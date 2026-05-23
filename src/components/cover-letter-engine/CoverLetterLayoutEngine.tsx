@@ -2,19 +2,31 @@ import React, { useMemo } from 'react';
 import { 
   ClassicHeader, 
   ModernHeader, 
-  MinimalHeader, 
+  MinimalHeader,
+  TypographicHeader,
+  ColumnSplitHeader,
+  AccentBannerHeader,
   HeaderSnippetProps 
 } from './snippets/headers/HeaderSnippets';
 import WYSIWYGEditor from '@/components/ui/WYSIWYGEditor';
+
+export interface CoverLetterDesignProps {
+  fontSize: number;
+  lineHeight: number;
+  pageMargin: number;
+  accentColor: string;
+  fontFamily: 'font-sans' | 'font-serif' | 'font-mono';
+}
 
 interface CoverLetterLayoutEngineProps {
   headerProps: HeaderSnippetProps;
   bodyContent: string;
   footerContent?: string;
-  templateType?: 'classic' | 'modern' | 'minimal';
+  templateType?: 'classic' | 'modern' | 'minimal' | 'typographic' | 'column-split' | 'accent-banner';
   isEditing?: boolean;
   onBodyChange?: (content: string) => void;
   pageFormat?: 'a4' | 'letter';
+  design?: Partial<CoverLetterDesignProps>;
 }
 
 export default function CoverLetterLayoutEngine({
@@ -24,7 +36,8 @@ export default function CoverLetterLayoutEngine({
   templateType = 'modern',
   isEditing = false,
   onBodyChange,
-  pageFormat = 'a4'
+  pageFormat = 'a4',
+  design = {}
 }: CoverLetterLayoutEngineProps) {
 
   const HeaderComponent = useMemo(() => {
@@ -33,14 +46,29 @@ export default function CoverLetterLayoutEngine({
         return ClassicHeader;
       case 'minimal':
         return MinimalHeader;
+      case 'typographic':
+        return TypographicHeader;
+      case 'column-split':
+        return ColumnSplitHeader;
+      case 'accent-banner':
+        return AccentBannerHeader;
       case 'modern':
       default:
         return ModernHeader;
     }
   }, [templateType]);
 
-  const fontClass = templateType === 'classic' ? 'font-serif' : 'font-sans';
-  const leadingClass = templateType === 'classic' ? 'leading-relaxed' : 'leading-loose';
+  const defaultDesign: CoverLetterDesignProps = {
+    fontSize: 15,
+    lineHeight: 1.6,
+    pageMargin: 6,
+    accentColor: '#80FF00',
+    fontFamily: templateType === 'classic' ? 'font-serif' : 'font-sans'
+  };
+
+  const activeDesign = { ...defaultDesign, ...design };
+  
+  const fontClass = activeDesign.fontFamily;
 
   const isHtml = /<[a-z][\s\S]*>/i.test(bodyContent);
 
@@ -52,12 +80,15 @@ export default function CoverLetterLayoutEngine({
 
   return (
     <div 
-      className={`mx-auto bg-white dark:bg-white shadow-2xl flex flex-col text-gray-800 transition-all duration-500 ease-in-out relative cover-letter-document cv-document`}
+      className={`mx-auto bg-white dark:bg-white shadow-2xl flex flex-col text-gray-800 transition-all duration-500 ease-in-out relative cover-letter-document cv-document ${fontClass}`}
       style={{ 
         width,
         minHeight,
         containerType: 'inline-size',
-      }}
+        fontSize: `${activeDesign.fontSize}px`,
+        lineHeight: activeDesign.lineHeight,
+        '--cv-accent': activeDesign.accentColor
+      } as React.CSSProperties}
     >
       {/* 
         We use a wrapper to ensure the minimum height matches exactly one page.
@@ -74,7 +105,12 @@ export default function CoverLetterLayoutEngine({
              }} 
         />
 
-        <div className="flex-1 flex flex-col relative z-10 py-[8cqw] px-[10cqw] sm:px-[12cqw] min-h-full">
+        <div 
+          className="flex-1 flex flex-col relative z-10 min-h-full"
+          style={{ 
+            padding: `${activeDesign.pageMargin}cqw ${activeDesign.pageMargin * 1.5}cqw`
+          }}
+        >
           {/* Render Selected Header Snippet */}
           <div className={`${isEditing ? 'border-dashed border-2 border-emerald-500/50 hover:bg-emerald-50/10 rounded-lg transition-colors p-2 -mx-2 -mt-2 cursor-pointer' : ''}`}>
             <HeaderComponent {...headerProps} />
@@ -82,26 +118,27 @@ export default function CoverLetterLayoutEngine({
 
           {/* Body Layout - Single Column Responsive */}
           {isEditing ? (
-            <div className={`flex-1 mt-8 mb-12`} style={{ minHeight: '40cqw' }}>
+            <div className={`flex-1 mt-4 mb-6`} style={{ minHeight: '40cqw' }}>
                <WYSIWYGEditor
                  value={bodyContent}
                  onChange={onBodyChange || (() => {})}
-                 className={`bg-transparent border-dashed border-2 border-emerald-500/50 hover:bg-emerald-50/10 rounded-lg p-2 ${fontClass} ${leadingClass} transition-colors h-full`}
+                 className={`bg-transparent border-dashed border-2 border-emerald-500/50 hover:bg-emerald-50/10 rounded-lg p-2 ${fontClass} transition-colors h-full`}
                  showToolbar={true}
                  reviewMode={true}
                  grammarLocale="us"
                />
             </div>
           ) : (
-          <div className={`flex-1 flex flex-col space-y-6 ${fontClass} ${leadingClass} text-[15px] text-gray-800 tracking-wide mt-8 mb-12`}>
+          <div className={`flex-1 flex flex-col space-y-3 ${fontClass} text-gray-800 tracking-wide mt-4 mb-6`}>
             {isHtml ? (
               <div 
-                className="prose prose-sm max-w-none text-gray-800 prose-p:leading-relaxed prose-p:mb-6"
+                className="prose prose-sm max-w-none text-gray-800"
+                style={{ fontSize: 'inherit', lineHeight: 'inherit' }}
                 dangerouslySetInnerHTML={{ __html: bodyContent }} 
               />
             ) : (
               paragraphs.map((paragraph, idx) => (
-                <p key={idx} className="text-justify mb-6">
+                <p key={idx} className="text-justify mb-3">
                   {paragraph.trim()}
                 </p>
               ))
@@ -110,8 +147,8 @@ export default function CoverLetterLayoutEngine({
         )}
 
         {/* Footer Snippet / Layout */}
-        <div className={`mt-auto pt-10 border-t border-gray-100 ${fontClass} text-gray-800`}>
-          <p className="mb-10">{footerContent || 'Sincerely,'}</p>
+        <div className={`mt-auto pt-4 border-t border-gray-100 ${fontClass} text-gray-800`}>
+          <p className="mb-2">{footerContent || 'Sincerely,'}</p>
           <p className="font-bold text-lg tracking-tight">{headerProps.name}</p>
         </div>
       </div>
