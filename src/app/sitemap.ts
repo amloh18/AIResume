@@ -23,6 +23,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     'ai-resume-builder',
     'ats-resume-checker',
     'resume-score',
+    'ai-career-report',
   ]
 
   // Example/template pages
@@ -38,7 +39,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   // Blog listing page
   const blogListingRoutes = ['blog']
 
-  // Existing blog posts (4 hardcoded SSR pages)
+  // Existing blog posts
   const existingBlogPosts = [
     'blog/resume-writing/fresher-resume-guide',
     'blog/ats-optimization/ats-tips',

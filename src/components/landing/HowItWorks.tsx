@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 
 const HowItWorks = () => {
@@ -121,9 +121,9 @@ const HowItWorks = () => {
 
             {/* Text Content */}
             <div className="flex-1">
-              {/* Feature Points - Clickable */}
+              {/* Desktop view: List of all features */}
               <motion.div
-                className="space-y-10"
+                className="hidden desktop:block space-y-10"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
@@ -156,6 +156,47 @@ const HowItWorks = () => {
                   </div>
                 ))}
               </motion.div>
+
+              {/* Mobile view: Only the active feature */}
+              <div className="desktop:hidden">
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={activeStep}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ duration: 0.3 }}
+                    className="relative pl-6 border-l-2 border-gray-800 min-h-[140px] flex flex-col justify-center"
+                  >
+                    {/* Progress bar on the border for mobile */}
+                    <motion.div
+                      className="absolute left-[-2px] top-0 w-[2px] bg-[#81ff00]"
+                      style={{ height: `${100 - progress}%` }}
+                      transition={{ duration: 0.05, ease: "linear" }}
+                    />
+
+                    <h3 className="text-xl font-bold text-white mb-3">
+                      {features[activeStep].title}
+                    </h3>
+                    <p className="text-gray-400 text-base leading-relaxed">
+                      {features[activeStep].description}
+                    </p>
+                  </motion.div>
+                </AnimatePresence>
+
+                {/* Mobile Pagination Indicators */}
+                <div className="flex gap-3 mt-10">
+                  {features.map((_, index) => (
+                    <button
+                      key={index}
+                      onClick={() => handleStepClick(index)}
+                      className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${index === activeStep ? 'bg-[#81ff00]' : 'bg-gray-800'
+                        }`}
+                      aria-label={`Go to step ${index + 1}`}
+                    />
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
 

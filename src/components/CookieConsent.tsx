@@ -2,8 +2,17 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Cookie, Shield, Settings } from 'lucide-react';
-import { getCookieConsentStatus, setCookieConsentStatus, initializeAnalytics, initializeMarketing } from '@/lib/utils/cookieUtils';
+import { X, Cookie, Settings, ChevronRight, Lock, BarChart3, Target } from 'lucide-react';
+import { 
+  getCookieConsentStatus, 
+  setCookieConsentStatus, 
+  getCookiePreferences,
+  setCookiePreferences,
+  initializeAnalytics, 
+  initializeMarketing 
+} from '@/lib/utils/cookieUtils';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 
 interface CookieConsentProps {
   onAccept?: () => void;
@@ -17,163 +26,167 @@ const CookieConsent: React.FC<CookieConsentProps> = ({
   onClose 
 }) => {
   const [isVisible, setIsVisible] = useState(false);
-  const [isAnimating, setIsAnimating] = useState(false);
+  const [showCustomizer, setShowCustomizer] = useState(false);
+  const [preferences, setPreferences] = useState({
+    necessary: true,
+    analytics: true,
+    marketing: false,
+  });
 
   useEffect(() => {
-    // Check if user has already made a choice
-    const cookieConsent = getCookieConsentStatus();
-    
-    // Check for expiry date and clear if expired
-    if (typeof window !== 'undefined') {
-      try {
-        const expiryStr = localStorage.getItem('cookieConsentExpiry');
-        if (expiryStr) {
-          const expiryDate = new Date(expiryStr);
-          if (new Date() > expiryDate) {
-            // Consent has expired, clear it
-            localStorage.removeItem('cookieConsent');
-            localStorage.removeItem('cookieConsentExpiry');
-          }
-        }
-      } catch (error) {
-        console.error('Error checking cookie consent expiry:', error);
-      }
-    }
-    
-    // Only show if no valid consent exists
     const currentConsent = getCookieConsentStatus();
     if (!currentConsent) {
-      // Show banner after a short delay for better UX
-      const timer = setTimeout(() => {
-        setIsVisible(true);
-      }, 1000);
+      const timer = setTimeout(() => setIsVisible(true), 1500);
       return () => clearTimeout(timer);
-    } else {
-      // User has already made a choice, don't show
-      setIsVisible(false);
     }
   }, []);
 
-  const handleAccept = () => {
-    setIsAnimating(true);
+  const handleAcceptAll = () => {
     setCookieConsentStatus('accepted');
-    // Initialize analytics and marketing tools
     initializeAnalytics();
     initializeMarketing();
-    setTimeout(() => {
-      setIsVisible(false);
-      onAccept?.();
-    }, 300);
+    setIsVisible(false);
+    onAccept?.();
   };
 
-  const handleDecline = () => {
-    setIsAnimating(true);
+  const handleDeclineAll = () => {
     setCookieConsentStatus('declined');
-    setTimeout(() => {
-      setIsVisible(false);
-      onDecline?.();
-    }, 300);
+    setIsVisible(false);
+    onDecline?.();
   };
 
-  const handleClose = () => {
-    setIsAnimating(true);
-    setCookieConsentStatus('accepted'); // Default to accept
-    // Initialize analytics and marketing tools
+  const handleSaveCustom = () => {
+    setCookiePreferences(preferences);
     initializeAnalytics();
     initializeMarketing();
-    setTimeout(() => {
-      setIsVisible(false);
-      onClose?.();
-    }, 300);
+    setIsVisible(false);
+    onAccept?.();
+  };
+
+  const togglePreference = (key: keyof typeof preferences) => {
+    if (key === 'necessary') return;
+    setPreferences(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
   if (!isVisible) return null;
 
   return (
     <AnimatePresence>
-      <motion.div
-        initial={{ y: 100, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        exit={{ y: 100, opacity: 0 }}
-        transition={{ 
-          duration: 0.4, 
-          ease: [0.4, 0, 0.2, 1],
-          opacity: { duration: 0.3 }
-        }}
-        className="fixed bottom-0 left-0 right-0 z-[99999] bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 border-t border-white/10 backdrop-blur-xl"
-        style={{
-          background: 'rgba(17, 24, 39, 0.95)',
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
-          zIndex: 99999
-        }}
-      >
-        {/* Glow effect */}
-        <div className="absolute inset-0 bg-gradient-to-r from-lime-400/5 via-blue-400/5 to-lime-400/5" />
-        
-        <div className="relative px-4 tablet:px-6 desktop:px-8 py-3">
-          <div className="max-w-7xl mx-auto">
-            <div className="flex flex-col tablet:flex-row items-center justify-between gap-3">
-              {/* Content */}
-              <div className="flex items-center gap-3 flex-1">
-                <motion.div
-                  className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-lime-400 to-lime-500 rounded-lg flex items-center justify-center shadow-lg"
-                  whileHover={{ scale: 1.05, rotate: 5 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <Cookie size={18} className="text-white" />
-                </motion.div>
-                
-                <div className="flex-1">
-                  <p className="text-white/90 text-sm leading-relaxed">
-                    We use cookies to enhance your experience and analyze site traffic. 
-                    <a href="/cookie-policy" className="text-lime-400 hover:text-lime-300 underline ml-1">Learn more</a>
-                  </p>
-                </div>
-              </div>
+      <div className="fixed bottom-4 left-0 right-0 z-[99999] flex justify-center px-4 pointer-events-none">
+        <motion.div
+          initial={{ y: 100, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: 100, opacity: 0 }}
+          className="w-full md:w-[85%] max-w-7xl pointer-events-auto"
+        >
+          <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-xl shadow-xl overflow-hidden">
+            <div className="px-4 py-3 md:px-6 md:py-3">
+              {!showCustomizer ? (
+                <div className="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8 text-center md:text-left">
+                  {/* Left: Minimal Info */}
+                  <div className="flex items-center gap-3 shrink-0">
+                    <Cookie className="text-[#81ff00] w-5 h-5 shrink-0" />
+                    <p className="text-gray-700 dark:text-gray-300 text-[13px] leading-tight font-medium">
+                      We use cookies to improve your experience. 
+                      <Link href="/cookie-policy" className="text-[#81ff00] hover:underline ml-1">
+                        Policy
+                      </Link>
+                    </p>
+                  </div>
 
-              {/* Actions */}
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <motion.button
-                  onClick={handleDecline}
-                  className="px-3 py-1.5 text-xs font-medium text-white/70 hover:text-white transition-colors duration-200 border border-white/20 hover:border-white/40 rounded-md backdrop-blur-sm"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  disabled={isAnimating}
+                  {/* Right: Compact Actions */}
+                  <div className="flex items-center gap-3 shrink-0">
+                    <button 
+                      onClick={() => setShowCustomizer(true)}
+                      className="text-[11px] font-bold text-gray-500 hover:text-gray-900 dark:hover:text-white px-1 transition-colors flex items-center gap-1"
+                    >
+                      <Settings className="w-3 h-3" />
+                      Customize
+                    </button>
+                    <Button 
+                      variant="ghost"
+                      onClick={handleDeclineAll}
+                      className="h-8 px-3 text-[11px] font-bold text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg"
+                    >
+                      Essential Only
+                    </Button>
+                    <Button 
+                      onClick={handleAcceptAll}
+                      className="h-8 px-5 bg-[#81ff00] hover:bg-[#72e000] text-black text-[11px] font-bold rounded-lg shadow-sm"
+                    >
+                      Accept All
+                    </Button>
+                    <button 
+                      onClick={() => setIsVisible(false)}
+                      className="ml-1 p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="flex flex-col md:flex-row items-center justify-center gap-6"
                 >
-                  Decline
-                </motion.button>
-                
-                <motion.button
-                  onClick={handleAccept}
-                  className="px-4 py-1.5 text-xs font-medium text-white bg-gradient-to-r from-lime-400 to-lime-500 hover:from-lime-500 hover:to-lime-600 rounded-md shadow-lg transition-all duration-200"
-                  whileHover={{ 
-                    scale: 1.02,
-                    boxShadow: "0 10px 25px -5px rgba(132, 204, 22, 0.4)"
-                  }}
-                  whileTap={{ scale: 0.98 }}
-                  disabled={isAnimating}
-                >
-                  Accept
-                </motion.button>
-                
-                <motion.button
-                  onClick={handleClose}
-                  className="p-1.5 text-white/60 hover:text-white hover:bg-white/10 rounded-md transition-all duration-200"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  disabled={isAnimating}
-                  title="Close (Accept)"
-                >
-                  <X size={16} />
-                </motion.button>
-              </div>
+                  <div className="flex items-center gap-3">
+                    <MiniPreferenceItem 
+                      title="Essential"
+                      checked={preferences.necessary}
+                      disabled={true}
+                    />
+                    <MiniPreferenceItem 
+                      title="Analytics"
+                      checked={preferences.analytics}
+                      onToggle={() => togglePreference('analytics')}
+                    />
+                    <MiniPreferenceItem 
+                      title="Marketing"
+                      checked={preferences.marketing}
+                      onToggle={() => togglePreference('marketing')}
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Button 
+                      variant="ghost"
+                      onClick={() => setShowCustomizer(false)}
+                      className="h-8 px-3 text-[11px] text-gray-500"
+                    >
+                      Back
+                    </Button>
+                    <Button 
+                      onClick={handleSaveCustom}
+                      className="h-8 px-4 bg-black dark:bg-[#81ff00] text-white dark:text-black text-[11px] font-bold rounded-lg"
+                    >
+                      Save
+                    </Button>
+                  </div>
+                </motion.div>
+              )}
             </div>
           </div>
-        </div>
-      </motion.div>
+        </motion.div>
+      </div>
     </AnimatePresence>
   );
 };
+
+const MiniPreferenceItem = ({ title, checked, disabled, onToggle }: any) => (
+  <div 
+    onClick={!disabled ? onToggle : undefined}
+    className={`flex items-center justify-between px-3 py-1.5 rounded-lg border text-[11px] transition-all ${
+      disabled 
+        ? 'bg-gray-50 dark:bg-white/5 border-transparent opacity-60' 
+        : `cursor-pointer ${checked ? 'border-[#81ff00]/40 bg-[#81ff00]/5 text-gray-900 dark:text-white' : 'border-gray-200 dark:border-white/10 text-gray-500'}`
+    }`}
+  >
+    <span className="font-bold">{title}</span>
+    <div className={`w-6 h-3 rounded-full relative transition-colors ${checked ? 'bg-[#81ff00]' : 'bg-gray-300 dark:bg-gray-700'}`}>
+      <div className={`absolute top-0.5 w-2 h-2 bg-white rounded-full transition-all ${checked ? 'left-3.5' : 'left-0.5'}`} />
+    </div>
+  </div>
+);
 
 export default CookieConsent;
