@@ -28,17 +28,21 @@ export async function GET(request: NextRequest) {
       
       if (countryPricing) {
         // Convert CountryPricing to RegionalPricing format
+        const monthlyVal = countryPricing.planPrices?.monthly?.price || 0;
+        const quarterlyVal = countryPricing.planPrices?.quarterly?.price || 0;
+        // In the database records:
+        // - pro_yearly maps to dayPass (typically 1999 INR, 109.99 EUR, etc.)
+        // - pro_lifetime maps to yearly (typically 4999 INR, etc.)
+        const yearlyVal = countryPricing.planPrices?.dayPass?.price || countryPricing.planPrices?.yearly?.price || 0;
+        const lifetimeVal = countryPricing.planPrices?.lifetime?.price || countryPricing.planPrices?.yearly?.price || 0;
+
         pricingData = {
           currency: countryPricing.currency,
           currencySymbol: countryPricing.currencySymbol,
-          monthly: `${countryPricing.currencySymbol}${countryPricing.planPrices.monthly.price}`,
-          quarterly: `${countryPricing.currencySymbol}${countryPricing.planPrices.quarterly.price}`,
-          yearly: `${countryPricing.currencySymbol}${countryPricing.planPrices.yearly.price >= 1000 
-            ? countryPricing.planPrices.yearly.price.toLocaleString() 
-            : countryPricing.planPrices.yearly.price}`,
-          lifetime: `${countryPricing.currencySymbol}${countryPricing.planPrices.lifetime.price >= 1000 
-            ? countryPricing.planPrices.lifetime.price.toLocaleString() 
-            : countryPricing.planPrices.lifetime.price}`,
+          monthly: `${countryPricing.currencySymbol}${monthlyVal}`,
+          quarterly: `${countryPricing.currencySymbol}${quarterlyVal}`,
+          yearly: `${countryPricing.currencySymbol}${yearlyVal >= 1000 ? yearlyVal.toLocaleString() : yearlyVal}`,
+          lifetime: `${countryPricing.currencySymbol}${lifetimeVal >= 1000 ? lifetimeVal.toLocaleString() : lifetimeVal}`,
           // Include additional data for new structure
           countryCode: countryPricing.countryCode,
           countryName: countryPricing.countryName,

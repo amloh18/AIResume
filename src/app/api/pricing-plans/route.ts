@@ -37,7 +37,7 @@ const fallbackPlans = [
     description: 'Get started with your first professional CV',
     price_monthly: 0,
     price_one_time: 0,
-    currency: 'GBP',
+    currency: 'USD',
     features: [
       'Access to ALL templates and snippets',
       'Application Tracker (Full Kanban access)',
@@ -72,9 +72,9 @@ const fallbackPlans = [
     description: 'Full access to all features with yearly billing',
     price_monthly: 0,
     price_quarterly: 0,
-    price_yearly: 149,
+    price_yearly: 144,
     price_one_time: 0,
-    currency: 'GBP',
+    currency: 'USD',
     features: [
       'Unlimited AI Generation',
       'ATS Scoring & Editing (Real-time feedback)',
@@ -108,7 +108,7 @@ const fallbackPlans = [
     price_quarterly: 0,
     price_yearly: 0,
     price_one_time: 0,
-    currency: 'GBP',
+    currency: 'USD',
     features: [
       'Unlimited AI Generation',
       'ATS Scoring & Editing (Real-time feedback)',
@@ -138,10 +138,10 @@ const fallbackPlans = [
     name: 'Professional Quarterly',
     description: 'Best value with priority support included',
     price_monthly: 0,
-    price_quarterly: 49,
+    price_quarterly: 48,
     price_yearly: 0,
     price_one_time: 0,
-    currency: 'GBP',
+    currency: 'USD',
     features: [
       'Unlimited AI Generation',
       'ATS Scoring & Editing (Real-time feedback)',
@@ -173,8 +173,8 @@ const fallbackPlans = [
     price_monthly: 0,
     price_quarterly: 0,
     price_yearly: 0,
-    price_one_time: 179,
-    currency: 'GBP',
+    price_one_time: 199,
+    currency: 'USD',
     features: [
       'Unlimited AI Generation',
       'ATS Scoring & Editing (Real-time feedback)',
@@ -241,7 +241,7 @@ export async function GET(request: NextRequest) {
         countryName: 'United States',
         currency: 'USD',
         currencySymbol: '$',
-        paymentPartner: 'stripe'
+        paymentPartner: 'polar'
       };
     }
 
@@ -309,7 +309,6 @@ export async function GET(request: NextRequest) {
         new Date((plan as any).promotionValidFrom) <= currentDate && new Date((plan as any).promotionValidUntil) >= currentDate;
 
       // Helper to get country price for a specific plan from CountryPricing collection
-      // Priority: 1. User's country pricing, 2. Plan's defaultCountryPricingId, 3. Legacy plan prices (deprecated)
       const getCountryPriceForPlan = (planKey: string, pricingSource: any) => {
         if (!pricingSource) return null;
 
@@ -318,42 +317,60 @@ export async function GET(request: NextRequest) {
           'day_pass': 'dayPass',
           'pro_monthly': 'monthly',
           'pro_quarterly': 'quarterly',
-          'pro_yearly': 'dayPass',
-          'pro_lifetime': 'yearly'
+          'pro_yearly': 'yearly',
+          'pro_lifetime': 'lifetime'
         };
 
         const pricingKey = planKeyMap[planKey];
-        return pricingKey ? pricingSource.planPrices[pricingKey]?.price : null;
+        if (!pricingKey) return null;
+
+        // Ensure we handle missing slots gracefully
+        const slot = pricingSource.planPrices[pricingKey];
+        return slot ? slot.price : null;
       };
 
       // Get price from user's country pricing, or fallback to plan's defaultCountryPricingId
       const activePricing = countryPricing || defaultCountryPricing;
-      const planDefaultPricingId = (plan as any).defaultCountryPricingId;
+      
+      const standardFallbacks: Record<string, number> = {
+        'pro_monthly': 19,
+        'pro_quarterly': 48,
+        'pro_yearly': 144,
+        'pro_lifetime': 199,
+        'day_pass': 9
+      };
 
-      // Try to get default pricing from ObjectId reference (fetch manually, no populate)
-      let planDefaultCountryPricing = null;
-      if (planDefaultPricingId) {
-        // Fetch CountryPricing by ObjectId
-        const { getCountryPricingById } = await import('@/lib/services/countryPricingService');
-        planDefaultCountryPricing = await getCountryPricingById(planDefaultPricingId);
+      // Base prices from database
+      const dbPrice = {
+        monthly: getCountryPriceForPlan('pro_monthly', activePricing) || standardFallbacks.pro_monthly,
+        quarterly: getCountryPriceForPlan('pro_quarterly', activePricing) || standardFallbacks.pro_quarterly,
+        yearly: getCountryPriceForPlan('pro_yearly', activePricing) || standardFallbacks.pro_yearly,
+        lifetime: getCountryPriceForPlan('pro_lifetime', activePricing) || standardFallbacks.pro_lifetime,
+        dayPass: getCountryPriceForPlan('day_pass', activePricing) || standardFallbacks.day_pass
+      };
+
+      // If we are using standard fallbacks (USD) but the user is in a different currency, 
+      // and we DON'T have a CountryPricing record for them, perform a live conversion.
+      let finalPrice = { ...dbPrice };
+      let isConversionApplied = false;
+
+      if (!countryPricing && regionInfo?.currency && regionInfo.currency !== 'USD') {
+        const { LocationService } = await import('@/lib/payment/locationService');
+        
+        finalPrice.monthly = LocationService.convertPrice(dbPrice.monthly, 'USD', regionInfo.currency).convertedPrice;
+        finalPrice.quarterly = LocationService.convertPrice(dbPrice.quarterly, 'USD', regionInfo.currency).convertedPrice;
+        finalPrice.yearly = LocationService.convertPrice(dbPrice.yearly, 'USD', regionInfo.currency).convertedPrice;
+        finalPrice.lifetime = LocationService.convertPrice(dbPrice.lifetime, 'USD', regionInfo.currency).convertedPrice;
+        finalPrice.dayPass = LocationService.convertPrice(dbPrice.dayPass, 'USD', regionInfo.currency).convertedPrice;
+        
+        isConversionApplied = true;
       }
 
-      // All prices MUST come from CountryPricing - no legacy fallbacks
       const basePrice = {
-        monthly: getCountryPriceForPlan('pro_monthly', activePricing)
-          || getCountryPriceForPlan('pro_monthly', planDefaultCountryPricing)
-          || 0, // No legacy fallback - prices must be in CountryPricing
-        quarterly: getCountryPriceForPlan('pro_quarterly', activePricing)
-          || getCountryPriceForPlan('pro_quarterly', planDefaultCountryPricing)
-          || 0, // No legacy fallback
-        yearly: getCountryPriceForPlan('pro_yearly', activePricing)
-          || getCountryPriceForPlan('pro_yearly', planDefaultCountryPricing)
-          || 0, // No legacy fallback
-        oneTime: getCountryPriceForPlan('day_pass', activePricing)
-          || getCountryPriceForPlan('pro_lifetime', activePricing)
-          || getCountryPriceForPlan('day_pass', planDefaultCountryPricing)
-          || getCountryPriceForPlan('pro_lifetime', planDefaultCountryPricing)
-          || 0 // No legacy fallback
+        monthly: finalPrice.monthly,
+        quarterly: finalPrice.quarterly,
+        yearly: finalPrice.yearly,
+        oneTime: plan.key === 'pro_lifetime' ? finalPrice.lifetime : finalPrice.dayPass
       };
 
       const effectivePrice = {
@@ -438,32 +455,30 @@ export async function GET(request: NextRequest) {
         // Add computed fields for backward compatibility
         price: basePrice.monthly || basePrice.oneTime || 0,
         billingCycle: plan.billingCycle,
-        // Country pricing info - use monthly pricing for display (from CountryPricing collection)
+        // Country pricing info
         regionalPricing: (() => {
-          // Priority: 1. User's country pricing, 2. Plan's defaultCountryPricingId, 3. Fallback
           const pricingSource = countryPricing || planDefaultCountryPricing || defaultCountryPricing;
-          if (pricingSource) {
-            const monthlyPrice = pricingSource.planPrices.monthly.price;
-            return {
-              region: pricingSource.countryCode,
-              regionName: pricingSource.countryName,
-              currency: pricingSource.currency,
-              currencySymbol: pricingSource.currencySymbol,
-              price: monthlyPrice,
-              displayPrice: `${pricingSource.currencySymbol}${monthlyPrice}`,
-              polarPriceId: pricingSource.polarPriceIds?.monthly
-            };
-          } else {
-            // Fallback to region info (should rarely happen if CountryPricing is properly set up)
-            return {
-              region: regionInfo?.countryCode || 'US',
-              regionName: regionInfo?.countryName || 'United States',
-              currency: planCurrency,
-              currencySymbol: planCurrencySymbol,
-              price: basePrice.monthly || 0,
-              displayPrice: `${planCurrencySymbol}${basePrice.monthly || 0}`
-            };
-          }
+          const displayPriceValue = plan.key === 'pro_lifetime' ? basePrice.oneTime : 
+                                   plan.key === 'day_pass' ? basePrice.oneTime : 
+                                   plan.key === 'pro_quarterly' ? basePrice.quarterly :
+                                   plan.key === 'pro_yearly' ? basePrice.yearly :
+                                   basePrice.monthly;
+
+          return {
+            region: pricingSource?.countryCode || regionInfo?.countryCode || 'US',
+            regionName: pricingSource?.countryName || regionInfo?.countryName || 'United States',
+            currency: planCurrency,
+            currencySymbol: planCurrencySymbol,
+            price: displayPriceValue,
+            displayPrice: `${planCurrencySymbol}${displayPriceValue}`,
+            polarPriceId: activePricing?.polarPriceIds?.[
+              plan.key === 'pro_monthly' ? 'monthly' :
+              plan.key === 'pro_quarterly' ? 'quarterly' :
+              plan.key === 'pro_yearly' ? 'yearly' :
+              plan.key === 'pro_lifetime' ? 'lifetime' : 'monthly'
+            ],
+            isApproximate: isConversionApplied
+          };
         })(),
         // Time-based metadata
         durationInfo,

@@ -4,6 +4,7 @@ import { ArrowRight, Calendar, Clock, Tag, BookOpen, ChevronRight, Sparkles, Che
 import { getAllArticles, getAllCategories } from '@/data/blogs';
 import { MotionDiv, MotionH1, MotionP } from '@/components/ui/motion-wrapper';
 import CardNav from '@/components/landing/CardNav';
+import Footer from '@/components/landing/Footer';
 
 export const metadata: Metadata = {
   title: 'Blog — Career Advice, CV Tips & ATS Optimization | CVCircle',
@@ -178,8 +179,8 @@ export default async function BlogPage(props: {
               transition={{ duration: 0.5, delay: 0.1 }}
               className="text-4xl md:text-6xl font-bold text-white mb-5 leading-tight"
             >
-              Research-Backed<br />
-              <span className="text-[#81ff00]">Career Advice</span>
+              Outsmart the ATS.<br />
+              <span className="text-[#81ff00]">Get the Interview.</span>
             </MotionH1>
 
             <MotionP
@@ -387,61 +388,7 @@ export default async function BlogPage(props: {
         </section>
 
         {/* Footer */}
-        <footer className="py-12 px-4 border-t border-white/5">
-          <div className="max-w-7xl mx-auto">
-            <div className="grid md:grid-cols-4 gap-8 mb-8">
-              <div>
-                <div className="flex items-center gap-2 mb-4">
-                  <Link href="/" className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-[#81ff00] rounded-lg flex items-center justify-center shadow-[0_0_10px_rgba(129,255,0,0.3)]">
-                      <span className="text-black font-bold text-sm">CV</span>
-                    </div>
-                    <span className="text-white font-bold text-lg">CVCircle</span>
-                  </Link>
-                </div>
-                <p className="text-gray-500 text-sm">AI-powered CV builder by Morigrid Labs. Build ATS-optimised resumes in minutes.</p>
-              </div>
-              <div>
-                <h4 className="text-white font-semibold mb-4">Product</h4>
-                <div className="space-y-2">
-                  <Link href="/ai-resume-builder" className="block text-gray-500 hover:text-white text-sm transition-colors">AI Resume Builder</Link>
-                  <Link href="/ats-resume-checker" className="block text-gray-500 hover:text-white text-sm transition-colors">ATS Resume Checker</Link>
-                  <Link href="/templates" className="block text-gray-500 hover:text-white text-sm transition-colors">Templates</Link>
-                  <Link href="/pricing" className="block text-gray-500 hover:text-white text-sm transition-colors">Pricing</Link>
-                </div>
-              </div>
-              <div>
-                <h4 className="text-white font-semibold mb-4">Resources</h4>
-                <div className="space-y-2">
-                  <Link href="/blog" className="block text-[#81ff00] text-sm">Blog</Link>
-                  <Link href="/features" className="block text-gray-500 hover:text-white text-sm transition-colors">Features</Link>
-                  <Link href="/resume/software-engineer" className="block text-gray-500 hover:text-white text-sm transition-colors">SE Resume Guide</Link>
-                  <Link href="/resume/data-analyst" className="block text-gray-500 hover:text-white text-sm transition-colors">DA Resume Guide</Link>
-                </div>
-              </div>
-              <div>
-                <h4 className="text-white font-semibold mb-4">Company</h4>
-                <div className="space-y-2">
-                  <Link href="/privacy-policy" className="block text-gray-500 hover:text-white text-sm transition-colors">Privacy Policy</Link>
-                  <Link href="/terms" className="block text-gray-500 hover:text-white text-sm transition-colors">Terms of Service</Link>
-                  <Link href="/business" className="block text-gray-500 hover:text-white text-sm transition-colors">B2B Enterprise</Link>
-                </div>
-              </div>
-            </div>
-            <div className="pt-8 border-t border-white/5 flex items-center justify-between text-sm text-gray-600">
-              <div className="flex items-center gap-2">
-                <Link href="/" className="flex items-center gap-2">
-                  <div className="w-5 h-5 bg-[#81ff00] rounded flex items-center justify-center"><span className="text-black font-bold text-[10px]">CV</span></div>
-                  <span className="text-gray-500">© 2026 CVCircle by Morigrid Labs</span>
-                </Link>
-              </div>
-              <div className="flex gap-6">
-                <Link href="/privacy-policy" className="hover:text-gray-400 transition-colors">Privacy</Link>
-                <Link href="/terms" className="hover:text-gray-400 transition-colors">Terms</Link>
-              </div>
-            </div>
-          </div>
-        </footer>
+        <Footer />
       </div>
     </div>
   );

@@ -80,7 +80,7 @@ interface DashboardDataContextType {
   refreshAll: () => Promise<void>;
 }
 
-const DashboardDataContext = createContext<DashboardDataContextType | undefined>(undefined);
+export const DashboardDataContext = createContext<DashboardDataContextType | undefined>(undefined);
 
 export const useDashboardData = () => {
   const context = useContext(DashboardDataContext);
@@ -410,8 +410,8 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
         setErrors(prev => ({ ...prev, goals: null }));
         console.log('🔍 DashboardData - Fetching goals');
         const response = await authenticatedFetch(`/api/dashboard/goals?userId=${userId}`);
-        const contentType = response.headers.get('content-type');
-        if (contentType && contentType.includes('application/json')) {
+        const contentType = response.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
           const result = await response.json();
 
           if (result.success && result.data) {

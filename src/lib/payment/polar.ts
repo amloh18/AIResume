@@ -211,6 +211,35 @@ export class PolarService {
     }
   }
 
+  static async listOrders(params: { customerId?: string; customerEmail?: string }) {
+    const polarInstance = getPolarInstance();
+    if (!polarInstance) {
+      return {
+        success: false,
+        error: 'Polar is not configured',
+      };
+    }
+    
+    try {
+      // Fetch orders from Polar
+      const orders = await polarInstance.orders.list({
+        ...params
+      });
+
+      return {
+        success: true,
+        orders: orders.items || [],
+        total: orders.pagination.totalCount
+      };
+    } catch (error) {
+      console.error('Polar listOrders error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
   static verifyWebhookSignature(payload: string, signature: string) {
     const webhookSecret = process.env.POLAR_WEBHOOK_SECRET;
     if (!webhookSecret) {

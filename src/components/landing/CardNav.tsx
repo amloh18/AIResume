@@ -70,20 +70,28 @@ const CardNav = ({
       const element = document.querySelector(href);
       if (element) {
         element.scrollIntoView({ behavior: 'smooth' });
+      } else {
+        // Element doesn't exist on this page, navigate to homepage + hash
+        router.push(`/${href}`);
       }
     } else {
       if (isExternal) {
         window.open(href, '_blank', 'noopener,noreferrer');
       } else {
-        window.location.href = href;
+        router.push(href);
       }
     }
   };
 
   const handleLogoClick = () => {
     if (typeof window === 'undefined') return;
-    // Scroll to top of page
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (pathname === '/') {
+      // Scroll to top of page
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      // Go to homepage
+      router.push('/');
+    }
     setIsMobileMenuOpen(false);
   };
 
@@ -98,7 +106,7 @@ const CardNav = ({
             type="button"
           >
             <div className="logo-image-wrapper relative">
-              <Logo size="lg" showBoth={true} />
+              <Logo size="lg" />
               {isBusinessRoute && (
                 <sup className="absolute -top-2 -right-4 text-[10px] font-bold text-[#80FF00]">HR</sup>
               )}
@@ -164,7 +172,7 @@ const CardNav = ({
             {!isBusinessRoute && (
               <button
                 type="button"
-                className="card-nav-business-button hidden md:flex h-[68px]"
+                className="card-nav-business-button hidden md:flex"
                 onClick={() => scrollToSection('/business', true)}
               >
                 Business
@@ -173,7 +181,7 @@ const CardNav = ({
 
             <button
               type="button"
-              className="card-nav-cta-button h-[68px]"
+              className="card-nav-cta-button"
               onClick={handleCtaClick}
             >
               Login

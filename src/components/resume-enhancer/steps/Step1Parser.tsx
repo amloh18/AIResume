@@ -603,7 +603,7 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
                 <Logo size="sm" />
                 <div className="hidden xs:block">
                   <h4 className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white">
-                    {activeTab === 'cvs' ? 'Build Your Resume' : 'Lets build your COver lEtter'}
+                    {activeTab === 'cvs' ? 'Build Your Resume' : 'Let\'s Build Your Cover Letter'}
                   </h4>
                   <p className="text-[9px] sm:text-[10px] text-gray-500 dark:text-gray-400 font-medium">Quick actions</p>
                 </div>
@@ -646,8 +646,9 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
                 {activeTab === 'cvs' ? (
                   <>Let's Build Your <span className="text-lime-500 italic relative">Resume</span></>
                 ) : (
-                  <>Lets build your <span className="text-lime-500 italic relative">COver lEtter</span></>
+                  <>Let's Build Your <span className="text-lime-500 italic relative">Cover Letter</span></>
                 )}
+
               </h2>
             <p className="text-lg sm:text-xl text-gray-400 font-medium max-w-2xl mx-auto leading-relaxed px-4">
               {activeTab === 'cvs' 

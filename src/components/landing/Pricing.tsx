@@ -22,6 +22,7 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
   const [selectedCategory, setSelectedCategory] = useState('professional'); // 'essential' or 'professional'
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<DatabasePricingPlan | null>(null);
+  const [selectedMobilePlanKey, setSelectedMobilePlanKey] = useState('pro_quarterly');
 
   // Use the shared pricing hook
   const {
@@ -204,203 +205,364 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
 
 
 
-        {/* Plans Grid */}
-        <motion.div
-          className="grid gap-6 grid-cols-1 tablet:grid-cols-2 desktop:grid-cols-5 max-w-[90rem] mx-auto w-full"
-          initial={{ opacity: 0, y: 50 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.4 }}
-          viewport={{ once: true }}
-        >
-          {filteredPlans.map((plan, index) => {
-            const regionalPrice = getRegionalPrice(plan);
-            const currencySymbol = getCurrencySymbol();
-            const effectivePrice = getEffectivePrice(plan);
-            const hasPromo = hasPromotionalPricing(plan);
-            const Icon = getPlanIcon(plan.key);
+        {/* Comparison Table Data */}
+        {(() => {
+          const comparisonFeatures = [
+            { name: 'Access to All Templates', free: '✓', pro_monthly: '✓', pro_quarterly: '✓', pro_yearly: '✓', pro_lifetime: '✓' },
+            { name: 'Kanban Application Tracker', free: '✓ (Basic)', pro_monthly: '✓ (Full)', pro_quarterly: '✓ (Full)', pro_yearly: '✓ (Full)', pro_lifetime: '✓ (Full)' },
+            { name: 'Browser Extension Sync', free: 'Basic Save', pro_monthly: 'One-Click Save & Autofill', pro_quarterly: 'One-Click Save & Autofill', pro_yearly: 'One-Click Save & Autofill', pro_lifetime: 'One-Click Save & Autofill' },
+            { name: 'AI Writing & Rephrasing', free: 'Limited Credits', pro_monthly: 'Unlimited', pro_quarterly: 'Unlimited', pro_yearly: 'Unlimited', pro_lifetime: 'Unlimited' },
+            { name: 'Real-time ATS Scoring & Editor', free: '✗', pro_monthly: '✓', pro_quarterly: '✓', pro_yearly: '✓', pro_lifetime: '✓' },
+            { name: 'AI Cover Letter Generator', free: '✗', pro_monthly: '✓', pro_quarterly: '✓', pro_yearly: '✓', pro_lifetime: '✓' },
+            { name: 'LinkedIn Profile Optimizer', free: '✗', pro_monthly: '✓', pro_quarterly: '✓', pro_yearly: '✓', pro_lifetime: '✓' },
+            { name: 'Interview Coach Mock Simulator', free: '✗', pro_monthly: '✓', pro_quarterly: '✓', pro_yearly: '✓', pro_lifetime: '✓' },
+            { name: 'Max Job Tracks', free: '3 Active Jobs', pro_monthly: 'Unlimited', pro_quarterly: 'Unlimited', pro_yearly: 'Unlimited', pro_lifetime: 'Unlimited' },
+            { name: 'Permanent Career Vault', free: '✗', pro_monthly: '✗', pro_quarterly: '✗', pro_yearly: '✗', pro_lifetime: '✓' },
+            { name: 'Customer Support Level', free: 'Standard', pro_monthly: 'Standard', pro_quarterly: 'Priority Support', pro_yearly: 'Priority Support', pro_lifetime: 'VIP 24/7 Support' },
+          ];
+
+          const freePlan = filteredPlans.find(p => p.key === 'free');
+          const selectedProPlan = filteredPlans.find(p => p.key === selectedMobilePlanKey);
+
+          const getMobilePlanPriceDisplay = (plan: DatabasePricingPlan) => {
             const monthlyEquivalent = getMonthlyEquivalent(plan);
+            const regionalPrice = getRegionalPrice(plan);
+            return monthlyEquivalent.showMonthly ? monthlyEquivalent.price : regionalPrice;
+          };
 
+          const getMobilePlanSubtext = (plan: DatabasePricingPlan) => {
+            const monthlyEquivalent = getMonthlyEquivalent(plan);
+            const regionalPrice = getRegionalPrice(plan);
             return (
-              <motion.div
-                key={plan._id}
-                className={`group relative bg-white dark:bg-[#1A2015] border border-gray-200 dark:border-white/10 rounded-2xl p-5 min-h-[550px] flex flex-col card-hover shadow-lg dark:shadow-none ${plan.isPopular ? 'ring-2 ring-lime-500 dark:ring-lime-400/50' : ''
-                  }`}
-                initial={{ opacity: 0, y: 50 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.1 * index }}
-                viewport={{ once: true }}
-                whileHover={{
-                  scale: 1.02,
-                  y: -5,
-                  boxShadow: "0 15px 30px -5px rgba(132, 204, 22, 0.3)"
-                }}
-                style={{ willChange: 'transform' }}
-              >
-                {/* Glow Effect */}
-                <motion.div
-                  className="absolute inset-0 rounded-2xl bg-gradient-to-br from-lime-400/10 to-lime-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-                  style={{ filter: 'blur(20px)' }}
-                />
-                {/* Popular Badge */}
-                {plan.isPopular && (
-                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 z-10">
-                    <span className="bg-lime-500 dark:bg-lime-400 text-white dark:text-gray-900 text-xs font-medium px-3 py-1 rounded-full shadow-lg">
-                      Most Popular
-                    </span>
-                  </div>
+              <div className="flex flex-col items-center">
+                {monthlyEquivalent.showMonthly && (
+                  <span className="text-[8px] text-gray-500 dark:text-white/60 font-normal">
+                    {regionalPrice} total
+                  </span>
                 )}
+                <span className="text-[8px] text-gray-400 font-normal mt-0.5">
+                  {plan.key === 'pro_monthly'
+                    ? 'recurring monthly'
+                    : plan.key === 'pro_quarterly'
+                      ? 'billed quarterly'
+                      : plan.key === 'pro_yearly'
+                        ? 'billed annually'
+                        : 'one-time'}
+                </span>
+              </div>
+            );
+          };
 
-                {/* Promotional Badge */}
-                {hasPromo && (
-                  <div className="absolute -top-3 right-3 z-10">
-                    <span className="bg-lime-500 dark:bg-lime-400 text-white dark:text-gray-900 text-xs font-medium px-2 py-1 rounded-full flex items-center gap-1 shadow-lg">
-                      <Gift size={10} />
-                      {plan.promotionDescription || 'Limited Time!'}
-                    </span>
+          const renderFeatureVal = (value: string) => {
+            if (value === '✓') {
+              return <Check className="w-4 h-4 text-lime-500 mx-auto" />;
+            }
+            if (value === '✗') {
+              return <span className="text-gray-300 dark:text-white/10 font-bold">—</span>;
+            }
+            return (
+              <span className="inline-block px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-white/5 text-gray-800 dark:text-white/80 font-medium">
+                {value}
+              </span>
+            );
+          };
+
+          return (
+            <motion.div
+              className="w-full max-w-[90rem] mx-auto rounded-2xl border border-gray-200 dark:border-white/10 shadow-2xl bg-white dark:bg-[#1A2015] backdrop-blur-sm relative z-10 p-2 desktop:p-0 overflow-hidden"
+              initial={{ opacity: 0, y: 50 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+              viewport={{ once: true }}
+            >
+              {/* Desktop Version */}
+              <div className="hidden desktop:block w-full overflow-visible">
+                <table className="w-full border-collapse table-layout-fixed">
+                  <thead>
+                    {/* Row 1: Plan Names */}
+                    <tr className="bg-gray-50/50 dark:bg-black/20">
+                      <th className="p-4 text-left border-b border-gray-200 dark:border-white/10 w-[25%] sticky left-0 bg-gray-50 dark:bg-[#1A2015] z-20">
+                        <div className="flex flex-col">
+                          <span className="text-[10px] font-semibold text-lime-600 dark:text-lime-400 uppercase tracking-widest mb-0.5">CVCircle Plans</span>
+                          <span className="text-lg font-bold text-gray-900 dark:text-white">Compare Features</span>
+                        </div>
+                      </th>
+                      {filteredPlans.map((plan) => {
+                        const isPopular = plan.isPopular;
+                        const isBestValue = plan.isBestValue;
+                        return (
+                          <th
+                            key={`header-${plan.key}`}
+                            className={`p-4 text-center align-middle w-[15%] border-b border-gray-200 dark:border-white/10 ${
+                              isPopular ? 'bg-lime-500/[0.03] dark:bg-lime-400/[0.02] border-x border-lime-500/30' : ''
+                            }`}
+                          >
+                            <div className="flex flex-col items-center justify-center">
+                              {/* Badge */}
+                              {isPopular && (
+                                <span className="bg-lime-500 dark:bg-lime-400 text-white dark:text-gray-900 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full mb-1.5 shadow-md">
+                                  Most Popular
+                                </span>
+                              )}
+                              {isBestValue && (
+                                <span className="bg-blue-500 text-white text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full mb-1.5 shadow-md">
+                                  Best Value
+                                </span>
+                              )}
+                              {!isPopular && !isBestValue && <div className="h-[19px] mb-1.5" />}
+                              <h3 className="text-sm font-bold text-gray-900 dark:text-white">{plan.name}</h3>
+                            </div>
+                          </th>
+                        );
+                      })}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {comparisonFeatures.map((row, rowIndex) => (
+                      <tr
+                        key={rowIndex}
+                        className="group hover:bg-gray-50/50 dark:hover:bg-[#81ff00]/[0.02] transition-colors"
+                      >
+                        <td className="p-4 text-sm font-semibold text-gray-800 dark:text-white/90 border-b border-gray-200 dark:border-white/10 text-left sticky left-0 bg-white dark:bg-[#1A2015] z-10 group-hover:bg-gray-50/80 dark:group-hover:bg-[#20291d] transition-colors duration-200 w-[25%]">
+                          {row.name}
+                        </td>
+
+                        {filteredPlans.map((plan) => {
+                          const value = (row as any)[plan.key];
+                          const isPopular = plan.isPopular;
+
+                          return (
+                            <td
+                              key={`${plan.key}-${rowIndex}`}
+                              className={`p-4 text-center border-b border-gray-200 dark:border-white/10 text-xs font-medium text-gray-600 dark:text-white/70 w-[15%] ${
+                                isPopular ? 'bg-lime-500/[0.015] dark:bg-lime-400/[0.01] border-x border-lime-500/20' : ''
+                              }`}
+                            >
+                              {value === '✓' ? (
+                                <Check className="w-5 h-5 text-lime-500 mx-auto" />
+                              ) : value === '✗' ? (
+                                <span className="text-gray-300 dark:text-white/10 font-bold">—</span>
+                              ) : (
+                                <span className="inline-block px-2.5 py-1 rounded-full bg-gray-100 dark:bg-white/5 text-gray-800 dark:text-white/80 font-medium text-center">
+                                  {value}
+                                </span>
+                              )}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    {/* Row 2: Prices */}
+                    <tr className="bg-gray-50/30 dark:bg-black/10 border-t border-gray-200 dark:border-white/10">
+                      <td className="p-4 border-b border-gray-200 dark:border-white/10 w-[25%] bg-gray-50 dark:bg-[#1A2015] sticky left-0 z-20 font-bold text-sm text-gray-800 dark:text-white/90">
+                        Price
+                      </td>
+                      {filteredPlans.map((plan) => {
+                        const regionalPrice = getRegionalPrice(plan);
+                        const monthlyEquivalent = getMonthlyEquivalent(plan);
+                        const isPopular = plan.isPopular;
+                        return (
+                          <td
+                            key={`price-${plan.key}`}
+                            className={`p-4 text-center align-top w-[15%] border-b border-gray-200 dark:border-white/10 ${
+                              isPopular ? 'bg-lime-500/[0.03] dark:bg-lime-400/[0.02] border-x border-lime-500/30' : ''
+                            }`}
+                          >
+                            <div className="flex flex-col items-center justify-start min-h-[64px]">
+                              {plan.key === 'free' ? (
+                                <div className="text-sm font-bold text-gray-900 dark:text-white">Free</div>
+                              ) : (
+                                <div className="flex flex-col items-center">
+                                  <span className="text-sm font-bold text-gray-900 dark:text-white leading-tight">
+                                    {monthlyEquivalent.showMonthly ? monthlyEquivalent.price : regionalPrice}
+                                    {plan.key === 'pro_monthly' ? '/month' : ''}
+                                  </span>
+                                  {monthlyEquivalent.showMonthly && (
+                                    <span className="text-[9px] text-gray-500 dark:text-white/60 mt-0.5 font-normal">
+                                      {regionalPrice} total
+                                    </span>
+                                  )}
+                                  <span className="text-[9px] text-gray-400 mt-0.5 font-normal">
+                                    {plan.key === 'pro_monthly'
+                                      ? 'recurring monthly'
+                                      : plan.key === 'pro_quarterly'
+                                        ? 'billed quarterly'
+                                        : plan.key === 'pro_yearly'
+                                          ? 'billed annually'
+                                          : 'one-time'}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                        );
+                      })}
+                    </tr>
+
+                    {/* Row 3: Action Buttons */}
+                    <tr className="bg-gray-50/30 dark:bg-black/10">
+                      <td className="p-4 border-b border-gray-200 dark:border-white/10 w-[25%] bg-gray-50 dark:bg-[#1A2015] sticky left-0 z-20" />
+                      {filteredPlans.map((plan) => {
+                        const isPopular = plan.isPopular;
+                        return (
+                          <td
+                            key={`cta-${plan.key}`}
+                            className={`p-4 text-center align-middle w-[15%] border-b border-gray-200 dark:border-white/10 ${
+                              isPopular ? 'bg-lime-500/[0.03] dark:bg-lime-400/[0.02] border-x border-lime-500/30' : ''
+                            }`}
+                          >
+                            <motion.button
+                              onClick={() => handlePlanSelect(plan)}
+                              className={`w-full py-2 px-3 text-xs font-bold rounded-lg transition-all duration-300 ${
+                                plan.key === 'free'
+                                  ? 'bg-gray-200 hover:bg-gray-300 dark:bg-white/10 dark:hover:bg-white/20 text-gray-900 dark:text-white'
+                                  : 'bg-[#81ff00] hover:bg-lime-400 text-black shadow-md hover:shadow-lime-400/20'
+                              }`}
+                              whileHover={{ scale: 1.03 }}
+                              whileTap={{ scale: 0.97 }}
+                            >
+                              {plan.key === 'free' ? 'Get Started' : 'Choose Plan'}
+                            </motion.button>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+
+              {/* Mobile Version */}
+              <div className="block desktop:hidden w-full overflow-visible">
+                {/* Pro Plan Selector */}
+                <div className="flex justify-center my-4 px-2">
+                  <div className="inline-flex p-1 rounded-xl bg-gray-100 dark:bg-black/30 border border-gray-200 dark:border-white/5 backdrop-blur-sm">
+                    {[
+                      { key: 'pro_monthly', label: 'Monthly' },
+                      { key: 'pro_quarterly', label: 'Quarterly' },
+                      { key: 'pro_yearly', label: 'Yearly' },
+                      { key: 'pro_lifetime', label: 'Lifetime' }
+                    ].map((interval) => {
+                      const isActive = selectedMobilePlanKey === interval.key;
+                      return (
+                        <button
+                          key={interval.key}
+                          onClick={() => setSelectedMobilePlanKey(interval.key)}
+                          className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 ${
+                            isActive
+                              ? 'bg-[#81ff00] text-black shadow-md'
+                              : 'text-gray-600 dark:text-white/60 hover:text-gray-900 dark:hover:text-white'
+                          }`}
+                        >
+                          {interval.label}
+                        </button>
+                      );
+                    })}
                   </div>
-                )}
-
-                {/* Plan Icon */}
-                <motion.div
-                  className={`inline-flex items-center justify-center w-12 h-12 rounded-xl mb-4 bg-gradient-to-br from-lime-400 to-lime-500 shadow-lg relative z-10`}
-                  whileHover={{
-                    scale: 1.1,
-                    rotateY: 15,
-                    boxShadow: "0 20px 40px -12px rgba(132, 204, 22, 0.5)"
-                  }}
-                  style={{
-                    transformStyle: 'preserve-3d',
-                    perspective: '1000px'
-                  }}
-                >
-                  <Icon size={24} className="text-white" />
-                </motion.div>
-
-                {/* Plan Name */}
-                <h3 className="text-base tablet:text-lg font-bold mb-3 text-gray-900 dark:text-white relative z-10">{plan.name}</h3>
-
-                {/* Plan Description */}
-                <p className="text-gray-600 dark:text-white/80 mb-4 text-xs tablet:text-xs leading-relaxed relative z-10">
-                  {plan.description}
-                </p>
-
-                {/* Pricing */}
-                <div className="mb-6 relative z-10">
-                  {plan.key === 'free' ? (
-                    <div className="text-xl tablet:text-2xl font-bold text-gray-900 dark:text-white">Free</div>
-                  ) : (
-                    <div>
-                      {hasPromo ? (
-                        <div>
-                          <div className="flex flex-col gap-1">
-                            <div className="flex items-baseline gap-2 flex-wrap">
-                              <span className="text-xl tablet:text-2xl font-bold text-gray-900 dark:text-white">
-                                {monthlyEquivalent.showMonthly ? monthlyEquivalent.price : regionalPrice}{plan.key === 'pro_monthly' ? '/month' : ''}
-                              </span>
-                              <span className="text-sm tablet:text-base text-gray-400 dark:text-white/50 line-through">
-                                {currencySymbol}{plan.price_one_time || plan.price_monthly}
-                              </span>
-                            </div>
-                            {monthlyEquivalent.showMonthly && (
-                              <div className="text-xs text-gray-500 dark:text-white/60">
-                                {regionalPrice} total
-                              </div>
-                            )}
-                          </div>
-                          <div className="text-xs tablet:text-xs text-lime-600 dark:text-lime-400 font-medium mt-1">
-                            {plan.promotionDescription || 'Limited Time Offer!'}
-                          </div>
-                        </div>
-                      ) : (
-                        <div>
-                          <div className="text-xl tablet:text-2xl font-bold text-gray-900 dark:text-white">
-                            {monthlyEquivalent.showMonthly ? monthlyEquivalent.price : regionalPrice}{plan.key === 'pro_monthly' ? '/month' : ''}
-                          </div>
-                          {monthlyEquivalent.showMonthly && (
-                            <div className="text-xs text-gray-500 dark:text-white/60 mt-1">
-                              {regionalPrice} total
-                            </div>
-                          )}
-                          {/* Savings badge */}
-                          {plan.key === 'pro_quarterly' && (
-                            <div className="text-xs text-lime-600 dark:text-lime-400 font-medium mt-1">
-                              Save <span className="bg-lime-200 dark:bg-lime-400 text-lime-800 dark:text-black px-1 rounded font-bold">10%</span> vs monthly
-                            </div>
-                          )}
-                          {plan.key === 'pro_yearly' && (
-                            <div className="text-xs text-lime-600 dark:text-lime-400 font-medium mt-1">
-                              Save <span className="bg-lime-200 dark:bg-lime-400 text-lime-800 dark:text-black px-1 rounded font-bold">25%</span> vs monthly
-                            </div>
-                          )}
-                        </div>
-                      )}
-                      <div className="text-gray-500 dark:text-white/60 text-xs tablet:text-xs mt-1">
-                        {plan.key === 'pro_monthly'
-                          ? 'recurring monthly'
-                          : plan.key === 'pro_quarterly'
-                            ? 'billed quarterly'
-                            : plan.key === 'pro_yearly'
-                              ? 'billed annually'
-                              : plan.key === 'pro_lifetime'
-                                ? 'one-time'
-                                : ''}
-                      </div>
-                    </div>
-                  )
-                  }
                 </div>
 
-                {/* Features */}
-                <ul className="space-y-3 mb-6 relative z-10 flex-grow">
-                  {plan.features.map((feature, featureIndex) => (
-                    <li key={featureIndex} className="flex items-start gap-2">
-                      <motion.div
-                        initial={{ opacity: 0, scale: 0 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: 0.5 + featureIndex * 0.1 }}
-                        whileHover={{ scale: 1.2 }}
-                      >
-                        <Check size={16} className="text-lime-600 dark:text-lime-400 flex-shrink-0 mt-0.5" />
-                      </motion.div>
-                      <span className="text-gray-700 dark:text-white/80 text-xs leading-relaxed">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
+                {/* Mobile Table */}
+                <table className="w-full border-collapse table-layout-fixed">
+                  <thead>
+                    {/* Row 1: Names */}
+                    <tr className="bg-gray-50/50 dark:bg-black/20">
+                      <th className="p-3 text-left border-b border-gray-200 dark:border-white/10 w-[40%]">
+                        <span className="text-[10px] font-bold text-gray-900 dark:text-white">Features</span>
+                      </th>
+                      <th className="p-3 text-center border-b border-gray-200 dark:border-white/10 w-[30%]">
+                        <span className="text-xs font-bold text-gray-900 dark:text-white">Free</span>
+                      </th>
+                      <th className="p-3 text-center border-b border-gray-200 dark:border-white/10 w-[30%] bg-lime-500/[0.03] dark:bg-lime-400/[0.02] border-x border-lime-500/20">
+                        <div className="flex flex-col items-center">
+                          <span className="bg-lime-500 dark:bg-lime-400 text-white dark:text-gray-900 text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full mb-1 shadow-md">
+                            Pro Choice
+                          </span>
+                          <span className="text-xs font-bold text-gray-900 dark:text-white text-center leading-tight">
+                            {selectedProPlan?.name || 'Pro'}
+                          </span>
+                        </div>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {comparisonFeatures.map((row, rowIndex) => {
+                      const freeVal = row.free;
+                      const proVal = (row as any)[selectedMobilePlanKey];
 
-                {/* Not Included Features */}
-                {plan.notIncludedFeatures && plan.notIncludedFeatures.length > 0 && (
-                  <div className="mb-4 relative z-10">
-                    <h4 className="text-xs font-medium text-gray-500 dark:text-white/60 mb-2">Not Included:</h4>
-                    <ul className="space-y-1">
-                      {plan.notIncludedFeatures.slice(0, 2).map((feature, featureIndex) => (
-                        <li key={featureIndex} className="flex items-start gap-2">
-                          <div className="w-4 h-4 rounded-full border border-gray-300 dark:border-white/30 flex items-center justify-center flex-shrink-0 mt-0.5">
-                            <div className="w-1.5 h-1.5 bg-gray-400 dark:bg-white/50 rounded-full"></div>
+                      return (
+                        <tr
+                          key={`mobile-row-${rowIndex}`}
+                          className="group hover:bg-gray-50/50 dark:hover:bg-[#81ff00]/[0.02] transition-colors"
+                        >
+                          <td className="p-3 text-xs font-semibold text-gray-800 dark:text-white/90 border-b border-gray-200 dark:border-white/10 text-left w-[40%]">
+                            {row.name}
+                          </td>
+                          <td className="p-3 text-center border-b border-gray-200 dark:border-white/10 text-[10px] font-medium text-gray-600 dark:text-white/70 w-[30%]">
+                            {renderFeatureVal(freeVal)}
+                          </td>
+                          <td className="p-3 text-center border-b border-gray-200 dark:border-white/10 text-[10px] font-medium text-gray-600 dark:text-white/70 bg-lime-500/[0.015] dark:bg-lime-400/[0.01] border-x border-lime-500/20 w-[30%]">
+                            {renderFeatureVal(proVal)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                  <tfoot>
+                    {/* Row 2: Prices */}
+                    <tr className="bg-gray-50/30 dark:bg-black/10 border-t border-gray-200 dark:border-white/10">
+                      <td className="p-3 text-xs font-bold text-gray-800 dark:text-white/90 border-b border-gray-200 dark:border-white/10 text-left w-[40%]">
+                        Price
+                      </td>
+                      <td className="p-3 text-center border-b border-gray-200 dark:border-white/10 w-[30%] align-top">
+                        <div className="text-sm font-bold text-gray-900 dark:text-white">Free</div>
+                      </td>
+                      <td className="p-3 text-center border-b border-gray-200 dark:border-white/10 w-[30%] bg-lime-500/[0.03] dark:bg-lime-400/[0.02] border-x border-lime-500/20 align-top">
+                        {selectedProPlan && (
+                          <div className="flex flex-col items-center min-h-[48px]">
+                            <span className="text-xs font-bold text-gray-900 dark:text-white text-center">
+                              {getMobilePlanPriceDisplay(selectedProPlan)}
+                            </span>
+                            {getMobilePlanSubtext(selectedProPlan)}
                           </div>
-                          <span className="text-gray-500 dark:text-white/60 text-xs">{feature}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
+                        )}
+                      </td>
+                    </tr>
 
-                {/* CTA Button */}
-                <motion.button
-                  onClick={() => handlePlanSelect(plan)}
-                  className="w-full py-3 px-4 bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-gray-900 font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg relative z-10"
-                  whileHover={{
-                    scale: 1.05,
-                    boxShadow: "0 20px 40px -12px rgba(132, 204, 22, 0.5)"
-                  }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  {plan.key === 'free' ? 'Get Started Free' : 'Choose Plan'}
-                  <ArrowRight size={16} className="inline-block ml-2" />
-                </motion.button>
-              </motion.div>
-            );
-          })}
-        </motion.div >
+                    {/* Row 3: CTA */}
+                    <tr className="bg-gray-50/30 dark:bg-black/10">
+                      <td className="p-2 border-b border-gray-200 dark:border-white/10 w-[40%]" />
+                      <td className="p-2 text-center border-b border-gray-200 dark:border-white/10 w-[30%] align-middle">
+                        {freePlan && (
+                          <motion.button
+                            onClick={() => handlePlanSelect(freePlan)}
+                            className="w-full py-1.5 px-2 text-[10px] font-bold rounded-md bg-gray-200 hover:bg-gray-300 dark:bg-white/10 dark:hover:bg-white/20 text-gray-900 dark:text-white"
+                            whileHover={{ scale: 1.03 }}
+                            whileTap={{ scale: 0.97 }}
+                          >
+                            Get Started
+                          </motion.button>
+                        )}
+                      </td>
+                      <td className="p-2 text-center border-b border-gray-200 dark:border-white/10 w-[30%] bg-lime-500/[0.03] dark:bg-lime-400/[0.02] border-x border-lime-500/20 align-middle">
+                        {selectedProPlan && (
+                          <motion.button
+                            onClick={() => handlePlanSelect(selectedProPlan)}
+                            className="w-full py-1.5 px-2 text-[10px] font-bold rounded-md bg-[#81ff00] hover:bg-lime-400 text-black shadow-sm hover:shadow-lime-400/20"
+                            whileHover={{ scale: 1.03 }}
+                            whileTap={{ scale: 0.97 }}
+                          >
+                            Choose Plan
+                          </motion.button>
+                        )}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </motion.div>
+          );
+        })()}
 
         {/* Bottom CTA */}
         <motion.div

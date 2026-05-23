@@ -99,9 +99,12 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
   };
 
   const handleSignIn = async (formData: Record<string, string>) => {
+    // Clear previous states immediately
+    setError('');
+    setSuccess('');
+    
     try {
       // Verify credentials and check for 2FA
-      // This single call handles: user not found, email not verified, wrong password, 2FA
       const verifyResponse = await fetch('/api/auth/verify-credentials', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -117,17 +120,15 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
       if (!verifyResult.success) {
         // Handle specific error codes
         if (verifyResult.code === 'EMAIL_NOT_VERIFIED') {
-          // User exists but is not verified, route to verification
           setEmail(formData.email);
           setVerificationType('email-verification');
-          // Send verification code
           await handleSendCode(formData.email, 'email-verification');
-          setSuccess('Account not verified. Please enter the verification code sent to your email.');
+          setSuccess('Account not verified. Verification code sent.');
           return;
         }
 
         if (verifyResult.code === 'OAUTH_USER') {
-          setError('This account uses Google sign-in. Please use the "Continue with Google" button.');
+          setError('Please use the "Continue with Google" button.');
           return;
         }
 
@@ -137,33 +138,28 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
 
       // Check if 2FA is required
       if (verifyResult.requiresTwoFactor && verifyResult.sessionId) {
-        // Store 2FA session info and switch to 2FA verification mode
         setTwoFactorSessionId(verifyResult.sessionId);
         setTwoFactorUserId(verifyResult.userId);
         setEmail(formData.email);
-        setVerificationType('passwordless-login'); // Reuse existing verification screen
+        setVerificationType('passwordless-login');
         setMode('verify-code');
         setSuccess('Please enter the 4-digit code sent to your email.');
         return;
       }
 
       // No 2FA required - proceed with normal NextAuth sign-in
-      const signInPromise = signIn('credentials', {
+      const result = await signIn('credentials', {
         email: formData.email,
         password: formData.password,
         portal: layoutVariant,
         redirect: false,
       });
 
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Sign in request timed out')), 30000)
-      );
-
-      const result = await Promise.race([signInPromise, timeoutPromise]) as any;
-
       if (result?.ok) {
+        // Clear errors first
+        setError('');
         setSuccess('Sign in successful! Redirecting...');
-        // Identify and track sign-in
+        
         if (verifyResult.user) {
           const u = verifyResult.user;
           posthog.identify(u.id || u._id, {
@@ -175,22 +171,23 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
             email: u.email,
           });
         }
-        // Determine redirect URL based on user role
+        
         const redirectUrl = await determineRedirectUrl(verifyResult.user, callbackUrl);
-        setTimeout(() => {
-          if (!isModal) {
-            window.location.href = redirectUrl;
-          }
-        }, 1000);
+        // Force immediate redirection if possible to avoid state flashes
+        if (!isModal) {
+          window.location.assign(redirectUrl);
+        }
       } else {
+        // Sign in failed, show error and ensure success is empty
+        setSuccess('');
         let errorMessage = 'Invalid email or password.';
 
         if (result?.error === 'CredentialsSignin') {
           errorMessage = 'Invalid email or password. Please check your credentials.';
         } else if (result?.error === 'Configuration') {
-          errorMessage = 'Authentication service is temporarily unavailable. Please try again later.';
+          errorMessage = 'Service unavailable. Please try again.';
         } else if (result?.error === 'AccessDenied') {
-          errorMessage = 'Access denied. Please contact support if this persists.';
+          errorMessage = 'Access denied. Please contact support.';
         } else if (result?.error) {
           errorMessage = result.error;
         }
@@ -198,12 +195,9 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
         setError(errorMessage);
       }
     } catch (error: any) {
+      setSuccess('');
       console.error('❌ Sign in error:', error);
-      if (error.message === 'Sign in request timed out') {
-        setError('Sign in request timed out. Please try again.');
-      } else {
-        setError('Sign in failed. Please try again.');
-      }
+      setError('Sign in failed. Please try again.');
     }
   };
 

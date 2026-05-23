@@ -57,7 +57,7 @@ export default function BlogSection() {
             CVCircle Career Journal
           </div>
           <MotionH2 className="text-3xl md:text-5xl font-bold text-white mb-4 leading-tight">
-            Research-Backed <span className="text-[#81ff00]">Career Advice</span>
+            Outsmart the ATS. <span className="text-[#81ff00]">Get the Interview.</span>
           </MotionH2>
           <p className="text-lg text-gray-400 max-w-2xl mx-auto leading-relaxed">
             Expert guides on CV building, ATS optimization, and job search strategy — written by the CVCircle research team.

@@ -30,10 +30,10 @@ export async function getRegionalPricingFromDB(countryCode: string): Promise<Reg
     return {
       currency: countryPricing.currency,
       currencySymbol: countryPricing.currencySymbol,
-      monthly: countryPricing.planPrices.monthly.price,
-      quarterly: countryPricing.planPrices.quarterly.price,
-      yearly: countryPricing.planPrices.yearly.price,
-      lifetime: countryPricing.planPrices.lifetime.price,
+      monthly: countryPricing.planPrices?.monthly?.price ?? 0,
+      quarterly: countryPricing.planPrices?.quarterly?.price ?? 0,
+      yearly: countryPricing.planPrices?.yearly?.price ?? 0,
+      lifetime: countryPricing.planPrices?.lifetime?.price ?? 0,
     };
   } catch (error) {
     console.error('Error fetching regional pricing from database:', error);
