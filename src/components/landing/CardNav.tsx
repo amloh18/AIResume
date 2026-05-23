@@ -164,7 +164,7 @@ const CardNav = ({
             {!isBusinessRoute && (
               <button
                 type="button"
-                className="card-nav-business-button hidden md:flex h-[40px]"
+                className="card-nav-business-button hidden md:flex h-[68px]"
                 onClick={() => scrollToSection('/business', true)}
               >
                 Business
@@ -173,7 +173,7 @@ const CardNav = ({
 
             <button
               type="button"
-              className="card-nav-cta-button h-[40px]"
+              className="card-nav-cta-button h-[68px]"
               onClick={handleCtaClick}
             >
               Login

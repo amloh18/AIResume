@@ -7,7 +7,14 @@ export async function POST(request: NextRequest) {
       cvData,
       jobData,
       recipientName,
-      companyName
+      companyName,
+      tone,
+      length,
+      creativity,
+      personalization,
+      skipExperience,
+      skipProjects,
+      mode
     } = await request.json();
 
     if (!cvData || !jobData) {
@@ -17,11 +24,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Pass all configuration params to the service
     const { structuredContent, legacyBody } = await aiCoverLetterService.generateModularCoverLetter({
       cvData,
       jobData,
       recipientName,
-      companyName
+      companyName,
+      tone,
+      length: typeof length === 'number' ? (length > 70 ? 'Long' : length < 30 ? 'Short' : 'Medium') : length,
+      creativity,
+      personalization,
+      skipExperience,
+      skipProjects,
+      mode
     });
 
     return NextResponse.json({
