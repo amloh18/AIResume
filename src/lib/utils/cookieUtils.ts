@@ -2,7 +2,7 @@
  * Cookie utility functions for managing user consent and preferences
  */
 
-export type CookieConsentStatus = 'accepted' | 'declined' | null;
+export type CookieConsentStatus = 'accepted' | 'declined' | 'customized' | null;
 
 export interface CookiePreferences {
   necessary: boolean;
@@ -25,10 +25,10 @@ export function getCookieConsentStatus(): CookieConsentStatus {
   if (typeof window === 'undefined') return null;
   
   try {
-  const status = localStorage.getItem('cookieConsent');
+    const status = localStorage.getItem('cookieConsent');
     // Validate that the status is a valid value
-    if (status === 'accepted' || status === 'declined') {
-  return status as CookieConsentStatus;
+    if (status === 'accepted' || status === 'declined' || status === 'customized') {
+      return status as CookieConsentStatus;
     }
     return null;
   } catch (error) {
@@ -44,7 +44,7 @@ export function setCookieConsentStatus(status: CookieConsentStatus): void {
   if (typeof window === 'undefined') return;
   
   try {
-    if (status && (status === 'accepted' || status === 'declined')) {
+    if (status && (status === 'accepted' || status === 'declined' || status === 'customized')) {
       localStorage.setItem('cookieConsent', status);
       // Also set an expiry date (1 year from now) to ensure persistence
       const expiryDate = new Date();
@@ -74,6 +74,26 @@ export function getCookiePreferences(): CookiePreferences {
     }
   }
   
+  // If user accepted all, return all true
+  if (getCookieConsentStatus() === 'accepted') {
+    return {
+      necessary: true,
+      analytics: true,
+      marketing: true,
+      preferences: true
+    };
+  }
+
+  // If user declined all, return only necessary
+  if (getCookieConsentStatus() === 'declined') {
+    return {
+      necessary: true,
+      analytics: false,
+      marketing: false,
+      preferences: false
+    };
+  }
+  
   return DEFAULT_COOKIE_PREFERENCES;
 }
 
@@ -84,9 +104,10 @@ export function setCookiePreferences(preferences: Partial<CookiePreferences>): v
   if (typeof window === 'undefined') return;
   
   const currentPreferences = getCookiePreferences();
-  const newPreferences = { ...currentPreferences, ...preferences };
+  const newPreferences = { ...currentPreferences, ...preferences, necessary: true };
   
   localStorage.setItem('cookiePreferences', JSON.stringify(newPreferences));
+  setCookieConsentStatus('customized');
 }
 
 /**
@@ -94,9 +115,11 @@ export function setCookiePreferences(preferences: Partial<CookiePreferences>): v
  */
 export function isAnalyticsAllowed(): boolean {
   const status = getCookieConsentStatus();
-  const preferences = getCookiePreferences();
+  if (status === 'accepted') return true;
+  if (status === 'declined') return false;
   
-  return status === 'accepted' && preferences.analytics;
+  const preferences = getCookiePreferences();
+  return preferences.analytics;
 }
 
 /**
@@ -104,9 +127,11 @@ export function isAnalyticsAllowed(): boolean {
  */
 export function isMarketingAllowed(): boolean {
   const status = getCookieConsentStatus();
-  const preferences = getCookiePreferences();
+  if (status === 'accepted') return true;
+  if (status === 'declined') return false;
   
-  return status === 'accepted' && preferences.marketing;
+  const preferences = getCookiePreferences();
+  return preferences.marketing;
 }
 
 /**
@@ -117,6 +142,7 @@ export function clearCookiePreferences(): void {
   
   localStorage.removeItem('cookieConsent');
   localStorage.removeItem('cookiePreferences');
+  localStorage.removeItem('cookieConsentExpiry');
 }
 
 /**
@@ -125,9 +151,8 @@ export function clearCookiePreferences(): void {
 export function initializeAnalytics(): void {
   if (typeof window === 'undefined' || !isAnalyticsAllowed()) return;
   
-  // Initialize Google Analytics or other analytics tools here
-  // This is a placeholder for when you add analytics
-  // Analytics initialization is silent in production
+  // This is where you'd trigger GA or other trackers
+  console.log('📊 Analytics initialized based on consent');
 }
 
 /**
@@ -136,8 +161,6 @@ export function initializeAnalytics(): void {
 export function initializeMarketing(): void {
   if (typeof window === 'undefined' || !isMarketingAllowed()) return;
   
-  // Initialize marketing tools here
-  // This is a placeholder for when you add marketing tools
-  // Marketing tools initialization is silent in production
+  // This is where you'd trigger FB Pixel, etc.
+  console.log('🎯 Marketing tools initialized based on consent');
 }
-

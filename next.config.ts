@@ -55,17 +55,7 @@ const nextConfig: NextConfig = {
       );
     }
 
-    // Define environment variables for webpack
-    config.plugins.push(
-      new webpack.DefinePlugin({
-        'process.env.NEXTAUTH_URL': JSON.stringify(process.env.NEXTAUTH_URL || 'http://localhost:3000'),
-        'process.env.NEXTAUTH_SECRET': JSON.stringify(process.env.NEXTAUTH_SECRET || 'fallback-secret-key-for-development'),
-        'process.env.MONGODB_URI': JSON.stringify(process.env.MONGODB_URI || ''),
-        'process.env.GOOGLE_CLIENT_ID': JSON.stringify(process.env.GOOGLE_CLIENT_ID || ''),
-        'process.env.GOOGLE_CLIENT_SECRET': JSON.stringify(process.env.GOOGLE_CLIENT_SECRET || ''),
-        'process.env.JWT_SECRET': JSON.stringify(process.env.JWT_SECRET || ''),
-      })
-    );
+
 
     // Fix jose library compatibility with Next.js 15
     if (isServer) {
@@ -103,7 +93,12 @@ const nextConfig: NextConfig = {
       }
     }
 
-    // Exclude Sentry from Edge Runtime
+    // For Edge Runtime builds (middleware), exclude Sentry
+    const isMiddlewareBuild = config.entry && typeof config.entry === 'object' &&
+      Object.keys(config.entry).some(key =>
+        key.includes('middleware') || key.includes('edge')
+      );
+
     const sentryAliases = {
       '@sentry/nextjs': false,
       '@sentry/node': false,
@@ -123,9 +118,11 @@ const nextConfig: NextConfig = {
 
     // Legacy component aliases removed - components have been migrated
 
-    // Apply Sentry exclusions (but ensure React/React-DOM are NEVER excluded)
+    // Apply Sentry exclusions only for Edge Runtime builds (middleware)
     // React must always be available for client components
-    Object.assign(config.resolve.alias, sentryAliases);
+    if (isMiddlewareBuild) {
+      Object.assign(config.resolve.alias, sentryAliases);
+    }
 
     // Explicitly ensure React is never aliased to false or excluded
     // This is critical - React must always be available
@@ -140,13 +137,7 @@ const nextConfig: NextConfig = {
     // This fixes "Cannot read properties of null (reading 'useState')" errors
     // For client builds, React must ALWAYS be bundled, never externalized
 
-    // For Edge Runtime builds (middleware), exclude instrumentation and Sentry completely
-    // Vercel's Edge bundler analyzes all files, so we need to be aggressive
-    const isMiddlewareBuild = config.entry && typeof config.entry === 'object' &&
-      Object.keys(config.entry).some(key =>
-        key.includes('middleware') || key.includes('edge')
-      );
-
+    // For Edge Runtime builds (middleware) or client builds, exclude instrumentation completely
     if (isMiddlewareBuild || !isServer) {
       // Exclude instrumentation from Edge builds
       config.resolve.alias['./instrumentation'] = false;
@@ -344,21 +335,6 @@ const nextConfig: NextConfig = {
         ],
       },
     ]
-  },
-  // Environment variables for Next.js
-  env: {
-    NEXTAUTH_URL: process.env.NEXTAUTH_URL || 'http://localhost:3000',
-    NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET || 'fallback-secret-key-for-development',
-    MONGODB_URI: process.env.MONGODB_URI || '',
-    GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || '',
-    GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET || '',
-    EMAIL_SERVER_HOST: process.env.EMAIL_SERVER_HOST || '',
-    EMAIL_SERVER_PORT: process.env.EMAIL_SERVER_PORT || '',
-    EMAIL_SERVER_USER: process.env.EMAIL_SERVER_USER || '',
-    EMAIL_SERVER_PASSWORD: process.env.EMAIL_SERVER_PASSWORD || '',
-    JWT_SECRET: process.env.JWT_SECRET || '',
-    GEMINI_API_KEY: process.env.GEMINI_API_KEY || '',
-    PERPLEXITY_API_KEY: process.env.PERPLEXITY_API_KEY || '',
   },
   // Performance optimizations
   compiler: {

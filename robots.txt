@@ -4,16 +4,11 @@
 # NOTE: This file is a copy for project root visibility.
 # The actual file served by Next.js is in: public/robots.txt
 # Next.js serves files from public/ directory at the root URL
-#
-# In Next.js, files in public/ are automatically served from root:
-# - public/robots.txt → accessible at /robots.txt
-# - public/llm.txt → accessible at /llm.txt
 
-# Allow all search engines
 User-agent: *
 Allow: /
 
-# Disallow admin and API routes (security and privacy)
+# Disallow sensitive or non-public areas
 Disallow: /admin/
 Disallow: /api/
 Disallow: /_next/
@@ -26,64 +21,33 @@ Disallow: /force-logout/
 Disallow: /welcome/
 Disallow: /demo-master-cv/
 
-# Allow important public pages (SEO-optimized)
+# SEO-optimized public pages
 Allow: /
-Allow: /ai-career-report
 Allow: /features
 Allow: /templates
-Allow: /sign-in
-Allow: /sign-up
-Allow: /privacy-policy
-Allow: /terms
-Allow: /cookie-policy
+Allow: /blog/
+Allow: /resume/
+Allow: /ai-resume-builder
+Allow: /ats-resume-checker
+Allow: /resume-score
+Allow: /ai-career-report
 
-# Allow static assets
-Allow: /images/
-Allow: /icons/
-Allow: /templates/
-Allow: /favicon.ico
-Allow: /robots.txt
-Allow: /sitemap.xml
+# AI Crawlers
+User-agent: GPTBot
+Allow: /
 Allow: /llm.txt
 
-# Crawl-delay for respectful crawling
-Crawl-delay: 1
-
-# Specific rules for major search engines
-User-agent: Googlebot
+User-agent: ChatGPT-User
 Allow: /
-Disallow: /admin/
-Disallow: /api/
-Disallow: /studio/
-Disallow: /dashboard/
-Disallow: /profile/
+Allow: /llm.txt
 
-User-agent: Bingbot
+User-agent: Claude-Web
 Allow: /
-Disallow: /admin/
-Disallow: /api/
-Disallow: /studio/
-Disallow: /dashboard/
-Disallow: /profile/
+Allow: /llm.txt
 
-User-agent: Slurp
+User-agent: Google-Extended
 Allow: /
-Disallow: /admin/
-Disallow: /api/
-Disallow: /studio/
-Disallow: /dashboard/
-Disallow: /profile/
-
-# Block bad bots
-User-agent: AhrefsBot
-Disallow: /
-
-User-agent: SemrushBot
-Disallow: /
-
-User-agent: MJ12bot
-Disallow: /
+Allow: /llm.txt
 
 # Sitemap location
 Sitemap: https://cvcircle.io/sitemap.xml
-

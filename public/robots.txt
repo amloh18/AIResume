@@ -1,11 +1,13 @@
 # robots.txt for CVCircle.io
 # AI-Powered CV Builder and Job Application Management Platform
 
-# Allow all search engines
+# -----------------------------------------------------------------------------
+# USER AGENT: ALL
+# -----------------------------------------------------------------------------
 User-agent: *
 Allow: /
 
-# Disallow admin and API routes (security and privacy)
+# Disallow sensitive or non-public areas
 Disallow: /admin/
 Disallow: /api/
 Disallow: /_next/
@@ -18,30 +20,62 @@ Disallow: /force-logout/
 Disallow: /welcome/
 Disallow: /demo-master-cv/
 
-# Allow important public pages (SEO-optimized)
+# SEO-optimized public pages
 Allow: /
-Allow: /ai-career-report
 Allow: /features
 Allow: /templates
-Allow: /sign-in
-Allow: /sign-up
+Allow: /blog/
+Allow: /resume/
+Allow: /ai-resume-builder
+Allow: /ats-resume-checker
+Allow: /resume-score
+Allow: /ai-career-report
+
+# Legal and static assets
 Allow: /privacy-policy
 Allow: /terms
 Allow: /cookie-policy
-
-# Allow static assets
 Allow: /images/
 Allow: /icons/
-Allow: /templates/
 Allow: /favicon.ico
 Allow: /robots.txt
 Allow: /sitemap.xml
 Allow: /llm.txt
 
-# Crawl-delay for respectful crawling
-Crawl-delay: 1
+# -----------------------------------------------------------------------------
+# USER AGENT: AI CRAWLERS (GPT, Claude, Gemini, etc.)
+# -----------------------------------------------------------------------------
+# Allow major AI crawlers to index our public value proposition
+User-agent: GPTBot
+Allow: /
+Allow: /llm.txt
+Disallow: /admin/
+Disallow: /api/
+Disallow: /dashboard/
 
-# Specific rules for major search engines
+User-agent: ChatGPT-User
+Allow: /
+Allow: /llm.txt
+
+User-agent: Claude-Web
+Allow: /
+Allow: /llm.txt
+
+User-agent: anthropic-ai
+Allow: /
+Allow: /llm.txt
+
+User-agent: Google-Extended
+Allow: /
+Allow: /llm.txt
+
+User-agent: CCBot
+Allow: /
+Allow: /llm.txt
+
+# -----------------------------------------------------------------------------
+# USER AGENT: SEARCH ENGINES
+# -----------------------------------------------------------------------------
 User-agent: Googlebot
 Allow: /
 Disallow: /admin/
@@ -58,15 +92,9 @@ Disallow: /studio/
 Disallow: /dashboard/
 Disallow: /profile/
 
-User-agent: Slurp
-Allow: /
-Disallow: /admin/
-Disallow: /api/
-Disallow: /studio/
-Disallow: /dashboard/
-Disallow: /profile/
-
-# Block bad bots
+# -----------------------------------------------------------------------------
+# USER AGENT: BAD BOTS (Blocked)
+# -----------------------------------------------------------------------------
 User-agent: AhrefsBot
 Disallow: /
 
@@ -74,6 +102,15 @@ User-agent: SemrushBot
 Disallow: /
 
 User-agent: MJ12bot
+Disallow: /
+
+User-agent: DotBot
+Disallow: /
+
+User-agent: Rogerbot
+Disallow: /
+
+User-agent: Exabot
 Disallow: /
 
 # Sitemap location
