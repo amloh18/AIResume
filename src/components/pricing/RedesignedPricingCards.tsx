@@ -64,19 +64,29 @@ const RedesignedPricingCards: React.FC<RedesignedPricingCardsProps> = ({
 
   // Group plans into categories
   const essentialPlans = safePlans.filter(plan =>
-    plan.key === 'free'
+    plan.key === 'free' || plan.key === 'starter_monthly' || plan.key === 'starter_yealry'
   );
   const proPlans = safePlans.filter(plan =>
+    plan.key === 'focused_monthly' || plan.key === 'focused_yearly' || 
+    plan.key === 'smart_quaterly' || plan.key === 'smart_yearly' ||
     plan.key === 'pro_monthly' || plan.key === 'pro_quarterly' || plan.key === 'pro_yearly' || plan.key === 'pro_lifetime'
   );
 
   const getPlanIcon = (key: string) => {
     switch (key) {
       case 'free':
+      case 'starter_monthly':
         return <Zap className="w-6 h-6" />;
+      case 'starter_yealry':
+        return <Star className="w-6 h-6" />;
+      case 'focused_monthly':
+      case 'focused_yearly':
       case 'pro_monthly':
       case 'pro_quarterly':
       case 'pro_yearly':
+        return <Crown className="w-6 h-6" />;
+      case 'smart_quaterly':
+      case 'smart_yearly':
       case 'pro_lifetime':
         return <Crown className="w-6 h-6" />;
       default:
@@ -85,7 +95,14 @@ const RedesignedPricingCards: React.FC<RedesignedPricingCardsProps> = ({
   };
 
   const getPlanPrice = (plan: PricingPlan) => {
-    if (plan.key === 'free') return 0;
+    if (plan.key === 'free' || plan.key === 'starter_monthly') return 0;
+    if (plan.key === 'starter_yealry') return 19.99;
+    if (plan.key === 'focused_monthly') return 9.99;
+    if (plan.key === 'focused_yearly') return 79.99;
+    if (plan.key === 'smart_quaterly') return 59.99;
+    if (plan.key === 'smart_yearly') return 199.00;
+
+    // Legacy fallbacks
     if (plan.key === 'pro_monthly') return plan.price_monthly || 0;
     if (plan.key === 'pro_quarterly') return plan.price_quarterly || 0;
     if (plan.key === 'pro_yearly') return plan.price_yearly || 0;
@@ -97,6 +114,18 @@ const RedesignedPricingCards: React.FC<RedesignedPricingCardsProps> = ({
     switch (plan.key) {
       case 'free':
         return '';
+      case 'starter_monthly':
+        return '/ mo';
+      case 'starter_yealry':
+        return '/ yr';
+      case 'focused_monthly':
+        return '/ mo';
+      case 'focused_yearly':
+        return '/ yr';
+      case 'smart_quaterly':
+        return '/ quarter';
+      case 'smart_yearly':
+        return '/ yr';
       case 'pro_monthly':
         return '/ mo';
       case 'pro_quarterly':
@@ -111,7 +140,10 @@ const RedesignedPricingCards: React.FC<RedesignedPricingCardsProps> = ({
   };
 
   const getPlanColor = (plan: PricingPlan) => {
-    if (plan.key === 'free') return 'from-gray-500 to-gray-600';
+    if (plan.key === 'free' || plan.key === 'starter_monthly') return 'from-gray-500 to-gray-600';
+    if (plan.key === 'starter_yealry') return 'from-lime-500 to-lime-600';
+    if (plan.key === 'focused_monthly' || plan.key === 'focused_yearly') return 'from-blue-500 to-indigo-600';
+    if (plan.key === 'smart_quaterly' || plan.key === 'smart_yearly') return 'from-purple-500 to-pink-600';
     if (plan.key === 'pro_monthly') return 'from-blue-500 to-indigo-600';
     if (plan.key === 'pro_quarterly') return 'from-emerald-500 to-teal-600';
     if (plan.key === 'pro_yearly') return 'from-purple-500 to-pink-600';
@@ -122,11 +154,11 @@ const RedesignedPricingCards: React.FC<RedesignedPricingCardsProps> = ({
   const getCardStyle = (plan: PricingPlan) => {
     const baseStyle = "relative bg-white dark:bg-gray-800 rounded-2xl border transition-all duration-300";
 
-    if (plan.isBestValue) {
+    if (plan.isBestValue || plan.key === 'smart_yearly') {
       return `${baseStyle} border-emerald-200 dark:border-emerald-800 shadow-lg shadow-emerald-500/20`;
     }
 
-    if (plan.isPopular) {
+    if (plan.isPopular || plan.key === 'focused_yearly') {
       return `${baseStyle} border-blue-200 dark:border-blue-800 shadow-lg shadow-blue-500/20`;
     }
 
@@ -173,9 +205,23 @@ const RedesignedPricingCards: React.FC<RedesignedPricingCardsProps> = ({
 
           {/* Pricing */}
           <div className="text-center mb-8">
-            <div className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
-              {plan.key === 'free' ? 'Free' : `$${price}`}
-            </div>
+            {plan.key === 'free' || plan.key === 'starter_monthly' ? (
+              <div className="text-4xl font-bold text-gray-900 dark:text-white mb-2">Free</div>
+            ) : plan.key === 'starter_yealry' ? (
+              <div className="text-4xl font-bold text-gray-900 dark:text-white mb-2 flex items-center justify-center gap-2">
+                <span className="text-xl text-gray-400 dark:text-gray-500 line-through font-semibold">$39.99</span>
+                <span>$19.99</span>
+              </div>
+            ) : (
+              <div className="text-4xl font-bold text-gray-900 dark:text-white mb-2 flex items-center justify-center gap-2">
+                {plan.isPromotionActive && plan.effectivePrice && (
+                  <span className="text-xl text-gray-400 dark:text-gray-500 line-through font-semibold">
+                    ${plan.price_yearly || plan.price_monthly || plan.price_quarterly || plan.price_one_time}
+                  </span>
+                )}
+                <span>${price}</span>
+              </div>
+            )}
             <div className="text-gray-600 dark:text-gray-300 text-sm">
               {getBillingText(plan)}
             </div>
@@ -200,13 +246,13 @@ const RedesignedPricingCards: React.FC<RedesignedPricingCardsProps> = ({
             <div className="grid grid-cols-2 gap-4 text-center">
               <div>
                 <div className="text-lg font-semibold text-gray-900 dark:text-white">
-                  {plan.maxJourneys === -1 ? '∞' : plan.maxJourneys || (plan.key === 'free' ? '1' : plan.key === 'pro_monthly' ? '10' : '∞')}
+                  {plan.key === 'free' || plan.key === 'starter_monthly' ? '3' : '∞'}
                 </div>
                 <div className="text-xs text-gray-600 dark:text-gray-300">Journey CVs</div>
               </div>
               <div>
                 <div className="text-lg font-semibold text-gray-900 dark:text-white">
-                  {plan.maxJobs === -1 ? '∞' : plan.maxJobs || (plan.key === 'free' ? '3' : '∞')}
+                  {plan.key === 'free' || plan.key === 'starter_monthly' ? '3' : plan.key === 'starter_yealry' ? '0' : '∞'}
                 </div>
                 <div className="text-xs text-gray-600 dark:text-gray-300">Jobs</div>
               </div>

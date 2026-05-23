@@ -1,7 +1,7 @@
 'use client';
 
 import React, { Suspense, useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { useUnifiedAuth, getUserIdForAPI } from '@/lib/hooks/useUnifiedAuth';
 import { ResumeEnhancerProvider } from '@/contexts/ResumeEnhancerContext';
 import { JobJourneyProvider } from '@/contexts/JobJourneyContext';
@@ -13,6 +13,7 @@ import LoadingAnimation from '@/components/ui/LoadingAnimation';
 import guestCVService from '@/lib/services/guestCVService';
 
 function ResumeEnhancerPageContent() {
+  const router = useRouter();
   const { user, loading: authLoading, isAuthenticated } = useUnifiedAuth();
   const searchParams = useSearchParams();
   const [isGuestMode, setIsGuestMode] = useState(false);
@@ -47,6 +48,40 @@ function ResumeEnhancerPageContent() {
   // Automatically determine mode if type or ids are present
   if (typeParam === 'cv' && cvId && mode === 'create') mode = 'edit';
   if ((typeParam === 'cl' || clId) && mode === 'create') mode = 'edit-cover-letter';
+
+  const docParam = searchParams.get('doc');
+  const [isRedirecting, setIsRedirecting] = useState(docParam === 'master-cv');
+
+  // Intercept doc=master-cv query parameter and fetch user's Master CV
+  useEffect(() => {
+    const handleMasterCVRedirect = async () => {
+      if (authLoading) return;
+      
+      if (docParam === 'master-cv') {
+        if (!isAuthenticated) {
+          // If not authenticated, let RouteGuard/Auth Modal handle it, but stop redirection state
+          setIsRedirecting(false);
+          return;
+        }
+
+        try {
+          const res = await fetch(`/api/cvs/master?userId=${user?.id}`);
+          const result = await res.json();
+          if (result.success && result.data?.masterCV?.id) {
+            router.replace(`/editor?cvId=${result.data.masterCV.id}&mode=edit-master&improve=true`);
+          } else {
+            console.log('No master CV found, loading editor defaults.');
+            router.replace('/editor?mode=create');
+          }
+        } catch (error) {
+          console.error('Error fetching master CV for redirect:', error);
+          router.replace('/editor?mode=create');
+        }
+      }
+    };
+
+    handleMasterCVRedirect();
+  }, [authLoading, isAuthenticated, user?.id, docParam, router]);
 
 // Check if user has CVs to determine guest mode
   useEffect(() => {
@@ -84,8 +119,8 @@ function ResumeEnhancerPageContent() {
     checkGuestMode();
   }, [authLoading, isAuthenticated, user?.id, mode, cvId, clId, journeyId, restoreDraftParam]);
 
-// Show loading while checking guest mode or authenticating
-if (authLoading || isCheckingGuestMode) {
+// Show loading while checking guest mode or authenticating or redirecting
+if (authLoading || isCheckingGuestMode || isRedirecting) {
   return <LoadingAnimation progress={0.5} showProgressBar={false} />;
 }
 

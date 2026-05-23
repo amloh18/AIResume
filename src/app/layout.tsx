@@ -178,11 +178,35 @@ export default async function RootLayout({
         <ViewportMeta />
         <ResourceHints />
         <React.Suspense fallback={
-          <div className="fixed inset-0 bg-[#1a230f] flex items-center justify-center z-[9999]">
-            <div className="flex flex-col items-center gap-4">
-              <div className="w-12 h-12 border-4 border-[#81ff00] border-t-transparent rounded-full animate-spin"></div>
-              <p className="text-[#81ff00] font-medium animate-pulse">Initializing CVCIRCLE...</p>
+          <div className="fixed inset-0 z-[10000] flex flex-col items-center justify-center bg-[#f3f2ee] dark:bg-[#1a230f] overflow-hidden">
+            <div className="relative w-48 h-48 flex items-center justify-center">
+              {/* Concentric Rotating Rings */}
+              <div className="absolute inset-0 border-[3px] border-transparent border-t-[#83d60d] rounded-full animate-spin" style={{ animationDuration: '2s' }} />
+              <div className="absolute inset-2 border-[2px] border-transparent border-b-[#83d60d]/50 rounded-full animate-spin" style={{ animationDirection: 'reverse', animationDuration: '3s' }} />
+              <div className="absolute inset-4 border-[1px] border-transparent border-r-[#83d60d]/30 rounded-full animate-spin" style={{ animationDuration: '1.5s' }} />
+              
+              {/* Pulsing Background Glow */}
+              <div className="absolute inset-0 bg-[#83d60d]/10 rounded-full animate-pulse blur-xl" />
+              
+              {/* Center Favicon */}
+              <div className="relative w-24 h-24 md:w-28 md:h-28 z-10 flex items-center justify-center p-2">
+                <img 
+                  src="/images/favicon.png" 
+                  alt="Loading..." 
+                  className="w-full h-full object-contain"
+                  style={{ animation: 'float-minimal 3s ease-in-out infinite' }}
+                />
+              </div>
             </div>
+            <div className="mt-12 flex flex-col items-center gap-2">
+              <h3 className="text-sm font-black text-gray-800 dark:text-gray-200 uppercase tracking-[0.25em] animate-pulse">Initializing Experience</h3>
+            </div>
+            <style dangerouslySetInnerHTML={{ __html: `
+              @keyframes float-minimal {
+                0%, 100% { transform: translateY(0); }
+                50% { transform: translateY(-6px); }
+              }
+            `}} />
           </div>
         }>
           <ClientProviders session={session}>

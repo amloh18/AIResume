@@ -1,4 +1,5 @@
 // @ts-nocheck
+export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import { PricingPlan } from '@/models';
@@ -31,27 +32,25 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache
 const fallbackPlans = [
   // Essential Category
   {
-    _id: 'free',
-    key: 'free',
-    name: 'Free',
-    description: 'Get started with your first professional CV',
+    _id: 'starter_monthly',
+    key: 'starter_monthly',
+    name: 'Starter Monthly',
+    description: 'Basic CV creation for job applications',
     price_monthly: 0,
     price_one_time: 0,
     currency: 'USD',
     features: [
       'Access to ALL templates and snippets',
-      'Application Tracker (Full Kanban access)',
-      'Basic Chrome Extension functionality',
       'Basic AI Writing (Grammar & rephrasing)',
       'Limited Free AI Credits'
     ],
     notIncludedFeatures: [
-      'Unlimited AI Generation',
-      'ATS Scoring & Editing',
-      'Advanced Sentence Structuring (STAR method)',
+      'Unlimited CV & Cover Letter Edits',
+      'Real-time ATS Scoring & Editor',
       'AI Cover Letter Generator',
       'LinkedIn Enhancer',
-      'Interview Coach Simulator'
+      'Interview Coach Simulator',
+      'Application Tracker'
     ],
     isPopular: false,
     isBestValue: false,
@@ -62,30 +61,35 @@ const fallbackPlans = [
     maxCoverLetters: 0,
     maxJobs: 3,
     maxJourneys: 0,
-    billingCycle: 'free',
+    billingCycle: 'monthly',
     category: 'essential'
   },
   {
-    _id: 'pro_yearly',
-    key: 'pro_yearly',
-    name: 'Professional Yearly',
-    description: 'Full access to all features with yearly billing',
+    _id: 'starter_yealry',
+    key: 'starter_yealry',
+    name: 'Starter Yearly',
+    description: 'Unlimited CV & Cover letter editing with live ATS checks',
     price_monthly: 0,
-    price_quarterly: 0,
-    price_yearly: 144,
+    price_yearly: 39.99,
+    promotionalPrice_yearly: 19.99,
+    promotionValidFrom: new Date('2026-01-01'),
+    promotionValidUntil: new Date('2036-12-31'),
+    promotionDescription: 'Limited time offer - 50% Off!',
     price_one_time: 0,
     currency: 'USD',
     features: [
-      'Unlimited AI Generation',
-      'ATS Scoring & Editing (Real-time feedback)',
-      'Advanced Sentence Structuring (STAR method)',
-      'Unlimited AI Cover Letter Generator',
-      'LinkedIn Enhancer (Profile suggestions)',
-      'Interview Coach (Mock simulator)',
       'Access to ALL templates and snippets',
-      'Application Tracker (Full Kanban access)'
+      'Unlimited CV & Cover Letter Edits',
+      'Real-time ATS Scoring & Editor',
+      'AI Cover Letter Generator',
+      'PDF & DOCX Downloads'
     ],
-    notIncludedFeatures: [],
+    notIncludedFeatures: [
+      'LinkedIn Enhancer',
+      'Interview Coach Simulator',
+      'Application Tracker',
+      'Auto Job Application Bot'
+    ],
     isPopular: false,
     isBestValue: false,
     displayOnLanding: true,
@@ -93,33 +97,32 @@ const fallbackPlans = [
     maxCVs: -1,
     maxExports: -1,
     maxCoverLetters: -1,
-    maxJobs: -1,
+    maxJobs: 0,
     maxJourneys: -1,
     billingCycle: 'yearly',
-    category: 'professional'
+    category: 'essential'
   },
-  // Professional Category
+  // Focused Pack
   {
-    _id: 'pro_monthly',
-    key: 'pro_monthly',
-    name: 'Professional Monthly',
-    description: 'Complete career toolkit with monthly flexibility',
-    price_monthly: 19,
-    price_quarterly: 0,
-    price_yearly: 0,
+    _id: 'focused_monthly',
+    key: 'focused_monthly',
+    name: 'Focused Monthly',
+    description: 'Complete career toolkit with job tracking and AI interview prep',
+    price_monthly: 9.99,
     price_one_time: 0,
     currency: 'USD',
     features: [
-      'Unlimited AI Generation',
-      'ATS Scoring & Editing (Real-time feedback)',
-      'Advanced Sentence Structuring (STAR method)',
-      'Unlimited AI Cover Letter Generator',
-      'LinkedIn Enhancer (Profile suggestions)',
-      'Interview Coach (Mock simulator)',
-      'Access to ALL templates and snippets',
-      'Application Tracker (Full Kanban access)'
+      'Unlimited CV & Cover Letter Edits',
+      'Real-time ATS Scoring & Editor',
+      'AI Cover Letter Generator',
+      'LinkedIn Enhancer',
+      'AI Interview Coach Mock Simulator',
+      'Application Tracker (Full Kanban access)',
+      'Access to ALL templates and snippets'
     ],
-    notIncludedFeatures: [],
+    notIncludedFeatures: [
+      'Auto Job Application Bot'
+    ],
     isPopular: false,
     isBestValue: false,
     displayOnLanding: true,
@@ -133,27 +136,59 @@ const fallbackPlans = [
     category: 'professional'
   },
   {
-    _id: 'pro_quarterly',
-    key: 'pro_quarterly',
-    name: 'Professional Quarterly',
-    description: 'Best value with priority support included',
-    price_monthly: 0,
-    price_quarterly: 48,
-    price_yearly: 0,
+    _id: 'focused_yearly',
+    key: 'focused_yearly',
+    name: 'Focused Yearly',
+    description: 'Full career package with significant yearly savings',
+    price_yearly: 79.99,
     price_one_time: 0,
     currency: 'USD',
     features: [
-      'Unlimited AI Generation',
-      'ATS Scoring & Editing (Real-time feedback)',
-      'Advanced Sentence Structuring (STAR method)',
-      'Unlimited AI Cover Letter Generator',
-      'LinkedIn Enhancer (Profile suggestions)',
-      'Interview Coach (Mock simulator)',
+      'Unlimited CV & Cover Letter Edits',
+      'Real-time ATS Scoring & Editor',
+      'AI Cover Letter Generator',
+      'LinkedIn Enhancer',
+      'AI Interview Coach Mock Simulator',
+      'Application Tracker (Full Kanban access)',
       'Access to ALL templates and snippets',
-      'Application Tracker (Full Kanban access)'
+      'Priority Customer Support'
+    ],
+    notIncludedFeatures: [
+      'Auto Job Application Bot'
+    ],
+    isPopular: true,
+    isBestValue: false,
+    displayOnLanding: true,
+    targetAudience: 'all',
+    maxCVs: -1,
+    maxExports: -1,
+    maxCoverLetters: -1,
+    maxJobs: -1,
+    maxJourneys: -1,
+    billingCycle: 'yearly',
+    category: 'professional'
+  },
+  // Smart Pack
+  {
+    _id: 'smart_quaterly',
+    key: 'smart_quaterly',
+    name: 'Smart Quarterly',
+    description: 'All Focused features plus Auto Job Application Bot',
+    price_quarterly: 59.99,
+    price_one_time: 0,
+    currency: 'USD',
+    features: [
+      'Auto Job Application Bot',
+      'Unlimited CV & Cover Letter Edits',
+      'Real-time ATS Scoring & Editor',
+      'AI Cover Letter Generator',
+      'LinkedIn Enhancer',
+      'AI Interview Coach Mock Simulator',
+      'Application Tracker (Full Kanban access)',
+      'VIP 24/7 Support'
     ],
     notIncludedFeatures: [],
-    isPopular: true,
+    isPopular: false,
     isBestValue: false,
     displayOnLanding: true,
     targetAudience: 'all',
@@ -166,25 +201,22 @@ const fallbackPlans = [
     category: 'professional'
   },
   {
-    _id: 'pro_lifetime',
-    key: 'pro_lifetime',
-    name: 'Lifetime',
-    description: 'One-time payment for lifetime access',
-    price_monthly: 0,
-    price_quarterly: 0,
-    price_yearly: 0,
-    price_one_time: 199,
+    _id: 'smart_yearly',
+    key: 'smart_yearly',
+    name: 'Smart Yearly',
+    description: 'The ultimate automated career package for absolute success',
+    price_yearly: 199.00,
+    price_one_time: 0,
     currency: 'USD',
     features: [
-      'Unlimited AI Generation',
-      'ATS Scoring & Editing (Real-time feedback)',
-      'Advanced Sentence Structuring (STAR method)',
-      'Unlimited AI Cover Letter Generator',
-      'LinkedIn Enhancer (Profile suggestions)',
-      'Interview Coach (Mock simulator)',
-      'Access to ALL templates and snippets',
+      'Auto Job Application Bot',
+      'Unlimited CV & Cover Letter Edits',
+      'Real-time ATS Scoring & Editor',
+      'AI Cover Letter Generator',
+      'LinkedIn Enhancer',
+      'AI Interview Coach Mock Simulator',
       'Application Tracker (Full Kanban access)',
-      'Career Vault (Permanent Archive)'
+      'VIP 24/7 Support'
     ],
     notIncludedFeatures: [],
     isPopular: false,
@@ -196,7 +228,7 @@ const fallbackPlans = [
     maxCoverLetters: -1,
     maxJobs: -1,
     maxJourneys: -1,
-    billingCycle: 'one-time',
+    billingCycle: 'yearly',
     category: 'professional'
   }
 ];
@@ -333,35 +365,50 @@ export async function GET(request: NextRequest) {
       const activePricing = countryPricing || defaultCountryPricing;
       
       const standardFallbacks: Record<string, number> = {
-        'pro_monthly': 19,
-        'pro_quarterly': 48,
-        'pro_yearly': 144,
-        'pro_lifetime': 199,
-        'day_pass': 9
+        'pro_monthly': 12.99,
+        'pro_quarterly': 34.99,
+        'pro_yearly': 99.00,
+        'pro_lifetime': 199.00,
+        'day_pass': 9.00,
+        'starter_monthly': 0,
+        'starter_yealry': 39.99,
+        'focused_monthly': 9.99,
+        'focused_yearly': 79.99,
+        'smart_quaterly': 59.99,
+        'smart_yearly': 199.00
       };
 
-      // Base prices from database
-      const dbPrice = {
-        monthly: getCountryPriceForPlan('pro_monthly', activePricing) || standardFallbacks.pro_monthly,
-        quarterly: getCountryPriceForPlan('pro_quarterly', activePricing) || standardFallbacks.pro_quarterly,
-        yearly: getCountryPriceForPlan('pro_yearly', activePricing) || standardFallbacks.pro_yearly,
-        lifetime: getCountryPriceForPlan('pro_lifetime', activePricing) || standardFallbacks.pro_lifetime,
-        dayPass: getCountryPriceForPlan('day_pass', activePricing) || standardFallbacks.day_pass
+      // Polar USD plans are the single source of truth for the whole app
+      const baseUSDPrice = {
+        monthly: plan.price_monthly !== undefined && plan.price_monthly !== null ? plan.price_monthly : (plan.key === 'pro_monthly' ? 12.99 : plan.key === 'focused_monthly' ? 9.99 : 0),
+        quarterly: plan.price_quarterly !== undefined && plan.price_quarterly !== null ? plan.price_quarterly : (plan.key === 'pro_quarterly' ? 34.99 : plan.key === 'smart_quaterly' ? 59.99 : 0),
+        yearly: plan.price_yearly !== undefined && plan.price_yearly !== null ? plan.price_yearly : (plan.key === 'pro_yearly' ? 99.00 : plan.key === 'starter_yealry' ? 39.99 : plan.key === 'focused_yearly' ? 79.99 : plan.key === 'smart_yearly' ? 199.00 : 0),
+        lifetime: plan.price_one_time !== undefined && plan.price_one_time !== null ? plan.price_one_time : (plan.key === 'pro_lifetime' ? 199.00 : 0),
+        dayPass: plan.key === 'day_pass' ? (plan.price_one_time || 9.00) : 0
       };
 
-      // If we are using standard fallbacks (USD) but the user is in a different currency, 
-      // and we DON'T have a CountryPricing record for them, perform a live conversion.
-      let finalPrice = { ...dbPrice };
+      const userCurrency = regionInfo?.currency || 'USD';
+      const isUSD = userCurrency === 'USD';
+
+      let finalPrice = {
+        monthly: baseUSDPrice.monthly,
+        quarterly: baseUSDPrice.quarterly,
+        yearly: baseUSDPrice.yearly,
+        lifetime: baseUSDPrice.lifetime,
+        dayPass: baseUSDPrice.dayPass
+      };
+
       let isConversionApplied = false;
 
-      if (!countryPricing && regionInfo?.currency && regionInfo.currency !== 'USD') {
+      if (!isUSD) {
         const { LocationService } = await import('@/lib/payment/locationService');
         
-        finalPrice.monthly = LocationService.convertPrice(dbPrice.monthly, 'USD', regionInfo.currency).convertedPrice;
-        finalPrice.quarterly = LocationService.convertPrice(dbPrice.quarterly, 'USD', regionInfo.currency).convertedPrice;
-        finalPrice.yearly = LocationService.convertPrice(dbPrice.yearly, 'USD', regionInfo.currency).convertedPrice;
-        finalPrice.lifetime = LocationService.convertPrice(dbPrice.lifetime, 'USD', regionInfo.currency).convertedPrice;
-        finalPrice.dayPass = LocationService.convertPrice(dbPrice.dayPass, 'USD', regionInfo.currency).convertedPrice;
+        // Convert to local currency and round off to nearest whole integer
+        if (baseUSDPrice.monthly > 0) finalPrice.monthly = Math.round(LocationService.convertPrice(baseUSDPrice.monthly, 'USD', userCurrency).convertedPrice);
+        if (baseUSDPrice.quarterly > 0) finalPrice.quarterly = Math.round(LocationService.convertPrice(baseUSDPrice.quarterly, 'USD', userCurrency).convertedPrice);
+        if (baseUSDPrice.yearly > 0) finalPrice.yearly = Math.round(LocationService.convertPrice(baseUSDPrice.yearly, 'USD', userCurrency).convertedPrice);
+        if (baseUSDPrice.lifetime > 0) finalPrice.lifetime = Math.round(LocationService.convertPrice(baseUSDPrice.lifetime, 'USD', userCurrency).convertedPrice);
+        if (baseUSDPrice.dayPass > 0) finalPrice.dayPass = Math.round(LocationService.convertPrice(baseUSDPrice.dayPass, 'USD', userCurrency).convertedPrice);
         
         isConversionApplied = true;
       }
@@ -374,16 +421,16 @@ export async function GET(request: NextRequest) {
       };
 
       const effectivePrice = {
-        monthly: isPromotionActive && (plan as any).promotionalPrice_monthly
+        monthly: isPromotionActive && (plan as any).promotionalPrice_monthly !== undefined
           ? (plan as any).promotionalPrice_monthly
           : basePrice.monthly,
-        quarterly: isPromotionActive && (plan as any).promotionalPrice_quarterly
+        quarterly: isPromotionActive && (plan as any).promotionalPrice_quarterly !== undefined
           ? (plan as any).promotionalPrice_quarterly
           : basePrice.quarterly,
-        yearly: isPromotionActive && (plan as any).promotionalPrice_yearly
+        yearly: isPromotionActive && (plan as any).promotionalPrice_yearly !== undefined
           ? (plan as any).promotionalPrice_yearly
           : basePrice.yearly,
-        oneTime: isPromotionActive && (plan as any).promotionalPrice_one_time
+        oneTime: isPromotionActive && (plan as any).promotionalPrice_one_time !== undefined
           ? (plan as any).promotionalPrice_one_time
           : basePrice.oneTime
       };
@@ -397,25 +444,25 @@ export async function GET(request: NextRequest) {
           durationHours: (plan as any).dayPassDuration || 24,
           displayText: `${(plan as any).dayPassDuration || 24} hours`
         };
-      } else if (plan.key === 'pro_monthly') {
+      } else if (plan.key.includes('monthly')) {
         durationInfo = {
           durationInDays: 30,
           durationType: 'month',
           displayText: '1 month'
         };
-      } else if (plan.key === 'pro_quarterly') {
+      } else if (plan.key.includes('quarterly') || plan.key.includes('quaterly')) {
         durationInfo = {
           durationInDays: 90,
           durationType: 'month',
           displayText: '3 months'
         };
-      } else if (plan.key === 'pro_yearly') {
+      } else if (plan.key.includes('yearly') || plan.key.includes('yealry')) {
         durationInfo = {
           durationInDays: 365,
           durationType: 'year',
           displayText: '1 year'
         };
-      } else if (plan.key === 'pro_lifetime') {
+      } else if (plan.key.includes('lifetime')) {
         durationInfo = {
           durationInDays: -1,
           durationType: 'year',
@@ -425,13 +472,19 @@ export async function GET(request: NextRequest) {
 
       // Get currency from CountryPricing (primary source) - no legacy fallbacks
       const planCurrency = activePricing?.currency
-        || planDefaultCountryPricing?.currency
+        || defaultCountryPricing?.currency
         || regionInfo?.currency
-        || 'GBP'; // Default to GBP (matches our defaultCountryPricing)
+        || 'USD'; // Default to USD (matches Polar plans)
 
       const planCurrencySymbol = activePricing?.currencySymbol
-        || planDefaultCountryPricing?.currencySymbol
+        || defaultCountryPricing?.currencySymbol
         || getCurrencySymbol(planCurrency);
+
+      // Find user regional pricing in database plan
+      const userRegion = regionInfo?.countryCode || 'US';
+      const planRegionalPricingObj = plan.regionalPricing?.find((rp: any) => 
+        rp.region?.toUpperCase() === userRegion.toUpperCase()
+      );
 
       return {
         ...plan,
@@ -453,15 +506,15 @@ export async function GET(request: NextRequest) {
         currency: planCurrency,
         currencySymbol: planCurrencySymbol,
         // Add computed fields for backward compatibility
-        price: basePrice.monthly || basePrice.oneTime || 0,
+        price: basePrice.yearly || basePrice.monthly || basePrice.quarterly || basePrice.oneTime || 0,
         billingCycle: plan.billingCycle,
         // Country pricing info
         regionalPricing: (() => {
-          const pricingSource = countryPricing || planDefaultCountryPricing || defaultCountryPricing;
-          const displayPriceValue = plan.key === 'pro_lifetime' ? basePrice.oneTime : 
+          const pricingSource = countryPricing || defaultCountryPricing;
+          const displayPriceValue = plan.key.includes('lifetime') ? basePrice.oneTime : 
                                    plan.key === 'day_pass' ? basePrice.oneTime : 
-                                   plan.key === 'pro_quarterly' ? basePrice.quarterly :
-                                   plan.key === 'pro_yearly' ? basePrice.yearly :
+                                   plan.key.includes('quarterly') || plan.key.includes('quaterly') ? basePrice.quarterly :
+                                   plan.key.includes('yearly') || plan.key.includes('yealry') ? basePrice.yearly :
                                    basePrice.monthly;
 
           return {
@@ -470,12 +523,14 @@ export async function GET(request: NextRequest) {
             currency: planCurrency,
             currencySymbol: planCurrencySymbol,
             price: displayPriceValue,
-            displayPrice: `${planCurrencySymbol}${displayPriceValue}`,
-            polarPriceId: activePricing?.polarPriceIds?.[
-              plan.key === 'pro_monthly' ? 'monthly' :
-              plan.key === 'pro_quarterly' ? 'quarterly' :
-              plan.key === 'pro_yearly' ? 'yearly' :
-              plan.key === 'pro_lifetime' ? 'lifetime' : 'monthly'
+            displayPrice: planCurrency === 'USD' 
+              ? `${planCurrencySymbol}${displayPriceValue.toFixed(2)}` 
+              : `${planCurrencySymbol}${displayPriceValue}`,
+            polarPriceId: planRegionalPricingObj?.polarPriceId || activePricing?.polarPriceIds?.[
+              plan.key.includes('monthly') ? 'monthly' :
+              plan.key.includes('quarterly') || plan.key.includes('quaterly') ? 'quarterly' :
+              plan.key.includes('yearly') || plan.key.includes('yealry') ? 'yearly' :
+              plan.key.includes('lifetime') ? 'lifetime' : 'monthly'
             ],
             isApproximate: isConversionApplied
           };

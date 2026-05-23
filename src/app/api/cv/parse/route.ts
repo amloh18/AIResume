@@ -287,15 +287,24 @@ async function extractTextFromFile(fileBuffer: Buffer, mimeType: string): Promis
       try {
         console.log('Attempting Method 2: pdfjs-dist (loading dynamically)...');
 
+        // Polyfill DOMMatrix for Node.js environments (required for pdfjs-dist 4.0+)
+        if (typeof (global as any).DOMMatrix === 'undefined') {
+          (global as any).DOMMatrix = class DOMMatrix {
+            constructor() {
+              return {};
+            }
+          };
+        }
+
         // Try different import paths for pdfjs-dist compatibility
         let pdfjs: any;
         try {
-          // Try standard import first
-          pdfjs = await import('pdfjs-dist');
+          // Try legacy build first for Node.js compatibility
+          pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
         } catch (e1) {
           try {
-            // Try legacy build
-            pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
+            // Try standard import
+            pdfjs = await import('pdfjs-dist');
           } catch (e2) {
             throw new Error(`Failed to import pdfjs-dist: ${e1 instanceof Error ? e1.message : String(e1)}`);
           }
@@ -1248,16 +1257,10 @@ export async function POST(request: NextRequest) {
     const session = await getServerSession(authOptions);
     const userId = session?.user?.id;
 
-    if (!userId) {
-      return NextResponse.json(
-        { error: 'Unauthorized. Please sign in to parse CVs.' },
-        { status: 401 }
-      );
-    }
-
     // Rate Limiting (using AI config since parsing is heavy)
+    // If no userId, use IP-based rate limiting (handled by passing undefined to checkLimit)
     const rateLimitResult = await rateLimiter.checkLimit(
-      userId,
+      userId || 'unauthenticated',
       rateLimitConfigs.ai
     );
     

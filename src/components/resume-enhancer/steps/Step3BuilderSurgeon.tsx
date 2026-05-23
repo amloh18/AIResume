@@ -10,7 +10,8 @@ import { usePaymentModal } from '@/contexts/PaymentModalContext';
 import DownloadModal from '@/components/ui/DownloadModal';
 import {
   Sparkles,
-  Component, Eye, Target, ZoomIn, ZoomOut, Plus, Shuffle, Palette, X
+  Component, Eye, Target, ZoomIn, ZoomOut, Plus, Shuffle, Palette, X,
+  Check, Info
 } from 'lucide-react';
 
 // Import CV Builder form components
@@ -89,6 +90,41 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
     const [jdText, setJdText] = useState('');
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [showRoleProfiler, setShowRoleProfiler] = useState(false);
+
+    const isImproveMode = searchParams.get('improve') === 'true' || searchParams.get('mode') === 'improve';
+    const [isSectionEdited, setIsSectionEdited] = useState(false);
+    const [isPdfExported, setIsPdfExported] = useState(false);
+
+    // Auto-open Surgeon suggestions panel on initial load in improve mode
+    useEffect(() => {
+      if (isImproveMode) {
+        dispatch({ type: 'SET_REPORT_OPEN', payload: true });
+      }
+    }, [isImproveMode, dispatch]);
+
+    const handleFinishOnboarding = async () => {
+      try {
+        const res = await fetch('/api/user/onboarding-status', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            onboarding: {
+              activation_status: 'completed'
+            }
+          })
+        });
+        if (res.ok) {
+          toast.success('Onboarding completed! Welcome to your dashboard.');
+          router.push('/dashboard');
+        } else {
+          toast.error('Failed to update onboarding status.');
+        }
+      } catch (err) {
+        console.error(err);
+        toast.error('An error occurred. Moving to dashboard.');
+        router.push('/dashboard');
+      }
+    };
     const [showJobParserDialog, setShowJobParserDialog] = useState(false);
     const [isATSUnlockDismissed, setIsATSUnlockDismissed] = useState(false);
     const [totalPages, setTotalPages] = useState(1);
@@ -143,6 +179,7 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
             paperSize: (state.paperSize as 'A4' | 'Letter') || 'A4',
           });
           toast.success('Downloaded successfully!');
+          setIsPdfExported(true);
         } else if (format === 'docx') {
           // DOCX: use the server export API which generates a content-faithful
           // Word document from cvData (all sections present, visual styling differs).
@@ -1220,6 +1257,7 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
                 role={state.jobData?.jobTitle || state.jobData?.title || state.targetRole || null}
                 onDataChange={(updatedData: any) => {
                   dispatch({ type: 'SET_CV_DATA', payload: updatedData });
+                  setIsSectionEdited(true);
                 }}
                 onTemplateChange={(newTemplate: any) => {
                   setTemplate(newTemplate);
@@ -1230,10 +1268,126 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
             </div>
           </div>
           
-          {/* ATS Meter Panel on the right */}
-          <div className="hidden lg:flex flex-col w-[352px] shrink-0 h-full relative z-10 gap-3">
-            <ATSMeterPanel />
-          </div>
+          {/* ATS Meter Panel or Onboarding Checklist on the right */}
+          {isImproveMode ? (() => {
+            const isPersonalInfoVerified = !!(state.cvData?.basics?.name?.trim() && state.cvData?.basics?.email?.trim());
+            const isQualityScoreReviewed = !!(state.surgeonAnalysis || atsScore);
+
+            const checklistItems = [
+              {
+                id: 'personal',
+                title: 'Verify Personal Info',
+                description: 'Ensure your name and email are filled in basics.',
+                completed: isPersonalInfoVerified,
+              },
+              {
+                id: 'quality',
+                title: 'Review Quality Score',
+                description: 'Run the AI Surgeon report to check ATS health.',
+                completed: isQualityScoreReviewed,
+              },
+              {
+                id: 'optimize',
+                title: 'Optimize Section Data',
+                description: 'Make at least one edit to any CV section.',
+                completed: isSectionEdited,
+              },
+              {
+                id: 'export',
+                title: 'Export PDF Copy',
+                description: 'Download the compiled PDF file of your resume.',
+                completed: isPdfExported,
+              }
+            ];
+
+            const completedCount = checklistItems.filter(item => item.completed).length;
+            const isChecklistComplete = completedCount === checklistItems.length;
+
+            return (
+              <div className="flex flex-col w-[320px] shrink-0 h-full bg-white dark:bg-[var(--bg-secondary)] border border-gray-200 dark:border-gray-800 rounded-xl p-5 shadow-sm relative z-10 select-none overflow-y-auto">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 text-teal-600 dark:text-teal-400">
+                    <Sparkles className="h-5 w-5 stroke-[2.5]" />
+                    <h3 className="font-extrabold text-lg tracking-tight text-gray-900 dark:text-white">Onboarding Checklist</h3>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Complete these quick steps to finish setting up your Master CV.
+                  </p>
+
+                  {/* Progress Bar */}
+                  <div className="space-y-1.5 pt-2">
+                    <div className="flex justify-between text-xs font-bold">
+                      <span className="text-gray-400">Setup Progress</span>
+                      <span className="text-teal-650">{completedCount} of 4 completed</span>
+                    </div>
+                    <div className="w-full bg-gray-150 dark:bg-gray-800 h-2 rounded-full overflow-hidden">
+                      <div 
+                        className="bg-teal-500 h-full transition-all duration-500 ease-out" 
+                        style={{ width: `${(completedCount / 4) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Checklist List */}
+                  <div className="space-y-3 pt-3">
+                    {checklistItems.map(item => (
+                      <div 
+                        key={item.id} 
+                        className={`p-3.5 rounded-xl border transition-all flex items-start gap-3 ${
+                          item.completed 
+                            ? 'bg-teal-50/40 border-teal-100 dark:bg-teal-950/20 dark:border-teal-900/30' 
+                            : 'bg-slate-50/50 border-gray-150 dark:bg-gray-900/30 dark:border-gray-800/40'
+                        }`}
+                      >
+                        <div className={`mt-0.5 rounded-full p-0.5 ${
+                          item.completed 
+                            ? 'bg-teal-500 text-white' 
+                            : 'bg-gray-200 text-gray-455 dark:bg-gray-800 dark:text-gray-600'
+                        }`}>
+                          <Check className="h-3.5 w-3.5 stroke-[3]" />
+                        </div>
+                        <div className="space-y-0.5">
+                          <h4 className={`text-xs font-bold ${
+                            item.completed 
+                              ? 'text-gray-900 dark:text-white line-through decoration-teal-500/40' 
+                              : 'text-gray-700 dark:text-gray-300'
+                          }`}>
+                            {item.title}
+                          </h4>
+                          <p className="text-[10px] text-gray-450 leading-relaxed dark:text-gray-500">
+                            {item.description}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Action Button */}
+                  <div className="pt-4">
+                    <button
+                      onClick={handleFinishOnboarding}
+                      className={`w-full py-3 px-4 rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${
+                        isChecklistComplete 
+                          ? 'bg-teal-600 hover:bg-teal-700 text-white shadow-md shadow-teal-100 dark:shadow-none' 
+                          : 'bg-gray-100 hover:bg-gray-200 text-gray-400 dark:bg-gray-800 dark:text-gray-500'
+                      }`}
+                    >
+                      Finish Onboarding
+                    </button>
+                    {!isChecklistComplete && (
+                      <p className="text-[9px] text-center text-gray-400 mt-2">
+                        Finish all steps to unlock dashboard features.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })() : (
+            <div className="hidden lg:flex flex-col w-[352px] shrink-0 h-full relative z-10 gap-3">
+              <ATSMeterPanel />
+            </div>
+          )}
 
         </div >
         {/* AI Analysis Chatbot Card - Bottom Right - Only in builder mode */}

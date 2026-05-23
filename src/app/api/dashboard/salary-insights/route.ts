@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
 
     // Fetch user profile for region detection
     const User = mongoose.models.User;
-    const user = await User.findById(userObjectId).select('region location subscription').lean();
+    const user = (await User.findById(userObjectId).select('region location subscription').lean()) as any;
 
     // Fetch job applications with salary info
     const jobs = await JobApplication.find({

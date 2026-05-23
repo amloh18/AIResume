@@ -71,6 +71,7 @@ import { filterMasterCVs, filterRegularCVs } from '@/lib/utils/cvFilterUtils';
 import CareerReportSidebar from './CareerReportSidebar';
 import CreditExhaustionModal from '@/components/payment/CreditExhaustionModal';
 import { usePaymentModal } from '@/contexts/PaymentModalContext';
+import LoadingOverlay from '@/components/ui/LoadingOverlay';
 
 interface CV {
   id: string;
@@ -2280,14 +2281,7 @@ const Canvas: React.FC = () => {
 
   // Show loading state while checking authentication
   if (authLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-lime-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-gray-600 dark:text-gray-400">Loading...</p>
-        </div>
-      </div>
-    );
+    return <LoadingOverlay message="Loading Canvas..." />;
   }
 
   // Don't render UI if not authenticated (redirect will happen)

@@ -519,13 +519,13 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
     const hasPromo = promotional && promotional.pricing;
     
     if (plan.key === 'pro_monthly') {
-      return (hasPromo && promotional.pricing.monthly) ? promotional.pricing.monthly : (dbPlan.price_monthly || 0);
+      return (hasPromo && promotional.pricing.monthly) ? promotional.pricing.monthly : (dbPlan.price_monthly || 12.99);
     } else if (plan.key === 'pro_quarterly') {
-      return (hasPromo && promotional.pricing.quarterly) ? promotional.pricing.quarterly : (dbPlan.price_quarterly || 0);
+      return (hasPromo && promotional.pricing.quarterly) ? promotional.pricing.quarterly : (dbPlan.price_quarterly || 34.99);
     } else if (plan.key === 'pro_yearly') {
-      return (hasPromo && promotional.pricing.yearly) ? promotional.pricing.yearly : (dbPlan.price_yearly || 0);
+      return (hasPromo && promotional.pricing.yearly) ? promotional.pricing.yearly : (dbPlan.price_yearly || 99.00);
     } else if (plan.key === 'pro_lifetime') {
-      return (hasPromo && promotional.pricing.oneTime) ? promotional.pricing.oneTime : (dbPlan.price_one_time || 0);
+      return (hasPromo && promotional.pricing.oneTime) ? promotional.pricing.oneTime : (dbPlan.price_one_time || 199.00);
     } else {
       return getEffectivePrice(dbPlan) || 0;
     }

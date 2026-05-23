@@ -399,11 +399,11 @@ export class LocationService {
   static formatPrice(price: number, currency: string, symbol?: string): string {
     const currencySymbol = symbol || this.getCurrencySymbol(currency);
     
-    if (currency === 'INR') {
-      return `${currencySymbol}${Math.round(price)}`;
+    if (currency === 'USD') {
+      return `${currencySymbol}${price.toFixed(2)}`;
     }
     
-    return `${currencySymbol}${price.toFixed(2)}`;
+    return `${currencySymbol}${Math.round(price)}`;
   }
 
   static getCurrencySymbol(currency: string): string {

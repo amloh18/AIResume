@@ -36,55 +36,55 @@ const UpgradeCard: React.FC<UpgradeCardProps> = ({ userId, onClose }) => {
     handleClose();
   };
 
-  // Get quarterly plan from pricing plans
-  const quarterlyPlan = useMemo(() => {
-    const plan = plans.find((p: DatabasePricingPlan) => p.key === 'pro_quarterly');
+  // Get recommended plan (Focused Yearly) from pricing plans
+  const recommendedPlan = useMemo(() => {
+    const plan = plans.find((p: DatabasePricingPlan) => p.key === 'focused_yearly');
     if (!plan || pricingLoading) {
       // Fallback to default values if plan not loaded yet
       return {
-        key: 'pro_quarterly',
-        name: 'Professional Quarterly',
-        price: 49,
-        priceString: '£49',
-        period: 'quarter',
-        monthlyEquivalent: 16.33,
-        monthlyEquivalentString: '£16.33',
-        savings: '14%',
-        currencySymbol: '£'
+        key: 'focused_yearly',
+        name: 'Focused Yearly',
+        price: 79.99,
+        priceString: '$79.99',
+        period: 'year',
+        monthlyEquivalent: 6.67,
+        monthlyEquivalentString: '$6.67',
+        savings: '33%',
+        currencySymbol: '$'
       };
     }
 
     const currencySymbol = getCurrencySymbol();
     const monthlyEquivalent = getMonthlyEquivalent(plan);
-    const quarterlyPriceString = getRegionalPrice(plan);
+    const yearlyPriceString = getRegionalPrice(plan);
 
     // Extract numeric values for calculations
     const extractNumeric = (str: string): number => {
       return parseFloat(str.replace(/[^\d.,]/g, '').replace(',', '')) || 0;
     };
 
-    const quarterlyPrice = extractNumeric(quarterlyPriceString);
-    const monthlyPlan = plans.find((p: DatabasePricingPlan) => p.key === 'pro_monthly');
+    const yearlyPrice = extractNumeric(yearlyPriceString);
+    const monthlyPlan = plans.find((p: DatabasePricingPlan) => p.key === 'focused_monthly');
     const monthlyPrice = monthlyPlan ? extractNumeric(getRegionalPrice(monthlyPlan)) : 0;
 
     // Calculate savings percentage
-    const quarterlyMonthlyEquivalent = quarterlyPrice / 3;
+    const yearlyMonthlyEquivalent = yearlyPrice / 12;
     const savings = monthlyPrice > 0
-      ? Math.round(((monthlyPrice - quarterlyMonthlyEquivalent) / monthlyPrice) * 100)
-      : 14;
+      ? Math.round(((monthlyPrice - yearlyMonthlyEquivalent) / monthlyPrice) * 100)
+      : 33;
 
     return {
       key: plan.key,
       name: plan.name,
-      price: quarterlyPrice,
-      priceString: quarterlyPriceString,
-      period: 'quarter',
+      price: yearlyPrice,
+      priceString: yearlyPriceString,
+      period: 'year',
       monthlyEquivalent: monthlyEquivalent.showMonthly
         ? extractNumeric(monthlyEquivalent.price)
-        : quarterlyMonthlyEquivalent,
+        : yearlyMonthlyEquivalent,
       monthlyEquivalentString: monthlyEquivalent.showMonthly
         ? monthlyEquivalent.price
-        : `${currencySymbol}${quarterlyMonthlyEquivalent.toFixed(2)}`,
+        : `${currencySymbol}${yearlyMonthlyEquivalent.toFixed(2)}`,
       savings: `${savings}%`,
       currencySymbol,
       plan // Store full plan object for regional pricing
@@ -151,16 +151,16 @@ const UpgradeCard: React.FC<UpgradeCardProps> = ({ userId, onClose }) => {
                       Recommended
                     </div>
                     <h4 className="text-lg font-bold text-gray-900 dark:text-white mb-1">
-                      {quarterlyPlan.name}
+                      {recommendedPlan.name}
                     </h4>
                     <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                      {quarterlyPlan.monthlyEquivalentString || `${quarterlyPlan.currencySymbol}${quarterlyPlan.monthlyEquivalent.toFixed(2)}`}
+                      {recommendedPlan.monthlyEquivalentString || `${recommendedPlan.currencySymbol}${recommendedPlan.monthlyEquivalent.toFixed(2)}`}
                     </div>
                     <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                      Billed quarterly at {quarterlyPlan.priceString || `${quarterlyPlan.currencySymbol}${quarterlyPlan.price}`}
+                      Billed annually at {recommendedPlan.priceString || `${recommendedPlan.currencySymbol}${recommendedPlan.price}`}
                     </div>
                     <div className="text-sm text-red-600 dark:text-red-400 font-medium mt-1">
-                      Save {quarterlyPlan.savings}
+                      Save {recommendedPlan.savings}
                     </div>
                   </div>
                 </div>
@@ -206,7 +206,7 @@ const UpgradeCard: React.FC<UpgradeCardProps> = ({ userId, onClose }) => {
           isOpen={showPaymentModal}
           onClose={() => setShowPaymentModal(false)}
           onSuccess={handlePaymentSuccess}
-          preselectedPlanKey={quarterlyPlan.key}
+          preselectedPlanKey={recommendedPlan.key}
         />
       )}
     </>

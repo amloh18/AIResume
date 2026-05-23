@@ -166,6 +166,15 @@ export interface IUser extends Document {
     setupComplete?: boolean;
   };
 
+  onboarding?: {
+    primary_goal?: 'cv' | 'tracker' | 'auto_apply';
+    confidence_score?: number;
+    recommended_plan?: string;
+    activation_status?: 'pending' | 'completed';
+    activation_route?: string;
+    dashboard_layout_type?: 'cv' | 'tracker' | 'auto_apply';
+  };
+
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -623,6 +632,14 @@ const userSchema = new Schema<IUser>({
       type: String,
       enum: ['admin', 'recruiter', 'member']
     }
+  },
+  onboarding: {
+    primary_goal: { type: String, enum: ['cv', 'tracker', 'auto_apply'] },
+    confidence_score: { type: Number },
+    recommended_plan: { type: String },
+    activation_status: { type: String, enum: ['pending', 'completed'], default: 'pending' },
+    activation_route: { type: String },
+    dashboard_layout_type: { type: String, enum: ['cv', 'tracker', 'auto_apply'] }
   }
 }, {
   timestamps: true,

@@ -12,6 +12,7 @@ interface PaymentModalContextType {
 interface PaymentModalOptions {
   preselectedPlanKey?: string;
   onSuccess?: (subscription: any) => void;
+  onClose?: () => void;
   returnUrl?: string;
   triggerContext?: string;
 }
@@ -39,28 +40,32 @@ export const PaymentModalProvider: React.FC<PaymentModalProviderProps> = ({ chil
     setIsOpen(true);
   }, []);
 
-  const closePaymentModal = useCallback(() => {
+  const closePaymentModal = useCallback((isSuccess = false) => {
+    const closeCallback = modalOptions.onClose;
     setIsOpen(false);
     setModalOptions({});
-  }, []);
+    if (!isSuccess) {
+      closeCallback?.();
+    }
+  }, [modalOptions.onClose]);
 
   const handleSuccess = useCallback((subscription: any) => {
     modalOptions.onSuccess?.(subscription);
-    closePaymentModal();
-  }, [modalOptions, closePaymentModal]);
+    closePaymentModal(true);
+  }, [modalOptions.onSuccess, closePaymentModal]);
 
   return (
     <PaymentModalContext.Provider
       value={{
         openPaymentModal,
-        closePaymentModal,
+        closePaymentModal: () => closePaymentModal(false),
         isPaymentModalOpen: isOpen,
       }}
     >
       {children}
       <UniversalPaymentModal
         isOpen={isOpen}
-        onClose={closePaymentModal}
+        onClose={() => closePaymentModal(false)}
         preselectedPlanKey={modalOptions.preselectedPlanKey}
         onSuccess={handleSuccess}
         returnUrl={modalOptions.returnUrl}

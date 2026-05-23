@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
     ).length;
 
     // Calculate monthly goal from user settings (default 20)
-    const user = await import('@/models/User').then(m => m.default.findById(userObjectId).select('monthlyGoal').lean());
+    const user = (await import('@/models/User').then(m => m.default.findById(userObjectId).select('monthlyGoal').lean())) as any;
     const monthlyGoal = user?.monthlyGoal || 20;
 
     return NextResponse.json({

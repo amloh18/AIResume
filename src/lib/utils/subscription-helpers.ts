@@ -29,49 +29,173 @@ export interface PlanLimits {
   // LinkedIn Enhancer restrictions
   linkedinToneChange: boolean;  // Can change tone in LinkedIn Enhancer
   linkedinCVSelection: boolean; // Can select different CVs in LinkedIn Enhancer
+  autoApplyBot: boolean;        // Auto Job Application Bot access
 }
 
 /**
  * Feature matrix by tier:
  * 
- * FREE:
- *   - Master CV only (no standalone, no journey)
- *   - LinkedIn Enhancer (basic - no tone change, no CV selection, uses Master CV)
- *   - PDF export only
- *   - NO tracker (no job parsing, no add jobs)
+ * FREE / STARTER MONTHLY:
+ *   - Basic CV creation, no cover letter AI, no tracker, spelling check only
  * 
- * DAY PASS:
- *   - Master CV + Unlimited Standalone CVs
- *   - LinkedIn Enhancer with tone change + CV selection
- *   - Cover Letter Generator
- *   - PDF + DOCX export
- *   - NO tracker (no job parsing, no journey CVs)
+ * STARTER YEARLY:
+ *   - Unlimited CV & Cover letter editing, live ATS check, pdf/docx download
+ *   - NO tracker, NO interview coach, NO linkedin tone change, NO auto apply bot
  * 
- * PRO (monthly/quarterly/lifetime):
- *   - Everything: Master + Standalone + Journey CVs
- *   - Full tracker (job parsing, add jobs, Kanban)
- *   - All tools with full access
+ * FOCUSED MONTHLY / YEARLY:
+ *   - Everything in Starter Yearly plus full Job Tracker, LinkedIn Enhancer, AI Interview Coach
+ *   - NO auto apply bot
+ * 
+ * SMART QUARTERLY / YEARLY:
+ *   - Everything in Focused plus Auto Job Application Bot
  */
 export const PLAN_LIMITS: Record<string, PlanLimits> = {
   free: {
-    journeyCVs: -1,              // Unlimited CV editing
-    activeJourneyCVs: -1,        // Unlimited active journeys
-    surgeonRuns: 10,             // Limited AI surgeon runs
-    downloads: -1,               // Unlimited CV/Cover Letter editing and exporting
-    premiumTemplates: true,      // Access to ALL templates
-    maxCVs: -1,                  // Unlimited CVs
-    maxJobs: -1,                 // Full Kanban/tracker access
-    standaloneCVs: true,         // Unlimited CV editing
+    journeyCVs: 3,
+    activeJourneyCVs: 3,
+    surgeonRuns: 10,
+    downloads: -1,
+    premiumTemplates: true,
+    maxCVs: -1,
+    maxJobs: 3,
+    standaloneCVs: true,
     aiSurgeonMode: 'spelling_only',
-    coverLetterAI: false,        // AI cover letter generator is Pro feature
-    docxExport: false,          // PDF download only
-    interviewCoach: false,       // Mock simulator is Pro feature
-    jobTracker: true,            // Full job tracker access
-    jobParsing: true,            // Can parse JDs
+    coverLetterAI: false,
+    docxExport: false,
+    interviewCoach: false,
+    jobTracker: true,
+    jobParsing: true,
     prioritySupport: false,
     advancedAnalytics: false,
-    linkedinToneChange: false,  // Tone customization is Pro feature
-    linkedinCVSelection: false  // CV selection in extension is Pro feature
+    linkedinToneChange: false,
+    linkedinCVSelection: false,
+    autoApplyBot: false
+  },
+  starter_monthly: {
+    journeyCVs: 3,
+    activeJourneyCVs: 3,
+    surgeonRuns: 10,
+    downloads: -1,
+    premiumTemplates: true,
+    maxCVs: -1,
+    maxJobs: 3,
+    standaloneCVs: true,
+    aiSurgeonMode: 'spelling_only',
+    coverLetterAI: false,
+    docxExport: false,
+    interviewCoach: false,
+    jobTracker: false,
+    jobParsing: false,
+    prioritySupport: false,
+    advancedAnalytics: false,
+    linkedinToneChange: false,
+    linkedinCVSelection: false,
+    autoApplyBot: false
+  },
+  starter_yealry: {
+    journeyCVs: -1,
+    activeJourneyCVs: -1,
+    surgeonRuns: -1,
+    downloads: -1,
+    premiumTemplates: true,
+    maxCVs: -1,
+    maxJobs: 0,
+    standaloneCVs: true,
+    aiSurgeonMode: 'full',
+    coverLetterAI: true,
+    docxExport: true,
+    interviewCoach: false,
+    jobTracker: false,
+    jobParsing: false,
+    prioritySupport: false,
+    advancedAnalytics: false,
+    linkedinToneChange: false,
+    linkedinCVSelection: false,
+    autoApplyBot: false
+  },
+  focused_monthly: {
+    journeyCVs: -1,
+    activeJourneyCVs: -1,
+    surgeonRuns: -1,
+    downloads: -1,
+    premiumTemplates: true,
+    maxCVs: -1,
+    maxJobs: -1,
+    standaloneCVs: true,
+    aiSurgeonMode: 'full',
+    coverLetterAI: true,
+    docxExport: true,
+    interviewCoach: true,
+    jobTracker: true,
+    jobParsing: true,
+    prioritySupport: true,
+    advancedAnalytics: true,
+    linkedinToneChange: true,
+    linkedinCVSelection: true,
+    autoApplyBot: false
+  },
+  focused_yearly: {
+    journeyCVs: -1,
+    activeJourneyCVs: -1,
+    surgeonRuns: -1,
+    downloads: -1,
+    premiumTemplates: true,
+    maxCVs: -1,
+    maxJobs: -1,
+    standaloneCVs: true,
+    aiSurgeonMode: 'full',
+    coverLetterAI: true,
+    docxExport: true,
+    interviewCoach: true,
+    jobTracker: true,
+    jobParsing: true,
+    prioritySupport: true,
+    advancedAnalytics: true,
+    linkedinToneChange: true,
+    linkedinCVSelection: true,
+    autoApplyBot: false
+  },
+  smart_quaterly: {
+    journeyCVs: -1,
+    activeJourneyCVs: -1,
+    surgeonRuns: -1,
+    downloads: -1,
+    premiumTemplates: true,
+    maxCVs: -1,
+    maxJobs: -1,
+    standaloneCVs: true,
+    aiSurgeonMode: 'full',
+    coverLetterAI: true,
+    docxExport: true,
+    interviewCoach: true,
+    jobTracker: true,
+    jobParsing: true,
+    prioritySupport: true,
+    advancedAnalytics: true,
+    linkedinToneChange: true,
+    linkedinCVSelection: true,
+    autoApplyBot: true
+  },
+  smart_yearly: {
+    journeyCVs: -1,
+    activeJourneyCVs: -1,
+    surgeonRuns: -1,
+    downloads: -1,
+    premiumTemplates: true,
+    maxCVs: -1,
+    maxJobs: -1,
+    standaloneCVs: true,
+    aiSurgeonMode: 'full',
+    coverLetterAI: true,
+    docxExport: true,
+    interviewCoach: true,
+    jobTracker: true,
+    jobParsing: true,
+    prioritySupport: true,
+    advancedAnalytics: true,
+    linkedinToneChange: true,
+    linkedinCVSelection: true,
+    autoApplyBot: true
   },
   pro_monthly: {
     journeyCVs: -1,
@@ -92,6 +216,7 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     advancedAnalytics: true,
     linkedinToneChange: true,
     linkedinCVSelection: true,
+    autoApplyBot: false,
     hasVault: true
   },
   pro_quarterly: {
@@ -113,6 +238,7 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     advancedAnalytics: true,
     linkedinToneChange: true,
     linkedinCVSelection: true,
+    autoApplyBot: false,
     hasVault: true
   },
   pro_yearly: {
@@ -134,6 +260,7 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     advancedAnalytics: true,
     linkedinToneChange: true,
     linkedinCVSelection: true,
+    autoApplyBot: false,
     hasVault: true
   },
   pro_lifetime: {
@@ -155,7 +282,8 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     advancedAnalytics: true,
     hasVault: true,
     linkedinToneChange: true,
-    linkedinCVSelection: true
+    linkedinCVSelection: true,
+    autoApplyBot: false
   },
   pro: {
     journeyCVs: -1,
@@ -176,6 +304,7 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     advancedAnalytics: true,
     linkedinToneChange: true,
     linkedinCVSelection: true,
+    autoApplyBot: false,
     hasVault: true
   }
 };
@@ -610,7 +739,7 @@ export async function checkJourneyCVLimit(
     };
   }
 
-  // Free tier: 1 Active Journey CV
+  // Free tier: cap on active Journey CVs
   const remaining = Math.max(0, limits.activeJourneyCVs - currentActiveCount);
 
   return {
@@ -618,7 +747,7 @@ export async function checkJourneyCVLimit(
     currentActiveCount,
     limit: limits.activeJourneyCVs,
     message: remaining === 0
-      ? 'You have 1 active Journey CV. Archive or delete it to create a new one, or Upgrade to Pro.'
+      ? `You have reached the limit of ${limits.activeJourneyCVs} active Journey CVs. Archive or delete one to create a new one, or Upgrade to Pro.`
       : undefined,
     upgradeRequired: remaining === 0,
     canDeleteToMakeSpace: currentActiveCount > 0

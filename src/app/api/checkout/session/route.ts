@@ -108,7 +108,16 @@ async function getCountryPricingForPlan(
   }
 }
 
-type PaidPlanKey = 'pro_monthly' | 'pro_quarterly' | 'pro_yearly' | 'pro_lifetime';
+type PaidPlanKey = 
+  | 'starter_yealry' 
+  | 'focused_monthly' 
+  | 'focused_yearly' 
+  | 'smart_quaterly' 
+  | 'smart_yearly' 
+  | 'pro_monthly' 
+  | 'pro_quarterly' 
+  | 'pro_yearly' 
+  | 'pro_lifetime';
 
 interface ZeroAmountActivationParams {
   user: any;
@@ -398,7 +407,19 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate plan key
-    const validPlanKeys = ['free', 'pro_monthly', 'pro_quarterly', 'pro_yearly', 'pro_lifetime'];
+    const validPlanKeys = [
+      'free',
+      'starter_monthly',
+      'starter_yealry',
+      'focused_monthly',
+      'focused_yearly',
+      'smart_quaterly',
+      'smart_yearly',
+      'pro_monthly',
+      'pro_quarterly',
+      'pro_yearly',
+      'pro_lifetime'
+    ];
     if (!validPlanKeys.includes(planKey)) {
       return NextResponse.json({ error: 'Invalid plan key' }, { status: 400 });
     }
@@ -609,91 +630,60 @@ async function handleProPlanPayment(
   regionInfo?: any,
   couponDiscount?: any
 ) {
-  const planKey = plan.key as 'pro_monthly' | 'pro_quarterly' | 'pro_yearly' | 'pro_lifetime';
-
-  // Get country pricing from CountryPricing collection
+  const planKey = plan.key as PaidPlanKey;
   const countryCode = regionInfo?.countryCode || 'GB';
-  let countryPricing = await getCountryPricingForPlan(countryCode, planKey, interval as any);
+  const userCurrency = regionInfo?.currency || 'USD';
 
-  // If no pricing found for non-India country, fallback to GB (Polar-compatible)
-  if (!countryPricing && countryCode !== 'IN') {
-    console.log('No pricing found for country, falling back to GB for Polar:', {
-      countryCode,
-      planKey,
-      interval,
-      fallbackTo: 'GB'
-    });
-    countryPricing = await getCountryPricingForPlan('GB', planKey, interval as any);
+  // Find matching regional pricing in the plan
+  let regionalPriceObj = plan.regionalPricing?.find((rp: any) => 
+    rp.region?.toUpperCase() === countryCode.toUpperCase()
+  );
+
+  // If not found, look for fallback region (e.g. GB or US)
+  if (!regionalPriceObj && countryCode !== 'GB') {
+    regionalPriceObj = plan.regionalPricing?.find((rp: any) => 
+      rp.region?.toUpperCase() === 'GB'
+    );
+  }
+  if (!regionalPriceObj && countryCode !== 'US') {
+    regionalPriceObj = plan.regionalPricing?.find((rp: any) => 
+      rp.region?.toUpperCase() === 'US'
+    );
+  }
+  // If still not found, use first element in regionalPricing or fallback to base plan details
+  if (!regionalPriceObj && plan.regionalPricing?.length > 0) {
+    regionalPriceObj = plan.regionalPricing[0];
   }
 
-  // Determine the correct price based on planKey
-  let priceId: string | undefined;
-  let amount: number = 0;
-  let currency: string = 'USD';
+  // Determine the correct price based on planKey and interval
+  let priceId: string | undefined = regionalPriceObj?.polarPriceId;
+  let amount: number = regionalPriceObj ? (regionalPriceObj.price * 100) : 0;
+  let currency: string = regionalPriceObj?.currency || 'USD';
 
-  if (planKey === 'pro_monthly') {
-    priceId = countryPricing?.polarPriceIds?.monthly;
-    if (countryPricing) {
-      amount = countryPricing.price * 100;
-      currency = countryPricing.currency;
-    }
-  } else if (planKey === 'pro_quarterly') {
-    priceId = countryPricing?.polarPriceIds?.quarterly;
-    if (countryPricing) {
-      amount = countryPricing.price * 100;
-      currency = countryPricing.currency;
-    }
-  } else if (planKey === 'pro_yearly') {
-    priceId = countryPricing?.polarPriceIds?.yearly;
-    if (countryPricing) {
-      amount = countryPricing.price * 100;
-      currency = countryPricing.currency;
-    }
-  } else if (planKey === 'pro_lifetime') {
-    priceId = countryPricing?.polarPriceIds?.lifetime;
-    if (countryPricing) {
-      amount = countryPricing.price * 100;
-      currency = countryPricing.currency;
-    }
-  }
-
-  // Fallback to plan's defaultCountryPricingId if amount is 0
+  // Fallback to plan's default fields if not resolved
   if (amount === 0) {
-    const planDefaultPricingId = (plan as any).defaultCountryPricingId;
-    if (planDefaultPricingId) {
-      const { getCountryPricingById } = await import('@/lib/services/countryPricingService');
-      const defaultPricing = await getCountryPricingById(planDefaultPricingId);
-      if (defaultPricing) {
-        const pricesKeyMap: Record<string, 'monthly' | 'quarterly' | 'yearly' | 'lifetime'> = {
-          'pro_monthly': 'monthly',
-          'pro_quarterly': 'quarterly',
-          'pro_yearly': 'yearly',
-          'pro_lifetime': 'lifetime'
-        };
-        const pKey = pricesKeyMap[planKey];
-        if (pKey) {
-          amount = defaultPricing.planPrices[pKey].price * 100;
-          currency = defaultPricing.currency;
-        }
-      }
+    if (planKey.includes('monthly')) {
+      amount = (plan.price_monthly || plan.price || 0) * 100;
+      priceId = plan.polarPriceId_monthly;
+    } else if (planKey.includes('quarterly') || planKey.includes('quaterly')) {
+      amount = (plan.price_quarterly || plan.price || 0) * 100;
+      priceId = plan.polarPriceId_quarterly;
+    } else if (planKey.includes('yearly') || planKey.includes('yealry')) {
+      amount = (plan.price_yearly || plan.price || 0) * 100;
+      priceId = plan.polarPriceId_yearly;
+    } else {
+      amount = (plan.price_one_time || plan.price || 0) * 100;
+      priceId = plan.polarPriceId_one_time;
     }
+    currency = plan.currency || 'USD';
   }
 
-  // Final fallback to GB pricing
-  if (amount === 0) {
-    const { getCountryPricing } = await import('@/lib/services/countryPricingService');
-    const gbPricing = await getCountryPricing('GB');
-    const pricesKeyMap: Record<string, 'monthly' | 'quarterly' | 'yearly' | 'lifetime'> = {
-      'pro_monthly': 'monthly',
-      'pro_quarterly': 'quarterly',
-      'pro_yearly': 'yearly',
-      'pro_lifetime': 'lifetime'
-    };
-    const pKey = pricesKeyMap[planKey];
-    if (gbPricing && pKey) {
-      amount = gbPricing.planPrices[pKey].price * 100;
-      currency = gbPricing.currency;
-    }
+  // Fallback to Polar Price IDs directly on plan if priceId still not set
+  if (!priceId) {
+    if (planKey.includes('monthly')) priceId = plan.polarPriceId_monthly;
+    else if (planKey.includes('quarterly') || planKey.includes('quaterly')) priceId = plan.polarPriceId_quarterly;
+    else if (planKey.includes('yearly') || planKey.includes('yealry')) priceId = plan.polarPriceId_yearly;
+    else priceId = plan.polarPriceId_one_time;
   }
 
   // Log for debugging

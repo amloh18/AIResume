@@ -14,9 +14,18 @@ import { Sparkles, Zap, Briefcase, Settings, MapPin, DollarSign, BarChart3, Hist
 import { AutoApplyPanel } from '@/components/jobs/AutoApplyPanel';
 import { ApplicationsPanel } from '@/components/jobs/ApplicationsPanel';
 import { motion } from 'framer-motion';
+import { useSearchParams } from 'next/navigation';
 
 export default function JobsDashboard() {
   const [activeTab, setActiveTab] = useState<'discover' | 'metrics' | 'autoapply' | 'applications' | 'settings'>('discover');
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam && ['discover', 'metrics', 'autoapply', 'applications', 'settings'].includes(tabParam)) {
+      setActiveTab(tabParam as any);
+    }
+  }, [searchParams]);
   const [region, setRegion] = useState<'UK' | 'India'>('UK');
   const [metrics, setMetrics] = useState<JobsMetrics | null>(null);
   const [jobs, setJobs] = useState<JobListing[]>([]);

@@ -101,3 +101,61 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+export async function POST(request: NextRequest) {
+  try {
+    const authResult = await getAuthenticatedUser(request);
+    if (!authResult) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { planKey } = await request.json();
+    if (planKey !== 'starter_monthly') {
+      return NextResponse.json({ success: false, error: 'Only starter_monthly can be activated via this endpoint' }, { status: 400 });
+    }
+
+    await getConnection();
+    const user = await User.findOne({ email: authResult.userEmail });
+    if (!user) {
+      return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
+    }
+
+    // Activate the free plan
+    const PricingPlan = await getAdminPricingPlan();
+    const plan = await PricingPlan.findOne({ key: 'starter_monthly' });
+    if (!plan) {
+      return NextResponse.json({ success: false, error: 'Starter plan not found' }, { status: 404 });
+    }
+
+    const now = new Date();
+    const expiresAt = new Date(now);
+    expiresAt.setMonth(expiresAt.getMonth() + 1);
+
+    await User.findByIdAndUpdate(user._id, {
+      $set: {
+        currentPlanKey: 'starter_monthly',
+        'subscription.planKey': 'starter_monthly',
+        'subscription.status': 'active',
+        'subscription.startDate': now,
+        'subscription.accessExpiresAt': expiresAt,
+        'subscription.currentPeriodStart': now,
+        'subscription.currentPeriodEnd': expiresAt,
+        'subscription.usageResetDate': expiresAt,
+        'subscription.provider': 'none',
+        'subscription.interval': 'monthly',
+        'subscription.purchasePrice': 0,
+        'subscription.autoRenew': true
+      }
+    });
+
+    // Initialize credits for the new plan
+    const creditService = (await import('@/lib/services/creditService')).default;
+    await creditService.initializeCredits(user._id.toString(), 'starter_monthly');
+
+    return NextResponse.json({ success: true, message: 'Starter plan activated' });
+  } catch (error) {
+    console.error('Error activating starter plan:', error);
+    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
+  }
+}
+
