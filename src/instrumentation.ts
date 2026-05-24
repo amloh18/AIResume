@@ -2,11 +2,21 @@ import * as Sentry from "@sentry/nextjs";
 
 export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
-    await import("../sentry.server.config");
+    Sentry.init({
+      dsn: "https://88b1aba46950f4d42ae02febd2ae0e8a@o4511432633679872.ingest.de.sentry.io/4511432660156496",
+      tracesSampleRate: 1,
+      enableLogs: true,
+      sendDefaultPii: true,
+    });
   }
 
   if (process.env.NEXT_RUNTIME === "edge") {
-    await import("../sentry.edge.config");
+    Sentry.init({
+      dsn: "https://88b1aba46950f4d42ae02febd2ae0e8a@o4511432633679872.ingest.de.sentry.io/4511432660156496",
+      tracesSampleRate: 1,
+      enableLogs: true,
+      sendDefaultPii: true,
+    });
   }
 }
 
