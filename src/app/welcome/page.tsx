@@ -49,6 +49,8 @@ interface OnboardingState {
   experienceLevel: string;
   salary: string;
   visaRequired: boolean | null;
+  parsedCVData: any;
+  droppedFile: string;
 }
 
 const WelcomePage: React.FC = () => {
@@ -126,7 +128,9 @@ const WelcomePage: React.FC = () => {
     locations,
     experienceLevel,
     salary,
-    visaRequired
+    visaRequired,
+    parsedCVData,
+    droppedFile
   });
 
   const saveStateToLocalStorage = (nextStepNum: number) => {
@@ -158,12 +162,16 @@ const WelcomePage: React.FC = () => {
         setVisaRequired(parsed.visaRequired ?? null);
         setFastTrackToEditor(parsed.fastTrackToEditor || false);
         
+        // Restore parsed data
+        if (parsed.parsedCVData) setParsedCVData(parsed.parsedCVData);
+        if (parsed.droppedFile) setDroppedFile(parsed.droppedFile);
+        
         // Clear local storage
         localStorage.removeItem('cvcircle_onboarding_state');
         
-        // If they fast-tracked, redirect immediately
+        // If they fast-tracked, call completion logic instead of simple redirect
         if (parsed.fastTrackToEditor) {
-          router.push('/editor');
+          completeOnboarding('/editor', parsed);
         } else {
           setCurrentStep(parsed.step || 5);
         }
@@ -210,10 +218,10 @@ const WelcomePage: React.FC = () => {
   };
 
   // Onboarding Completion Endpoint call
-  const completeOnboarding = async (redirectUrl: string) => {
+  const completeOnboarding = async (redirectUrl: string, overrideState?: OnboardingState) => {
     if (status === 'authenticated') {
       try {
-        const rec = getRecommendedTier();
+        const rec = getRecommendedTier(overrideState);
         let primary_goal: 'cv' | 'tracker' | 'auto_apply' = 'cv';
         let recommended_plan = 'free';
         let activation_route = '/editor?doc=master-cv&mode=improve';
@@ -239,43 +247,46 @@ const WelcomePage: React.FC = () => {
         // Use the resolved activation route for saving, but if a specific custom redirectUrl was passed (like '/dashboard'), we can let the user go there
         const targetRoute = redirectUrl === '/dashboard' ? '/dashboard' : activation_route;
 
-        // --- MASTER CV CREATION ---
-        // Save the parsed CV data as the Master CV if it exists
-        if (parsedCVData || targetRoles.length > 0) {
-          try {
-            const cvDataToSave = parsedCVData || {
-              basics: {
-                name: session?.user?.name || '',
-                email: session?.user?.email || '',
-                label: targetRoles[0] || ''
-              },
-              skills: targetRoles.map(r => ({ name: r, level: 'Expert' })),
-              work: [],
-              education: [],
-              projects: []
-            };
+        const s_parsedCVData = overrideState?.parsedCVData ?? parsedCVData;
+        const s_targetRoles = overrideState?.targetRoles ?? targetRoles;
+        const s_droppedFile = overrideState?.droppedFile ?? droppedFile;
+        const s_cvScore = overrideState?.cvScore ?? cvScore;
 
-            await fetch('/api/cvs', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                title: droppedFile || 'Master CV',
-                cvData: cvDataToSave,
-                cvType: 'master',
+        // --- MASTER CV CREATION ---
+        // Save the parsed CV data as the Master CV (Always create one during onboarding)
+        try {
+          const cvDataToSave = s_parsedCVData || {
+            basics: {
+              name: session?.user?.name || '',
+              email: session?.user?.email || '',
+              label: s_targetRoles[0] || ''
+            },
+            skills: s_targetRoles.map(r => ({ name: r, level: 'Expert' })),
+            work: [],
+            education: [],
+            projects: []
+          };
+
+          await fetch('/api/cvs', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              title: s_droppedFile || 'Master CV',
+              cvData: cvDataToSave,
+              cvType: 'master',
+              isMaster: true,
+              metadata: {
                 isMaster: true,
-                metadata: {
-                  isMaster: true,
-                  createdVia: 'ai-career-report', // Authoritative flag for master CV
-                  createdFrom: 'onboarding',
-                  atsScore: cvScore
-                }
-              })
-            });
-            console.log('✅ Master CV created/saved from onboarding');
-            sessionStorage.setItem('masterCVCreated', 'true');
-          } catch (cvError) {
-            console.error('Failed to create Master CV during onboarding:', cvError);
-          }
+                createdVia: 'ai-career-report', // Authoritative flag for master CV
+                createdFrom: 'onboarding',
+                atsScore: s_cvScore
+              }
+            })
+          });
+          console.log('✅ Master CV created/saved from onboarding');
+          sessionStorage.setItem('masterCVCreated', 'true');
+        } catch (cvError) {
+          console.error('Failed to create Master CV during onboarding:', cvError);
         }
 
         await fetch('/api/user/onboarding-status', {
@@ -285,7 +296,7 @@ const WelcomePage: React.FC = () => {
             hasSeenWelcome: true,
             onboarding: {
               primary_goal,
-              confidence_score: cvScore,
+              confidence_score: s_cvScore,
               recommended_plan,
               activation_status: 'pending',
               activation_route,
@@ -326,56 +337,62 @@ const WelcomePage: React.FC = () => {
   };
 
   // Silent Tier Scoring Calculation
-  const getRecommendedTier = () => {
+  const getRecommendedTier = (overrideState?: OnboardingState) => {
+    const s_intent = overrideState?.intent ?? intent;
+    const s_searchStatus = overrideState?.searchStatus ?? searchStatus;
+    const s_monthlyVolume = overrideState?.monthlyVolume ?? monthlyVolume;
+    const s_trackerInterest = overrideState?.trackerInterest ?? trackerInterest;
+    const s_autoapplyInterest = overrideState?.autoapplyInterest ?? autoapplyInterest;
+
     let score1 = 0; // Free CV Studio
     let score2 = 0; // Job Tracker
     let score3 = 0; // Auto-Apply
 
     // Intent selection scoring
-    if (intent === 'cv' || intent === 'cv_scratch') {
+    if (s_intent === 'cv' || s_intent === 'cv_scratch') {
       score1 += 3;
-    } else if (intent === 'tracker') {
+    } else if (s_intent === 'tracker') {
       score2 += 3;
-    } else if (intent === 'auto_apply') {
+    } else if (s_intent === 'auto_apply') {
       score3 += 3;
     }
 
     // Search activity status scoring
-    if (searchStatus === 'browsing') {
+    if (s_searchStatus === 'browsing') {
       score1 += 2;
-    } else if (searchStatus === 'exploring') {
+    } else if (s_searchStatus === 'exploring') {
       score1 += 1;
       score2 += 2;
-    } else if (searchStatus === 'active') {
+    } else if (s_searchStatus === 'active') {
       score2 += 2;
       score3 += 1;
-    } else if (searchStatus === 'aggressive') {
+    } else if (s_searchStatus === 'aggressive') {
       score3 += 3;
       score2 += 1;
     }
 
     // Monthly Volume scoring
-    if (monthlyVolume === 'low') {
+    if (s_monthlyVolume === 'low') {
       score1 += 2;
-    } else if (monthlyVolume === 'medium') {
+    } else if (s_monthlyVolume === 'medium') {
       score2 += 3;
-    } else if (monthlyVolume === 'high') {
+    } else if (s_monthlyVolume === 'high') {
       score3 += 3;
-    } else if (monthlyVolume === 'aggressive') {
+    } else if (s_monthlyVolume === 'aggressive') {
       score3 += 4;
     }
 
     // Tracker interest scoring
-    if (trackerInterest === 'yes') {
+    if (s_trackerInterest === 'yes') {
       score2 += 2;
-    } else if (trackerInterest === 'no') {
+    } else if (s_trackerInterest === 'no') {
       score1 += 1;
     }
 
     // Auto-Apply interest scoring
-    if (autoapplyInterest === 'yes') {
+    if (s_autoapplyInterest === 'yes') {
       score3 += 3;
-    } else if (autoapplyInterest === 'no') {
+    } else if (s_autoapplyInterest === 'no') {
       score2 += 1;
       score1 += 1;
     }
@@ -549,7 +566,7 @@ const WelcomePage: React.FC = () => {
           setAuthSuccess('Signed in successfully! Continuing...');
           setTimeout(() => {
             if (fastTrackToEditor) {
-              router.push('/editor');
+              completeOnboarding('/editor');
             } else {
               setCurrentStep(5);
             }
@@ -599,7 +616,7 @@ const WelcomePage: React.FC = () => {
         setAuthSuccess('Account verified and logged in!');
         setTimeout(() => {
           if (fastTrackToEditor) {
-            router.push('/editor');
+            completeOnboarding('/editor');
           } else {
             setCurrentStep(5);
           }

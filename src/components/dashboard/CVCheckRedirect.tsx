@@ -237,10 +237,13 @@ export default function CVCheckRedirect({ children }: CVCheckRedirectProps) {
 
             // Check if user has any master CVs
             // Handle both old format (isMaster at root) and new format (metadata.isMaster)
+            // Also check for cvType as an additional fallback
             const hasMasterCV = result.data.cvs.some((cv: any) => {
               const isMasterAtRoot = cv.isMaster === true;
               const isMasterInMetadata = cv.metadata?.isMaster === true;
               const isMasterInMetadataString = cv.metadata?.isMaster === 'true';
+              const isMasterByType = cv.cvType === 'master';
+              const isMasterByMetadataType = cv.metadata?.cvType === 'master';
 
               console.log('🔍 CV Master check:', {
                 id: cv.id,
@@ -248,10 +251,12 @@ export default function CVCheckRedirect({ children }: CVCheckRedirectProps) {
                 isMasterAtRoot,
                 isMasterInMetadata,
                 isMasterInMetadataString,
+                isMasterByType,
+                isMasterByMetadataType,
                 metadata: cv.metadata
               });
 
-              return isMasterAtRoot || isMasterInMetadata || isMasterInMetadataString;
+              return isMasterAtRoot || isMasterInMetadata || isMasterInMetadataString || isMasterByType || isMasterByMetadataType;
             });
 
             console.log('🔍 Master CV check result:', {
@@ -261,7 +266,9 @@ export default function CVCheckRedirect({ children }: CVCheckRedirectProps) {
                 const isMasterAtRoot = cv.isMaster === true;
                 const isMasterInMetadata = cv.metadata?.isMaster === true;
                 const isMasterInMetadataString = cv.metadata?.isMaster === 'true';
-                return isMasterAtRoot || isMasterInMetadata || isMasterInMetadataString;
+                const isMasterByType = cv.cvType === 'master';
+                const isMasterByMetadataType = cv.metadata?.cvType === 'master';
+                return isMasterAtRoot || isMasterInMetadata || isMasterInMetadataString || isMasterByType || isMasterByMetadataType;
               }).length
             });
 
