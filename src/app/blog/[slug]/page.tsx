@@ -16,7 +16,7 @@ export async function generateMetadata(props: {
   if (!article) return { title: 'Article Not Found | CVCircle' };
 
   return {
-    title: `${article.title} | CVCircle`,
+    title: `${article.title} | Career Tips & ATS Strategy | CVCircle`,
     description: article.excerpt || article.subtitle,
     alternates: { canonical: `/blog/${params.slug}` },
     openGraph: {
@@ -187,8 +187,67 @@ export default async function BlogPostPage(props: {
 
   const categoryColor = categoryColors[article.category] || 'bg-gray-800 text-gray-300 border-gray-700';
 
+  const articleSchema = {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": article.title,
+    "description": article.excerpt || article.subtitle,
+    "image": article.featuredImage,
+    "author": {
+      "@type": "Organization",
+      "name": "CVCircle Research Team",
+      "url": "https://cvcircle.io"
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "CVCircle",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://cvcircle.io/images/favicon.png"
+      }
+    },
+    "datePublished": article.date,
+    "mainEntityOfPage": {
+      "@type": "WebPage",
+      "@id": `https://cvcircle.io/blog/${slug}`
+    }
+  };
+
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "Home",
+        "item": "https://cvcircle.io"
+      },
+      {
+        "@type": "ListItem",
+        "position": 2,
+        "name": "Blog",
+        "item": "https://cvcircle.io/blog"
+      },
+      {
+        "@type": "ListItem",
+        "position": 3,
+        "name": article.title,
+        "item": `https://cvcircle.io/blog/${slug}`
+      }
+    ]
+  };
+
   return (
     <div className="min-h-screen bg-[#0d1209]">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-[#81ff00]/3 rounded-full blur-3xl" />
         <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-green-900/10 rounded-full blur-3xl" />
@@ -252,6 +311,31 @@ export default async function BlogPostPage(props: {
             <div className="grid grid-cols-1 xl:grid-cols-[260px_1fr] gap-12">
               <aside className="hidden xl:block">
                 <TableOfContentsClient sections={article.tableOfContents} slug={article.slug} />
+                
+                {/* Related Tools Links */}
+                <div className="mt-12 sticky top-32">
+                  <h4 className="text-white font-bold text-sm mb-4 uppercase tracking-wider">Essential Tools</h4>
+                  <div className="flex flex-col gap-3">
+                    <Link href="/ai-resume-builder" className="group flex items-center gap-3 p-3 bg-white/5 rounded-lg border border-white/5 hover:border-[#81ff00]/30 transition-all">
+                      <div className="w-8 h-8 bg-lime-400/10 rounded-md flex items-center justify-center text-lime-400">
+                        <Sparkles className="w-4 h-4" />
+                      </div>
+                      <span className="text-xs text-gray-300 font-medium group-hover:text-white transition-colors">AI Resume Builder</span>
+                    </Link>
+                    <Link href="/ats-resume-checker" className="group flex items-center gap-3 p-3 bg-white/5 rounded-lg border border-white/5 hover:border-blue-400/30 transition-all">
+                      <div className="w-8 h-8 bg-blue-400/10 rounded-md flex items-center justify-center text-blue-400">
+                        <CheckCircle className="w-4 h-4" />
+                      </div>
+                      <span className="text-xs text-gray-300 font-medium group-hover:text-white transition-colors">ATS Scanner</span>
+                    </Link>
+                    <Link href="/templates" className="group flex items-center gap-3 p-3 bg-white/5 rounded-lg border border-white/5 hover:border-purple-400/30 transition-all">
+                      <div className="w-8 h-8 bg-purple-400/10 rounded-md flex items-center justify-center text-purple-400">
+                        <FileText className="w-4 h-4" />
+                      </div>
+                      <span className="text-xs text-gray-300 font-medium group-hover:text-white transition-colors">Resume Templates</span>
+                    </Link>
+                  </div>
+                </div>
               </aside>
               <article className="max-w-3xl">
                 {article.sections.map((section, index) => (
@@ -275,6 +359,39 @@ export default async function BlogPostPage(props: {
                     </MotionDiv>
                   </section>
                 ))}
+                
+                {/* FAQ Section if present in JSON */}
+                {article.faqs && article.faqs.length > 0 && (
+                  <section id="faqs" className="mt-16 pt-16 border-t border-white/5 scroll-mt-28">
+                    <h2 className="text-2xl md:text-3xl font-bold text-white mb-8">Frequently Asked Questions</h2>
+                    <div className="space-y-6">
+                      {article.faqs.map((faq: any, i: number) => (
+                        <div key={i} className="bg-[#1a1f1a] p-6 rounded-xl border border-white/5">
+                          <h3 className="text-lg font-bold text-white mb-3">{faq.question}</h3>
+                          <p className="text-gray-400 text-sm leading-relaxed">{faq.answer}</p>
+                        </div>
+                      ))}
+                    </div>
+                    {/* FAQ Schema */}
+                    <script
+                      type="application/ld+json"
+                      dangerouslySetInnerHTML={{
+                        __html: JSON.stringify({
+                          "@context": "https://schema.org",
+                          "@type": "FAQPage",
+                          "mainEntity": article.faqs.map((faq: any) => ({
+                            "@type": "Question",
+                            "name": faq.question,
+                            "acceptedAnswer": {
+                              "@type": "Answer",
+                              "text": faq.answer
+                            }
+                          }))
+                        })
+                      }}
+                    />
+                  </section>
+                )}
               </article>
             </div>
           </div>

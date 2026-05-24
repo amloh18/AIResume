@@ -38,19 +38,19 @@ const Hero = () => {
             {/* Marker background effect */}
             <span className="absolute inset-0 bg-[#81ff00] opacity-40 blur-sm -skew-y-1 transform scale-105 rounded-sm"></span>
             <span className="absolute inset-0 bg-[#81ff00] opacity-60 -z-10 transform -skew-y-1 rounded-sm"></span>
-            <span className="relative text-black px-3 py-1 font-extrabold">Stop wasting time</span>
+            <span className="relative text-black px-3 py-1 font-extrabold">AI Resume Builder for ATS Jobs</span>
           </span>
         </motion.h1>
 
         {/* Subtitle */}
-        <motion.p
-          className="text-3xl tablet:text-5xl desktop:text-6xl text-white mb-6 font-bold tracking-tight"
+        <motion.h2
+          className="text-2xl tablet:text-4xl desktop:text-5xl text-white mb-6 font-bold tracking-tight"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
         >
-          Start getting interviews.
-        </motion.p>
+          Stop wasting time. Start getting interviews.
+        </motion.h2>
 
         {/* Description */}
         <motion.p

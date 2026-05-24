@@ -26,6 +26,10 @@ export interface BlogArticle {
     id: string;
     title: string;
   }[];
+  faqs?: {
+    question: string;
+    answer: string;
+  }[];
 }
 
 export interface BlogArticleMeta {

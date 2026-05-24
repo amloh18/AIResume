@@ -125,6 +125,9 @@ export const metadata: Metadata = {
   },
   verification: {
     google: process.env.GOOGLE_SITE_VERIFICATION,
+    other: {
+      'msvalidate.01': ['C0E623844C2A0ACD1B0528453501DDAE'],
+    },
   },
    icons: {
       icon: [
