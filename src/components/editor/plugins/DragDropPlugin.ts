@@ -16,6 +16,15 @@ interface DragDropState {
 
 const dragDropKey = new PluginKey<DragDropState>('dragDrop');
 
+declare module '@tiptap/core' {
+    interface Commands<ReturnType> {
+        dragDrop: {
+            setDraggingState: (pos: number, nodeType: string) => ReturnType;
+            resetDraggingState: () => ReturnType;
+        };
+    }
+}
+
 export const DragDropPlugin = Extension.create<DragDropOptions>({
     name: 'dragDrop',
 
@@ -25,6 +34,29 @@ export const DragDropPlugin = Extension.create<DragDropOptions>({
             onDragEnd: undefined,
             onDrop: undefined,
             onReorder: undefined,
+        };
+    },
+
+    addCommands() {
+        return {
+            setDraggingState: (pos: number, nodeType: string) => ({ tr, dispatch }) => {
+                if (dispatch) {
+                    dispatch(tr.setMeta(dragDropKey, {
+                        dragging: { pos, nodeType },
+                        dropTarget: null,
+                    }));
+                }
+                return true;
+            },
+            resetDraggingState: () => ({ tr, dispatch }) => {
+                if (dispatch) {
+                    dispatch(tr.setMeta(dragDropKey, {
+                        dragging: null,
+                        dropTarget: null,
+                    }));
+                }
+                return true;
+            },
         };
     },
 
@@ -49,6 +81,14 @@ export const DragDropPlugin = Extension.create<DragDropOptions>({
                 props: {
                     handleDOMEvents: {
                         dragstart: (view, event) => {
+                            // Only allow drag if it's from a drag handle
+                            const target = event.target as HTMLElement;
+                            const isHandle = target.closest('[data-drag-handle]');
+                            
+                            if (!isHandle) {
+                                return false;
+                            }
+
                             if (options.onDragStart) {
                                 options.onDragStart(event);
                             }

@@ -115,7 +115,7 @@ const Features = () => {
       description: 'Save and autofill job data instantly from any job board. Never copy-paste again.',
       cta: 'Download Extension',
       ctaLink: 'https://chromewebstore.google.com/detail/fphkljfgefkfemmlfbpnjdojnfeadaii',
-      images: ['/images/extension.png'],
+      images: ['/images/extension.webp'],
       showFrame: false,
     },
     {
@@ -124,7 +124,7 @@ const Features = () => {
       description: 'Optimize your LinkedIn profile with AI-powered suggestions to attract recruiters & land more opportunities.',
       cta: 'Enhance Profile',
       ctaLink: '/linkedin-enhancer',
-      images: ['/images/linkedin_enhancer.png', '/images/linkedin_enhancer_dashbaord.png'],
+      images: ['/images/linkedin_enhancer.webp', '/images/linkedin_enhancer_dashbaord.webp'],
       showFrame: true,
     },
     // Row 2: 3 medium tiles
@@ -134,7 +134,7 @@ const Features = () => {
       description: 'Auto-generate CVs and Cover Letters tailored to pass Applicant Tracking Systems with high score.',
       cta: 'Create CV',
       ctaLink: '/studio',
-      images: ['/images/ats_optimization.png'],
+      images: ['/images/ats_optimization.webp'],
       showFrame: false,
     },
     {
@@ -143,7 +143,7 @@ const Features = () => {
       description: 'Identify missing skills and get actionable recommendations to bridge the gap.',
       cta: 'Analyze Skills',
       ctaLink: '/ai-career-report',
-      images: ['/images/skill_gap_analysis.png'],
+      images: ['/images/skill_gap_analysis.webp'],
       showFrame: false,
     },
     {
@@ -152,7 +152,7 @@ const Features = () => {
       description: 'Get detailed CV reports highlighting career gaps, strengths, and areas for improvement.',
       cta: 'Get Report',
       ctaLink: '/ai-career-report',
-      images: ['/images/career_insights.png'],
+      images: ['/images/career_insights.webp'],
       showFrame: false,
     },
     // Row 3: 2 tiles
@@ -162,7 +162,7 @@ const Features = () => {
       description: 'Access sponsored jobs with visa sponsorship tags for UK and USA companies with updated companies list.',
       cta: 'Explore Jobs',
       ctaLink: '/dashboard/jobs',
-      images: ['/images/global_opportunities.png'],
+      images: ['/images/global_opportunities.webp'],
       showFrame: false,
     },
     {
@@ -171,7 +171,7 @@ const Features = () => {
       description: 'Get an edge over other candidates by practising industry standard interview questions.',
       cta: 'Start Practice',
       ctaLink: '/interview-coach',
-      images: ['/images/interviewcoach_dashbaord.png', '/images/interviewcoach_questionanalysis.png', '/images/interviwcoach.png'],
+      images: ['/images/interviewcoach_dashbaord.webp', '/images/interviewcoach_questionanalysis.webp', '/images/interviwcoach.webp'],
       showFrame: true,
     },
     {
@@ -180,7 +180,7 @@ const Features = () => {
       description: 'Switch between dark and light themes for a comfortable reading experience in any environment.',
       cta: 'Try Theme',
       ctaLink: '/dashboard',
-      images: ['/images/features/dark_light.png'],
+      images: ['/images/features/dark_light.webp'],
       showFrame: true,
     },
   ];

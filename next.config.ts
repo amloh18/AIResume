@@ -257,10 +257,18 @@ const nextConfig: NextConfig = {
   },
   // Performance optimizations
   experimental: {
-    // Disable aggressive CSS optimization to prevent preload warnings
-    optimizeCss: false,
-    // Temporarily disable lucide-react optimization to fix HMR issues with Route icon
-    optimizePackageImports: ['lottie-react'],
+    // Enable aggressive CSS optimization (critters) to inline critical CSS
+    optimizeCss: true,
+    // Optimize imports for common heavy libraries
+    optimizePackageImports: [
+      'lottie-react',
+      'lucide-react',
+      'framer-motion',
+      '@heroicons/react',
+      'recharts',
+      'date-fns',
+      'lodash'
+    ],
   },
   // Turbopack configuration - use webpack for now due to custom webpack config
   turbopack: {},
@@ -416,7 +424,7 @@ export default withSentryConfig(nextConfig, {
   tunnelRoute: "/monitoring",
 
   // Hides source maps from generated client bundles
-  hideSourceMaps: true,
+  // hideSourceMaps: true,
 
   // Automatically tree-shake Sentry logger statements to reduce bundle size
   disableLogger: true,

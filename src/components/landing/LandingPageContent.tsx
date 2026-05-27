@@ -3,16 +3,19 @@
 import React, { useEffect } from 'react';
 import { FileText, Sparkles, CheckCircle, Briefcase, Chrome, Globe, LayoutDashboard, BookOpen } from 'lucide-react';
 import Hero from '@/components/landing/Hero';
-import Features from '@/components/landing/Features';
-import ChromeExtension from '@/components/landing/ChromeExtension';
-import Testimonials from '@/components/landing/Testimonials';
-import HowItWorks from '@/components/landing/HowItWorks';
-import Pricing from '@/components/landing/Pricing';
-import BlogSection from '@/components/landing/BlogSection';
-import FAQ from '@/components/landing/FAQ';
-import Footer from '@/components/landing/Footer';
 import CardNav from '@/components/landing/CardNav';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
+
+// Lazy load non-critical sections
+const Features = dynamic(() => import('@/components/landing/Features'), { ssr: true });
+const ChromeExtension = dynamic(() => import('@/components/landing/ChromeExtension'), { ssr: true });
+const Testimonials = dynamic(() => import('@/components/landing/Testimonials'), { ssr: true });
+const HowItWorks = dynamic(() => import('@/components/landing/HowItWorks'), { ssr: true });
+const Pricing = dynamic(() => import('@/components/landing/Pricing'), { ssr: true });
+const BlogSection = dynamic(() => import('@/components/landing/BlogSection'), { ssr: true });
+const FAQ = dynamic(() => import('@/components/landing/FAQ'), { ssr: true });
+const Footer = dynamic(() => import('@/components/landing/Footer'), { ssr: true });
 
 export default function LandingPageContent() {
   const router = useRouter();

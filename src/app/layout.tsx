@@ -9,8 +9,8 @@ import GlobalCommandBar from '@/components/ui/GlobalCommandBar'
 import { getServerSession } from 'next-auth'
 import { authConfig } from '@/lib/auth-config'
 
-// Force dynamic rendering for all pages
-export const dynamic = 'force-dynamic'
+// Allow Next.js to determine rendering strategy (SSG vs SSR) automatically
+export const dynamic = 'auto'
 export const dynamicParams = true
 
 export const viewport: Viewport = {
@@ -157,15 +157,9 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode
 }) {
-  // Fetch the session on the server - wrap in try-catch to prevent crashes
-  let session = null;
-  try {
-    session = await getServerSession(authConfig);
-  } catch (error) {
-    // Log error but don't crash the app
-    console.error('Error fetching session in RootLayout:', error);
-    // Continue with null session - app will work without session
-  }
+  // We no longer fetch session on the server here to allow static generation of marketing pages.
+  // ClientProviders (SessionProvider) will automatically fetch it on the client side.
+  const session = null;
 
   return (
     <html lang="en">
@@ -181,35 +175,20 @@ export default async function RootLayout({
         <ViewportMeta />
         <ResourceHints />
         <React.Suspense fallback={
-          <div className="fixed inset-0 z-[10000] flex flex-col items-center justify-center bg-[#f3f2ee] dark:bg-[#1a230f] overflow-hidden">
-            <div className="relative w-48 h-48 flex items-center justify-center">
+          <div className="fixed inset-0 z-[10000] flex flex-col items-center justify-center bg-[#f3f2ee] dark:bg-[#141810] overflow-hidden">
+            <div className="relative w-24 h-24 flex items-center justify-center">
               {/* Concentric Rotating Rings */}
-              <div className="absolute inset-0 border-[3px] border-transparent border-t-[#83d60d] rounded-full animate-spin" style={{ animationDuration: '2s' }} />
-              <div className="absolute inset-2 border-[2px] border-transparent border-b-[#83d60d]/50 rounded-full animate-spin" style={{ animationDirection: 'reverse', animationDuration: '3s' }} />
-              <div className="absolute inset-4 border-[1px] border-transparent border-r-[#83d60d]/30 rounded-full animate-spin" style={{ animationDuration: '1.5s' }} />
+              <div className="absolute inset-0 border-[3px] border-transparent border-t-[#81ff00] rounded-full animate-spin" style={{ animationDuration: '1.5s' }} />
+              <div className="absolute inset-2 border-[2px] border-transparent border-b-[#81ff00]/50 rounded-full animate-spin" style={{ animationDirection: 'reverse', animationDuration: '2s' }} />
               
-              {/* Pulsing Background Glow */}
-              <div className="absolute inset-0 bg-[#83d60d]/10 rounded-full animate-pulse blur-xl" />
-              
-              {/* Center Favicon */}
-              <div className="relative w-24 h-24 md:w-28 md:h-28 z-10 flex items-center justify-center p-2">
-                <img 
-                  src="/images/favicon.png" 
-                  alt="Loading..." 
-                  className="w-full h-full object-contain"
-                  style={{ animation: 'float-minimal 3s ease-in-out infinite' }}
-                />
+              {/* Center "CV" Text */}
+              <div className="relative z-10 flex items-center justify-center">
+                <span className="text-2xl font-black text-black dark:text-white tracking-tighter">CV</span>
               </div>
             </div>
-            <div className="mt-12 flex flex-col items-center gap-2">
-              <h3 className="text-sm font-black text-gray-800 dark:text-gray-200 uppercase tracking-[0.25em] animate-pulse">Initializing Experience</h3>
+            <div className="mt-8 flex flex-col items-center gap-2">
+              <h3 className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-[0.3em] animate-pulse">Initializing</h3>
             </div>
-            <style dangerouslySetInnerHTML={{ __html: `
-              @keyframes float-minimal {
-                0%, 100% { transform: translateY(0); }
-                50% { transform: translateY(-6px); }
-              }
-            `}} />
           </div>
         }>
           <ClientProviders session={session}>

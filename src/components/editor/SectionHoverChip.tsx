@@ -325,6 +325,32 @@ export const SectionHoverChip: React.FC<SectionHoverChipProps> = ({
 
   // Drag handlers
   const handleDragStart = useCallback((e: React.DragEvent, sectionId: string) => {
+    if (!editor) return;
+
+    // Find the section position in the editor
+    let sectionPos = -1;
+    let sectionType = '';
+
+    const sections = findSections();
+    const section = sections.find(s => s.id === sectionId);
+    
+    if (section) {
+      try {
+        sectionPos = editor.view.posAtDOM(section.element, 0);
+        sectionType = section.type;
+        
+        // Adjust position to the start of the node if needed
+        const $pos = editor.state.doc.resolve(sectionPos);
+        sectionPos = $pos.before();
+      } catch (err) {
+        console.error('Failed to get section position:', err);
+      }
+    }
+
+    if (sectionPos >= 0) {
+      editor.commands.setDraggingState(sectionPos, sectionType);
+    }
+
     setDragState({ dragging: true, sectionId });
     e.dataTransfer.setData('text/plain', sectionId);
     e.dataTransfer.effectAllowed = 'move';
@@ -335,9 +361,13 @@ export const SectionHoverChip: React.FC<SectionHoverChipProps> = ({
       const el = container.querySelector(`[data-id="${sectionId}"]`) as HTMLElement;
       if (el) el.classList.add('section-dragging');
     }
-  }, [containerRef]);
+  }, [containerRef, editor, findSections]);
 
   const handleDragEnd = useCallback(() => {
+    if (editor) {
+      editor.commands.resetDraggingState();
+    }
+
     const container = containerRef.current;
     if (container && dragState.sectionId) {
       const el = container.querySelector(`[data-id="${dragState.sectionId}"]`) as HTMLElement;
@@ -346,7 +376,7 @@ export const SectionHoverChip: React.FC<SectionHoverChipProps> = ({
     // Remove all drop indicators
     container?.querySelectorAll('.section-drop-indicator').forEach((el) => el.remove());
     setDragState({ dragging: false, sectionId: null });
-  }, [containerRef, dragState.sectionId]);
+  }, [containerRef, editor, dragState.sectionId]);
 
   // Calculate chip position - position above the section with some offset
   const chipPosition = hoveredSection
@@ -382,6 +412,7 @@ export const SectionHoverChip: React.FC<SectionHoverChipProps> = ({
               {/* Drag handle */}
               <button
                 draggable
+                data-drag-handle
                 onDragStart={(e) => handleDragStart(e, hoveredSection.id)}
                 onDragEnd={handleDragEnd}
                 className="p-1 rounded hover:bg-gray-700 text-gray-400 hover:text-white transition-colors cursor-grab active:cursor-grabbing"
