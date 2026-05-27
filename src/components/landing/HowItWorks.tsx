@@ -14,27 +14,27 @@ const HowItWorks = () => {
     {
       title: 'Create Primary CV',
       description: 'Build your comprehensive professional profile once. Include all your skills, experience, and achievements to act as the foundation for every future application.',
-      image: '/images/Howitworks/step1.png',
+      image: '/images/Howitworks/step1.webp',
     },
     {
       title: 'Search & Save Jobs',
       description: 'Discover roles across different portals and save them to your tracker. Pull job details instantly using our Chrome extension or add them manually.',
-      image: '/images/Howitworks/step2.png',
+      image: '/images/Howitworks/step2.webp',
     },
     {
       title: 'Add Job Description',
       description: 'Import job details instantly using our Chrome extension or paste them manually. We analyze the requirements to understand exactly what the employer needs.',
-      image: '/images/Howitworks/step3.png',
+      image: '/images/Howitworks/step3.webp',
     },
     {
       title: 'Get Tailored Docs',
       description: 'Your CV and cover letter are automatically generated and optimized for the highest possible ATS score, perfectly matching the job description.',
-      image: '/images/Howitworks/step4.png',
+      image: '/images/Howitworks/step4.webp',
     },
     {
       title: 'Refine & Track',
       description: 'Make final tweaks in our studio if desired, then download your documents and track your application status from "Applied" to "Hired".',
-      image: '/images/Howitworks/step5.png',
+      image: '/images/Howitworks/step5.webp',
     },
   ], []);
 

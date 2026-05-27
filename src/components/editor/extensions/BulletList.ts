@@ -33,10 +33,16 @@ export const BulletList = Node.create<BulletListOptions>({
     parseHTML() {
         return [
             {
-                tag: 'ul.bullet-list',
+                tag: 'ul[data-type="bullet-list"]',
+                priority: 100,
             },
             {
-                tag: 'ul[data-type="bullet-list"]',
+                tag: 'ul.bullet-list',
+                priority: 90,
+            },
+            {
+                tag: 'ul',
+                priority: 50,
             },
         ];
     },

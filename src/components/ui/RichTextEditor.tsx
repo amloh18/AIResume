@@ -32,8 +32,10 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
     setIsMounted(true);
   }, []);
 
+  const extensions = React.useMemo(() => [StarterKit], []);
+
   const editor = useEditor({
-    extensions: [StarterKit],
+    extensions,
     content: content,
     immediatelyRender: false,
     editorProps: {
@@ -46,9 +48,13 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
     },
   });
 
+  // Only update editor content if it changes from OUTSIDE (e.g. not during typing)
   useEffect(() => {
     if (editor && content !== editor.getHTML()) {
-      editor.commands.setContent(content);
+      // Prevent cursor jump by checking if editor is focused
+      if (!editor.isFocused) {
+        editor.commands.setContent(content);
+      }
     }
   }, [content, editor]);
 

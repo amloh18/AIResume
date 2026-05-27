@@ -30,6 +30,7 @@ import {
   EducationBlock,
   SkillsBlock,
   ProjectsBlock,
+  BulletList,
   BulletNode,
   SkillTagNode,
   DateRangeNode,
@@ -85,45 +86,56 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({
   const setSectionTitleStyle = useFormatStore((s) => s.setSectionTitleStyle);
   const { startDragging, stopDragging } = useSnippetStore();
 
+  const extensions = React.useMemo(() => [
+    StarterKit.configure({
+      heading: {
+        levels: [1, 2, 3],
+      },
+      // Disable the default bulletList and listItem as we use custom ones
+      bulletList: false,
+      listItem: false,
+    }),
+    Placeholder.configure({
+      placeholder: 'Start building your resume...',
+    }),
+    Underline,
+    TextAlign.configure({
+      types: ['heading', 'paragraph'],
+    }),
+    ExperienceBlock,
+    EducationBlock,
+    SkillsBlock,
+    ProjectsBlock,
+    BulletList,
+    BulletNode,
+    SkillTagNode,
+    DateRangeNode,
+    HighlightMark,
+    MetricMark,
+    DragDropPlugin,
+    KeyboardShortcutsPlugin.configure({
+      onSave,
+    }),
+    AISuggestionPlugin,
+    ContextDetectionPlugin.configure({
+      onContextChange: (newContext) => {
+        setContext(newContext);
+      },
+    }),
+  ], [onSave]);
+
   const editor = useEditor({
-    extensions: [
-      StarterKit.configure({
-        heading: {
-          levels: [1, 2, 3],
-        },
-      }),
-      Placeholder.configure({
-        placeholder: 'Start building your resume...',
-      }),
-      Underline,
-      TextAlign.configure({
-        types: ['heading', 'paragraph'],
-      }),
-      ExperienceBlock,
-      EducationBlock,
-      SkillsBlock,
-      ProjectsBlock,
-      BulletNode,
-      SkillTagNode,
-      DateRangeNode,
-      HighlightMark,
-      MetricMark,
-      DragDropPlugin,
-      KeyboardShortcutsPlugin.configure({
-        onSave,
-      }),
-      AISuggestionPlugin,
-      ContextDetectionPlugin.configure({
-        onContextChange: (newContext) => {
-          setContext(newContext);
-        },
-      }),
-    ],
+    extensions,
     content: initialContent,
     immediatelyRender: false,
     editorProps: {
       attributes: {
         class: 'resume-editor prose prose-sm max-w-none focus:outline-none p-6 min-h-[500px] space-y-1',
+      },
+      // Better paste handling
+      handlePaste: (view, event) => {
+        // We can add custom paste logic here if needed
+        return false; // let the default handler work but our schema will clean it
       },
     },
     onUpdate: ({ editor }) => {

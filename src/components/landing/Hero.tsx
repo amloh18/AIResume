@@ -87,13 +87,14 @@ const Hero = () => {
           {/* Main image - Direct rendering without complex wrappers */}
           <div className="relative w-full h-auto">
             <Image
-              src="/images/herobanner.png"
+              src="/images/herobanner.webp"
               alt="CVCircle Dashboard"
               width={1920}
               height={1080}
               className="w-full h-auto object-contain drop-shadow-2xl rounded-2xl"
               priority
-              quality={100}
+              quality={85}
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 100vw, 1200px"
             />
           </div>
         </motion.div>

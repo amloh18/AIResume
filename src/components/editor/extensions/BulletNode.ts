@@ -56,9 +56,15 @@ export const BulletNode = Node.create<BulletNodeOptions>({
         return [
             {
                 tag: 'li[data-type="bullet-node"]',
+                priority: 100,
             },
             {
                 tag: 'li.bullet-item',
+                priority: 90,
+            },
+            {
+                tag: 'li',
+                priority: 50,
             },
         ];
     },

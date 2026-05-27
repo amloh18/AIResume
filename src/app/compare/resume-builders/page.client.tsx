@@ -1,0 +1,148 @@
+'use client'
+
+import Link from 'next/link'
+import { motion } from 'framer-motion'
+import { CheckCircle, XCircle, ArrowRight } from 'lucide-react'
+
+export default function CompareResumeBuildersPage() {
+  return (
+    <div className="min-h-screen bg-[#0d1209]">
+      {/* Navigation */}
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0d1209]/90 backdrop-blur-md border-b border-white/5">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex items-center justify-between h-16">
+            <Link href="/" className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-[#81ff00] rounded-lg flex items-center justify-center">
+                <span className="text-black font-bold text-sm">CV</span>
+              </div>
+              <span className="text-white font-bold text-lg">CVCircle</span>
+            </Link>
+            <div className="hidden md:flex items-center gap-8">
+              <Link href="/#features" className="text-gray-400 hover:text-white text-sm">Features</Link>
+              <Link href="/templates" className="text-gray-400 hover:text-white text-sm">Templates</Link>
+              <Link href="/blog" className="text-gray-400 hover:text-white text-sm">Blog</Link>
+              <Link href="/sign-up" className="bg-[#81ff00] text-black px-4 py-2 rounded-full font-bold text-sm">Start Free</Link>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      <section className="relative pt-32 pb-16 px-4">
+        <div className="absolute inset-0 z-0 pointer-events-none">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-gradient-to-b from-green-600/20 to-transparent rounded-full blur-[100px]" />
+        </div>
+        
+        <div className="relative z-10 max-w-5xl mx-auto">
+          <header className="text-center mb-16">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="inline-block px-4 py-2 bg-green-500/20 text-green-400 rounded-full text-sm font-medium mb-6"
+            >
+              Comparison
+            </motion.div>
+            <motion.h1
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-4xl md:text-5xl font-bold text-white mb-6"
+            >
+              Best Resume Builders in 2026
+            </motion.h1>
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="text-xl text-gray-400 max-w-2xl mx-auto"
+            >
+              Compare top resume builders to find the right tool for your job search
+            </motion.p>
+          </header>
+
+          {/* Comparison Table */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="overflow-x-auto"
+          >
+            <table className="w-full text-left bg-[#1a1f1a] rounded-xl overflow-hidden border border-white/5">
+              <thead>
+                <tr className="bg-[#141810]">
+                  <th className="p-4 text-white font-bold">Feature</th>
+                  <th className="p-4 text-[#81ff00] font-bold text-center">CVCircle</th>
+                  <th className="p-4 text-white font-bold text-center">Novoresume</th>
+                  <th className="p-4 text-white font-bold text-center">Zety</th>
+                  <th className="p-4 text-white font-bold text-center">Resume.io</th>
+                </tr>
+              </thead>
+              <tbody className="text-gray-300">
+                {[
+                  { feature: 'AI Resume Builder', cvcircle: 'Advanced', others: ['Basic', '✓', '✗'] },
+                  { feature: 'ATS Optimization', cvcircle: 'Automatic', others: ['✓', '✓', '✓'] },
+                  { feature: 'Free Tier', cvcircle: 'Full access', others: ['Limited', 'Limited', 'Limited'] },
+                  { feature: 'Job Tracker', cvcircle: 'Included', others: ['✗', '✗', '✗'] },
+                  { feature: 'Cover Letter AI', cvcircle: '✓ AI-powered', others: ['✓', '✓', '✓'] },
+                  { feature: 'Templates', cvcircle: '20+', others: ['20+', '20+', '30+'] },
+                  { feature: 'Role-Specific Pages', cvcircle: '50+', others: ['✗', '✗', '✗'] },
+                ].map((row, i) => (
+                  <tr key={i} className="border-t border-white/5">
+                    <td className="p-4 font-semibold">{row.feature}</td>
+                    <td className="p-4 text-center text-[#81ff00] font-medium">{row.cvcircle}</td>
+                    <td className="p-4 text-center">{row.others[0]}</td>
+                    <td className="p-4 text-center">{row.others[1]}</td>
+                    <td className="p-4 text-center">{row.others[2]}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </motion.div>
+
+          {/* Why CVCircle */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            className="mt-16 bg-gradient-to-r from-green-900/50 to-emerald-900/50 rounded-2xl p-8 border border-green-800/50"
+          >
+            <h2 className="text-2xl font-bold text-white mb-6 text-center">Why Choose CVCircle?</h2>
+            <div className="grid md:grid-cols-3 gap-6">
+              {[
+                { icon: '🤖', title: 'AI-Powered', desc: 'Advanced AI generates role-specific content tailored to your target job' },
+                { icon: '🎯', title: 'Job Tracker', desc: 'Track all your applications in one place - no extra tools needed' },
+                { icon: '💰', title: 'Free to Start', desc: 'Get started for free with full access to core features' },
+              ].map((item, i) => (
+                <div key={i} className="text-center">
+                  <div className="text-3xl mb-3">{item.icon}</div>
+                  <h3 className="font-semibold text-white mb-2">{item.title}</h3>
+                  <p className="text-gray-400 text-sm">{item.desc}</p>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+
+          <div className="mt-12 text-center">
+            <Link href="/ai-resume-builder" className="inline-flex items-center gap-2 bg-[#81ff00] text-black px-8 py-4 rounded-full font-bold hover:bg-[#6dd600] transition-all hover:scale-105">
+              Try CVCircle Free <ArrowRight className="w-5 h-5" />
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="py-8 px-4 border-t border-white/5 mt-16">
+        <div className="max-w-7xl mx-auto flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 bg-[#81ff00] rounded">
+              <span className="text-black font-bold text-xs">CV</span>
+            </div>
+            <span className="text-gray-500 text-sm">© 2026 CVCircle</span>
+          </div>
+          <div className="flex gap-6">
+            <Link href="/privacy-policy" className="text-gray-500 text-sm">Privacy</Link>
+            <Link href="/terms" className="text-gray-500 text-sm">Terms</Link>
+          </div>
+        </div>
+      </footer>
+    </div>
+  )
+}
