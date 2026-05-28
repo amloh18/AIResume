@@ -48,7 +48,13 @@ const isAdminRoute = (req: NextRequest) => {
 }
 
 const isPublicRoute = (req: NextRequest) => {
-  return publicRoutes.some((route) => req.nextUrl.pathname.startsWith(route))
+  const pathname = req.nextUrl.pathname;
+  return publicRoutes.some((route) => {
+    if (route === '/') {
+      return pathname === '/';
+    }
+    return pathname.startsWith(route);
+  });
 }
 
 const isB2BRoute = (req: NextRequest) => {
@@ -59,6 +65,8 @@ export default async function proxy(req: NextRequest) {
   const startTime = Date.now();
   const pathname = req.nextUrl.pathname;
   const method = req.method;
+
+  const secret = process.env.NEXTAUTH_SECRET || 'fallback-secret-key-for-development';
 
   if (pathname.startsWith('/studio')) {
     return NextResponse.next()
@@ -73,7 +81,7 @@ export default async function proxy(req: NextRequest) {
     return NextResponse.next()
   }
 
-  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+  const token = await getToken({ req, secret });
   const isAuth = !!token;
 
   if (pathname.startsWith('/api/')) {

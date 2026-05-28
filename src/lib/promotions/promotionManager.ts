@@ -14,6 +14,7 @@ interface PromotionManagerOptions {
   isPaidUser?: boolean;
   isDismissed: (promotionId: string) => boolean;
   canShowPromotion: () => boolean;
+  isPromotionOnCooldown: (promotionId: string, cooldownDays?: number) => boolean;
 }
 
 /**
@@ -32,6 +33,7 @@ export function selectPromotion(options: PromotionManagerOptions): PromotionConf
     isPaidUser = false,
     isDismissed,
     canShowPromotion,
+    isPromotionOnCooldown,
   } = options;
 
   // Check cooldown
@@ -48,8 +50,10 @@ export function selectPromotion(options: PromotionManagerOptions): PromotionConf
     return null;
   }
 
-  // Filter out dismissed promotions
-  const availablePromotions = contextMatches.filter((promotion) => !isDismissed(promotion.id));
+  // Filter out dismissed or on-cooldown promotions
+  const availablePromotions = contextMatches.filter((promotion) => {
+    return !isDismissed(promotion.id) && !isPromotionOnCooldown(promotion.id, promotion.cooldownDays);
+  });
 
   if (availablePromotions.length === 0) {
     return null;

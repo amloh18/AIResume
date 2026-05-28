@@ -88,9 +88,6 @@ export async function POST(request: NextRequest) {
       sameSite: 'lax',
       path: '/',
       maxAge: 30 * 24 * 60 * 60, // 30 days
-      ...(process.env.NODE_ENV === 'production'
-        ? { domain: '.cvcircle.io' }
-        : {}),
     });
 
     console.log('✅ Session created server-side for user:', (userDoc._id as any).toString());

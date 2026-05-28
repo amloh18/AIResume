@@ -65,6 +65,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
 }) => {
   const session = null; // Session handling - using unified auth system
   const [step, setStep] = useState(1);
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('yearly');
   const [selectedPlan, setSelectedPlan] = useState<PricingPlan | null>(null);
   const [loading, setLoading] = useState(false);
   const [discountCode, setDiscountCode] = useState('');
@@ -1043,23 +1044,59 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
 
                         const currentPlan = pricingPlans.find((plan: PricingPlan) => isCurrentPlan(plan));
 
-                        const subscriptionPlans = availablePlans;
+                        // Filter plans based on selected billing cycle
+                        const subscriptionPlans = availablePlans.filter(plan => {
+                          const key = plan.key.toLowerCase();
+                          if (billingCycle === 'yearly') {
+                            return key.includes('yearly') || key.includes('yealry') || key.includes('quarterly') || key.includes('quaterly') || key.includes('lifetime');
+                          } else {
+                            return key.includes('monthly');
+                          }
+                        });
 
-                        // Sort logic (optional, keeping consistent with before)
+                        // Fallback: if no plans for selected cycle, show all
+                        const displayPlans = subscriptionPlans.length > 0 ? subscriptionPlans : availablePlans;
 
                         return (
-                          <div className="flex flex-col gap-6 bg-gray-50 dark:bg-[#1A201A] rounded-2xl p-6 border border-gray-100 dark:border-gray-800 max-w-[34rem] mx-auto w-full">
+                          <div className="flex flex-col gap-6 bg-gray-50 dark:bg-[#1A201A] rounded-2xl p-6 border border-gray-100 dark:border-gray-800 max-w-[42rem] mx-auto w-full transition-all duration-300">
 
                             {/* --- HEADER MOVED INSIDE --- */}
-                            <div className="mb-2">
-                              <h2 className="text-2xl tablet:text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                                {adminMode ? 'Grant Plan' : previewMode ? 'Preview Plans' : step === 1 ? 'Choose Your Plan' : 'Complete Your Order'}
-                              </h2>
-                              {adminMode && <span className="inline-block bg-lime-100 text-lime-800 text-xs font-medium px-2 py-1 rounded-full mb-2 mr-2">Admin Mode</span>}
-                              {previewMode && <span className="inline-block bg-lime-100 text-lime-800 text-xs font-medium px-2 py-1 rounded-full mb-2">Preview</span>}
-                              <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-                                {adminMode ? 'Grant a plan to the selected user' : previewMode ? 'Preview available plans and pricing' : 'Review your plan selection and complete payment'}
-                              </p>
+                            <div className="flex flex-col tablet:flex-row tablet:items-center justify-between gap-4 mb-2">
+                              <div>
+                                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                                  {adminMode ? 'Grant Plan' : previewMode ? 'Preview Plans' : step === 1 ? 'Choose Your Plan' : 'Complete Your Order'}
+                                </h2>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                  {adminMode ? 'Grant a plan to the selected user' : previewMode ? 'Preview available plans and pricing' : 'Review your plan selection and complete payment'}
+                                </p>
+                              </div>
+
+                              {/* Billing Cycle Toggle */}
+                              {!adminMode && !previewMode && (
+                                <div className="flex items-center p-1 bg-gray-200/50 dark:bg-white/5 rounded-xl self-start tablet:self-center">
+                                  <button
+                                    onClick={() => setBillingCycle('monthly')}
+                                    className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                                      billingCycle === 'monthly'
+                                        ? 'bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white shadow-sm'
+                                        : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                                    }`}
+                                  >
+                                    Monthly
+                                  </button>
+                                  <button
+                                    onClick={() => setBillingCycle('yearly')}
+                                    className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 ${
+                                      billingCycle === 'yearly'
+                                        ? 'bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white shadow-sm'
+                                        : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                                    }`}
+                                  >
+                                    Yearly
+                                    <span className="bg-lime-500 text-black text-[10px] px-1.5 py-0.5 rounded-md font-black">SAVE 25%</span>
+                                  </button>
+                                </div>
+                              )}
                             </div>
 
                             {/* --- CURRENT PLAN MOVED INSIDE --- */}
@@ -1067,39 +1104,36 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                               <div className="p-4 bg-white dark:bg-[#232f1c] rounded-xl border border-lime-200 dark:border-lime-500/20 shadow-sm">
                                 <div className="flex items-start gap-4">
                                   <div className="flex-shrink-0">
-                                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-lg bg-gradient-to-br from-lime-400 to-lime-500 shadow-lg">
-                                      {(() => { const Icon = getPlanIcon(currentPlan.key); return <Icon size={24} className="text-white" />; })()}
+                                    <div className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-gradient-to-br from-lime-400 to-lime-500 shadow-lg">
+                                      {(() => { const Icon = getPlanIcon(currentPlan.key); return <Icon size={20} className="text-white" />; })()}
                                     </div>
                                   </div>
                                   <div className="flex-1">
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <h3 className="text-lg font-bold text-gray-900 dark:text-white">{currentPlan.name}</h3>
-                                      <span className="bg-lime-100 text-lime-800 text-xs font-medium px-2 py-0.5 rounded-full">Current Plan</span>
+                                    <div className="flex items-center gap-2 mb-0.5">
+                                      <h3 className="text-md font-bold text-gray-900 dark:text-white">{currentPlan.name}</h3>
+                                      <span className="bg-lime-100 text-lime-800 text-[10px] font-bold px-2 py-0.5 rounded-full">Current Plan</span>
                                     </div>
-                                    <p className="text-sm text-gray-600 dark:text-gray-400">{currentPlan.description}</p>
+                                    <p className="text-xs text-gray-600 dark:text-gray-400">{currentPlan.description}</p>
                                   </div>
                                 </div>
                               </div>
                             )}
-                            {/* Subscription Plans - Vertical Radio Group */}
-                            {subscriptionPlans.length > 0 && (
-                              <div className="flex flex-col gap-3">
-                                {subscriptionPlans.map((plan) => {
+
+                            {/* Subscription Plans - Grid Layout */}
+                            {displayPlans.length > 0 && (
+                              <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4">
+                                {displayPlans.map((plan) => {
                                   const dbPlan = plan as unknown as DatabasePricingPlan;
                                   const regionalPrice = getRegionalPrice(dbPlan);
                                   const currencySymbol = getCurrencySymbol();
-                                  const effectivePrice = getEffectivePrice(dbPlan); // This is monthly effective for subs
+                                  const effectivePrice = getEffectivePrice(dbPlan);
                                   const monthlyEquivalent = getMonthlyEquivalent(dbPlan);
                                   const isSelected = selectedPlan?.key === plan.key;
                                   const Icon = getPlanIcon(plan.key);
 
-                                  // Determine display price
-                                  // If monthly equivalent is shown, use that as the big number
-                                  // Then show billed amount
-
                                   const displayPrice = monthlyEquivalent.showMonthly ? monthlyEquivalent.price : (regionalPrice || `${currencySymbol}${effectivePrice}`);
                                   const billedAmountText = monthlyEquivalent.showMonthly
-                                    ? `${regionalPrice || `${currencySymbol}${effectivePrice}`} billed ${plan.key === 'pro_quarterly' ? 'quarterly' : 'annually'}`
+                                    ? `${regionalPrice || `${currencySymbol}${effectivePrice}`} billed ${plan.key.includes('quarterly') || plan.key.includes('quaterly') ? 'quarterly' : 'annually'}`
                                     : '';
 
                                   return (
@@ -1107,7 +1141,6 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                                       key={plan.key}
                                       onClick={() => {
                                         setUserChangedPlan(true);
-                                        // Same selection logic as before
                                         let planPrice = 0;
                                         if (plan.key === 'pro_monthly') planPrice = dbPlan.price_monthly || 0;
                                         else if (plan.key === 'pro_quarterly') planPrice = dbPlan.price_quarterly || 0;
@@ -1115,22 +1148,17 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                                         else if (plan.key === 'pro_lifetime') planPrice = dbPlan.price_one_time || 0;
                                         else planPrice = effectivePrice || 0;
 
-                                        // Regional override logic
                                         if (regionalPricing) {
                                           let regionalPriceValue = planPrice;
                                           let hasRegionalPrice = false;
 
-                                          // ... (reusing exact logic would be verbose, but necessary for correctness)
-                                          // Simplified for this view: assume standard selection works or copy full logic.
-                                          // To avoid huge block, I'll use the exact logic from previous version but inline here.
-
-                                          if (plan.key === 'pro_quarterly' && regionalPricing.quarterly) {
+                                          if ((plan.key.includes('quarterly') || plan.key.includes('quaterly')) && regionalPricing.quarterly) {
                                             const extracted = extractNumericPrice(regionalPricing.quarterly);
                                             if (extracted > 0) { regionalPriceValue = extracted; hasRegionalPrice = true; }
-                                          } else if (plan.key === 'pro_yearly' && regionalPricing.yearly) {
+                                          } else if ((plan.key.includes('yearly') || plan.key.includes('yealry')) && regionalPricing.yearly) {
                                             const extracted = extractNumericPrice(regionalPricing.yearly);
                                             if (extracted > 0) { regionalPriceValue = extracted; hasRegionalPrice = true; }
-                                          } else if (plan.key === 'pro_monthly' && regionalPricing.monthly) {
+                                          } else if (plan.key.includes('monthly') && regionalPricing.monthly) {
                                             const extracted = extractNumericPrice(regionalPricing.monthly);
                                             if (extracted > 0) { regionalPriceValue = extracted; hasRegionalPrice = true; }
                                           }
@@ -1151,72 +1179,79 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                                         }
                                         setSelectedPlan(plan);
                                       }}
-                                      className={`relative flex items-center p-4 rounded-xl border-2 cursor-pointer transition-all ${isSelected
-                                        ? 'border-gray-900 bg-gray-900 dark:border-lime-500 dark:bg-lime-500/10'
-                                        : 'border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600 bg-white dark:bg-[#232f1c]'
-                                        }`}
+                                      className={`group relative flex flex-col p-5 rounded-2xl border-2 transition-all duration-300 ${
+                                        isSelected
+                                          ? 'border-gray-900 bg-gray-900 dark:border-lime-500 dark:bg-lime-500/10 shadow-lg scale-[1.02] z-10'
+                                          : 'border-gray-200 hover:border-gray-300 dark:border-gray-800 dark:hover:border-gray-700 bg-white dark:bg-[#141810]/50'
+                                      }`}
                                     >
-                                      {/* Radio Circle */}
-                                      <div className={`w-5 h-5 rounded-full border-[1.5px] mr-4 flex items-center justify-center flex-shrink-0 ${isSelected
-                                        ? 'border-white dark:border-lime-500'
-                                        : 'border-gray-400 dark:border-gray-500'
+                                      {/* Selection Indicator */}
+                                      <div className={`absolute top-4 right-4 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
+                                        isSelected ? 'border-lime-500 bg-lime-500' : 'border-gray-300 dark:border-gray-600'
+                                      }`}>
+                                        {isSelected && <Check className="w-3 h-3 text-black stroke-[4]" />}
+                                      </div>
+
+                                      {/* Plan Info */}
+                                      <div className="flex items-center gap-3 mb-4">
+                                        <div className={`p-2 rounded-xl transition-colors ${
+                                          isSelected ? 'bg-lime-500 text-black' : 'bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400'
                                         }`}>
-                                        {isSelected && (
-                                          <div className="w-2.5 h-2.5 rounded-full bg-white dark:bg-lime-500" />
-                                        )}
+                                          <Icon size={20} />
+                                        </div>
+                                        <div>
+                                          <h3 className={`font-bold text-lg leading-tight ${isSelected ? 'text-white' : 'text-gray-900 dark:text-white'}`}>
+                                            {plan.name.replace('Pro ', '').replace(' Monthly', '').replace(' Yearly', '').replace(' Quarterly', '')}
+                                          </h3>
+                                          <p className={`text-[10px] font-medium uppercase tracking-wider ${isSelected ? 'text-lime-400' : 'text-gray-500'}`}>
+                                            {plan.key.includes('yearly') || plan.key.includes('yealry') ? 'Best Value' : plan.key.includes('quarterly') ? 'Popular' : 'Standard'}
+                                          </p>
+                                        </div>
                                       </div>
 
-                                      {/* Plan Name */}
-                                      <div className="flex-1">
-                                        <div className="flex items-center gap-2">
-                                          <Icon size={20} className={isSelected ? 'text-white' : 'text-gray-900 dark:text-white'} />
-                                          <div className={`font-semibold text-lg ${isSelected ? 'text-white' : 'text-gray-900 dark:text-white'}`}>
-                                            {plan.name.replace('Pro ', '')}
-                                          </div>
-                                        </div>
-
-                                        {/* Embedded Features List for Active Card */}
-                                        {isSelected && (
-                                          <div className="mt-3">
-                                            <p className="text-sm font-bold text-white mb-2">This package includes:</p>
-                                            <ul className="space-y-1.5">
-                                              {plan.features.map((feature, i) => (
-                                                <li key={i} className="flex items-start gap-2 text-xs tablet:text-sm text-gray-200">
-                                                  <Check className="w-4 h-4 text-white flex-shrink-0 mt-0.5" />
-                                                  <span>{feature}</span>
-                                                </li>
-                                              ))}
-                                            </ul>
-                                          </div>
-                                        )}
-                                      </div>
-
-                                      {/* Badges */}
-                                      {plan.key === 'pro_yearly' && (
-                                        <div className="mr-auto ml-2 px-2 py-0.5 bg-[rgb(129,255,0)] text-black text-xs font-bold rounded">
-                                          Save ~25%
-                                        </div>
-                                      )}
-
-                                      {/* Price */}
-                                      <div className="text-right">
-                                        <div className="flex items-baseline justify-end gap-1">
-                                          <span className={`text-lg font-bold ${isSelected ? 'text-white' : 'text-gray-900 dark:text-white'}`}>{displayPrice.replace(/\/mo$/, '').replace(/\/month$/, '')}</span>
-                                          <span className={`text-sm ${isSelected ? 'text-gray-300' : 'text-gray-500'}`}>/month</span>
+                                      {/* Pricing */}
+                                      <div className="mb-4">
+                                        <div className="flex items-baseline gap-1">
+                                          <span className={`text-2xl font-black ${isSelected ? 'text-white' : 'text-gray-900 dark:text-white'}`}>
+                                            {displayPrice.split('/')[0]}
+                                          </span>
+                                          <span className={`text-sm font-medium ${isSelected ? 'text-gray-400' : 'text-gray-500'}`}>
+                                            /mo
+                                          </span>
                                         </div>
                                         {billedAmountText && (
-                                          <div className={`text-xs mt-0.5 ${isSelected ? 'text-gray-400' : 'text-gray-400 dark:text-gray-500'}`}>
+                                          <p className={`text-[10px] mt-1 font-medium ${isSelected ? 'text-gray-400' : 'text-gray-400 dark:text-gray-500'}`}>
                                             {billedAmountText}
-                                          </div>
+                                          </p>
                                         )}
                                       </div>
+
+                                      {/* Features Preview (Collapsed) */}
+                                      <div className={`space-y-1.5 pt-4 border-t ${isSelected ? 'border-white/10' : 'border-gray-100 dark:border-white/5'}`}>
+                                        {plan.features.slice(0, 3).map((feature, i) => (
+                                          <div key={i} className="flex items-start gap-2">
+                                            <Check className={`w-3 h-3 mt-0.5 flex-shrink-0 ${isSelected ? 'text-lime-500' : 'text-gray-400'}`} />
+                                            <span className={`text-[10px] tablet:text-xs font-medium ${isSelected ? 'text-gray-300' : 'text-gray-600 dark:text-gray-400'}`}>
+                                              {feature}
+                                            </span>
+                                          </div>
+                                        ))}
+                                        {plan.features.length > 3 && (
+                                          <p className={`text-[9px] font-bold mt-1 ${isSelected ? 'text-lime-500/80' : 'text-gray-400'}`}>
+                                            + {plan.features.length - 3} more features
+                                          </p>
+                                        )}
+                                      </div>
+                                      
+                                      {/* Selection Shadow Overlay */}
+                                      {isSelected && (
+                                        <div className="absolute inset-0 rounded-2xl ring-2 ring-lime-500 pointer-events-none" />
+                                      )}
                                     </div>
                                   );
                                 })}
                               </div>
                             )}
-
-
 
                             {/* Empty State */}
                             {availablePlans.length === 0 && (

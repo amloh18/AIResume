@@ -46,21 +46,18 @@ export class UnifiedAuthService {
         updateAge: 24 * 60 * 60, // 24 hours
       },
 
-      useSecureCookies: process.env.NODE_ENV === 'production',
+      useSecureCookies: (process.env.NODE_ENV === 'production' && NEXTAUTH_URL.startsWith('https://')),
       cookies: {
         sessionToken: {
           name:
-            process.env.NODE_ENV === 'production'
+            (process.env.NODE_ENV === 'production' && NEXTAUTH_URL.startsWith('https://'))
               ? '__Secure-next-auth.session-token'
               : 'next-auth.session-token',
           options: {
             httpOnly: true,
             sameSite: 'lax',
             path: '/',
-            secure: process.env.NODE_ENV === 'production',
-            ...(process.env.NODE_ENV === 'production'
-              ? { domain: '.cvcircle.io' }
-              : {}),
+            secure: (process.env.NODE_ENV === 'production' && NEXTAUTH_URL.startsWith('https://')),
             maxAge: 30 * 24 * 60 * 60, // 30 days
           },
         },
@@ -688,7 +685,11 @@ export class UnifiedAuthService {
         verifyRequest: '/auth/verify-email',
       },
 
-      debug: process.env.NODE_ENV === 'development',
+      debug: false, // Explicitly disable debug mode to prevent leaking secrets in logs
+
+      // trustHost is primarily for NextAuth v5 but included here for better proxy support
+      // @ts-ignore
+      trustHost: true,
 
       events: {
         async signIn({ user, account, profile, isNewUser }) {

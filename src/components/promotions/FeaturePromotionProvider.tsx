@@ -7,7 +7,7 @@ import { selectPromotion } from '@/lib/promotions/promotionManager';
 import FeaturePromotionCard from './FeaturePromotionCard';
 
 function PromotionRenderer() {
-  const { currentPromotion, showPromotion, dismissPromotion, isDismissed, canShowPromotion } = useFeaturePromotion();
+  const { currentPromotion, showPromotion, dismissPromotion, isDismissed, canShowPromotion, isPromotionOnCooldown } = useFeaturePromotion();
   const contextData = usePromotionContext();
 
   // Select and show promotion when context changes
@@ -31,6 +31,7 @@ function PromotionRenderer() {
         isPaidUser: contextData.isPaidUser,
         isDismissed,
         canShowPromotion,
+        isPromotionOnCooldown,
       });
 
       if (promotion) {
@@ -61,6 +62,7 @@ function PromotionRenderer() {
     contextData.isB2B,
     isDismissed,
     canShowPromotion,
+    isPromotionOnCooldown,
     showPromotion,
   ]);
 
