@@ -95,12 +95,8 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
     const [isSectionEdited, setIsSectionEdited] = useState(false);
     const [isPdfExported, setIsPdfExported] = useState(false);
 
-    // Auto-open Surgeon suggestions panel on initial load in improve mode
-    useEffect(() => {
-      if (isImproveMode) {
-        dispatch({ type: 'SET_REPORT_OPEN', payload: true });
-      }
-    }, [isImproveMode, dispatch]);
+    // Improve mode now keeps analysis in the right rail instead of opening the
+    // modal automatically. Users can still run analysis from the rail.
 
     const handleFinishOnboarding = async () => {
       try {
@@ -1268,57 +1264,58 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
             </div>
           </div>
           
-          {/* ATS Meter Panel or Onboarding Checklist on the right */}
-          {isImproveMode ? (() => {
-            const isPersonalInfoVerified = !!(state.cvData?.basics?.name?.trim() && state.cvData?.basics?.email?.trim());
-            const isQualityScoreReviewed = !!(state.surgeonAnalysis || atsScore);
+          {/* Right rail: onboarding setup checklist and AI analysis */}
+          <div className="hidden lg:flex flex-col w-[352px] shrink-0 h-full relative z-10 gap-3 min-h-0">
+            {isImproveMode && (() => {
+              const isPersonalInfoVerified = !!(state.cvData?.basics?.name?.trim() && state.cvData?.basics?.email?.trim());
+              const isQualityScoreReviewed = !!(state.surgeonAnalysis || atsScore);
 
-            const checklistItems = [
-              {
-                id: 'personal',
-                title: 'Verify Personal Info',
-                description: 'Ensure your name and email are filled in basics.',
-                completed: isPersonalInfoVerified,
-              },
-              {
-                id: 'quality',
-                title: 'Review Quality Score',
-                description: 'Run the AI Surgeon report to check ATS health.',
-                completed: isQualityScoreReviewed,
-              },
-              {
-                id: 'optimize',
-                title: 'Optimize Section Data',
-                description: 'Make at least one edit to any CV section.',
-                completed: isSectionEdited,
-              },
-              {
-                id: 'export',
-                title: 'Export PDF Copy',
-                description: 'Download the compiled PDF file of your resume.',
-                completed: isPdfExported,
-              }
-            ];
+              const checklistItems = [
+                {
+                  id: 'personal',
+                  title: 'Verify Personal Info',
+                  description: 'Ensure your name and email are filled in basics.',
+                  completed: isPersonalInfoVerified,
+                },
+                {
+                  id: 'quality',
+                  title: 'Review Quality Score',
+                  description: 'Review the AI Analysis score for CV health.',
+                  completed: isQualityScoreReviewed,
+                },
+                {
+                  id: 'optimize',
+                  title: 'Optimize Section Data',
+                  description: 'Make at least one edit to any CV section.',
+                  completed: isSectionEdited,
+                },
+                {
+                  id: 'export',
+                  title: 'Export PDF Copy',
+                  description: 'Download the compiled PDF file of your resume.',
+                  completed: isPdfExported,
+                }
+              ];
 
-            const completedCount = checklistItems.filter(item => item.completed).length;
-            const isChecklistComplete = completedCount === checklistItems.length;
+              const completedCount = checklistItems.filter(item => item.completed).length;
+              const isChecklistComplete = completedCount === checklistItems.length;
 
-            return (
-              <div className="flex flex-col w-[320px] shrink-0 h-full bg-white dark:bg-[var(--bg-secondary)] border border-gray-200 dark:border-gray-800 rounded-xl p-5 shadow-sm relative z-10 select-none overflow-y-auto">
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2 text-teal-600 dark:text-teal-400">
-                    <Sparkles className="h-5 w-5 stroke-[2.5]" />
-                    <h3 className="font-extrabold text-lg tracking-tight text-gray-900 dark:text-white">Onboarding Checklist</h3>
-                  </div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Complete these quick steps to finish setting up your Master CV.
-                  </p>
+              return (
+                <div className="shrink-0 max-h-[46%] bg-white dark:bg-[var(--bg-secondary)] border border-gray-200 dark:border-gray-800 rounded-xl p-4 shadow-sm select-none overflow-y-auto">
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-teal-600 dark:text-teal-400">
+                      <Sparkles className="h-4 w-4 stroke-[2.5]" />
+                      <h3 className="font-extrabold text-sm tracking-tight text-gray-900 dark:text-white">Onboarding Checklist</h3>
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Finish these steps to set up your Master CV.
+                    </p>
 
                   {/* Progress Bar */}
                   <div className="space-y-1.5 pt-2">
                     <div className="flex justify-between text-xs font-bold">
                       <span className="text-gray-400">Setup Progress</span>
-                      <span className="text-teal-650">{completedCount} of 4 completed</span>
+                      <span className="text-teal-700 dark:text-teal-400">{completedCount} of 4 completed</span>
                     </div>
                     <div className="w-full bg-gray-150 dark:bg-gray-800 h-2 rounded-full overflow-hidden">
                       <div 
@@ -1329,11 +1326,11 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
                   </div>
 
                   {/* Checklist List */}
-                  <div className="space-y-3 pt-3">
+                  <div className="space-y-2 pt-2">
                     {checklistItems.map(item => (
                       <div 
                         key={item.id} 
-                        className={`p-3.5 rounded-xl border transition-all flex items-start gap-3 ${
+                        className={`p-3 rounded-lg border transition-all flex items-start gap-3 ${
                           item.completed 
                             ? 'bg-teal-50/40 border-teal-100 dark:bg-teal-950/20 dark:border-teal-900/30' 
                             : 'bg-slate-50/50 border-gray-150 dark:bg-gray-900/30 dark:border-gray-800/40'
@@ -1342,7 +1339,7 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
                         <div className={`mt-0.5 rounded-full p-0.5 ${
                           item.completed 
                             ? 'bg-teal-500 text-white' 
-                            : 'bg-gray-200 text-gray-455 dark:bg-gray-800 dark:text-gray-600'
+                            : 'bg-gray-200 text-gray-400 dark:bg-gray-800 dark:text-gray-600'
                         }`}>
                           <Check className="h-3.5 w-3.5 stroke-[3]" />
                         </div>
@@ -1354,7 +1351,7 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
                           }`}>
                             {item.title}
                           </h4>
-                          <p className="text-[10px] text-gray-450 leading-relaxed dark:text-gray-500">
+                          <p className="text-[10px] text-gray-500 leading-relaxed dark:text-gray-500">
                             {item.description}
                           </p>
                         </div>
@@ -1363,10 +1360,10 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
                   </div>
 
                   {/* Action Button */}
-                  <div className="pt-4">
+                  <div className="pt-2">
                     <button
                       onClick={handleFinishOnboarding}
-                      className={`w-full py-3 px-4 rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${
+                      className={`w-full py-2.5 px-4 rounded-lg font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${
                         isChecklistComplete 
                           ? 'bg-teal-600 hover:bg-teal-700 text-white shadow-md shadow-teal-100 dark:shadow-none' 
                           : 'bg-gray-100 hover:bg-gray-200 text-gray-400 dark:bg-gray-800 dark:text-gray-500'
@@ -1376,18 +1373,18 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
                     </button>
                     {!isChecklistComplete && (
                       <p className="text-[9px] text-center text-gray-400 mt-2">
-                        Finish all steps to unlock dashboard features.
+                        Finish all steps before heading to your dashboard.
                       </p>
                     )}
                   </div>
+                  </div>
                 </div>
-              </div>
-            );
-          })() : (
-            <div className="hidden lg:flex flex-col w-[352px] shrink-0 h-full relative z-10 gap-3">
+              );
+            })()}
+            <div className="flex-1 min-h-0">
               <ATSMeterPanel />
             </div>
-          )}
+          </div>
 
         </div >
         {/* AI Analysis Chatbot Card - Bottom Right - Only in builder mode */}

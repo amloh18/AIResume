@@ -1,7 +1,24 @@
-export type PlanKey = 'free' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly' | 'pro_lifetime';
+export type PlanKey =
+  | 'free'
+  | 'starter_monthly'
+  | 'starter_yealry'
+  | 'focused_monthly'
+  | 'focused_yearly'
+  | 'smart_quaterly'
+  | 'smart_yearly'
+  | 'pro_monthly'
+  | 'pro_quarterly'
+  | 'pro_yearly'
+  | 'pro_lifetime';
 
 export const PLAN_NAMES: Record<PlanKey, string> = {
   free: 'Free Plan',
+  starter_monthly: 'Starter Monthly',
+  starter_yealry: 'Starter Yearly',
+  focused_monthly: 'Focused Monthly',
+  focused_yearly: 'Focused Yearly',
+  smart_quaterly: 'Smart Quarterly',
+  smart_yearly: 'Smart Yearly',
   pro_monthly: 'Pro Monthly',
   pro_quarterly: 'Pro Quarterly',
   pro_yearly: 'Pro Yearly',
@@ -24,7 +41,7 @@ export interface UserPlan {
 export function hasAIAccess(userPlan: UserPlan | null): boolean {
   if (!userPlan) return false;
 
-  const proPlans: PlanKey[] = ['pro_monthly', 'pro_quarterly', 'pro_yearly', 'pro_lifetime'];
+  const proPlans: PlanKey[] = ['focused_monthly', 'focused_yearly', 'smart_quaterly', 'smart_yearly', 'pro_monthly', 'pro_quarterly', 'pro_yearly', 'pro_lifetime'];
   const hasProPlan = proPlans.includes(userPlan.currentPlanKey);
 
   // Check if subscription is active
@@ -41,15 +58,7 @@ export function hasAIAccess(userPlan: UserPlan | null): boolean {
  * Get the user's current plan name
  */
 export function getPlanName(planKey: PlanKey): string {
-  const planNames = {
-    free: 'Free Plan',
-    pro_monthly: 'Pro Monthly',
-    pro_quarterly: 'Pro Quarterly',
-    pro_yearly: 'Pro Yearly',
-    pro_lifetime: 'Pro Lifetime'
-  };
-
-  return planNames[planKey] || 'Unknown Plan';
+  return PLAN_NAMES[planKey] || 'Unknown Plan';
 }
 
 /**
@@ -63,7 +72,7 @@ export function hasSpecificAIAccess(userPlan: UserPlan | null, feature: 'basic' 
       return true; // All PRO users get basic AI
     case 'advanced':
       // Advanced features for quarterly and yearly plans
-      return ['pro_quarterly', 'pro_yearly', 'pro_lifetime'].includes(userPlan?.currentPlanKey || 'free');
+      return ['focused_yearly', 'smart_quaterly', 'smart_yearly', 'pro_quarterly', 'pro_yearly', 'pro_lifetime'].includes(userPlan?.currentPlanKey || 'free');
     case 'all':
       return true; // All PRO users get all features
     default:

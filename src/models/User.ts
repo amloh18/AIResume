@@ -1,6 +1,33 @@
 import mongoose, { Document, Schema } from 'mongoose';
 import bcrypt from 'bcryptjs';
 
+export type UserPlanKey =
+  | 'free'
+  | 'starter_monthly'
+  | 'starter_yealry'
+  | 'focused_monthly'
+  | 'focused_yearly'
+  | 'smart_quaterly'
+  | 'smart_yearly'
+  | 'pro_monthly'
+  | 'pro_quarterly'
+  | 'pro_yearly'
+  | 'pro_lifetime';
+
+const USER_PLAN_KEYS: UserPlanKey[] = [
+  'free',
+  'starter_monthly',
+  'starter_yealry',
+  'focused_monthly',
+  'focused_yearly',
+  'smart_quaterly',
+  'smart_yearly',
+  'pro_monthly',
+  'pro_quarterly',
+  'pro_yearly',
+  'pro_lifetime'
+];
+
 export interface IUser extends Document {
   // SINGLE SOURCE OF TRUTH: Authentication linking
   authProviderId: string; // The unique string ID from NextAuth
@@ -21,7 +48,7 @@ export interface IUser extends Document {
 
   // Subscription and usage tracking
   // STANDARDIZED: All plan keys use underscore format for consistency
-  currentPlanKey: 'free' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly' | 'pro_lifetime';
+  currentPlanKey: UserPlanKey;
   monthlyGoal?: number;
   usage: {
     cvJourneyCount: number;
@@ -108,7 +135,7 @@ export interface IUser extends Document {
 
   // Subscription details
   subscription: {
-    planKey: 'free' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly' | 'pro_lifetime';
+    planKey: UserPlanKey;
     status: 'active' | 'inactive' | 'cancelled' | 'expired';
     startDate: Date;
     endDate?: Date;
@@ -123,7 +150,7 @@ export interface IUser extends Document {
     purchasePrice?: number; // Original purchase price
     // Auto-renewal (only for monthly plans)
     autoRenew?: boolean; // Whether subscription auto-renews
-    provider: 'stripe' | 'polar' | 'admin';
+    provider: 'stripe' | 'polar' | 'admin' | 'none';
     providerSubscriptionId?: string;
     providerCustomerId?: string;
     interval: 'one-time' | 'monthly' | 'quarterly' | 'yearly';
@@ -255,7 +282,7 @@ const userSchema = new Schema<IUser>({
   // STANDARDIZED: Consistent plan key format across all models
   currentPlanKey: {
     type: String,
-    enum: ['free', 'pro_monthly', 'pro_quarterly', 'pro_yearly', 'pro_lifetime'],
+    enum: USER_PLAN_KEYS,
     default: 'free'
   },
   monthlyGoal: {
@@ -540,7 +567,7 @@ const userSchema = new Schema<IUser>({
   subscription: {
     planKey: {
       type: String,
-      enum: ['free', 'pro_monthly', 'pro_quarterly', 'pro_yearly', 'pro_lifetime'],
+      enum: USER_PLAN_KEYS,
       default: 'free'
     },
     status: {
@@ -569,7 +596,7 @@ const userSchema = new Schema<IUser>({
     },
     provider: {
       type: String,
-      enum: ['stripe', 'polar', 'admin'],
+      enum: ['stripe', 'polar', 'admin', 'none'],
       default: 'stripe'
     },
     providerSubscriptionId: String,
