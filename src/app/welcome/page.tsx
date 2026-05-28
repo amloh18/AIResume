@@ -35,6 +35,7 @@ import { Button } from '@/components/ui/button';
 import Logo from '@/components/ui/Logo';
 import { usePaymentModal } from '@/contexts/PaymentModalContext';
 import CodeVerificationScreen from '@/components/auth/CodeVerificationScreen';
+import guestCVService from '@/lib/services/guestCVService';
 
 interface OnboardingState {
   intent: string;
@@ -183,7 +184,7 @@ const WelcomePage: React.FC = () => {
 
   // Handle Next Navigation
   const handleNext = () => {
-    if (currentStep === 3 && intent === 'cv') {
+    if (currentStep === 3 && (intent === 'cv' || intent === 'cv_scratch')) {
       // Type 1 User Fast-Track check: If user fast-tracks, set flag & go to auth or editor
       if (status === 'authenticated') {
         completeOnboarding('/editor');
@@ -219,6 +220,11 @@ const WelcomePage: React.FC = () => {
 
   // Onboarding Completion Endpoint call
   const completeOnboarding = async (redirectUrl: string, overrideState?: OnboardingState) => {
+    const s_parsedCVData = overrideState?.parsedCVData ?? parsedCVData;
+    const s_targetRoles = overrideState?.targetRoles ?? targetRoles;
+    const s_droppedFile = overrideState?.droppedFile ?? droppedFile;
+    const s_cvScore = overrideState?.cvScore ?? cvScore;
+
     if (status === 'authenticated') {
       try {
         const rec = getRecommendedTier(overrideState);
@@ -247,11 +253,6 @@ const WelcomePage: React.FC = () => {
         // Use the resolved activation route for saving, but if a specific custom redirectUrl was passed (like '/dashboard'), we can let the user go there
         const targetRoute = redirectUrl === '/dashboard' ? '/dashboard' : activation_route;
 
-        const s_parsedCVData = overrideState?.parsedCVData ?? parsedCVData;
-        const s_targetRoles = overrideState?.targetRoles ?? targetRoles;
-        const s_droppedFile = overrideState?.droppedFile ?? droppedFile;
-        const s_cvScore = overrideState?.cvScore ?? cvScore;
-
         // --- MASTER CV CREATION ---
         // Save the parsed CV data as the Master CV (Always create one during onboarding)
         try {
@@ -267,7 +268,7 @@ const WelcomePage: React.FC = () => {
             projects: []
           };
 
-          await fetch('/api/cvs', {
+          const cvRes = await fetch('/api/cvs', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -283,7 +284,15 @@ const WelcomePage: React.FC = () => {
               }
             })
           });
-          console.log('✅ Master CV created/saved from onboarding');
+          
+          const cvResult = await cvRes.json();
+          if (cvResult.success && cvResult.cv?.id) {
+            console.log('✅ Master CV created/saved from onboarding:', cvResult.cv.id);
+            // Update activation route to use REAL CV ID for reliability
+            activation_route = `/editor?cvId=${cvResult.cv.id}&mode=edit-master&improve=true`;
+          } else {
+            console.warn('⚠️ Master CV creation returned success:false or missing ID', cvResult);
+          }
           sessionStorage.setItem('masterCVCreated', 'true');
         } catch (cvError) {
           console.error('Failed to create Master CV during onboarding:', cvError);
@@ -332,6 +341,45 @@ const WelcomePage: React.FC = () => {
       } catch (err) {
         console.error('Failed to update onboarding status on backend:', err);
       }
+    } else {
+      // --- GUEST USER REDIRECTION ---
+      // For unauthenticated users, we must save their parsed data to guest draft
+      // so the editor can pick it up automatically.
+      if (s_parsedCVData || seedingMethod === 'scratch') {
+        try {
+          const cvDataToSave = s_parsedCVData || {
+            basics: {
+              name: '',
+              email: '',
+              label: s_targetRoles[0] || ''
+            },
+            skills: s_targetRoles.map(r => ({ name: r, level: 'Expert' })),
+            work: [],
+            education: [],
+            projects: []
+          };
+
+          await guestCVService.saveGuestDraft({
+            cvData: cvDataToSave,
+            currentStep: 3, // Start at step 3 in editor (Builder)
+            completedSteps: [1, 2],
+            targetRole: s_targetRoles[0] || '',
+            seniorityLevel: experienceLevel || 'professional',
+            cvTitle: s_droppedFile || 'Master CV'
+          });
+          console.log('✅ Guest draft saved from onboarding');
+        } catch (err) {
+          console.error('Failed to save guest draft during onboarding:', err);
+        }
+      }
+      
+      // Redirect to editor with restoreDraft param
+      const finalUrl = redirectUrl.includes('?') 
+        ? `${redirectUrl}&restoreDraft=true&fromOnboarding=true`
+        : `${redirectUrl}?restoreDraft=true&fromOnboarding=true`;
+      
+      router.push(finalUrl);
+      return;
     }
     router.push(redirectUrl);
   };
@@ -905,71 +953,109 @@ const WelcomePage: React.FC = () => {
             {/* Step 3: Completeness Gauge & early exit */}
             {currentStep === 3 && (
               <div className="space-y-8">
-                <div className="space-y-3 text-center">
-                  <h1 className="text-4xl font-extrabold tracking-tight md:text-5xl">
-                    Your CV Analysis
-                  </h1>
-                  <p className="text-gray-500 text-lg max-w-xl mx-auto">
-                    We found 3 areas where your CV score could be boosted by over 25 points immediately.
-                  </p>
-                </div>
+                {seedingMethod === 'scratch' ? (
+                  <div className="space-y-6">
+                    <div className="space-y-3 text-center">
+                      <div className="inline-flex p-3 rounded-2xl bg-lime-100 text-lime-700 mb-2">
+                        <Sparkles className="h-8 w-8" />
+                      </div>
+                      <h1 className="text-4xl font-extrabold tracking-tight md:text-5xl">
+                        Ready to Build
+                      </h1>
+                      <p className="text-gray-500 text-lg max-w-xl mx-auto">
+                        Your workspace is initialized. We've set up a clean canvas for your Master CV with guided prompts to help you stand out.
+                      </p>
+                    </div>
 
-                <div className="grid md:grid-cols-2 gap-8 items-center bg-slate-50 p-6 rounded-2xl border border-gray-150">
-                  {/* Gauge */}
-                  <div className="flex flex-col items-center justify-center text-center space-y-3">
-                    <div className="relative w-36 h-36 flex items-center justify-center">
-                      <svg className="w-full h-full transform -rotate-90">
-                        <circle 
-                          cx="72" cy="72" r="60" 
-                          stroke="#E2E8F0" strokeWidth="10" 
-                          fill="transparent" 
-                        />
-                        <motion.circle 
-                          cx="72" cy="72" r="60" 
-                          stroke="black" strokeWidth="10" 
-                          fill="transparent" 
-                          strokeDasharray="376.8"
-                          initial={{ strokeDashoffset: 376.8 }}
-                          animate={{ strokeDashoffset: 376.8 - (376.8 * cvScore) / 100 }}
-                          transition={{ duration: 1.2, ease: "easeOut" }}
-                        />
-                      </svg>
-                      <div className="absolute flex flex-col items-center">
-                        <span className="text-3xl font-black">{cvScore}%</span>
-                        <span className="text-xs text-gray-500 uppercase tracking-widest font-black">Score</span>
+                    <div className="bg-slate-50 border border-gray-150 rounded-3xl p-8 flex flex-col items-center text-center space-y-4">
+                      <div className="grid grid-cols-3 gap-4 w-full">
+                        <div className="p-4 bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center gap-2">
+                          <Palette className="h-5 w-5 text-blue-500" />
+                          <span className="text-[10px] font-bold uppercase tracking-tight">Pro Templates</span>
+                        </div>
+                        <div className="p-4 bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center gap-2">
+                          <Zap className="h-5 w-5 text-lime-500" />
+                          <span className="text-[10px] font-bold uppercase tracking-tight">AI Assistance</span>
+                        </div>
+                        <div className="p-4 bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center gap-2">
+                          <Target className="h-5 w-5 text-purple-500" />
+                          <span className="text-[10px] font-bold uppercase tracking-tight">ATS Check</span>
+                        </div>
+                      </div>
+                      <p className="text-sm text-gray-500 max-w-md">
+                        Our editor will guide you through adding your experience, skills, and projects while providing real-time ATS feedback.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="space-y-3 text-center">
+                      <h1 className="text-4xl font-extrabold tracking-tight md:text-5xl">
+                        Your CV Analysis
+                      </h1>
+                      <p className="text-gray-500 text-lg max-w-xl mx-auto">
+                        We found 3 areas where your CV score could be boosted by over 25 points immediately.
+                      </p>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-8 items-center bg-slate-50 p-6 rounded-2xl border border-gray-150">
+                      {/* Gauge */}
+                      <div className="flex flex-col items-center justify-center text-center space-y-3">
+                        <div className="relative w-36 h-36 flex items-center justify-center">
+                          <svg className="w-full h-full transform -rotate-90">
+                            <circle 
+                              cx="72" cy="72" r="60" 
+                              stroke="#E2E8F0" strokeWidth="10" 
+                              fill="transparent" 
+                            />
+                            <motion.circle 
+                              cx="72" cy="72" r="60" 
+                              stroke="black" strokeWidth="10" 
+                              fill="transparent" 
+                              strokeDasharray="376.8"
+                              initial={{ strokeDashoffset: 376.8 }}
+                              animate={{ strokeDashoffset: 376.8 - (376.8 * cvScore) / 100 }}
+                              transition={{ duration: 1.2, ease: "easeOut" }}
+                            />
+                          </svg>
+                          <div className="absolute flex flex-col items-center">
+                            <span className="text-3xl font-black">{cvScore}%</span>
+                            <span className="text-xs text-gray-500 uppercase tracking-widest font-black">Score</span>
+                          </div>
+                        </div>
+                        <div>
+                          <h4 className="font-bold">Initial Health Index</h4>
+                          <p className="text-xs text-gray-500">Based on parser scanning</p>
+                        </div>
+                      </div>
+
+                      {/* Feedback points */}
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <span className="text-xs font-black uppercase text-green-600 tracking-wider flex items-center gap-1">
+                            <CheckCircle className="h-3 w-3" /> Strengths Detected
+                          </span>
+                          <ul className="text-xs text-gray-600 space-y-1.5 list-disc pl-4">
+                            <li>Contact details correctly formatted.</li>
+                            <li>Clean work experience section hierarchy.</li>
+                            <li>Logical date formats.</li>
+                          </ul>
+                        </div>
+
+                        <div className="space-y-2">
+                          <span className="text-xs font-black uppercase text-amber-600 tracking-wider flex items-center gap-1">
+                            <AlertTriangle className="h-3 w-3" /> Target Areas for Improvement
+                          </span>
+                          <ul className="text-xs text-gray-600 space-y-1.5 list-disc pl-4">
+                            <li>Missing ATS industry-specific keywords.</li>
+                            <li>Accomplishment statements lack STAR metric counts.</li>
+                            <li>Professional summary lacks hard impact claims.</li>
+                          </ul>
+                        </div>
                       </div>
                     </div>
-                    <div>
-                      <h4 className="font-bold">Initial Health Index</h4>
-                      <p className="text-xs text-gray-500">Based on parser scanning</p>
-                    </div>
-                  </div>
-
-                  {/* Feedback points */}
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <span className="text-xs font-black uppercase text-green-600 tracking-wider flex items-center gap-1">
-                        <CheckCircle className="h-3 w-3" /> Strengths Detected
-                      </span>
-                      <ul className="text-xs text-gray-600 space-y-1.5 list-disc pl-4">
-                        <li>Contact details correctly formatted.</li>
-                        <li>Clean work experience section hierarchy.</li>
-                        <li>Logical date formats.</li>
-                      </ul>
-                    </div>
-
-                    <div className="space-y-2">
-                      <span className="text-xs font-black uppercase text-amber-600 tracking-wider flex items-center gap-1">
-                        <AlertTriangle className="h-3 w-3" /> Target Areas for Improvement
-                      </span>
-                      <ul className="text-xs text-gray-600 space-y-1.5 list-disc pl-4">
-                        <li>Missing ATS industry-specific keywords.</li>
-                        <li>Accomplishment statements lack STAR metric counts.</li>
-                        <li>Professional summary lacks hard impact claims.</li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
+                  </>
+                )}
 
                 {/* Fast track option for Type 1 */}
                 <div className="flex flex-col items-center justify-center gap-3 pt-4 border-t border-gray-100">

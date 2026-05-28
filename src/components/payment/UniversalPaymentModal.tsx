@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import posthog from 'posthog-js';
 import Logo from '@/components/ui/Logo';
-import { X, Check, CreditCard, Zap, Star, Shield, Crown, Gift, Brain, Users, Globe, ArrowRight, Target, BarChart3, Download, FileText, CheckCircle, ChevronDown, ChevronUp, Info } from 'lucide-react';
+import { X, Check, CreditCard, Zap, Star, Shield, Crown, Gift, Brain, Users, Globe, ArrowRight, Target, BarChart3, Download, FileText, CheckCircle, ChevronDown, ChevronUp, Info, Sparkles } from 'lucide-react';
 import { PricingPlan } from '@/types/pricing';
 import { usePricingPlans, DatabasePricingPlan } from '@/lib/hooks/usePricingPlans';
 
@@ -447,52 +447,16 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
     if (plan.key === 'free') return 0;
 
     // Use regional pricing if available (attached when plan is selected)
-    // This should already contain the full price for quarterly/yearly plans
     const regionalPrice = (plan as any).regionalPricing;
     if (regionalPrice?.price) {
-      // Use promotional pricing if available, but ensure we use the correct interval price
-      const promotional = getPromotionalPricing(plan);
-      if (promotional && promotional.pricing) {
-        // For quarterly/yearly, use the full price, not monthly equivalent
-        if (plan.key === 'pro_quarterly' && promotional.pricing.quarterly) {
-          return promotional.pricing.quarterly;
-        }
-        if (plan.key === 'pro_yearly' && promotional.pricing.yearly) {
-          return promotional.pricing.yearly;
-        }
-        if (plan.key === 'pro_lifetime' && promotional.pricing.oneTime) {
-          return promotional.pricing.oneTime;
-        }
-        if (plan.key === 'pro_monthly' && promotional.pricing.monthly) {
-          return promotional.pricing.monthly;
-        }
-        // Fallback to regional price which should already be the correct full price
-        return regionalPrice.price;
-      }
-      // Regional price should already be the full price for the selected plan
       return regionalPrice.price;
     }
 
-    // Fallback: Get price from plan based on key - use FULL price for quarterly/yearly
+    // Fallback to computed price field from API
     const dbPlan = plan as unknown as DatabasePricingPlan;
-    let planPrice = 0;
-    if (plan.key === 'pro_monthly') {
-      planPrice = dbPlan.price_monthly || 0;
-    } else if (plan.key === 'pro_quarterly') {
-      // Use full quarterly price (one-time charge)
-      planPrice = dbPlan.price_quarterly || 0;
-    } else if (plan.key === 'pro_yearly') {
-      // Use full yearly price (one-time charge)
-      planPrice = dbPlan.price_yearly || 0;
-    } else if (plan.key === 'pro_lifetime') {
-      // Use full lifetime price (one-time charge)
-      planPrice = dbPlan.price_one_time || 0;
-    } else {
-      // Fallback to effective price from hook
-      planPrice = getEffectivePrice(dbPlan) || 0;
-    }
+    if (dbPlan.price) return dbPlan.price;
 
-    return planPrice;
+    return 0;
   };
 
   const getFinalPrice = () => {
@@ -513,23 +477,36 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
 
   const getUSDPlanPrice = (plan: PricingPlan) => {
     if (plan.key === 'free') return 0;
-    const dbPlan = plan as unknown as DatabasePricingPlan;
     
-    // Check if there is promotional pricing active for the user
+    // Use the explicit usdPrice field from our updated API
+    const dbPlan = plan as unknown as any;
+    if (dbPlan.usdPrice !== undefined && dbPlan.usdPrice > 0) return dbPlan.usdPrice;
+
+    // Legacy fallbacks if usdPrice is missing or 0
     const promotional = getPromotionalPricing(plan);
     const hasPromo = promotional && promotional.pricing;
     
-    if (plan.key === 'pro_monthly') {
+    if (plan.key.includes('pro_monthly')) {
       return (hasPromo && promotional.pricing.monthly) ? promotional.pricing.monthly : (dbPlan.price_monthly || 12.99);
-    } else if (plan.key === 'pro_quarterly') {
+    } else if (plan.key.includes('pro_quarterly')) {
       return (hasPromo && promotional.pricing.quarterly) ? promotional.pricing.quarterly : (dbPlan.price_quarterly || 34.99);
-    } else if (plan.key === 'pro_yearly') {
+    } else if (plan.key.includes('pro_yearly')) {
       return (hasPromo && promotional.pricing.yearly) ? promotional.pricing.yearly : (dbPlan.price_yearly || 99.00);
-    } else if (plan.key === 'pro_lifetime') {
+    } else if (plan.key.includes('pro_lifetime')) {
       return (hasPromo && promotional.pricing.oneTime) ? promotional.pricing.oneTime : (dbPlan.price_one_time || 199.00);
-    } else {
-      return getEffectivePrice(dbPlan) || 0;
+    } else if (plan.key === 'focused_monthly') {
+      return 9.99;
+    } else if (plan.key === 'focused_yearly') {
+      return 79.99;
+    } else if (plan.key === 'smart_quaterly') {
+      return 59.99;
+    } else if (plan.key === 'smart_yearly') {
+      return 199.00;
+    } else if (plan.key === 'starter_yealry') {
+      return 39.99;
     }
+
+    return getEffectivePrice(dbPlan) || 0;
   };
 
   const getUSDFinalPrice = () => {
@@ -779,8 +756,13 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
 
   // Get plan icon component (matching landing page)
   const getPlanIcon = (planKey: string) => {
-    switch (planKey) {
-      case 'free': return Brain;
+    const key = planKey.toLowerCase();
+    if (key === 'free') return Brain;
+    if (key.includes('starter')) return Target;
+    if (key.includes('focused')) return Sparkles;
+    if (key.includes('smart')) return Zap;
+    
+    switch (key) {
       case 'pro_monthly': return Crown;
       case 'pro_quarterly': return Users;
       case 'pro_yearly': return Globe;
@@ -790,13 +772,13 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
   };
 
   const getPlanColor = (planKey: string) => {
-    switch (planKey) {
+    const key = planKey.toLowerCase();
+    if (key.includes('focused')) return 'text-lime-500 bg-lime-500/10';
+    if (key.includes('smart')) return 'text-purple-500 bg-purple-500/10';
+    
+    switch (key) {
       case 'free': return 'text-gray-600 bg-gray-100 dark:text-gray-300 dark:bg-gray-800';
-      case 'pro_monthly': return 'text-lime-600 bg-lime-100 dark:text-lime-300 dark:bg-lime-900/20';
-      case 'pro_quarterly': return 'text-lime-600 bg-lime-100 dark:text-lime-300 dark:bg-lime-900/20';
-      case 'pro_yearly': return 'text-lime-600 bg-lime-100 dark:text-lime-300 dark:bg-lime-900/20';
-      case 'pro_lifetime': return 'text-lime-600 bg-lime-100 dark:text-lime-300 dark:bg-lime-900/20';
-      default: return 'text-gray-600 bg-gray-100 dark:text-gray-300 dark:bg-gray-800';
+      default: return 'text-gray-600 bg-gray-100 dark:text-gray-400 dark:bg-white/5';
     }
   };
 
@@ -934,71 +916,132 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                   stiffness: 200,
                   mass: 0.8
                 }}
-                className="w-full tablet:w-1/2 bg-[#f3f2ee] dark:bg-[#141810] overflow-y-auto hidden tablet:block"
+                className="w-full tablet:w-[38%] bg-[#f3f2ee] dark:bg-[#141810] overflow-y-auto hidden tablet:block"
               >
-                <div className="p-8 tablet:p-12 max-w-2xl mx-auto h-full flex flex-col bg-[#f3f2ee] dark:bg-[#141810] rounded-l-2xl">
-                {/* Logo */}
-                <div className="mb-8 flex items-center gap-3">
-                  <Logo size="md" />
-                </div>
-
-                {/* Main Heading */}
-                <div className="mb-8">
-                  <h1 className="text-3xl tablet:text-4xl font-bold mb-4 text-gray-900 dark:text-white">
+                <div className="p-6 tablet:p-10 max-w-2xl mx-auto h-full flex flex-col bg-[#f3f2ee] dark:bg-[#141810] rounded-l-2xl">
+                {/* Logo & Main Heading Combined */}
+                <div className="mb-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <Logo size="sm" />
+                    <span className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Premium Toolkit</span>
+                  </div>
+                  <h1 className="text-2xl tablet:text-3xl font-bold mb-3 text-gray-900 dark:text-white">
                     Unlock Your Full Career Potential
                   </h1>
-                  <p className="text-gray-600 dark:text-gray-300 text-base leading-relaxed">
-                    All-in-one solution for your career growth. Create professional CVs, optimize for ATS systems, and track your job applications—all in one place.
+                  <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed">
+                    All-in-one solution for your career growth. Create professional CVs, optimize for ATS systems, and track your job applications.
                   </p>
                 </div>
 
-                {/* Premium Toolkit Section */}
-                <div className="mb-8 flex-1">
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Pro Features Include</h2>
-                  <ul className="space-y-3">
-                    <li className="flex items-start gap-3">
-                      <CheckCircle className="w-5 h-5 text-blue-600 dark:text-[#80FF00] mt-0.5 flex-shrink-0" />
-                      <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                        <strong className="text-gray-900 dark:text-white">Unlimited CVs & Templates:</strong> Create unlimited CVs with access to all premium templates.
+                {/* Premium Toolkit Section - More Compact Grid */}
+                <div className="mb-6 flex-1">
+                  <h2 className="text-sm font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                    <Zap className="w-4 h-4 text-lime-500" />
+                    <span>EVERYTHING YOU NEED TO SUCCEED</span>
+                  </h2>
+                  <ul className="grid grid-cols-1 tablet:grid-cols-2 gap-x-6 gap-y-4">
+                    <li className="flex items-start gap-2">
+                      <div className="p-1 rounded bg-gray-100 dark:bg-white/5 mt-0.5">
+                        <FileText className="w-3.5 h-3.5 text-gray-600 dark:text-lime-500" />
+                      </div>
+                      <div className="text-xs text-gray-700 dark:text-gray-300 leading-snug">
+                        <strong className="text-gray-900 dark:text-white block mb-0.5 text-[11px]">Dynamic Layout System</strong>
+                        Smart snippet system to create unlimited, tailored resume templates.
                       </div>
                     </li>
-                    <li className="flex items-start gap-3">
-                      <CheckCircle className="w-5 h-5 text-blue-600 dark:text-[#80FF00] mt-0.5 flex-shrink-0" />
-                      <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                        <strong className="text-gray-900 dark:text-white">Automated Cover Letter:</strong> AI-powered cover letter generator tailored to each job application.
+                    <li className="flex items-start gap-2">
+                      <div className="p-1 rounded bg-gray-100 dark:bg-white/5 mt-0.5">
+                        <Target className="w-3.5 h-3.5 text-gray-600 dark:text-lime-500" />
+                      </div>
+                      <div className="text-xs text-gray-700 dark:text-gray-300 leading-snug">
+                        <strong className="text-gray-900 dark:text-white block mb-0.5 text-[11px]">Precision Job Pipeline</strong>
+                        Real-time stage tracking with AI-generated follow-up & email suggestions.
                       </div>
                     </li>
-                    <li className="flex items-start gap-3">
-                      <CheckCircle className="w-5 h-5 text-blue-600 dark:text-[#80FF00] mt-0.5 flex-shrink-0" />
-                      <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                        <strong className="text-gray-900 dark:text-white">Job Application Tracker:</strong> Manage all your job applications in one organized dashboard.
+                    <li className="flex items-start gap-2">
+                      <div className="p-1 rounded bg-gray-100 dark:bg-white/5 mt-0.5">
+                        <Globe className="w-3.5 h-3.5 text-gray-600 dark:text-lime-500" />
+                      </div>
+                      <div className="text-xs text-gray-700 dark:text-gray-300 leading-snug">
+                        <strong className="text-gray-900 dark:text-white block mb-0.5 text-[11px]">One-Click Sourcing</strong>
+                        Save roles via extension or paste directly with instant AI insights.
                       </div>
                     </li>
-                    <li className="flex items-start gap-3">
-                      <CheckCircle className="w-5 h-5 text-blue-600 dark:text-[#80FF00] mt-0.5 flex-shrink-0" />
-                      <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                        <strong className="text-gray-900 dark:text-white">Deep ATS Optimization:</strong> Full AI analysis to maximize your ATS score and pass screening systems.
+                    <li className="flex items-start gap-2">
+                      <div className="p-1 rounded bg-gray-100 dark:bg-white/5 mt-0.5">
+                        <Zap className="w-3.5 h-3.5 text-gray-600 dark:text-lime-500" />
+                      </div>
+                      <div className="text-xs text-gray-700 dark:text-gray-300 leading-snug">
+                        <strong className="text-gray-900 dark:text-white block mb-0.5 text-[11px]">Automated Tailoring</strong>
+                        Save a job and get a perfectly matched CV & Cover Letter instantly.
                       </div>
                     </li>
-                    <li className="flex items-start gap-3">
-                      <CheckCircle className="w-5 h-5 text-blue-600 dark:text-[#80FF00] mt-0.5 flex-shrink-0" />
-                      <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                        <strong className="text-gray-900 dark:text-white">Chrome Extension:</strong> Save job listings with one click and auto-populate applications.
+                    <li className="flex items-start gap-2">
+                      <div className="p-1 rounded bg-gray-100 dark:bg-white/5 mt-0.5 flex items-center justify-center">
+                        <span className="text-[10px] font-black text-gray-600 dark:text-lime-500 leading-none">in</span>
+                      </div>
+                      <div className="text-xs text-gray-700 dark:text-gray-300 leading-snug">
+                        <strong className="text-gray-900 dark:text-white block mb-0.5 text-[11px]">LinkedIn Optimizer</strong>
+                        Visual, section-by-section guide to perfecting your professional profile.
                       </div>
                     </li>
-                    <li className="flex items-start gap-3">
-                      <CheckCircle className="w-5 h-5 text-blue-600 dark:text-[#80FF00] mt-0.5 flex-shrink-0" />
-                      <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                        <strong className="text-gray-900 dark:text-white">Interview Coach:</strong> AI-powered interview preparation with role-specific questions and feedback.
+                    <li className="flex items-start gap-2">
+                      <div className="p-1 rounded bg-gray-100 dark:bg-white/5 mt-0.5">
+                        <Users className="w-3.5 h-3.5 text-gray-600 dark:text-lime-500" />
+                      </div>
+                      <div className="text-xs text-gray-700 dark:text-gray-300 leading-snug">
+                        <strong className="text-gray-900 dark:text-white block mb-0.5 text-[11px]">AI Interview Simulator</strong>
+                        Role-specific mock interviews with real-time performance feedback.
                       </div>
                     </li>
-                    <li className="flex items-start gap-3">
-                      <CheckCircle className="w-5 h-5 text-blue-600 dark:text-[#80FF00] mt-0.5 flex-shrink-0" />
-                      <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                        <strong className="text-gray-900 dark:text-white">Advanced Analytics:</strong> Deep insights into your career profile and improvement areas.
+                    <li className="col-span-1 tablet:col-span-2 flex items-start gap-2 p-2 bg-purple-500/5 rounded-lg border border-purple-500/10">
+                      <div className="p-1 rounded bg-purple-500/10 mt-0.5">
+                        <Sparkles className="w-3.5 h-3.5 text-purple-500" />
+                      </div>
+                      <div className="text-xs text-gray-700 dark:text-gray-300 leading-snug">
+                        <strong className="text-gray-900 dark:text-white flex items-center gap-2 mb-0.5 text-[11px]">
+                          Autonomous Applications
+                          <span className="text-[8px] bg-purple-500 text-white px-1.5 py-0.5 rounded-full font-black uppercase tracking-tighter">Coming Soon</span>
+                        </strong>
+                        Relax while CVCircle completes the 'Whole Circle' of your job hunt autonomously.
                       </div>
                     </li>
                   </ul>
+                </div>
+
+                {/* Live Testimonials - Side-by-Side */}
+                <div className="mb-6 pt-6 border-t border-gray-200 dark:border-white/10">
+                  <h2 className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-4">SUCCESS STORIES</h2>
+                  <div className="grid grid-cols-1 desktop:grid-cols-2 gap-4">
+                    <div className="bg-white/50 dark:bg-white/5 p-3 rounded-xl border border-gray-200 dark:border-white/10 shadow-sm flex flex-col justify-between">
+                      <p className="text-[11px] text-gray-600 dark:text-gray-400 italic mb-2 leading-relaxed">
+                        "CVCircle doubled my interview callbacks in just two weeks!"
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <div className="w-5 h-5 rounded-full bg-lime-500 flex items-center justify-center text-[9px] font-bold text-black flex-shrink-0">
+                          S
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-[10px] font-bold text-gray-900 dark:text-white truncate">Sarah B.</p>
+                          <p className="text-[8px] text-gray-500 truncate">Sales Director</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="bg-white/50 dark:bg-white/5 p-3 rounded-xl border border-gray-200 dark:border-white/10 shadow-sm flex flex-col justify-between">
+                      <p className="text-[11px] text-gray-600 dark:text-gray-400 italic mb-2 leading-relaxed">
+                        "The AI Interview Coach helped me land my dream role."
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0">
+                          A
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-[10px] font-bold text-gray-900 dark:text-white truncate">Aisha T.</p>
+                          <p className="text-[8px] text-gray-500 truncate">Recent Graduate</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Trust Elements - Bottom */}
@@ -1019,7 +1062,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                 mass: 0.8,
                 delay: 0.1
               }}
-              className="w-full tablet:w-1/2 bg-[#f3f2ee] dark:bg-[#141810] overflow-y-auto"
+              className="w-full tablet:w-[62%] bg-[#f3f2ee] dark:bg-[#141810] overflow-y-auto"
             >
               <div className="p-4 tablet:p-6 max-w-5xl mx-auto bg-[#f3f2ee] dark:bg-[#141810] rounded-lg">
 
@@ -1048,9 +1091,9 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                         const subscriptionPlans = availablePlans.filter(plan => {
                           const key = plan.key.toLowerCase();
                           if (billingCycle === 'yearly') {
-                            return key.includes('yearly') || key.includes('yealry') || key.includes('quarterly') || key.includes('quaterly') || key.includes('lifetime');
+                            return key.includes('yearly') || key.includes('yealry') || key.includes('lifetime');
                           } else {
-                            return key.includes('monthly');
+                            return key.includes('monthly') || key.includes('quarterly') || key.includes('quaterly');
                           }
                         });
 
@@ -1058,16 +1101,16 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                         const displayPlans = subscriptionPlans.length > 0 ? subscriptionPlans : availablePlans;
 
                         return (
-                          <div className="flex flex-col gap-6 bg-gray-50 dark:bg-[#1A201A] rounded-2xl p-6 border border-gray-100 dark:border-gray-800 max-w-[42rem] mx-auto w-full transition-all duration-300">
+                          <div className="flex flex-col gap-4 bg-gray-50 dark:bg-[#1A201A] rounded-2xl p-4 border border-gray-100 dark:border-gray-800 max-w-[42rem] mx-auto w-full transition-all duration-300">
 
                             {/* --- HEADER MOVED INSIDE --- */}
-                            <div className="flex flex-col tablet:flex-row tablet:items-center justify-between gap-4 mb-2">
+                            <div className="flex flex-col tablet:flex-row tablet:items-center justify-between gap-3 mb-2 px-2">
                               <div>
                                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                                  {adminMode ? 'Grant Plan' : previewMode ? 'Preview Plans' : step === 1 ? 'Choose Your Plan' : 'Complete Your Order'}
+                                  Choose Your Plan
                                 </h2>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                  {adminMode ? 'Grant a plan to the selected user' : previewMode ? 'Preview available plans and pricing' : 'Review your plan selection and complete payment'}
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                  Review and complete payment
                                 </p>
                               </div>
 
@@ -1076,7 +1119,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                                 <div className="flex items-center p-1 bg-gray-200/50 dark:bg-white/5 rounded-xl self-start tablet:self-center">
                                   <button
                                     onClick={() => setBillingCycle('monthly')}
-                                    className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                                    className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${
                                       billingCycle === 'monthly'
                                         ? 'bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white shadow-sm'
                                         : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
@@ -1086,34 +1129,33 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                                   </button>
                                   <button
                                     onClick={() => setBillingCycle('yearly')}
-                                    className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 ${
+                                    className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 ${
                                       billingCycle === 'yearly'
                                         ? 'bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white shadow-sm'
                                         : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
                                     }`}
                                   >
                                     Yearly
-                                    <span className="bg-lime-500 text-black text-[10px] px-1.5 py-0.5 rounded-md font-black">SAVE 25%</span>
+                                    <span className="bg-lime-500 text-black text-[9px] px-1.5 py-0.5 rounded-md font-black">SAVE 25%</span>
                                   </button>
                                 </div>
                               )}
                             </div>
 
                             {/* --- CURRENT PLAN MOVED INSIDE --- */}
-                            {currentPlan && !adminMode && currentPlan.key !== 'free' && (
-                              <div className="p-4 bg-white dark:bg-[#232f1c] rounded-xl border border-lime-200 dark:border-lime-500/20 shadow-sm">
-                                <div className="flex items-start gap-4">
+                            {currentPlan && !adminMode && (
+                              <div className="mx-2 p-3 bg-white dark:bg-[#232f1c] rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm">
+                                <div className="flex items-center gap-4">
                                   <div className="flex-shrink-0">
-                                    <div className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-gradient-to-br from-lime-400 to-lime-500 shadow-lg">
-                                      {(() => { const Icon = getPlanIcon(currentPlan.key); return <Icon size={20} className="text-white" />; })()}
+                                    <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-lime-500/10 text-lime-600 dark:text-lime-400">
+                                      {(() => { const Icon = getPlanIcon(currentPlan.key); return <Icon size={20} />; })()}
                                     </div>
                                   </div>
                                   <div className="flex-1">
-                                    <div className="flex items-center gap-2 mb-0.5">
+                                    <div className="flex items-center gap-2">
                                       <h3 className="text-md font-bold text-gray-900 dark:text-white">{currentPlan.name}</h3>
-                                      <span className="bg-lime-100 text-lime-800 text-[10px] font-bold px-2 py-0.5 rounded-full">Current Plan</span>
+                                      <span className="bg-lime-100 text-lime-800 text-[9px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider">Current</span>
                                     </div>
-                                    <p className="text-xs text-gray-600 dark:text-gray-400">{currentPlan.description}</p>
                                   </div>
                                 </div>
                               </div>
@@ -1121,7 +1163,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
 
                             {/* Subscription Plans - Grid Layout */}
                             {displayPlans.length > 0 && (
-                              <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4">
+                              <div className="grid grid-cols-1 tablet:grid-cols-3 gap-3 px-2">
                                 {displayPlans.map((plan) => {
                                   const dbPlan = plan as unknown as DatabasePricingPlan;
                                   const regionalPrice = getRegionalPrice(dbPlan);
@@ -1130,10 +1172,11 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                                   const monthlyEquivalent = getMonthlyEquivalent(dbPlan);
                                   const isSelected = selectedPlan?.key === plan.key;
                                   const Icon = getPlanIcon(plan.key);
+                                  const isFocused = plan.key.includes('focused');
 
                                   const displayPrice = monthlyEquivalent.showMonthly ? monthlyEquivalent.price : (regionalPrice || `${currencySymbol}${effectivePrice}`);
-                                  const billedAmountText = monthlyEquivalent.showMonthly
-                                    ? `${regionalPrice || `${currencySymbol}${effectivePrice}`} billed ${plan.key.includes('quarterly') || plan.key.includes('quaterly') ? 'quarterly' : 'annually'}`
+                                  const totalText = monthlyEquivalent.showMonthly 
+                                    ? `${regionalPrice || `${currencySymbol}${effectivePrice}`} total`
                                     : '';
 
                                   return (
@@ -1141,134 +1184,93 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                                       key={plan.key}
                                       onClick={() => {
                                         setUserChangedPlan(true);
-                                        let planPrice = 0;
-                                        if (plan.key === 'pro_monthly') planPrice = dbPlan.price_monthly || 0;
-                                        else if (plan.key === 'pro_quarterly') planPrice = dbPlan.price_quarterly || 0;
-                                        else if (plan.key === 'pro_yearly') planPrice = dbPlan.price_yearly || 0;
-                                        else if (plan.key === 'pro_lifetime') planPrice = dbPlan.price_one_time || 0;
-                                        else planPrice = effectivePrice || 0;
-
-                                        if (regionalPricing) {
-                                          let regionalPriceValue = planPrice;
-                                          let hasRegionalPrice = false;
-
-                                          if ((plan.key.includes('quarterly') || plan.key.includes('quaterly')) && regionalPricing.quarterly) {
-                                            const extracted = extractNumericPrice(regionalPricing.quarterly);
-                                            if (extracted > 0) { regionalPriceValue = extracted; hasRegionalPrice = true; }
-                                          } else if ((plan.key.includes('yearly') || plan.key.includes('yealry')) && regionalPricing.yearly) {
-                                            const extracted = extractNumericPrice(regionalPricing.yearly);
-                                            if (extracted > 0) { regionalPriceValue = extracted; hasRegionalPrice = true; }
-                                          } else if (plan.key.includes('monthly') && regionalPricing.monthly) {
-                                            const extracted = extractNumericPrice(regionalPricing.monthly);
-                                            if (extracted > 0) { regionalPriceValue = extracted; hasRegionalPrice = true; }
-                                          }
-
-                                          if (hasRegionalPrice) {
-                                            const planWithRegionalPrice = {
-                                              ...plan,
-                                              regionalPricing: {
-                                                price: regionalPriceValue,
-                                                currencySymbol: regionalPricing.currencySymbol || currencySymbol,
-                                                currency: regionalPricing.currency || 'USD'
-                                              },
-                                              durationInfo: monthlyEquivalent.showMonthly ? { displayText: monthlyEquivalent.price } : undefined
-                                            } as unknown as PricingPlan;
-                                            setSelectedPlan(planWithRegionalPrice);
-                                            return;
-                                          }
-                                        }
                                         setSelectedPlan(plan);
                                       }}
-                                      className={`group relative flex flex-col p-5 rounded-2xl border-2 transition-all duration-300 ${
-                                        isSelected
-                                          ? 'border-gray-900 bg-gray-900 dark:border-lime-500 dark:bg-lime-500/10 shadow-lg scale-[1.02] z-10'
-                                          : 'border-gray-200 hover:border-gray-300 dark:border-gray-800 dark:hover:border-gray-700 bg-white dark:bg-[#141810]/50'
+                                      className={`group relative flex flex-col p-5 rounded-3xl border-2 transition-all duration-300 cursor-pointer ${
+                                        isFocused
+                                          ? 'bg-gray-900 border-gray-900 dark:bg-[#1A201A] dark:border-lime-500/50 shadow-xl scale-[1.02] z-10'
+                                          : isSelected
+                                            ? 'border-lime-500 bg-white dark:bg-[#1A201A]'
+                                            : 'border-gray-200 hover:border-gray-300 dark:border-white/5 bg-white dark:bg-white/5'
                                       }`}
                                     >
-                                      {/* Selection Indicator */}
-                                      <div className={`absolute top-4 right-4 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
-                                        isSelected ? 'border-lime-500 bg-lime-500' : 'border-gray-300 dark:border-gray-600'
+                                      {/* Selection Indicator & Badge */}
+                                      {isFocused && (
+                                        <div className="absolute top-4 right-4 text-lime-500 bg-lime-500/10 rounded-full p-0.5">
+                                          <CheckCircle className="w-5 h-5" />
+                                        </div>
+                                      )}
+                                      
+                                      <div className={`p-2 w-fit rounded-xl mb-4 ${
+                                        isFocused ? 'bg-lime-500/20 text-lime-500' : 'bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400'
                                       }`}>
-                                        {isSelected && <Check className="w-3 h-3 text-black stroke-[4]" />}
+                                        <Icon size={18} />
                                       </div>
 
-                                      {/* Plan Info */}
-                                      <div className="flex items-center gap-3 mb-4">
-                                        <div className={`p-2 rounded-xl transition-colors ${
-                                          isSelected ? 'bg-lime-500 text-black' : 'bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400'
-                                        }`}>
-                                          <Icon size={20} />
-                                        </div>
-                                        <div>
-                                          <h3 className={`font-bold text-lg leading-tight ${isSelected ? 'text-white' : 'text-gray-900 dark:text-white'}`}>
-                                            {plan.name.replace('Pro ', '').replace(' Monthly', '').replace(' Yearly', '').replace(' Quarterly', '')}
-                                          </h3>
-                                          <p className={`text-[10px] font-medium uppercase tracking-wider ${isSelected ? 'text-lime-400' : 'text-gray-500'}`}>
-                                            {plan.key.includes('yearly') || plan.key.includes('yealry') ? 'Best Value' : plan.key.includes('quarterly') ? 'Popular' : 'Standard'}
-                                          </p>
-                                        </div>
-                                      </div>
-
-                                      {/* Pricing */}
-                                      <div className="mb-4">
-                                        <div className="flex items-baseline gap-1">
-                                          <span className={`text-2xl font-black ${isSelected ? 'text-white' : 'text-gray-900 dark:text-white'}`}>
+                                      <div className="mb-6">
+                                        <h3 className={`font-bold text-lg mb-1 ${isFocused ? 'text-white' : 'text-gray-900 dark:text-white'}`}>
+                                          {plan.name.replace(' Monthly', '').replace(' Yearly', '').replace(' Quarterly', '')}
+                                        </h3>
+                                        {isFocused && (
+                                          <span className="text-[9px] bg-lime-500 text-black px-2 py-0.5 rounded-md font-black uppercase tracking-wider mb-2 inline-block">
+                                            Most Popular
+                                          </span>
+                                        )}
+                                        
+                                        <div className="flex items-baseline gap-1 mt-2">
+                                          <span className={`text-3xl font-black ${isFocused ? 'text-white' : 'text-gray-900 dark:text-white'}`}>
                                             {displayPrice.split('/')[0]}
                                           </span>
-                                          <span className={`text-sm font-medium ${isSelected ? 'text-gray-400' : 'text-gray-500'}`}>
+                                          <span className={`text-xs font-bold ${isFocused ? 'text-gray-400' : 'text-gray-500'}`}>
                                             /mo
                                           </span>
                                         </div>
-                                        {billedAmountText && (
-                                          <p className={`text-[10px] mt-1 font-medium ${isSelected ? 'text-gray-400' : 'text-gray-400 dark:text-gray-500'}`}>
-                                            {billedAmountText}
+                                        {totalText && (
+                                          <p className={`text-[10px] font-bold mt-1 ${isFocused ? 'text-gray-400' : 'text-gray-500'}`}>
+                                            {totalText.split(' ')[0]}* total
                                           </p>
                                         )}
                                       </div>
 
-                                      {/* Features Preview (Collapsed) */}
-                                      <div className={`space-y-1.5 pt-4 border-t ${isSelected ? 'border-white/10' : 'border-gray-100 dark:border-white/5'}`}>
-                                        {plan.features.slice(0, 3).map((feature, i) => (
+                                      {/* Feature Tags */}
+                                      <div className="flex-1 space-y-3 mb-8">
+                                        {plan.features.slice(0, 4).map((feature, i) => (
                                           <div key={i} className="flex items-start gap-2">
-                                            <Check className={`w-3 h-3 mt-0.5 flex-shrink-0 ${isSelected ? 'text-lime-500' : 'text-gray-400'}`} />
-                                            <span className={`text-[10px] tablet:text-xs font-medium ${isSelected ? 'text-gray-300' : 'text-gray-600 dark:text-gray-400'}`}>
-                                              {feature}
+                                            <Check className={`w-3 h-3 mt-0.5 flex-shrink-0 ${isFocused ? 'text-lime-500' : 'text-lime-500'}`} />
+                                            <span className={`text-[11px] font-bold leading-tight ${isFocused ? 'text-gray-300' : 'text-gray-600 dark:text-gray-400'}`}>
+                                              {feature.split(':')[0]}
                                             </span>
                                           </div>
                                         ))}
-                                        {plan.features.length > 3 && (
-                                          <p className={`text-[9px] font-bold mt-1 ${isSelected ? 'text-lime-500/80' : 'text-gray-400'}`}>
-                                            + {plan.features.length - 3} more features
-                                          </p>
-                                        )}
                                       </div>
-                                      
-                                      {/* Selection Shadow Overlay */}
-                                      {isSelected && (
-                                        <div className="absolute inset-0 rounded-2xl ring-2 ring-lime-500 pointer-events-none" />
-                                      )}
+
+                                      <button className={`w-full py-2.5 rounded-xl font-bold text-xs transition-all ${
+                                        isFocused 
+                                          ? 'bg-lime-500 hover:bg-lime-600 text-black shadow-lg shadow-lime-500/20' 
+                                          : 'border border-lime-500/50 text-lime-600 dark:text-lime-400 hover:bg-lime-500/5'
+                                      }`}>
+                                        Choose Plan
+                                      </button>
                                     </div>
                                   );
                                 })}
                               </div>
                             )}
 
-                            {/* Empty State */}
-                            {availablePlans.length === 0 && (
-                              <div className="py-12 text-center text-gray-500">
-                                {plansLoading ? 'Loading plans...' : 'No plans available. Please try refreshing the page.'}
-                              </div>
-                            )}
-
                             {/* Continue Button (Moved Inside) */}
-                            <div className="pt-4 mt-2 border-t border-gray-100 dark:border-gray-800 flex justify-center w-full">
+                            <div className="pt-4 flex flex-col items-center w-full">
                               <button
                                 onClick={() => setStep(2)}
                                 disabled={!selectedPlan || isCurrentPlan(selectedPlan)}
-                                className="w-full tablet:w-auto px-8 py-3 bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-black rounded-lg font-bold disabled:bg-gray-200 dark:disabled:bg-gray-800 disabled:text-gray-400 dark:disabled:text-gray-600 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg disabled:shadow-none"
+                                className="w-full tablet:w-auto px-16 py-4 bg-[#80FF00] hover:bg-[#99ff33] text-black rounded-2xl font-black disabled:bg-gray-200 dark:disabled:bg-gray-800 disabled:text-gray-400 dark:disabled:text-gray-600 disabled:cursor-not-allowed transition-all shadow-xl shadow-lime-500/20 active:scale-95 text-base flex items-center justify-center gap-3"
                               >
-                                {adminMode ? 'Grant Plan' : previewMode ? 'Preview' : 'Continue to Payment'}
+                                <Shield className="w-5 h-5 opacity-50" />
+                                <span>Continue to Payment</span>
                               </button>
+                              <div className="mt-3 flex items-center gap-2 text-gray-500 dark:text-gray-400">
+                                <Shield className="w-3.5 h-3.5 text-lime-500" />
+                                <span className="text-[10px] font-bold">Secure payments. Cancel anytime.</span>
+                              </div>
                             </div>
 
                           </div>
@@ -1276,17 +1278,25 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                       })()}
 
                       {/* Trust Elements Footer (Simplified) */}
-                      <div className="mt-6 px-2 max-w-[34rem] mx-auto">
-                        <div className="grid grid-cols-2 gap-4 text-xs mb-4">
-                          <div className="flex flex-col items-center text-center gap-1">
-                            <Shield className="w-4 h-4 text-green-600 dark:text-green-400 mb-1" />
-                            <span className="font-bold text-gray-900 dark:text-white">100% Satisfaction</span>
-                            <span className="text-gray-500 dark:text-gray-400 leading-tight">Full refund if not satisfied. No questions asked.</span>
+                      <div className="mt-8 pt-6 border-t border-gray-100 dark:border-white/5">
+                        <div className="grid grid-cols-2 gap-8 mb-6 max-w-[36rem] mx-auto">
+                          <div className="flex items-start gap-3">
+                            <div className="p-1.5 rounded-lg bg-green-500/10 mt-1">
+                              <Shield className="w-4 h-4 text-green-600 dark:text-green-400" />
+                            </div>
+                            <div>
+                              <span className="block text-xs font-black text-gray-900 dark:text-white uppercase tracking-wider">100% Satisfaction</span>
+                              <span className="text-[10px] text-gray-500 dark:text-gray-400 leading-tight">Full refund if not satisfied. No questions asked.</span>
+                            </div>
                           </div>
-                          <div className="flex flex-col items-center text-center gap-1">
-                            <ArrowRight className="w-4 h-4 text-blue-600 dark:text-blue-400 mb-1" />
-                            <span className="font-bold text-gray-900 dark:text-white">No Obligation</span>
-                            <span className="text-gray-500 dark:text-gray-400 leading-tight">Switch anytime if you find a better price.</span>
+                          <div className="flex items-start gap-3">
+                            <div className="p-1.5 rounded-lg bg-blue-500/10 mt-1">
+                              <ArrowRight className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                            </div>
+                            <div>
+                              <span className="block text-xs font-black text-gray-900 dark:text-white uppercase tracking-wider">No Obligation</span>
+                              <span className="text-[10px] text-gray-500 dark:text-gray-400 leading-tight">Switch anytime if you find a better price.</span>
+                            </div>
                           </div>
                         </div>
 

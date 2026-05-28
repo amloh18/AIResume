@@ -81,6 +81,11 @@ interface PricingCacheEntry {
 const CACHE_TTL = 5 * 60 * 1000;
 const pricingCache = new Map<string, PricingCacheEntry>();
 
+// Global variables to cache location and regional pricing across all hook instances
+let globalLocationData: LocationData | null = null;
+let globalRegionalPricing: RegionalPricing | null = null;
+let globalLocationPromise: Promise<void> | null = null;
+
 function getCacheKey(options: UsePricingPlansOptions): string {
   return JSON.stringify({
     publicOnly: options.publicOnly || false,
@@ -96,9 +101,9 @@ function isCacheValid(entry: PricingCacheEntry): boolean {
 export function usePricingPlans(options: UsePricingPlansOptions = {}): UsePricingPlansResult {
   const [plans, setPlans] = useState<DatabasePricingPlan[]>([]);
   const [promotionalOffers, setPromotionalOffers] = useState<any[]>([]);
-  const [locationData, setLocationData] = useState<LocationData | null>(null);
-  const [regionalPricing, setRegionalPricing] = useState<RegionalPricing | null>(null);
-  const [selectedCurrency, setSelectedCurrency] = useState<string>('USD');
+  const [locationData, setLocationData] = useState<LocationData | null>(globalLocationData);
+  const [regionalPricing, setRegionalPricing] = useState<RegionalPricing | null>(globalRegionalPricing);
+  const [selectedCurrency, setSelectedCurrency] = useState<string>(globalLocationData?.currency || 'USD');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -106,22 +111,48 @@ export function usePricingPlans(options: UsePricingPlansOptions = {}): UsePricin
   // Fetch location and set regional pricing from database
   useEffect(() => {
     const detectLocation = async () => {
-      try {
-        const location = await LocationService.getLocationData();
-        setLocationData(location);
-        setSelectedCurrency(location.currency || 'USD');
-
-        // Fetch regional pricing data
-        const response = await fetch(`/api/pricing/regional?countryCode=${location.countryCode}`);
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success && data.pricing) {
-            setRegionalPricing(data.pricing);
-          }
-        }
-      } catch (error) {
-        console.error('Error detecting location/pricing:', error);
+      // If we already have a promise in flight, wait for it
+      if (globalLocationPromise) {
+        await globalLocationPromise;
+        setLocationData(globalLocationData);
+        setRegionalPricing(globalRegionalPricing);
+        setSelectedCurrency(globalLocationData?.currency || 'USD');
+        return;
       }
+
+      // If we already have the data, just use it
+      if (globalLocationData && globalRegionalPricing) {
+        setLocationData(globalLocationData);
+        setRegionalPricing(globalRegionalPricing);
+        setSelectedCurrency(globalLocationData.currency || 'USD');
+        return;
+      }
+
+      // Start the detection process and store the promise
+      globalLocationPromise = (async () => {
+        try {
+          const location = await LocationService.getLocationData();
+          globalLocationData = location;
+          
+          // Fetch regional pricing data
+          const response = await fetch(`/api/pricing/regional?countryCode=${location.countryCode}`);
+          if (response.ok) {
+            const data = await response.json();
+            if (data.success && data.pricing) {
+              globalRegionalPricing = data.pricing;
+            }
+          }
+        } catch (error) {
+          console.error('Error detecting location/pricing:', error);
+        } finally {
+          globalLocationPromise = null;
+        }
+      })();
+
+      await globalLocationPromise;
+      setLocationData(globalLocationData);
+      setRegionalPricing(globalRegionalPricing);
+      setSelectedCurrency(globalLocationData?.currency || 'USD');
     };
 
     detectLocation();
@@ -238,7 +269,7 @@ export function usePricingPlans(options: UsePricingPlansOptions = {}): UsePricin
       if (totalPrice > 0) {
         const monthlyNum = totalPrice / divisor;
         const formattedMonthly = formatMonthlyPrice(monthlyNum);
-        const basePrice = `${symbol}${formattedMonthly}/month`;
+        const basePrice = `${symbol}${formattedMonthly}/m`;
         return {
           price: (isUSD || !isApprox) ? basePrice : `${basePrice}*`,
           showMonthly: true
