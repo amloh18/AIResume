@@ -19,13 +19,14 @@ import {
   ChevronDown,
   ChevronUp,
   AlertCircle,
+  Loader2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import CampaignFilters from "./CampaignFilters";
 import FilterPresets from "./FilterPresets";
 import ABTestingConfig from "./ABTestingConfig";
-import { campaignTemplates, CampaignTemplate } from "@/lib/campaign-templates";
+import { campaignTemplates, CampaignTemplate, BASE_TEMPLATE } from "@/lib/campaign-templates";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -95,6 +96,11 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
   const [isTargetAudienceExpanded, setIsTargetAudienceExpanded] =
     useState(false);
   const [showFilterPresets, setShowFilterPresets] = useState(true);
+
+  // AI Template Generation State
+  const [showAiPrompt, setShowAiPrompt] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [isGeneratingAi, setIsGeneratingAi] = useState(false);
 
   // A/B Testing State
   const [abTestConfig, setAbTestConfig] = useState<{
@@ -249,6 +255,60 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
   const handleTemplateSelect = (template: CampaignTemplate) => {
     setSelectedTemplate(template);
     setShowTemplateSelector(false);
+  };
+
+  const handleGenerateAiTemplate = async () => {
+    if (!aiPrompt.trim()) {
+      toast({ title: "Input Required", description: "Please enter a prompt for the AI.", variant: "destructive" });
+      return;
+    }
+
+    setIsGeneratingAi(true);
+    try {
+      const response = await fetch("/api/admin/ai-email-template", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt: aiPrompt,
+          category: templateCategoryFilter !== "all" ? templateCategoryFilter : "general"
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to generate template");
+      }
+
+      const data = await response.json();
+      
+      if (data.success && data.htmlContent) {
+        const generatedHtml = BASE_TEMPLATE(data.htmlContent, data.subject || "AI Generated Campaign");
+        
+        const newTemplate: CampaignTemplate = {
+          id: `ai-${Date.now()}`,
+          name: "✨ AI Generated Template",
+          description: aiPrompt.slice(0, 50) + "...",
+          category: templateCategoryFilter !== "all" ? (templateCategoryFilter as any) : "newsletter",
+          scenario: "AI Generated",
+          subjectTemplate: data.subject || "Exciting news from CVCircle",
+          htmlContent: generatedHtml,
+          defaultFromName: "CVCircle Team",
+          defaultFromEmail: "support@cvcircle.io"
+        };
+        
+        setAvailableTemplates(prev => [newTemplate, ...prev]);
+        setSelectedTemplate(newTemplate);
+        setShowAiPrompt(false);
+        setAiPrompt("");
+        
+        toast({ title: "Template Generated", description: "Your AI template is ready to use!", variant: "success" });
+      } else {
+        throw new Error(data.error || "Generation failed");
+      }
+    } catch (error: any) {
+      toast({ title: "Generation Failed", description: error.message || "Failed to generate AI template", variant: "destructive" });
+    } finally {
+      setIsGeneratingAi(false);
+    }
   };
 
   const handlePreviewTargets = async () => {
@@ -665,7 +725,7 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
 
                 {/* Template Selection */}
                 <div className="mb-6">
-                  <div className="mb-4">
+                  <div className="mb-4 flex items-center justify-between">
                     <Select
                       value={templateCategoryFilter}
                       onValueChange={setTemplateCategoryFilter}
@@ -724,7 +784,49 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
                         </SelectItem>
                       </SelectContent>
                     </Select>
+                    
+                    <button
+                      onClick={() => setShowAiPrompt(!showAiPrompt)}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors border ${showAiPrompt ? 'bg-blue-600 border-blue-500 text-white' : 'bg-gray-800 border-gray-700 text-gray-300 hover:text-white hover:border-gray-600'}`}
+                    >
+                      <Sparkles className="w-4 h-4" />
+                      Create with AI
+                    </button>
                   </div>
+                  
+                  <AnimatePresence>
+                    {showAiPrompt && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="mb-6 overflow-hidden"
+                      >
+                        <div className="p-4 bg-gradient-to-r from-blue-900/40 to-purple-900/40 border border-blue-800/50 rounded-lg space-y-3">
+                          <Label className="text-blue-200 flex items-center gap-2">
+                            <Sparkles className="w-4 h-4 text-blue-400" />
+                            Describe the email you want to send
+                          </Label>
+                          <Textarea
+                            value={aiPrompt}
+                            onChange={(e) => setAiPrompt(e.target.value)}
+                            placeholder="E.g., An upsell email for our Day Pass targeting users who have created 3 free resumes but haven't upgraded yet. Offer them a 20% discount code: PRO20."
+                            className="bg-gray-900/80 border-blue-800/50 text-white min-h-[100px] resize-none"
+                          />
+                          <div className="flex justify-end">
+                            <button
+                              onClick={handleGenerateAiTemplate}
+                              disabled={isGeneratingAi || !aiPrompt.trim()}
+                              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all disabled:opacity-50"
+                            >
+                              {isGeneratingAi ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                              {isGeneratingAi ? 'Generating Template...' : 'Generate Template'}
+                            </button>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
 
                   <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4 max-h-96 overflow-y-auto">
                     {filteredTemplates.map((template) => (

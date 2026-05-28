@@ -24,7 +24,7 @@ const THEME = {
   border: '#333333'
 };
 
-const BASE_TEMPLATE = (content: string, title: string) => `
+export const BASE_TEMPLATE = (content: string, title: string) => `
 <!DOCTYPE html>
 <html>
 <head>
