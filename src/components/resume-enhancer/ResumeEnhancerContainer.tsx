@@ -1990,50 +1990,49 @@ export default function ResumeEnhancerContainer({
     goToStep(5);
   };
 
+  // Helper for deep equality check (simple but effective for our state objects)
+  const isDeepEqual = (a: any, b: any) => {
+    if (a === b) return true;
+    if (typeof a !== 'object' || a === null || typeof b !== 'object' || b === null) return false;
+    const keysA = Object.keys(a);
+    const keysB = Object.keys(b);
+    if (keysA.length !== keysB.length) return false;
+    for (const key of keysA) {
+      if (!keysB.includes(key)) return false;
+      if (!isDeepEqual(a[key], b[key])) return false;
+    }
+    return true;
+  };
+
   // Check if there are unsaved changes
   const hasUnsavedChanges = useMemo(() => {
-    // For new CVs (create mode), check if any data has been entered after Step 1
-    if (mode === 'create') {
-      // If initial data is set (Step 1 completed), compare with current data
-      if (initialCVDataRef.current) {
-        const currentDataStr = JSON.stringify(state.cvData);
-        const initialDataStr = JSON.stringify(initialCVDataRef.current);
-        const dataChanged = currentDataStr !== initialDataStr;
-        const titleChanged = state.cvTitle !== initialCVTitleRef.current;
-        const currentTemplateId = state.selectedTemplate?.id || (state.selectedTemplate as any)?._id;
-        const initialTemplateId = initialTemplateRef.current?.id || (initialTemplateRef.current as any)?._id;
-        const templateChanged = currentTemplateId !== initialTemplateId;
-        return dataChanged || titleChanged || templateChanged;
-      }
-
-      // If initial data not set yet, check if any meaningful content exists
-      const hasContent =
-        (state.cvData.basics?.name && state.cvData.basics.name.trim() !== '') ||
-        (state.cvData.work && state.cvData.work.length > 0) ||
-        (state.cvData.education && state.cvData.education.length > 0) ||
-        (state.cvData.skills && state.cvData.skills.length > 0);
-
-      return hasContent;
+    // If no initial data is captured yet, it's not "unsaved" yet
+    if (!initialCVDataRef.current) {
+        // For new CVs (create mode), check if any meaningful content exists
+        if (mode === 'create') {
+          const hasContent =
+            (state.cvData.basics?.name && state.cvData.basics.name.trim() !== '') ||
+            (state.cvData.work && state.cvData.work.length > 0) ||
+            (state.cvData.education && state.cvData.education.length > 0) ||
+            (state.cvData.skills && state.cvData.skills.length > 0);
+          return hasContent;
+        }
+        return false;
     }
 
-    // For edit mode, compare with initial data
-    if (!initialCVDataRef.current) return false;
-
     // Deep comparison of CV data
-    const currentDataStr = JSON.stringify(state.cvData);
-    const initialDataStr = JSON.stringify(initialCVDataRef.current);
-    const dataChanged = currentDataStr !== initialDataStr;
+    const dataChanged = !isDeepEqual(state.cvData, initialCVDataRef.current);
 
     // Check if title changed
     const titleChanged = state.cvTitle !== initialCVTitleRef.current;
 
     // Check if template changed
-    const currentTemplateId = state.selectedTemplate?.id || (state.selectedTemplate as any)?._id;
-    const initialTemplateId = initialTemplateRef.current?.id || (initialTemplateRef.current as any)?._id;
+    const currentTemplateId = state.selectedTemplate?.id || (state.selectedTemplate as any)?._id || state.selectedTemplate;
+    const initialTemplateId = initialTemplateRef.current?.id || (initialTemplateRef.current as any)?._id || initialTemplateRef.current;
     const templateChanged = currentTemplateId !== initialTemplateId;
 
     return dataChanged || titleChanged || templateChanged;
-  }, [mode, state.cvData, state.cvTitle, state.selectedTemplate]);
+  }, [mode, state.cvData, state.cvTitle, state.selectedTemplate, isDeepEqual]);
 
   const handleBackStep = () => {
     if (state.currentStep <= 1) return;

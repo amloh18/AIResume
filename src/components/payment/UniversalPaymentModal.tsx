@@ -1175,8 +1175,9 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                                   const isFocused = plan.key.includes('focused');
 
                                   const displayPrice = monthlyEquivalent.showMonthly ? monthlyEquivalent.price : (regionalPrice || `${currencySymbol}${effectivePrice}`);
+                                  const totalAmount = regionalPrice || `${currencySymbol}${effectivePrice}`;
                                   const totalText = monthlyEquivalent.showMonthly 
-                                    ? `${regionalPrice || `${currencySymbol}${effectivePrice}`} total`
+                                    ? `${totalAmount} total`
                                     : '';
 
                                   return (
@@ -1222,12 +1223,12 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                                             {displayPrice.split('/')[0]}
                                           </span>
                                           <span className={`text-xs font-bold ${isFocused ? 'text-gray-400' : 'text-gray-500'}`}>
-                                            /mo
+                                            {monthlyEquivalent.showMonthly ? '/mo' : plan.key.includes('lifetime') ? '/one-time' : '/period'}
                                           </span>
                                         </div>
                                         {totalText && (
                                           <p className={`text-[10px] font-bold mt-1 ${isFocused ? 'text-gray-400' : 'text-gray-500'}`}>
-                                            {totalText.split(' ')[0]}* total
+                                            {totalText}
                                           </p>
                                         )}
                                       </div>

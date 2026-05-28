@@ -1475,9 +1475,9 @@ const MembershipBilling = ({ user }: { user: User }) => {
 
   const [isMembershipModalOpen, setIsMembershipModalOpen] = useState(false);
   const [isAddPaymentModalOpen, setIsAddPaymentModalOpen] = useState(false);
-  const [showComparePlans, setShowComparePlans] = useState(false);
 
   // Toast notification state
+
   const showToastNotification = (type: 'success' | 'error' | 'info', message: string) => {
     // Notification removed
   };
@@ -1674,19 +1674,11 @@ const MembershipBilling = ({ user }: { user: User }) => {
 
                 <button 
                   onClick={() => {
-                    setShowComparePlans(true);
-                    setTimeout(() => {
-                      const pricingSection = document.getElementById('compare-plans');
-                      if (pricingSection) {
-                        pricingSection.scrollIntoView({ behavior: 'smooth' });
-                      } else {
-                        setIsMembershipModalOpen(true);
-                      }
-                    }, 100);
+                    setIsMembershipModalOpen(true);
                   }}
                   className="relative z-10 w-full py-2.5 px-4 bg-gray-900 hover:bg-gray-800 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-900 text-sm font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
                 >
-                  View All Plans & Upgrade <ArrowRight className="w-4 h-4" />
+                  Upgrade Your Plan <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
             )}
@@ -1694,18 +1686,6 @@ const MembershipBilling = ({ user }: { user: User }) => {
         </div>
 
         {/* Compare Plans Section */}
-        {showComparePlans && (
-          <div id="compare-plans" className="space-y-6 pt-6 border-t border-gray-200 dark:border-gray-800">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Compare Plans</h3>
-            <div className="rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-800">
-              <Pricing onSuccess={() => {
-                refetchBillingData();
-                showToastNotification('success', 'Subscription updated successfully!');
-              }} />
-            </div>
-          </div>
-        )}
-
         {/* Payment History Section */}
         <div id="payment-history" className="space-y-6 pt-6 border-t border-gray-200 dark:border-gray-800">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">

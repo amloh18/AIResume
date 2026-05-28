@@ -260,7 +260,7 @@ export function usePricingPlans(options: UsePricingPlansOptions = {}): UsePricin
     };
 
     const isQuarterly = plan.key === 'pro_quarterly' || plan.key === 'smart_quaterly' || plan.key.includes('quarterly') || plan.key.includes('quaterly');
-    const isYearly = plan.key === 'pro_yearly' || plan.key === 'starter_yealry' || plan.key === 'focused_yearly' || plan.key === 'smart_yearly' || plan.key.includes('yearly') || plan.key.includes('yealry');
+    const isYearly = plan.key === 'pro_yearly' || plan.key === 'starter_yearly' || plan.key === 'starter_yealry' || plan.key === 'focused_yearly' || plan.key === 'smart_yearly' || plan.key.includes('yearly') || plan.key.includes('yealry');
 
     if (isQuarterly || isYearly) {
       const totalPrice = regionalData?.price || (plan as any).price || 0;

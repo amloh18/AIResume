@@ -21,7 +21,7 @@ const EXCHANGE_RATES: Record<string, number> = {
   'EUR': 1.0,
   'USD': 1.08,
   'GBP': 0.85,
-  'INR': 89.5,
+  'INR': 103.5,
   'CAD': 1.47,
   'AUD': 1.65,
   'SGD': 1.45,

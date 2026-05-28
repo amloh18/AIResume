@@ -13,6 +13,8 @@ type TabType = 'notifications' | 'activities';
 export default function NotificationCenter() {
   const {
     notifications,
+    activities: liveActivities,
+    progressEvents,
     unreadCount,
     markAsRead,
     markAllAsRead,
@@ -20,11 +22,26 @@ export default function NotificationCenter() {
 
   // Safe context access to avoid "must be used within DashboardDataProvider" error
   const dashboardContext = useContext(DashboardDataContext);
-  const activities = dashboardContext?.activities || [];
+  const dbActivities = dashboardContext?.activities || [];
   const secondaryLoading = dashboardContext?.secondaryLoading || { activities: false };
   
+  // Merge live activities with DB activities
+  const allActivities = [...liveActivities];
+  dbActivities.forEach(dbA => {
+    if (!allActivities.some(a => a.id === dbA.id)) {
+      allActivities.push(dbA);
+    }
+  });
+  
+  // Sort merged activities by timestamp
+  allActivities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
   const [activeTab, setActiveTab] = useState<TabType>('notifications');
   const [isOpen, setIsOpen] = useState(false);
+  
+  // Convert progressEvents Map to Array for rendering
+  const activeProgressArray = Array.from(progressEvents.values());
+
   
   // Hide activity tab if context is missing
   const showActivityTab = !!dashboardContext;
@@ -124,7 +141,31 @@ export default function NotificationCenter() {
               <div className="flex-1 overflow-y-auto px-4 pb-6 custom-scrollbar min-h-[300px]">
                 {activeTab === 'notifications' || !showActivityTab ? (
                   <div className="space-y-2">
-                    {notifications.length === 0 ? (
+                    {/* Live Progress Section */}
+                    {activeProgressArray.length > 0 && (
+                      <div className="mb-4 space-y-2">
+                        {activeProgressArray.map((p) => (
+                          <div key={p.id} className="p-4 rounded-2xl bg-[#80FF00]/5 border border-[#80FF00]/20 shadow-sm animate-pulse">
+                            <div className="flex justify-between items-center mb-2">
+                              <span className="text-[10px] font-black uppercase tracking-widest text-[#80FF00]">
+                                {p.type === 'progress' ? 'Processing...' : 'Information'}
+                              </span>
+                              <span className="text-[10px] font-bold text-gray-500">{p.progress}%</span>
+                            </div>
+                            <h4 className="text-xs font-bold text-gray-900 dark:text-white mb-2">{p.message || 'Updating...'}</h4>
+                            <div className="h-1.5 w-full bg-gray-200 dark:bg-white/10 rounded-full overflow-hidden">
+                              <motion.div 
+                                className="h-full bg-[#80FF00] shadow-[0_0_8px_#80FF00]"
+                                initial={{ width: 0 }}
+                                animate={{ width: `${p.progress}%` }}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {notifications.length === 0 && activeProgressArray.length === 0 ? (
                       <EmptyState icon={Bell} title="No notifications" sub="You're all caught up!" />
                     ) : (
                       notifications.map(n => (
@@ -153,16 +194,16 @@ export default function NotificationCenter() {
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {secondaryLoading.activities ? (
+                    {secondaryLoading.activities && allActivities.length === 0 ? (
                        <div className="flex justify-center py-10"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#80FF00]" /></div>
-                    ) : activities.length === 0 ? (
+                    ) : allActivities.length === 0 ? (
                       <EmptyState icon={Clock} title="No activity" sub="Your timeline is empty" />
                     ) : (
-                      activities.map((a, idx) => {
+                      allActivities.map((a, idx) => {
                         const Icon = getActivityIcon(a.type);
                         const colorClass = getActivityColor(a.type);
                         return (
-                          <div key={idx} className="p-4 rounded-2xl bg-gray-50/50 dark:bg-white/[0.02] hover:bg-gray-100 dark:hover:bg-white/[0.04] transition-all flex gap-4 border border-transparent hover:border-gray-200 dark:hover:border-white/5">
+                          <div key={a.id || idx} className="p-4 rounded-2xl bg-gray-50/50 dark:bg-white/[0.02] hover:bg-gray-100 dark:hover:bg-white/[0.04] transition-all flex gap-4 border border-transparent hover:border-gray-200 dark:hover:border-white/5">
                             <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${colorClass}`}>
                               <Icon size={18} />
                             </div>
