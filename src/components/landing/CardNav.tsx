@@ -40,10 +40,46 @@ const CardNav = ({
 }: CardNavProps) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [hoveredLink, setHoveredLink] = useState<string | null>(null);
+  const [isVisible, setIsVisible] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
   const navRef = useRef<HTMLElement>(null);
   const router = useRouter();
   const pathname = usePathname();
   const isBusinessRoute = pathname === '/business';
+
+  // Handle scroll behavior
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      
+      // Don't hide navbar in the hero section (top 100px)
+      if (currentScrollY < 100) {
+        setIsVisible(true);
+        setLastScrollY(currentScrollY);
+        return;
+      }
+
+      // Add a small threshold (e.g., 5px) to avoid flickering on tiny scrolls
+      const scrollThreshold = 5;
+      
+      if (Math.abs(currentScrollY - lastScrollY) < scrollThreshold) {
+        return;
+      }
+
+      if (currentScrollY > lastScrollY) {
+        // Scrolling down - hide navbar
+        setIsVisible(false);
+      } else {
+        // Scrolling up - show navbar
+        setIsVisible(true);
+      }
+      
+      setLastScrollY(currentScrollY);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [lastScrollY]);
 
   // Determine if any submenu is currently open
   const isAnySubmenuOpen = hoveredLink !== null;
@@ -96,7 +132,7 @@ const CardNav = ({
   };
 
   return (
-    <div className={`card-nav-container ${className} ${isAnySubmenuOpen ? 'submenu-open' : ''}`}>
+    <div className={`card-nav-container ${className} ${isAnySubmenuOpen ? 'submenu-open' : ''} ${!isVisible && !isMobileMenuOpen ? 'nav-hidden' : ''}`}>
       <nav ref={navRef} className="card-nav">
         <div className="card-nav-content">
            <button 

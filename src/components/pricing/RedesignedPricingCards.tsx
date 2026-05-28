@@ -96,17 +96,18 @@ const RedesignedPricingCards: React.FC<RedesignedPricingCardsProps> = ({
 
   const getPlanPrice = (plan: PricingPlan) => {
     if (plan.key === 'free' || plan.key === 'starter_monthly') return 0;
-    if (plan.key === 'starter_yealry') return 19.99;
-    if (plan.key === 'focused_monthly') return 9.99;
-    if (plan.key === 'focused_yearly') return 79.99;
-    if (plan.key === 'smart_quaterly') return 59.99;
-    if (plan.key === 'smart_yearly') return 199.00;
+    
+    // Check for promotional price first
+    if (plan.isPromotionActive && plan.effectivePrice) {
+      return plan.effectivePrice.yearly || plan.effectivePrice.quarterly || plan.effectivePrice.monthly || plan.effectivePrice.oneTime || 0;
+    }
 
-    // Legacy fallbacks
-    if (plan.key === 'pro_monthly') return plan.price_monthly || 0;
-    if (plan.key === 'pro_quarterly') return plan.price_quarterly || 0;
-    if (plan.key === 'pro_yearly') return plan.price_yearly || 0;
-    if (plan.key === 'pro_lifetime') return plan.price_one_time || 0;
+    // Use plan prices from database/API
+    if (plan.key.includes('monthly')) return plan.price_monthly || 0;
+    if (plan.key.includes('yearly') || plan.key.includes('yealry')) return plan.price_yearly || 0;
+    if (plan.key.includes('quarterly') || plan.key.includes('quaterly')) return plan.price_quarterly || 0;
+    if (plan.key.includes('lifetime') || plan.key.includes('one_time')) return plan.price_one_time || 0;
+
     return plan.price_monthly || plan.price_quarterly || plan.price_yearly || plan.price_one_time || 0;
   };
 
@@ -115,25 +116,25 @@ const RedesignedPricingCards: React.FC<RedesignedPricingCardsProps> = ({
       case 'free':
         return '';
       case 'starter_monthly':
-        return '/ mo';
+        return '/m';
       case 'starter_yealry':
-        return '/ yr';
+        return '/y';
       case 'focused_monthly':
-        return '/ mo';
+        return '/m';
       case 'focused_yearly':
-        return '/ yr';
+        return '/y';
       case 'smart_quaterly':
-        return '/ quarter';
+        return '/q';
       case 'smart_yearly':
-        return '/ yr';
+        return '/y';
       case 'pro_monthly':
-        return '/ mo';
+        return '/m';
       case 'pro_quarterly':
-        return '/ every 3rd mo';
+        return '/q';
       case 'pro_yearly':
-        return '/ yr';
+        return '/y';
       case 'pro_lifetime':
-        return 'One-time payment';
+        return 'One-time';
       default:
         return '';
     }
@@ -207,19 +208,17 @@ const RedesignedPricingCards: React.FC<RedesignedPricingCardsProps> = ({
           <div className="text-center mb-8">
             {plan.key === 'free' || plan.key === 'starter_monthly' ? (
               <div className="text-4xl font-bold text-gray-900 dark:text-white mb-2">Free</div>
-            ) : plan.key === 'starter_yealry' ? (
-              <div className="text-4xl font-bold text-gray-900 dark:text-white mb-2 flex items-center justify-center gap-2">
-                <span className="text-xl text-gray-400 dark:text-gray-500 line-through font-semibold">$39.99</span>
-                <span>$19.99</span>
-              </div>
             ) : (
               <div className="text-4xl font-bold text-gray-900 dark:text-white mb-2 flex items-center justify-center gap-2">
-                {plan.isPromotionActive && plan.effectivePrice && (
+                {plan.isPromotionActive && (
                   <span className="text-xl text-gray-400 dark:text-gray-500 line-through font-semibold">
-                    ${plan.price_yearly || plan.price_monthly || plan.price_quarterly || plan.price_one_time}
+                    {plan.regionalPricing?.currencySymbol || plan.currencySymbol || '$'}
+                    {plan.price_yearly || plan.price_monthly || plan.price_quarterly || plan.price_one_time}
                   </span>
                 )}
-                <span>${price}</span>
+                <span>
+                  {plan.regionalPricing?.displayPrice || `${plan.regionalPricing?.currencySymbol || plan.currencySymbol || '$'}${price}`}
+                </span>
               </div>
             )}
             <div className="text-gray-600 dark:text-gray-300 text-sm">

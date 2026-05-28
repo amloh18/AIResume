@@ -294,7 +294,11 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
             if (plan.key === 'starter_yealry') {
               return (
                 <div className="flex flex-col items-center">
-                  <span className="text-[8px] text-gray-500 line-through font-normal">$39.99 total</span>
+                  {plan.isPromotionActive && (
+                    <span className="text-[8px] text-gray-400 line-through font-normal">
+                      {plan.regionalPricing?.currencySymbol || '$'}{plan.price_yearly || 39.99} total
+                    </span>
+                  )}
                   <span className="text-[8px] text-gray-400 font-normal mt-0.5">billed annually</span>
                 </div>
               );
@@ -445,8 +449,14 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
                                 <div className="text-xl tablet:text-2xl font-extrabold text-gray-900 dark:text-white">Free</div>
                               ) : plan.key === 'starter_yealry' ? (
                                 <div className="flex flex-col items-center">
-                                  <span className="text-xs text-gray-400 line-through font-normal mb-0.5">$39.99</span>
-                                  <span className="text-xl tablet:text-2xl font-extrabold text-gray-900 dark:text-white leading-tight">$19.99</span>
+                                  {plan.isPromotionActive && (
+                                    <span className="text-xs text-gray-400 line-through font-normal mb-0.5">
+                                      {plan.regionalPricing?.currencySymbol || '$'}{plan.price_yearly || 39.99}
+                                    </span>
+                                  )}
+                                  <span className="text-xl tablet:text-2xl font-extrabold text-gray-900 dark:text-white leading-tight">
+                                    {regionalPrice}
+                                  </span>
                                   <span className="text-[9px] text-gray-400 mt-0.5 font-normal">billed annually</span>
                                 </div>
                               ) : (
@@ -454,7 +464,7 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
                                   <span className="text-xl tablet:text-2xl font-extrabold text-gray-900 dark:text-white leading-tight">
                                     {(() => {
                                       const basePriceStr = monthlyEquivalent.showMonthly ? monthlyEquivalent.price : regionalPrice;
-                                      const suffix = plan.key.includes('monthly') ? '/month' : '';
+                                      const suffix = plan.key.includes('monthly') ? '/m' : '';
                                       if (basePriceStr.endsWith('*')) {
                                         return `${basePriceStr.slice(0, -1)}${suffix}*`;
                                       }
@@ -671,7 +681,7 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
           transition={{ duration: 0.6, delay: 0.5 }}
           viewport={{ once: true }}
         >
-          * Prices shown in non-USD currencies are calculated using live exchange rates from the base USD plan price (e.g. Starter Yearly: $39.99/yr, Focused Monthly: $9.99/mo, Focused Yearly: $79.99/yr, Smart Quarterly: $59.99/qtr, Smart Yearly: $199.00/yr) and converted using live exchange values. Actual billing amounts at checkout may vary slightly depending on real-time conversions and payment processing options.
+          * Prices shown in non-USD currencies are calculated using live exchange rates from the base USD plan price (e.g. Starter Yearly: $39.99/y, Focused Monthly: $9.99/m, Focused Yearly: $79.99/y, Smart Quarterly: $59.99/q, Smart Yearly: $199.00/y) and converted using live exchange values. Actual billing amounts at checkout may vary slightly depending on real-time conversions and payment processing options.
         </motion.div>
 
         {/* Bottom CTA */}

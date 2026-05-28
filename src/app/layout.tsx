@@ -157,9 +157,9 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode
 }) {
-  // We no longer fetch session on the server here to allow static generation of marketing pages.
-  // ClientProviders (SessionProvider) will automatically fetch it on the client side.
-  const session = null;
+  // Fetch session on the server to prevent auth race conditions and flashes
+  // This initializes the ClientProviders (SessionProvider) with the correct state immediately
+  const session = await getServerSession(authConfig);
 
   return (
     <html lang="en">
