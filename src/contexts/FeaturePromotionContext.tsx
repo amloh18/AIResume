@@ -14,6 +14,7 @@ interface DismissedPromotion {
 interface PromotionState {
   dismissedPromotions: Record<string, DismissedPromotion>;
   lastPromotionShown: number;
+  shownPromotions: Record<string, number>;
 }
 
 interface FeaturePromotionContextType {
@@ -22,6 +23,7 @@ interface FeaturePromotionContextType {
   dismissPromotion: (promotionId: string) => void;
   isDismissed: (promotionId: string) => boolean;
   canShowPromotion: () => boolean;
+  isPromotionOnCooldown: (promotionId: string, cooldownDays?: number) => boolean;
   clearExpiredDismissals: () => void;
 }
 
@@ -37,6 +39,7 @@ export interface PromotionConfig {
   contexts: string[];
   priority: number;
   autoDismissMs?: number;
+  cooldownDays?: number;
 }
 
 const FeaturePromotionContext = createContext<FeaturePromotionContextType | undefined>(undefined);
@@ -56,6 +59,7 @@ const loadState = (): PromotionState => {
     return {
       dismissedPromotions: {},
       lastPromotionShown: 0,
+      shownPromotions: {},
     };
   }
 
@@ -66,6 +70,7 @@ const loadState = (): PromotionState => {
       return {
         dismissedPromotions: parsed.dismissedPromotions || {},
         lastPromotionShown: parsed.lastPromotionShown || 0,
+        shownPromotions: parsed.shownPromotions || {},
       };
     }
   } catch (error) {
@@ -75,6 +80,7 @@ const loadState = (): PromotionState => {
   return {
     dismissedPromotions: {},
     lastPromotionShown: 0,
+    shownPromotions: {},
   };
 };
 
@@ -111,6 +117,7 @@ export function FeaturePromotionProvider({ children }: { children: React.ReactNo
       const cleanedState: PromotionState = {
         dismissedPromotions: activeDismissals,
         lastPromotionShown: loadedState.lastPromotionShown,
+        shownPromotions: loadedState.shownPromotions || {},
       };
 
       setState(cleanedState);
@@ -131,8 +138,8 @@ export function FeaturePromotionProvider({ children }: { children: React.ReactNo
       });
 
       const cleanedState: PromotionState = {
+        ...prev,
         dismissedPromotions: activeDismissals,
-        lastPromotionShown: prev.lastPromotionShown,
       };
 
       saveState(cleanedState);
@@ -153,8 +160,8 @@ export function FeaturePromotionProvider({ children }: { children: React.ReactNo
           const newDismissals = { ...prev.dismissedPromotions };
           delete newDismissals[promotionId];
           const newState: PromotionState = {
+            ...prev,
             dismissedPromotions: newDismissals,
-            lastPromotionShown: prev.lastPromotionShown,
           };
           saveState(newState);
           return newState;
@@ -166,7 +173,7 @@ export function FeaturePromotionProvider({ children }: { children: React.ReactNo
     [state.dismissedPromotions]
   );
 
-  // Check if we can show a promotion (cooldown check)
+  // Check if we can show a promotion (global cooldown check)
   const canShowPromotion = useCallback((): boolean => {
     if (typeof window === 'undefined') return false;
 
@@ -180,11 +187,30 @@ export function FeaturePromotionProvider({ children }: { children: React.ReactNo
     return timeSinceLastPromotion >= PROMOTION_COOLDOWN_MS;
   }, [state.lastPromotionShown]);
 
+  // Check if specific promotion is on cooldown
+  const isPromotionOnCooldown = useCallback(
+    (promotionId: string, cooldownDays = 0): boolean => {
+      if (cooldownDays <= 0) return false;
+      
+      const lastShown = state.shownPromotions[promotionId];
+      if (!lastShown) return false;
+
+      const now = Date.now();
+      const cooldownMs = cooldownDays * 24 * 60 * 60 * 1000;
+      return now - lastShown < cooldownMs;
+    },
+    [state.shownPromotions]
+  );
+
   // Show a promotion
   const showPromotion = useCallback(
     (promotion: PromotionConfig) => {
-      // Don't show if dismissed or in cooldown
-      if (isDismissed(promotion.id) || !canShowPromotion()) {
+      // Don't show if dismissed, in global cooldown, or in specific cooldown
+      if (
+        isDismissed(promotion.id) || 
+        !canShowPromotion() || 
+        isPromotionOnCooldown(promotion.id, promotion.cooldownDays)
+      ) {
         return;
       }
 
@@ -199,12 +225,16 @@ export function FeaturePromotionProvider({ children }: { children: React.ReactNo
         const newState: PromotionState = {
           ...prev,
           lastPromotionShown: Date.now(),
+          shownPromotions: {
+            ...prev.shownPromotions,
+            [promotion.id]: Date.now(),
+          },
         };
         saveState(newState);
         return newState;
       });
     },
-    [isDismissed, canShowPromotion]
+    [isDismissed, canShowPromotion, isPromotionOnCooldown]
   );
 
   // Dismiss a promotion
@@ -221,8 +251,8 @@ export function FeaturePromotionProvider({ children }: { children: React.ReactNo
         };
 
         const newState: PromotionState = {
+          ...prev,
           dismissedPromotions: newDismissals,
-          lastPromotionShown: prev.lastPromotionShown,
         };
 
         saveState(newState);
@@ -247,6 +277,7 @@ export function FeaturePromotionProvider({ children }: { children: React.ReactNo
     dismissPromotion,
     isDismissed,
     canShowPromotion,
+    isPromotionOnCooldown,
     clearExpiredDismissals,
   };
 

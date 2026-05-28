@@ -260,7 +260,6 @@
 }
 
 html {
-  scroll-behavior: smooth;
   background: var(--bg-primary);
   min-height: 100%;
   width: 100%;

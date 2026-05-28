@@ -84,21 +84,13 @@ export async function POST(request: NextRequest) {
     ];
 
     cookieNames.forEach(cookieName => {
-      // Clear cookie with different domain/path combinations
-      const domains = isProduction ? ['.cvcircle.io', 'cvcircle.io'] : [undefined];
-      const paths = ['/', ''];
-
-      domains.forEach(domain => {
-        paths.forEach(path => {
-          response.cookies.set(cookieName, '', {
-            expires: new Date(0),
-            httpOnly: true,
-            secure: isProduction,
-            sameSite: 'lax',
-            path: path || '/',
-            ...(domain ? { domain } : {}),
-          });
-        });
+      // Clear cookie with standard path
+      response.cookies.set(cookieName, '', {
+        expires: new Date(0),
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: 'lax',
+        path: '/',
       });
     });
 

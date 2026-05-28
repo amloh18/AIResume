@@ -36,6 +36,7 @@ export const PROMOTION_TYPES: PromotionConfig[] = [
     contexts: ['cv-editing'],
     priority: 10,
     autoDismissMs: 15000,
+    cooldownDays: 1,
   },
   {
     id: 'cover-letter-cv-viewing',
@@ -52,6 +53,7 @@ export const PROMOTION_TYPES: PromotionConfig[] = [
     contexts: ['cv-viewing'],
     priority: 9,
     autoDismissMs: 15000,
+    cooldownDays: 1,
   },
   {
     id: 'ats-analysis-job',
@@ -68,6 +70,7 @@ export const PROMOTION_TYPES: PromotionConfig[] = [
     contexts: ['job-tracking', 'ats-analysis'],
     priority: 8,
     autoDismissMs: 15000,
+    cooldownDays: 2,
   },
   {
     id: 'cv-creation-no-cv',
@@ -84,6 +87,7 @@ export const PROMOTION_TYPES: PromotionConfig[] = [
     contexts: ['job-tracking', 'dashboard'],
     priority: 7,
     autoDismissMs: 15000,
+    cooldownDays: 5,
   },
   {
     id: 'upgrade-credit-low',
@@ -100,6 +104,7 @@ export const PROMOTION_TYPES: PromotionConfig[] = [
     contexts: ['credit-low'],
     priority: 9,
     autoDismissMs: 20000,
+    cooldownDays: 1,
   },
   {
     id: 'upgrade-credit-exhausted',
@@ -116,6 +121,7 @@ export const PROMOTION_TYPES: PromotionConfig[] = [
     contexts: ['credit-exhausted'],
     priority: 10,
     autoDismissMs: 30000,
+    cooldownDays: 0.5,
   },
   {
     id: 'upgrade-free-user',
@@ -131,7 +137,8 @@ export const PROMOTION_TYPES: PromotionConfig[] = [
     imageUrl: IMAGE_URLS.upgrade,
     contexts: ['free-user', 'dashboard'],
     priority: 6,
-    autoDismissMs: 15000,
+    autoDismissMs: 25000,
+    cooldownDays: 3,
   },
   {
     id: 'job-tracking-no-jobs',

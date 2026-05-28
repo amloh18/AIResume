@@ -22,6 +22,7 @@ const Logo = ({ className = '', size = 'md' }: LogoProps) => {
           width={sizeMap[size].img}
           height={sizeMap[size].img}
           className="object-contain"
+          style={{ height: 'auto' }}
           priority
         />
       </div>
