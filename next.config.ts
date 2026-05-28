@@ -137,16 +137,8 @@ const nextConfig: NextConfig = {
     // This fixes "Cannot read properties of null (reading 'useState')" errors
     // For client builds, React must ALWAYS be bundled, never externalized
 
-    // For Edge Runtime builds (middleware) or client builds, exclude instrumentation completely
+    // For Edge Runtime builds (middleware) or client builds, exclude monitoring modules
     if (isMiddlewareBuild || !isServer) {
-      // Exclude instrumentation from Edge builds
-      config.resolve.alias['./instrumentation'] = false;
-      config.resolve.alias['./instrumentation.js'] = false;
-      config.resolve.alias['./instrumentation.ts'] = false;
-      config.resolve.alias['instrumentation'] = false;
-      config.resolve.alias['instrumentation.js'] = false;
-      config.resolve.alias['instrumentation.ts'] = false;
-
       // Exclude Sentry and monitoring modules from Edge builds
       config.resolve.alias['@/lib/monitoring'] = false;
       config.resolve.alias['@/lib/error-tracking'] = false;
@@ -441,5 +433,13 @@ export default withSentryConfig(nextConfig, {
       // Automatically tree-shake Sentry logger statements to reduce bundle size
       removeDebugLogging: true,
     },
+  },
+});
+
+    // Enables automatic instrumentation of Vercel Cron Monitors. (Does not yet work with App Router route handlers.)
+    // See the following for more information:
+    // https://docs.sentry.io/product/crons/
+    // https://vercel.com/docs/cron-jobs
+    automaticVercelMonitors: true,
   },
 });
