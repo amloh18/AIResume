@@ -5,13 +5,18 @@ import { log } from '@/lib/edge-logger';
 // Dynamically require stripe so the build doesn't fail when the package is absent
 let Stripe: any = null;
 let stripe: any = null;
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY || '';
 try {
-  Stripe = require('stripe'); // eslint-disable-line @typescript-eslint/no-var-requires
-  const stripeSecretKey = process.env.STRIPE_SECRET_KEY || '';
-  if (Stripe && typeof Stripe.default === 'function') {
-    stripe = new Stripe.default(stripeSecretKey, {
-      apiVersion: '2025-01-27.acacia' as any,
-    });
+  if (stripeSecretKey) {
+    Stripe = require('stripe'); // eslint-disable-line @typescript-eslint/no-var-requires
+    if (Stripe) {
+      const StripeClass = typeof Stripe === 'function' ? Stripe : Stripe.default;
+      if (typeof StripeClass === 'function') {
+        stripe = new StripeClass(stripeSecretKey, {
+          apiVersion: '2025-01-27.acacia' as any,
+        });
+      }
+    }
   }
 } catch {
   // stripe package not installed or not configured — runtime guards below
