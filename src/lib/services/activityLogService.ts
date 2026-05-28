@@ -284,7 +284,7 @@ export class ActivityLogService {
     ipAddress?: string;
     metadata?: Record<string, any>;
   }): Promise<void> {
-    await this.log({
+    const logParams: LogActivityParams = {
       logType: 'user_action',
       userId: params.userId,
       userEmail: params.userEmail,
@@ -298,8 +298,35 @@ export class ActivityLogService {
       } : undefined,
       metadata: params.metadata,
       tags: ['user_action', params.resourceType || 'general']
-    });
+    };
+
+    await this.log(logParams);
+
+    // Push live activity update via SSE if successful
+    if (params.status === 'success') {
+      try {
+        const { sendEventToUser } = await import('@/app/api/stream-notifications/route');
+        
+        // Map to frontend format for immediate display
+        const activityPayload = {
+          id: new mongoose.Types.ObjectId().toString(), // Temporary ID for UI
+          type: params.action === 'applied' || params.resourceType === 'job' ? 'applied' : 
+                params.action === 'interview' || params.resourceType === 'journey' ? 'interview' : 
+                params.action === 'cv_updated' || params.resourceType === 'cv' ? 'cv_updated' : 'cv_updated',
+          message: params.metadata?.message || params.action,
+          timestamp: new Date(),
+          metadata: params.metadata
+        };
+
+        // Try to push to active SSE connection
+        await sendEventToUser(params.userId, 'activity', activityPayload);
+      } catch (error) {
+        // SSE push is best-effort, ignore errors
+        console.debug('Failed to push live activity update:', error);
+      }
+    }
   }
+
 
   /**
    * Log admin action

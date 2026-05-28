@@ -2,7 +2,7 @@
 
 
 import React, { useState, useEffect, useImperativeHandle, forwardRef, useMemo, useCallback } from 'react';
-import { GripVertical, Download, Plus, LayoutTemplate, Save, RefreshCw, Layers, Check, Search, Filter, Briefcase, PlusCircle, Trash2, ChevronUp, ChevronDown, ImageIcon, ArrowRight, Loader2, PlayCircle, Eye, MousePointer2, Wand2, Quote, FileText, Palette, FileJson, X, Sparkles, Copy, CopyCheck } from 'lucide-react';
+import { GripVertical, Download, Plus, LayoutTemplate, Save, RefreshCw, Layers, Check, Search, Filter, Briefcase, PlusCircle, Trash2, ChevronUp, ChevronDown, ImageIcon, ArrowRight, Loader2, PlayCircle, Eye, MousePointer2, Wand2, Quote, FileText, Palette, FileJson, X, Sparkles, Copy, CopyCheck, AlertCircle } from 'lucide-react';
 import { CANVAS_TEMPLATES, TEMPLATE_CATEGORIES, SNIPPETS, TITLE_STYLES, SNIPPET_FAMILIES, ATS_SNIPPETS } from './registry';
 import { EditableField, CanvasSnippet, CanvasZone, StaticLayoutRenderer, FloatingToolbar, CanvasContext } from './components/CoreUI';
 import { JSONSidebarViewer } from './components/JSONSidebarViewer';
@@ -41,6 +41,8 @@ export interface CVCanvasBuilderRef {
 // ==========================================
 const FloatingAICard = ({ pointSuggestion, setPointSuggestion, handleFetchSuggestion, cvData, handleDataChange }: any) => {
   const [pos, setPos] = useState({ top: -1000, left: 0 });
+  const [activeTab, setActiveTab] = useState<'improvement' | 'original'>('improvement');
+  const [copied, setCopied] = useState(false);
   const { openPaymentModal } = usePaymentModal();
 
   useEffect(() => {
@@ -56,8 +58,8 @@ const FloatingAICard = ({ pointSuggestion, setPointSuggestion, handleFetchSugges
         if (left + 420 > window.innerWidth - 20) {
           left = window.innerWidth - 440;
         }
-        if (top + 300 > window.innerHeight - 20) {
-          top = window.innerHeight - 320;
+        if (top + 400 > window.innerHeight - 20) {
+          top = window.innerHeight - 420;
         }
         
         setPos({ top, left });
@@ -76,65 +78,148 @@ const FloatingAICard = ({ pointSuggestion, setPointSuggestion, handleFetchSugges
     };
   }, [pointSuggestion?.node]);
 
+  const handleCopy = () => {
+    if (!pointSuggestion?.text) return;
+    navigator.clipboard.writeText(pointSuggestion.text.replace(/<\/?[^>]+(>|$)/g, ""));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   if (!pointSuggestion) return null;
 
   return (
-    <div className={`fixed z-[110] border border-emerald-500/30 shadow-2xl rounded-xl p-5 w-[420px] bg-[#111111] transition-all duration-75`} style={{ top: pos.top, left: pos.left }}>
-      <div className="flex items-center justify-between mb-4 text-[#7EE787]">
-        <div className="flex items-center gap-2">
-          <Wand2 size={16} className={pointSuggestion.loading ? 'animate-pulse' : ''} />
-          <span className="text-[11px] font-bold uppercase tracking-widest">{pointSuggestion.loading ? 'AI is thinking...' : 'AI Contextual Suggestion'}</span>
+    <div className={`fixed z-[110] border border-emerald-500/40 shadow-[0_20px_50px_rgba(0,0,0,0.5)] rounded-2xl p-0 w-[440px] bg-[#0f0f0f] transition-all duration-75 overflow-hidden font-sans`} style={{ top: pos.top, left: pos.left }}>
+      {/* Header */}
+      <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 bg-white/5">
+        <div className="flex items-center gap-2.5">
+          <div className="p-1.5 bg-emerald-500/20 rounded-lg">
+            <Wand2 size={18} className={pointSuggestion.loading ? 'animate-spin' : 'text-emerald-400'} />
+          </div>
+          <div>
+            <h4 className="text-[13px] font-bold text-white uppercase tracking-wider">ThinkHard AI</h4>
+            <p className="text-[10px] text-emerald-400/70 font-medium uppercase tracking-widest">{pointSuggestion.loading ? 'Processing...' : 'Contextual Suggestion'}</p>
+          </div>
         </div>
-        <button onClick={() => setPointSuggestion(null)} className="text-gray-400 hover:text-white transition-colors"><X size={16}/></button>
+        <button onClick={() => setPointSuggestion(null)} className="p-1.5 hover:bg-white/10 rounded-full text-gray-400 hover:text-white transition-colors"><X size={18}/></button>
       </div>
+
+      {/* Tabs */}
+      {!pointSuggestion.loading && !pointSuggestion.error && (
+        <div className="flex px-5 pt-4 gap-4 border-b border-white/5">
+          <button 
+            onClick={() => setActiveTab('improvement')}
+            className={`pb-3 text-xs font-bold tracking-wide transition-all relative ${activeTab === 'improvement' ? 'text-emerald-400' : 'text-gray-500 hover:text-gray-300'}`}
+          >
+            IMPROVEMENT
+            {activeTab === 'improvement' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-400 rounded-full" />}
+          </button>
+          <button 
+            onClick={() => setActiveTab('original')}
+            className={`pb-3 text-xs font-bold tracking-wide transition-all relative ${activeTab === 'original' ? 'text-emerald-400' : 'text-gray-500 hover:text-gray-300'}`}
+          >
+            ORIGINAL
+            {activeTab === 'original' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-400 rounded-full" />}
+          </button>
+        </div>
+      )}
       
-      <div className="mb-6 relative min-h-[60px]">
+      {/* Content Area */}
+      <div className="p-5 min-h-[120px]">
         {pointSuggestion.loading ? (
-          <div className="flex flex-col gap-2">
-            <div className="h-3 bg-gray-800 rounded animate-pulse w-full"></div>
-            <div className="h-3 bg-gray-800 rounded animate-pulse w-[80%]"></div>
-            <div className="h-3 bg-gray-800 rounded animate-pulse w-[60%]"></div>
+          <div className="space-y-3 py-2">
+            <div className="h-3.5 bg-white/5 rounded-full animate-pulse w-full"></div>
+            <div className="h-3.5 bg-white/5 rounded-full animate-pulse w-[90%]"></div>
+            <div className="h-3.5 bg-white/5 rounded-full animate-pulse w-[75%]"></div>
+            <div className="h-3.5 bg-white/5 rounded-full animate-pulse w-[40%]"></div>
           </div>
         ) : pointSuggestion.error === 'usage_limit_reached' ? (
-          <div className="text-sm text-red-400">
-            You have reached your AI usage limit for the current plan.{' '}
-            <button
-              type="button"
-              onClick={() =>
-                openPaymentModal({
-                  preselectedPlanKey: 'pro_monthly',
-                  triggerContext: 'ai-contextual-suggestion-limit',
-                  returnUrl: window.location.href
-                })
-              }
-              className="underline font-bold text-red-300"
-            >
-              Upgrade Plan
-            </button>{' '}
-            to continue using Thinkhard AI features.
+          <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 flex gap-3">
+            <AlertCircle className="text-red-400 shrink-0" size={20} />
+            <div className="text-sm text-red-100 leading-relaxed">
+              <span className="font-bold block mb-1">Limit Reached</span>
+              Upgrade to Pro for unlimited AI-powered contextual suggestions and career coaching.
+              <button
+                type="button"
+                onClick={() =>
+                  openPaymentModal({
+                    preselectedPlanKey: 'pro_monthly',
+                    triggerContext: 'ai-contextual-suggestion-limit',
+                    returnUrl: window.location.href
+                  })
+                }
+                className="block mt-2 font-bold text-red-400 hover:text-red-300 underline underline-offset-4"
+              >
+                Upgrade Plan
+              </button>
+            </div>
           </div>
         ) : pointSuggestion.error ? (
-          <div className="text-sm text-red-400">{pointSuggestion.error}</div>
+          <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 text-sm text-red-400 flex items-center gap-2">
+            <AlertCircle size={16} /> {pointSuggestion.error}
+          </div>
         ) : (
-          <p className="text-sm leading-relaxed text-gray-100">{pointSuggestion.text}</p>
+          <div className="relative group">
+            <div className={`text-[14px] leading-relaxed transition-all duration-300 ${activeTab === 'original' ? 'text-gray-400 italic' : 'text-gray-100'}`}>
+              {activeTab === 'improvement' ? pointSuggestion.text : pointSuggestion.originalText}
+            </div>
+            {activeTab === 'improvement' && (
+              <button 
+                onClick={handleCopy}
+                className="absolute -right-2 -top-2 p-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white transition-all opacity-0 group-hover:opacity-100 shadow-xl"
+                title="Copy to clipboard"
+              >
+                {copied ? <CopyCheck size={14} className="text-emerald-400" /> : <Copy size={14} />}
+              </button>
+            )}
+          </div>
         )}
       </div>
       
+      {/* Quick Actions & Footer */}
       {!pointSuggestion.loading && !pointSuggestion.error && (
-        <div className="flex flex-col gap-3">
-          <div className="flex justify-between items-center pb-3 border-b border-[#333]">
-            <button onClick={() => handleFetchSuggestion('star')} className="text-xs font-semibold text-blue-400 hover:text-blue-300 flex items-center gap-1"><Sparkles size={12}/> STAR Method</button>
-            <select onChange={(e) => handleFetchSuggestion('tone', e.target.value)} className="bg-[#222] text-xs text-gray-300 border border-[#444] rounded px-2 py-1 outline-none focus:border-emerald-500">
-              <option value="">Change Tone...</option>
-              <option value="Professional">Professional</option>
-              <option value="Confident">Confident</option>
-              <option value="Creative">Creative</option>
-              <option value="Action-oriented">Action-oriented</option>
-            </select>
+        <div className="px-5 pb-5 space-y-4">
+          <div className="flex flex-col gap-2">
+            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Targeted Refinement</p>
+            <div className="flex flex-wrap gap-2">
+              <button onClick={() => handleFetchSuggestion('star')} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 rounded-lg text-xs font-bold transition-all border border-blue-500/20"><Sparkles size={12}/> STAR Method</button>
+              <button onClick={() => handleFetchSuggestion('quantify')} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 rounded-lg text-xs font-bold transition-all border border-purple-500/20"># Quantify</button>
+              <button onClick={() => handleFetchSuggestion('concise')} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 rounded-lg text-xs font-bold transition-all border border-orange-500/20">✂️ Concise</button>
+              <button onClick={() => handleFetchSuggestion('action_verbs')} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-lg text-xs font-bold transition-all border border-emerald-500/20">🚀 Power Verbs</button>
+              
+              <div className="relative inline-block">
+                <select 
+                  onChange={(e) => handleFetchSuggestion('tone', e.target.value)} 
+                  className="bg-white/5 hover:bg-white/10 text-xs text-gray-300 border border-white/10 rounded-lg px-2.5 py-1.5 outline-none focus:border-emerald-500/50 appearance-none cursor-pointer pr-7 font-bold transition-all"
+                >
+                  <option value="">🎭 Tone...</option>
+                  <option value="Professional">Professional</option>
+                  <option value="Confident">Confident</option>
+                  <option value="Creative">Creative</option>
+                  <option value="Action-oriented">Action-oriented</option>
+                </select>
+                <ChevronDown size={12} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+              </div>
+            </div>
           </div>
-          <div className="flex justify-end gap-3 mt-1">
-            <button onClick={() => setPointSuggestion(null)} className="px-4 py-2 text-sm font-semibold rounded-lg bg-[#222] text-gray-300 hover:bg-[#333] hover:text-white transition-colors">Cancel</button>
-            <button onClick={() => { const currentHtml = getNestedValue(cvData, pointSuggestion.path) || ''; let newHtml = currentHtml; if (newHtml.includes('</ul>')) { newHtml = newHtml.replace('</ul>', `<li>${pointSuggestion.text}</li></ul>`); } else { newHtml += `<ul><li>${pointSuggestion.text}</li></ul>`; } handleDataChange(pointSuggestion.path, newHtml); setPointSuggestion(null); }} className="px-4 py-2 text-sm font-semibold rounded-lg shadow-lg bg-[#7EE787] text-black hover:bg-[#68d171] transition-colors">Accept & Add Bullet</button>
+
+          <div className="flex gap-3 pt-4 border-t border-white/5">
+            <button onClick={() => setPointSuggestion(null)} className="flex-1 px-4 py-2.5 text-sm font-bold rounded-xl bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white transition-all">Cancel</button>
+            <button 
+              onClick={() => { 
+                const currentHtml = getNestedValue(cvData, pointSuggestion.path) || ''; 
+                let newHtml = currentHtml; 
+                if (newHtml.includes('</ul>')) { 
+                  newHtml = newHtml.replace('</ul>', `<li>${pointSuggestion.text}</li></ul>`); 
+                } else { 
+                  newHtml += `<ul><li>${pointSuggestion.text}</li></ul>`; 
+                } 
+                handleDataChange(pointSuggestion.path, newHtml); 
+                setPointSuggestion(null); 
+              }} 
+              className="flex-[1.5] px-4 py-2.5 text-sm font-bold rounded-xl shadow-[0_4px_20px_rgba(126,231,135,0.2)] bg-emerald-400 text-[#0a0a0a] hover:bg-emerald-300 active:scale-[0.98] transition-all"
+            >
+              Accept & Add Bullet
+            </button>
           </div>
         </div>
       )}
@@ -730,7 +815,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     return () => clearTimeout(timer);
   }, [cvData, focusedNode, getFocusedPath]);
 
-  const handleFetchSuggestion = async (type: 'star' | 'tone', tone?: string) => {
+  const handleFetchSuggestion = async (type: 'star' | 'tone' | 'quantify' | 'concise' | 'action_verbs', tone?: string) => {
     if (!pointSuggestion) return;
     setPointSuggestion(prev => prev ? { ...prev, loading: true, error: undefined } : null);
     try {
@@ -741,7 +826,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
         body: JSON.stringify({ 
           content: pointSuggestion.originalText, 
           type: isSummary ? 'summary' : 'experience', 
-          promptType: type === 'star' ? 'star' : 'tone',
+          promptType: type,
           tone: tone 
         })
       });

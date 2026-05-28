@@ -15,12 +15,15 @@ import {
 
 interface NotificationContextType {
   notifications: INotification[];
+  activities: any[];
+  progressEvents: Map<string, any>;
   unreadCount: number;
   isLoading: boolean;
   markAsRead: (notificationId: string) => Promise<void>;
   markAllAsRead: () => Promise<void>;
   handleNotificationAction: (notificationId: string, actionType: string) => Promise<void>;
   refreshNotifications: () => Promise<void>;
+  updateProgress: (id: string, progress: number, message?: string, type?: 'info' | 'progress') => void;
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
@@ -28,8 +31,27 @@ const NotificationContext = createContext<NotificationContextType | undefined>(u
 // Component that provides notifications with session - only for non-admin routes
 function NotificationProviderWithSession({ children }: { children: React.ReactNode }) {
   const [notifications, setNotifications] = useState<INotification[]>([]);
+  const [activities, setActivities] = useState<any[]>([]);
+  const [progressEvents, setProgressEvents] = useState<Map<string, any>>(new Map());
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  // ... rest remains same until SSE onmessage ...
+
+  // Helper to update progress
+  const updateProgress = useCallback((id: string, progress: number, message?: string, type: 'info' | 'progress' = 'progress') => {
+    setProgressEvents(prev => {
+      const next = new Map(prev);
+      if (progress >= 100) {
+        next.delete(id);
+      } else {
+        next.set(id, { id, progress, message, type, updatedAt: new Date() });
+      }
+      return next;
+    });
+  }, []);
+
+  // ... (keep previous fetch and helper methods) ...
+
   const [eventSource, setEventSource] = useState<EventSource | null>(null);
   const eventSourceRef = useRef<EventSource | null>(null); // Ref to track eventSource without causing re-renders
   const [isMounted, setIsMounted] = useState(false);
@@ -552,7 +574,6 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
           
           // Handle different message types
           if (data.type === 'heartbeat') {
-            // Heartbeat message - just acknowledge
             if (process.env.NODE_ENV === 'development') {
               console.debug('💓 SSE heartbeat received');
             }
@@ -564,93 +585,65 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
             return;
           }
 
-          // Handle notification messages
-          if (data.type !== 'notification') {
-            console.log('⚠️ NotificationContext - Unknown message type:', data.type, data);
-            return;
-          }
-
-          console.log('🔔 NotificationContext - Received notification message type');
-          const notification = data.notification;
-          
-          if (!notification || !notification._id) {
-            console.warn('⚠️ NotificationContext - Invalid notification data in message:', {
-              hasNotification: !!data.notification,
-              notificationId: data.notification?._id,
-              fullData: data
-            });
-            return;
-          }
-          
-          console.log('📦 NotificationContext - Processing notification from SSE:', {
-            id: notification._id,
-            title: notification.title,
-            read: notification.read,
-            channels: notification.channels,
-            isAuthenticated
-          });
-
-          // Filter expired notifications
-          const filtered = filterExpiredNotifications([notification]);
-          console.log('🔍 NotificationContext - After filtering:', {
-            originalCount: 1,
-            filteredCount: filtered.length,
-            notification: filtered[0] ? {
-              id: filtered[0]._id,
-              title: filtered[0].title,
-              expired: filtered.length === 0
-            } : null
-          });
-          
-          if (filtered.length > 0) {
-            const newNotification = filtered[0];
-            console.log('✅ NotificationContext - Notification passed filtering, adding to state:', newNotification.title);
+          // Handle Notification
+          if (data.type === 'notification') {
+            console.log('🔔 NotificationContext - Received notification message type');
+            const notification = data.notification;
             
-            setNotifications((prev) => {
-              // Ensure prev is an array
-              if (!prev || !Array.isArray(prev)) {
-                return [newNotification];
-              }
+            if (!notification || !notification._id) {
+              console.warn('⚠️ NotificationContext - Invalid notification data');
+              return;
+            }
 
-              // Check if notification already exists (avoid duplicates)
-              const notificationId = newNotification._id ? (typeof newNotification._id === 'string' ? newNotification._id : String(newNotification._id)) : '';
-              const exists = prev.some((n) => {
-                const nId = n._id ? (typeof n._id === 'string' ? n._id : String(n._id)) : '';
-                return nId === notificationId;
+            const filtered = filterExpiredNotifications([notification]);
+            if (filtered.length > 0) {
+              const newNotification = filtered[0];
+              setNotifications((prev) => {
+                const notificationId = newNotification._id ? (typeof newNotification._id === 'string' ? newNotification._id : String(newNotification._id)) : '';
+                const exists = prev.some((n) => {
+                  const nId = n._id ? (typeof n._id === 'string' ? n._id : String(n._id)) : '';
+                  return nId === notificationId;
+                });
+                if (exists) return prev;
+                
+                setTimeout(() => showToastForNotification(newNotification), 100);
+                return [newNotification, ...prev];
               });
-
-              if (exists) {
-                console.log('🔁 NotificationContext - Duplicate notification skipped:', notificationId);
-                return prev;
-              }
-
-              console.log('🆕 NotificationContext - Adding new notification to state');
-              // Add new notification at the beginning
-              const updated = filterExpiredNotifications([newNotification, ...prev]);
-              
-              // Immediately show toast for new notification from SSE
-              // Use a small delay to ensure state is updated
-              console.log('⏰ NotificationContext - Scheduling toast display for:', newNotification.title);
-              setTimeout(() => {
-                console.log('🎯 NotificationContext - Attempting to show toast for:', newNotification.title);
-                showToastForNotification(newNotification);
-              }, 100);
-              
-              return updated;
-            });
-          } else {
-            console.log('🗑️ NotificationContext - Notification filtered out (expired or invalid)');
+            }
+            return;
           }
+
+          // Handle Activity
+          if (data.type === 'activity') {
+            console.log('🏃 NotificationContext - Received activity message type');
+            const activity = data.activity;
+            if (activity) {
+              setActivities(prev => {
+                // Keep only unique activities, max 50
+                const exists = prev.some(a => a.id === activity.id);
+                if (exists) return prev;
+                return [activity, ...prev].slice(0, 50);
+              });
+              
+              // Optional: Show a subtle toast for activities if desired
+              // toast({ title: 'New Activity', description: activity.message });
+            }
+            return;
+          }
+
+          // Handle Progress/Info
+          if (data.type === 'progress' || data.type === 'info') {
+            console.log(`📊 NotificationContext - Received ${data.type} message type`);
+            const payload = data[data.type];
+            if (payload && payload.id) {
+              updateProgress(payload.id, payload.progress ?? 50, payload.message, data.type as 'info' | 'progress');
+            }
+            return;
+          }
+
+          console.log('⚠️ NotificationContext - Unknown message type:', data.type, data);
         } catch (error) {
-          // Safely handle errors without stringifying Event objects
-          if (error instanceof Error) {
-            console.error('Error parsing SSE message:', error.message, error.stack);
-          } else if (error && typeof error === 'object' && 'type' in error) {
-            // Likely an Event object
-            console.error('Error parsing SSE message: Event object received');
-          } else {
-            console.error('Error parsing SSE message:', String(error));
-          }
+          console.error('Error parsing SSE message:', error);
         }
       };
 
@@ -825,12 +818,15 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
     <NotificationContext.Provider
       value={{
         notifications,
+        activities,
+        progressEvents,
         unreadCount,
         isLoading,
         markAsRead,
         markAllAsRead,
         handleNotificationAction,
         refreshNotifications,
+        updateProgress,
       }}
     >
       {children}

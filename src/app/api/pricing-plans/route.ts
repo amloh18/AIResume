@@ -31,10 +31,10 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache
 // Updated Standard USD prices for the new plan structure
 const STANDARD_USD_PRICES: Record<string, number> = {
   'starter_monthly': 0,
-  'starter_yealry': 39.99,
+  'starter_yearly': 39.99,
   'focused_monthly': 9.99,
   'focused_yearly': 79.99,
-  'smart_quaterly': 59.99,
+  'smart_quarterly': 59.99,
   'smart_yearly': 199.00
 };
 
@@ -98,34 +98,45 @@ export async function GET(request: NextRequest) {
     const { LocationService } = await import('@/lib/payment/locationService');
 
     const enhancedPlans = await Promise.all(plans.map(async (plan) => {
+      // Fix common typos in keys for lookup
+      const planKey = plan.key.replace('yealry', 'yearly').replace('quaterly', 'quarterly');
+      
       // Check if promotion is active
       const isPromotionActive = (plan as any).promotionValidFrom && (plan as any).promotionValidUntil &&
         new Date((plan as any).promotionValidFrom) <= currentDate && new Date((plan as any).promotionValidUntil) >= currentDate;
 
       // Single source of truth for base USD price
-      const baseUSDPriceValue = STANDARD_USD_PRICES[plan.key] || 0;
+      const baseUSDPriceValue = STANDARD_USD_PRICES[planKey] || plan.price_yearly || plan.price_monthly || plan.price_one_time || 0;
       const userCurrency = regionInfo?.currency || 'USD';
       const isUSD = userCurrency === 'USD';
 
+      // Determine the base price to use (preferring promotional if active)
+      let basePriceToUse = baseUSDPriceValue;
+      if (isPromotionActive && (planKey === 'starter_yearly' || plan.key === 'starter_yealry')) {
+        // If there's a promotional price in the DB, use it, otherwise apply a default 50% discount for starter yearly
+        basePriceToUse = (plan as any).promotionalPrice_yearly || (baseUSDPriceValue / 2);
+      } else if (isPromotionActive) {
+        // For other plans, use their specific promotional prices if available
+        basePriceToUse = (plan as any).promotionalPrice_yearly || (plan as any).promotionalPrice_monthly || (plan as any).promotionalPrice_one_time || baseUSDPriceValue;
+      }
+
       // Calculate final price (converted or base)
-      let finalPriceValue = baseUSDPriceValue;
+      let finalPriceValue = basePriceToUse;
       let isConversionApplied = false;
 
-      if (!isUSD && baseUSDPriceValue > 0) {
-        finalPriceValue = Math.round(LocationService.convertPrice(baseUSDPriceValue, 'USD', userCurrency).convertedPrice);
+      if (!isUSD && basePriceToUse > 0) {
+        finalPriceValue = Math.round(LocationService.convertPrice(basePriceToUse, 'USD', userCurrency).convertedPrice);
         isConversionApplied = true;
       }
 
-      // Special handling for Starter Yearly promotion (50% off)
-      const effectivePriceValue = (isPromotionActive && plan.key === 'starter_yealry' && (plan as any).promotionalPrice_yearly)
-        ? (plan as any).promotionalPrice_yearly
-        : finalPriceValue;
+      const effectivePriceValue = finalPriceValue;
 
       // Metadata for duration
       let durationInfo = null;
-      if (plan.key.includes('monthly')) durationInfo = { durationInDays: 30, durationType: 'month', displayText: '1 month' };
-      else if (plan.key.includes('quarterly') || plan.key.includes('quaterly')) durationInfo = { durationInDays: 90, durationType: 'month', displayText: '3 months' };
-      else if (plan.key.includes('yearly') || plan.key.includes('yealry')) durationInfo = { durationInDays: 365, durationType: 'year', displayText: '1 year' };
+      if (planKey.includes('monthly')) durationInfo = { durationInDays: 30, durationType: 'month', displayText: '1 month' };
+      else if (planKey.includes('quarterly')) durationInfo = { durationInDays: 90, durationType: 'month', displayText: '3 months' };
+      else if (planKey.includes('yearly')) durationInfo = { durationInDays: 365, durationType: 'year', displayText: '1 year' };
+      else if (planKey.includes('lifetime')) durationInfo = { durationInDays: 9999, durationType: 'lifetime', displayText: 'Lifetime' };
 
       // Resolve currency and symbol
       const activePricing = countryPricing || defaultCountryPricing;
@@ -137,7 +148,8 @@ export async function GET(request: NextRequest) {
         currency: planCurrency,
         currencySymbol: planCurrencySymbol,
         price: effectivePriceValue,
-        usdPrice: baseUSDPriceValue, // Crucial for frontend checkout display
+        usdPrice: basePriceToUse, // Crucial for frontend checkout display - use the effective USD price
+        baseUsdPrice: baseUSDPriceValue, // Original USD price before any discounts
         regionalPricing: {
           region: regionInfo?.countryCode || 'US',
           currency: planCurrency,

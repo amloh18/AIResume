@@ -30,7 +30,9 @@ import {
   User as UserIcon,
   Eye,
   EyeOff,
-  Palette
+  Palette,
+  FileJson,
+  Copy
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Logo from '@/components/ui/Logo';
@@ -84,6 +86,66 @@ const WelcomePage: React.FC = () => {
   const [droppedFile, setDroppedFile] = useState<string>('');
   const [actualFile, setActualFile] = useState<File | null>(null);
   const [parsedCVData, setParsedCVData] = useState<any>(null);
+  const [showJsonModal, setShowJsonModal] = useState(false);
+  const [jsonInput, setJsonInput] = useState('');
+  const [jsonError, setJsonError] = useState('');
+
+  const jsonSample = {
+    basics: {
+      name: "Your Name",
+      email: "email@example.com",
+      phone: "+1 234 567 890",
+      website: "https://yourportfolio.com",
+      location: { address: "City, Country" },
+      profiles: [{ network: "LinkedIn", url: "https://linkedin.com/in/username" }]
+    },
+    work: [{
+      company: "Company Name",
+      position: "Job Title",
+      startDate: "2020-01-01",
+      endDate: "2023-01-01",
+      summary: "Description of your role and impact."
+    }],
+    education: [{
+      institution: "University Name",
+      area: "Field of Study",
+      studyType: "Degree",
+      startDate: "2016-01-01",
+      endDate: "2020-01-01"
+    }],
+    skills: [{ name: "Skill Name", level: "Expert" }]
+  };
+
+  const copyJsonSample = () => {
+    const aiPrompt = `Act as an expert career coach and senior resume writer.
+I will provide you with my current resume or background details.
+Your task is to:
+1. Analyze my background and the standard for high-impact CVs.
+2. Convert my data into a perfectly structured JSON format following the "JSON Resume" standard.
+3. Ensure every bullet point is quantified, uses strong action verbs, and follows the STAR method.
+4. Output ONLY the JSON object, starting with { and ending with }.
+
+Use this schema as a foundation:
+${JSON.stringify(jsonSample, null, 2)}
+
+Here is my background:
+[PASTE YOUR CV TEXT HERE]`;
+
+    navigator.clipboard.writeText(aiPrompt);
+    // Brief toast logic could go here
+  };
+
+  const handleJsonSubmit = () => {
+    try {
+      const parsed = JSON.parse(jsonInput);
+      setParsedCVData(parsed);
+      setSeedingMethod('json');
+      setShowJsonModal(false);
+      handleNext();
+    } catch (e) {
+      setJsonError('Invalid JSON format. Please check and try again.');
+    }
+  };
 
   // Inline Auth Form State
   const [authTab, setAuthTab] = useState<'signup' | 'signin'>('signup');
@@ -871,11 +933,12 @@ const WelcomePage: React.FC = () => {
 
                 {!isParsing ? (
                   <div className="space-y-6">
-                    <div className="grid md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       {[
-                        { id: 'upload', title: 'Upload Resume', desc: 'PDF, Word, or TXT', icon: Upload },
-                        { id: 'linkedin', title: 'LinkedIn Profile', desc: 'Import Profile PDF', icon: Linkedin },
-                        { id: 'scratch', title: 'Start Fresh', desc: 'No file - manual entry', icon: Sparkles }
+                        { id: 'upload', title: 'Upload CV', desc: 'PDF, Word, TXT', icon: Upload },
+                        { id: 'linkedin', title: 'LinkedIn', desc: 'Profile PDF', icon: Linkedin },
+                        { id: 'json', title: 'JSON Data', desc: 'Copy-Paste JSON', icon: FileJson },
+                        { id: 'scratch', title: 'Start Fresh', desc: 'No file - manual', icon: Sparkles }
                       ].map(method => {
                         const Icon = method.icon;
                         const isSelected = seedingMethod === method.id;
@@ -885,8 +948,11 @@ const WelcomePage: React.FC = () => {
                             onClick={() => {
                               setSeedingMethod(method.id);
                               if (method.id === 'scratch') {
+                                setParsedCVData(null); // CRITICAL: Reset any previously parsed data for scratch mode
                                 setCVScore(0);
                                 handleNext();
+                              } else if (method.id === 'json') {
+                                setShowJsonModal(true);
                               }
                             }}
                             className={`p-6 border-2 rounded-2xl text-center flex flex-col items-center justify-center gap-3 transition-all ${
@@ -894,11 +960,11 @@ const WelcomePage: React.FC = () => {
                             }`}
                           >
                             <div className={`p-3 rounded-xl ${isSelected ? 'bg-black text-[#80FF00]' : 'bg-gray-150'}`}>
-                              <Icon className="h-6 w-6" />
+                              <Icon className="h-5 w-5" />
                             </div>
                             <div>
-                              <h3 className="font-bold">{method.title}</h3>
-                              <p className="text-xs text-gray-500 mt-1">{method.desc}</p>
+                              <h3 className="font-bold text-sm">{method.title}</h3>
+                              <p className="text-[10px] text-gray-500 mt-1">{method.desc}</p>
                             </div>
                           </button>
                         );
@@ -953,6 +1019,89 @@ const WelcomePage: React.FC = () => {
                     </div>
                   </div>
                 )}
+
+                {/* JSON Import Modal */}
+                <AnimatePresence>
+                  {showJsonModal && (
+                    <motion.div 
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm"
+                    >
+                      <motion.div 
+                        initial={{ scale: 0.9, y: 20 }}
+                        animate={{ scale: 1, y: 0 }}
+                        className="bg-white rounded-3xl p-8 max-w-2xl w-full shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-black rounded-lg text-[#80FF00]">
+                              <FileJson size={24} />
+                            </div>
+                            <div>
+                              <h2 className="text-2xl font-black">JSON Import</h2>
+                              <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">Direct Background Injection</p>
+                            </div>
+                          </div>
+                          <button onClick={() => setShowJsonModal(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                            <X size={20} />
+                          </button>
+                        </div>
+
+                        <div className="space-y-4">
+                          <div className="p-4 bg-lime-50 rounded-2xl border border-lime-100 space-y-3">
+                            <h4 className="text-xs font-black uppercase tracking-widest text-lime-800 flex items-center gap-2">
+                              <Sparkles size={14} /> How to get your JSON?
+                            </h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs leading-relaxed text-lime-900/80">
+                              <div className="space-y-1">
+                                <span className="font-bold text-lime-900 block">Step 1</span>
+                                Copy your CV text or profile summary.
+                              </div>
+                              <div className="space-y-1">
+                                <span className="font-bold text-lime-900 block">Step 2</span>
+                                Paste it into ChatGPT or Claude and ask: "Convert this into a valid JSON CV format following the JSON Resume standard."
+                              </div>
+                            </div>
+                            <Button 
+                              onClick={copyJsonSample}
+                              variant="outline"
+                              className="w-full mt-2 bg-white border-lime-200 text-lime-700 hover:bg-lime-100 font-bold rounded-xl flex items-center gap-2 h-9"
+                            >
+                              <Copy size={14} /> Copy Sample JSON Format
+                            </Button>
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="text-xs font-black uppercase tracking-widest text-gray-400">Paste JSON here</label>
+                            <textarea 
+                              value={jsonInput}
+                              onChange={(e) => {
+                                setJsonInput(e.target.value);
+                                setJsonError('');
+                              }}
+                              placeholder='{ "basics": { ... }, "work": [ ... ] }'
+                              className="w-full h-48 p-4 bg-slate-50 border border-gray-200 rounded-2xl font-mono text-xs outline-none focus:border-black transition-colors"
+                            />
+                            {jsonError && <p className="text-xs text-red-500 font-bold">{jsonError}</p>}
+                          </div>
+                        </div>
+
+                        <div className="flex gap-3">
+                          <Button onClick={() => setShowJsonModal(false)} variant="ghost" className="flex-1 rounded-2xl font-bold py-6">Cancel</Button>
+                          <Button 
+                            onClick={handleJsonSubmit}
+                            disabled={!jsonInput.trim()}
+                            className="flex-[2] bg-black text-white hover:bg-slate-900 rounded-2xl font-bold py-6 shadow-xl disabled:opacity-30"
+                          >
+                            Import & Continue
+                          </Button>
+                        </div>
+                      </motion.div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             )}
 

@@ -3,12 +3,58 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getConnection } from '@/lib/database';
 import Notification from '@/models/Notification';
+import ActivityLog from '@/models/ActivityLog';
 import mongoose from 'mongoose';
 
 // Store active connections
 const connections = new Map<string, ReadableStreamDefaultController>();
 
 export const dynamic = 'force-dynamic';
+
+// Helper to map activity log to frontend format (reused from dashboard/activities route)
+function mapActivity(log: any) {
+    let type: 'cv_updated' | 'applied' | 'interview' | 'improvement' | 'recommendation' = 'cv_updated';
+    
+    // Determine type based on action or resource
+    if (log.action === 'applied' || log.resource?.type === 'job') {
+      type = 'applied';
+    } else if (log.action === 'interview' || log.resource?.type === 'journey') {
+      type = 'interview';
+    } else if (log.action === 'ats_check' || log.action === 'improvement') {
+      type = 'improvement';
+    } else if (log.action === 'recommendation') {
+      type = 'recommendation';
+    }
+
+    // Format message with resource name if available
+    let message = log.action;
+    const resourceName = log.resource?.name || log.metadata?.name || log.metadata?.title;
+    const resourceType = log.resource?.type;
+    
+    if (log.action === 'cv_updated' || log.action === 'updated' && resourceType === 'cv') {
+      const cvType = log.metadata?.cvType || 'CV';
+      const typeLabel = cvType === 'master' ? 'Master CV' : cvType === 'journey' ? 'Journey CV' : 'Standalone CV';
+      message = `Updated ${typeLabel}: ${resourceName || 'Untitled'}`;
+      type = 'cv_updated';
+    } else if (log.action === 'cv_created' || log.action === 'created' && resourceType === 'cv') {
+      const cvType = log.metadata?.cvType || 'CV';
+      const typeLabel = cvType === 'master' ? 'Master CV' : cvType === 'journey' ? 'Journey CV' : 'Standalone CV';
+      message = `Created ${typeLabel}: ${resourceName || 'Untitled'}`;
+      type = 'cv_updated';
+    } else if (log.action === 'applied' || resourceType === 'job') {
+      message = `Applied for: ${resourceName || 'a new role'}`;
+    } else if (log.action === 'user_action') {
+      message = log.metadata?.message || log.action;
+    }
+
+    return {
+      id: log._id.toString(),
+      type,
+      message,
+      timestamp: log.timestamp,
+      metadata: log.metadata
+    };
+}
 
 export async function GET(request: NextRequest) {
     try {
@@ -48,10 +94,9 @@ export async function GET(request: NextRequest) {
         }
 
         // Create SSE stream with timeout handling
-        // Determine if running locally (for timeout and heartbeat adjustments)
         const isLocal = process.env.NODE_ENV === 'development' || !process.env.VERCEL;
-
         const encoder = new TextEncoder();
+        
         const stream = new ReadableStream({
             start(controller) {
                 try {
@@ -60,81 +105,69 @@ export async function GET(request: NextRequest) {
                     console.log(`🔗 SSE connection stored for user ${userId}. Total active connections: ${connections.size}`);
 
                     // Send initial connection message
-                    controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'connected' })}\n\n`));
+                    controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'connected', userId })}\n\n`));
                 } catch (startError) {
                     console.error('Error in stream start:', startError);
                     try {
                         controller.close();
-                    } catch (closeError) {
-                        console.error('Error closing controller:', closeError);
-                    }
+                    } catch (closeError) {}
                     connections.delete(userId);
                     return;
                 }
 
-                // Set up interval to check for new notifications
+                // Track last sent IDs/times to avoid duplicates and gaps
+                let lastCheckTime = new Date(Date.now() - 1000); // Start looking from 1s ago
+
+                // Set up interval to check for new notifications and activities
                 const interval = setInterval(async () => {
                     try {
-                        // Check for unread notifications created in the last 5 seconds
-                        const fiveSecondsAgo = new Date(Date.now() - 5000);
-
-                        // Ensure userId is a valid ObjectId string
-                        if (!userId || typeof userId !== 'string') {
-                            console.error('Invalid userId in stream interval:', userId);
-                            return;
-                        }
-
-                        // Convert userId to ObjectId for query
+                        const checkTime = new Date();
+                        
+                        // Ensure userId is valid
                         let userIdObjectId: mongoose.Types.ObjectId;
                         try {
                             userIdObjectId = new mongoose.Types.ObjectId(userId);
-                        } catch (objectIdError) {
-                            console.error('Invalid ObjectId format for userId:', userId, objectIdError);
-                            return;
-                        }
+                        } catch (e) { return; }
 
+                        // 1. Check for new notifications
                         const newNotifications = await Notification.find({
                             userId: userIdObjectId,
                             read: false,
-                            createdAt: { $gte: fiveSecondsAgo },
-                        })
-                            .sort({ createdAt: -1 })
-                            .limit(10)
-                            .lean();
+                            createdAt: { $gt: lastCheckTime },
+                        }).sort({ createdAt: 1 }).lean();
 
                         for (const notification of newNotifications) {
-                            try {
-                                const data = JSON.stringify({
-                                    type: 'notification',
-                                    notification,
-                                });
-                                controller.enqueue(encoder.encode(`data: ${data}\n\n`));
-                            } catch (encodeError) {
-                                console.error('Error encoding notification:', encodeError);
-                            }
+                            const data = JSON.stringify({ type: 'notification', notification });
+                            controller.enqueue(encoder.encode(`data: ${data}\n\n`));
                         }
+
+                        // 2. Check for new activities
+                        const newActivities = await ActivityLog.find({
+                            userId: userIdObjectId,
+                            logType: 'user_action',
+                            timestamp: { $gt: lastCheckTime }
+                        }).sort({ timestamp: 1 }).lean();
+
+                        for (const activity of newActivities) {
+                            const mapped = mapActivity(activity);
+                            const data = JSON.stringify({ type: 'activity', activity: mapped });
+                            controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+                        }
+
+                        lastCheckTime = checkTime;
                     } catch (error) {
-                        console.error('Error checking for new notifications:', error);
-                        // Don't throw - just log the error to prevent breaking the stream
+                        console.error('Error checking for new events in SSE stream:', error);
                     }
-                }, 5000); // Check every 5 seconds
+                }, 4000); // Check every 4 seconds
 
-                // Set up heartbeat to keep connection alive and detect disconnects
-                // For local: every 30 seconds, for production: every 10 seconds
+                // Set up heartbeat
                 const heartbeatIntervalMs = isLocal ? 30000 : 10000;
-
                 let heartbeatCount = 0;
                 const heartbeatInterval = setInterval(() => {
                     try {
                         heartbeatCount++;
                         controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'heartbeat', count: heartbeatCount, timestamp: Date.now() })}\n\n`));
                     } catch (error) {
-                        // Connection closed, cleanup
-                        if (isLocal) {
-                            console.debug(`💔 SSE heartbeat failed for user ${userId}, connection closed`);
-                        } else {
-                            console.log(`💔 SSE heartbeat failed for user ${userId}, connection closed`);
-                        }
                         clearInterval(interval);
                         clearInterval(heartbeatInterval);
                         clearTimeout(connectionTimeout);
@@ -143,9 +176,7 @@ export async function GET(request: NextRequest) {
                 }, heartbeatIntervalMs);
 
                 // Set connection timeout
-                // For local development: 5 minutes, for production: 15 seconds (well within Vercel's 30s limit)
-                const timeoutDuration = isLocal ? 300000 : 15000; // 5 minutes local, 15 seconds production
-
+                const timeoutDuration = isLocal ? 300000 : 15000;
                 const connectionTimeout = setTimeout(() => {
                     console.log(`⏱️ SSE connection timeout for user ${userId}, closing gracefully`);
                     clearInterval(interval);
@@ -153,10 +184,7 @@ export async function GET(request: NextRequest) {
                     connections.delete(userId);
                     try {
                         controller.close();
-                    } catch (error) {
-                        // Connection may already be closed
-                        console.warn('Error closing SSE connection:', error);
-                    }
+                    } catch (error) {}
                 }, timeoutDuration);
 
                 // Cleanup on close
@@ -168,9 +196,7 @@ export async function GET(request: NextRequest) {
                     connections.delete(userId);
                     try {
                         controller.close();
-                    } catch (error) {
-                        // Connection may already be closed
-                    }
+                    } catch (error) {}
                 });
             },
         });
@@ -184,39 +210,43 @@ export async function GET(request: NextRequest) {
         });
     } catch (error: any) {
         console.error('Error setting up SSE stream:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        const errorStack = error instanceof Error ? error.stack : undefined;
-        console.error('SSE stream error details:', { errorMessage, errorStack, error });
-        return new Response(JSON.stringify({
-            error: 'Internal Server Error',
-            message: errorMessage,
-            details: process.env.NODE_ENV === 'development' ? errorStack : undefined
-        }), {
+        return new Response(JSON.stringify({ error: 'Internal Server Error' }), {
             status: 500,
             headers: { 'Content-Type': 'application/json' }
         });
     }
 }
 
-// Helper function to send notification to specific user
-export async function sendNotificationToUser(userId: string, notification: any) {
+/**
+ * Generic function to send an event to a specific user via SSE
+ */
+export async function sendEventToUser(userId: string, type: string, payload: any) {
     const controller = connections.get(userId);
     if (controller) {
         const encoder = new TextEncoder();
         const data = JSON.stringify({
-            type: 'notification',
-            notification,
+            type,
+            [type]: payload,
         });
         try {
             controller.enqueue(encoder.encode(`data: ${data}\n\n`));
-            console.log(`✅ Notification enqueued to SSE stream for user ${userId}:`, notification.title);
+            console.log(`✅ Event [${type}] enqueued to SSE stream for user ${userId}`);
         } catch (error) {
-            console.error('Error sending notification via SSE:', error);
+            console.error(`Error sending ${type} via SSE:`, error);
             connections.delete(userId);
         }
     } else {
-        const activeUserIds = Array.from(connections.keys());
-        console.warn(`⚠️ No SSE connection found for user ${userId}. Active connections:`, activeUserIds);
-        console.warn(`⚠️ Notification will not be delivered via SSE. User may need to refresh the page.`);
+        // Log skip in dev
+        if (process.env.NODE_ENV === 'development') {
+            console.debug(`⏭️ No active SSE connection for user ${userId}, event [${type}] skipped`);
+        }
     }
 }
+
+/**
+ * Backward compatibility: sendNotificationToUser
+ */
+export async function sendNotificationToUser(userId: string, notification: any) {
+    return sendEventToUser(userId, 'notification', notification);
+}
+

@@ -66,6 +66,38 @@ Instructions:
 6. If the content is in HTML, preserve basic formatting.
 
 Please provide the improved description in a ${tone} tone:`;
+      } else if (promptType === 'quantify') {
+        systemPrompt = `You are an expert CV/resume writer. Your task is to take a job experience description and enhance it by adding potential quantifiable metrics, percentages, or numbers where they might realistically apply.`;
+        userPrompt = `Original Experience Description:
+${content}
+
+Instructions:
+1. Identify areas where results can be quantified (e.g., "Increased sales by X%", "Managed a team of Y", "Reduced costs by Z").
+2. If specific numbers aren't provided, use placeholders like [X%] or [Number] to prompt the user to fill them in, but make the phrasing strong.
+3. Focus on impact and results.
+4. Return ONLY the improved text with quantifiable metrics.
+5. If the content is in HTML, preserve basic formatting.`;
+      } else if (promptType === 'concise') {
+        systemPrompt = `You are an expert CV editor. Your task is to make job experience descriptions more concise and "punchy" without losing the core achievement.`;
+        userPrompt = `Original Experience Description:
+${content}
+
+Instructions:
+1. Remove filler words and redundant phrases.
+2. Use strong action verbs.
+3. Keep the most impactful information.
+4. Return ONLY the shortened, high-impact version.
+5. If the content is in HTML, preserve basic formatting.`;
+      } else if (promptType === 'action_verbs') {
+        systemPrompt = `You are an expert CV writer. Your task is to replace weak verbs with powerful, industry-standard action verbs.`;
+        userPrompt = `Original Experience Description:
+${content}
+
+Instructions:
+1. Replace words like "responsible for", "helped with", "did", "worked on" with verbs like "Spearheaded", "Architected", "Orchestrated", "Catalyzed".
+2. Ensure the verbs accurately reflect the level of responsibility.
+3. Return ONLY the improved text.
+4. If the content is in HTML, preserve basic formatting.`;
       } else {
         systemPrompt = `You are an expert CV/resume writer and career coach. Your task is to convert job experience descriptions into powerful, ATS-friendly bullet points using the STAR (Situation-Task-Action-Result) method.`;
         userPrompt = `Original Experience Description:

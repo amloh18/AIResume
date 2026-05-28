@@ -38,6 +38,8 @@ import RevenueManager from '@/components/admin/RevenueManager';
 import { getCountryName, getCountryFlag, DEFAULT_PLAN_KEY, TIME_RANGES } from '@/lib/config/adminConstants';
 import { ADMIN_THEME } from '@/lib/config/adminTheme';
 import { useRouter } from 'next/navigation';
+import { LocationService } from '@/lib/payment/locationService';
+
 // RegionalPricing interface (from database)
 interface RegionalPricing {
   currency: string;
@@ -358,13 +360,20 @@ const PricingPlanManager: React.FC = () => {
     setSelectedPlanForEdit(null);
   };
 
-  const getPlanPrice = (plan: PricingPlan) => {
+  const getPlanPrice = (plan: any) => {
     if (plan.key === DEFAULT_PLAN_KEY) return 0;
+    
+    // First try to use the base USD price provided by the API
+    if (plan.baseUsdPrice !== undefined) return plan.baseUsdPrice;
+    if (plan.usdPrice !== undefined) return plan.usdPrice;
+    
+    // Fallback to old field names
     if (plan.key === 'pro_monthly') return plan.price_monthly || 0;
     if (plan.key === 'pro_quarterly') return plan.price_quarterly || 0;
     if (plan.key === 'pro_yearly') return plan.price_yearly || 0;
     if (plan.key === 'pro_lifetime') return plan.price_one_time || 0;
-    return 0;
+    
+    return plan.price_yearly || plan.price_monthly || plan.price_one_time || 0;
   };
 
   const getBillingCycle = (plan: PricingPlan) => {
@@ -695,11 +704,19 @@ const PricingPlanManager: React.FC = () => {
                       // Initialize edit state with current values
                       const initialEdits: Record<string, any> = {};
                       safeCountryPricing.forEach(cp => {
+                        const getAutoCalc = (planKey: string) => {
+                          let usdBase = 0;
+                          if (planKey === 'lifetime') usdBase = 199;
+                          if (planKey === 'monthly') usdBase = 9.99;
+                          if (planKey === 'quarterly') usdBase = 59.99;
+                          if (planKey === 'yearly') usdBase = 199;
+                          return Math.round(LocationService.convertPrice(usdBase, 'USD', cp.currency).convertedPrice);
+                        };
                         initialEdits[cp.countryCode] = {
-                          lifetime: cp.planPrices?.lifetime?.price || 0,
-                          monthly: cp.planPrices?.monthly?.price || 0,
-                          quarterly: cp.planPrices?.quarterly?.price || 0,
-                          yearly: cp.planPrices?.yearly?.price || 0
+                          lifetime: cp.planPrices?.lifetime?.price || getAutoCalc('lifetime'),
+                          monthly: cp.planPrices?.monthly?.price || getAutoCalc('monthly'),
+                          quarterly: cp.planPrices?.quarterly?.price || getAutoCalc('quarterly'),
+                          yearly: cp.planPrices?.yearly?.price || getAutoCalc('yearly')
                         };
                       });
                       setEditedPrices(initialEdits);
@@ -795,7 +812,22 @@ const PricingPlanManager: React.FC = () => {
                                         </div>
                                       ) : (
                                         <span className={`text-sm font-medium ${ADMIN_THEME.text.primary}`}>
-                                          {pricing.currencySymbol}{pricing.planPrices?.[planKey]?.price?.toLocaleString() || '0'}
+                                          {(() => {
+                                            const dbPrice = pricing.planPrices?.[planKey]?.price;
+                                            if (dbPrice && dbPrice > 0) return `${pricing.currencySymbol}${dbPrice.toLocaleString()}`;
+                                            
+                                            // Auto-calculate fallback
+                                            let usdBase = 0;
+                                            if (planKey === 'lifetime') usdBase = 199;
+                                            if (planKey === 'monthly') usdBase = 9.99;
+                                            if (planKey === 'quarterly') usdBase = 59.99;
+                                            if (planKey === 'yearly') usdBase = 199;
+                                            
+                                            if (usdBase === 0) return `${pricing.currencySymbol}0`;
+                                            
+                                            const autoCalc = Math.round(LocationService.convertPrice(usdBase, 'USD', pricing.currency).convertedPrice);
+                                            return `${pricing.currencySymbol}${autoCalc.toLocaleString()} (Auto)`;
+                                          })()}
                                         </span>
                                       )}
                                     </td>
