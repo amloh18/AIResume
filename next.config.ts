@@ -357,6 +357,7 @@ const nextConfig: NextConfig = {
     'pdf2pic',
     'pdf-parse',
     'pdfjs-dist',
+    'stripe',
     // Exclude Sentry from Edge Runtime
     '@sentry/nextjs',
     '@sentry/node',
@@ -418,24 +419,13 @@ export default withSentryConfig(nextConfig, {
   // Hides source maps from generated client bundles
   // hideSourceMaps: true,
 
-  // Automatically tree-shake Sentry logger statements to reduce bundle size
-  disableLogger: true,
+  // Tree-shaking options for reducing bundle size
+  treeshake: {
+    // Automatically tree-shake Sentry logger statements to reduce bundle size
+    removeDebugLogging: true,
+  },
 
   webpack: {
-    // Enables automatic instrumentation of Vercel Cron Monitors. (Does not yet work with App Router route handlers.)
-    // See the following for more information:
-    // https://docs.sentry.io/product/crons/
-    // https://vercel.com/docs/cron-jobs
-    automaticVercelMonitors: true,
-
-    // Tree-shaking options for reducing bundle size
-    treeshake: {
-      // Automatically tree-shake Sentry logger statements to reduce bundle size
-      removeDebugLogging: true,
-    },
-  },
-});
-
     // Enables automatic instrumentation of Vercel Cron Monitors. (Does not yet work with App Router route handlers.)
     // See the following for more information:
     // https://docs.sentry.io/product/crons/
