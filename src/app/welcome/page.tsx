@@ -29,7 +29,8 @@ import {
   Lock,
   User as UserIcon,
   Eye,
-  EyeOff
+  EyeOff,
+  Palette
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Logo from '@/components/ui/Logo';
