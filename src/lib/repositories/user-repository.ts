@@ -1,5 +1,5 @@
 import 'server-only';
-import User, { IUser } from '@/models/User';
+import User, { IUser, type UserPlanKey } from '@/models/User';
 import { BaseRepository } from './base-repository';
 import { FilterQuery } from 'mongoose';
 
@@ -154,7 +154,7 @@ export class UserRepository extends BaseRepository<IUser> {
    * Find users by plan
    */
   async findByPlan(
-    planKey: 'free' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly' | 'pro_lifetime'
+    planKey: UserPlanKey
   ): Promise<IUser[]> {
     return this.find(
       { currentPlanKey: planKey } as FilterQuery<IUser>,

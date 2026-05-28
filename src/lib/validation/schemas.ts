@@ -79,15 +79,29 @@ export const updateMonthlyGoalSchema = z.object({
 // PRICING & PAYMENT SCHEMAS
 // ============================================
 
+const planKeySchema = z.enum([
+  'free',
+  'starter_monthly',
+  'starter_yealry',
+  'focused_monthly',
+  'focused_yearly',
+  'smart_quaterly',
+  'smart_yearly',
+  'pro_monthly',
+  'pro_quarterly',
+  'pro_yearly',
+  'pro_lifetime'
+]);
+
 export const createPaymentIntentSchema = z.object({
-  planKey: z.enum(['free', 'pro_monthly', 'pro_quarterly', 'pro_yearly', 'pro_lifetime']),
+  planKey: planKeySchema,
   billingCycle: z.enum(['one-time', 'monthly', 'quarterly', 'yearly']).optional(),
   couponCode: z.string().optional(),
 });
 
 export const applyCouponSchema = z.object({
   couponCode: z.string().min(1, 'Coupon code is required'),
-  planKey: z.enum(['free', 'pro_monthly', 'pro_quarterly', 'pro_yearly', 'pro_lifetime']),
+  planKey: planKeySchema,
 });
 
 // ============================================
@@ -277,4 +291,3 @@ export type UpdateCVInput = z.infer<typeof updateCVSchema>;
 export type CreateJobInput = z.infer<typeof createJobSchema>;
 export type UpdateJobInput = z.infer<typeof updateJobSchema>;
 export type CreateFeedbackInput = z.infer<typeof createFeedbackSchema>;
-

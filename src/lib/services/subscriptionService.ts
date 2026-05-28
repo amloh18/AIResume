@@ -136,7 +136,7 @@ class SubscriptionService {
    */
   async activateProPlan(
     userId: string,
-    planKey: 'pro_monthly' | 'pro_quarterly' | 'pro_yearly' | 'pro_lifetime',
+    planKey: 'starter_yealry' | 'focused_monthly' | 'focused_yearly' | 'smart_quaterly' | 'smart_yearly' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly' | 'pro_lifetime',
     interval: 'monthly' | 'quarterly' | 'yearly' | 'lifetime' | 'one-time',
     paymentId: string,
     region: string,
@@ -183,19 +183,19 @@ class SubscriptionService {
       let autoRenew = false;
 
       // Calculate expiry based on plan type
-      if (planKey === 'pro_monthly') {
+      if (planKey === 'pro_monthly' || planKey === 'focused_monthly') {
         // Monthly: recurring subscription
         const nextMonth = new Date(now);
         nextMonth.setMonth(nextMonth.getMonth() + 1);
         expiresAt = nextMonth;
         daysRemaining = 30;
         autoRenew = true; // Only monthly plans auto-renew
-      } else if (planKey === 'pro_quarterly') {
+      } else if (planKey === 'pro_quarterly' || planKey === 'smart_quaterly') {
         // Quarterly: one-time payment for 90 days
         expiresAt = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
         daysRemaining = 90;
         autoRenew = false;
-      } else if (planKey === 'pro_yearly') {
+      } else if (planKey === 'pro_yearly' || planKey === 'starter_yealry' || planKey === 'focused_yearly' || planKey === 'smart_yearly') {
         // Yearly: recurring or one-time payment for 365 days
         expiresAt = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
         daysRemaining = 365;
@@ -210,7 +210,7 @@ class SubscriptionService {
       }
 
       // Calculate usage reset date (monthly for monthly, at expiry for quarterly/yearly)
-      const usageResetDate = planKey === 'pro_monthly'
+      const usageResetDate = (planKey === 'pro_monthly' || planKey === 'focused_monthly')
         ? new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
         : expiresAt;
 
@@ -548,4 +548,3 @@ class SubscriptionService {
 }
 
 export default new SubscriptionService();
-

@@ -68,10 +68,24 @@ export const UserSettingsSchema = z.object({
 });
 
 // Subscription schema
+const PlanKeySchema = z.enum([
+  'free',
+  'starter_monthly',
+  'starter_yealry',
+  'focused_monthly',
+  'focused_yearly',
+  'smart_quaterly',
+  'smart_yearly',
+  'pro_monthly',
+  'pro_quarterly',
+  'pro_yearly',
+  'pro_lifetime'
+]);
+
 export const SubscriptionSchema = z.object({
-  planKey: z.enum(['free', 'pro_monthly', 'pro_quarterly', 'pro_yearly', 'pro_lifetime']),
+  planKey: PlanKeySchema,
   status: z.enum(['active', 'inactive', 'cancelled', 'expired']),
-  provider: z.enum(['stripe', 'polar', 'admin']),
+  provider: z.enum(['stripe', 'polar', 'admin', 'none']),
   providerSubscriptionId: z.string().optional(),
   providerCustomerId: z.string().optional(),
   interval: z.enum(['one-time', 'monthly', 'quarterly', 'yearly']),

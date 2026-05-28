@@ -1,5 +1,18 @@
 import NextAuth from 'next-auth';
 
+type AuthPlanKey =
+  | 'free'
+  | 'starter_monthly'
+  | 'starter_yealry'
+  | 'focused_monthly'
+  | 'focused_yearly'
+  | 'smart_quaterly'
+  | 'smart_yearly'
+  | 'pro_monthly'
+  | 'pro_quarterly'
+  | 'pro_yearly'
+  | 'pro_lifetime';
+
 declare module 'next-auth' {
   interface Session {
     user: {
@@ -12,7 +25,7 @@ declare module 'next-auth' {
       image?: string;
       role?: string;
       type?: 'user' | 'admin';
-      planKey?: 'free' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly' | 'pro_lifetime';
+      planKey?: AuthPlanKey;
       subscriptionStatus?: 'active' | 'inactive' | 'cancelled' | 'expired';
       emailVerified?: boolean;
     };
@@ -28,7 +41,7 @@ declare module 'next-auth' {
     image?: string;
     role?: string;
     type?: 'user' | 'admin';
-    planKey?: 'free' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly' | 'pro_lifetime';
+    planKey?: AuthPlanKey;
     subscriptionStatus?: 'active' | 'inactive' | 'cancelled' | 'expired';
     emailVerified?: boolean;
   }
@@ -45,8 +58,8 @@ declare module 'next-auth/jwt' {
     lastName?: string;
     role?: string;
     type?: 'user' | 'admin';
-    planKey?: 'free' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly' | 'pro_lifetime';
+    planKey?: AuthPlanKey;
     subscriptionStatus?: 'active' | 'inactive' | 'cancelled' | 'expired';
     emailVerified?: boolean;
   }
-} 
+}

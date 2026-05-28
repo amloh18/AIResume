@@ -230,29 +230,30 @@ const WelcomePage: React.FC = () => {
       try {
         const rec = getRecommendedTier(overrideState);
         let primary_goal: 'cv' | 'tracker' | 'auto_apply' = 'cv';
-        let recommended_plan = 'free';
+        let recommended_plan = 'starter_monthly';
         let activation_route = '/editor?doc=master-cv&mode=improve';
         let dashboard_layout_type: 'cv' | 'tracker' | 'auto_apply' = 'cv';
 
         if (rec.type === 3) {
           primary_goal = 'auto_apply';
-          recommended_plan = 'pro_quarterly';
+          recommended_plan = 'smart_quaterly';
           activation_route = '/dashboard/jobs?tab=auto-apply&setup=1';
           dashboard_layout_type = 'auto_apply';
         } else if (rec.type === 2) {
           primary_goal = 'tracker';
-          recommended_plan = 'pro_monthly';
+          recommended_plan = 'focused_monthly';
           activation_route = '/dashboard/tracker?newJob=1';
           dashboard_layout_type = 'tracker';
         } else {
           primary_goal = 'cv';
-          recommended_plan = 'free';
+          recommended_plan = 'starter_monthly';
           activation_route = '/editor?doc=master-cv&mode=improve';
           dashboard_layout_type = 'cv';
         }
 
-        // Use the resolved activation route for saving, but if a specific custom redirectUrl was passed (like '/dashboard'), we can let the user go there
-        const targetRoute = redirectUrl === '/dashboard' ? '/dashboard' : activation_route;
+        // Use the resolved activation route for saving, but keep it mutable because
+        // Master CV creation below can replace doc=master-cv with the real cvId.
+        let targetRoute = redirectUrl === '/dashboard' ? '/dashboard' : activation_route;
 
         // --- MASTER CV CREATION ---
         // Save the parsed CV data as the Master CV (Always create one during onboarding)
@@ -287,10 +288,14 @@ const WelcomePage: React.FC = () => {
           });
           
           const cvResult = await cvRes.json();
-          if (cvResult.success && cvResult.cv?.id) {
-            console.log('✅ Master CV created/saved from onboarding:', cvResult.cv.id);
+          const masterCvId = cvResult.cv?.id || cvResult.cv?._id || cvResult.data?.cv?.id || cvResult.existingMasterCVId;
+          if ((cvResult.success && masterCvId) || cvResult.existingMasterCVId) {
+            console.log('✅ Master CV created/saved from onboarding:', masterCvId);
             // Update activation route to use REAL CV ID for reliability
-            activation_route = `/editor?cvId=${cvResult.cv.id}&mode=edit-master&improve=true`;
+            activation_route = `/editor?cvId=${masterCvId}&mode=edit-master&improve=true`;
+            if (redirectUrl !== '/dashboard') {
+              targetRoute = activation_route;
+            }
           } else {
             console.warn('⚠️ Master CV creation returned success:false or missing ID', cvResult);
           }
@@ -308,7 +313,7 @@ const WelcomePage: React.FC = () => {
               primary_goal,
               confidence_score: s_cvScore,
               recommended_plan,
-              activation_status: 'pending',
+              activation_status: 'completed',
               activation_route,
               dashboard_layout_type
             }
@@ -317,7 +322,7 @@ const WelcomePage: React.FC = () => {
         
         // Show the paywall before final redirection
         openPaymentModal({
-          preselectedPlanKey: recommended_plan === 'free' ? 'pro_monthly' : recommended_plan,
+          preselectedPlanKey: recommended_plan === 'starter_monthly' ? 'focused_monthly' : recommended_plan,
           triggerContext: 'onboarding-exit',
           onSuccess: () => {
             sessionStorage.setItem('fromOnboarding', 'true');
@@ -448,24 +453,24 @@ const WelcomePage: React.FC = () => {
 
     // Final Recommendation Resolution
     if (score3 >= score2 && score3 >= score1) {
-      const plan = plans.find(p => p.key === 'pro_quarterly');
+      const plan = plans.find(p => p.key === 'smart_quaterly') || plans.find(p => p.key === 'pro_quarterly');
       const priceText = plan?.regionalPricing?.price 
         ? `${currencySymbol}${plan.regionalPricing.price}`
         : `${currencySymbol}34.99`;
       return {
-        tier: 'Auto-Apply Autopilot',
+        tier: 'Smart',
         description: 'Best for scale. AI will search, match, customize, and automatically submit applications for you.',
         price: `${priceText}/quarter`,
         redirectUrl: '/dashboard/jobs?tab=auto-apply&setup=1',
         type: 3
       };
     } else if (score2 >= score1) {
-      const plan = plans.find(p => p.key === 'pro_monthly');
+      const plan = plans.find(p => p.key === 'focused_monthly') || plans.find(p => p.key === 'pro_monthly');
       const priceText = plan?.regionalPricing?.price 
         ? `${currencySymbol}${plan.regionalPricing.price}`
         : `${currencySymbol}12.99`;
       return {
-        tier: 'Career Builder (Job Tracker)',
+        tier: 'Focused',
         description: 'Perfect for active searchers looking to organize, track applications, and optimize CVs.',
         price: `${priceText}/month`,
         redirectUrl: '/dashboard/tracker?newJob=1',
@@ -473,7 +478,7 @@ const WelcomePage: React.FC = () => {
       };
     } else {
       return {
-        tier: 'Free CV Studio',
+        tier: 'Starter',
         description: 'Create, edit, and export professional templates with basic ATS feedback.',
         price: 'Free',
         redirectUrl: '/editor?doc=master-cv&mode=improve',

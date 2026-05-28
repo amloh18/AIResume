@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 import Image from 'next/image';
 import Logo from '@/components/ui/Logo';
-import { Upload, FileText, Edit3, CheckCircle2, Loader2, Briefcase, Sparkles, AlertTriangle, FolderOpen, Edit2 } from 'lucide-react';
+import { Upload, FileText, Edit3, CheckCircle2, Loader2, Briefcase, Sparkles, AlertTriangle, FolderOpen, Edit2, Copy } from 'lucide-react';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
 import { UnifiedCVDataStructure, DEFAULT_UNIFIED_CV_DATA } from '@/types/unified-cv-schema';
 import { sanitizeErrorMessage } from '@/lib/api/error-handler';
@@ -192,6 +192,7 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
   const [draftCV, setDraftCV] = useState<any>(null);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isLinkedInImporting, setIsLinkedInImporting] = useState(false);
+  const [isDuplicating, setIsDuplicating] = useState(false);
   const [linkedInImportError, setLinkedInImportError] = useState('');
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
   const topSectionRef = React.useRef<HTMLDivElement>(null);
@@ -334,6 +335,42 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
       router.push(`/editor?mode=${editMode}&cvId=${originalCvId}`);
     } else {
       console.error('Failed to enter edit mode: Missing CV ID on object', cv);
+    }
+  };
+
+  const handleDuplicatePrimary = async () => {
+    const masterCV = existingCVs.find(cv => cv.cvType === 'master');
+    if (!masterCV) {
+      alert("No Primary (Master) CV found to duplicate.");
+      return;
+    }
+    
+    setIsDuplicating(true);
+    try {
+      const response = await fetch('/api/cvs/duplicate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sourceCvId: masterCV.id || masterCV._id,
+          userId: user?.id,
+          journeyId: null,
+          customTitle: `${masterCV.title} (Copy)`
+        }),
+      });
+
+      const result = await response.json();
+      if (result.success && result.cvId) {
+        router.push(`/editor?mode=edit&cvId=${result.cvId}`);
+      } else {
+        throw new Error(result.message || 'Failed to duplicate CV');
+      }
+    } catch (error) {
+      console.error('Error duplicating master CV:', error);
+      alert('Error duplicating CV. Please try again.');
+    } finally {
+      setIsDuplicating(false);
     }
   };
 
@@ -688,26 +725,27 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
                 <motion.button
                   whileHover={{ y: -8, scale: 1.01 }}
                   whileTap={{ scale: 0.98 }}
-                  onClick={() => setParseMethod('upload')}
-                  className="group relative bg-white dark:bg-[#141810] rounded-[2rem] sm:rounded-[2.5rem] p-8 sm:p-12 shadow-2xl border border-white/5 overflow-hidden text-left flex flex-col items-center justify-center text-center"
+                  onClick={handleDuplicatePrimary}
+                  disabled={!userHasMasterCV || isDuplicating || isLoadingCVs}
+                  className={`group relative bg-white dark:bg-[#141810] rounded-[2rem] sm:rounded-[2.5rem] p-8 sm:p-12 shadow-2xl border border-white/5 overflow-hidden text-left flex flex-col items-center justify-center text-center ${(!userHasMasterCV || isDuplicating || isLoadingCVs) ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-lime-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                   <div className="relative flex flex-col items-center space-y-4 sm:space-y-8">
                     <div className="w-16 h-16 sm:w-24 sm:h-24 bg-lime-500 text-black rounded-[1.5rem] sm:rounded-[2rem] flex items-center justify-center shadow-2xl shadow-lime-500/30 group-hover:rotate-6 group-hover:scale-110 transition-all duration-500">
-                      <Upload className="w-8 h-8 sm:w-12 sm:h-12 stroke-[2.5]" />
+                      {isDuplicating ? <Loader2 className="w-8 h-8 sm:w-12 sm:h-12 animate-spin" /> : <Copy className="w-8 h-8 sm:w-12 sm:h-12 stroke-[2.5]" />}
                     </div>
                     <div>
-                      <h3 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white mb-2 sm:mb-3 tracking-tight">Upload</h3>
+                      <h3 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white mb-2 sm:mb-3 tracking-tight">Duplicate Primary CV</h3>
                       <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400 font-medium leading-relaxed">
-                        Import your existing resume. <br className="hidden xs:block" />
-                        We'll handle the rest.
+                        Create a standalone CV <br className="hidden xs:block" />
+                        copied from your master CV.
                       </p>
                     </div>
-                    <div className="flex gap-2">
-                      <span className="text-[9px] sm:text-[10px] font-black px-3 sm:px-4 py-1 sm:py-1.5 bg-black/5 dark:bg-white/10 rounded-full text-gray-400 group-hover:text-lime-500 transition-colors">
-                        PDF / DOCX
+                    {!userHasMasterCV && (
+                      <span className="text-[9px] sm:text-[10px] font-black px-3 sm:px-4 py-1 sm:py-1.5 bg-red-100 dark:bg-red-500/10 text-red-500 rounded-full">
+                        Requires Master CV
                       </span>
-                    </div>
+                    )}
                   </div>
                 </motion.button>
 
@@ -723,7 +761,7 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
                       <Edit3 className="w-8 h-8 sm:w-12 sm:h-12 stroke-[2.5]" />
                     </div>
                     <div>
-                      <h3 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white mb-2 sm:mb-3 tracking-tight">Start Fresh</h3>
+                      <h3 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white mb-2 sm:mb-3 tracking-tight">Start from scratch</h3>
                       <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400 font-medium leading-relaxed">
                         Build a winning resume <br className="hidden xs:block" />
                         from scratch with AI.
@@ -734,70 +772,6 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
                     </span>
                   </div>
                 </motion.button>
-
-                {userHasMasterCV ? (
-                  <motion.button
-                    whileHover={{ y: -8, scale: 1.01 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={handleStartWithJob}
-                    className="group relative bg-white dark:bg-[#141810] rounded-[2rem] sm:rounded-[2.5rem] p-8 sm:p-12 shadow-2xl border border-lime-500/30 overflow-hidden text-left flex flex-col items-center justify-center text-center"
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-br from-lime-500/20 via-transparent to-transparent opacity-30 group-hover:opacity-100 transition-opacity duration-500" />
-                    <div className="absolute -top-24 -right-24 w-64 h-64 bg-lime-500/10 blur-[100px] rounded-full" />
-                    <div className="relative flex flex-col items-center space-y-4 sm:space-y-8">
-                      <div className="px-3 sm:px-4 py-1 sm:py-1.5 bg-lime-500 text-black text-[9px] sm:text-[10px] font-black rounded-full shadow-2xl shadow-lime-500/20">
-                        POWERFUL
-                      </div>
-                      <div className="w-16 h-16 sm:w-24 sm:h-24 bg-lime-500/20 border border-lime-500/40 rounded-[1.5rem] sm:rounded-[2rem] flex items-center justify-center shadow-inner group-hover:scale-110 transition-all duration-500">
-                        <Briefcase className="w-8 h-8 sm:w-12 sm:h-12 text-lime-500" />
-                      </div>
-                      <div>
-                        <h3 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white mb-2 sm:mb-3 tracking-tight">Apply to Job</h3>
-                        <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 font-medium leading-relaxed">
-                          Auto-tailor your Master CV <br className="hidden xs:block" />
-                          to any job description.
-                        </p>
-                      </div>
-                      <div className="flex gap-2">
-                        <span className="text-[9px] sm:text-[10px] font-black px-3 sm:px-4 py-1 sm:py-1.5 bg-lime-500/10 text-lime-500 border border-lime-500/20 rounded-full group-hover:bg-lime-500 group-hover:text-black transition-all">
-                          ATS OPTIMIZED
-                        </span>
-                      </div>
-                    </div>
-                  </motion.button>
-                ) : (
-                  <motion.button
-                    whileHover={{ y: -8, scale: 1.01 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => setParseMethod('linkedin')}
-                    disabled={!user}
-                    className={`group relative bg-white dark:bg-[#141810] rounded-[2rem] sm:rounded-[2.5rem] p-8 sm:p-12 shadow-2xl border overflow-hidden text-left flex flex-col items-center justify-center text-center transition-all ${user 
-                      ? 'border-blue-200 dark:border-blue-500/20 hover:border-blue-500' 
-                      : 'border-gray-200 dark:border-white/5 opacity-50 cursor-not-allowed'
-                    }`}
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                    <div className="relative flex flex-col items-center space-y-4 sm:space-y-8">
-                      <div className="w-16 h-16 sm:w-24 sm:h-24 bg-blue-500/20 border border-blue-500/40 rounded-[1.5rem] sm:rounded-[2rem] flex items-center justify-center shadow-inner group-hover:scale-110 transition-all duration-500">
-                        <svg className="w-8 h-8 sm:w-12 sm:h-12 text-blue-600 dark:text-blue-400" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
-                        </svg>
-                      </div>
-                      <div>
-                        <h3 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white mb-2 sm:mb-3 tracking-tight">LinkedIn</h3>
-                        <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400 font-medium leading-relaxed">
-                          Import your profile data <br className="hidden xs:block" />
-                          directly from LinkedIn.
-                        </p>
-                      </div>
-                      {!user && (
-                        <span className="text-[9px] sm:text-[10px] font-black px-3 sm:px-4 py-1 sm:py-1.5 bg-gray-100 dark:bg-white/10 text-gray-400 dark:text-gray-600 rounded-full">
-                          Sign in required
-                        </span>
-                      )}
-                    </div>
-                  </motion.button>
-                )}
               </>
             ) : (
               <>

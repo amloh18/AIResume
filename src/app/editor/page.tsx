@@ -9,7 +9,7 @@ import { ATSProvider } from '@/contexts/ATSContext';
 import { DashboardDataProvider } from '@/contexts/DashboardDataContext';
 import ResumeEnhancerContainer from '@/components/resume-enhancer/ResumeEnhancerContainer';
 import RouteGuard from '@/components/auth/RouteGuard';
-import LoadingAnimation from '@/components/ui/LoadingAnimation';
+import LoadingOverlay from '@/components/ui/LoadingOverlay';
 import guestCVService from '@/lib/services/guestCVService';
 
 function ResumeEnhancerPageContent() {
@@ -121,7 +121,7 @@ function ResumeEnhancerPageContent() {
 
 // Show loading while checking guest mode or authenticating or redirecting
 if (authLoading || isCheckingGuestMode || isRedirecting) {
-  return <LoadingAnimation progress={0.5} showProgressBar={false} />;
+  return <LoadingOverlay message={isRedirecting ? 'Opening Master CV' : 'Loading Editor'} />;
 }
 
 // For guest mode, allow access without authentication
@@ -174,7 +174,7 @@ if (isGuestMode) {
 
 export default function ResumeEnhancerPage() {
   return (
-    <Suspense fallback={<LoadingAnimation progress={0.3} showProgressBar={false} />}>
+    <Suspense fallback={<LoadingOverlay message="Loading Editor" />}>
       <ResumeEnhancerPageContent />
     </Suspense>
   );
