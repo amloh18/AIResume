@@ -6,6 +6,7 @@ import { Sparkles, Zap, Rocket, ShieldCheck, ArrowRight, Star } from 'lucide-rea
 import { UserTier } from '@/types/dashboard-widgets';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
+import { usePaymentModal } from '@/contexts/PaymentModalContext';
 
 interface UpgradeBannerProps {
   tier: UserTier;
@@ -14,6 +15,7 @@ interface UpgradeBannerProps {
 
 export default function UpgradeBanner({ tier, isYearly = false }: UpgradeBannerProps) {
   const router = useRouter();
+  const { openPaymentModal } = usePaymentModal();
 
   const getContent = () => {
     switch (tier) {
@@ -25,7 +27,8 @@ export default function UpgradeBanner({ tier, isYearly = false }: UpgradeBannerP
           cta: "View Premium Plans",
           gradient: "from-emerald-600 via-teal-700 to-cyan-800",
           icon: <Rocket className="w-12 h-12 text-[#83d60d]" />,
-          path: "/pricing"
+          path: "/pricing",
+          planKey: 'focused_monthly'
         };
       case 'focused':
         return {
@@ -35,7 +38,8 @@ export default function UpgradeBanner({ tier, isYearly = false }: UpgradeBannerP
           cta: "Activate Smart Autopilot",
           gradient: "from-indigo-600 via-purple-700 to-rose-700",
           icon: <Zap className="w-12 h-12 text-amber-400" />,
-          path: "/pricing?plan=smart"
+          path: "/pricing?plan=smart",
+          planKey: 'smart_quarterly'
         };
       case 'smart':
         if (!isYearly) {
@@ -46,7 +50,8 @@ export default function UpgradeBanner({ tier, isYearly = false }: UpgradeBannerP
             cta: "Switch to Yearly & Save",
             gradient: "from-[#0f172a] via-[#1e293b] to-[#334155]",
             icon: <Star className="w-12 h-12 text-[#83d60d]" />,
-            path: "/pricing?interval=yearly"
+            path: "/pricing?interval=yearly",
+            planKey: 'smart_yearly'
           };
         }
         return {
@@ -65,6 +70,17 @@ export default function UpgradeBanner({ tier, isYearly = false }: UpgradeBannerP
 
   const content = getContent();
   if (!content) return null;
+
+  const handleAction = () => {
+    if (content.path === '/dashboard/settings') {
+      router.push(content.path);
+    } else {
+      openPaymentModal({
+        preselectedPlanKey: (content as any).planKey,
+        triggerContext: 'dashboard_upgrade_banner'
+      });
+    }
+  };
 
   return (
     <motion.div
@@ -117,7 +133,7 @@ export default function UpgradeBanner({ tier, isYearly = false }: UpgradeBannerP
             </motion.div>
             
             <button
-              onClick={() => router.push(content.path)}
+              onClick={handleAction}
               className="group relative px-8 py-4 rounded-2xl bg-[#83d60d] hover:bg-[#a2f02d] text-slate-900 font-black text-sm uppercase tracking-widest transition-all shadow-xl shadow-[#83d60d]/20 overflow-hidden"
             >
               <div className="relative z-10 flex items-center gap-2">

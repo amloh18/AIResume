@@ -83,8 +83,13 @@ export class PolarService {
     }
     
     try {
-      const checkout = await polarInstance.checkouts.create({
+      console.log('🚀 Creating Polar checkout with:', {
         productPriceId: params.productPriceId,
+        customerEmail: params.customerEmail,
+      });
+
+      const checkout = await polarInstance.checkouts.create({
+        products: [params.productPriceId],
         successUrl: params.successUrl,
         customerEmail: params.customerEmail,
         customerName: params.customerName,
