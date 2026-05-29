@@ -212,13 +212,16 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
     linkedin: user.linkedin || '',
     github: user.github || '',
     summary: user.summary || '',
-    company: user.settings?.company || '',
-    address: user.settings?.address || '',
+    company: user.company || '',
+    address: user.address || '',
+    jobTitle: user.jobTitle || '',
+    industry: user.industry || '',
+    experience: user.experience || 'mid',
     timezone: user.settings?.timezone || 'UTC +07:00 - Asia / Jakarta',
     languagePreference: user.settings?.languagePreference || 'English',
-    dateOfBirth: user.settings?.dateOfBirth || '',
-    gender: user.settings?.gender || '',
-    nationality: user.settings?.nationality || '',
+    dateOfBirth: user.dateOfBirth || '',
+    gender: user.gender || '',
+    nationality: user.nationality || '',
   });
 
   const [avatar, setAvatar] = useState(user.avatar || user.profilePhoto || '');
@@ -301,22 +304,23 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
         lastName: formData.lastName,
         username: formData.username,
         avatar: avatar,
-        // Main profile fields
         phone: formData.phone,
         location: formData.location,
         website: formData.website,
         linkedin: formData.linkedin,
         github: formData.github,
         summary: formData.summary,
-        // Settings fields
+        company: formData.company,
+        address: formData.address,
+        jobTitle: formData.jobTitle,
+        industry: formData.industry,
+        experience: formData.experience,
+        dateOfBirth: formData.dateOfBirth,
+        gender: formData.gender,
+        nationality: formData.nationality,
         settings: {
-          company: formData.company,
-          address: formData.address,
           timezone: formData.timezone,
           languagePreference: formData.languagePreference,
-          dateOfBirth: formData.dateOfBirth,
-          gender: formData.gender,
-          nationality: formData.nationality,
         }
       };
 
@@ -725,6 +729,48 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
                 onChange={(e) => handleInputChange('company', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-lime-500/20 rounded-lg bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 focus:ring-2 focus:ring-lime-500 focus:border-transparent"
               />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Job Title
+              </label>
+              <input
+                type="text"
+                value={formData.jobTitle}
+                onChange={(e) => handleInputChange('jobTitle', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-lime-500/20 rounded-lg bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 focus:ring-2 focus:ring-lime-500 focus:border-transparent"
+                placeholder="e.g. Senior Software Engineer"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Industry
+              </label>
+              <input
+                type="text"
+                value={formData.industry}
+                onChange={(e) => handleInputChange('industry', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-lime-500/20 rounded-lg bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 focus:ring-2 focus:ring-lime-500 focus:border-transparent"
+                placeholder="e.g. Technology"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Experience Level
+              </label>
+              <select
+                value={formData.experience}
+                onChange={(e) => handleInputChange('experience', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-lime-500/20 rounded-lg bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 focus:ring-2 focus:ring-lime-500 focus:border-transparent"
+              >
+                <option value="entry">Entry Level</option>
+                <option value="mid">Mid Level</option>
+                <option value="senior">Senior Level</option>
+                <option value="executive">Executive</option>
+              </select>
             </div>
           </div>
 
@@ -1941,31 +1987,14 @@ const SettingsContent = () => {
     };
   }, []);
 
-  const handleSaveUser = async (userData: User) => {
-    try {
-      const response = await fetch('/api/user', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(userData),
-      });
+  const handleSaveUser = (updatedUser: User) => {
+    console.log('🔄 Settings - Updating local state with saved user data');
+    setUserData(updatedUser);
 
-      if (response.ok) {
-        const result = await response.json();
-        if (result.success && result.user) {
-          console.log('Profile updated successfully');
-          setUserData(result.user);
-
-          // Dispatch custom event to notify other components of user data update
-          window.dispatchEvent(new CustomEvent('userProfileUpdated', {
-            detail: { user: result.user }
-          }));
-        }
-      } else {
-        console.error('Failed to update profile');
-      }
-    } catch (error) {
-      console.error('Error updating profile:', error);
-    }
+    // Dispatch custom event to notify other components of user data update
+    window.dispatchEvent(new CustomEvent('userProfileUpdated', {
+      detail: { user: updatedUser }
+    }));
   };
 
   const renderTabContent = () => {
@@ -1999,8 +2028,8 @@ const SettingsContent = () => {
 
   return (
     <RouteGuard requireAuth={true}>
-      <div className="min-h-screen w-full min-w-0 overflow-x-hidden">
-        <div className="w-full min-w-0 max-w-full">
+      <div className="min-h-screen w-full min-w-0 overflow-x-hidden pb-20">
+        <div className="max-w-6xl mx-auto px-4 md:px-6 w-full min-w-0">
           {/* Page Header - Same style as other dashboard pages */}
           <PageHeader
             title="Settings"

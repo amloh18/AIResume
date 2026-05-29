@@ -124,9 +124,13 @@ export interface IUser extends Document {
   github?: string;
   summary?: string;
   company?: string;
+  address?: string;
   jobTitle?: string;
   industry?: string;
   experience?: 'entry' | 'mid' | 'senior' | 'executive';
+  dateOfBirth?: string;
+  gender?: string;
+  nationality?: string;
 
   // Admin tracking fields
   lastLogin?: Date;
@@ -535,6 +539,11 @@ const userSchema = new Schema<IUser>({
     trim: true,
     maxlength: [100, 'Company name cannot exceed 100 characters']
   },
+  address: {
+    type: String,
+    trim: true,
+    maxlength: [200, 'Address cannot exceed 200 characters']
+  },
   jobTitle: {
     type: String,
     trim: true,
@@ -549,6 +558,18 @@ const userSchema = new Schema<IUser>({
     type: String,
     enum: ['entry', 'mid', 'senior', 'executive'],
     default: 'mid'
+  },
+  dateOfBirth: {
+    type: String,
+    trim: true
+  },
+  gender: {
+    type: String,
+    trim: true
+  },
+  nationality: {
+    type: String,
+    trim: true
   },
   lastLogin: {
     type: Date,

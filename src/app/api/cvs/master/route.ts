@@ -36,13 +36,18 @@ export async function GET(request: NextRequest) {
 
     console.log('🔍 Master CV API - User ID:', userId);
 
-    // CRITICAL: Master CV is ONLY identified by ai-career-report creation
     // First, try to find the master CV created via ai-career-report (the authoritative source)
+    // or explicitly marked as master
     let masterCV = await CV.findOne({
       userId: new mongoose.Types.ObjectId(userId),
       $or: [
         { 'metadata.createdVia': 'ai-career-report' },
-        { 'metadata.tags': { $in: ['ai-career-report'] } }
+        { 'metadata.tags': { $in: ['ai-career-report'] } },
+        { 'metadata.isMaster': true },
+        { 'metadata.isMaster': 'true' },
+        { 'isMaster': true },
+        { 'isMaster': 'true' },
+        { 'cvType': 'master' }
       ]
     }).sort({ createdAt: -1 }).lean() as any;
 

@@ -32,7 +32,8 @@ import {
   EyeOff,
   Palette,
   FileJson,
-  Copy
+  Copy,
+  X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Logo from '@/components/ui/Logo';
@@ -128,8 +129,7 @@ Your task is to:
 Use this schema as a foundation:
 ${JSON.stringify(jsonSample, null, 2)}
 
-Here is my background:
-[PASTE YOUR CV TEXT HERE]`;
+Please find the CV data attached.`;
 
     navigator.clipboard.writeText(aiPrompt);
     // Brief toast logic could go here
@@ -293,7 +293,10 @@ Here is my background:
         const rec = getRecommendedTier(overrideState);
         let primary_goal: 'cv' | 'tracker' | 'auto_apply' = 'cv';
         let recommended_plan = 'starter_monthly';
-        let activation_route = '/editor?doc=master-cv&mode=improve';
+        const isScratch = seedingMethod === 'scratch';
+        let activation_route = isScratch 
+          ? '/editor?mode=create&step=1&master=true'
+          : '/editor?doc=master-cv&mode=improve&step=2';
         let dashboard_layout_type: 'cv' | 'tracker' | 'auto_apply' = 'cv';
 
         if (rec.type === 3) {
@@ -309,7 +312,7 @@ Here is my background:
         } else {
           primary_goal = 'cv';
           recommended_plan = 'starter_monthly';
-          activation_route = '/editor?doc=master-cv&mode=improve';
+          // activation_route already set based on isScratch
           dashboard_layout_type = 'cv';
         }
 
@@ -350,16 +353,22 @@ Here is my background:
           });
           
           const cvResult = await cvRes.json();
+          // Check for CV ID in multiple possible response formats
           const masterCvId = cvResult.cv?.id || cvResult.cv?._id || cvResult.data?.cv?.id || cvResult.existingMasterCVId;
-          if ((cvResult.success && masterCvId) || cvResult.existingMasterCVId) {
+          
+          if (masterCvId) {
             console.log('✅ Master CV created/saved from onboarding:', masterCvId);
             // Update activation route to use REAL CV ID for reliability
-            activation_route = `/editor?cvId=${masterCvId}&mode=edit-master&improve=true`;
+            // If scratch, we might still want to go to step 1 but with the ID
+            // If parsed, go to step 2 (Template selection)
+            const nextStep = isScratch ? 1 : 2;
+            activation_route = `/editor?cvId=${masterCvId}&mode=edit-master&improve=true&step=${nextStep}`;
+            
             if (redirectUrl !== '/dashboard') {
               targetRoute = activation_route;
             }
-          } else {
-            console.warn('⚠️ Master CV creation returned success:false or missing ID', cvResult);
+          } else if (!cvResult.success && cvRes.status !== 409) {
+            console.warn('⚠️ Master CV creation failed:', cvResult.error || 'Unknown error');
           }
           sessionStorage.setItem('masterCVCreated', 'true');
         } catch (cvError) {
@@ -1037,11 +1046,11 @@ Here is my background:
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
                             <div className="p-2 bg-black rounded-lg text-[#80FF00]">
-                              <FileJson size={24} />
+                              <Sparkles size={24} />
                             </div>
                             <div>
-                              <h2 className="text-2xl font-black">JSON Import</h2>
-                              <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">Direct Background Injection</p>
+                              <h2 className="text-2xl font-black">AI-Powered Import</h2>
+                              <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">Fast-track your tailored CV</p>
                             </div>
                           </div>
                           <button onClick={() => setShowJsonModal(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
@@ -1050,41 +1059,51 @@ Here is my background:
                         </div>
 
                         <div className="space-y-4">
-                          <div className="p-4 bg-lime-50 rounded-2xl border border-lime-100 space-y-3">
+                          <div className="p-5 bg-lime-50 rounded-[24px] border border-lime-100 space-y-4">
                             <h4 className="text-xs font-black uppercase tracking-widest text-lime-800 flex items-center gap-2">
-                              <Sparkles size={14} /> How to get your JSON?
+                              <Zap size={14} className="fill-lime-800" /> Getting started is simple
                             </h4>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs leading-relaxed text-lime-900/80">
-                              <div className="space-y-1">
-                                <span className="font-bold text-lime-900 block">Step 1</span>
-                                Copy your CV text or profile summary.
+                            
+                            <div className="space-y-4 text-xs leading-relaxed text-lime-900/80">
+                              <div className="flex gap-3">
+                                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-lime-200 text-lime-800 flex items-center justify-center font-black">1</span>
+                                <p>Attach your CV or paste your LinkedIn profile into <strong>Claude or ChatGPT</strong>.</p>
                               </div>
-                              <div className="space-y-1">
-                                <span className="font-bold text-lime-900 block">Step 2</span>
-                                Paste it into ChatGPT or Claude and ask: "Convert this into a valid JSON CV format following the JSON Resume standard."
+                              <div className="flex gap-3">
+                                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-lime-200 text-lime-800 flex items-center justify-center font-black">2</span>
+                                <p>Copy our specialized AI prompt below and paste it into the chat.</p>
+                              </div>
+                              <div className="flex gap-3">
+                                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-lime-200 text-lime-800 flex items-center justify-center font-black">3</span>
+                                <p>Copy the JSON output provided by the AI and paste it into the box below.</p>
                               </div>
                             </div>
-                            <Button 
-                              onClick={copyJsonSample}
-                              variant="outline"
-                              className="w-full mt-2 bg-white border-lime-200 text-lime-700 hover:bg-lime-100 font-bold rounded-xl flex items-center gap-2 h-9"
-                            >
-                              <Copy size={14} /> Copy Sample JSON Format
-                            </Button>
+
+                            <div className="pt-2">
+                              <Button 
+                                onClick={copyJsonSample}
+                                className="w-full bg-lime-800 hover:bg-lime-900 text-white font-bold rounded-xl flex items-center justify-center gap-2 h-10 shadow-sm"
+                              >
+                                <Copy size={14} /> Copy AI Prompt
+                              </Button>
+                              <p className="text-[10px] text-lime-700/60 text-center mt-2 font-medium italic">
+                                Voila! It's that easy to get a tailored CV. You can choose premium templates later.
+                              </p>
+                            </div>
                           </div>
 
                           <div className="space-y-2">
-                            <label className="text-xs font-black uppercase tracking-widest text-gray-400">Paste JSON here</label>
+                            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-2">JSON Input</label>
                             <textarea 
                               value={jsonInput}
                               onChange={(e) => {
                                 setJsonInput(e.target.value);
                                 setJsonError('');
                               }}
-                              placeholder='{ "basics": { ... }, "work": [ ... ] }'
-                              className="w-full h-48 p-4 bg-slate-50 border border-gray-200 rounded-2xl font-mono text-xs outline-none focus:border-black transition-colors"
+                              placeholder='Paste the { "basics": ... } code block here'
+                              className="w-full h-40 p-5 bg-slate-50 border border-gray-100 rounded-[24px] font-mono text-[11px] outline-none focus:border-black focus:bg-white transition-all shadow-inner"
                             />
-                            {jsonError && <p className="text-xs text-red-500 font-bold">{jsonError}</p>}
+                            {jsonError && <p className="text-xs text-red-500 font-bold ml-2">{jsonError}</p>}
                           </div>
                         </div>
 
