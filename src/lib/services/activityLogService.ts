@@ -305,7 +305,7 @@ export class ActivityLogService {
     // Push live activity update via SSE if successful
     if (params.status === 'success') {
       try {
-        const { sendEventToUser } = await import('@/app/api/stream-notifications/route');
+        const { sseService } = await import('@/lib/services/sseService');
         
         // Map to frontend format for immediate display
         const activityPayload = {
@@ -319,7 +319,7 @@ export class ActivityLogService {
         };
 
         // Try to push to active SSE connection
-        await sendEventToUser(params.userId, 'activity', activityPayload);
+        await sseService.sendEventToUser(params.userId, 'activity', activityPayload);
       } catch (error) {
         // SSE push is best-effort, ignore errors
         console.debug('Failed to push live activity update:', error);

@@ -44,10 +44,24 @@ export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('overview');
   const [activeSubTab, setActiveSubTab] = useState('');
 
+  // Update URL hash when tab changes
+  const handleTabChange = (tab: string, subTab?: string) => {
+    console.log('🔄 Tab change requested:', tab, subTab);
+    const hash = subTab ? `${tab}-${subTab}` : tab;
+    
+    // Update hash which will trigger parseHash via hashchange event
+    window.location.hash = hash;
+    
+    // Manually set state for immediate UI feedback
+    setActiveTab(tab);
+    setActiveSubTab(subTab || '');
+  };
+
   // Parse hash from URL on mount and on hash change
   useEffect(() => {
     const parseHash = () => {
       const hash = window.location.hash.slice(1);
+      console.log('📍 Parsing hash:', hash);
       if (!hash) {
         setActiveTab('overview');
         setActiveSubTab('');
@@ -57,6 +71,8 @@ export default function AdminDashboard() {
       const parts = hash.split('-');
       const section = parts[0];
       const subsection = parts.slice(1).join('-') || '';
+      
+      console.log('🧩 Parsed:', { section, subsection });
 
       setActiveTab(section);
       setActiveSubTab(subsection);
@@ -66,14 +82,6 @@ export default function AdminDashboard() {
     window.addEventListener('hashchange', parseHash);
     return () => window.removeEventListener('hashchange', parseHash);
   }, []);
-
-  // Update URL hash when tab changes
-  const handleTabChange = (tab: string, subTab?: string) => {
-    const hash = subTab ? `${tab}-${subTab}` : tab;
-    window.location.hash = hash;
-    setActiveTab(tab);
-    setActiveSubTab(subTab || '');
-  };
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -175,10 +183,10 @@ export default function AdminDashboard() {
           </div>
 
           <main className="flex-1 overflow-auto p-4 md:p-6 lg:p-8 relative">
-            <div className="max-w-7xl mx-auto space-y-6">
+            <div className="w-full space-y-6">
               
               {/* Content Switching */}
-              {activeTab === 'overview' && <AdminKPIs />}
+              {activeTab === 'overview' && <AdminKPIs onTabChange={handleTabChange} />}
               
               {activeTab === 'analytics' && activeSubTab === 'ai' && <AIAnalytics />}
               {activeTab === 'analytics' && activeSubTab === 'journey' && <CVJourneyKPIs />}

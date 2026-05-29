@@ -1136,7 +1136,14 @@ export default function ResumeEnhancerContainer({
           } else {
             // Skip to requested step or default to Step 3 for editing
             const targetStep = requestedStep || 3;
-            goToStepSafely(targetStep, { silent: true });
+            
+            if (targetStep === 2) {
+              // Step 2 is the template overlay, which needs Step 1 as background
+              goToStepSafely(1, { silent: true });
+              setShowTemplateOverlay(true);
+            } else {
+              goToStepSafely(targetStep, { silent: true });
+            }
             
             // Set completed steps based on target step
             const completed = [];
@@ -1389,9 +1396,15 @@ export default function ResumeEnhancerContainer({
           }
         }
 
-        // Only go to step 1 if we are starting fresh (create mode, no ID) and not restoring draft
+        // Only go to requested step (or default to 1) if we are starting fresh (create mode, no ID) and not restoring draft
         if (mode === 'create' && !cvId && !journeyId && !restoreDraft) {
-          goToStepSafely(1, { silent: true });
+          const targetStep = requestedStep || 1;
+          if (targetStep === 2) {
+            goToStepSafely(1, { silent: true });
+            setShowTemplateOverlay(true);
+          } else {
+            goToStepSafely(targetStep, { silent: true });
+          }
         }
 
         // Mark as initialized

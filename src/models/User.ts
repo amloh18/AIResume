@@ -14,6 +14,16 @@ export type UserPlanKey =
   | 'pro_yearly'
   | 'pro_lifetime';
 
+export type UserLifecycleState =
+  | 'NEW'
+  | 'IMPORTED'
+  | 'PRIMARY_CV_CREATED'
+  | 'ANALYZED'
+  | 'AUTHENTICATED'
+  | 'SEGMENTED'
+  | 'ONBOARDING_COMPLETE'
+  | 'ACTIVE';
+
 const USER_PLAN_KEYS: UserPlanKey[] = [
   'free',
   'starter_monthly',
@@ -43,6 +53,11 @@ export interface IUser extends Document {
   role: 'user' | 'admin';
   userRole?: 'Student' | 'Professional' | 'Recruiter';
   isEmailVerified: boolean;
+
+  // Guest support
+  isAnonymous: boolean;
+  anonymousToken?: string;
+  userLifecycleState: UserLifecycleState;
 
   // Note: Authentication tokens are now stored in separate VerificationToken collection
 
@@ -204,6 +219,12 @@ export interface IUser extends Document {
     activation_status?: 'pending' | 'completed';
     activation_route?: string;
     dashboard_layout_type?: 'cv' | 'tracker' | 'auto_apply';
+    
+    // Detailed session tracking
+    current_stage?: string;
+    completed_stages?: string[];
+    onboarding_version?: number;
+    primary_cv_id?: string | mongoose.Types.ObjectId;
   };
 
   createdAt: Date;
@@ -281,6 +302,32 @@ const userSchema = new Schema<IUser>({
   isEmailVerified: {
     type: Boolean,
     default: false
+  },
+  // Guest and Lifecycle support
+  isAnonymous: {
+    type: Boolean,
+    default: false,
+    index: true
+  },
+  anonymousToken: {
+    type: String,
+    sparse: true,
+    index: true
+  },
+  userLifecycleState: {
+    type: String,
+    enum: [
+      'NEW',
+      'IMPORTED',
+      'PRIMARY_CV_CREATED',
+      'ANALYZED',
+      'AUTHENTICATED',
+      'SEGMENTED',
+      'ONBOARDING_COMPLETE',
+      'ACTIVE'
+    ],
+    default: 'NEW',
+    index: true
   },
   // Token fields removed - now handled by VerificationToken collection
   // STANDARDIZED: Consistent plan key format across all models
@@ -687,7 +734,13 @@ const userSchema = new Schema<IUser>({
     recommended_plan: { type: String },
     activation_status: { type: String, enum: ['pending', 'completed'], default: 'pending' },
     activation_route: { type: String },
-    dashboard_layout_type: { type: String, enum: ['cv', 'tracker', 'auto_apply'] }
+    dashboard_layout_type: { type: String, enum: ['cv', 'tracker', 'auto_apply'] },
+    
+    // Detailed session tracking
+    current_stage: { type: String },
+    completed_stages: { type: [String], default: [] },
+    onboarding_version: { type: Number, default: 1 },
+    primary_cv_id: { type: Schema.Types.ObjectId, ref: 'CV' }
   }
 }, {
   timestamps: true,
@@ -718,6 +771,10 @@ userSchema.pre('save', async function (next) {
     }
 
     // Set default values for required fields
+    if (!this.userLifecycleState) {
+      this.userLifecycleState = 'NEW';
+    }
+
     if (!this.usage) {
       this.usage = {
         cvJourneyCount: 0,

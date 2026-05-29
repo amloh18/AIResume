@@ -78,6 +78,33 @@ export async function getAuthenticatedUser(request?: NextRequest): Promise<AuthR
       };
     }
 
+    // Check for anonymous user session
+    try {
+      const { cookies } = await import('next/headers');
+      const cookieStore = await cookies();
+      const anonymousToken = cookieStore.get('cvcircle_anonymous_token')?.value;
+      
+      if (anonymousToken) {
+        console.log('👤 Auth - Anonymous token found:', anonymousToken.substring(0, 8));
+        await getConnection();
+        
+        const anonUser = await User.findOne({ 
+          anonymousToken, 
+          isAnonymous: true 
+        });
+        
+        if (anonUser) {
+          return {
+            user: anonUser,
+            userEmail: anonUser.email,
+            userId: anonUser._id.toString(),
+          };
+        }
+      }
+    } catch (cookieError) {
+      // Ignore errors in environments where cookies are not available (e.g. some build scripts)
+    }
+
     console.log('❌ Auth - No valid authentication found');
     return null;
 

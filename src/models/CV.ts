@@ -57,6 +57,16 @@ export interface ICV extends Document {
     parentMasterId?: mongoose.Types.ObjectId; // For Standalone CVs forked from Master
     isUserMaster?: boolean; // Definitive flag for THE Master CV (single per user)
     fresherMode?: boolean; // Education/Projects first layout (no work experience)
+    // Analysis Snapshot for Onboarding & Dashboard
+    analysisSnapshot?: {
+      healthIndex: number;
+      atsReadability: number;
+      keywordCoverage: number;
+      impactScore: number;
+      strengths: string[];
+      weaknesses: string[];
+      generatedAt: Date;
+    };
     // CV Surgeon Analysis Cache
     surgeonAnalysis?: {
       score: number;
@@ -204,6 +214,16 @@ const cvSchema = new Schema<ICV>({
     parentMasterId: { type: Schema.Types.ObjectId, ref: 'CV' }, // Source Master CV for forks
     isUserMaster: { type: Boolean, default: false }, // Definitive single Master flag
     fresherMode: { type: Boolean, default: false }, // Education/Projects first layout
+    // Analysis Snapshot for Onboarding & Dashboard
+    analysisSnapshot: {
+      healthIndex: { type: Number },
+      atsReadability: { type: Number },
+      keywordCoverage: { type: Number },
+      impactScore: { type: Number },
+      strengths: { type: [String], default: [] },
+      weaknesses: { type: [String], default: [] },
+      generatedAt: { type: Date, default: Date.now }
+    },
     // CV Surgeon Analysis Cache
     surgeonAnalysis: {
       score: { type: Number },

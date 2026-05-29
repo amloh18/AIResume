@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
     }
     
     const body = await request.json();
-    const { email, password, firstName, lastName } = body;
+    const { email, password, firstName, lastName, anonymousToken } = body;
 
     console.log('📧 Registration attempt for email:', email);
 
@@ -178,6 +178,23 @@ export async function POST(request: NextRequest) {
 
     await user.save();
     console.log('✅ User created with ID:', user._id.toString());
+
+    // Check for anonymous user to merge
+    let effectiveAnonToken = anonymousToken;
+    if (!effectiveAnonToken) {
+      try {
+        const { cookies } = await import('next/headers');
+        const cookieStore = await cookies();
+        effectiveAnonToken = cookieStore.get('cvcircle_anonymous_token')?.value;
+      } catch (err) {
+        console.warn('Could not read anonymous token from cookies');
+      }
+    }
+
+    if (effectiveAnonToken) {
+      const { UserService } = await import('@/lib/auth/user-service');
+      await UserService.mergeAnonymousUser(effectiveAnonToken, user._id.toString());
+    }
 
     // Generate verification code
     const code = generateVerificationCode();

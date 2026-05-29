@@ -27,6 +27,7 @@ import {
   TrendingUp,
   ArrowUpCircle
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import UniversalPaymentModal from '@/components/payment/UniversalPaymentModal';
 import UserActivityModal from './UserActivityModal';
 import { USER_ROLES, DEFAULT_PAGINATION_LIMIT, DEFAULT_SEARCH_DEBOUNCE_MS, PAYMENT_PROVIDERS } from '@/lib/config/adminConstants';
@@ -393,87 +394,82 @@ const UserManagement: React.FC = () => {
     return matchesSearch && matchesRole && matchesPlan;
   });
 
-  // Always show the structure, only skeleton the data portions
-
-  if (error) {
-    return (
-      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6">
-        <div className="flex items-center">
-          <AlertCircle className="h-5 w-5 text-red-400 mr-3" />
-          <div>
-            <h3 className="text-sm font-medium text-red-800 dark:text-red-200">
-              Error Loading Users
-            </h3>
-            <p className="text-sm text-red-700 dark:text-red-300 mt-1">
-              {error}
-            </p>
-            <button
-              onClick={() => fetchUsers(true)}
-              className="mt-3 text-sm bg-red-100 dark:bg-red-800 text-red-800 dark:text-red-200 px-3 py-1 rounded hover:bg-red-200 dark:hover:bg-red-700"
-            >
-              Try Again
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-6">
-      {/* Header with Filters */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">User Management</h1>
-            <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-sm font-medium rounded-full">
-              Total Users: {metrics.totalUsers.toLocaleString()}
-            </span>
-          </div>
-          <p className="text-gray-600 dark:text-gray-300 mt-1">Manage user accounts and subscriptions</p>
-        </div>
-
-        {/* Filters inline with header */}
-        <div className="flex items-center gap-3">
-          <div className="relative w-64">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search users..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-          <select
-            value={filterRole}
-            onChange={(e) => setFilterRole(e.target.value)}
-            className="px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+    <div className="space-y-6 relative min-h-screen">
+      <AnimatePresence mode="wait">
+        {selectedUserForActivity && isActivityModalOpen ? (
+          <UserActivityModal
+            key="activity-view"
+            userId={selectedUserForActivity._id}
+            isOpen={isActivityModalOpen}
+            onClose={() => {
+              setIsActivityModalOpen(false);
+              setSelectedUserForActivity(null);
+            }}
+          />
+        ) : (
+          <motion.div
+            key="list-view"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            className="space-y-6"
           >
-            <option value="all">All Roles</option>
-            {USER_ROLES.map((role) => (
-              <option key={role} value={role}>
-                {role.charAt(0).toUpperCase() + role.slice(1)}
-              </option>
-            ))}
-          </select>
-          <select
-            value={filterPlan}
-            onChange={(e) => setFilterPlan(e.target.value)}
-            className="px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="all">All Plans</option>
-            {planConfig.plans.map((planKey) => (
-              <option key={planKey} value={planKey}>
-                {planConfig.planDisplayNames[planKey] || planKey}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
+            {/* Header with Filters */}
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+              <div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <h1 className="text-2xl font-bold text-gray-900 dark:text-white">User Management</h1>
+                  <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs font-bold rounded-full shrink-0">
+                    {metrics.totalUsers.toLocaleString()} Total
+                  </span>
+                </div>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage accounts, subscriptions and activity</p>
+              </div>
 
-      {/* Metrics Cards */}
-      <div className="grid grid-cols-1 tablet:grid-cols-2 desktop:grid-cols-4 gap-6">
+              {/* Filters */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                <div className="relative w-full sm:w-64">
+                  <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search name or email..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <div className="flex gap-2 w-full sm:w-auto">
+                  <select
+                    value={filterRole}
+                    onChange={(e) => setFilterRole(e.target.value)}
+                    className="flex-1 sm:flex-none px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="all">All Roles</option>
+                    {USER_ROLES.map((role) => (
+                      <option key={role} value={role}>
+                        {role.charAt(0).toUpperCase() + role.slice(1)}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={filterPlan}
+                    onChange={(e) => setFilterPlan(e.target.value)}
+                    className="flex-1 sm:flex-none px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="all">All Plans</option>
+                    {planConfig.plans.map((planKey) => (
+                      <option key={planKey} value={planKey}>
+                        {planConfig.planDisplayNames[planKey] || planKey}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Metrics Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 desktop:grid-cols-4 gap-4 md:gap-6">
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div>
@@ -714,8 +710,11 @@ const UserManagement: React.FC = () => {
           </div>
         </div>
       </div>
+    </motion.div>
+  )}
+</AnimatePresence>
 
-      {/* Membership Modal */}
+  {/* Membership Modal */}
       {selectedUserForModal && (
         <UniversalPaymentModal
           isOpen={isMembershipModalOpen}
@@ -727,20 +726,6 @@ const UserManagement: React.FC = () => {
           }}
           adminMode={true}
           subjectUserId={selectedUserForModal._id}
-        />
-      )}
-
-      {/* User Activity Modal */}
-      {selectedUserForActivity && (
-        <UserActivityModal
-          userId={selectedUserForActivity._id}
-          userName={`${selectedUserForActivity.firstName} ${selectedUserForActivity.lastName}`}
-          userEmail={selectedUserForActivity.email}
-          isOpen={isActivityModalOpen}
-          onClose={() => {
-            setIsActivityModalOpen(false);
-            setSelectedUserForActivity(null);
-          }}
         />
       )}
     </div>

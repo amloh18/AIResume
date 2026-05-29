@@ -360,6 +360,26 @@ export class UnifiedAuthService {
                 await newUser.save();
                 userDoc = newUser.toObject();
                 console.log('✅ New user created for passwordless login:', newUser._id.toString());
+                
+                // Check for anonymous user to merge
+                try {
+                  const headersList = await headers();
+                  const cookieHeader = headersList.get('cookie');
+                  if (cookieHeader) {
+                    const match = cookieHeader.match(/cvcircle_anonymous_token=([^;]+)/);
+                    if (match && match[1]) {
+                      const anonymousToken = match[1];
+                      console.log('🔄 Merging anonymous user during passwordless signup:', anonymousToken);
+                      await UserService.mergeAnonymousUser(anonymousToken, userDoc._id.toString());
+                      
+                      // Fetch updated user doc to get merged onboarding state
+                      const updatedUser = await User.findById(userDoc._id).lean().exec();
+                      if (updatedUser) userDoc = updatedUser;
+                    }
+                  }
+                } catch (err) {
+                  console.warn('⚠️ Failed to merge anonymous user during passwordless signup:', err);
+                }
               } else if (!userDoc.isEmailVerified) {
                 // Update existing user to be verified
                 await User.findByIdAndUpdate((userDoc._id as any).toString(), {
@@ -479,6 +499,22 @@ export class UnifiedAuthService {
               });
 
               if (oauthUser) {
+                // Check for anonymous user to merge
+                try {
+                  const headersList = await headers();
+                  const cookieHeader = headersList.get('cookie');
+                  if (cookieHeader) {
+                    const match = cookieHeader.match(/cvcircle_anonymous_token=([^;]+)/);
+                    if (match && match[1]) {
+                      const anonymousToken = match[1];
+                      console.log('🔄 Merging anonymous user during OAuth sign-in:', anonymousToken);
+                      await UserService.mergeAnonymousUser(anonymousToken, oauthUser.id);
+                    }
+                  }
+                } catch (err) {
+                  console.warn('⚠️ Failed to merge anonymous user during OAuth sign-in:', err);
+                }
+
                 user.id = oauthUser.id;
                 // Store LinkedIn-specific data in user object for JWT callback
                 if (linkedInAccessToken) {
