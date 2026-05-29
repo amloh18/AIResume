@@ -266,8 +266,8 @@ export async function POST(request: NextRequest) {
 
                         // 2. Push progress to global notification system via SSE
                         try {
-                          const { sendEventToUser } = await import('@/app/api/stream-notifications/route');
-                          await sendEventToUser(authUser.userId, 'progress', {
+                          const { sseService } = await import('@/lib/services/sseService');
+                          await sseService.sendEventToUser(authUser.userId, 'progress', {
                             id: 'sponsorship_upload',
                             progress,
                             message: `Processing ${country.toUpperCase()} sponsorship registry...`
@@ -279,8 +279,8 @@ export async function POST(request: NextRequest) {
 
                     // Clear progress on completion
                     try {
-                      const { sendEventToUser } = await import('@/app/api/stream-notifications/route');
-                      await sendEventToUser(authUser.userId, 'progress', {
+                      const { sseService } = await import('@/lib/services/sseService');
+                      await sseService.sendEventToUser(authUser.userId, 'progress', {
                         id: 'sponsorship_upload',
                         progress: 100
                       });

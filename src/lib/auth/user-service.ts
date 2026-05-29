@@ -146,5 +146,54 @@ export class UserService {
       return null;
     }
   }
+
+  /**
+   * Merge anonymous user data into a real user account
+   */
+  static async mergeAnonymousUser(anonymousToken: string, realUserId: string): Promise<boolean> {
+    try {
+      await getConnection();
+      const anonUser = await userRepository.findByAnonymousToken(anonymousToken);
+      if (!anonUser) {
+        console.log('⚠️ No anonymous user found for token:', anonymousToken);
+        return false;
+      }
+
+      const anonUserId = anonUser._id.toString();
+      console.log(`🔄 Merging anonymous user ${anonUserId} into real user ${realUserId}`);
+
+      // 1. Transfer Primary CV and any other CVs
+      const CV = (await import('@/models/CV')).default;
+      const cvUpdateResult = await CV.updateMany(
+        { userId: anonUserId },
+        { $set: { userId: realUserId } }
+      );
+      console.log(`✅ Transferred ${cvUpdateResult.modifiedCount} CVs to real user`);
+
+      // 2. Transfer Onboarding data and set lifecycle state
+      // We merge onboarding data, preferring anonymous data if present
+      const realUser = await userRepository.findById(realUserId);
+      const mergedOnboarding = {
+        ...(realUser?.onboarding || {}),
+        ...(anonUser.onboarding || {})
+      };
+
+      await userRepository.updateById(realUserId, {
+        $set: {
+          onboarding: mergedOnboarding,
+          userLifecycleState: 'AUTHENTICATED'
+        }
+      } as any);
+
+      // 3. Delete anonymous user
+      await userRepository.deleteById(anonUserId);
+      console.log(`✅ Anonymous user ${anonUserId} deleted after merge`);
+
+      return true;
+    } catch (error) {
+      console.error('❌ Error merging anonymous user:', error);
+      return false;
+    }
+  }
 }
 

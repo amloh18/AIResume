@@ -5,9 +5,7 @@ import { getConnection } from '@/lib/database';
 import Notification from '@/models/Notification';
 import ActivityLog from '@/models/ActivityLog';
 import mongoose from 'mongoose';
-
-// Store active connections
-const connections = new Map<string, ReadableStreamDefaultController>();
+import { sseService } from '@/lib/services/sseService';
 
 export const dynamic = 'force-dynamic';
 
@@ -100,9 +98,8 @@ export async function GET(request: NextRequest) {
         const stream = new ReadableStream({
             start(controller) {
                 try {
-                    // Store connection
-                    connections.set(userId, controller);
-                    console.log(`🔗 SSE connection stored for user ${userId}. Total active connections: ${connections.size}`);
+                    // Register connection with service
+                    sseService.registerConnection(userId, controller);
 
                     // Send initial connection message
                     controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'connected', userId })}\n\n`));
@@ -111,7 +108,7 @@ export async function GET(request: NextRequest) {
                     try {
                         controller.close();
                     } catch (closeError) {}
-                    connections.delete(userId);
+                    sseService.removeConnection(userId);
                     return;
                 }
 
@@ -171,7 +168,7 @@ export async function GET(request: NextRequest) {
                         clearInterval(interval);
                         clearInterval(heartbeatInterval);
                         clearTimeout(connectionTimeout);
-                        connections.delete(userId);
+                        sseService.removeConnection(userId);
                     }
                 }, heartbeatIntervalMs);
 
@@ -181,7 +178,7 @@ export async function GET(request: NextRequest) {
                     console.log(`⏱️ SSE connection timeout for user ${userId}, closing gracefully`);
                     clearInterval(interval);
                     clearInterval(heartbeatInterval);
-                    connections.delete(userId);
+                    sseService.removeConnection(userId);
                     try {
                         controller.close();
                     } catch (error) {}
@@ -193,7 +190,7 @@ export async function GET(request: NextRequest) {
                     clearInterval(interval);
                     clearInterval(heartbeatInterval);
                     clearTimeout(connectionTimeout);
-                    connections.delete(userId);
+                    sseService.removeConnection(userId);
                     try {
                         controller.close();
                     } catch (error) {}
@@ -216,37 +213,3 @@ export async function GET(request: NextRequest) {
         });
     }
 }
-
-/**
- * Generic function to send an event to a specific user via SSE
- */
-export async function sendEventToUser(userId: string, type: string, payload: any) {
-    const controller = connections.get(userId);
-    if (controller) {
-        const encoder = new TextEncoder();
-        const data = JSON.stringify({
-            type,
-            [type]: payload,
-        });
-        try {
-            controller.enqueue(encoder.encode(`data: ${data}\n\n`));
-            console.log(`✅ Event [${type}] enqueued to SSE stream for user ${userId}`);
-        } catch (error) {
-            console.error(`Error sending ${type} via SSE:`, error);
-            connections.delete(userId);
-        }
-    } else {
-        // Log skip in dev
-        if (process.env.NODE_ENV === 'development') {
-            console.debug(`⏭️ No active SSE connection for user ${userId}, event [${type}] skipped`);
-        }
-    }
-}
-
-/**
- * Backward compatibility: sendNotificationToUser
- */
-export async function sendNotificationToUser(userId: string, notification: any) {
-    return sendEventToUser(userId, 'notification', notification);
-}
-

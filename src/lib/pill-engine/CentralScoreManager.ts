@@ -84,7 +84,7 @@ const ROLE_DETECTION_PATTERNS: Array<{ patterns: RegExp[]; role: IndustryRole }>
     { patterns: [/consultant|advisor|analyst|strategy/i], role: 'consultant' }
 ];
 
-interface IndustryKeywordSet {
+export interface IndustryKeywordSet {
     technicalSkills: string[];
     softSkills: string[];
     competencies: string[];
@@ -92,7 +92,7 @@ interface IndustryKeywordSet {
     certifications: string[];
 }
 
-const INDUSTRY_STANDARD_KEYWORDS: Record<IndustryRole, IndustryKeywordSet> = {
+export const INDUSTRY_STANDARD_KEYWORDS: Record<IndustryRole, IndustryKeywordSet> = {
     software_engineer: {
         technicalSkills: ['javascript', 'typescript', 'python', 'java', 'react', 'node.js', 'aws', 'docker', 'kubernetes', 'sql', 'nosql', 'mongodb', 'postgresql', 'git', 'ci/cd', 'rest api', 'graphql', 'microservices', 'agile', 'scrum', 'testing', 'debugging', 'optimization'],
         softSkills: ['problem-solving', 'collaboration', 'communication', 'attention to detail'],

@@ -35,6 +35,37 @@ export class UserRepository extends BaseRepository<IUser> {
   }
 
   /**
+   * Find user by anonymous token
+   */
+  async findByAnonymousToken(anonymousToken: string): Promise<IUser | null> {
+    return this.findOne(
+      { anonymousToken, isAnonymous: true } as FilterQuery<IUser>,
+      { lean: true }
+    );
+  }
+
+  /**
+   * Create anonymous user
+   */
+  async createAnonymousUser(anonymousToken: string): Promise<IUser> {
+    return this.create({
+      firstName: 'Anonymous',
+      lastName: 'User',
+      email: `guest_${anonymousToken.substring(0, 8)}@cvcircle.io`, // Placeholder email
+      isAnonymous: true,
+      anonymousToken,
+      isEmailVerified: false,
+      role: 'user',
+      currentPlanKey: 'free',
+      userLifecycleState: 'NEW',
+      onboarding: {
+        completed_stages: [],
+        onboarding_version: 1
+      }
+    } as Partial<IUser>);
+  }
+
+  /**
    * Find user by auth provider ID
    */
   async findByAuthProviderId(authProviderId: string): Promise<IUser | null> {

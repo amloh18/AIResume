@@ -16,6 +16,8 @@ import {
 } from 'lucide-react';
 import { UserTier } from '@/types/dashboard-widgets';
 import { useDashboardData } from '@/contexts/DashboardDataContext';
+import { useRouter } from 'next/navigation';
+import { usePaymentModal } from '@/contexts/PaymentModalContext';
 import { cn } from '@/lib/utils';
 import KPICard from './KPICard';
 import CVStrengthRadar from './CVStrengthRadar';
@@ -41,6 +43,8 @@ interface RedesignedDashboardViewProps {
 }
 
 export default function RedesignedDashboardView({ tier, isExpanded = false }: RedesignedDashboardViewProps) {
+  const router = useRouter();
+  const { openPaymentModal } = usePaymentModal();
   const { 
     cvs, 
     coverLetters, 
@@ -62,6 +66,41 @@ export default function RedesignedDashboardView({ tier, isExpanded = false }: Re
   const cvScore = masterCV?.metadata?.atsScore || 0;
   
   const getKPIs = () => {
+    const handleKPIClick = (title: string) => {
+      if (title === "CV Score") {
+        router.push('/editor');
+        return;
+      }
+
+      if (tier === 'starter') {
+        openPaymentModal({ 
+          triggerContext: `dashboard-kpi-${title.toLowerCase().replace(' ', '-')}`,
+          preselectedPlanKey: 'focused_monthly'
+        });
+        return;
+      }
+
+      switch (title) {
+        case "Tailored CVs":
+          router.push('/editor');
+          break;
+        case "Cover Letters":
+          router.push('/dashboard/tracker');
+          break;
+        case "ATS Scans":
+          router.push('/dashboard/tracker');
+          break;
+        case "Jobs Tracked":
+          router.push('/dashboard/tracker');
+          break;
+        case "Auto Applies":
+          router.push('/dashboard/jobs?tab=auto-apply');
+          break;
+        default:
+          break;
+      }
+    };
+
     const common = [
       { 
         title: "CV Score", 
@@ -70,7 +109,9 @@ export default function RedesignedDashboardView({ tier, isExpanded = false }: Re
         color: "#163d32", 
         trend: cvScore > 0 ? "+12" : undefined, 
         trendDirection: 'up' as const,
-        loading: secondaryLoading.cvs
+        loading: secondaryLoading.cvs,
+        onClick: () => handleKPIClick("CV Score"),
+        actionLabel: "Open Canvas"
       },
       { 
         title: "Tailored CVs", 
@@ -78,21 +119,27 @@ export default function RedesignedDashboardView({ tier, isExpanded = false }: Re
         icon: <Briefcase />, 
         color: "#ffd0b0", 
         subtitle: `${goals.cvsCreatedThisMonth} this month`,
-        loading: secondaryLoading.cvs
+        loading: secondaryLoading.cvs,
+        onClick: () => handleKPIClick("Tailored CVs"),
+        actionLabel: tier === 'starter' ? "Upgrade" : "Open Canvas"
       },
       { 
         title: "Cover Letters", 
         value: coverLetters.length.toString(), 
         icon: <FileText />, 
         color: "#1c4ce8",
-        loading: secondaryLoading.coverLetters
+        loading: secondaryLoading.coverLetters,
+        onClick: () => handleKPIClick("Cover Letters"),
+        actionLabel: tier === 'starter' ? "Upgrade" : "Open Tracker"
       },
       { 
         title: "ATS Scans", 
         value: analytics?.totalScans || "0", 
         icon: <Search />, 
         color: "#6138db",
-        loading: secondaryLoading.analytics
+        loading: secondaryLoading.analytics,
+        onClick: () => handleKPIClick("ATS Scans"),
+        actionLabel: tier === 'starter' ? "Upgrade" : "Open Tracker"
       },
     ];
 
@@ -107,7 +154,9 @@ export default function RedesignedDashboardView({ tier, isExpanded = false }: Re
         color: "#6138db", 
         trend: `+${streak.applicationsThisWeek}`, 
         trendDirection: 'up' as const,
-        loading: secondaryLoading.jobs
+        loading: secondaryLoading.jobs,
+        onClick: () => handleKPIClick("Jobs Tracked"),
+        actionLabel: "Open Tracker"
       }
     ];
 
@@ -122,7 +171,9 @@ export default function RedesignedDashboardView({ tier, isExpanded = false }: Re
         color: "#0f172a", 
         trend: "+8", 
         trendDirection: 'up' as const,
-        loading: secondaryLoading.analytics
+        loading: secondaryLoading.analytics,
+        onClick: () => handleKPIClick("Auto Applies"),
+        actionLabel: "View Autopilot"
       }
     ];
   };

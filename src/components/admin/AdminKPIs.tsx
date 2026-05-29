@@ -29,7 +29,11 @@ interface ChartData {
   aiUsage: number;
 }
 
-const AdminKPIs: React.FC = () => {
+interface AdminKPIsProps {
+  onTabChange?: (tab: string, subTab?: string) => void;
+}
+
+const AdminKPIs: React.FC<AdminKPIsProps> = ({ onTabChange }) => {
   const [kpiData, setKpiData] = useState<KPIData | null>(null);
   const [chartData, setChartData] = useState<ChartData[]>([]);
   const [recentUsers, setRecentUsers] = useState<any[]>([]);
@@ -146,7 +150,10 @@ const AdminKPIs: React.FC = () => {
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {/* Dark Green Card */}
-        <div className="bg-[#185b3a] rounded-3xl p-6 text-white relative overflow-hidden shadow-lg shadow-[#185b3a]/20">
+        <button 
+          onClick={() => onTabChange?.('management', 'users')}
+          className="bg-[#185b3a] rounded-3xl p-6 text-white relative overflow-hidden shadow-lg shadow-[#185b3a]/20 text-left hover:scale-[1.02] transition-transform duration-200"
+        >
           <div className="flex justify-between items-start mb-4">
             <p className="text-lime-50 font-medium text-lg">Total Users</p>
             <div className="w-8 h-8 rounded-full border border-lime-400/30 flex items-center justify-center bg-white/10 backdrop-blur-sm">
@@ -163,15 +170,19 @@ const AdminKPIs: React.FC = () => {
             </span>
             Increased from last month
           </div>
-        </div>
+        </button>
 
         {/* White Cards */}
         {[
-          { title: 'Active Users', value: kpiData?.activeUsers?.toLocaleString() || '0', change: calculateChange(kpiData?.activeUsers || 0, 20) },
-          { title: 'Total CVs', value: kpiData?.totalCVs?.toLocaleString() || '0', change: calculateChange(kpiData?.totalCVs || 0, 30) },
-          { title: 'Jobs Tracked', value: kpiData?.totalJobs?.toLocaleString() || '0', status: 'Active' },
+          { title: 'Active Users', value: kpiData?.activeUsers?.toLocaleString() || '0', change: calculateChange(kpiData?.activeUsers || 0, 20), tab: 'analytics', subTab: 'logs' },
+          { title: 'Total CVs', value: kpiData?.totalCVs?.toLocaleString() || '0', change: calculateChange(kpiData?.totalCVs || 0, 30), tab: 'management', subTab: 'drafts' },
+          { title: 'Jobs Tracked', value: kpiData?.totalJobs?.toLocaleString() || '0', status: 'Active', tab: 'analytics', subTab: 'journey' },
         ].map((card, idx) => (
-          <div key={idx} className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col justify-between">
+          <button 
+            key={idx} 
+            onClick={() => onTabChange?.(card.tab, card.subTab)}
+            className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col justify-between text-left hover:shadow-md hover:scale-[1.02] transition-all duration-200"
+          >
             <div className="flex justify-between items-start mb-4">
               <p className="text-gray-600 dark:text-gray-400 font-medium text-lg">{card.title}</p>
               <div className="w-8 h-8 rounded-full border border-gray-200 dark:border-gray-600 flex items-center justify-center">
@@ -192,14 +203,17 @@ const AdminKPIs: React.FC = () => {
                 <span className="text-gray-400">System tracked</span>
               )}
             </div>
-          </div>
+          </button>
         ))}
       </div>
 
       {/* Middle Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Project Analytics Bar Chart */}
-        <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+        <button 
+          onClick={() => onTabChange?.('analytics', 'ai')}
+          className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 text-left hover:shadow-md transition-shadow duration-200"
+        >
           <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6">System Analytics</h3>
           <div className="h-[250px] w-full">
             {chartData.length > 0 ? (
@@ -217,7 +231,7 @@ const AdminKPIs: React.FC = () => {
               <div className="h-full w-full flex items-center justify-center text-gray-400">Loading chart data...</div>
             )}
           </div>
-        </div>
+        </button>
 
         {/* Reminders & Alerts */}
         <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col justify-between">
@@ -231,7 +245,10 @@ const AdminKPIs: React.FC = () => {
               </p>
             </div>
           </div>
-          <button className="w-full flex items-center justify-center gap-2 px-5 py-4 bg-[#185b3a] hover:bg-[#114028] text-white rounded-2xl font-medium transition-colors shadow-md">
+          <button 
+            onClick={() => onTabChange?.('analytics', 'system')}
+            className="w-full flex items-center justify-center gap-2 px-5 py-4 bg-[#185b3a] hover:bg-[#114028] text-white rounded-2xl font-medium transition-colors shadow-md"
+          >
             <Activity className="w-5 h-5" />
             View Full Report
           </button>
@@ -244,7 +261,10 @@ const AdminKPIs: React.FC = () => {
         <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-lg font-bold text-gray-900 dark:text-white">Recent Users</h3>
-            <button className="px-4 py-1.5 text-sm border border-gray-200 dark:border-gray-700 rounded-full hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300">
+            <button 
+              onClick={() => onTabChange?.('management', 'users')}
+              className="px-4 py-1.5 text-sm border border-gray-200 dark:border-gray-700 rounded-full hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300"
+            >
               View All
             </button>
           </div>
@@ -276,7 +296,10 @@ const AdminKPIs: React.FC = () => {
         </div>
 
         {/* Project Progress */}
-        <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+        <button 
+          onClick={() => onTabChange?.('analytics', 'journey')}
+          className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 text-left hover:shadow-md transition-shadow duration-200"
+        >
           <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Resource Usage</h3>
           <div className="h-[200px] relative">
             <ResponsiveContainer width="100%" height="100%">
@@ -313,13 +336,19 @@ const AdminKPIs: React.FC = () => {
               </div>
             ))}
           </div>
-        </div>
+        </button>
 
         {/* Time Tracker / Project List */}
         <div className="flex flex-col gap-6">
           <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 flex-1">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-bold text-gray-900 dark:text-white">Recent Activity</h3>
+              <button 
+                onClick={() => onTabChange?.('analytics', 'logs')}
+                className="text-xs text-gray-400 hover:text-[#185b3a] font-bold"
+              >
+                View All
+              </button>
             </div>
             <div className="space-y-4">
               {displayActivities.map((act, idx) => {

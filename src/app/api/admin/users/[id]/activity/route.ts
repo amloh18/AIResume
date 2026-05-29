@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
-import { User, CV, CoverLetter, JobApplication, ApplicationJourney, ActivityLog } from '@/models';
+import { User, CV, CoverLetter, JobApplication, ApplicationJourney, ActivityLog, SupportNote } from '@/models';
 import { requireAdmin } from '@/lib/middleware/admin-auth';
 
 // Force dynamic rendering
@@ -12,159 +12,148 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Verify admin authentication using NextAuth session
+    // Verify admin authentication
     await requireAdmin(request);
 
     const { id } = await params;
-
-    // Check database connection
-    try {
-      await getConnection();
-    } catch (dbError: any) {
-      console.error('❌ Database connection error:', dbError);
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Database connection failed',
-          details: dbError.message
-        },
-        { status: 500 }
-      );
-    }
+    await getConnection();
 
     // Find user
     const user = await User.findById(id).lean() as any;
     if (!user) {
-      return NextResponse.json(
-        { success: false, error: 'User not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
     }
 
-    // Convert userId to string for queries
-    const userId = (user as any)._id?.toString() || (user as any)._id;
+    const userId = user._id.toString();
 
-    // Count documents
-    const [cvCount, masterCVExists, coverLetterCount, jobCount, journeyCount] = await Promise.all([
-      CV.countDocuments({ userId: user._id }),
-      CV.countDocuments({ userId: user._id, 'metadata.isMaster': true }),
-      CoverLetter.countDocuments({ userId: user._id }),
+    // 1. Basic Metrics & LTV
+    const Invoice = (await import('@/models/Invoice')).default;
+    const [cvs, coverLetters, jobs, journeys, supportNotes, totalLogs, invoices] = await Promise.all([
+      CV.find({ userId: user._id }).sort({ updatedAt: -1 }).lean(),
+      CoverLetter.find({ userId: user._id }).sort({ updatedAt: -1 }).lean(),
       JobApplication.countDocuments({ userId: user._id }),
-      ApplicationJourney.countDocuments({ userId }),
+      ApplicationJourney.find({ userId }).lean(),
+      SupportNote.find({ userId: user._id }).sort({ timestamp: -1 }).lean(),
+      ActivityLog.countDocuments({ userId: user._id }),
+      Invoice.find({ userId: user._id, status: 'paid' }).lean()
     ]);
 
-    // Calculate total time spent using ActivityLog
-    // We'll group logs into sessions. A new session starts if there's a gap of > 30 minutes.
-    const logs = await ActivityLog.find({ userId: user._id }).lean()
-      .sort({ timestamp: 1 })
-      .select('timestamp')
-      .lean();
+    const lifetimeValue = invoices.reduce((sum: number, inv: any) => sum + (inv.amount || 0), 0);
 
-    let estimatedSessionTime = 0; // in minutes
+    const masterCV = cvs.find(cv => cv.metadata?.isMaster);
+    const tailoredCVsCount = cvs.length - (masterCV ? 1 : 0);
 
+    // 2. Journey Pipeline Overview
+    const pipeline = {
+      applied: journeys.filter(j => j.status === 'applied').length,
+      screening: journeys.filter(j => j.status === 'screening').length,
+      interview: journeys.filter(j => j.status === 'interview').length,
+      offers: journeys.filter(j => j.status === 'offer').length,
+      rejected: journeys.filter(j => j.status === 'rejected').length,
+      total: journeys.length
+    };
+
+    // 3. AI Usage & Time in App
+    const logs = await ActivityLog.find({ userId: user._id }).sort({ timestamp: 1 }).lean();
+    const aiActionsCount = logs.filter(l => l.logType === 'ai').length;
+    
+    let estimatedSessionTime = 0;
     if (logs.length > 0) {
       let currentSessionStart = new Date(logs[0].timestamp).getTime();
       let lastLogTime = currentSessionStart;
-      const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes in milliseconds
+      const SESSION_TIMEOUT = 30 * 60 * 1000;
 
       for (let i = 1; i < logs.length; i++) {
         const currentLogTime = new Date(logs[i].timestamp).getTime();
         const timeDiff = currentLogTime - lastLogTime;
-
         if (timeDiff > SESSION_TIMEOUT) {
-          // End of current session
-          // Add duration of previous session (at least 1 minute per action if single action)
-          const sessionDuration = Math.max(lastLogTime - currentSessionStart, 60000);
-          estimatedSessionTime += sessionDuration;
-
-          // Start new session
+          estimatedSessionTime += Math.max(lastLogTime - currentSessionStart, 60000);
           currentSessionStart = currentLogTime;
         }
-
         lastLogTime = currentLogTime;
       }
-
-      // Add the last session
-      const lastSessionDuration = Math.max(lastLogTime - currentSessionStart, 60000);
-      estimatedSessionTime += lastSessionDuration;
-
-      // Convert to minutes
+      estimatedSessionTime += Math.max(lastLogTime - currentSessionStart, 60000);
       estimatedSessionTime = Math.round(estimatedSessionTime / (1000 * 60));
     }
 
-    // Get recent activity (last 10 CVs, journeys, etc.)
-    const recentCVs = await CV.find({ userId: user._id }).lean()
-      .sort({ updatedAt: -1 })
-      .limit(10)
-      .select('title metadata.isMaster updatedAt')
-      .lean();
+    // 4. Feature Usage (Activity Distribution)
+    const featureUsage = {
+      cvEditor: logs.filter(l => l.resource?.type === 'cv' && l.action === 'updated').length,
+      atsScan: logs.filter(l => l.action === 'ats_check').length,
+      coverLetters: logs.filter(l => l.resource?.type === 'cover_letter').length,
+      interviewCoach: logs.filter(l => l.endpoint?.includes('interview')).length,
+      autoApply: logs.filter(l => l.endpoint?.includes('auto-apply')).length
+    };
+    
+    // Normalize to 0-100% based on max usage
+    const maxUsage = Math.max(...Object.values(featureUsage), 1);
+    const featureUsagePercent = Object.fromEntries(
+      Object.entries(featureUsage).map(([k, v]) => [k, Math.round((v / maxUsage) * 100)])
+    );
 
-    const recentJourneys = await ApplicationJourney.find({ userId }).lean()
-      .sort({ lastWorkedOn: -1 })
-      .limit(10)
-      .select('jobTitle company status lastWorkedOn')
-      .lean();
+    // 5. Recent Activity Feed
+    const recentActivity = logs.slice(-10).reverse().map(l => ({
+      action: l.action,
+      resourceType: l.resource?.type,
+      resourceName: l.resource?.name,
+      timestamp: l.timestamp,
+      ip: l.ipAddress
+    }));
+
+    // Get latest IP from logs
+    const latestLogWithIp = [...logs].reverse().find(l => l.ipAddress);
+    const ipAddress = latestLogWithIp?.ipAddress || 'unknown';
 
     return NextResponse.json({
       success: true,
       data: {
         user: {
-          _id: user._id,
-          email: user.email,
-          firstName: user.firstName,
-          lastName: user.lastName,
+          ...user,
           registrationDate: user.createdAt,
           lastActive: user.lastLogin || user.updatedAt,
+          ipAddress: ipAddress
         },
         metrics: {
-          masterCV: masterCVExists > 0,
-          cvCount,
-          coverLetterCount,
-          jobCount,
-          journeyCount,
-          totalDocuments: cvCount + coverLetterCount + jobCount,
-          estimatedSessionTimeMinutes: estimatedSessionTime,
-          estimatedSessionTimeHours: Math.round((estimatedSessionTime / 60) * 10) / 10, // Round to 1 decimal
+          healthScore: masterCV?.metadata?.analysisSnapshot?.healthIndex || 68,
+          analysisSnapshot: masterCV?.metadata?.analysisSnapshot,
+          masterCV: {
+            exists: !!masterCV,
+            atsScore: masterCV?.metadata?.atsScore || 0,
+            lastUpdated: masterCV?.updatedAt
+          },
+          cvs: {
+            total: cvs.length,
+            master: masterCV ? 1 : 0,
+            tailored: tailoredCVsCount
+          },
+          coverLetters: {
+            total: coverLetters.length,
+            lastCreated: coverLetters[0]?.createdAt
+          },
+          jobs: {
+            total: jobs,
+            active: journeys.filter(j => !['rejected', 'offer', 'ghosted'].includes(j.status)).length
+          },
+          documents: {
+            total: cvs.length + coverLetters.length + jobs,
+            storageUsed: user.subscription?.storageUsed || 0
+          },
+          journeys: journeys.length,
+          timeInApp: estimatedSessionTime,
+          aiApplications: aiActionsCount,
+          autoApplyEnabled: user.onboarding?.dashboard_layout_type === 'auto_apply',
+          subscription: user.subscription,
+          lifetimeValue: lifetimeValue
         },
-        activity: {
-          recentCVs: recentCVs.map(cv => ({
-            title: cv.title,
-            isMaster: cv.metadata?.isMaster || false,
-            lastModified: cv.updatedAt,
-          })),
-          recentJourneys: recentJourneys.map(journey => ({
-            jobTitle: journey.jobTitle,
-            company: journey.company,
-            status: journey.status,
-            lastWorkedOn: journey.lastWorkedOn,
-          })),
-        },
-      },
-    }, { headers: { 'Cache-Control': 'no-store' } });
+        pipeline,
+        featureUsage: featureUsagePercent,
+        recentActivity,
+        supportNotes
+      }
+    });
 
   } catch (error: any) {
     console.error('❌ Get user activity error:', error);
-
-    // Handle authentication errors
-    if (error.message === 'UNAUTHORIZED') {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-    if (error.message === 'FORBIDDEN') {
-      return NextResponse.json(
-        { success: false, error: 'Admin access required' },
-        { status: 403 }
-      );
-    }
-
-    return NextResponse.json(
-      {
-        success: false,
-        error: error.message || 'Failed to get user activity',
-      },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, error: error.message || 'Failed to get user activity' }, { status: 500 });
   }
 }

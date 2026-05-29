@@ -27,19 +27,24 @@ import {
   Check,
   Mail,
   Lock,
+  Info,
   User as UserIcon,
   Eye,
   EyeOff,
   Palette,
   FileJson,
   Copy,
-  X
+  X,
+  LayoutGrid,
+  Trophy,
+  TrendingUp,
+  Lightbulb
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Logo from '@/components/ui/Logo';
 import { usePaymentModal } from '@/contexts/PaymentModalContext';
 import CodeVerificationScreen from '@/components/auth/CodeVerificationScreen';
-import guestCVService from '@/lib/services/guestCVService';
+import { toast } from 'react-hot-toast';
 
 interface OnboardingState {
   intent: string;
@@ -65,11 +70,16 @@ const WelcomePage: React.FC = () => {
   
   // Onboarding Steps (1 to 10)
   const [currentStep, setCurrentStep] = useState(1);
+  const [lifecycleState, setLifecycleState] = useState<string>('NEW');
+  const [primaryCvId, setPrimaryCvId] = useState<string | null>(null);
+  const [isResuming, setIsResuming] = useState(false);
+  const [isLoadingSession, setIsLoadingSession] = useState(true);
+  const [analysisSnapshot, setAnalysisSnapshot] = useState<any>(null);
   
   // Selections
   const [intent, setIntent] = useState<string>('');
   const [seedingMethod, setSeedingMethod] = useState<string>('');
-  const [cvScore, setCVScore] = useState<number>(68);
+  const [cvScore, setCVScore] = useState<number>(0);
   const [searchStatus, setSearchStatus] = useState<string>('');
   const [monthlyVolume, setMonthlyVolume] = useState<string>('');
   const [trackerInterest, setTrackerInterest] = useState<string>('');
@@ -90,6 +100,79 @@ const WelcomePage: React.FC = () => {
   const [showJsonModal, setShowJsonModal] = useState(false);
   const [jsonInput, setJsonInput] = useState('');
   const [jsonError, setJsonError] = useState('');
+
+  // Helper Functions
+  const saveSession = async (updates: any) => {
+    try {
+      await fetch('/api/user/onboarding-session', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates)
+      });
+    } catch (err) {
+      console.error('Auto-save failed:', err);
+    }
+  };
+
+  const savePrimaryCV = async (cvData: any, title: string, score: number) => {
+    try {
+      // 1. Create/Update Primary CV
+      const response = await fetch('/api/cvs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: title || 'Primary CV',
+          cvData: cvData,
+          cvType: 'master',
+          isMaster: true,
+          metadata: {
+            isMaster: true,
+            isUserMaster: true,
+            createdVia: 'onboarding',
+            atsScore: score
+          }
+        })
+      });
+      
+      const result = await response.json();
+      const masterCvId = result.cv?.id || result.cv?._id || result.data?.cv?.id || result.existingMasterCVId;
+      
+      if (masterCvId) {
+        setPrimaryCvId(masterCvId);
+        
+        // 2. Generate Analysis Snapshot
+        const analysisRes = await fetch('/api/cv/analysis-snapshot', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cvId: masterCvId })
+        });
+        const analysisData = await analysisRes.json();
+        if (analysisData.success) {
+          setAnalysisSnapshot(analysisData.data);
+          setCVScore(analysisData.data.healthIndex);
+        }
+
+        // 3. Update onboarding session
+        await saveSession({
+          primary_cv_id: masterCvId,
+          userLifecycleState: 'PRIMARY_CV_CREATED'
+        });
+        setLifecycleState('PRIMARY_CV_CREATED');
+        
+        return masterCvId;
+      }
+    } catch (err) {
+      console.error('Failed to save primary CV:', err);
+    }
+    return null;
+  };
+
+  const triggerNotification = (message: string) => {
+    toast.success(message, {
+      duration: 4000,
+      position: 'bottom-right',
+    });
+  };
 
   const jsonSample = {
     basics: {
@@ -135,12 +218,16 @@ Please find the CV data attached.`;
     // Brief toast logic could go here
   };
 
-  const handleJsonSubmit = () => {
+  const handleJsonSubmit = async () => {
     try {
       const parsed = JSON.parse(jsonInput);
       setParsedCVData(parsed);
       setSeedingMethod('json');
       setShowJsonModal(false);
+      
+      // Early CV Creation
+      await savePrimaryCV(parsed, droppedFile || 'Primary CV', cvScore);
+      
       handleNext();
     } catch (e) {
       setJsonError('Invalid JSON format. Please check and try again.');
@@ -163,6 +250,60 @@ Please find the CV data attached.`;
   // Pricing Plans (fetched from API)
   const [plans, setPlans] = useState<any[]>([]);
   const [currencySymbol, setCurrencySymbol] = useState('$');
+
+  // Load Onboarding Session & Initial Auth
+  useEffect(() => {
+    const initSession = async () => {
+      setIsLoadingSession(true);
+      try {
+        // Ensure we have at least an anonymous session
+        await fetch('/api/auth/anonymous-session');
+        
+        // Fetch detailed onboarding session
+        const sessionRes = await fetch('/api/user/onboarding-session');
+        const sessionData = await sessionRes.json();
+        
+        if (sessionData.success && sessionData.data) {
+          const { onboarding, userLifecycleState } = sessionData.data;
+          
+          setLifecycleState(userLifecycleState || 'NEW');
+          
+          if (onboarding) {
+            if (onboarding.primary_goal) setIntent(onboarding.primary_goal);
+            if (onboarding.confidence_score) setCVScore(onboarding.confidence_score);
+            if (onboarding.primary_cv_id) setPrimaryCvId(onboarding.primary_cv_id);
+            
+            // If they have progress, prepare for "Welcome Back"
+            if (onboarding.current_stage && userLifecycleState !== 'ONBOARDING_COMPLETE') {
+              const stepMatch = onboarding.current_stage.match(/STEP_(\d+)/);
+              if (stepMatch) {
+                const step = parseInt(stepMatch[1]);
+                if (step > 1) {
+                  setIsResuming(true);
+                }
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Failed to initialize onboarding session:', err);
+      } finally {
+        setIsLoadingSession(false);
+      }
+    };
+
+    initSession();
+  }, [status]);
+
+  // Auto-save logic
+  useEffect(() => {
+    if (!isLoadingSession && currentStep > 1) {
+      saveSession({
+        current_stage: `STEP_${currentStep}`,
+        completed_stages: Array.from({ length: currentStep - 1 }, (_, i) => `STEP_${i + 1}`)
+      });
+    }
+  }, [currentStep, isLoadingSession]);
 
   // Load plans
   useEffect(() => {
@@ -247,6 +388,16 @@ Please find the CV data attached.`;
 
   // Handle Next Navigation
   const handleNext = () => {
+    // Skip Step 3 (Analysis) for scratch CVs
+    if (currentStep === 2 && (intent === 'cv_scratch' || seedingMethod === 'scratch')) {
+      if (status === 'authenticated') {
+        setCurrentStep(5); // Skip Step 3 and Step 4 (Auth Wall)
+      } else {
+        setCurrentStep(4); // Skip Step 3
+      }
+      return;
+    }
+
     if (currentStep === 3 && (intent === 'cv' || intent === 'cv_scratch')) {
       // Type 1 User Fast-Track check: If user fast-tracks, set flag & go to auth or editor
       if (status === 'authenticated') {
@@ -275,7 +426,13 @@ Please find the CV data attached.`;
 
   const handleBack = () => {
     if (currentStep === 5 && status === 'authenticated') {
-      setCurrentStep(3);
+      if (intent === 'cv_scratch' || seedingMethod === 'scratch') {
+        setCurrentStep(2);
+      } else {
+        setCurrentStep(3);
+      }
+    } else if (currentStep === 4 && (intent === 'cv_scratch' || seedingMethod === 'scratch')) {
+      setCurrentStep(2);
     } else if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
     }
@@ -283,115 +440,49 @@ Please find the CV data attached.`;
 
   // Onboarding Completion Endpoint call
   const completeOnboarding = async (redirectUrl: string, overrideState?: OnboardingState) => {
-    const s_parsedCVData = overrideState?.parsedCVData ?? parsedCVData;
-    const s_targetRoles = overrideState?.targetRoles ?? targetRoles;
-    const s_droppedFile = overrideState?.droppedFile ?? droppedFile;
     const s_cvScore = overrideState?.cvScore ?? cvScore;
 
-    if (status === 'authenticated') {
-      try {
-        const rec = getRecommendedTier(overrideState);
-        let primary_goal: 'cv' | 'tracker' | 'auto_apply' = 'cv';
-        let recommended_plan = 'starter_monthly';
-        const isScratch = seedingMethod === 'scratch';
-        let activation_route = isScratch 
-          ? '/editor?mode=create&step=1&master=true'
-          : '/editor?doc=master-cv&mode=improve&step=2';
-        let dashboard_layout_type: 'cv' | 'tracker' | 'auto_apply' = 'cv';
+    try {
+      const rec = getRecommendedTier(overrideState);
+      let primary_goal: 'cv' | 'tracker' | 'auto_apply' = 'cv';
+      let recommended_plan = 'starter_monthly';
+      const isScratch = seedingMethod === 'scratch';
+      let activation_route = isScratch 
+        ? '/editor?mode=create&step=2&master=true'
+        : '/editor?doc=master-cv&mode=improve&step=2';
+      let dashboard_layout_type: 'cv' | 'tracker' | 'auto_apply' = 'cv';
 
-        if (rec.type === 3) {
-          primary_goal = 'auto_apply';
-          recommended_plan = 'smart_quaterly';
-          activation_route = '/dashboard/jobs?tab=auto-apply&setup=1';
-          dashboard_layout_type = 'auto_apply';
-        } else if (rec.type === 2) {
-          primary_goal = 'tracker';
-          recommended_plan = 'focused_monthly';
-          activation_route = '/dashboard/tracker?newJob=1';
-          dashboard_layout_type = 'tracker';
-        } else {
-          primary_goal = 'cv';
-          recommended_plan = 'starter_monthly';
-          // activation_route already set based on isScratch
-          dashboard_layout_type = 'cv';
+      if (rec.type === 3) {
+        primary_goal = 'auto_apply';
+        recommended_plan = 'smart_quaterly';
+        activation_route = '/dashboard/jobs?tab=auto-apply&setup=1';
+        dashboard_layout_type = 'auto_apply';
+      } else if (rec.type === 2) {
+        primary_goal = 'tracker';
+        recommended_plan = 'focused_monthly';
+        activation_route = '/dashboard/tracker?newJob=1';
+        dashboard_layout_type = 'tracker';
+      }
+
+      let targetRoute = redirectUrl === '/dashboard' ? '/dashboard' : activation_route;
+
+      if (primaryCvId) {
+        activation_route = `/editor?cvId=${primaryCvId}&mode=edit-master&improve=true&step=2`;
+        if (redirectUrl !== '/dashboard') {
+          targetRoute = activation_route;
         }
+      }
 
-        // Use the resolved activation route for saving, but keep it mutable because
-        // Master CV creation below can replace doc=master-cv with the real cvId.
-        let targetRoute = redirectUrl === '/dashboard' ? '/dashboard' : activation_route;
+      // Update session status
+      await saveSession({
+        primary_goal,
+        confidence_score: s_cvScore,
+        recommended_plan,
+        userLifecycleState: 'ONBOARDING_COMPLETE',
+        dashboard_layout_type
+      });
 
-        // --- MASTER CV CREATION ---
-        // Save the parsed CV data as the Master CV (Always create one during onboarding)
-        try {
-          const cvDataToSave = s_parsedCVData || {
-            basics: {
-              name: session?.user?.name || '',
-              email: session?.user?.email || '',
-              label: s_targetRoles[0] || ''
-            },
-            skills: s_targetRoles.map(r => ({ name: r, level: 'Expert' })),
-            work: [],
-            education: [],
-            projects: []
-          };
-
-          const cvRes = await fetch('/api/cvs', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              title: s_droppedFile || 'Master CV',
-              cvData: cvDataToSave,
-              cvType: 'master',
-              isMaster: true,
-              metadata: {
-                isMaster: true,
-                createdVia: 'ai-career-report', // Authoritative flag for master CV
-                createdFrom: 'onboarding',
-                atsScore: s_cvScore
-              }
-            })
-          });
-          
-          const cvResult = await cvRes.json();
-          // Check for CV ID in multiple possible response formats
-          const masterCvId = cvResult.cv?.id || cvResult.cv?._id || cvResult.data?.cv?.id || cvResult.existingMasterCVId;
-          
-          if (masterCvId) {
-            console.log('✅ Master CV created/saved from onboarding:', masterCvId);
-            // Update activation route to use REAL CV ID for reliability
-            // If scratch, we might still want to go to step 1 but with the ID
-            // If parsed, go to step 2 (Template selection)
-            const nextStep = isScratch ? 1 : 2;
-            activation_route = `/editor?cvId=${masterCvId}&mode=edit-master&improve=true&step=${nextStep}`;
-            
-            if (redirectUrl !== '/dashboard') {
-              targetRoute = activation_route;
-            }
-          } else if (!cvResult.success && cvRes.status !== 409) {
-            console.warn('⚠️ Master CV creation failed:', cvResult.error || 'Unknown error');
-          }
-          sessionStorage.setItem('masterCVCreated', 'true');
-        } catch (cvError) {
-          console.error('Failed to create Master CV during onboarding:', cvError);
-        }
-
-        await fetch('/api/user/onboarding-status', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            hasSeenWelcome: true,
-            onboarding: {
-              primary_goal,
-              confidence_score: s_cvScore,
-              recommended_plan,
-              activation_status: 'completed',
-              activation_route,
-              dashboard_layout_type
-            }
-          }),
-        });
-        
-        // Show the paywall before final redirection
+      if (status === 'authenticated') {
         openPaymentModal({
           preselectedPlanKey: recommended_plan === 'starter_monthly' ? 'focused_monthly' : recommended_plan,
           triggerContext: 'onboarding-exit',
@@ -400,7 +491,6 @@ Please find the CV data attached.`;
             router.push(targetRoute);
           },
           onClose: async () => {
-            // Automatically assign starter monthly free plan when paywall is closed
             try {
               await fetch('/api/user/subscription', {
                 method: 'POST',
@@ -414,51 +504,17 @@ Please find the CV data attached.`;
             router.push(targetRoute);
           }
         });
-        return;
-      } catch (err) {
-        console.error('Failed to update onboarding status on backend:', err);
+      } else {
+        // Guest user - redirect to editor or dashboard with restore draft flag
+        const finalUrl = targetRoute.includes('?') 
+          ? `${targetRoute}&restoreDraft=true&fromOnboarding=true`
+          : `${targetRoute}?restoreDraft=true&fromOnboarding=true`;
+        router.push(finalUrl);
       }
-    } else {
-      // --- GUEST USER REDIRECTION ---
-      // For unauthenticated users, we must save their parsed data to guest draft
-      // so the editor can pick it up automatically.
-      if (s_parsedCVData || seedingMethod === 'scratch') {
-        try {
-          const cvDataToSave = s_parsedCVData || {
-            basics: {
-              name: '',
-              email: '',
-              label: s_targetRoles[0] || ''
-            },
-            skills: s_targetRoles.map(r => ({ name: r, level: 'Expert' })),
-            work: [],
-            education: [],
-            projects: []
-          };
-
-          await guestCVService.saveGuestDraft({
-            cvData: cvDataToSave,
-            currentStep: 3, // Start at step 3 in editor (Builder)
-            completedSteps: [1, 2],
-            targetRole: s_targetRoles[0] || '',
-            seniorityLevel: experienceLevel || 'professional',
-            cvTitle: s_droppedFile || 'Master CV'
-          });
-          console.log('✅ Guest draft saved from onboarding');
-        } catch (err) {
-          console.error('Failed to save guest draft during onboarding:', err);
-        }
-      }
-      
-      // Redirect to editor with restoreDraft param
-      const finalUrl = redirectUrl.includes('?') 
-        ? `${redirectUrl}&restoreDraft=true&fromOnboarding=true`
-        : `${redirectUrl}?restoreDraft=true&fromOnboarding=true`;
-      
-      router.push(finalUrl);
-      return;
+    } catch (err) {
+      console.error('Failed to complete onboarding:', err);
+      router.push(redirectUrl);
     }
-    router.push(redirectUrl);
   };
 
   // Silent Tier Scoring Calculation
@@ -601,8 +657,12 @@ Please find the CV data attached.`;
         if (result._parsed || result.basics || result.work) {
           // Store the whole result as the CV data
           setParsedCVData(result);
-          // Try to get score from analysis metadata if present
-          setCVScore(result.analysis?.score || result._score || 68);
+          
+          // Early CV Creation
+          const score = result.analysis?.score || result._score || 68;
+          setCVScore(score);
+          await savePrimaryCV(result, file.name, score);
+          
           triggerNotification("CV Parsed successfully!");
           setTimeout(() => {
             setIsParsing(false);
@@ -838,18 +898,81 @@ Please find the CV data attached.`;
       <main className="max-w-4xl mx-auto w-full px-6 py-12 flex-1 flex flex-col justify-center">
         
         <AnimatePresence mode="wait">
-          <motion.div
-            key={currentStep}
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-            className={`w-full transition-all duration-300 ${
-              currentStep === 4 
-                ? 'max-w-md mx-auto bg-white dark:bg-[#141810] border border-gray-100 dark:border-white/10 rounded-md p-8 shadow-2xl' 
-                : 'bg-white border border-gray-200 rounded-[2rem] p-8 md:p-12 shadow-sm'
-            }`}
-          >
+          {isResuming ? (
+            <motion.div
+              key="resume-screen"
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              className="w-full bg-white border border-gray-200 rounded-[2rem] p-8 md:p-12 shadow-sm max-w-2xl mx-auto"
+            >
+              <div className="space-y-8">
+                <div className="space-y-3 text-center">
+                  <div className="inline-flex p-3 rounded-2xl bg-[#80FF00]/10 text-black mb-2">
+                    <Sparkles className="h-8 w-8 text-[#80FF00]" />
+                  </div>
+                  <h1 className="text-4xl font-extrabold tracking-tight">Welcome Back</h1>
+                  <p className="text-gray-500 text-lg">We've saved your progress. Pick up right where you left off.</p>
+                </div>
+
+                <div className="bg-slate-50 rounded-2xl p-6 space-y-4 border border-gray-100">
+                  <div className="flex items-center gap-3 text-sm font-bold text-green-600">
+                    <CheckCircle className="h-5 w-5" /> <span>Primary CV Created</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm font-bold text-green-600">
+                    <CheckCircle className="h-5 w-5" /> <span>ATS Analysis Complete</span>
+                  </div>
+                  {status === 'authenticated' ? (
+                    <div className="flex items-center gap-3 text-sm font-bold text-green-600">
+                      <CheckCircle className="h-5 w-5" /> <span>Account Verified</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-3 text-sm font-bold text-amber-600">
+                      <AlertTriangle className="h-5 w-5" /> <span>Authentication Pending</span>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-3 text-sm font-bold text-gray-400">
+                    <div className="w-5 h-5 rounded-full border-2 border-gray-200" /> 
+                    <span>{11 - currentStep} steps remaining to full unlock</span>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-3">
+                  <Button 
+                    onClick={() => {
+                      setIsResuming(false);
+                      // Step was already set in initSession
+                    }}
+                    className="w-full bg-black text-white hover:bg-slate-900 font-extrabold py-6 rounded-2xl flex items-center justify-center gap-2 shadow-sm"
+                  >
+                    Continue Setup <ArrowRight className="h-5 w-5" />
+                  </Button>
+                  {primaryCvId && (
+                    <Button 
+                      variant="ghost"
+                      onClick={() => router.push(`/editor?cvId=${primaryCvId}`)}
+                      className="w-full text-gray-500 font-bold py-4 hover:bg-slate-100 rounded-2xl"
+                    >
+                      Open Primary CV
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div
+              key={currentStep}
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              className={`w-full transition-all duration-300 ${
+                currentStep === 4 
+                  ? 'max-w-md mx-auto bg-white dark:bg-[#141810] border border-gray-100 dark:border-white/10 rounded-md p-8 shadow-2xl' 
+                  : 'bg-white border border-gray-200 rounded-[2rem] p-8 md:p-12 shadow-sm'
+              }`}
+            >
             
             {/* Step 1: Welcome & Intent */}
             {currentStep === 1 && (
@@ -1125,114 +1248,247 @@ Please find the CV data attached.`;
             )}
 
             {/* Step 3: Completeness Gauge & early exit */}
+            {/* Step 3: CV Analysis Dashboard */}
             {currentStep === 3 && (
-              <div className="space-y-8">
-                {seedingMethod === 'scratch' ? (
-                  <div className="space-y-6">
-                    <div className="space-y-3 text-center">
-                      <div className="inline-flex p-3 rounded-2xl bg-lime-100 text-lime-700 mb-2">
-                        <Sparkles className="h-8 w-8" />
-                      </div>
-                      <h1 className="text-4xl font-extrabold tracking-tight md:text-5xl">
-                        Ready to Build
-                      </h1>
-                      <p className="text-gray-500 text-lg max-w-xl mx-auto">
-                        Your workspace is initialized. We've set up a clean canvas for your Master CV with guided prompts to help you stand out.
-                      </p>
-                    </div>
+              <div className="space-y-6">
+                <div className="space-y-2 text-center">
+                  <h1 className="text-4xl font-extrabold tracking-tight md:text-5xl">
+                    Your CV Analysis
+                  </h1>
+                  <p className="text-gray-500 text-lg max-w-2xl mx-auto">
+                    We've analyzed your CV to give you actionable insights and a health score.
+                  </p>
+                </div>
 
-                    <div className="bg-slate-50 border border-gray-150 rounded-3xl p-8 flex flex-col items-center text-center space-y-4">
-                      <div className="grid grid-cols-3 gap-4 w-full">
-                        <div className="p-4 bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center gap-2">
-                          <Palette className="h-5 w-5 text-blue-500" />
-                          <span className="text-[10px] font-bold uppercase tracking-tight">Pro Templates</span>
-                        </div>
-                        <div className="p-4 bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center gap-2">
-                          <Zap className="h-5 w-5 text-lime-500" />
-                          <span className="text-[10px] font-bold uppercase tracking-tight">AI Assistance</span>
-                        </div>
-                        <div className="p-4 bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center gap-2">
-                          <Target className="h-5 w-5 text-purple-500" />
-                          <span className="text-[10px] font-bold uppercase tracking-tight">ATS Check</span>
-                        </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* Left: Health Index */}
+                  <div className="bg-slate-50 border border-gray-150 rounded-2xl p-6 flex flex-col items-center justify-center text-center space-y-4 shadow-sm">
+                    <h3 className="text-xs font-black uppercase tracking-widest text-gray-400">Initial Health Index</h3>
+                    <div className="relative w-40 h-40 flex items-center justify-center">
+                      <svg className="w-full h-full transform -rotate-90">
+                        <circle 
+                          cx="80" cy="80" r="70" 
+                          stroke="#E2E8F0" strokeWidth="12" 
+                          fill="transparent" 
+                        />
+                        <motion.circle 
+                          cx="80" cy="80" r="70" 
+                          stroke="#80FF00" strokeWidth="12" 
+                          fill="transparent" 
+                          strokeDasharray="439.8"
+                          initial={{ strokeDashoffset: 439.8 }}
+                          animate={{ strokeDashoffset: 439.8 - (439.8 * cvScore) / 100 }}
+                          transition={{ duration: 1.5, ease: "easeOut" }}
+                          strokeLinecap="round"
+                        />
+                      </svg>
+                      <div className="absolute flex flex-col items-center">
+                        <span className="text-4xl font-black">{cvScore}%</span>
+                        <span className="text-[10px] text-gray-400 uppercase tracking-widest font-black">Score</span>
                       </div>
-                      <p className="text-sm text-gray-500 max-w-md">
-                        Our editor will guide you through adding your experience, skills, and projects while providing real-time ATS feedback.
+                    </div>
+                    <div className="space-y-1">
+                      <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#80FF00]/10 text-green-700 rounded-full text-xs font-bold">
+                        <div className="w-2 h-2 rounded-full bg-green-500" />
+                        {cvScore >= 80 ? 'Excellent' : cvScore >= 60 ? 'Fair' : 'Needs Improvement'}
+                      </div>
+                      <p className="text-xs text-gray-500 max-w-[180px] mx-auto mt-2 leading-relaxed">
+                        {cvScore >= 80 
+                          ? 'Your CV is highly competitive and ready for elite roles!' 
+                          : cvScore >= 60 
+                          ? 'Your CV has a solid foundation. Let\'s make it stand out!' 
+                          : 'Your CV needs significant optimization to bypass modern ATS.'}
                       </p>
                     </div>
                   </div>
-                ) : (
-                  <>
-                    <div className="space-y-3 text-center">
-                      <h1 className="text-4xl font-extrabold tracking-tight md:text-5xl">
-                        Your CV Analysis
-                      </h1>
-                      <p className="text-gray-500 text-lg max-w-xl mx-auto">
-                        We found 3 areas where your CV score could be boosted by over 25 points immediately.
-                      </p>
-                    </div>
 
-                    <div className="grid md:grid-cols-2 gap-8 items-center bg-slate-50 p-6 rounded-2xl border border-gray-150">
-                      {/* Gauge */}
-                      <div className="flex flex-col items-center justify-center text-center space-y-3">
-                        <div className="relative w-36 h-36 flex items-center justify-center">
-                          <svg className="w-full h-full transform -rotate-90">
-                            <circle 
-                              cx="72" cy="72" r="60" 
-                              stroke="#E2E8F0" strokeWidth="10" 
-                              fill="transparent" 
-                            />
-                            <motion.circle 
-                              cx="72" cy="72" r="60" 
-                              stroke="black" strokeWidth="10" 
-                              fill="transparent" 
-                              strokeDasharray="376.8"
-                              initial={{ strokeDashoffset: 376.8 }}
-                              animate={{ strokeDashoffset: 376.8 - (376.8 * cvScore) / 100 }}
-                              transition={{ duration: 1.2, ease: "easeOut" }}
-                            />
-                          </svg>
-                          <div className="absolute flex flex-col items-center">
-                            <span className="text-3xl font-black">{cvScore}%</span>
-                            <span className="text-xs text-gray-500 uppercase tracking-widest font-black">Score</span>
+                  {/* Center: Score Breakdown */}
+                  <div className="bg-white border border-gray-150 rounded-2xl p-6 space-y-5 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-xs font-black uppercase tracking-widest text-gray-400">Score Breakdown</h3>
+                      <button className="text-gray-300 hover:text-gray-500 transition-colors"><Info size={14} /></button>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      {[
+                        { label: 'Structure & Formatting', score: analysisSnapshot?.breakdown?.structure || 0, color: 'bg-green-500', icon: Palette },
+                        { label: 'ATS Readability', score: analysisSnapshot?.breakdown?.readability || 0, color: 'bg-indigo-500', icon: FileText },
+                        { label: 'Content Strength', score: analysisSnapshot?.breakdown?.contentStrength || 0, color: 'bg-orange-500', icon: Sparkles },
+                        { label: 'Skills & Keywords', score: analysisSnapshot?.breakdown?.skillsKeywords || 0, color: 'bg-blue-500', icon: Target },
+                        { label: 'Impact & Achievements', score: analysisSnapshot?.breakdown?.impactAchievements || 0, color: 'bg-teal-500', icon: Zap },
+                      ].map((item, idx) => {
+                        const Icon = item.icon;
+                        return (
+                          <div key={idx} className="space-y-1.5">
+                            <div className="flex justify-between items-center text-[11px] font-bold">
+                              <div className="flex items-center gap-2 text-gray-600">
+                                <div className={`p-1 rounded ${item.color} bg-opacity-10 text-${item.color.split('-')[1]}-600`}>
+                                  <Icon size={12} />
+                                </div>
+                                <span>{item.label}</span>
+                              </div>
+                              <span className="text-gray-400">{item.score} / 20</span>
+                            </div>
+                            <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                              <motion.div 
+                                className={`h-full ${item.color}`}
+                                initial={{ width: 0 }}
+                                animate={{ width: `${(item.score / 20) * 100}%` }}
+                                transition={{ duration: 1, delay: 0.5 + idx * 0.1 }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Right: At a Glance */}
+                  <div className="bg-white border border-gray-150 rounded-2xl p-6 space-y-5 shadow-sm">
+                    <h3 className="text-xs font-black uppercase tracking-widest text-gray-400">At a Glance</h3>
+                    <div className="space-y-4">
+                      {[
+                        { label: 'Pages Detected', value: analysisSnapshot?.stats?.pagesDetected || 0, icon: FileText },
+                        { label: 'Total Words', value: analysisSnapshot?.stats?.totalWords || 0, icon: Mail },
+                        { label: 'Experience', value: `${analysisSnapshot?.stats?.experienceYears || 0} years`, icon: Briefcase },
+                        { label: 'Top Skills Found', value: analysisSnapshot?.stats?.skillsFound || 0, icon: Zap },
+                        { label: 'Sections Detected', value: `${analysisSnapshot?.stats?.sectionsDetected || 0}/9`, icon: LayoutGrid },
+                      ].map((stat, idx) => {
+                        const Icon = stat.icon;
+                        return (
+                          <div key={idx} className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="text-gray-300"><Icon size={16} /></div>
+                              <span className="text-xs font-bold text-gray-500">{stat.label}</span>
+                            </div>
+                            <span className="text-xs font-black">{stat.value}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* Your Strengths */}
+                  <div className="bg-green-50/50 border border-green-100 rounded-2xl p-6 space-y-4">
+                    <div className="flex items-center gap-2 text-green-700">
+                      <CheckCircle size={18} className="fill-green-700 text-white" />
+                      <h3 className="text-sm font-black uppercase tracking-tight">Your Strengths</h3>
+                    </div>
+                    <div className="space-y-4">
+                      {(analysisSnapshot?.strengths || []).map((s, idx) => (
+                        <div key={idx} className="flex gap-3">
+                          <div className="mt-1 p-1 bg-white rounded shadow-sm text-green-600"><Check size={10} strokeWidth={4} /></div>
+                          <div>
+                            <p className="text-xs font-bold text-gray-800">{s}</p>
+                            <p className="text-[10px] text-gray-500 mt-0.5">Your CV has a clear section hierarchy and layout.</p>
                           </div>
                         </div>
-                        <div>
-                          <h4 className="font-bold">Initial Health Index</h4>
-                          <p className="text-xs text-gray-500">Based on parser scanning</p>
-                        </div>
-                      </div>
-
-                      {/* Feedback points */}
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <span className="text-xs font-black uppercase text-green-600 tracking-wider flex items-center gap-1">
-                            <CheckCircle className="h-3 w-3" /> Strengths Detected
-                          </span>
-                          <ul className="text-xs text-gray-600 space-y-1.5 list-disc pl-4">
-                            <li>Contact details correctly formatted.</li>
-                            <li>Clean work experience section hierarchy.</li>
-                            <li>Logical date formats.</li>
-                          </ul>
-                        </div>
-
-                        <div className="space-y-2">
-                          <span className="text-xs font-black uppercase text-amber-600 tracking-wider flex items-center gap-1">
-                            <AlertTriangle className="h-3 w-3" /> Target Areas for Improvement
-                          </span>
-                          <ul className="text-xs text-gray-600 space-y-1.5 list-disc pl-4">
-                            <li>Missing ATS industry-specific keywords.</li>
-                            <li>Accomplishment statements lack STAR metric counts.</li>
-                            <li>Professional summary lacks hard impact claims.</li>
-                          </ul>
-                        </div>
+                      ))}
+                    </div>
+                    <div className="pt-4 border-t border-green-100 flex items-center gap-3">
+                      <div className="p-2 bg-white rounded-lg text-green-600 shadow-sm"><Trophy size={16} /></div>
+                      <div>
+                        <p className="text-xs font-black text-green-800">Keep it up!</p>
+                        <p className="text-[10px] text-green-700/70">You're on the right track.</p>
                       </div>
                     </div>
-                  </>
-                )}
+                  </div>
 
-                {/* Fast track option for Type 1 */}
-                <div className="flex flex-col items-center justify-center gap-3 pt-4 border-t border-gray-100">
+                  {/* Areas to Improve */}
+                  <div className="bg-orange-50/50 border border-orange-100 rounded-2xl p-6 space-y-4">
+                    <div className="flex items-center gap-2 text-orange-700">
+                      <Info size={18} className="fill-orange-700 text-white" />
+                      <h3 className="text-sm font-black uppercase tracking-tight">Areas to Improve</h3>
+                    </div>
+                    <div className="space-y-4">
+                      {(analysisSnapshot?.weaknesses || []).map((w, idx) => (
+                        <div key={idx} className="flex gap-3">
+                          <div className="mt-1 p-1 bg-white rounded shadow-sm text-orange-600"><Zap size={10} fill="currentColor" /></div>
+                          <div>
+                            <p className="text-xs font-bold text-gray-800">{w}</p>
+                            <p className="text-[10px] text-gray-500 mt-0.5">Add more role-relevant keywords to your profile.</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="pt-4 border-t border-orange-100 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-white rounded-lg text-orange-600 shadow-sm"><TrendingUp size={16} /></div>
+                        <div>
+                          <p className="text-xs font-black text-orange-800">Potential Score Boost</p>
+                          <p className="text-[10px] text-orange-700/70">+{analysisSnapshot?.potentialBoost || 0} points</p>
+                        </div>
+                      </div>
+                      <ArrowRight size={14} className="text-orange-300" />
+                    </div>
+                  </div>
+
+                  {/* Top Missing Keywords */}
+                  <div className="bg-blue-50/30 border border-blue-100 rounded-2xl p-6 flex flex-col shadow-sm">
+                    <div className="flex items-center gap-2 text-blue-700 mb-6">
+                      <Search size={18} />
+                      <h3 className="text-sm font-black uppercase tracking-tight">Top Missing Keywords</h3>
+                    </div>
+                    
+                    <div className="flex flex-wrap gap-2 mb-auto">
+                      {(analysisSnapshot?.missingKeywords || []).map((k, idx) => (
+                        <div key={idx} className="px-3 py-1.5 bg-white border border-blue-100 text-blue-600 text-[10px] font-bold rounded-lg shadow-sm">
+                          {k}
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="mt-8 pt-6 border-t border-blue-100 flex gap-3 items-start">
+                      <Lightbulb size={18} className="text-blue-500 mt-0.5" />
+                      <div className="space-y-1">
+                        <p className="text-[11px] font-black text-blue-900 uppercase tracking-wide">Tip</p>
+                        <p className="text-[10px] text-blue-700/70 leading-relaxed font-medium">
+                          Add these keywords naturally in your experience and skills sections.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* AI Recommendation Banner */}
+                <div className="bg-indigo-600 rounded-2xl p-5 text-white flex items-center justify-between shadow-xl relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-white/20 transition-all" />
+                  <div className="flex items-center gap-4 relative z-10">
+                    <div className="p-3 bg-white/20 backdrop-blur-md rounded-xl shadow-lg">
+                      <Sparkles size={20} className="fill-white" />
+                    </div>
+                    <div className="space-y-0.5">
+                      <h4 className="text-sm font-black uppercase tracking-wide">AI Recommendation</h4>
+                      <p className="text-xs text-indigo-100 max-w-md font-medium leading-relaxed">
+                        With a few strategic improvements, your CV can rank significantly higher with ATS systems and catch recruiters' attention.
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-10 relative z-10">
+                    <div className="text-center">
+                      <span className="text-3xl font-black">{cvScore + (analysisSnapshot?.potentialBoost || 0)}%</span>
+                      <p className="text-[10px] font-black text-indigo-200 uppercase tracking-widest mt-1">Potential Score</p>
+                    </div>
+                    
+                    <div className="h-10 w-px bg-white/20" />
+                    
+                    <button className="flex items-center gap-4 text-left group/btn">
+                      <div>
+                        <p className="text-[10px] font-black text-indigo-200 uppercase tracking-widest mb-1">Top Priority</p>
+                        <p className="text-xs font-bold text-white max-w-[200px] leading-tight group-hover:text-white transition-colors">
+                          {analysisSnapshot?.topPriority || 'Complete your profile to see tailored recommendations...'}
+                        </p>
+                      </div>
+                      <ChevronRight size={18} className="text-indigo-300 group-hover/btn:translate-x-1 transition-transform" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Navigation Controls */}
+                <div className="flex flex-col items-center gap-4 pt-4 border-t border-gray-100">
                   <Button 
                     onClick={() => {
                       if (status === 'authenticated') {
@@ -1242,15 +1498,15 @@ Please find the CV data attached.`;
                         setCurrentStep(4);
                       }
                     }}
-                    className="w-full bg-[#80FF00] hover:bg-[#6edc00] text-black font-extrabold py-6 rounded-2xl flex items-center justify-center gap-2 shadow-sm transition-all"
+                    className="w-full bg-[#80FF00] hover:bg-[#70e600] text-black font-extrabold py-6 rounded-2xl flex items-center justify-center gap-2 shadow-sm transition-all text-sm uppercase tracking-tight"
                   >
                     Go directly to CV Editor (Fast Track) <ArrowRight className="h-5 w-5" />
                   </Button>
                   <button 
                     onClick={handleNext}
-                    className="text-xs text-gray-500 hover:text-black font-semibold uppercase tracking-wider"
+                    className="text-[10px] text-gray-400 hover:text-black font-black uppercase tracking-widest transition-colors flex items-center gap-2"
                   >
-                    Continue Personalization Flow ➔
+                    Continue Personalization Flow <ChevronRight size={12} strokeWidth={3} />
                   </button>
                 </div>
               </div>
@@ -2018,7 +2274,8 @@ Please find the CV data attached.`;
             )}
 
           </motion.div>
-        </AnimatePresence>
+        )}
+      </AnimatePresence>
 
       </main>
 
