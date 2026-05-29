@@ -1131,12 +1131,17 @@ export default function ResumeEnhancerContainer({
           
           if (mode === 'edit-cover-letter') {
             const allowedCoverLetterStep = !isMasterCV && resolvedCvType !== 'master';
-            goToStepSafely(allowedCoverLetterStep ? 4 : 3, { silent: false });
+            goToStepSafely(requestedStep || (allowedCoverLetterStep ? 4 : 3), { silent: false });
             setCompletedSteps(allowedCoverLetterStep ? [1, 2, 3] : [1, 2]);
           } else {
-            // Skip to Step 3 for editing
-            goToStepSafely(3, { silent: true });
-            setCompletedSteps([1, 2]);
+            // Skip to requested step or default to Step 3 for editing
+            const targetStep = requestedStep || 3;
+            goToStepSafely(targetStep, { silent: true });
+            
+            // Set completed steps based on target step
+            const completed = [];
+            for (let i = 1; i < targetStep; i++) completed.push(i);
+            setCompletedSteps(completed);
           }
 
           // Update URL to include mode parameter

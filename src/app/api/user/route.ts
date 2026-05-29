@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
 
     // Find user with optimized query
     const user = await User.findOne({ email: userEmail })
-      .select('firstName lastName email username avatar role isEmailVerified currentPlanKey subscription settings authProvider createdAt updatedAt')
+      .select('firstName lastName email username avatar role isEmailVerified currentPlanKey subscription settings authProvider createdAt updatedAt phone location website linkedin github summary company address jobTitle industry experience dateOfBirth gender nationality')
       .lean()
       .exec() as any;
 
@@ -114,6 +114,20 @@ export async function GET(request: NextRequest) {
       currentPlanKey,
       subscription,
       settings: user.settings,
+      phone: user.phone,
+      location: user.location,
+      website: user.website,
+      linkedin: user.linkedin,
+      github: user.github,
+      summary: user.summary,
+      company: user.company,
+      address: user.address,
+      jobTitle: user.jobTitle,
+      industry: user.industry,
+      experience: user.experience,
+      dateOfBirth: user.dateOfBirth,
+      gender: user.gender,
+      nationality: user.nationality,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt
     };
@@ -180,7 +194,12 @@ export async function PUT(request: NextRequest) {
     await getConnection();
 
     const body = await request.json();
-    const { firstName, lastName, username, avatar, phone, location, website, linkedin, github, summary, settings } = body;
+    const { 
+      firstName, lastName, username, avatar, 
+      phone, location, website, linkedin, github, summary, 
+      company, address, dateOfBirth, gender, nationality,
+      settings 
+    } = body;
 
     // Find user
     const user = await User.findOne({ email: userEmail });
@@ -224,15 +243,27 @@ export async function PUT(request: NextRequest) {
     if (linkedin !== undefined) user.linkedin = linkedin;
     if (github !== undefined) user.github = github;
     if (summary !== undefined) user.summary = summary;
+    if (company !== undefined) user.company = company;
+    if (address !== undefined) user.address = address;
+    if (dateOfBirth !== undefined) user.dateOfBirth = dateOfBirth;
+    if (gender !== undefined) user.gender = gender;
+    if (nationality !== undefined) user.nationality = nationality;
     
     // Update settings
     if (settings !== undefined) {
       // Merge settings while preserving existing structure
+      const currentSettings = user.settings || {
+        theme: 'auto',
+        notifications: { email: true, push: true },
+        timezone: 'UTC',
+        languagePreference: 'en'
+      };
+
       user.settings = {
-        ...user.settings,
+        ...currentSettings,
         ...settings,
         notifications: {
-          ...user.settings.notifications,
+          ...(currentSettings.notifications || { email: true, push: true }),
           ...(settings.notifications || {})
         }
       };
@@ -280,6 +311,17 @@ export async function PUT(request: NextRequest) {
         currentPlanKey,
         subscription,
         settings: user.settings,
+        phone: user.phone,
+        location: user.location,
+        website: user.website,
+        linkedin: user.linkedin,
+        github: user.github,
+        summary: user.summary,
+        company: user.company,
+        address: user.address,
+        dateOfBirth: user.dateOfBirth,
+        gender: user.gender,
+        nationality: user.nationality,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt
       }

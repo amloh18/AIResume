@@ -9,6 +9,7 @@ import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
 import GlobalSearchBar from '@/components/layout/GlobalSearchBar';
 import NotificationCenter from '@/components/notifications/NotificationCenter';
 import { cn } from '@/lib/utils';
+import { Search } from 'lucide-react';
 
 // Subtitles that rotate based on user context
 const CONTEXT_SUBTITLES = [
@@ -170,8 +171,13 @@ export default function GreetingHeader() {
           </svg>
         </button>
 
-        <div className="flex items-center gap-0 shrink-0">
-           <div className="w-36 xxs:w-44 xs:w-52">
+        <div className="flex items-center gap-2 shrink-0">
+           <div className="md:hidden">
+              <button className="p-2 rounded-xl bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 shadow-sm">
+                <Search size={20} className="text-gray-700 dark:text-gray-200" />
+              </button>
+           </div>
+           <div className="hidden md:block w-36 xxs:w-44 xs:w-52">
               <GlobalSearchBar />
            </div>
            <NotificationCenter />

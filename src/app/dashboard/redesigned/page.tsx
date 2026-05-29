@@ -1,102 +1,60 @@
 'use client';
 
-import React, { Suspense } from 'react';
+import React, { useState } from 'react';
+import { useSession } from 'next-auth/react';
 import RouteGuard from '@/components/auth/RouteGuard';
 import SidebarNav from '@/components/dashboard/SidebarNav';
 import GreetingHeader from '@/components/dashboard/GreetingHeader';
-import CVEditorCard from '@/components/dashboard/cards/CVEditorCard';
-import JobTrackerCard from '@/components/dashboard/cards/JobTrackerCard';
-import ApplicationTrackerCard from '@/components/dashboard/cards/ApplicationTrackerCard';
-import InterviewCoachCard from '@/components/dashboard/cards/InterviewCoachCard';
-import ProgressOverviewChart from '@/components/dashboard/charts/ProgressOverviewChart';
-import ApplicationFunnel from '@/components/dashboard/charts/ApplicationFunnel';
-import AIInsightsWidget from '@/components/dashboard/widgets/AIInsightsWidget';
-import TopSkillsWidget from '@/components/dashboard/widgets/TopSkillsWidget';
-import JobRecommendationsWidget from '@/components/dashboard/widgets/JobRecommendationsWidget';
-import SalaryInsightsWidget from '@/components/dashboard/widgets/SalaryInsightsWidget';
-import StreakWidget from '@/components/dashboard/widgets/StreakWidget';
-import GoalsWidget from '@/components/dashboard/widgets/GoalsWidget';
+import RedesignedDashboardView from '@/components/dashboard/redesigned/RedesignedDashboardView';
+import { UserTier } from '@/types/dashboard-widgets';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function RedesignedDashboard() {
+  const { data: session } = useSession();
+  const [tier, setTier] = useState<UserTier>('starter');
+
+  const userRole = (session?.user as any)?.role || 'user';
+  const isAdmin = userRole === 'admin' || userRole === 'superadmin';
+
   return (
     <RouteGuard requireAuth={true}>
-      <div className="min-h-screen bg-gray-50/50 dark:bg-black">
+      <div className="min-h-screen bg-[#f3f2ee] dark:bg-black text-[#0f172a] dark:text-gray-150 font-sans">
         {/* Sidebar */}
         <SidebarNav />
 
         {/* Main Content Area */}
-        <div className="lg:ml-[84px] transition-all duration-300 lg:expanded:ml-[240px]">
-          <div className="p-4 md:p-6 lg:p-8 pt-16 lg:pt-8">
+        <div className="lg:ml-[84px] transition-all duration-300">
+          <div className="max-w-[1440px] mx-auto p-4 md:p-6 lg:p-12 pt-16 lg:pt-12">
             
             {/* Greeting Header */}
-            <div className="mb-6">
+            <div className="mb-10">
               <GreetingHeader />
+              <p className="text-slate-500 font-bold mt-2 text-sm">
+                Explore the redesigned {tier} dashboard experience.
+              </p>
             </div>
 
-            {/* Top Hub Cards Row */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-6 mb-6">
-              <CVEditorCard />
-              <JobTrackerCard />
-              <ApplicationTrackerCard />
-              <InterviewCoachCard />
-            </div>
-
-            {/* Charts Row */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 mb-6">
-              <div className="lg:col-span-2">
-                <ProgressOverviewChart />
-              </div>
-              <div className="lg:col-span-1">
-                <ApplicationFunnel />
-              </div>
-            </div>
-
-            {/* Widgets Grid - Top Row */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 mb-6">
-              {/* Left column: AI Insights */}
-              <div className="lg:col-span-1">
-                <AIInsightsWidget />
-              </div>
-
-              {/* Middle column: Top Skills */}
-              <div className="lg:col-span-1">
-                <TopSkillsWidget />
-              </div>
-
-              {/* Right column: Salary Insights */}
-              <div className="lg:col-span-1">
-                <SalaryInsightsWidget />
-              </div>
-            </div>
-
-            {/* Middle Row: Job Recommendations */}
-            <div className="grid grid-cols-1 gap-4 md:gap-6 mb-6">
-              <JobRecommendationsWidget />
-            </div>
-
-            {/* Bottom Row: Streak + Goals */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-6">
-              <StreakWidget />
-              <GoalsWidget />
-            </div>
+            {/* Dashboard View */}
+            <RedesignedDashboardView tier={tier} />
 
           </div>
         </div>
+
+        {/* Tier Switcher (Admin/Demo only) */}
+        {isAdmin && (
+          <div className="fixed bottom-6 right-6 z-[60] flex gap-2 bg-white/90 dark:bg-black/90 p-2 rounded-2xl shadow-2xl border border-slate-200 dark:border-gray-800">
+            {(['starter', 'focused', 'smart'] as const).map(t => (
+              <button 
+                key={t}
+                onClick={() => setTier(t)}
+                className={`px-4 h-10 rounded-xl font-black text-[10px] uppercase transition-all ${tier === t ? 'bg-[#83d60d] text-slate-900 shadow-lg' : 'bg-slate-100 dark:bg-gray-800 text-slate-400 hover:bg-slate-200'}`}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </RouteGuard>
   );
 }
-
-// CSS to handle expanded state class
-const style = document.createElement('style');
-style.innerHTML = `
-  .expanded\\:ml-\\[240px\\] {
-    margin-left: 240px;
-  }
-  @media (min-width: 1024px) {
-    .lg:expanded\\:ml-\\[240px\\] {
-      margin-left: 240px;
-    }
-  }
-`;
-document.head.appendChild(style);

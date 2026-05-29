@@ -67,15 +67,27 @@ function ResumeEnhancerPageContent() {
         try {
           const res = await fetch(`/api/cvs/master?userId=${user?.id}`);
           const result = await res.json();
+          
+          // Capture other params to preserve them (like step)
+          const currentParams = new URLSearchParams(searchParams.toString());
+          currentParams.delete('doc'); // Remove doc=master-cv
+          
           if (result.success && result.data?.masterCV?.id) {
-            router.replace(`/editor?cvId=${result.data.masterCV.id}&mode=edit-master&improve=true`);
+            currentParams.set('cvId', result.data.masterCV.id);
+            currentParams.set('mode', 'edit-master');
+            if (!currentParams.has('improve')) currentParams.set('improve', 'true');
+            router.replace(`/editor?${currentParams.toString()}`);
           } else {
             console.log('No master CV found, loading editor defaults.');
-            router.replace('/editor?mode=create');
+            currentParams.set('mode', 'create');
+            router.replace(`/editor?${currentParams.toString()}`);
           }
         } catch (error) {
           console.error('Error fetching master CV for redirect:', error);
-          router.replace('/editor?mode=create');
+          const currentParams = new URLSearchParams(searchParams.toString());
+          currentParams.delete('doc');
+          currentParams.set('mode', 'create');
+          router.replace(`/editor?${currentParams.toString()}`);
         }
       }
     };

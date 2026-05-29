@@ -46,6 +46,14 @@ export interface DatabasePricingPlan {
     yearly?: number;
     oneTime?: number;
   };
+  price?: number;
+  regionalPricing?: {
+    currency: string;
+    currencySymbol: string;
+    displayPrice: string;
+    isApproximate: boolean;
+    price: number;
+  };
 }
 
 interface UsePricingPlansOptions {
