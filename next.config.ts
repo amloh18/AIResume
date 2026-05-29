@@ -249,8 +249,8 @@ const nextConfig: NextConfig = {
   },
   // Performance optimizations
   experimental: {
-    // Enable aggressive CSS optimization (critters) to inline critical CSS
-    optimizeCss: true,
+    // Disable aggressive CSS optimization (critters) to reduce memory usage during build
+    // optimizeCss: true,
     // Optimize imports for common heavy libraries
     optimizePackageImports: [
       'lottie-react',
@@ -417,7 +417,7 @@ export default withSentryConfig(nextConfig, {
   tunnelRoute: "/monitoring",
 
   // Hides source maps from generated client bundles
-  // hideSourceMaps: true,
+  hideSourceMaps: true,
 
   webpack: {
     // Enables automatic instrumentation of Vercel Cron Monitors. (Does not yet work with App Router route handlers.)
