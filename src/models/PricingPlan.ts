@@ -1,7 +1,7 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IPricingPlan extends Document {
-  key: 'free' | 'starter_monthly' | 'starter_yealry' | 'focused_monthly' | 'focused_yearly' | 'smart_quaterly' | 'smart_yearly' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly' | 'pro_lifetime';
+  key: 'free' | 'starter_monthly' | 'starter_yearly' | 'focused_monthly' | 'focused_yearly' | 'smart_quarterly' | 'smart_yearly' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly' | 'pro_lifetime';
   name: string;
   description: string;
 
@@ -73,9 +73,9 @@ const pricingPlanSchema = new Schema<IPricingPlan>({
     type: String,
     required: [true, 'Plan key is required'],
     enum: [
-      'free', 'starter_monthly', 'starter_yealry', 
+      'free', 'starter_monthly', 'starter_yearly', 
       'focused_monthly', 'focused_yearly', 
-      'smart_quaterly', 'smart_yearly',
+      'smart_quarterly', 'smart_yearly',
       'pro_monthly', 'pro_quarterly', 'pro_yearly', 'pro_lifetime'
     ]
   },

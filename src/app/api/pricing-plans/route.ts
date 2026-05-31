@@ -73,6 +73,11 @@ export async function GET(request: NextRequest) {
     await getConnection();
     const PricingPlanModel = await getAdminPricingPlan();
     
+    if (!PricingPlanModel) {
+      console.error('PricingPlan model could not be loaded in API route');
+      throw new Error('Database model error');
+    }
+
     let query: any = {};
     if (!includeInactive) query.status = 'active';
     if (publicOnly) {
@@ -80,8 +85,12 @@ export async function GET(request: NextRequest) {
       query.targetAudience = 'all';
     }
 
+    console.log(`🔍 Pricing API - Query: ${JSON.stringify(query)}`);
     const plans = await PricingPlanModel.find(query).sort({ sortOrder: 1 }).lean();
+    console.log(`🔍 Pricing API - Found ${plans?.length || 0} plans`);
+
     if (!plans || plans.length === 0) {
+      console.error('❌ Pricing API - No pricing plans found matching query');
       throw new Error('No pricing plans found in database');
     }
 

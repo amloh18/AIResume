@@ -56,7 +56,7 @@ const METER_LIMITS: Record<string, Record<string, number>> = {
         CV_CREATION: -1,
         COVER_LETTER_AI: 0
     },
-    starter_yealry: {
+    starter_yearly: {
         JOB_ACTIVATION: 0,       // No job tracker
         PDF_DOWNLOAD: -1,
         AI_FIX: -1,
@@ -77,7 +77,7 @@ const METER_LIMITS: Record<string, Record<string, number>> = {
         CV_CREATION: -1,
         COVER_LETTER_AI: -1
     },
-    smart_quaterly: {
+    smart_quarterly: {
         JOB_ACTIVATION: -1,
         PDF_DOWNLOAD: -1,
         AI_FIX: -1,
@@ -133,7 +133,7 @@ const QUOTA_LIMITS: Record<string, Record<string, number>> = {
         DRAFTS: -1,
         JOURNEY_CVS: 3
     },
-    starter_yealry: {
+    starter_yearly: {
         ACTIVE_JOBS: 0,          // No job tracker
         DRAFTS: -1,
         JOURNEY_CVS: -1          // Unlimited journey CVs
@@ -148,7 +148,7 @@ const QUOTA_LIMITS: Record<string, Record<string, number>> = {
         DRAFTS: -1,
         JOURNEY_CVS: -1
     },
-    smart_quaterly: {
+    smart_quarterly: {
         ACTIVE_JOBS: -1,
         DRAFTS: -1,
         JOURNEY_CVS: -1

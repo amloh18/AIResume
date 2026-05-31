@@ -454,7 +454,7 @@ Please find the CV data attached.`;
 
       if (rec.type === 3) {
         primary_goal = 'auto_apply';
-        recommended_plan = 'smart_quaterly';
+        recommended_plan = 'smart_quarterly';
         activation_route = '/dashboard/jobs?tab=auto-apply&setup=1';
         dashboard_layout_type = 'auto_apply';
       } else if (rec.type === 2) {
@@ -580,7 +580,7 @@ Please find the CV data attached.`;
 
     // Final Recommendation Resolution
     if (score3 >= score2 && score3 >= score1) {
-      const plan = plans.find(p => p.key === 'smart_quaterly') || plans.find(p => p.key === 'pro_quarterly');
+      const plan = plans.find(p => p.key === 'smart_quarterly') || plans.find(p => p.key === 'pro_quarterly');
       const priceText = plan?.regionalPricing?.price 
         ? `${currencySymbol}${plan.regionalPricing.price}`
         : `${currencySymbol}34.99`;

@@ -46,10 +46,10 @@ class CreditService {
       switch (planKey) {
         case 'free':
           return { jobCredits: 1, aiCredits: 3 }; // 1 job credit, 3 AI credits for free
-        case 'starter_yealry':
+        case 'starter_yearly':
         case 'focused_monthly':
         case 'focused_yearly':
-        case 'smart_quaterly':
+        case 'smart_quarterly':
         case 'smart_yearly':
         case 'pro_monthly':
         case 'pro_quarterly':
@@ -109,7 +109,7 @@ class CreditService {
       }
 
       // For paid plans (monthly/quarterly/yearly/lifetime), check subscription status
-      if (['starter_yealry', 'focused_monthly', 'focused_yearly', 'smart_quaterly', 'smart_yearly', 'pro_monthly', 'pro_quarterly', 'pro_yearly', 'pro_lifetime'].includes(user.currentPlanKey)) {
+      if (['starter_yearly', 'focused_monthly', 'focused_yearly', 'smart_quarterly', 'smart_yearly', 'pro_monthly', 'pro_quarterly', 'pro_yearly', 'pro_lifetime'].includes(user.currentPlanKey)) {
         // Check if user actually has an active subscription
         const subscription = user.subscription;
         const hasActiveSubscription = subscription &&
@@ -384,10 +384,10 @@ class CreditService {
     switch (planKey) {
       case 'free':
         return 'monthly'; // Resets on 1st of month
-      case 'starter_yealry':
+      case 'starter_yearly':
       case 'focused_monthly':
       case 'focused_yearly':
-      case 'smart_quaterly':
+      case 'smart_quarterly':
       case 'smart_yearly':
       case 'pro_monthly':
       case 'pro_quarterly':

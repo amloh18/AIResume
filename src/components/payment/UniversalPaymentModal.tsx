@@ -498,11 +498,11 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
       return 9.99;
     } else if (plan.key === 'focused_yearly') {
       return 79.99;
-    } else if (plan.key === 'smart_quaterly') {
+    } else if (plan.key === 'smart_quarterly') {
       return 59.99;
     } else if (plan.key === 'smart_yearly') {
       return 199.00;
-    } else if (plan.key === 'starter_yealry') {
+    } else if (plan.key === 'starter_yearly') {
       return 39.99;
     }
 
@@ -1091,9 +1091,9 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                         const subscriptionPlans = availablePlans.filter(plan => {
                           const key = plan.key.toLowerCase();
                           if (billingCycle === 'yearly') {
-                            return key.includes('yearly') || key.includes('yealry') || key.includes('lifetime');
+                            return key.includes('yearly') || key.includes('lifetime');
                           } else {
-                            return key.includes('monthly') || key.includes('quarterly') || key.includes('quaterly');
+                            return key.includes('monthly') || key.includes('quarterly');
                           }
                         });
 

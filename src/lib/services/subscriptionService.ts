@@ -136,7 +136,7 @@ class SubscriptionService {
    */
   async activateProPlan(
     userId: string,
-    planKey: 'starter_yealry' | 'focused_monthly' | 'focused_yearly' | 'smart_quaterly' | 'smart_yearly' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly' | 'pro_lifetime',
+    planKey: 'starter_yearly' | 'focused_monthly' | 'focused_yearly' | 'smart_quarterly' | 'smart_yearly' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly' | 'pro_lifetime',
     interval: 'monthly' | 'quarterly' | 'yearly' | 'lifetime' | 'one-time',
     paymentId: string,
     region: string,
@@ -190,12 +190,12 @@ class SubscriptionService {
         expiresAt = nextMonth;
         daysRemaining = 30;
         autoRenew = true; // Only monthly plans auto-renew
-      } else if (planKey === 'pro_quarterly' || planKey === 'smart_quaterly') {
+      } else if (planKey === 'pro_quarterly' || planKey === 'smart_quarterly') {
         // Quarterly: one-time payment for 90 days
         expiresAt = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
         daysRemaining = 90;
         autoRenew = false;
-      } else if (planKey === 'pro_yearly' || planKey === 'starter_yealry' || planKey === 'focused_yearly' || planKey === 'smart_yearly') {
+      } else if (planKey === 'pro_yearly' || planKey === 'starter_yearly' || planKey === 'focused_yearly' || planKey === 'smart_yearly') {
         // Yearly: recurring or one-time payment for 365 days
         expiresAt = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
         daysRemaining = 365;

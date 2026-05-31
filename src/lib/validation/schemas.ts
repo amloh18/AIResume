@@ -82,10 +82,10 @@ export const updateMonthlyGoalSchema = z.object({
 const planKeySchema = z.enum([
   'free',
   'starter_monthly',
-  'starter_yealry',
+  'starter_yearly',
   'focused_monthly',
   'focused_yearly',
-  'smart_quaterly',
+  'smart_quarterly',
   'smart_yearly',
   'pro_monthly',
   'pro_quarterly',

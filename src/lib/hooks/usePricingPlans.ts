@@ -202,6 +202,9 @@ export function usePricingPlans(options: UsePricingPlansOptions = {}): UsePricin
               timestamp: Date.now(),
             });
           }
+        } else {
+          const errorData = await response.json().catch(() => ({}));
+          setError(errorData.error || `Failed to fetch pricing plans (Status: ${response.status})`);
         }
       } catch (error) {
         console.error('Error fetching pricing data:', error);

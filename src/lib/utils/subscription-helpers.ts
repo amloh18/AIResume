@@ -92,7 +92,7 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     linkedinCVSelection: false,
     autoApplyBot: false
   },
-  starter_yealry: {
+  starter_yearly: {
     journeyCVs: -1,
     activeJourneyCVs: -1,
     surgeonRuns: -1,
@@ -155,7 +155,7 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     linkedinCVSelection: true,
     autoApplyBot: false
   },
-  smart_quaterly: {
+  smart_quarterly: {
     journeyCVs: -1,
     activeJourneyCVs: -1,
     surgeonRuns: -1,
