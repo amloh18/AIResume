@@ -33,10 +33,34 @@ export async function getAuthenticatedUser(request?: NextRequest): Promise<AuthR
       console.log('✅ Auth - NextAuth session found:', session.user.email);
       
       // Get full user data from database if needed
-      // Note: connectDB is idempotent, safe to call multiple times
       await getConnection();
       const email = String(session.user.email).toLowerCase();
+      
+      // Check User collection first
       let dbUser = await User.findOne({ email });
+      
+      // If not found in User collection, check AdminAuth collection
+      if (!dbUser) {
+        const AdminAuth = (await import('@/models/AdminAuth')).default;
+        const adminUser = await AdminAuth.findOne({ email }).lean().exec();
+        
+        if (adminUser) {
+          // Map AdminAuth user to the expected user format
+          dbUser = {
+            ...adminUser,
+            _id: adminUser._id,
+            firstName: 'Admin',
+            lastName: 'User',
+            role: adminUser.role || 'admin',
+          } as any;
+          
+          return {
+            user: dbUser,
+            userEmail: dbUser.email,
+            userId: dbUser._id.toString(),
+          };
+        }
+      }
       
       if (dbUser) {
         return {

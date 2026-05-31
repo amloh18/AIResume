@@ -32,7 +32,7 @@ export default function RedesignedAIInsightsWidget({ insights = defaultInsights,
         title: "More data needed",
         description: "Insights will appear once more data is collected.",
       }}
-      className="h-full"
+      className="h-[450px]"
     >
       <div className="space-y-4">
         {insights.map((insight) => (

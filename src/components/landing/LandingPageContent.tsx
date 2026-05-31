@@ -4,6 +4,7 @@ import React, { useEffect } from 'react';
 import { FileText, Sparkles, CheckCircle, Briefcase, Chrome, Globe, LayoutDashboard, BookOpen } from 'lucide-react';
 import Hero from '@/components/landing/Hero';
 import CardNav from '@/components/landing/CardNav';
+import { TestimonialSnippet } from '@/components/landing/Testimonials';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 
@@ -179,8 +180,11 @@ export default function LandingPageContent() {
         />
 
         <Hero />
+        <TestimonialSnippet index={0} />
         <HowItWorks />
+        <TestimonialSnippet index={1} />
         <Features />
+        <TestimonialSnippet index={2} />
         <ChromeExtension />
         <Testimonials />
 

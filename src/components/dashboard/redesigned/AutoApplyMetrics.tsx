@@ -29,9 +29,9 @@ export default function AutoApplyMetrics({ loading = false, empty = false }: { l
         title: "No metrics available",
         description: "Metrics will appear once automation starts.",
       }}
-      className="h-full min-h-[300px]"
+      className="h-[450px]"
     >
-      <div className="w-full h-full min-h-[200px]">
+      <div className="w-full h-[280px]">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
             <defs>

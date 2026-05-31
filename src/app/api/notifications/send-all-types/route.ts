@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     
     // If authenticated, verify user is admin or the target user
     if (authResult) {
-      const isAdmin = authResult.user?.role === 'admin';
+      const isAdmin = authResult.user?.role === 'admin' || authResult.user?.role === 'superadmin';
       const isTargetUser = authResult.userId === userId;
       
       if (!isAdmin && !isTargetUser) {

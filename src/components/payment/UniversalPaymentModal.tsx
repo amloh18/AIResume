@@ -893,7 +893,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 10 }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="relative flex bg-white dark:bg-[#141810] rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden"
+              className="relative flex bg-white dark:bg-[#141810] rounded-2xl shadow-2xl w-full max-w-[1400px] max-h-[96vh] overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Close Button - Moved to outer container */}
@@ -1064,7 +1064,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
               }}
               className="w-full tablet:w-[62%] bg-[#f3f2ee] dark:bg-[#141810] overflow-y-auto"
             >
-              <div className="p-4 tablet:p-6 max-w-5xl mx-auto bg-[#f3f2ee] dark:bg-[#141810] rounded-lg">
+              <div className="p-4 tablet:p-8 max-w-full mx-auto bg-[#f3f2ee] dark:bg-[#141810] rounded-lg">
 
                 {/* Header */}
                 {/* Header moved inside plans container */}
@@ -1101,7 +1101,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                         const displayPlans = subscriptionPlans.length > 0 ? subscriptionPlans : availablePlans;
 
                         return (
-                          <div className="flex flex-col gap-4 bg-gray-50 dark:bg-[#1A201A] rounded-2xl p-4 border border-gray-100 dark:border-gray-800 max-w-[42rem] mx-auto w-full transition-all duration-300">
+                          <div className="flex flex-col gap-4 bg-gray-50 dark:bg-[#1A201A] rounded-2xl p-4 border border-gray-100 dark:border-gray-800 max-w-full mx-auto w-full transition-all duration-300">
 
                             {/* --- HEADER MOVED INSIDE --- */}
                             <div className="flex flex-col tablet:flex-row tablet:items-center justify-between gap-3 mb-2 px-2">
@@ -1280,7 +1280,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
 
                       {/* Trust Elements Footer (Simplified) */}
                       <div className="mt-8 pt-6 border-t border-gray-100 dark:border-white/5">
-                        <div className="grid grid-cols-2 gap-8 mb-6 max-w-[36rem] mx-auto">
+                        <div className="grid grid-cols-2 gap-8 mb-6 max-w-4xl mx-auto">
                           <div className="flex items-start gap-3">
                             <div className="p-1.5 rounded-lg bg-green-500/10 mt-1">
                               <Shield className="w-4 h-4 text-green-600 dark:text-green-400" />

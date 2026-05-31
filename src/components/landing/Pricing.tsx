@@ -100,25 +100,35 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
     // Ensure pricingPlans is always an array
     const safePlans = Array.isArray(pricingPlans) ? pricingPlans : [];
     
-    // Select plans based on active toggle interval
+    // Support both spellings for robustness
     const activeKeys = billingInterval === 'monthly'
-      ? ['starter_monthly', 'focused_monthly', 'smart_quaterly']
-      : ['starter_yealry', 'focused_yearly', 'smart_yearly'];
+      ? ['free', 'starter_monthly', 'focused_monthly', 'smart_quarterly', 'smart_quaterly']
+      : ['free', 'starter_yearly', 'starter_yealry', 'focused_yearly', 'smart_yearly'];
       
     return safePlans
       .filter(plan => activeKeys.includes(plan.key))
       .sort((a, b) => {
-        const indexA = activeKeys.indexOf(a.key);
-        const indexB = activeKeys.indexOf(b.key);
-        if (indexA === -1) return 1;
-        if (indexB === -1) return -1;
-        return indexA - indexB;
+        // Find best match in activeKeys to preserve intended order
+        const getIndex = (key: string) => {
+          if (key === 'free') return -1;
+          if (billingInterval === 'monthly') {
+            if (key === 'starter_monthly') return 0;
+            if (key === 'focused_monthly') return 1;
+            if (key.includes('smart')) return 2;
+          } else {
+            if (key.includes('starter')) return 0;
+            if (key.includes('focused')) return 1;
+            if (key.includes('smart')) return 2;
+          }
+          return 99;
+        };
+        return getIndex(a.key) - getIndex(b.key);
       });
   }, [pricingPlans, billingInterval]);
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex items-center justify-center py-32">
         <LoadingAnimation />
       </div>
     );
@@ -126,7 +136,7 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex items-center justify-center py-32">
         <div className="text-gray-900 dark:text-white text-center">
           <p className="text-red-400 mb-2">Error loading pricing plans</p>
           <p className="text-sm text-gray-500 dark:text-white/60">{error}</p>
@@ -136,7 +146,7 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
   }
 
   return (
-    <section id="pricing" className="relative pt-8 pb-20 flex items-center bg-gray-50 dark:bg-[#141810] overflow-hidden">
+    <section id="pricing" className="relative py-24 bg-gray-50 dark:bg-[#141810] overflow-hidden">
       {/* Grid Pattern Background with Glowing Dots */}
       <div className="absolute inset-0">
         {/* Grid Lines - Much more visible */}
@@ -196,7 +206,7 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-r from-lime-400/5 to-blue-400/5 rounded-full blur-3xl"></div>
       </div>
 
-      <div className="relative z-10 max-w-7xl mx-auto px-4 tablet:px-6 desktop:px-8 w-full h-full flex flex-col justify-center">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 tablet:px-6 desktop:px-8 w-full flex flex-col items-center">
         {/* Header */}
         <motion.div
           className="text-left mb-16"
@@ -402,7 +412,8 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
                         </td>
 
                         {filteredPlans.map((plan) => {
-                          const value = (row as any)[plan.key];
+                          const normalizedKey = plan.key.replace('yealry', 'yearly').replace('quaterly', 'quarterly');
+                          const value = (row as any)[plan.key] || (row as any)[normalizedKey];
                           const isPopular = plan.isPopular;
 
                           return (
@@ -585,8 +596,11 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
                   </thead>
                   <tbody>
                     {comparisonFeatures.map((row, rowIndex) => {
-                      const leftVal = leftPlan ? (row as any)[leftPlan.key] : '✗';
-                      const proVal = selectedProPlan ? (row as any)[selectedProPlan.key] : '✗';
+                      const leftNormalizedKey = leftPlan?.key.replace('yealry', 'yearly').replace('quaterly', 'quarterly');
+                      const proNormalizedKey = selectedProPlan?.key.replace('yealry', 'yearly').replace('quaterly', 'quarterly');
+                      
+                      const leftVal = leftPlan ? ((row as any)[leftPlan.key] || (row as any)[leftNormalizedKey as string]) : '✗';
+                      const proVal = selectedProPlan ? ((row as any)[selectedProPlan.key] || (row as any)[proNormalizedKey as string]) : '✗';
 
                       return (
                         <tr

@@ -349,7 +349,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
         } else {
           setUsernameError('');
         }
-        console.error('Save failed:', result.error);
+        console.error('Save failed:', result.error, result.details || '');
       }
     } catch (error) {
       setSaveStatus('error');

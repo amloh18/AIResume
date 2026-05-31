@@ -15,11 +15,13 @@ export default async function APIKeysPage() {
   if (!authResult) redirect('/sign-in');
 
   const user = authResult.user;
-  if (!user.b2b || !user.b2b.tenantId) {
+  const isGlobalAdmin = user.role === 'admin' || user.role === 'superadmin';
+
+  if (!isGlobalAdmin && (!user.b2b || !user.b2b.tenantId)) {
     redirect('/dashboard');
   }
 
-  if (user.b2b.role !== 'admin') {
+  if (!isGlobalAdmin && user.b2b.role !== 'admin') {
     return (
       <div className="p-6">
         <h1 className="text-2xl font-bold text-red-600">Access Denied</h1>
@@ -31,8 +33,9 @@ export default async function APIKeysPage() {
   }
 
   await getConnection();
-  const apiKeys = await ApiKey.find({ tenantId: user.b2b.tenantId }).lean() as any[];
-  const tenant = await Tenant.findById(user.b2b.tenantId).lean() as any;
+  const tenantId = user.b2b?.tenantId;
+  const apiKeys = tenantId ? await ApiKey.find({ tenantId }).lean() as any[] : [];
+  const tenant = tenantId ? await Tenant.findById(tenantId).lean() as any : null;
 
   return (
     <div className="space-y-8 pb-10">

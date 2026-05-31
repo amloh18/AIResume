@@ -483,20 +483,21 @@ export default function RedesignedDashboardView({ tier, isExpanded = false }: Re
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <AutoApplyMetrics />
-                <div className="space-y-8">
-                  <AIMatchDiscoveryWidget />
-                  <AutomationSettingsWidget />
-                  <RedesignedAIInsightsWidget 
-                    loading={secondaryLoading.aiInsights}
-                    empty={aiInsights.length === 0}
-                    insights={aiInsights.map(i => ({
-                      id: i.id || Math.random().toString(),
-                      title: i.title,
-                      description: i.description,
-                      type: i.type as any
-                    }))}
-                  />
-                </div>
+                <AIMatchDiscoveryWidget />
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <AutomationSettingsWidget />
+                <RedesignedAIInsightsWidget 
+                  loading={secondaryLoading.aiInsights}
+                  empty={aiInsights.length === 0}
+                  insights={aiInsights.map(i => ({
+                    id: i.id || Math.random().toString(),
+                    title: i.title,
+                    description: i.description,
+                    type: i.type as any
+                  }))}
+                />
               </div>
             </motion.div>
           </motion.div>

@@ -116,11 +116,8 @@ export class UnifiedAuthService {
               if (portal === 'admin' && !isAdmin) {
                 throw new Error('Unauthorized. Please use the consumer login.');
               }
-              if (portal === 'b2b' && !isB2b) {
+              if (portal === 'b2b' && !isB2b && !isAdmin) {
                 throw new Error('Unauthorized. Please use the consumer login.');
-              }
-              if (portal === 'default' && isAdmin) {
-                throw new Error('Unauthorized. Please use the admin login.');
               }
               if (portal === 'default' && isB2b && !isAdmin) {
                 throw new Error('Unauthorized. Please use the B2B login.');
@@ -250,11 +247,8 @@ export class UnifiedAuthService {
                 if (portal === 'admin' && !isAdmin) {
                   throw new Error('Unauthorized. Please use the consumer login.');
                 }
-                if (portal === 'b2b' && !isB2b) {
+                if (portal === 'b2b' && !isB2b && !isAdmin) {
                   throw new Error('Unauthorized. Please use the consumer login.');
-                }
-                if (portal === 'default' && isAdmin) {
-                  throw new Error('Unauthorized. Please use the admin login.');
                 }
                 if (portal === 'default' && isB2b && !isAdmin) {
                   throw new Error('Unauthorized. Please use the B2B login.');
@@ -402,11 +396,8 @@ export class UnifiedAuthService {
               if (portal === 'admin' && !isAdmin) {
                 throw new Error('Unauthorized. Please use the consumer login.');
               }
-              if (portal === 'b2b' && !isB2b) {
+              if (portal === 'b2b' && !isB2b && !isAdmin) {
                 throw new Error('Unauthorized. Please use the consumer login.');
-              }
-              if (portal === 'default' && isAdmin) {
-                throw new Error('Unauthorized. Please use the admin login.');
               }
               if (portal === 'default' && isB2b && !isAdmin) {
                 throw new Error('Unauthorized. Please use the B2B login.');

@@ -9,18 +9,27 @@ export async function GET(
 ) {
   try {
     const authResult = await getAuthenticatedUser();
-    if (!authResult || !authResult.user.b2b?.tenantId) {
+    if (!authResult) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const user = authResult.user as any;
+    const isGlobalAdmin = user.role === 'admin' || user.role === 'superadmin';
+    
+    if (!isGlobalAdmin && !user.b2b?.tenantId) {
+      return NextResponse.json({ error: 'Forbidden. B2B access required.' }, { status: 403 });
     }
 
     const { id } = await params;
     await getConnection();
-    const tenantId = authResult.user.b2b.tenantId;
+    const tenantId = user.b2b?.tenantId;
 
-    const candidate = await B2BCandidate.findOne({
-      _id: id,
-      tenantId
-    }).lean();
+    const query: any = { _id: id };
+    if (!isGlobalAdmin) {
+      query.tenantId = tenantId;
+    }
+
+    const candidate = await B2BCandidate.findOne(query).lean();
 
     if (!candidate) {
       return NextResponse.json({ error: 'Candidate not found' }, { status: 404 });
@@ -41,18 +50,27 @@ export async function DELETE(
 ) {
   try {
     const authResult = await getAuthenticatedUser();
-    if (!authResult || !authResult.user.b2b?.tenantId) {
+    if (!authResult) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const user = authResult.user as any;
+    const isGlobalAdmin = user.role === 'admin' || user.role === 'superadmin';
+    
+    if (!isGlobalAdmin && !user.b2b?.tenantId) {
+      return NextResponse.json({ error: 'Forbidden. B2B access required.' }, { status: 403 });
     }
 
     const { id } = await params;
     await getConnection();
-    const tenantId = authResult.user.b2b.tenantId;
+    const tenantId = user.b2b?.tenantId;
 
-    const candidate = await B2BCandidate.findOneAndDelete({
-      _id: id,
-      tenantId
-    });
+    const query: any = { _id: id };
+    if (!isGlobalAdmin) {
+      query.tenantId = tenantId;
+    }
+
+    const candidate = await B2BCandidate.findOneAndDelete(query);
 
     if (!candidate) {
       return NextResponse.json({ error: 'Candidate not found' }, { status: 404 });
@@ -73,14 +91,26 @@ export async function PATCH(
 ) {
   try {
     const authResult = await getAuthenticatedUser();
-    if (!authResult || !authResult.user.b2b?.tenantId) {
+    if (!authResult) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const user = authResult.user as any;
+    const isGlobalAdmin = user.role === 'admin' || user.role === 'superadmin';
+    
+    if (!isGlobalAdmin && !user.b2b?.tenantId) {
+      return NextResponse.json({ error: 'Forbidden. B2B access required.' }, { status: 403 });
     }
 
     const { id } = await params;
     await getConnection();
-    const tenantId = authResult.user.b2b.tenantId;
+    const tenantId = user.b2b?.tenantId;
     const body = await req.json();
+
+    const query: any = { _id: id };
+    if (!isGlobalAdmin) {
+      query.tenantId = tenantId;
+    }
 
     const updateData: any = {};
     if (body.status) {
@@ -95,7 +125,7 @@ export async function PATCH(
     }
 
     const candidate = await B2BCandidate.findOneAndUpdate(
-      { _id: id, tenantId },
+      query,
       { $set: updateData },
       { new: true }
     ).lean();

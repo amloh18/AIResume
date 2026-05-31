@@ -196,11 +196,9 @@ export default async function proxy(req: NextRequest) {
     }
 
     const isUserAdmin = token.type === 'admin' || token.role === 'admin' || token.role === 'superadmin';
-    if (isUserAdmin) {
-      log.debug('Admin attempted to access consumer route, redirecting', { pathname });
-      return NextResponse.redirect(new URL('/admin/dashboard', req.url));
-    }
-    if (token.isB2b) {
+    // Admin users are allowed to access consumer routes if they want to
+    // They will have a "Switch to Admin" button in their navigation
+    if (token.isB2b && !isUserAdmin) {
       log.debug('B2B user attempted to access consumer route, redirecting', { pathname });
       return NextResponse.redirect(new URL('/b2b/dashboard', req.url));
     }

@@ -12,11 +12,14 @@ export async function GET(req: NextRequest) {
     }
 
     const user = authResult.user as any;
-    if (!user.b2b?.tenantId) {
+    const isGlobalAdmin = user.role === 'admin' || user.role === 'superadmin';
+    
+    if (!isGlobalAdmin && !user.b2b?.tenantId) {
       return NextResponse.json({ error: 'Forbidden. B2B access required.' }, { status: 403 });
     }
 
-    const tenantId = user.b2b.tenantId;
+    const tenantId = user.b2b?.tenantId;
+    const query = tenantId ? { tenantId } : {};
     await getConnection();
 
     // 1. Basic Counts
@@ -31,12 +34,12 @@ export async function GET(req: NextRequest) {
       allCandidates,
       allJobs
     ] = await Promise.all([
-      B2BCandidate.countDocuments({ tenantId }),
-      B2BCandidate.countDocuments({ tenantId, createdAt: { $gte: startOfToday } }),
-      B2BCandidate.countDocuments({ tenantId, status: 'shortlisted' }),
-      B2BCandidate.countDocuments({ tenantId, status: 'hired' }),
-      B2BCandidate.find({ tenantId }).sort({ createdAt: -1 }).lean(),
-      Job.find({ tenantId }).lean() // active jobs
+      B2BCandidate.countDocuments(query),
+      B2BCandidate.countDocuments({ ...query, createdAt: { $gte: startOfToday } }),
+      B2BCandidate.countDocuments({ ...query, status: 'shortlisted' }),
+      B2BCandidate.countDocuments({ ...query, status: 'hired' }),
+      B2BCandidate.find(query).sort({ createdAt: -1 }).lean(),
+      Job.find(query).lean() // active jobs
     ]);
 
     // 2. Pipeline Overview

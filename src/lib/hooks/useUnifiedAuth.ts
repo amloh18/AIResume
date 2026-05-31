@@ -9,6 +9,8 @@ interface UnifiedUser {
   name: string;
   username?: string;
   image?: string;
+  role: string;
+  isB2b: boolean;
   isNextAuthUser: boolean;
 }
 
@@ -18,6 +20,7 @@ interface UseUnifiedAuthReturn {
   error: string | null;
   isAuthenticated: boolean;
   userId: string | null;
+  role: string | null;
   // Firebase specific methods
   signInWithGoogle: () => Promise<any>;
   signOut: () => Promise<void>;
@@ -41,6 +44,8 @@ export const useUnifiedAuth = (): UseUnifiedAuthReturn => {
         email: session.user.email || '',
         name: session.user.name || session.user.email?.split('@')[0] || 'User',
         image: session.user.image,
+        role: (session.user as any).role || 'user',
+        isB2b: !!(session.user as any).isB2b,
         isNextAuthUser: true
       };
     }
@@ -52,6 +57,7 @@ export const useUnifiedAuth = (): UseUnifiedAuthReturn => {
   const isAuthenticated = !!session?.user;
   // Use unified user id (falls back to email) so it's never null post-login
   const userId = user?.id || null;
+  const role = user?.role || null;
 
   // Error handling
   const error = null; // Add error handling if needed
@@ -78,6 +84,7 @@ export const useUnifiedAuth = (): UseUnifiedAuthReturn => {
     error,
     isAuthenticated,
     userId,
+    role,
     signInWithGoogle,
     signOut: handleSignOut
   };

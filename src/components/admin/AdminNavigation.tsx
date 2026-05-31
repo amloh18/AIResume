@@ -69,8 +69,8 @@ export default function AdminNavigation({ activeTab, activeSubTab, onTabChange, 
     {
       title: 'PORTALS',
       items: [
-        { id: 'consumer', label: 'Consumer Dashboard', icon: UserCircle, action: () => window.location.href = '/dashboard' },
-        { id: 'b2b', label: 'B2B Gateway', icon: Briefcase, action: () => window.location.href = '/b2b/dashboard' },
+        { id: 'consumer', label: 'Consumer Dashboard', icon: UserCircle, action: () => router.push('/dashboard') },
+        { id: 'b2b', label: 'B2B Gateway', icon: Briefcase, action: () => router.push('/b2b/dashboard') },
       ]
     },
     {

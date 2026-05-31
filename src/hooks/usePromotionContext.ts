@@ -48,7 +48,7 @@ export function usePromotionContext(): PromotionContextData {
 
     // Check user roles and special statuses
     if (user) {
-      isAdmin = user.role === 'admin';
+      isAdmin = user.role === 'admin' || user.role === 'superadmin';
       isB2B = !!user.b2b?.tenantId;
     }
 

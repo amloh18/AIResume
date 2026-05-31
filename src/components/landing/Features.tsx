@@ -106,13 +106,12 @@ const MultiImageFeature = ({ images, title, showFrame = true }: { images: string
 };
 
 const Features = () => {
-  // All features organized for 2-column layout (8 total features)
+  // All features organized for 2-column layout (7 total features)
   const allFeatures = [
-    // Row 1: 2 large tiles
     {
       id: 'smart-extension',
       title: 'Smart Extension',
-      description: 'Save and autofill job data instantly from any job board. Never copy-paste again.',
+      description: 'Save hours of manual data entry. One click to track any job and autofill your profile across 100+ platforms.',
       cta: 'Download Extension',
       ctaLink: 'https://chromewebstore.google.com/detail/fphkljfgefkfemmlfbpnjdojnfeadaii',
       images: ['/images/extension.webp'],
@@ -121,17 +120,16 @@ const Features = () => {
     {
       id: 'linkedin-enhancer',
       title: 'LinkedIn Profile Enhancer',
-      description: 'Optimize your LinkedIn profile with AI-powered suggestions to attract recruiters & land more opportunities.',
+      description: 'Get 5x more recruiter interest. AI-driven profile optimization that turns your LinkedIn into a high-performance lead magnet.',
       cta: 'Enhance Profile',
       ctaLink: '/linkedin-enhancer',
       images: ['/images/linkedin_enhancer.webp', '/images/linkedin_enhancer_dashbaord.webp'],
       showFrame: true,
     },
-    // Row 2: 3 medium tiles
     {
       id: 'ats-optimized',
       title: 'ATS-Optimized Docs',
-      description: 'Auto-generate CVs and Cover Letters tailored to pass Applicant Tracking Systems with high score.',
+      description: 'Land on the hiring manager\'s desk. Automatically bypass ATS filters with resumes tailored specifically for every job description.',
       cta: 'Create CV',
       ctaLink: '/studio',
       images: ['/images/ats_optimization.webp'],
@@ -140,7 +138,7 @@ const Features = () => {
     {
       id: 'skills-gap',
       title: 'Skills Gap Analysis',
-      description: 'Identify missing skills and get actionable recommendations to bridge the gap.',
+      description: 'Become the perfect candidate. AI analyzes your target job to show exactly which skills you\'re missing and how to get them.',
       cta: 'Analyze Skills',
       ctaLink: '/ai-career-report',
       images: ['/images/skill_gap_analysis.webp'],
@@ -149,17 +147,16 @@ const Features = () => {
     {
       id: 'career-insights',
       title: 'Deep Career Insights',
-      description: 'Get detailed CV reports highlighting career gaps, strengths, and areas for improvement.',
+      description: 'Fix resume red flags instantly. Professional-grade audits that reveal exactly why you aren\'t getting callbacks.',
       cta: 'Get Report',
       ctaLink: '/ai-career-report',
       images: ['/images/career_insights.webp'],
       showFrame: false,
     },
-    // Row 3: 2 tiles
     {
       id: 'global-opportunities',
       title: 'Global Opportunities',
-      description: 'Access sponsored jobs with visa sponsorship tags for UK and USA companies with updated companies list.',
+      description: 'Relocate with confidence. Filter for verified visa-sponsored roles in the UK and USA from our curated database.',
       cta: 'Explore Jobs',
       ctaLink: '/dashboard/jobs',
       images: ['/images/global_opportunities.webp'],
@@ -168,19 +165,10 @@ const Features = () => {
     {
       id: 'interview-coach',
       title: 'AI Interview Coach',
-      description: 'Get an edge over other candidates by practising industry standard interview questions.',
+      description: 'Ace every interview. Practice with real-time AI feedback to build unshakable confidence and master difficult questions.',
       cta: 'Start Practice',
       ctaLink: '/interview-coach',
       images: ['/images/interviewcoach_dashbaord.webp', '/images/interviewcoach_questionanalysis.webp', '/images/interviwcoach.webp'],
-      showFrame: true,
-    },
-    {
-      id: 'dark-light-mode',
-      title: 'Dark & Light Mode',
-      description: 'Switch between dark and light themes for a comfortable reading experience in any environment.',
-      cta: 'Try Theme',
-      ctaLink: '/dashboard',
-      images: ['/images/features/dark_light.webp'],
       showFrame: true,
     },
   ];
@@ -223,37 +211,7 @@ const Features = () => {
           </motion.h2>
         </div>
 
-        {/* Group 1: Dark & Light Mode (Row 1 - Centered Large) */}
-        <div className="grid grid-cols-1 desktop:grid-cols-2 gap-6 mb-6">
-          {allFeatures
-            .filter(f => ['dark-light-mode'].includes(f.id))
-            .map((feature, index) => (
-              <motion.div
-                key={feature.id}
-                className="group relative rounded-2xl overflow-hidden desktop:col-span-2 w-full"
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5 }}
-              >
-                <div className="p-6 tablet:p-8 min-h-[140px] flex flex-col justify-start">
-                  <h3 className="text-xl font-bold text-white mb-2">{feature.title}</h3>
-                  <p className="text-gray-400 text-sm leading-relaxed max-w-sm">
-                    {feature.description}
-                  </p>
-                </div>
-
-                <div className={`relative ${feature.showFrame === false ? 'aspect-square' : 'aspect-[16/6]'} overflow-hidden rounded-2xl mx-4 mb-4`}>
-                  <MultiImageFeature images={feature.images} title={feature.title} showFrame={feature.showFrame} />
-                  {feature.showFrame !== false && (
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#141810]/60 to-transparent pointer-events-none rounded-2xl z-10" />
-                  )}
-                </div>
-              </motion.div>
-            ))}
-        </div>
-
-        {/* Group 2: LinkedIn + AI Coach (Row 2 - Large 2-col) */}
+        {/* Group 1: LinkedIn + AI Coach (Row 1 - Large 2-col) */}
         <div className="grid grid-cols-1 desktop:grid-cols-2 gap-6 mb-6">
           {allFeatures
             .filter(f => ['linkedin-enhancer', 'interview-coach'].includes(f.id))
@@ -283,7 +241,7 @@ const Features = () => {
             ))}
         </div>
 
-        {/* Group 3: Remaining Large Features (Career Insights, Global Opps) */}
+        {/* Group 2: Remaining Large Features (Career Insights, Global Opps) */}
         <div className="grid grid-cols-1 desktop:grid-cols-2 gap-6 mb-6">
           {allFeatures
             .filter(f => ['career-insights', 'global-opportunities'].includes(f.id))
@@ -313,7 +271,7 @@ const Features = () => {
             ))}
         </div>
 
-        {/* Group 4: Small Features (Row 4 - Smart Extension, ATS, Skills Gap) */}
+        {/* Group 3: Small Features (Row 3 - Smart Extension, ATS, Skills Gap) */}
         <div className="grid grid-cols-1 tablet:grid-cols-2 desktop:grid-cols-3 gap-6">
           {allFeatures
             .filter(f => ['smart-extension', 'ats-optimized', 'skills-gap'].includes(f.id))

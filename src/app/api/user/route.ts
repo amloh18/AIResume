@@ -86,10 +86,19 @@ export async function GET(request: NextRequest) {
     }
 
     // Find user with optimized query
-    const user = await User.findOne({ email: userEmail })
+    let user = await User.findOne({ email: userEmail })
       .select('firstName lastName email username avatar role isEmailVerified currentPlanKey subscription settings authProvider createdAt updatedAt phone location website linkedin github summary company address jobTitle industry experience dateOfBirth gender nationality')
       .lean()
       .exec() as any;
+
+    let isAdminAuthUser = false;
+    if (!user) {
+      const AdminAuth = (await import('@/models/AdminAuth')).default;
+      user = await AdminAuth.findOne({ email: userEmail }).lean().exec();
+      if (user) {
+        isAdminAuthUser = true;
+      }
+    }
 
     if (!user) {
       return NextResponse.json(
@@ -98,36 +107,39 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const { currentPlanKey, subscription } = subscriptionService.getEffectivePlan(user);
+    const { currentPlanKey, subscription } = !isAdminAuthUser
+      ? subscriptionService.getEffectivePlan(user)
+      : { currentPlanKey: 'pro_lifetime', subscription: { status: 'active', planKey: 'pro_lifetime' } };
 
     // Format user data for frontend
     const userData = {
       id: user._id.toString(),
-      firstName: user.firstName,
-      lastName: user.lastName,
+      firstName: !isAdminAuthUser ? user.firstName : 'Admin',
+      lastName: !isAdminAuthUser ? user.lastName : 'User',
+      name: !isAdminAuthUser ? `${user.firstName} ${user.lastName}` : 'Admin User',
       email: user.email,
-      username: user.username,
-      avatar: user.avatar,
+      username: !isAdminAuthUser ? user.username : undefined,
+      avatar: !isAdminAuthUser ? user.avatar : undefined,
       role: user.role,
-      isEmailVerified: user.isEmailVerified,
-      authProvider: user.authProvider,
+      isEmailVerified: !isAdminAuthUser ? user.isEmailVerified : true,
+      authProvider: !isAdminAuthUser ? user.authProvider : 'local',
       currentPlanKey,
       subscription,
-      settings: user.settings,
-      phone: user.phone,
-      location: user.location,
-      website: user.website,
-      linkedin: user.linkedin,
-      github: user.github,
-      summary: user.summary,
-      company: user.company,
-      address: user.address,
-      jobTitle: user.jobTitle,
-      industry: user.industry,
-      experience: user.experience,
-      dateOfBirth: user.dateOfBirth,
-      gender: user.gender,
-      nationality: user.nationality,
+      settings: !isAdminAuthUser ? user.settings : { theme: 'dark', timezone: 'UTC', languagePreference: 'en' },
+      phone: !isAdminAuthUser ? user.phone : undefined,
+      location: !isAdminAuthUser ? user.location : undefined,
+      website: !isAdminAuthUser ? user.website : undefined,
+      linkedin: !isAdminAuthUser ? user.linkedin : undefined,
+      github: !isAdminAuthUser ? user.github : undefined,
+      summary: !isAdminAuthUser ? user.summary : undefined,
+      company: !isAdminAuthUser ? user.company : undefined,
+      address: !isAdminAuthUser ? user.address : undefined,
+      jobTitle: !isAdminAuthUser ? user.jobTitle : undefined,
+      industry: !isAdminAuthUser ? user.industry : undefined,
+      experience: !isAdminAuthUser ? user.experience : undefined,
+      dateOfBirth: !isAdminAuthUser ? user.dateOfBirth : undefined,
+      gender: !isAdminAuthUser ? user.gender : undefined,
+      nationality: !isAdminAuthUser ? user.nationality : undefined,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt
     };
@@ -198,11 +210,22 @@ export async function PUT(request: NextRequest) {
       firstName, lastName, username, avatar, 
       phone, location, website, linkedin, github, summary, 
       company, address, dateOfBirth, gender, nationality,
-      settings 
+      experience, settings 
     } = body;
 
     // Find user
-    const user = await User.findOne({ email: userEmail });
+    let user = await User.findOne({ email: userEmail });
+    let isAdminAuthUser = false;
+
+    if (!user) {
+      // Fallback: Check AdminAuth collection
+      const AdminAuth = (await import('@/models/AdminAuth')).default;
+      user = await AdminAuth.findOne({ email: userEmail });
+      if (user) {
+        isAdminAuthUser = true;
+      }
+    }
+
     if (!user) {
       return NextResponse.json(
         { success: false, error: 'User not found' },
@@ -232,25 +255,28 @@ export async function PUT(request: NextRequest) {
     }
 
     // Update allowed fields
-    if (firstName !== undefined) user.firstName = firstName;
-    if (lastName !== undefined) user.lastName = lastName;
-    if (avatar !== undefined) user.avatar = avatar;
+    if (firstName !== undefined && !isAdminAuthUser) user.firstName = firstName;
+    if (lastName !== undefined && !isAdminAuthUser) user.lastName = lastName;
+    if (avatar !== undefined && !isAdminAuthUser) user.avatar = avatar;
     
-    // Update profile fields
-    if (phone !== undefined) user.phone = phone;
-    if (location !== undefined) user.location = location;
-    if (website !== undefined) user.website = website;
-    if (linkedin !== undefined) user.linkedin = linkedin;
-    if (github !== undefined) user.github = github;
-    if (summary !== undefined) user.summary = summary;
-    if (company !== undefined) user.company = company;
-    if (address !== undefined) user.address = address;
-    if (dateOfBirth !== undefined) user.dateOfBirth = dateOfBirth;
-    if (gender !== undefined) user.gender = gender;
-    if (nationality !== undefined) user.nationality = nationality;
+    // Update profile fields (only for regular users)
+    if (!isAdminAuthUser) {
+      if (phone !== undefined) user.phone = phone;
+      if (location !== undefined) user.location = location;
+      if (website !== undefined) user.website = website;
+      if (linkedin !== undefined) user.linkedin = linkedin;
+      if (github !== undefined) user.github = github;
+      if (summary !== undefined) user.summary = summary;
+      if (company !== undefined) user.company = company;
+      if (address !== undefined) user.address = address;
+      if (dateOfBirth !== undefined) user.dateOfBirth = dateOfBirth;
+      if (gender !== undefined) user.gender = gender;
+      if (nationality !== undefined) user.nationality = nationality;
+      if (experience !== undefined) user.experience = experience;
+    }
     
-    // Update settings
-    if (settings !== undefined) {
+    // Update settings (only for regular users)
+    if (settings !== undefined && !isAdminAuthUser) {
       // Merge settings while preserving existing structure
       const currentSettings = user.settings || {
         theme: 'auto',
@@ -270,13 +296,15 @@ export async function PUT(request: NextRequest) {
     }
 
     console.log('User before save:', {
-      firstName: user.firstName,
-      lastName: user.lastName,
-      settings: user.settings
+      email: user.email,
+      isAdminAuthUser,
+      role: user.role
     });
 
     try {
-      await user.save();
+      // Bypass validation for superadmins and AdminAuth users to avoid stale enum issues
+      const skipValidation = isAdminAuthUser || user.role === 'superadmin';
+      await user.save({ validateBeforeSave: !skipValidation });
       console.log('User saved successfully');
     } catch (saveError: any) {
       console.error('Save error:', saveError);
@@ -294,34 +322,37 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const { currentPlanKey, subscription } = subscriptionService.getEffectivePlan(user);
+    const { currentPlanKey, subscription } = !isAdminAuthUser 
+      ? subscriptionService.getEffectivePlan(user)
+      : { currentPlanKey: 'pro_lifetime', subscription: { status: 'active', planKey: 'pro_lifetime' } };
 
     return NextResponse.json({
       success: true,
       message: 'Profile updated successfully',
       user: {
         id: user._id.toString(),
-        firstName: user.firstName,
-        lastName: user.lastName,
+        firstName: !isAdminAuthUser ? user.firstName : 'Admin',
+        lastName: !isAdminAuthUser ? user.lastName : 'User',
+        name: !isAdminAuthUser ? `${user.firstName} ${user.lastName}` : 'Admin User',
         email: user.email,
-        username: user.username,
-        avatar: user.avatar,
+        username: !isAdminAuthUser ? user.username : undefined,
+        avatar: !isAdminAuthUser ? user.avatar : undefined,
         role: user.role,
-        isEmailVerified: user.isEmailVerified,
+        isEmailVerified: !isAdminAuthUser ? user.isEmailVerified : true,
         currentPlanKey,
         subscription,
-        settings: user.settings,
-        phone: user.phone,
-        location: user.location,
-        website: user.website,
-        linkedin: user.linkedin,
-        github: user.github,
-        summary: user.summary,
-        company: user.company,
-        address: user.address,
-        dateOfBirth: user.dateOfBirth,
-        gender: user.gender,
-        nationality: user.nationality,
+        settings: !isAdminAuthUser ? user.settings : { theme: 'dark', timezone: 'UTC', languagePreference: 'en' },
+        phone: !isAdminAuthUser ? user.phone : undefined,
+        location: !isAdminAuthUser ? user.location : undefined,
+        website: !isAdminAuthUser ? user.website : undefined,
+        linkedin: !isAdminAuthUser ? user.linkedin : undefined,
+        github: !isAdminAuthUser ? user.github : undefined,
+        summary: !isAdminAuthUser ? user.summary : undefined,
+        company: !isAdminAuthUser ? user.company : undefined,
+        address: !isAdminAuthUser ? user.address : undefined,
+        dateOfBirth: !isAdminAuthUser ? user.dateOfBirth : undefined,
+        gender: !isAdminAuthUser ? user.gender : undefined,
+        nationality: !isAdminAuthUser ? user.nationality : undefined,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt
       }

@@ -17,7 +17,7 @@ export default function AutomationSettingsWidget({ loading = false }: { loading?
       type="settings"
       userTier={['smart']}
       loading={loading}
-      className="h-full"
+      className="h-[450px]"
     >
       <div className="space-y-6">
         {/* Auto Apply Toggle */}

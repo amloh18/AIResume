@@ -12,11 +12,13 @@ export default async function SettingsPage() {
   if (!authResult) redirect('/sign-in');
 
   const user = authResult.user;
-  if (!user.b2b || !user.b2b.tenantId) {
+  const isGlobalAdmin = user.role === 'admin' || user.role === 'superadmin';
+
+  if (!isGlobalAdmin && (!user.b2b || !user.b2b.tenantId)) {
     redirect('/dashboard');
   }
 
-  if (user.b2b.role !== 'admin') {
+  if (!isGlobalAdmin && user.b2b.role !== 'admin') {
     return (
       <div className="p-6">
         <h1 className="text-2xl font-bold text-red-600">Access Denied</h1>
