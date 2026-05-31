@@ -64,11 +64,11 @@ const RedesignedPricingCards: React.FC<RedesignedPricingCardsProps> = ({
 
   // Group plans into categories
   const essentialPlans = safePlans.filter(plan =>
-    plan.key === 'free' || plan.key === 'starter_monthly' || plan.key === 'starter_yealry'
+    plan.key === 'free' || plan.key === 'starter_monthly' || plan.key === 'starter_yearly'
   );
   const proPlans = safePlans.filter(plan =>
     plan.key === 'focused_monthly' || plan.key === 'focused_yearly' || 
-    plan.key === 'smart_quaterly' || plan.key === 'smart_yearly' ||
+    plan.key === 'smart_quarterly' || plan.key === 'smart_yearly' ||
     plan.key === 'pro_monthly' || plan.key === 'pro_quarterly' || plan.key === 'pro_yearly' || plan.key === 'pro_lifetime'
   );
 
@@ -77,7 +77,7 @@ const RedesignedPricingCards: React.FC<RedesignedPricingCardsProps> = ({
       case 'free':
       case 'starter_monthly':
         return <Zap className="w-6 h-6" />;
-      case 'starter_yealry':
+      case 'starter_yearly':
         return <Star className="w-6 h-6" />;
       case 'focused_monthly':
       case 'focused_yearly':
@@ -85,7 +85,7 @@ const RedesignedPricingCards: React.FC<RedesignedPricingCardsProps> = ({
       case 'pro_quarterly':
       case 'pro_yearly':
         return <Crown className="w-6 h-6" />;
-      case 'smart_quaterly':
+      case 'smart_quarterly':
       case 'smart_yearly':
       case 'pro_lifetime':
         return <Crown className="w-6 h-6" />;
@@ -104,8 +104,8 @@ const RedesignedPricingCards: React.FC<RedesignedPricingCardsProps> = ({
 
     // Use plan prices from database/API
     if (plan.key.includes('monthly')) return plan.price_monthly || 0;
-    if (plan.key.includes('yearly') || plan.key.includes('yealry')) return plan.price_yearly || 0;
-    if (plan.key.includes('quarterly') || plan.key.includes('quaterly')) return plan.price_quarterly || 0;
+    if (plan.key.includes('yearly')) return plan.price_yearly || 0;
+    if (plan.key.includes('quarterly')) return plan.price_quarterly || 0;
     if (plan.key.includes('lifetime') || plan.key.includes('one_time')) return plan.price_one_time || 0;
 
     return plan.price_monthly || plan.price_quarterly || plan.price_yearly || plan.price_one_time || 0;
@@ -117,13 +117,13 @@ const RedesignedPricingCards: React.FC<RedesignedPricingCardsProps> = ({
         return '';
       case 'starter_monthly':
         return '/m';
-      case 'starter_yealry':
+      case 'starter_yearly':
         return '/y';
       case 'focused_monthly':
         return '/m';
       case 'focused_yearly':
         return '/y';
-      case 'smart_quaterly':
+      case 'smart_quarterly':
         return '/q';
       case 'smart_yearly':
         return '/y';
@@ -142,9 +142,9 @@ const RedesignedPricingCards: React.FC<RedesignedPricingCardsProps> = ({
 
   const getPlanColor = (plan: PricingPlan) => {
     if (plan.key === 'free' || plan.key === 'starter_monthly') return 'from-gray-500 to-gray-600';
-    if (plan.key === 'starter_yealry') return 'from-lime-500 to-lime-600';
+    if (plan.key === 'starter_yearly') return 'from-lime-500 to-lime-600';
     if (plan.key === 'focused_monthly' || plan.key === 'focused_yearly') return 'from-blue-500 to-indigo-600';
-    if (plan.key === 'smart_quaterly' || plan.key === 'smart_yearly') return 'from-purple-500 to-pink-600';
+    if (plan.key === 'smart_quarterly' || plan.key === 'smart_yearly') return 'from-purple-500 to-pink-600';
     if (plan.key === 'pro_monthly') return 'from-blue-500 to-indigo-600';
     if (plan.key === 'pro_quarterly') return 'from-emerald-500 to-teal-600';
     if (plan.key === 'pro_yearly') return 'from-purple-500 to-pink-600';
@@ -251,7 +251,7 @@ const RedesignedPricingCards: React.FC<RedesignedPricingCardsProps> = ({
               </div>
               <div>
                 <div className="text-lg font-semibold text-gray-900 dark:text-white">
-                  {plan.key === 'free' || plan.key === 'starter_monthly' ? '3' : plan.key === 'starter_yealry' ? '0' : '∞'}
+                  {plan.key === 'free' || plan.key === 'starter_monthly' ? '3' : plan.key === 'starter_yearly' ? '0' : '∞'}
                 </div>
                 <div className="text-xs text-gray-600 dark:text-gray-300">Jobs</div>
               </div>

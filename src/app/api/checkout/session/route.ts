@@ -12,10 +12,10 @@ import Coupon from '@/models/Coupon';
 import DiscountCode from '@/models/DiscountCode';
 
 type PaidPlanKey = 
-  | 'starter_yealry' 
+  | 'starter_yearly' 
   | 'focused_monthly' 
   | 'focused_yearly' 
-  | 'smart_quaterly' 
+  | 'smart_quarterly' 
   | 'smart_yearly';
 
 interface ZeroAmountActivationParams {
@@ -205,10 +205,10 @@ async function handleProPlanPayment(
     if (planKey.includes('monthly')) {
       amount = (plan.price_monthly || 0) * 100;
       priceId = plan.polarPriceId_monthly;
-    } else if (planKey.includes('yearly') || planKey.includes('yealry')) {
+    } else if (planKey.includes('yearly')) {
       amount = (plan.price_yearly || 0) * 100;
       priceId = plan.polarPriceId_yearly;
-    } else if (planKey.includes('quarterly') || planKey.includes('quaterly')) {
+    } else if (planKey.includes('quarterly')) {
       amount = (plan.price_quarterly || 0) * 100;
       priceId = plan.polarPriceId_quarterly;
     }

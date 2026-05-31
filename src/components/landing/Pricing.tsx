@@ -102,8 +102,8 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
     
     // Support both spellings for robustness
     const activeKeys = billingInterval === 'monthly'
-      ? ['free', 'starter_monthly', 'focused_monthly', 'smart_quarterly', 'smart_quaterly']
-      : ['free', 'starter_yearly', 'starter_yealry', 'focused_yearly', 'smart_yearly'];
+      ? ['free', 'starter_monthly', 'focused_monthly', 'smart_quarterly']
+      : ['free', 'starter_yearly', 'focused_yearly', 'smart_yearly'];
       
     return safePlans
       .filter(plan => activeKeys.includes(plan.key))
@@ -272,26 +272,26 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
         {/* Comparison Table Data */}
         {(() => {
           const comparisonFeatures = [
-            { name: 'Access to All Templates', free: '✓', starter_monthly: '✓', starter_yealry: '✓', focused_monthly: '✓', focused_yearly: '✓', smart_quaterly: '✓', smart_yearly: '✓', pro_monthly: '✓', pro_quarterly: '✓', pro_yearly: '✓', pro_lifetime: '✓' },
-            { name: 'CV & Cover Letter Editing', free: 'Unlimited', starter_monthly: 'Unlimited', starter_yealry: 'Unlimited', focused_monthly: 'Unlimited', focused_yearly: 'Unlimited', smart_quaterly: 'Unlimited', smart_yearly: 'Unlimited', pro_monthly: 'Unlimited', pro_quarterly: 'Unlimited', pro_yearly: 'Unlimited', pro_lifetime: 'Unlimited' },
-            { name: 'Real-time ATS Scoring & Editor', free: 'Spelling Only', starter_monthly: 'Spelling Only', starter_yealry: '✓ (Live ATS)', focused_monthly: '✓ (Live ATS)', focused_yearly: '✓ (Live ATS)', smart_quaterly: '✓ (Live ATS)', smart_yearly: '✓ (Live ATS)', pro_monthly: '✓', pro_quarterly: '✓', pro_yearly: '✓', pro_lifetime: '✓' },
-            { name: 'AI Cover Letter Generator', free: '✗', starter_monthly: '✗', starter_yealry: '✓', focused_monthly: '✓', focused_yearly: '✓', smart_quaterly: '✓', smart_yearly: '✓', pro_monthly: '✓', pro_quarterly: '✓', pro_yearly: '✓', pro_lifetime: '✓' },
-            { name: 'LinkedIn Enhancer (Optimizer)', free: '✗', starter_monthly: '✗', starter_yealry: '✗', focused_monthly: '✓', focused_yearly: '✓', smart_quaterly: '✓', smart_yearly: '✓', pro_monthly: '✓', pro_quarterly: '✓', pro_yearly: '✓', pro_lifetime: '✓' },
-            { name: 'AI Interview Coach Simulator', free: '✗', starter_monthly: '✗', starter_yealry: '✗', focused_monthly: '✓', focused_yearly: '✓', smart_quaterly: '✓', smart_yearly: '✓', pro_monthly: '✓', pro_quarterly: '✓', pro_yearly: '✓', pro_lifetime: '✓' },
-            { name: 'Job Application Tracker', free: '✓ (Basic)', starter_monthly: '✗', starter_yealry: '✗', focused_monthly: '✓ (Full)', focused_yearly: '✓ (Full)', smart_quaterly: '✓ (Full)', smart_yearly: '✓ (Full)', pro_monthly: '✓ (Full)', pro_quarterly: '✓ (Full)', pro_yearly: '✓ (Full)', pro_lifetime: '✓ (Full)' },
-            { name: 'Auto Job Application Bot', free: '✗', starter_monthly: '✗', starter_yealry: '✗', focused_monthly: '✗', focused_yearly: '✗', smart_quaterly: '✓', smart_yearly: '✓', pro_monthly: '✗', pro_quarterly: '✗', pro_yearly: '✗', pro_lifetime: '✗' },
-            { name: 'Permanent Career Vault', free: '✗', starter_monthly: '✗', starter_yealry: '✗', focused_monthly: '✗', focused_yearly: '✗', smart_quaterly: '✗', smart_yearly: '✗', pro_monthly: '✗', pro_quarterly: '✗', pro_yearly: '✗', pro_lifetime: '✓' },
-            { name: 'Customer Support Level', free: 'Standard', starter_monthly: 'Standard', starter_yealry: 'Standard', focused_monthly: 'Priority', focused_yearly: 'Priority', smart_quaterly: 'VIP 24/7 Support', smart_yearly: 'VIP 24/7 Support', pro_monthly: 'Standard', pro_quarterly: 'Priority Support', pro_yearly: 'Priority Support', pro_lifetime: 'VIP 24/7 Support' },
+            { name: 'Access to All Templates', free: '✓', starter_monthly: '✓', starter_yearly: '✓', focused_monthly: '✓', focused_yearly: '✓', smart_quarterly: '✓', smart_yearly: '✓', pro_monthly: '✓', pro_quarterly: '✓', pro_yearly: '✓', pro_lifetime: '✓' },
+            { name: 'CV & Cover Letter Editing', free: 'Unlimited', starter_monthly: 'Unlimited', starter_yearly: 'Unlimited', focused_monthly: 'Unlimited', focused_yearly: 'Unlimited', smart_quarterly: 'Unlimited', smart_yearly: 'Unlimited', pro_monthly: 'Unlimited', pro_quarterly: 'Unlimited', pro_yearly: 'Unlimited', pro_lifetime: 'Unlimited' },
+            { name: 'Real-time ATS Scoring & Editor', free: 'Spelling Only', starter_monthly: 'Spelling Only', starter_yearly: '✓ (Live ATS)', focused_monthly: '✓ (Live ATS)', focused_yearly: '✓ (Live ATS)', smart_quarterly: '✓ (Live ATS)', smart_yearly: '✓ (Live ATS)', pro_monthly: '✓', pro_quarterly: '✓', pro_yearly: '✓', pro_lifetime: '✓' },
+            { name: 'AI Cover Letter Generator', free: '✗', starter_monthly: '✗', starter_yearly: '✓', focused_monthly: '✓', focused_yearly: '✓', smart_quarterly: '✓', smart_yearly: '✓', pro_monthly: '✓', pro_quarterly: '✓', pro_yearly: '✓', pro_lifetime: '✓' },
+            { name: 'LinkedIn Enhancer (Optimizer)', free: '✗', starter_monthly: '✗', starter_yearly: '✗', focused_monthly: '✓', focused_yearly: '✓', smart_quarterly: '✓', smart_yearly: '✓', pro_monthly: '✓', pro_quarterly: '✓', pro_yearly: '✓', pro_lifetime: '✓' },
+            { name: 'AI Interview Coach Simulator', free: '✗', starter_monthly: '✗', starter_yearly: '✗', focused_monthly: '✓', focused_yearly: '✓', smart_quarterly: '✓', smart_yearly: '✓', pro_monthly: '✓', pro_quarterly: '✓', pro_yearly: '✓', pro_lifetime: '✓' },
+            { name: 'Job Application Tracker', free: '✓ (Basic)', starter_monthly: '✗', starter_yearly: '✗', focused_monthly: '✓ (Full)', focused_yearly: '✓ (Full)', smart_quarterly: '✓ (Full)', smart_yearly: '✓ (Full)', pro_monthly: '✓ (Full)', pro_quarterly: '✓ (Full)', pro_yearly: '✓ (Full)', pro_lifetime: '✓ (Full)' },
+            { name: 'Auto Job Application Bot', free: '✗', starter_monthly: '✗', starter_yearly: '✗', focused_monthly: '✗', focused_yearly: '✗', smart_quarterly: '✓', smart_yearly: '✓', pro_monthly: '✗', pro_quarterly: '✗', pro_yearly: '✗', pro_lifetime: '✗' },
+            { name: 'Permanent Career Vault', free: '✗', starter_monthly: '✗', starter_yearly: '✗', focused_monthly: '✗', focused_yearly: '✗', smart_quarterly: '✗', smart_yearly: '✗', pro_monthly: '✗', pro_quarterly: '✗', pro_yearly: '✗', pro_lifetime: '✓' },
+            { name: 'Customer Support Level', free: 'Standard', starter_monthly: 'Standard', starter_yearly: 'Standard', focused_monthly: 'Priority', focused_yearly: 'Priority', smart_quarterly: 'VIP 24/7 Support', smart_yearly: 'VIP 24/7 Support', pro_monthly: 'Standard', pro_quarterly: 'Priority Support', pro_yearly: 'Priority Support', pro_lifetime: 'VIP 24/7 Support' },
           ];
 
           const leftPlan = billingInterval === 'monthly'
             ? filteredPlans.find(p => p.key === 'starter_monthly')
-            : filteredPlans.find(p => p.key === 'starter_yealry');
+            : filteredPlans.find(p => p.key === 'starter_yearly');
           const selectedProPlan = filteredPlans.find(p => p.key === selectedMobilePlanKey);
 
           const getMobilePlanPriceDisplay = (plan: DatabasePricingPlan) => {
             const regionalPrice = getRegionalPrice(plan);
-            if (plan.key === 'starter_yealry') {
+            if (plan.key === 'starter_yearly') {
               return regionalPrice.endsWith('*')
                 ? `${regionalPrice.slice(0, -1)} (Save 50%)*`
                 : `${regionalPrice} (Save 50%)`;
@@ -301,7 +301,7 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
           };
 
           const getMobilePlanSubtext = (plan: DatabasePricingPlan) => {
-            if (plan.key === 'starter_yealry') {
+            if (plan.key === 'starter_yearly') {
               return (
                 <div className="flex flex-col items-center">
                   {plan.isPromotionActive && (
@@ -325,9 +325,9 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
                 <span className="text-[8px] text-gray-400 font-normal mt-0.5">
                   {plan.key.includes('monthly')
                     ? 'recurring monthly'
-                    : plan.key.includes('quarterly') || plan.key.includes('quaterly')
+                    : plan.key.includes('quarterly')
                       ? 'billed quarterly'
-                      : plan.key.includes('yearly') || plan.key.includes('yealry')
+                      : plan.key.includes('yearly')
                         ? 'billed annually'
                         : 'one-time'}
                 </span>
@@ -393,7 +393,7 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
                               )}
                               {!isPopular && !isBestValue && <div className="h-[19px] mb-1.5" />}
                                <h3 className="text-sm font-bold text-gray-900 dark:text-white">
-                                 {plan.name.replace(/\s*(Monthly|Yearly|Quarterly|Quaterly)/gi, '')}
+                                 {plan.name.replace(/\s*(Monthly|Yearly|Quarterly)/gi, '')}
                                </h3>
                             </div>
                           </th>
@@ -412,8 +412,7 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
                         </td>
 
                         {filteredPlans.map((plan) => {
-                          const normalizedKey = plan.key.replace('yealry', 'yearly').replace('quaterly', 'quarterly');
-                          const value = (row as any)[plan.key] || (row as any)[normalizedKey];
+                          const value = (row as any)[plan.key];
                           const isPopular = plan.isPopular;
 
                           return (
@@ -458,7 +457,7 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
                             <div className="flex flex-col items-center justify-start min-h-[64px]">
                               {plan.key === 'free' || plan.key === 'starter_monthly' ? (
                                 <div className="text-xl tablet:text-2xl font-extrabold text-gray-900 dark:text-white">Free</div>
-                              ) : plan.key === 'starter_yealry' ? (
+                              ) : plan.key === 'starter_yearly' ? (
                                 <div className="flex flex-col items-center">
                                   {plan.isPromotionActive && (
                                     <span className="text-xs text-gray-400 line-through font-normal mb-0.5">
@@ -490,9 +489,9 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
                                   <span className="text-[9px] text-gray-400 mt-0.5 font-normal">
                                     {plan.key.includes('monthly')
                                       ? 'recurring monthly'
-                                      : plan.key.includes('quarterly') || plan.key.includes('quaterly')
+                                      : plan.key.includes('quarterly')
                                         ? 'billed quarterly'
-                                        : plan.key.includes('yearly') || plan.key.includes('yealry')
+                                        : plan.key.includes('yearly')
                                           ? 'billed annually'
                                           : 'one-time'}
                                   </span>
@@ -544,7 +543,7 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
                     {(billingInterval === 'monthly'
                       ? [
                           { key: 'focused_monthly', label: 'Focused Mo' },
-                          { key: 'smart_quaterly', label: 'Smart Qtr' }
+                          { key: 'smart_quarterly', label: 'Smart Qtr' }
                         ]
                       : [
                           { key: 'focused_yearly', label: 'Focused Yr' },
@@ -579,7 +578,7 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
                       </th>
                       <th className="p-3 text-center border-b border-gray-200 dark:border-white/10 w-[30%]">
                         <span className="text-xs font-bold text-gray-900 dark:text-white">
-                          {leftPlan ? leftPlan.name.replace(/\s*(Monthly|Yearly|Quarterly|Quaterly)/gi, '') : 'Starter'}
+                          {leftPlan ? leftPlan.name.replace(/\s*(Monthly|Yearly|Quarterly)/gi, '') : 'Starter'}
                         </span>
                       </th>
                       <th className="p-3 text-center border-b border-gray-200 dark:border-white/10 w-[30%] bg-lime-500/[0.03] dark:bg-lime-400/[0.02] border-x border-lime-500/20">
@@ -588,7 +587,7 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
                             Pro Choice
                           </span>
                           <span className="text-xs font-bold text-gray-900 dark:text-white text-center leading-tight">
-                            {selectedProPlan ? selectedProPlan.name.replace(/\s*(Monthly|Yearly|Quarterly|Quaterly)/gi, '') : 'Pro'}
+                            {selectedProPlan ? selectedProPlan.name.replace(/\s*(Monthly|Yearly|Quarterly)/gi, '') : 'Pro'}
                           </span>
                         </div>
                       </th>
@@ -596,11 +595,8 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
                   </thead>
                   <tbody>
                     {comparisonFeatures.map((row, rowIndex) => {
-                      const leftNormalizedKey = leftPlan?.key.replace('yealry', 'yearly').replace('quaterly', 'quarterly');
-                      const proNormalizedKey = selectedProPlan?.key.replace('yealry', 'yearly').replace('quaterly', 'quarterly');
-                      
-                      const leftVal = leftPlan ? ((row as any)[leftPlan.key] || (row as any)[leftNormalizedKey as string]) : '✗';
-                      const proVal = selectedProPlan ? ((row as any)[selectedProPlan.key] || (row as any)[proNormalizedKey as string]) : '✗';
+                      const leftVal = leftPlan ? (row as any)[leftPlan.key] : '✗';
+                      const proVal = selectedProPlan ? (row as any)[selectedProPlan.key] : '✗';
 
                       return (
                         <tr
