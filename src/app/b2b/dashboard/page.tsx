@@ -8,7 +8,9 @@ export default async function B2BDashboardPage() {
   if (!authResult) redirect('/sign-in');
 
   const user = authResult.user;
-  if (!user.b2b || !user.b2b.tenantId) {
+  const isGlobalAdmin = user.role === 'admin' || user.role === 'superadmin';
+
+  if (!isGlobalAdmin && (!user.b2b || !user.b2b.tenantId)) {
     redirect('/dashboard');
   }
 

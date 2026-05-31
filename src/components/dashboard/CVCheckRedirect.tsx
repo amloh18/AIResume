@@ -102,6 +102,15 @@ export default function CVCheckRedirect({ children }: CVCheckRedirectProps) {
         return;
       }
 
+      // Bypass check for admins and superadmins
+      const isAdmin = user?.role === 'admin' || user?.role === 'superadmin';
+      if (isAdmin) {
+        console.log('✅ User is admin/superadmin, bypassing CV check');
+        setHasMasterCV(true);
+        setIsChecking(false);
+        return;
+      }
+
       if (!user?.id) {
         console.log('❌ No user ID in auth');
         setIsChecking(false);

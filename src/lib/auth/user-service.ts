@@ -37,8 +37,20 @@ export class UserService {
     try {
       await getConnection();
 
-      // Find user by email with password
-      const user = await userRepository.findByEmailWithPassword(email);
+      // Find user by email with password in regular User collection
+      let user = await userRepository.findByEmailWithPassword(email);
+      let isAdminCollection = false;
+
+      if (!user) {
+        // Fallback: Check AdminAuth collection
+        const AdminAuth = (await import('@/models/AdminAuth')).default;
+        const adminUser = await AdminAuth.findOne({ email: email.toLowerCase() }).select('+password').lean().exec();
+        
+        if (adminUser) {
+          user = adminUser as any;
+          isAdminCollection = true;
+        }
+      }
 
       if (!user) {
         return { user: null, error: 'Invalid credentials' };
@@ -49,32 +61,45 @@ export class UserService {
         return { user: null, error: 'Please sign in with Google' };
       }
 
-      // Check if email is verified
-      if (!user.isEmailVerified) {
+      // Check if email is verified (only for regular users, admins are assumed verified)
+      if (!isAdminCollection && !user.isEmailVerified) {
         return { user: null, error: 'Please verify your email before signing in' };
       }
 
-      // Verify password using repository method
+      // Verify password
+      let isPasswordValid = false;
       const userId = (user as any)._id.toString();
-      const isPasswordValid = await userRepository.verifyPassword(userId, password);
+
+      if (isAdminCollection) {
+        // AdminAuth uses bcrypt directly in its method, but since we are lean, we use bcrypt here
+        const bcrypt = await import('bcryptjs');
+        isPasswordValid = await bcrypt.compare(password, user.password);
+      } else {
+        isPasswordValid = await userRepository.verifyPassword(userId, password);
+      }
 
       if (!isPasswordValid) {
         return { user: null, error: 'Invalid credentials' };
       }
 
-      // Update last login using repository
-      await userRepository.updateLastLogin(userId);
+      // Update last login
+      if (isAdminCollection) {
+        const AdminAuth = (await import('@/models/AdminAuth')).default;
+        await AdminAuth.findByIdAndUpdate(userId, { lastLogin: new Date() });
+      } else {
+        await userRepository.updateLastLogin(userId);
+      }
 
       return {
         user: {
           id: userId,
           email: user.email,
-          name: `${user.firstName} ${user.lastName}`,
-          image: user.avatar || null,
+          name: isAdminCollection ? 'Admin User' : `${user.firstName} ${user.lastName}`,
+          image: (user as any).avatar || null,
           role: user.role || 'user',
-          planKey: user.currentPlanKey || 'free',
-          subscriptionStatus: user.subscription?.status || 'inactive',
-          isB2b: !!(user as any).b2b?.tenantId,
+          planKey: (user as any).currentPlanKey || (isAdminCollection ? 'pro_lifetime' : 'free'),
+          subscriptionStatus: (user as any).subscription?.status || (isAdminCollection ? 'active' : 'inactive'),
+          isB2b: isAdminCollection ? true : !!(user as any).b2b?.tenantId,
         },
       };
     } catch (error: any) {

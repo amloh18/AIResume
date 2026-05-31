@@ -7,12 +7,22 @@ import Tenant from '@/models/b2b/Tenant';
 export async function POST(req: NextRequest) {
   try {
     const authResult = await getAuthenticatedUser();
-    if (!authResult || !authResult.user.b2b?.tenantId) {
+    const user = authResult?.user as any;
+    const isGlobalAdmin = user?.role === 'admin' || user?.role === 'superadmin';
+
+    if (!authResult || (!isGlobalAdmin && !user.b2b?.tenantId)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     await getConnection();
-    const tenantId = authResult.user.b2b.tenantId;
+    const tenantId = user.b2b?.tenantId;
+    
+    if (!tenantId && isGlobalAdmin) {
+      // If global admin and no tenantId, they shouldn't probably be uploading CVs 
+      // without specifying a tenant. But let's at least not crash.
+      return NextResponse.json({ error: 'Tenant ID required for uploads' }, { status: 400 });
+    }
+
     const body = await req.json();
 
     const { candidates } = body; // Array of parsed CV data
@@ -51,12 +61,19 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   try {
     const authResult = await getAuthenticatedUser();
-    if (!authResult || !authResult.user.b2b?.tenantId) {
+    if (!authResult) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const user = authResult.user as any;
+    const isGlobalAdmin = user.role === 'admin' || user.role === 'superadmin';
+    
+    if (!isGlobalAdmin && !user.b2b?.tenantId) {
+      return NextResponse.json({ error: 'Forbidden. B2B access required.' }, { status: 403 });
+    }
+
     await getConnection();
-    const tenantId = authResult.user.b2b.tenantId;
+    const tenantId = user.b2b?.tenantId;
     const searchParams = req.nextUrl.searchParams;
 
     const page = parseInt(searchParams.get('page') || '1', 10);
@@ -67,7 +84,7 @@ export async function GET(req: NextRequest) {
     const skill = searchParams.get('skill') || '';
     const location = searchParams.get('location') || '';
 
-    const query: any = { tenantId };
+    const query: any = tenantId ? { tenantId } : {};
 
     if (search) {
       query.$or = [

@@ -230,8 +230,8 @@ const OptimizedNavigation: React.FC = () => {
     };
   }, [userData?.id, fetchCreditInfo]);
 
-  // Check if user is admin
-  const isAdmin = userData?.role === 'admin';
+  // Check if user is admin or superadmin
+  const isAdmin = userData?.role === 'admin' || userData?.role === 'superadmin';
 
   // Prefetch routes on mount for faster navigation
   useEffect(() => {

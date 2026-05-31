@@ -34,7 +34,7 @@ export default function AIMatchDiscoveryWidget({ matches = defaultMatches, loadi
         title: "No new AI matches found",
         description: "We're constantly scanning for new roles.",
       }}
-      className="h-full"
+      className="h-[450px]"
     >
       <div className="space-y-4">
         {matches.map((match) => (

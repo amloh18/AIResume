@@ -22,7 +22,7 @@ export default function AdminLayoutClient({
   useEffect(() => {
     // Only show selector on first visit to admin dashboard
     // and if user hasn't made a selection before
-    if (isAdmin && !isB2B && pathname === '/admin') {
+    if (isAdmin && !isB2B && pathname === '/admin/dashboard') {
       const hasSeenSelector = localStorage.getItem('admin-dashboard-selector-confirmed');
       if (!hasSeenSelector) {
         // Small delay to let the page render first
@@ -40,7 +40,7 @@ export default function AdminLayoutClient({
     // Navigate to the selected dashboard
     switch (choice) {
       case 'admin':
-        router.push('/admin');
+        router.push('/admin/dashboard');
         break;
       case 'user':
         router.push('/dashboard');

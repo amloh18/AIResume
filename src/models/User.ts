@@ -50,7 +50,7 @@ export interface IUser extends Document {
   lastName: string;
   username?: string;
   avatar?: string;
-  role: 'user' | 'admin';
+  role: 'user' | 'admin' | 'superadmin';
   userRole?: 'Student' | 'Professional' | 'Recruiter';
   isEmailVerified: boolean;
 
@@ -291,7 +291,7 @@ const userSchema = new Schema<IUser>({
   },
   role: {
     type: String,
-    enum: ['user', 'admin'],
+    enum: ['user', 'admin', 'superadmin'],
     default: 'user'
   },
   userRole: {

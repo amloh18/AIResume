@@ -27,8 +27,8 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    // Check if user is a B2B admin
-    const isB2bAdmin = user.b2b && user.role === 'admin';
+    // Check if user is a B2B admin or superadmin
+    const isB2bAdmin = user.b2b && (user.role === 'admin' || user.role === 'superadmin');
     if (!isB2bAdmin) {
       return NextResponse.json(
         { success: false, error: 'Only B2B admins can complete onboarding' },

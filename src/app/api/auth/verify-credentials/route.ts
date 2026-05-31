@@ -38,15 +38,9 @@ export async function POST(request: NextRequest) {
           { status: 403 }
         );
       }
-      if (portal === 'b2b' && !isB2b) {
+      if (portal === 'b2b' && !isB2b && !isAdmin) {
         return NextResponse.json(
           { success: false, error: 'Unauthorized. Please use the consumer login.', code: 'UNAUTHORIZED_PORTAL' },
-          { status: 403 }
-        );
-      }
-      if (portal === 'default' && isAdmin) {
-        return NextResponse.json(
-          { success: false, error: 'Unauthorized. Please use the admin login.', code: 'UNAUTHORIZED_PORTAL' },
           { status: 403 }
         );
       }
