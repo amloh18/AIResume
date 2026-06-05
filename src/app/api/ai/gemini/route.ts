@@ -1,53 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleGenAI } from '@google/genai';
 import { callGeminiWithAllKeysFallback } from '@/lib/utils/gemini-api-fallback';
-
-// Get API key with fallback (for backward compatibility)
-function getGeminiApiKey(): string | null {
-  return (
-    process.env.gemini_api_key || 
-    process.env.GEMINI_API_KEY ||
-    process.env.gemini_api_key1 ||
-    process.env.GEMINI_API_KEY1 ||
-    null
-  );
-}
-
-function getGeminiApiKey2(): string | null {
-  return (
-    process.env.gemini_api_key2 || 
-    process.env.GEMINI_API_KEY2 ||
-    process.env['GEMINI_API-KEY2'] ||
-    process.env['gemini_api-key2'] ||
-    null
-  );
-}
-
-function getGeminiApiKey3(): string | null {
-  return (
-    process.env.gemini_api_key3 || 
-    process.env.GEMINI_API_KEY3 ||
-    process.env['GEMINI_API-KEY3'] ||
-    process.env['gemini_api-key3'] ||
-    null
-  );
-}
 
 interface GeminiRequest {
   prompt: string;
   context?: string;
   type: 'rewrite' | 'optimize' | 'suggest' | 'generate';
   section?: string;
-}
-
-interface GeminiResponse {
-  candidates: Array<{
-    content: {
-      parts: Array<{
-        text: string;
-      }>;
-    };
-  }>;
 }
 
 export async function POST(request: NextRequest) {
@@ -65,10 +23,6 @@ export async function POST(request: NextRequest) {
     if (!prompt || !type) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
-
-    // Rate limiting check (basic implementation)
-    const clientIP = request.headers.get('x-forwarded-for') || 'unknown';
-    // In production, implement proper rate limiting with Redis or similar
 
     // Construct the prompt based on type
     let systemPrompt = '';
@@ -134,13 +88,12 @@ Please provide the generated content:`;
 
     try {
       generatedText = await callGeminiWithAllKeysFallback(fullPrompt, {
-        model: 'gemini-2.0-flash-lite-preview-02-05',
-        temperature: 0.7,
-        maxTokens: 2048
+        action: `gemini_${type}`,
+        endpoint: '/api/ai/gemini'
       });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      
+
       // Check if it's a quota error
       if (errorMessage.includes('429') || errorMessage.includes('quota') || errorMessage.includes('RESOURCE_EXHAUSTED')) {
         return NextResponse.json({ 
@@ -149,7 +102,7 @@ Please provide the generated content:`;
           retryAfter: '30s'
         }, { status: 429 });
       }
-      
+
       return NextResponse.json({ 
         error: 'AI service temporarily unavailable',
         details: `Failed to generate content: ${errorMessage}`,
@@ -181,11 +134,4 @@ Please provide the generated content:`;
       details: 'Failed to process AI request'
     }, { status: 500 });
   }
-}
-
-// Add rate limiting middleware (basic implementation)
-function checkRateLimit(clientIP: string): boolean {
-  // In production, implement proper rate limiting
-  // For now, return true to allow all requests
-  return true;
 } 

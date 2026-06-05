@@ -107,14 +107,20 @@ export async function PUT(
       );
     }
 
-    // Update targeted user count if filters changed
-    if (body.targetFilters) {
+    // Update targeted user count if filters or CSV recipients changed
+    if (body.targetFilters || body.csvRecipients) {
       try {
-        const targetedUsers = await getTargetedUsers(body.targetFilters);
+        const targetedUsers = await getTargetedUsers(body.targetFilters || campaign.targetFilters || {});
         body.targetedUserCount = targetedUsers.length;
+        
+        // Add CSV recipients to count
+        const csvRecipients = body.csvRecipients || campaign.csvRecipients || [];
+        if (csvRecipients && Array.isArray(csvRecipients)) {
+          body.targetedUserCount += csvRecipients.length;
+        }
       } catch (error) {
-        console.warn('⚠️ Failed to get targeted users during build:', error);
-        body.targetedUserCount = 0;
+        console.warn('⚠️ Failed to get targeted users during update:', error);
+        body.targetedUserCount = campaign.targetedUserCount;
       }
     }
 

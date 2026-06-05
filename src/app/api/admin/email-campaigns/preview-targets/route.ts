@@ -20,12 +20,25 @@ export async function POST(request: NextRequest) {
     await requireAdmin(request);
 
     const body = await request.json();
-    const { targetFilters = {}, limit = 100 } = body;
+    const { targetFilters = {}, csvRecipients = [], limit = 100 } = body;
 
     // No validation - empty object is valid (means all users)
 
-    // Get all targeted users
-    const allUsers = await getTargetedUsers(targetFilters);
+    // Get all targeted users from DB
+    const dbUsers = await getTargetedUsers(targetFilters);
+    
+    // Combine with CSV recipients
+    const allUsers = [
+      ...dbUsers,
+      ...(csvRecipients || []).map((r: any, index: number) => ({
+        _id: `csv-${index}`,
+        email: r.email,
+        firstName: r.name?.split(' ')[0] || 'Valued',
+        lastName: r.name?.split(' ').slice(1).join(' ') || 'User',
+        isCsv: true
+      }))
+    ];
+
     const totalCount = allUsers.length;
 
     // Get preview users (limited)
@@ -37,6 +50,7 @@ export async function POST(request: NextRequest) {
       currentPlanKey: user.currentPlanKey || 'free',
       registrationDate: user.registrationDate,
       lastActiveAt: user.lastActiveAt,
+      isCsv: user.isCsv || false,
     }));
 
     return NextResponse.json({

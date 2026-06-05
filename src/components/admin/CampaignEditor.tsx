@@ -67,6 +67,7 @@ interface Campaign {
   utmSource?: string;
   utmMedium?: string;
   utmCampaign?: string;
+  csvRecipients?: Array<{ name: string; email: string }>;
 }
 
 interface Props {
@@ -142,7 +143,70 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
     campaignGoal: "clicks",
     utmSource: "email",
     utmMedium: "campaign",
+    csvRecipients: [],
   });
+
+  const handleCsvUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      if (!text) return;
+
+      const lines = text.split(/\r?\n/);
+      const recipients: Array<{ name: string; email: string }> = [];
+      
+      lines.forEach((line, index) => {
+        const trimmedLine = line.trim();
+        if (!trimmedLine) return;
+        
+        // Skip header if it contains "email"
+        if (index === 0 && trimmedLine.toLowerCase().includes("email")) return;
+
+        const parts = trimmedLine.split(",").map(s => s.trim().replace(/^"|"$/g, ""));
+        
+        let name = "Valued User";
+        let email = "";
+
+        if (parts.length >= 2) {
+          // Check if first part is name and second is email, or vice versa
+          if (parts[1].includes("@")) {
+            name = parts[0] || name;
+            email = parts[1];
+          } else if (parts[0].includes("@")) {
+            email = parts[0];
+            name = parts[1] || name;
+          }
+        } else if (parts.length === 1 && parts[0].includes("@")) {
+          email = parts[0];
+        }
+
+        if (email && email.includes("@")) {
+          recipients.push({ name, email });
+        }
+      });
+
+      if (recipients.length > 0) {
+        setFormData(prev => ({ ...prev, csvRecipients: recipients }));
+        toast({
+          title: "CSV Uploaded",
+          description: `Successfully parsed ${recipients.length} recipients.`,
+          variant: "success"
+        });
+        // Trigger preview update
+        handlePreviewTargets();
+      } else {
+        toast({
+          title: "Upload Failed",
+          description: "No valid email addresses found in CSV.",
+          variant: "destructive"
+        });
+      }
+    };
+    reader.readAsText(file);
+  };
 
   useEffect(() => {
     if (campaign) {
@@ -176,6 +240,7 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               targetFilters: formData.targetFilters,
+              csvRecipients: formData.csvRecipients,
               limit: 0, // Just get count, no preview emails needed
             }),
           },
@@ -200,7 +265,7 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
     }, 500); // Wait 500ms after last filter change
 
     return () => clearTimeout(timeoutId);
-  }, [formData.targetFilters]);
+  }, [formData.targetFilters, formData.csvRecipients]);
 
   useEffect(() => {
     if (selectedTemplate) {
@@ -321,6 +386,7 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             targetFilters: formData.targetFilters,
+            csvRecipients: formData.csvRecipients,
             limit: 10,
           }),
         },
@@ -924,7 +990,7 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
                       </div>
                       <p className="text-xs text-gray-400 mt-2">
                         {targetedCount === 0
-                          ? "Select filters to target users"
+                          ? "Select filters or upload CSV to target users"
                           : "users will receive this campaign"}
                       </p>
                     </div>
@@ -959,6 +1025,57 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
                       </p>
                     </div>
                   )}
+                </div>
+
+                {/* CSV Upload Section */}
+                <div className="mb-6">
+                  <h4 className="text-lg font-semibold text-white mb-4">
+                    Bulk Import via CSV (Optional)
+                  </h4>
+                  <div className="p-6 bg-gray-800 border border-gray-700 rounded-lg border-dashed">
+                    <div className="flex flex-col items-center justify-center text-center">
+                      <div className="p-3 bg-blue-500/10 rounded-full mb-3">
+                        <Mail className="w-6 h-6 text-blue-400" />
+                      </div>
+                      <h5 className="text-white font-medium mb-1">Upload Recipient List</h5>
+                      <p className="text-sm text-gray-400 mb-4 max-w-md">
+                        Upload a CSV file with names and email addresses. We'll add these to your target audience.
+                      </p>
+                      
+                      <div className="w-full max-w-sm">
+                        <Input
+                          type="file"
+                          accept=".csv"
+                          onChange={handleCsvUpload}
+                          className="bg-gray-900 border-gray-700 text-gray-300 file:bg-gray-800 file:text-gray-300 file:border-0 file:mr-4 file:px-4 file:py-2 hover:file:bg-gray-700"
+                        />
+                      </div>
+                      
+                      <div className="mt-4 grid grid-cols-2 gap-4 text-left w-full max-w-md">
+                        <div className="text-xs text-gray-500">
+                          <span className="text-gray-400 font-semibold block mb-1">Format A:</span>
+                          John Doe, john@example.com
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          <span className="text-gray-400 font-semibold block mb-1">Format B:</span>
+                          john@example.com
+                        </div>
+                      </div>
+
+                      {formData.csvRecipients && formData.csvRecipients.length > 0 && (
+                        <div className="mt-6 flex items-center gap-2 px-3 py-1.5 bg-green-500/10 border border-green-500/20 rounded-full text-green-400 text-sm">
+                          <CheckCircle className="w-4 h-4" />
+                          {formData.csvRecipients.length} recipients imported
+                          <button 
+                            onClick={() => setFormData(prev => ({ ...prev, csvRecipients: [] }))}
+                            className="ml-2 text-gray-400 hover:text-white"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
                 {/* Filter Presets */}

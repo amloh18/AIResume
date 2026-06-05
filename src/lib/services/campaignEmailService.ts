@@ -47,7 +47,18 @@ export class CampaignEmailService {
             }
 
             // 3. Get recipients based on filters
-            const recipients = await getTargetedUsers(campaign.targetFilters);
+            let recipients = await getTargetedUsers(campaign.targetFilters);
+            
+            // 3b. Add CSV recipients if present
+            if (campaign.csvRecipients && campaign.csvRecipients.length > 0) {
+                const csvRecipients = campaign.csvRecipients.map(r => ({
+                    email: r.email,
+                    firstName: r.name.split(' ')[0],
+                    lastName: r.name.split(' ').slice(1).join(' ')
+                }));
+                recipients = [...recipients, ...csvRecipients];
+            }
+
             console.log(`📧 Campaign ${campaignId}: Found ${recipients.length} recipients`);
 
             if (recipients.length === 0) {

@@ -101,13 +101,16 @@ export async function POST(request: NextRequest) {
 
         // Calculate targeted user count
         let targetedUserCount = 0;
-        if (body.targetFilters) {
-            try {
-                const targetedUsers = await getTargetedUsers(body.targetFilters);
-                targetedUserCount = targetedUsers.length;
-            } catch (error) {
-                console.warn('⚠️ Failed to get targeted users:', error);
+        try {
+            const targetedUsers = await getTargetedUsers(body.targetFilters || {});
+            targetedUserCount = targetedUsers.length;
+            
+            // Add CSV recipients to count
+            if (body.csvRecipients && Array.isArray(body.csvRecipients)) {
+                targetedUserCount += body.csvRecipients.length;
             }
+        } catch (error) {
+            console.warn('⚠️ Failed to get targeted users:', error);
         }
 
         // Extract admin info from session
