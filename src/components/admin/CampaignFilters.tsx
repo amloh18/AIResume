@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Filter, X, Plus } from 'lucide-react';
+import isEqual from 'lodash/isEqual';
 
 interface FilterProps {
   filters: any;
@@ -16,7 +17,7 @@ export default function CampaignFilters({ filters, onChange, twoColumn = false }
   }));
   const [availablePlans, setAvailablePlans] = useState<string[]>([]);
   const [availableRegions, setAvailableRegions] = useState<string[]>([]);
-  const isSyncingFromProps = React.useRef(false);
+  const lastFiltersRef = useRef(filters);
 
   useEffect(() => {
     fetchAvailablePlans();
@@ -60,22 +61,24 @@ export default function CampaignFilters({ filters, onChange, twoColumn = false }
     }
   };
 
+  // Sync local filters with props if they change externally
   useEffect(() => {
-    isSyncingFromProps.current = true;
-    setLocalFilters({
-      ...(filters || {}),
-      usageMetrics: filters?.usageMetrics || {},
-    });
-    setTimeout(() => {
-      isSyncingFromProps.current = false;
-    }, 0);
+    if (!isEqual(filters, lastFiltersRef.current)) {
+      const newFilters = {
+        ...(filters || {}),
+        usageMetrics: filters?.usageMetrics || {},
+      };
+      setLocalFilters(newFilters);
+      lastFiltersRef.current = filters;
+    }
   }, [filters]);
 
+  // Push local changes to parent
   useEffect(() => {
-    if (!isSyncingFromProps.current) {
+    if (!isEqual(localFilters, filters)) {
       onChange(localFilters);
     }
-  }, [localFilters]);
+  }, [localFilters, filters, onChange]);
 
   const handlePlanChange = (plan: string, checked: boolean) => {
     const plans = localFilters.membershipPlans || [];
