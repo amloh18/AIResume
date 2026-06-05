@@ -2,26 +2,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-  Search, 
-  Filter, 
-  Download, 
-  RefreshCw, 
-  AlertCircle, 
-  CheckCircle, 
-  Clock,
-  FileText,
-  Brain,
-  Activity,
-  CreditCard,
-  Upload,
-  Settings,
-  X,
-  ChevronDown,
-  ChevronUp
+  Search, Filter, Download, RefreshCw, AlertCircle, CheckCircle, Clock,
+  FileText, Brain, Activity, CreditCard, Upload, Settings, X, 
+  ChevronDown, ChevronUp, Zap, Shield, Globe, ArrowUpRight, Terminal
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent } from '@/components/ui/card';
 import type { LogType, LogStatus } from '@/models/ActivityLog';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface ActivityLog {
   _id: string;
@@ -33,51 +20,17 @@ interface ActivityLog {
   method?: string;
   statusCode?: number;
   responseTime?: number;
-  resource?: {
-    type: string;
-    id?: string;
-    name?: string;
-  };
   action: string;
   status: LogStatus;
   errorMessage?: string;
-  aiMetadata?: {
-    model?: string;
-    tokensUsed?: number;
-    cost?: number;
-  };
-  apiMetadata?: {
-    requestSize?: number;
-    responseSize?: number;
-    errorCode?: string;
-  };
-  exportMetadata?: {
-    format?: string;
-    fileSize?: number;
-  };
-  paymentMetadata?: {
-    amount?: number;
-    currency?: string;
-    provider?: string;
-  };
-  adminMetadata?: {
-    adminEmail?: string;
-    actionType?: string;
-  };
-  tags?: string[];
+  aiMetadata?: { model?: string; tokensUsed?: number; cost?: number; };
 }
 
 interface LogMetrics {
   totalLogs: number;
-  byType: Record<LogType, number>;
-  byStatus: Record<LogStatus, number>;
   errorRate: number;
   avgResponseTime: number;
-  totalAIUsage: {
-    tokens: number;
-    cost: number;
-    requests: number;
-  };
+  totalAIUsage: { tokens: number; cost: number; requests: number; };
 }
 
 export default function LogsViewer() {
@@ -87,61 +40,36 @@ export default function LogsViewer() {
   const [totalLogs, setTotalLogs] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(50);
-  
-  // Filters
   const [logTypeFilter, setLogTypeFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [timeRange, setTimeRange] = useState<'today' | '7d' | '30d' | '90d'>('7d');
   const [expandedLog, setExpandedLog] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    fetchLogs();
-    fetchMetrics();
-  }, [currentPage, logTypeFilter, statusFilter, timeRange]);
+    setMounted(true);
+  }, []);
 
   const fetchLogs = async () => {
-    setLoading(true);
     try {
-      const startDate = getStartDate(timeRange);
+      setLoading(true);
       const params = new URLSearchParams({
         limit: String(pageSize),
         skip: String((currentPage - 1) * pageSize),
-        startDate: startDate.toISOString(),
       });
-
-      if (logTypeFilter !== 'all') {
-        params.append('logType', logTypeFilter);
-      }
-
-      if (statusFilter !== 'all') {
-        params.append('status', statusFilter);
-      }
-
-      if (searchTerm) {
-        params.append('action', searchTerm);
-      }
+      if (logTypeFilter !== 'all') params.append('logType', logTypeFilter);
+      if (statusFilter !== 'all') params.append('status', statusFilter);
+      if (searchTerm) params.append('action', searchTerm);
 
       const response = await fetch(`/api/admin/logs?${params.toString()}`);
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch logs');
-      }
-
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        throw new Error('Invalid response from server');
-      }
-
       const data = await response.json();
-      
       if (data.success) {
         setLogs(data.logs || []);
         setTotalLogs(data.total || 0);
       }
     } catch (error) {
-      console.error('Error fetching logs:', error);
-      setLogs([]);
+      console.error('Fetch error:', error);
     } finally {
       setLoading(false);
     }
@@ -150,403 +78,226 @@ export default function LogsViewer() {
   const fetchMetrics = async () => {
     try {
       const response = await fetch(`/api/admin/logs/metrics?range=${timeRange}`);
-      
-      if (response.ok) {
-        const contentType = response.headers.get('content-type');
-        if (contentType && contentType.includes('application/json')) {
-          const data = await response.json();
-          if (data.success) {
-            setMetrics(data.metrics);
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching metrics:', error);
+      const data = await response.json();
+      if (data.success) setMetrics(data.metrics);
+    } catch (error) {}
+  };
+
+  useEffect(() => {
+    if (mounted) {
+      fetchLogs();
+      fetchMetrics();
     }
+  }, [currentPage, logTypeFilter, statusFilter, timeRange, mounted]);
+
+  const container = {
+    hidden: { opacity: 0 },
+    show: { opacity: 1, transition: { staggerChildren: 0.05 } }
   };
 
-  const getStartDate = (range: 'today' | '7d' | '30d' | '90d'): Date => {
-    const now = new Date();
-    switch (range) {
-      case 'today':
-        return new Date(now.setHours(0, 0, 0, 0));
-      case '7d':
-        return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      case '30d':
-        return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-      case '90d':
-        return new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-      default:
-        return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    }
+  const item = {
+    hidden: { opacity: 0, x: -10 },
+    show: { opacity: 1, x: 0 }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString();
-  };
-
-  const getLogTypeIcon = (logType: LogType) => {
-    switch (logType) {
-      case 'api':
-        return <Activity className="w-4 h-4" />;
-      case 'ai':
-        return <Brain className="w-4 h-4" />;
-      case 'user_action':
-        return <FileText className="w-4 h-4" />;
-      case 'admin_action':
-        return <Settings className="w-4 h-4" />;
-      case 'payment':
-        return <CreditCard className="w-4 h-4" />;
-      case 'export':
-        return <Upload className="w-4 h-4" />;
-      default:
-        return <Activity className="w-4 h-4" />;
-    }
-  };
-
-  const getLogTypeColor = (logType: LogType) => {
-    switch (logType) {
-      case 'api':
-        return 'text-blue-700 bg-blue-50';
-      case 'ai':
-        return 'text-purple-700 bg-purple-50';
-      case 'user_action':
-        return 'text-emerald-700 bg-emerald-50';
-      case 'admin_action':
-        return 'text-amber-800 bg-amber-50';
-      case 'payment':
-        return 'text-yellow-800 bg-yellow-50';
-      case 'export':
-        return 'text-cyan-700 bg-cyan-50';
-      default:
-        return 'text-slate-700 bg-slate-100';
-    }
-  };
-
-  const getStatusBadge = (status: LogStatus) => {
-    switch (status) {
-      case 'success':
-        return (
-          <span className="px-2 py-1 rounded text-xs bg-emerald-50 text-emerald-700 flex items-center gap-1 border border-emerald-200">
-            <CheckCircle className="w-3 h-3" />
-            Success
-          </span>
-        );
-      case 'failed':
-        return (
-          <span className="px-2 py-1 rounded text-xs bg-red-50 text-red-700 flex items-center gap-1 border border-red-200">
-            <AlertCircle className="w-3 h-3" />
-            Failed
-          </span>
-        );
-      case 'warning':
-        return (
-          <span className="px-2 py-1 rounded text-xs bg-amber-50 text-amber-800 flex items-center gap-1 border border-amber-200">
-            <AlertCircle className="w-3 h-3" />
-            Warning
-          </span>
-        );
-    }
-  };
-
-  const handleSearch = () => {
-    setCurrentPage(1);
-    fetchLogs();
-  };
+  if (!mounted) return null;
 
   const totalPages = Math.ceil(totalLogs / pageSize);
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <motion.div variants={container} initial="hidden" animate="show" className="space-y-10">
+      {/* Command Header */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Activity Logs</h1>
-          <p className="text-slate-600 text-sm mt-1">Monitor system activity and user actions</p>
+          <h1 className="text-4xl font-black text-white tracking-tighter uppercase">
+            System <span className="text-emerald-500">Logs</span>
+          </h1>
+          <p className="text-white/40 text-xs font-bold uppercase tracking-[0.2em] mt-2">
+            Real-time Audit Trail • {totalLogs.toLocaleString()} Entries Indexed
+          </p>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => {
-              fetchLogs();
-              fetchMetrics();
-            }}
-            className="px-4 py-2 bg-white hover:bg-slate-50 text-slate-700 rounded-lg transition-colors flex items-center gap-2 border border-slate-200"
-          >
-            <RefreshCw className="w-4 h-4" />
-            Refresh
+
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="relative group">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 group-focus-within:text-emerald-400 transition-colors" />
+            <input
+              type="text"
+              placeholder="Search Protocol..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-12 pr-6 py-3 bg-white/5 border border-white/5 rounded-2xl text-sm text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:bg-white/10 w-full sm:w-64 transition-all"
+            />
+          </div>
+          
+          <button onClick={() => { fetchLogs(); fetchMetrics(); }} className="p-3 bg-white/5 border border-white/5 rounded-2xl hover:bg-white/10 transition-all text-white/40">
+            <RefreshCw className="w-5 h-5" />
           </button>
         </div>
       </div>
 
-      {/* Metrics Cards */}
-      {metrics && (
-        <div className="grid grid-cols-1 tablet:grid-cols-2 desktop:grid-cols-4 gap-4">
-          <Card className="bg-white border-slate-200">
-            <CardContent className="p-4">
-              <div className="text-sm text-slate-600 mb-1">Total Logs</div>
-              <div className="text-2xl font-bold text-slate-900">{metrics.totalLogs.toLocaleString()}</div>
-            </CardContent>
-          </Card>
-          <Card className="bg-white border-slate-200">
-            <CardContent className="p-4">
-              <div className="text-sm text-slate-600 mb-1">Error Rate</div>
-              <div className="text-2xl font-bold text-slate-900">{metrics.errorRate.toFixed(2)}%</div>
-            </CardContent>
-          </Card>
-          <Card className="bg-white border-slate-200">
-            <CardContent className="p-4">
-              <div className="text-sm text-slate-600 mb-1">Avg Response Time</div>
-              <div className="text-2xl font-bold text-slate-900">{metrics.avgResponseTime}ms</div>
-            </CardContent>
-          </Card>
-          <Card className="bg-white border-slate-200">
-            <CardContent className="p-4">
-              <div className="text-sm text-slate-600 mb-1">AI Usage</div>
-              <div className="text-lg font-bold text-slate-900">
-                {metrics.totalAIUsage.tokens.toLocaleString()} tokens
+      {/* Metrics Bento */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {[
+          { label: 'Event Volume', val: metrics?.totalLogs.toLocaleString() || '0', sub: 'Total Signals', icon: Terminal, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+          { label: 'Anomaly Rate', val: `${metrics?.errorRate.toFixed(2) || '0.00'}%`, sub: 'Sector Stability', icon: Shield, color: 'text-red-500', bg: 'bg-red-500/10' },
+          { label: 'Latency Avg', val: `${metrics?.avgResponseTime || '0'}ms`, sub: 'Response Velocity', icon: Zap, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+          { label: 'Neural Cost', val: `$${metrics?.totalAIUsage.cost.toFixed(4) || '0.0000'}`, sub: 'AI Overhead', icon: Brain, color: 'text-purple-500', bg: 'bg-purple-500/10' },
+        ].map((m, i) => (
+          <div key={i} className="bg-[#111111] border border-white/10 p-8 rounded-[2rem] flex flex-col justify-between h-40 group hover:border-white/20 transition-all shadow-2xl">
+            <div className="flex justify-between items-start">
+              <div className={`p-3 rounded-2xl ${m.bg} ${m.color}`}>
+                <m.icon className="w-6 h-6" />
               </div>
-              <div className="text-xs text-slate-500 mt-1">
-                ${metrics.totalAIUsage.cost.toFixed(4)} / {metrics.totalAIUsage.requests} requests
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Filters */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
-        <div className="grid grid-cols-1 tablet:grid-cols-4 gap-4">
-          <div>
-            <label className="block text-sm text-slate-600 mb-2">Log Type</label>
-            <Select value={logTypeFilter} onValueChange={setLogTypeFilter}>
-              <SelectTrigger className="bg-white border-slate-200 text-slate-900">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-white border-slate-200 text-slate-900">
-                <SelectItem value="all" className="text-slate-900 focus:bg-slate-50">All Types</SelectItem>
-                <SelectItem value="api" className="text-slate-900 focus:bg-slate-50">API</SelectItem>
-                <SelectItem value="ai" className="text-slate-900 focus:bg-slate-50">AI</SelectItem>
-                <SelectItem value="user_action" className="text-slate-900 focus:bg-slate-50">User Actions</SelectItem>
-                <SelectItem value="admin_action" className="text-slate-900 focus:bg-slate-50">Admin Actions</SelectItem>
-                <SelectItem value="payment" className="text-slate-900 focus:bg-slate-50">Payments</SelectItem>
-                <SelectItem value="export" className="text-slate-900 focus:bg-slate-50">Exports</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <label className="block text-sm text-slate-600 mb-2">Status</label>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="bg-white border-slate-200 text-slate-900">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-white border-slate-200 text-slate-900">
-                <SelectItem value="all" className="text-slate-900 focus:bg-slate-50">All Status</SelectItem>
-                <SelectItem value="success" className="text-slate-900 focus:bg-slate-50">Success</SelectItem>
-                <SelectItem value="failed" className="text-slate-900 focus:bg-slate-50">Failed</SelectItem>
-                <SelectItem value="warning" className="text-slate-900 focus:bg-slate-50">Warning</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <label className="block text-sm text-slate-600 mb-2">Time Range</label>
-            <Select value={timeRange} onValueChange={(value: any) => setTimeRange(value)}>
-              <SelectTrigger className="bg-white border-slate-200 text-slate-900">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-white border-slate-200 text-slate-900">
-                <SelectItem value="today" className="text-slate-900 focus:bg-slate-50">Today</SelectItem>
-                <SelectItem value="7d" className="text-slate-900 focus:bg-slate-50">Last 7 Days</SelectItem>
-                <SelectItem value="30d" className="text-slate-900 focus:bg-slate-50">Last 30 Days</SelectItem>
-                <SelectItem value="90d" className="text-slate-900 focus:bg-slate-50">Last 90 Days</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <label className="block text-sm text-slate-600 mb-2">Search</label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                placeholder="Search action..."
-                className="flex-1 px-3 py-2 bg-white border border-slate-200 text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600"
-              />
-              <button
-                onClick={handleSearch}
-                className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg transition-colors"
-              >
-                <Search className="w-4 h-4" />
-              </button>
+              <ArrowUpRight className="w-4 h-4 text-white/20 group-hover:text-white transition-colors" />
+            </div>
+            <div>
+              <p className="text-white/20 text-[10px] font-black uppercase tracking-widest">{m.label}</p>
+              <p className="text-2xl font-black text-white tracking-tighter">{m.val}</p>
             </div>
           </div>
+        ))}
+      </div>
+
+      {/* Filters Bar */}
+      <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-6 flex flex-wrap gap-6 items-center shadow-xl backdrop-blur-md">
+        <div className="flex items-center gap-3">
+          <Filter className="w-4 h-4 text-white/20" />
+          <span className="text-[10px] font-black text-white/20 uppercase tracking-widest">Filter Matrix:</span>
         </div>
+        
+        <Select value={logTypeFilter} onValueChange={setLogTypeFilter}>
+          <SelectTrigger className="bg-white/5 border-white/5 w-44 rounded-xl text-white text-xs h-12"><SelectValue placeholder="Type" /></SelectTrigger>
+          <SelectContent className="bg-[#111111] border-white/10 text-white rounded-xl">
+            <SelectItem value="all">All Types</SelectItem>
+            <SelectItem value="api">API Streams</SelectItem>
+            <SelectItem value="ai">Neural Cycles</SelectItem>
+            <SelectItem value="user_action">Identity Acts</SelectItem>
+            <SelectItem value="admin_action">Root Protocols</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="bg-white/5 border-white/5 w-44 rounded-xl text-white text-xs h-12"><SelectValue placeholder="Status" /></SelectTrigger>
+          <SelectContent className="bg-[#111111] border-white/10 text-white rounded-xl">
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="success">Nominal</SelectItem>
+            <SelectItem value="failed">Anomaly</SelectItem>
+            <SelectItem value="warning">Degraded</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select value={timeRange} onValueChange={(v: any) => setTimeRange(v)}>
+          <SelectTrigger className="bg-white/5 border-white/5 w-44 rounded-xl text-white text-xs h-12"><SelectValue placeholder="Window" /></SelectTrigger>
+          <SelectContent className="bg-[#111111] border-white/10 text-white rounded-xl">
+            <SelectItem value="today">Cycle: 24h</SelectItem>
+            <SelectItem value="7d">Cycle: 7d</SelectItem>
+            <SelectItem value="30d">Cycle: 30d</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Logs Table */}
-      <Card className="bg-white border-slate-200">
-        <CardContent className="p-0">
-          {loading ? (
-            <div className="p-12 text-center text-slate-600">Loading logs...</div>
-          ) : logs.length === 0 ? (
-            <div className="p-12 text-center text-slate-600">No logs found</div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-slate-200 bg-slate-50">
-                    <th className="text-left p-4 text-xs font-semibold text-slate-600">Type</th>
-                    <th className="text-left p-4 text-xs font-semibold text-slate-600">Timestamp</th>
-                    <th className="text-left p-4 text-xs font-semibold text-slate-600">User</th>
-                    <th className="text-left p-4 text-xs font-semibold text-slate-600">Action</th>
-                    <th className="text-left p-4 text-xs font-semibold text-slate-600">Status</th>
-                    <th className="text-left p-4 text-xs font-semibold text-slate-600">Details</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {logs.map((log) => (
-                    <React.Fragment key={log._id}>
-                      <tr 
-                        className="border-b border-slate-200 hover:bg-slate-50 cursor-pointer transition-colors"
-                        onClick={() => setExpandedLog(expandedLog === log._id ? null : log._id)}
-                      >
-                        <td className="p-4">
-                          <div className={`flex items-center gap-2 px-2 py-1 rounded ${getLogTypeColor(log.logType)}`}>
-                            {getLogTypeIcon(log.logType)}
-                            <span className="text-xs capitalize">{log.logType.replace('_', ' ')}</span>
+      <div className="bg-[#111111] border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl relative">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-white/5 bg-white/5">
+                <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Protocol</th>
+                <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Timestamp</th>
+                <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Subject Node</th>
+                <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Action Vector</th>
+                <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Status</th>
+                <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em] text-right">Details</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5">
+              {logs.map((log) => (
+                <React.Fragment key={log._id}>
+                  <motion.tr 
+                    variants={item}
+                    className="hover:bg-white/[0.02] cursor-pointer transition-colors group"
+                    onClick={() => setExpandedLog(expandedLog === log._id ? null : log._id)}
+                  >
+                    <td className="px-8 py-6">
+                      <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${
+                        log.logType === 'ai' ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' :
+                        log.logType === 'api' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
+                        'bg-white/5 text-white/40 border-white/10'
+                      }`}>
+                        <span className="truncate max-w-[80px]">{log.logType.replace('_', ' ')}</span>
+                      </div>
+                    </td>
+                    <td className="px-8 py-6 text-[11px] font-mono text-white/40">{new Date(log.timestamp).toLocaleString()}</td>
+                    <td className="px-8 py-6 text-sm font-bold text-white/60 truncate max-w-[150px]">{log.userEmail || 'System'}</td>
+                    <td className="px-8 py-6 text-sm font-black text-white group-hover:text-emerald-400 transition-colors">{log.action}</td>
+                    <td className="px-8 py-6">
+                      <div className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-widest ${
+                        log.status === 'success' ? 'text-emerald-500' : 
+                        log.status === 'failed' ? 'text-red-500' : 'text-amber-500'
+                      }`}>
+                        <div className={`w-1.5 h-1.5 rounded-full ${log.status === 'success' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : log.status === 'failed' ? 'bg-red-500' : 'bg-amber-500'}`} />
+                        {log.status}
+                      </div>
+                    </td>
+                    <td className="px-8 py-6 text-right">
+                      <div className={`p-2 rounded-lg bg-white/5 transition-all ${expandedLog === log._id ? 'bg-emerald-500 text-black' : 'text-white/20 hover:text-white'}`}>
+                        {expandedLog === log._id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                      </div>
+                    </td>
+                  </motion.tr>
+                  <AnimatePresence>
+                    {expandedLog === log._id && (
+                      <motion.tr initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                        <td colSpan={6} className="px-12 py-10 bg-black/40">
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                            <div className="space-y-4">
+                              <h5 className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Network Context</h5>
+                              <div className="space-y-2 p-5 bg-white/5 rounded-2xl border border-white/5 font-mono text-[11px] text-white/60">
+                                <div><span className="text-white/20 uppercase mr-2">Endpoint:</span> {log.method} {log.endpoint}</div>
+                                <div><span className="text-white/20 uppercase mr-2">Latency:</span> {log.responseTime}ms</div>
+                                <div><span className="text-white/20 uppercase mr-2">Code:</span> {log.statusCode}</div>
+                              </div>
+                            </div>
+                            {log.aiMetadata && (
+                              <div className="space-y-4">
+                                <h5 className="text-[10px] font-black text-purple-400 uppercase tracking-widest">Neural Payload</h5>
+                                <div className="space-y-2 p-5 bg-purple-500/5 rounded-2xl border border-purple-500/10 font-mono text-[11px] text-purple-200/60">
+                                  <div><span className="text-purple-400/30 uppercase mr-2">Model:</span> {log.aiMetadata.model}</div>
+                                  <div><span className="text-purple-400/30 uppercase mr-2">Tokens:</span> {log.aiMetadata.tokensUsed}</div>
+                                  <div><span className="text-purple-400/30 uppercase mr-2">Load:</span> ${log.aiMetadata.cost?.toFixed(4)}</div>
+                                </div>
+                              </div>
+                            )}
+                            {log.errorMessage && (
+                              <div className="space-y-4">
+                                <h5 className="text-[10px] font-black text-red-400 uppercase tracking-widest">Anomaly Report</h5>
+                                <div className="p-5 bg-red-500/5 rounded-2xl border border-red-500/10 text-[11px] text-red-200/60 leading-relaxed italic">
+                                  "{log.errorMessage}"
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </td>
-                        <td className="p-4 text-slate-700 text-sm">
-                          {formatDate(log.timestamp)}
-                        </td>
-                        <td className="p-4 text-slate-700 text-sm">
-                          {log.userEmail || log.adminMetadata?.adminEmail || 'System'}
-                        </td>
-                        <td className="p-4 text-slate-700 text-sm">
-                          {log.action}
-                        </td>
-                        <td className="p-4">
-                          {getStatusBadge(log.status)}
-                        </td>
-                        <td className="p-4">
-                          <button className="text-emerald-700 hover:text-emerald-800">
-                            {expandedLog === log._id ? (
-                              <ChevronUp className="w-4 h-4" />
-                            ) : (
-                              <ChevronDown className="w-4 h-4" />
-                            )}
-                          </button>
-                        </td>
-                      </tr>
-                      {expandedLog === log._id && (
-                        <tr>
-                          <td colSpan={6} className="p-4 bg-slate-50">
-                            <div className="space-y-2 text-sm">
-                              {log.endpoint && (
-                                <div>
-                                  <span className="text-slate-600">Endpoint:</span>
-                                  <span className="text-slate-900 ml-2">{log.method} {log.endpoint}</span>
-                                </div>
-                              )}
-                              {log.responseTime && (
-                                <div>
-                                  <span className="text-slate-600">Response Time:</span>
-                                  <span className="text-slate-900 ml-2">{log.responseTime}ms</span>
-                                </div>
-                              )}
-                              {log.statusCode && (
-                                <div>
-                                  <span className="text-slate-600">Status Code:</span>
-                                  <span className="text-slate-900 ml-2">{log.statusCode}</span>
-                                </div>
-                              )}
-                              {log.resource && (
-                                <div>
-                                  <span className="text-slate-600">Resource:</span>
-                                  <span className="text-slate-900 ml-2">
-                                    {log.resource.type} {log.resource.name ? `(${log.resource.name})` : ''}
-                                  </span>
-                                </div>
-                              )}
-                              {log.aiMetadata && (
-                                <div>
-                                  <span className="text-slate-600">AI:</span>
-                                  <span className="text-slate-900 ml-2">
-                                    {log.aiMetadata.model} - {log.aiMetadata.tokensUsed} tokens - ${log.aiMetadata.cost?.toFixed(4)}
-                                  </span>
-                                </div>
-                              )}
-                              {log.paymentMetadata && (
-                                <div>
-                                  <span className="text-slate-600">Payment:</span>
-                                  <span className="text-slate-900 ml-2">
-                                    {log.paymentMetadata.currency} {log.paymentMetadata.amount} via {log.paymentMetadata.provider}
-                                  </span>
-                                </div>
-                              )}
-                              {log.exportMetadata && (
-                                <div>
-                                  <span className="text-slate-600">Export:</span>
-                                  <span className="text-slate-900 ml-2">
-                                    {log.exportMetadata.format} - {(log.exportMetadata.fileSize || 0) / 1024}KB
-                                  </span>
-                                </div>
-                              )}
-                              {log.errorMessage && (
-                                <div>
-                                  <span className="text-red-700">Error:</span>
-                                  <span className="text-red-600 ml-2">{log.errorMessage}</span>
-                                </div>
-                              )}
-                              {log.tags && log.tags.length > 0 && (
-                                <div>
-                                  <span className="text-slate-600">Tags:</span>
-                                  <span className="text-slate-900 ml-2">{log.tags.join(', ')}</span>
-                                </div>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </React.Fragment>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                      </motion.tr>
+                    )}
+                  </AnimatePresence>
+                </React.Fragment>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <div className="text-sm text-slate-600">
-            Showing {(currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, totalLogs)} of {totalLogs} logs
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="px-4 py-2 bg-white hover:bg-slate-50 text-slate-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-slate-200"
-            >
-              Previous
-            </button>
-            <span className="text-slate-600">
-              Page {currentPage} of {totalPages}
-            </span>
-            <button
-              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-              className="px-4 py-2 bg-white hover:bg-slate-50 text-slate-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-slate-200"
-            >
-              Next
-            </button>
+        {/* Table Footer / Pagination */}
+        <div className="p-8 bg-white/2 border-t border-white/5 flex items-center justify-between">
+          <p className="text-[10px] font-black uppercase tracking-widest text-white/20">
+            Stream Index: {(currentPage - 1) * pageSize + 1}-{Math.min(currentPage * pageSize, totalLogs)} of {totalLogs} Signals
+          </p>
+          <div className="flex gap-4">
+            <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-6 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white font-black text-[10px] uppercase tracking-widest border border-white/5 disabled:opacity-30">Shift Back</button>
+            <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="px-6 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white font-black text-[10px] uppercase tracking-widest border border-white/5 disabled:opacity-30">Shift Next</button>
           </div>
         </div>
-      )}
-    </div>
+      </div>
+    </motion.div>
   );
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
+import { getConnection } from '@/lib/database';
 import { getAdminEmailCampaign } from '@/models/admin-models';
 import { getTargetedUsers } from '@/lib/services/userSyncService';
 import { ActivityLogService } from '@/lib/services/activityLogService';
@@ -13,6 +14,7 @@ export const runtime = 'nodejs';
 // GET - Fetch all campaigns with filters
 export async function GET(request: NextRequest) {
     try {
+        await getConnection();
         // Skip during build time
         if (process.env.NODE_ENV === 'production' && !process.env.VERCEL) {
             return NextResponse.json(
@@ -80,6 +82,7 @@ export async function GET(request: NextRequest) {
 // POST - Create new campaign
 export async function POST(request: NextRequest) {
     try {
+        await getConnection();
         const session = await getServerSession(authOptions);
 
         // Check if user is admin by type or role

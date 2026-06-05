@@ -17,6 +17,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { formatCurrency, convertToINR } from '@/lib/utils/currencyConverter';
 import { ADMIN_THEME } from '@/lib/config/adminTheme';
+import { motion } from 'framer-motion';
 
 interface RevenueData {
   period: string;
@@ -60,8 +61,6 @@ export default function RevenueManager() {
           const data = await response.json();
           setRevenueData(data);
         }
-      } else {
-        console.error('Failed to fetch revenue data');
       }
     } catch (error) {
       console.error('Error fetching revenue data:', error);
@@ -72,10 +71,8 @@ export default function RevenueManager() {
 
   const handleSendInvoice = async (userId: string, invoiceUrl?: string) => {
     if (invoiceUrl) {
-      // Open existing invoice
       window.open(invoiceUrl, '_blank');
     } else {
-      // Generate and send invoice
       try {
         const response = await fetch(`/api/admin/invoices/generate`, {
           method: 'POST',
@@ -83,13 +80,7 @@ export default function RevenueManager() {
           body: JSON.stringify({ userId })
         });
         if (response.ok) {
-          const contentType = response.headers.get('content-type');
-          if (contentType && contentType.includes('application/json')) {
-            const data = await response.json();
-            alert('Invoice sent successfully!');
-          } else {
-            alert('Invoice sent, but received invalid response');
-          }
+          alert('Invoice sent successfully!');
         } else {
           alert('Failed to send invoice');
         }
@@ -128,10 +119,10 @@ export default function RevenueManager() {
     window.URL.revokeObjectURL(url);
   };
 
-  if (loading) {
+  if (loading && !revenueData) {
     return (
-      <div className="flex items-center justify-center p-12">
-        <div className="text-gray-400">Loading revenue data...</div>
+      <div className="min-h-[400px] flex items-center justify-center">
+        <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: "linear" }} className="w-12 h-12 border-2 border-emerald-500 border-t-transparent rounded-full" />
       </div>
     );
   }
@@ -139,45 +130,31 @@ export default function RevenueManager() {
   if (!revenueData) {
     return (
       <div className="flex items-center justify-center p-12">
-        <div className="text-gray-400">No revenue data available</div>
+        <div className="text-white/20 font-black uppercase tracking-widest text-xs italic">No data available for this period</div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header with Period Selector */}
-      <div className="flex justify-between items-center">
+    <div className="space-y-10">
+      {/* Header */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
         <div>
-          <h2 className={`text-2xl font-bold ${ADMIN_THEME.text.primary}`}>Revenue Analytics</h2>
-          <p className={`${ADMIN_THEME.text.muted} mt-1`}>Track revenue across different time periods</p>
+          <h1 className="text-4xl font-black text-white tracking-tighter uppercase">
+            Revenue <span className="text-emerald-500">Summary</span>
+          </h1>
+          <p className="text-white/40 text-xs font-bold uppercase tracking-[0.2em] mt-2">
+            Financial Overview • v2.6.0
+          </p>
         </div>
-        <div className="flex gap-3">
-          <button
-            onClick={handleExportCSV}
-            className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${ADMIN_THEME.button.outline}`}
-          >
-            <Download className="h-4 w-4" />
-            Export CSV
-          </button>
 
-          <a
-            href="https://dashboard.stripe.com/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-4 py-2 bg-[#635BFF] hover:bg-[#5851E2] text-white rounded-lg flex items-center gap-2 transition-colors font-medium"
-            title="Open Stripe Dashboard"
-          >
-            <CreditCard className="h-4 w-4" />
-            <span className="hidden tablet:inline">Stripe</span>
-          </a>
-
+        <div className="flex flex-wrap items-center gap-4">
           <Select value={period} onValueChange={(value: any) => setPeriod(value)}>
-            <SelectTrigger className={`w-48 ${ADMIN_THEME.input.base}`}>
+            <SelectTrigger className="px-4 py-3 bg-white/5 border border-white/5 rounded-2xl text-[10px] font-black uppercase tracking-widest text-white/60 focus:outline-none hover:bg-white/10 transition-all w-48 h-12">
               <Calendar className="h-4 w-4 mr-2" />
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-[#111111] border-white/10 text-white rounded-xl">
               <SelectItem value="day">Today</SelectItem>
               <SelectItem value="week">This Week</SelectItem>
               <SelectItem value="month">This Month</SelectItem>
@@ -185,171 +162,190 @@ export default function RevenueManager() {
               <SelectItem value="year">This Year</SelectItem>
             </SelectContent>
           </Select>
+
+          <button
+            onClick={handleExportCSV}
+            className="px-6 py-3 bg-white/5 border border-white/5 rounded-2xl hover:bg-white/10 transition-all text-white/40 hover:text-white flex items-center gap-2 text-[10px] font-black uppercase tracking-widest"
+          >
+            <Download className="h-4 w-4" />
+            Download Report
+          </button>
+
+          <a
+            href="https://dashboard.stripe.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-6 py-3 bg-[#635BFF] hover:bg-[#5851E2] text-white rounded-2xl flex items-center gap-2 transition-all text-[10px] font-black uppercase tracking-widest"
+          >
+            <CreditCard className="h-4 w-4" />
+            Stripe
+          </a>
         </div>
       </div>
 
-      {/* Revenue Summary Cards */}
-      <div className="grid grid-cols-1 tablet:grid-cols-3 gap-6">
-        <Card className={ADMIN_THEME.card.base}>
-          <CardContent className="p-6">
+      {/* Stats Bento */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card className="bg-[#111111] border-white/10 rounded-[2.5rem] shadow-2xl overflow-hidden relative group">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 blur-3xl rounded-full" />
+          <CardContent className="p-8">
             <div className="flex items-center justify-between">
               <div>
-                <p className={`text-sm ${ADMIN_THEME.text.muted}`}>Total Revenue (INR)</p>
-                <p className={`text-3xl font-bold mt-2 ${ADMIN_THEME.text.primary}`}>
+                <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Total Earned (INR)</p>
+                <p className="text-4xl font-black text-white mt-4 tracking-tighter">
                   ₹{revenueData.totalInINR.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
                 </p>
               </div>
-              <DollarSign className="h-12 w-12 text-emerald-600" />
+              <div className="p-4 bg-emerald-500/10 rounded-2xl text-emerald-500">
+                <DollarSign className="h-8 w-8" />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className={ADMIN_THEME.card.base}>
-          <CardContent className="p-6">
+        <Card className="bg-[#111111] border-white/10 rounded-[2.5rem] shadow-2xl overflow-hidden relative group">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 blur-3xl rounded-full" />
+          <CardContent className="p-8">
             <div className="flex items-center justify-between">
               <div>
-                <p className={`text-sm ${ADMIN_THEME.text.muted}`}>Total Purchases</p>
-                <p className={`text-3xl font-bold mt-2 ${ADMIN_THEME.text.primary}`}>
+                <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Total Orders</p>
+                <p className="text-4xl font-black text-white mt-4 tracking-tighter">
                   {revenueData.totalPurchases}
                 </p>
               </div>
-              <Users className="h-12 w-12 text-emerald-600" />
+              <div className="p-4 bg-blue-500/10 rounded-2xl text-blue-500">
+                <Users className="h-8 w-8" />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className={ADMIN_THEME.card.base}>
-          <CardContent className="p-6">
+        <Card className="bg-[#111111] border-white/10 rounded-[2.5rem] shadow-2xl overflow-hidden relative group">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 blur-3xl rounded-full" />
+          <CardContent className="p-8">
             <div className="flex items-center justify-between">
               <div>
-                <p className={`text-sm ${ADMIN_THEME.text.muted}`}>Average Order Value</p>
-                <p className={`text-3xl font-bold mt-2 ${ADMIN_THEME.text.primary}`}>
+                <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Avg. Order Value</p>
+                <p className="text-4xl font-black text-white mt-4 tracking-tighter">
                   ₹{revenueData.totalPurchases > 0
                     ? (revenueData.totalInINR / revenueData.totalPurchases).toLocaleString('en-IN', { maximumFractionDigits: 2 })
                     : '0.00'}
                 </p>
               </div>
-              <TrendingUp className="h-12 w-12 text-emerald-600" />
+              <div className="p-4 bg-amber-500/10 rounded-2xl text-amber-500">
+                <TrendingUp className="h-8 w-8" />
+              </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Revenue by Currency */}
-      {
-        Object.keys(revenueData.revenueByCurrency).length > 0 && (
-          <Card className={ADMIN_THEME.card.base}>
-            <CardContent className="p-6">
-              <h3 className={`text-xl font-bold mb-4 ${ADMIN_THEME.text.primary}`}>Revenue by Currency</h3>
-              <div className="grid grid-cols-2 tablet:grid-cols-4 gap-4">
-                {Object.entries(revenueData.revenueByCurrency).map(([currency, data]) => (
-                  <div key={currency} className={`p-4 rounded-xl border ${ADMIN_THEME.border.primary} ${ADMIN_THEME.background.tertiary}`}>
-                    <p className={`text-sm ${ADMIN_THEME.text.secondary}`}>{currency}</p>
-                    <p className={`text-2xl font-bold mt-1 ${ADMIN_THEME.text.primary}`}>
-                      {formatCurrency(data.amount, currency)}
-                    </p>
-                    <p className={`text-xs mt-1 ${ADMIN_THEME.text.tertiary}`}>
-                      {data.count} {data.count === 1 ? 'purchase' : 'purchases'}
-                    </p>
-                    <p className={`text-xs mt-1 ${ADMIN_THEME.text.muted}`}>
-                      ₹{convertToINR(data.amount, currency).toLocaleString('en-IN', { maximumFractionDigits: 2 })} INR
-                    </p>
+      {/* Sales by Currency */}
+      {Object.keys(revenueData.revenueByCurrency).length > 0 && (
+        <Card className="bg-[#111111] border-white/10 rounded-[2.5rem] shadow-2xl">
+          <CardContent className="p-8">
+            <h3 className="text-lg font-black text-white uppercase tracking-tight mb-8">Sales by Currency</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {Object.entries(revenueData.revenueByCurrency).map(([currency, data]) => (
+                <div key={currency} className="p-6 bg-white/[0.02] border border-white/5 rounded-[1.5rem] group hover:bg-white/[0.05] transition-all">
+                  <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">{currency}</p>
+                  <p className="text-2xl font-black text-white mt-2">
+                    {formatCurrency(data.amount, currency)}
+                  </p>
+                  <div className="flex justify-between items-center mt-4">
+                    <p className="text-[10px] font-bold text-white/40 uppercase">{data.count} {data.count === 1 ? 'sale' : 'sales'}</p>
+                    <p className="text-[10px] font-black text-emerald-500">₹{convertToINR(data.amount, currency).toLocaleString('en-IN', { maximumFractionDigits: 0 })} INR</p>
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )
-      }
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* User Purchases Table */}
-      <Card className={ADMIN_THEME.card.base}>
-        <CardContent className="p-0">
-          <div className={`p-6 border-b ${ADMIN_THEME.border.primary}`}>
-            <h3 className={`text-xl font-bold ${ADMIN_THEME.text.primary}`}>User Purchases</h3>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className={`border-b ${ADMIN_THEME.border.primary} ${ADMIN_THEME.table.header}`}>
-                  <th className={`text-left p-4 text-sm font-semibold ${ADMIN_THEME.text.secondary}`}>User</th>
-                  <th className={`text-left p-4 text-sm font-semibold ${ADMIN_THEME.text.secondary}`}>Plan</th>
-                  <th className={`text-left p-4 text-sm font-semibold ${ADMIN_THEME.text.secondary}`}>Amount</th>
-                  <th className={`text-left p-4 text-sm font-semibold ${ADMIN_THEME.text.secondary}`}>Location</th>
-                  <th className={`text-left p-4 text-sm font-semibold ${ADMIN_THEME.text.secondary}`}>Date</th>
-                  <th className={`text-left p-4 text-sm font-semibold ${ADMIN_THEME.text.secondary}`}>Actions</th>
+      <div className="bg-white/[0.02] border border-white/5 rounded-[2.5rem] overflow-hidden shadow-2xl">
+        <div className="p-8 border-b border-white/5 bg-white/2">
+          <h3 className="text-xl font-black text-white uppercase tracking-tight">Recent Sales</h3>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-white/5 bg-white/5">
+                <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">User</th>
+                <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Plan</th>
+                <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Amount</th>
+                <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Country</th>
+                <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Date</th>
+                <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em] text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5">
+              {revenueData.userPurchases.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-8 py-20 text-center text-white/20 font-black uppercase tracking-widest text-xs italic">
+                    No sales recorded for this period
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {revenueData.userPurchases.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className={`p-8 text-center ${ADMIN_THEME.text.muted}`}>
-                      No purchases found for this period
+              ) : (
+                revenueData.userPurchases.map((purchase, index) => (
+                  <tr key={index} className="group hover:bg-white/[0.03] transition-colors cursor-default">
+                    <td className="px-8 py-6">
+                      <div>
+                        <div className="text-sm font-black text-white group-hover:text-emerald-400 transition-colors">{purchase.userName}</div>
+                        <div className="text-xs text-white/30 font-medium">{purchase.userEmail}</div>
+                      </div>
+                    </td>
+                    <td className="px-8 py-6">
+                      <span className="px-3 py-1 bg-white/5 border border-white/10 rounded-lg text-[10px] font-black uppercase tracking-widest text-white/60">
+                        {purchase.planName}
+                      </span>
+                    </td>
+                    <td className="px-8 py-6">
+                      <div className="text-sm font-black text-white">
+                        {formatCurrency(purchase.amount, purchase.currency)}
+                      </div>
+                      <div className="text-[10px] font-bold text-white/20 uppercase tracking-widest">
+                        ₹{purchase.amountInINR.toLocaleString('en-IN', { maximumFractionDigits: 0 })} INR
+                      </div>
+                    </td>
+                    <td className="px-8 py-6">
+                      <div className="flex items-center gap-2 text-white/40">
+                        <MapPin className="w-3.5 h-3.5" />
+                        <span className="text-xs font-bold">{purchase.location}</span>
+                      </div>
+                    </td>
+                    <td className="px-8 py-6 text-xs font-black text-white/30">
+                      {new Date(purchase.purchaseDate).toLocaleDateString()}
+                    </td>
+                    <td className="px-8 py-6 text-right">
+                      <button
+                        onClick={() => handleSendInvoice(purchase.userId, purchase.invoiceUrl)}
+                        className="p-2.5 rounded-xl bg-white/5 hover:bg-emerald-500/10 text-white/30 hover:text-emerald-400 transition-all border border-transparent hover:border-emerald-500/20"
+                        title="Send Receipt"
+                      >
+                        <Mail className="w-4 h-4" />
+                      </button>
                     </td>
                   </tr>
-                ) : (
-                  revenueData.userPurchases.map((purchase, index) => (
-                    <tr
-                      key={index}
-                      className={`border-b ${ADMIN_THEME.border.primary} ${ADMIN_THEME.table.row} transition-colors`}
-                    >
-                      <td className="p-4">
-                        <div>
-                          <div className={`font-medium ${ADMIN_THEME.text.primary}`}>{purchase.userName}</div>
-                          <div className={`text-xs ${ADMIN_THEME.text.muted}`}>{purchase.userEmail}</div>
-                        </div>
-                      </td>
-                      <td className={`p-4 ${ADMIN_THEME.text.secondary}`}>{purchase.planName}</td>
-                      <td className="p-4">
-                        <div>
-                          <div className={`font-medium ${ADMIN_THEME.text.primary}`}>
-                            {formatCurrency(purchase.amount, purchase.currency)}
-                          </div>
-                          <div className={`text-xs ${ADMIN_THEME.text.muted}`}>
-                            ₹{purchase.amountInINR.toLocaleString('en-IN', { maximumFractionDigits: 2 })} INR
-                          </div>
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        <div className={`flex items-center gap-1 ${ADMIN_THEME.text.secondary}`}>
-                          <MapPin className="w-4 h-4" />
-                          {purchase.location}
-                        </div>
-                      </td>
-                      <td className={`p-4 ${ADMIN_THEME.text.secondary}`}>
-                        {new Date(purchase.purchaseDate).toLocaleDateString()}
-                      </td>
-                      <td className="p-4">
-                        <button
-                          onClick={() => handleSendInvoice(purchase.userId, purchase.invoiceUrl)}
-                          className={`p-2 rounded-lg transition-colors ${ADMIN_THEME.button.ghost}`}
-                          title="Send Invoice"
-                        >
-                          <Mail className="w-4 h-4 text-emerald-600" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
-      {/* Globe-based Revenue Map (Future Enhancement) */}
-      <Card className={ADMIN_THEME.card.base}>
-        <CardContent className="p-6">
-          <h3 className={`text-xl font-bold mb-4 ${ADMIN_THEME.text.primary}`}>Revenue by Location</h3>
-          <div className={`rounded-lg p-8 text-center ${ADMIN_THEME.background.tertiary}`}>
-            <Globe className={`h-16 w-16 mx-auto mb-4 ${ADMIN_THEME.text.muted}`} />
-            <p className={ADMIN_THEME.text.muted}>
-              Interactive map visualization coming soon.
-              Ensure user location tracking is enabled.
+      {/* Map Area */}
+      <Card className="bg-[#111111] border-white/10 rounded-[2.5rem] shadow-2xl">
+        <CardContent className="p-8">
+          <h3 className="text-lg font-black text-white uppercase tracking-tight mb-8">Sales by Region</h3>
+          <div className="rounded-[1.5rem] bg-white/[0.02] border border-white/5 p-20 text-center flex flex-col items-center">
+            <Globe className="h-16 w-16 text-white/10 mb-6" />
+            <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">
+              Map view coming soon.
             </p>
           </div>
         </CardContent>
       </Card>
-    </div >
+    </div>
   );
 }

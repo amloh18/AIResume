@@ -107,7 +107,6 @@ export default function CampaignPerformancePanel({
     const goalCompletionRate = calculateRate(performance.goalCompletions, performance.clicked);
 
     const handleExportReport = () => {
-        // Export performance data as CSV
         const csvData = [
             ['Metric', 'Value', 'Rate'],
             ['Sent', performance.sent, ''],
@@ -138,7 +137,6 @@ export default function CampaignPerformancePanel({
     };
 
     const getPerformanceColor = (rate: number, metric: 'open' | 'click' | 'bounce' | 'unsubscribe') => {
-        // Industry benchmarks
         const benchmarks = {
             open: { good: 20, average: 15 },
             click: { good: 3, average: 2 },
@@ -149,14 +147,12 @@ export default function CampaignPerformancePanel({
         const benchmark = benchmarks[metric];
 
         if (metric === 'bounce' || metric === 'unsubscribe') {
-            // Lower is better
-            if (rate <= benchmark.good) return 'text-green-400';
-            if (rate <= benchmark.average) return 'text-yellow-400';
+            if (rate <= benchmark.good) return 'text-emerald-500';
+            if (rate <= benchmark.average) return 'text-amber-500';
             return 'text-red-400';
         } else {
-            // Higher is better
-            if (rate >= benchmark.good) return 'text-green-400';
-            if (rate >= benchmark.average) return 'text-yellow-400';
+            if (rate >= benchmark.good) return 'text-emerald-500';
+            if (rate >= benchmark.average) return 'text-amber-500';
             return 'text-red-400';
         }
     };
@@ -168,7 +164,7 @@ export default function CampaignPerformancePanel({
         rate,
         rateLabel,
         trend,
-        color = 'text-blue-400'
+        color = 'text-blue-500'
     }: {
         icon: React.ReactNode;
         label: string;
@@ -178,28 +174,28 @@ export default function CampaignPerformancePanel({
         trend?: 'up' | 'down';
         color?: string;
     }) => (
-        <Card className="bg-gray-800 border-gray-700">
-            <CardContent className="p-4">
+        <Card className="bg-[#111111] border-white/10 shadow-2xl">
+            <CardContent className="p-6">
                 <div className="flex items-start justify-between">
                     <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
+                        <div className="flex items-center gap-2 mb-3">
                             <div className={color}>{icon}</div>
-                            <span className="text-sm text-gray-400">{label}</span>
+                            <span className="text-[10px] font-black uppercase tracking-widest text-white/30">{label}</span>
                         </div>
-                        <div className="text-2xl font-bold text-white">{value}</div>
+                        <div className="text-3xl font-black text-white tracking-tighter">{value}</div>
                         {rate !== undefined && (
-                            <div className="flex items-center gap-2 mt-1">
-                                <span className={`text-sm font-semibold ${color}`}>
-                                    {rate.toFixed(2)}%
+                            <div className="flex items-center gap-2 mt-2">
+                                <span className={`text-xs font-black ${color}`}>
+                                    {rate.toFixed(1)}%
                                 </span>
                                 {rateLabel && (
-                                    <span className="text-xs text-gray-500">{rateLabel}</span>
+                                    <span className="text-[9px] font-bold text-white/10 uppercase tracking-widest">{rateLabel}</span>
                                 )}
                             </div>
                         )}
                     </div>
                     {trend && (
-                        <div className={trend === 'up' ? 'text-green-400' : 'text-red-400'}>
+                        <div className={trend === 'up' ? 'text-emerald-500' : 'text-red-400'}>
                             {trend === 'up' ? <TrendingUp className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />}
                         </div>
                     )}
@@ -209,35 +205,35 @@ export default function CampaignPerformancePanel({
     );
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-10">
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h2 className="text-2xl font-bold text-white">Campaign Performance</h2>
-                    <p className="text-sm text-gray-400 mt-1">
-                        Last updated: {lastUpdated.toLocaleTimeString()}
-                        {loading && <span className="ml-2 text-blue-400">Refreshing...</span>}
+                    <h2 className="text-3xl font-black text-white tracking-tighter uppercase">Campaign <span className="text-emerald-500">Performance</span></h2>
+                    <p className="text-[10px] font-bold text-white/20 uppercase tracking-[0.2em] mt-2">
+                        Last synced: {lastUpdated.toLocaleTimeString()}
+                        {loading && <span className="ml-3 text-emerald-500 animate-pulse">Syncing...</span>}
                     </p>
                 </div>
                 <Button
                     onClick={handleExportReport}
                     variant="outline"
-                    className="bg-gray-800 border-gray-700 text-white hover:bg-gray-700"
+                    className="bg-white/5 border-white/5 text-white/60 hover:bg-white/10 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest px-6"
                 >
                     <Download className="w-4 h-4 mr-2" />
-                    Export Report
+                    Export Intel
                 </Button>
             </div>
 
             {/* Standard Metrics */}
             <div>
-                <h3 className="text-lg font-semibold text-white mb-4">Standard Metrics</h3>
-                <div className="grid grid-cols-1 tablet:grid-cols-2 desktop:grid-cols-4 gap-4">
+                <h3 className="text-xs font-black text-white/30 uppercase tracking-[0.2em] mb-6 ml-2">Standard Telemetry</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     <MetricCard
                         icon={<Mail className="w-5 h-5" />}
                         label="Sent"
                         value={performance.sent.toLocaleString()}
-                        color="text-blue-400"
+                        color="text-blue-500"
                     />
 
                     <MetricCard
@@ -246,7 +242,7 @@ export default function CampaignPerformancePanel({
                         value={performance.delivered.toLocaleString()}
                         rate={deliveryRate}
                         rateLabel="delivery rate"
-                        color="text-green-400"
+                        color="text-emerald-500"
                     />
 
                     <MetricCard
@@ -271,8 +267,8 @@ export default function CampaignPerformancePanel({
 
             {/* Engagement Details */}
             <div>
-                <h3 className="text-lg font-semibold text-white mb-4">Engagement Details</h3>
-                <div className="grid grid-cols-1 tablet:grid-cols-3 gap-4">
+                <h3 className="text-xs font-black text-white/30 uppercase tracking-[0.2em] mb-6 ml-2">Engagement Depth</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <MetricCard
                         icon={<XCircle className="w-5 h-5" />}
                         label="Bounced"
@@ -303,15 +299,15 @@ export default function CampaignPerformancePanel({
             {/* Goal Performance */}
             {campaignGoal && (
                 <div>
-                    <h3 className="text-lg font-semibold text-white mb-4">Goal Performance</h3>
-                    <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4">
+                    <h3 className="text-xs font-black text-white/30 uppercase tracking-[0.2em] mb-6 ml-2">Objective Tracking</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <MetricCard
                             icon={<Target className="w-5 h-5" />}
                             label={`Goal Completions (${campaignGoal})`}
                             value={performance.goalCompletions.toLocaleString()}
                             rate={goalCompletionRate}
                             rateLabel="of clicks"
-                            color="text-purple-400"
+                            color="text-purple-500"
                         />
 
                         {performance.revenue !== undefined && (
@@ -319,7 +315,7 @@ export default function CampaignPerformancePanel({
                                 icon={<DollarSign className="w-5 h-5" />}
                                 label="Revenue Generated"
                                 value={`$${performance.revenue.toLocaleString()}`}
-                                color="text-green-400"
+                                color="text-emerald-500"
                             />
                         )}
                     </div>
@@ -327,36 +323,36 @@ export default function CampaignPerformancePanel({
             )}
 
             {/* List Health Indicators */}
-            <Card className="bg-gray-800 border-gray-700">
-                <CardContent className="p-4">
-                    <h3 className="text-lg font-semibold text-white mb-4">List Health</h3>
-                    <div className="space-y-3">
+            <Card className="bg-[#111111] border-white/10 rounded-[2rem] overflow-hidden shadow-2xl">
+                <CardContent className="p-8">
+                    <h3 className="text-sm font-black text-white uppercase tracking-tight mb-6">Sector Health</h3>
+                    <div className="space-y-5">
                         <div className="flex items-center justify-between">
-                            <span className="text-gray-400">Hard Bounce Rate</span>
-                            <span className={`font-semibold ${calculateRate(performance.hardBounces, performance.sent) > 2
+                            <span className="text-[10px] font-black text-white/30 uppercase tracking-widest">Hard Bounce Rate</span>
+                            <span className={`text-xs font-black ${calculateRate(performance.hardBounces, performance.sent) > 2
                                     ? 'text-red-400'
-                                    : 'text-green-400'
+                                    : 'text-emerald-500'
                                 }`}>
                                 {calculateRate(performance.hardBounces, performance.sent).toFixed(2)}%
                             </span>
                         </div>
                         <div className="flex items-center justify-between">
-                            <span className="text-gray-400">Spam Complaint Rate</span>
-                            <span className={`font-semibold ${calculateRate(performance.spamReports, performance.delivered) > 0.1
+                            <span className="text-[10px] font-black text-white/30 uppercase tracking-widest">Spam Complaint Rate</span>
+                            <span className={`text-xs font-black ${calculateRate(performance.spamReports, performance.delivered) > 0.1
                                     ? 'text-red-400'
-                                    : 'text-green-400'
+                                    : 'text-emerald-500'
                                 }`}>
                                 {calculateRate(performance.spamReports, performance.delivered).toFixed(3)}%
                             </span>
                         </div>
-                        <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-                            <p className="text-sm text-blue-300">
-                                <strong>Health Status:</strong> {
+                        <div className="p-4 bg-emerald-500/5 border border-emerald-500/10 rounded-2xl">
+                            <p className="text-[10px] font-bold text-emerald-400/60 uppercase tracking-widest leading-relaxed">
+                                <strong className="text-emerald-400">System Assessment:</strong> {
                                     bounceRate < 2 && calculateRate(performance.spamReports, performance.delivered) < 0.1
-                                        ? '✅ Excellent - Your sender reputation is healthy'
+                                        ? 'PROTOCOL OPTIMAL - Sender reputation is secure.'
                                         : bounceRate < 5 && calculateRate(performance.spamReports, performance.delivered) < 0.5
-                                            ? '⚠️ Fair - Monitor your list quality'
-                                            : '❌ Poor - Take action to improve list hygiene'
+                                            ? 'PROTOCOL STABLE - Monitor signal quality.'
+                                            : 'PROTOCOL CRITICAL - Immediate list hygiene required.'
                                 }
                             </p>
                         </div>
@@ -365,36 +361,36 @@ export default function CampaignPerformancePanel({
             </Card>
 
             {/* Performance Benchmarks */}
-            <Card className="bg-gradient-to-br from-purple-500/10 to-blue-500/10 border-purple-500/30">
-                <CardContent className="p-4">
-                    <h3 className="text-lg font-semibold text-white mb-3">Industry Benchmarks</h3>
-                    <div className="grid grid-cols-2 tablet:grid-cols-4 gap-4 text-sm">
+            <Card className="bg-gradient-to-br from-emerald-500/10 to-blue-500/10 border-emerald-500/20 rounded-[2rem] shadow-2xl">
+                <CardContent className="p-8">
+                    <h3 className="text-sm font-black text-white uppercase tracking-tight mb-6">Market Benchmarks</h3>
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
                         <div>
-                            <div className="text-gray-400">Open Rate</div>
-                            <div className="text-white font-semibold">15-25%</div>
-                            <div className={`text-xs mt-1 ${getPerformanceColor(openRate, 'open')}`}>
-                                Your: {openRate.toFixed(2)}%
+                            <div className="text-[9px] font-black text-white/20 uppercase tracking-widest mb-1">Open Rate</div>
+                            <div className="text-sm font-black text-white">15-25%</div>
+                            <div className={`text-[10px] font-bold mt-2 ${getPerformanceColor(openRate, 'open')}`}>
+                                Actual: {openRate.toFixed(1)}%
                             </div>
                         </div>
                         <div>
-                            <div className="text-gray-400">Click Rate</div>
-                            <div className="text-white font-semibold">2-5%</div>
-                            <div className={`text-xs mt-1 ${getPerformanceColor(clickRate, 'click')}`}>
-                                Your: {clickRate.toFixed(2)}%
+                            <div className="text-[9px] font-black text-white/20 uppercase tracking-widest mb-1">Click Rate</div>
+                            <div className="text-sm font-black text-white">2-5%</div>
+                            <div className={`text-[10px] font-bold mt-2 ${getPerformanceColor(clickRate, 'click')}`}>
+                                Actual: {clickRate.toFixed(1)}%
                             </div>
                         </div>
                         <div>
-                            <div className="text-gray-400">Bounce Rate</div>
-                            <div className="text-white font-semibold">&lt;2%</div>
-                            <div className={`text-xs mt-1 ${getPerformanceColor(bounceRate, 'bounce')}`}>
-                                Your: {bounceRate.toFixed(2)}%
+                            <div className="text-[9px] font-black text-white/20 uppercase tracking-widest mb-1">Bounce Rate</div>
+                            <div className="text-sm font-black text-white">&lt;2%</div>
+                            <div className={`text-[10px] font-bold mt-2 ${getPerformanceColor(bounceRate, 'bounce')}`}>
+                                Actual: {bounceRate.toFixed(1)}%
                             </div>
                         </div>
                         <div>
-                            <div className="text-gray-400">Unsubscribe Rate</div>
-                            <div className="text-white font-semibold">&lt;0.5%</div>
-                            <div className={`text-xs mt-1 ${getPerformanceColor(unsubscribeRate, 'unsubscribe')}`}>
-                                Your: {unsubscribeRate.toFixed(2)}%
+                            <div className="text-[9px] font-black text-white/20 uppercase tracking-widest mb-1">Unsubscribe</div>
+                            <div className="text-sm font-black text-white">&lt;0.5%</div>
+                            <div className={`text-[10px] font-bold mt-2 ${getPerformanceColor(unsubscribeRate, 'unsubscribe')}`}>
+                                Actual: {unsubscribeRate.toFixed(1)}%
                             </div>
                         </div>
                     </div>

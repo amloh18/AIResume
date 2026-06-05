@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
+import { getConnection } from '@/lib/database';
 import { getAdminEmailCampaign } from '@/models/admin-models';
 import { getTargetedUsers } from '@/lib/services/userSyncService';
 import { ActivityLogService } from '@/lib/services/activityLogService';
@@ -16,6 +17,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await getConnection();
     // Skip during build time
     if (process.env.NODE_ENV === 'production' && !process.env.VERCEL) {
       return NextResponse.json(
@@ -71,6 +73,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await getConnection();
     const session = await getServerSession(authOptions);
 
     // Check if user is admin by type or role
@@ -178,6 +181,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await getConnection();
     const session = await getServerSession(authOptions);
 
     // Check if user is admin by type or role

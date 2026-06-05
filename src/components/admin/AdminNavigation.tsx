@@ -3,13 +3,13 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import Logo from '@/components/ui/Logo';
 import {
-  LayoutDashboard, BarChart3, Users, Settings, LogOut, ArrowLeft, Activity, Mail, Database, CreditCard, Shield, Menu, X, Sparkles, FileText, MessageSquare, Bell, Briefcase, UserCircle
+  LayoutDashboard, BarChart3, Users, Settings, LogOut, Activity, Mail, Database, CreditCard, Shield, X, Sparkles, FileText, MessageSquare, Bell, Briefcase, UserCircle, ChevronRight
 } from 'lucide-react';
 import { useSession, signOut } from 'next-auth/react';
-import { useTheme } from '@/lib/contexts/ThemeContext';
+import { ADMIN_THEME } from '@/lib/config/adminTheme';
 
 interface AdminNavigationProps {
   activeTab: string;
@@ -35,86 +35,102 @@ export default function AdminNavigation({ activeTab, activeSubTab, onTabChange, 
 
   const navGroups = [
     {
-      title: 'MENU',
+      title: 'Main',
       items: [
         { id: 'overview', label: 'Dashboard', icon: LayoutDashboard },
+      ]
+    },
+    {
+      title: 'Management',
+      items: [
         { 
           id: 'management', 
-          label: 'Management', 
-          icon: Users,
+          label: 'Content', 
+          icon: Shield,
           subItems: [
             { id: 'users', label: 'Users', icon: Users },
-            { id: 'businesses', label: 'Businesses (B2B)', icon: Briefcase },
+            { id: 'businesses', label: 'Businesses', icon: Briefcase },
             { id: 'campaigns', label: 'Campaigns', icon: Mail },
-            { id: 'notifications', label: 'Notifications', icon: Bell },
-            { id: 'drafts', label: 'CV Drafts', icon: FileText },
-            { id: 'sponsorships', label: 'Data', icon: Database },
-          ]
-        },
-        { 
-          id: 'analytics', 
-          label: 'Analytics', 
-          icon: BarChart3,
-          subItems: [
-            { id: 'ai', label: 'AI Analytics', icon: Sparkles },
-            { id: 'journey', label: 'Journey', icon: FileText },
-            { id: 'content', label: 'Content', icon: MessageSquare },
-            { id: 'logs', label: 'Activity Logs', icon: Activity },
-            { id: 'system', label: 'System Health', icon: Settings },
+            { id: 'notifications', label: 'Alerts', icon: Bell },
+            { id: 'drafts', label: 'Drafts', icon: FileText },
+            { id: 'sponsorships', label: 'Data Tables', icon: Database },
           ]
         },
         { id: 'pricing', label: 'Pricing', icon: CreditCard },
       ]
     },
     {
-      title: 'PORTALS',
+      title: 'Insights',
       items: [
-        { id: 'consumer', label: 'Consumer Dashboard', icon: UserCircle, action: () => router.push('/dashboard') },
-        { id: 'b2b', label: 'B2B Gateway', icon: Briefcase, action: () => router.push('/b2b/dashboard') },
-      ]
-    },
-    {
-      title: 'GENERAL',
-      items: [
-        { id: 'logout', label: 'Logout', icon: LogOut, action: handleSignOut },
+        { 
+          id: 'analytics', 
+          label: 'Analytics', 
+          icon: BarChart3,
+          subItems: [
+            { id: 'ai', label: 'AI Analytics', icon: Sparkles },
+            { id: 'journey', label: 'Journeys', icon: FileText },
+            { id: 'content', label: 'Conversations', icon: MessageSquare },
+            { id: 'logs', label: 'Logs', icon: Activity },
+            { id: 'system', label: 'Health', icon: Settings },
+          ]
+        },
       ]
     }
   ];
 
   return (
-    <div className="h-full w-full flex flex-col bg-white dark:bg-[#1a230f] border-r border-gray-200 dark:border-gray-800 shadow-sm rounded-r-3xl my-2 ml-2 relative overflow-hidden transition-colors duration-300">
+    <div className="h-full w-full flex flex-col bg-[#050505] border-r border-white/5 shadow-[20px_0_50px_rgba(0,0,0,0.5)] relative overflow-hidden">
+      {/* Background Glow */}
+      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-emerald-500/10 blur-[100px] rounded-full pointer-events-none" />
+      
       {/* Mobile Close Button */}
-      <div className="lg:hidden absolute top-4 right-4 z-50">
-        <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 text-gray-500">
-          <X className="w-6 h-6" />
+      <div className="lg:hidden absolute top-6 right-6 z-50">
+        <button 
+          onClick={() => setIsMobileMenuOpen(false)} 
+          className="p-3 bg-white/5 hover:bg-white/10 rounded-2xl text-white transition-all backdrop-blur-md"
+        >
+          <X className="w-5 h-5" />
         </button>
       </div>
 
       {/* Logo Area */}
-      <div className="p-6 pb-2 flex items-center justify-between">
-        <Logo size="md" />
-      </div>
-      <div className="px-6 mb-6">
-        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-xs font-bold uppercase tracking-wider">
-          <Shield className="w-3 h-3" />
-          Admin
+      <div className="p-8 pb-4 flex items-center justify-between">
+        <div className="relative group">
+          <div className="absolute inset-0 bg-emerald-500/20 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
+          <Logo size="md" />
         </div>
+      </div>
+      
+      <div className="px-8 mb-8">
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold uppercase tracking-widest"
+        >
+          <div className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse" />
+          Status: Online
+        </motion.div>
       </div>
 
       {/* Navigation Links */}
-      <div className="flex-1 overflow-y-auto px-4 space-y-6 scrollbar-hide">
+      <div className="flex-1 overflow-y-auto px-6 space-y-10 scrollbar-hide py-4">
         {navGroups.map((group, groupIdx) => (
-          <div key={groupIdx}>
-            <h3 className="px-4 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">
+          <motion.div 
+            key={groupIdx}
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.1 * groupIdx }}
+          >
+            <h3 className="px-4 text-[10px] font-black text-white/30 uppercase tracking-[0.2em] mb-4">
               {group.title}
             </h3>
-            <div className="space-y-1">
+            <div className="space-y-2">
               {group.items.map((item) => {
                 const isActive = activeTab === item.id;
                 const Icon = item.icon;
                 
                 return (
-                  <div key={item.id} className="flex flex-col">
+                  <div key={item.id} className="flex flex-col group/item">
                     <button
                       onClick={() => {
                         if (item.action) {
@@ -124,63 +140,119 @@ export default function AdminNavigation({ activeTab, activeSubTab, onTabChange, 
                           if (window.innerWidth < 1024) setIsMobileMenuOpen(false);
                         }
                       }}
-                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-200 text-left ${
+                      className={`relative w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-300 text-left overflow-hidden ${
                         isActive && !item.action
-                          ? 'bg-[#185b3a] text-white shadow-md shadow-[#185b3a]/20'
-                          : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/50 hover:text-gray-900 dark:hover:text-white'
+                          ? 'bg-white/5 text-white'
+                          : 'text-white/50 hover:text-white hover:bg-white/[0.02]'
                       }`}
                     >
-                      <Icon className={`w-5 h-5 flex-shrink-0 ${isActive && !item.action ? 'text-lime-300' : ''}`} />
-                      <span className="font-medium truncate">{item.label}</span>
+                      {/* Active Indicator Bar */}
+                      {isActive && (
+                        <motion.div 
+                          layoutId="activeTab"
+                          className="absolute left-0 w-1 h-1/2 bg-emerald-500 rounded-r-full"
+                        />
+                      )}
+                      
+                      <div className={`relative z-10 p-2 rounded-xl transition-all duration-300 ${
+                        isActive ? 'bg-emerald-500/20 text-emerald-400' : 'bg-white/5 text-white/40 group-hover/item:text-white/70'
+                      }`}>
+                        <Icon className="w-5 h-5 flex-shrink-0" />
+                      </div>
+                      
+                      <span className="relative z-10 font-medium text-sm tracking-tight">{item.label}</span>
+                      
+                      {item.subItems && (
+                        <ChevronRight className={`ml-auto w-4 h-4 transition-transform duration-300 ${isActive ? 'rotate-90 text-emerald-500' : 'text-white/20'}`} />
+                      )}
                     </button>
                     
-                    {/* Sub-items */}
-                    {item.subItems && isActive && (
-                      <div className="mt-1 ml-4 pl-4 border-l-2 border-gray-200 dark:border-gray-700 space-y-1">
-                        {item.subItems.map(subItem => {
-                          const SubIcon = subItem.icon;
-                          const isSubActive = activeSubTab === subItem.id;
-                          return (
-                            <button
-                              key={subItem.id}
-                              onClick={() => {
-                                onTabChange(item.id, subItem.id);
-                                if (window.innerWidth < 1024) setIsMobileMenuOpen(false);
-                              }}
-                              className={`w-full flex items-center gap-3 px-4 py-2 rounded-xl transition-all duration-200 text-left text-sm ${
-                                isSubActive
-                                  ? 'bg-lime-100 dark:bg-lime-900/30 text-[#185b3a] dark:text-lime-400 font-semibold'
-                                  : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/30 hover:text-gray-900 dark:hover:text-gray-200'
-                              }`}
-                            >
-                              <SubIcon className="w-4 h-4 flex-shrink-0" />
-                              <span className="truncate">{subItem.label}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
+                    {/* Sub-items with liquid animation */}
+                    <AnimatePresence>
+                      {item.subItems && isActive && (
+                        <motion.div 
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="mt-2 ml-6 pl-6 border-l border-white/5 space-y-1">
+                            {item.subItems.map(subItem => {
+                              const SubIcon = subItem.icon;
+                              const isSubActive = activeSubTab === subItem.id;
+                              return (
+                                <button
+                                  key={subItem.id}
+                                  onClick={() => {
+                                    onTabChange(item.id, subItem.id);
+                                    if (window.innerWidth < 1024) setIsMobileMenuOpen(false);
+                                  }}
+                                  className={`group/sub w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-300 text-left text-xs ${
+                                    isSubActive
+                                      ? 'text-emerald-400 font-semibold'
+                                      : 'text-white/30 hover:text-white/70'
+                                  }`}
+                                >
+                                  <div className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
+                                    isSubActive ? 'bg-emerald-500 scale-100' : 'bg-white/10 scale-0 group-hover/sub:scale-100'
+                                  }`} />
+                                  <span className="truncate tracking-wide">{subItem.label}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
                 );
               })}
             </div>
-          </div>
+          </motion.div>
         ))}
       </div>
 
-      {/* User Profile Card */}
-      <div className="p-4 mt-auto">
-        <div className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-4 flex items-center gap-3 border border-gray-100 dark:border-gray-700">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#185b3a] to-lime-500 flex items-center justify-center text-white font-bold text-lg shadow-inner flex-shrink-0">
-            {user?.email?.charAt(0).toUpperCase() || 'A'}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold text-gray-900 dark:text-white truncate">
-              {user?.name || 'Admin User'}
-            </p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-              {user?.email}
-            </p>
+      {/* Footer Area */}
+      <div className="p-6 mt-auto space-y-4">
+        {/* Portal Links */}
+        <div className="grid grid-cols-2 gap-2">
+          <button 
+            onClick={() => router.push('/dashboard')}
+            className="flex flex-col items-center justify-center p-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/5 transition-all text-white/50 hover:text-white group"
+          >
+            <UserCircle className="w-5 h-5 mb-1 group-hover:text-emerald-400 transition-colors" />
+            <span className="text-[10px] font-bold uppercase tracking-wider">User</span>
+          </button>
+          <button 
+            onClick={() => router.push('/b2b/dashboard')}
+            className="flex flex-col items-center justify-center p-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/5 transition-all text-white/50 hover:text-white group"
+          >
+            <Briefcase className="w-5 h-5 mb-1 group-hover:text-emerald-400 transition-colors" />
+            <span className="text-[10px] font-bold uppercase tracking-wider">B2B</span>
+          </button>
+        </div>
+
+        {/* User Profile Card */}
+        <div className="relative group p-[1px] rounded-[1.5rem] overflow-hidden bg-white/5 hover:bg-gradient-to-br hover:from-emerald-500/50 hover:to-transparent transition-all duration-500">
+          <div className="bg-[#0a0a0a] rounded-[1.5rem] p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-600 to-emerald-400 flex items-center justify-center text-black font-black text-lg shadow-[0_0_20px_rgba(16,185,129,0.3)] flex-shrink-0">
+              {user?.email?.charAt(0).toUpperCase() || 'A'}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-white truncate">
+                {user?.name || 'Admin'}
+              </p>
+              <p className="text-[10px] text-white/30 truncate uppercase tracking-wider">
+                Administrator
+              </p>
+            </div>
+            <button 
+              onClick={handleSignOut}
+              className="p-2 text-white/20 hover:text-red-400 transition-colors"
+              title="Logout"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
           </div>
         </div>
       </div>

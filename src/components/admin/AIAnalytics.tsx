@@ -1,37 +1,21 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { AdminAIAnalyticsSkeleton } from './AdminSkeletons';
 import {
-  Activity,
-  DollarSign,
-  TrendingUp,
-  Users,
-  Calendar,
-  BarChart3,
-  Zap
+  Activity, DollarSign, TrendingUp, Users, Calendar, BarChart3, Zap, 
+  Sparkles, Shield, ArrowUpRight, Cpu, Network, Database, Brain
 } from 'lucide-react';
 import {
-  LineChart,
-  Line,
-  AreaChart,
-  Area,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell
+  LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, 
+  CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell
 } from 'recharts';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface AIUsageData {
   totalTokens: number;
   totalCost: number;
+  inputCost: number;
+  outputCost: number;
   totalRequests: number;
   averageTokensPerRequest: number;
   costPerToken: number;
@@ -62,433 +46,226 @@ const AIAnalytics: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [timeRange, setTimeRange] = useState('30d');
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    fetchAIData();
-  }, [timeRange]);
+    setMounted(true);
+  }, []);
 
   const fetchAIData = async () => {
     try {
       setLoading(true);
       const response = await fetch(`/api/admin/ai-analytics?range=${timeRange}`);
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        throw new Error('Invalid response format from server');
-      }
-
       const data = await response.json();
-
-      if (data.error) {
-        throw new Error(data.error);
+      if (data.success || !data.error) {
+        setAiData(data);
       }
-
-      setAiData(data);
     } catch (error) {
-      console.error('Error fetching AI data:', error);
-      setError(`Failed to fetch AI analytics: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      setAiData(null);
+      setError('Neural Link Interrupted');
     } finally {
       setLoading(false);
     }
   };
 
-  const aiMetrics = [
-    {
-      title: 'Total Tokens',
-      value: aiData?.totalTokens?.toLocaleString() || '0',
-      change: '+15%',
-      changeType: 'positive',
-      icon: Activity,
-      color: 'bg-blue-500'
-    },
-    {
-      title: 'Total Cost',
-      value: `$${aiData?.totalCost?.toFixed(2) || '0.00'}`,
-      change: '+12%',
-      changeType: 'positive',
-      icon: DollarSign,
-      color: 'bg-green-500'
-    },
-    {
-      title: 'Total Requests',
-      value: aiData?.totalRequests?.toLocaleString() || '0',
-      change: '+8%',
-      changeType: 'positive',
-      icon: Zap,
-      color: 'bg-purple-500'
-    },
-    {
-      title: 'Avg Tokens/Request',
-      value: aiData?.averageTokensPerRequest?.toFixed(0) || '0',
-      change: '+5%',
-      changeType: 'positive',
-      icon: TrendingUp,
-      color: 'bg-orange-500'
-    }
-  ];
+  useEffect(() => {
+    if (mounted) fetchAIData();
+  }, [timeRange, mounted]);
 
-  // Generate realistic daily usage data if none exists
-  const getDailyUsageData = () => {
-    if (aiData?.dailyUsage && aiData.dailyUsage.length > 0) {
-      return aiData.dailyUsage;
-    }
-    return [];
+  const container = {
+    hidden: { opacity: 0 },
+    show: { opacity: 1, transition: { staggerChildren: 0.05 } }
   };
 
-  const costBreakdownData = [
-    { name: 'Input Tokens', value: (aiData?.totalCost || 0) * 0.7, color: '#3B82F6' },
-    { name: 'Output Tokens', value: (aiData?.totalCost || 0) * 0.3, color: '#10B981' }
-  ];
+  const item = {
+    hidden: { opacity: 0, y: 10 },
+    show: { opacity: 1, y: 0 }
+  };
 
-  if (loading) {
+  if (!mounted) return null;
+
+  if (loading && !aiData) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">AI Analytics</h1>
-        </div>
-        <div className="grid grid-cols-1 tablet:grid-cols-2 desktop:grid-cols-4 gap-6">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 animate-pulse">
-              <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-3/4 mb-4"></div>
-              <div className="h-8 bg-gray-200 dark:bg-gray-600 rounded w-1/2 mb-2"></div>
-              <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded w-1/4"></div>
-            </div>
-          ))}
-        </div>
+      <div className="min-h-[400px] flex items-center justify-center">
+        <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: "linear" }} className="w-12 h-12 border-2 border-emerald-500 border-t-transparent rounded-full" />
       </div>
     );
   }
 
-  if (error || !aiData) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">AI Analytics</h1>
+  const costBreakdownData = [
+    { name: 'Input', value: aiData?.inputCost || 0, color: '#10b981' },
+    { name: 'Output', value: aiData?.outputCost || 0, color: '#3b82f6' }
+  ];
+
+  return (
+    <motion.div variants={container} initial="hidden" animate="show" className="space-y-10">
+      {/* Command Header */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
+        <div>
+          <h1 className="text-4xl font-black text-white tracking-tighter uppercase">
+            Intelligence <span className="text-emerald-500">Analytics</span>
+          </h1>
+          <p className="text-white/40 text-xs font-bold uppercase tracking-[0.2em] mt-2">
+            Neural Network Performance • Cost & Token Telemetry
+          </p>
         </div>
-        <div className="text-center py-12">
-          <div className="text-red-500 text-6xl mb-4">⚠️</div>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Failed to Load AI Analytics</h3>
-          <p className="text-gray-600 dark:text-gray-400 mb-4">{error || 'Unable to fetch AI analytics data.'}</p>
-          <button
-            onClick={fetchAIData}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            Retry
+
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 bg-white/5 border border-white/5 p-1 rounded-2xl">
+            {['7d', '30d', '90d', '1y'].map(range => (
+              <button
+                key={range}
+                onClick={() => setTimeRange(range)}
+                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${timeRange === range ? 'bg-emerald-500 text-black shadow-lg shadow-emerald-500/20' : 'text-white/40 hover:text-white'}`}
+              >
+                {range}
+              </button>
+            ))}
+          </div>
+          <button onClick={fetchAIData} className="p-3 bg-white/5 border border-white/5 rounded-2xl hover:bg-white/10 transition-all text-white/40">
+            <Activity className="w-5 h-5" />
           </button>
         </div>
       </div>
-    );
-  }
 
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">AI Analytics</h1>
-          <p className="text-gray-600 dark:text-gray-400">Monitor AI usage, costs, and performance</p>
-        </div>
-
-        <div className="flex items-center space-x-2">
-          <select
-            value={timeRange}
-            onChange={(e) => setTimeRange(e.target.value)}
-            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-          >
-            <option value="7d">Last 7 days</option>
-            <option value="30d">Last 30 days</option>
-            <option value="90d">Last 90 days</option>
-            <option value="1y">Last year</option>
-          </select>
-        </div>
-      </div>
-
-      {/* AI Metrics Cards */}
-      <div className="grid grid-cols-1 tablet:grid-cols-2 desktop:grid-cols-4 gap-6">
-        {aiMetrics.map((metric, index) => {
-          const Icon = metric.icon;
-          return (
-            <div key={index} className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{metric.title}</p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{metric.value}</p>
-                </div>
-                <div className={`p-3 rounded-full ${metric.color} bg-opacity-10`}>
-                  <Icon className={`h-6 w-6 ${metric.color.replace('bg-', 'text-')}`} />
-                </div>
+      {/* Primary Metrics Bento */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {[
+          { label: 'Token Velocity', val: aiData?.totalTokens.toLocaleString() || '0', sub: 'Nodes Processed', icon: Brain, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+          { label: 'Compute Cost', val: `$${aiData?.totalCost.toFixed(2) || '0.00'}`, sub: 'Sector Budget', icon: DollarSign, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+          { label: 'Cycle Count', val: aiData?.totalRequests.toLocaleString() || '0', sub: 'Total Inferences', icon: Zap, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+          { label: 'Node Efficiency', val: aiData?.averageTokensPerRequest.toFixed(0) || '0', sub: 'Tokens / Cycle', icon: Cpu, color: 'text-purple-500', bg: 'bg-purple-500/10' },
+        ].map((m, i) => (
+          <motion.div key={i} variants={item} className="bg-[#111111] border border-white/10 p-8 rounded-[2.5rem] flex flex-col justify-between h-44 group hover:border-white/20 transition-all shadow-2xl">
+            <div className="flex justify-between items-start">
+              <div className={`p-3 rounded-2xl ${m.bg} ${m.color}`}>
+                <m.icon className="w-6 h-6" />
               </div>
-              <div className="mt-4 flex items-center">
-                <span className={`text-sm font-medium ${metric.changeType === 'positive' ? 'text-green-600' : 'text-red-600'
-                  }`}>
-                  {metric.change}
-                </span>
-                <span className="text-sm text-gray-500 dark:text-gray-400 ml-1">from last period</span>
-              </div>
+              <ArrowUpRight className="w-4 h-4 text-white/20 group-hover:text-white transition-colors" />
             </div>
-          );
-        })}
+            <div>
+              <p className="text-white/20 text-[10px] font-black uppercase tracking-widest mb-1">{m.label}</p>
+              <p className="text-3xl font-black text-white tracking-tighter">{m.val}</p>
+              <p className="text-[9px] font-bold text-white/10 uppercase tracking-widest mt-1">{m.sub}</p>
+            </div>
+          </motion.div>
+        ))}
       </div>
 
-      {/* Usage by Endpoint */}
-      <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Usage by Endpoint</h3>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* Main Performance Chart */}
+        <motion.div variants={item} className="lg:col-span-8 bg-[#111111] border border-white/10 rounded-[2.5rem] p-10 shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 blur-[100px] rounded-full pointer-events-none" />
+          <div className="flex justify-between items-center mb-12">
+            <div>
+              <h3 className="text-xl font-black text-white uppercase tracking-tight">Neural Propagation</h3>
+              <p className="text-white/30 text-xs font-bold mt-1 uppercase tracking-widest">Inference & Token Density</p>
+            </div>
+            <div className="px-4 py-2 bg-white/5 border border-white/5 rounded-xl text-[10px] font-black uppercase tracking-widest text-white/40">Temporal Flow</div>
+          </div>
+
+          <div className="h-[350px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={aiData?.dailyUsage}>
+                <defs>
+                  <linearGradient id="colorTokens" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
+                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: 'rgba(255,255,255,0.2)', fontSize: 10, fontWeight: 900 }} dy={10} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: 'rgba(255,255,255,0.2)', fontSize: 10, fontWeight: 900 }} />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', color: '#fff' }}
+                  itemStyle={{ fontSize: '12px', fontWeight: 700 }}
+                />
+                <Area type="monotone" dataKey="requests" stroke="#3b82f6" strokeWidth={4} fill="transparent" name="Cycles" />
+                <Area type="monotone" dataKey="tokens" stroke="#10b981" strokeWidth={4} fillOpacity={1} fill="url(#colorTokens)" name="Tokens" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </motion.div>
+
+        {/* Cost Matrix */}
+        <motion.div variants={item} className="lg:col-span-4 bg-[#111111] border border-white/10 rounded-[2.5rem] p-10 shadow-2xl flex flex-col">
+          <h3 className="text-xl font-black text-white uppercase tracking-tight mb-2">Cost Nexus</h3>
+          <p className="text-white/30 text-[10px] font-black uppercase tracking-widest mb-10">Resource Allocation</p>
+          
+          <div className="flex-1 relative min-h-[200px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie data={costBreakdownData} cx="50%" cy="50%" innerRadius={70} outerRadius={100} paddingAngle={10} dataKey="value" stroke="none">
+                  {costBreakdownData.map((entry, index) => <Cell key={index} fill={entry.color} />)}
+                </Pie>
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+              <span className="text-3xl font-black text-white">${aiData?.totalCost.toFixed(2)}</span>
+              <span className="text-[10px] font-black text-white/20 uppercase tracking-widest">Total Load</span>
+            </div>
+          </div>
+          
+          <div className="space-y-4 mt-10">
+            {costBreakdownData.map((item, idx) => (
+              <div key={idx} className="flex items-center justify-between bg-white/[0.02] p-4 rounded-2xl border border-white/5">
+                <div className="flex items-center gap-4">
+                  <div className="w-3 h-3 rounded-full shadow-[0_0_8px_rgba(255,255,255,0.2)]" style={{ backgroundColor: item.color }} />
+                  <span className="text-xs font-black text-white uppercase tracking-widest">{item.name} Protocol</span>
+                </div>
+                <span className="text-xs font-black text-emerald-400">${item.value.toFixed(2)}</span>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      </div>
+
+      {/* Endpoint Table */}
+      <motion.div variants={item} className="bg-white/[0.02] border border-white/5 rounded-[2.5rem] overflow-hidden shadow-2xl">
+        <div className="p-8 border-b border-white/5 bg-white/2">
+          <h3 className="text-lg font-black text-white uppercase tracking-tight">Endpoint Telemetry</h3>
+        </div>
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead className="bg-gray-50 dark:bg-gray-700">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Endpoint
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Requests
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Tokens
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Cost
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Avg Tokens/Request
-                </th>
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-white/5 bg-white/5">
+                <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Interface</th>
+                <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Compute Cycles</th>
+                <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Total Tokens</th>
+                <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Economic Load</th>
+                <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Velocity Avg</th>
               </tr>
             </thead>
-            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-              {aiData.usageByEndpoint.map((endpoint, index) => (
-                <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                    {endpoint.endpoint}
+            <tbody className="divide-y divide-white/5">
+              {aiData?.usageByEndpoint.map((ep, idx) => (
+                <tr key={idx} className="hover:bg-white/[0.03] transition-colors group">
+                  <td className="px-8 py-6">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-white/5 text-white/20 group-hover:text-emerald-500 transition-colors">
+                        <Network className="w-4 h-4" />
+                      </div>
+                      <span className="text-sm font-black text-white">{ep.endpoint}</span>
+                    </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                    {endpoint.requests.toLocaleString()}
+                  <td className="px-8 py-6 font-mono text-xs text-white/60">{ep.requests.toLocaleString()}</td>
+                  <td className="px-8 py-6 font-mono text-xs text-white/60">{ep.tokens.toLocaleString()}</td>
+                  <td className="px-8 py-6">
+                    <span className="text-xs font-black text-emerald-400/80">${ep.cost?.toFixed(3) || '0.00'}</span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                    {endpoint.tokens.toLocaleString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                    ${endpoint.cost?.toFixed(2) || '0.00'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                    {endpoint.requests > 0 ? (endpoint.tokens / endpoint.requests).toFixed(0) : 0}
+                  <td className="px-8 py-6">
+                    <div className="flex items-center gap-2">
+                      <div className="h-1.5 flex-1 max-w-[60px] bg-white/5 rounded-full overflow-hidden">
+                        <div className="h-full bg-blue-500" style={{ width: `${Math.min((ep.tokens / ep.requests) / 10, 100)}%` }} />
+                      </div>
+                      <span className="text-[10px] font-black text-white/20">{(ep.tokens / ep.requests).toFixed(0)}</span>
+                    </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-      </div>
-
-      {/* Top Users by AI Usage */}
-      <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Top Users by AI Usage</h3>
-        <div className="space-y-4">
-          {aiData.usageByUser.slice(0, 10).map((user, index) => (
-            <div key={index} className="flex items-center justify-between p-4 border border-gray-100 dark:border-gray-600 rounded-lg">
-              <div className="flex items-center space-x-4">
-                <div className="flex-shrink-0 h-10 w-10">
-                  <div className="h-10 w-10 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                      {user.userName?.charAt(0)?.toUpperCase() || '?'}
-                    </span>
-                  </div>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">{user.userName || 'Unknown User'}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">{user.userEmail || user.userId || 'Unknown'}</p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="text-sm font-medium text-gray-900 dark:text-white">
-                  {user.requests} requests
-                </p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {user.tokens?.toLocaleString() || '0'} tokens • ${user.cost?.toFixed(2) || '0.00'}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Cost Analysis */}
-      <div className="grid grid-cols-1 desktop:grid-cols-2 gap-6">
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Cost Breakdown</h3>
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600 dark:text-gray-400">Input Tokens</span>
-              <span className="text-sm font-medium text-gray-900 dark:text-white">
-                ${((aiData?.totalCost || 0) * 0.7).toFixed(2)}
-              </span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600 dark:text-gray-400">Output Tokens</span>
-              <span className="text-sm font-medium text-gray-900 dark:text-white">
-                ${((aiData?.totalCost || 0) * 0.3).toFixed(2)}
-              </span>
-            </div>
-            <div className="border-t border-gray-200 dark:border-gray-600 pt-4">
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium text-gray-900 dark:text-white">Total Cost</span>
-                <span className="text-lg font-bold text-gray-900 dark:text-white">
-                  ${(aiData?.totalCost || 0).toFixed(2)}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Cost Breakdown Pie Chart */}
-          <div className="mt-6">
-            <ResponsiveContainer width="100%" height={200}>
-              <PieChart>
-                <Pie
-                  data={costBreakdownData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name} ${((percent as number || 0) * 100).toFixed(0)}%`}
-                  outerRadius={60}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {costBreakdownData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#1F2937',
-                    border: '1px solid #374151',
-                    borderRadius: '8px',
-                    color: '#F9FAFB'
-                  }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Daily Usage Trend</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={getDailyUsageData()}>
-              <XAxis
-                dataKey="date"
-                stroke="#6B7280"
-                fontSize={12}
-                interval={timeRange === '1y' ? 0 : 'preserveStartEnd'}
-              />
-              <YAxis
-                stroke="#6B7280"
-                fontSize={12}
-              />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: '#1F2937',
-                  border: '1px solid #374151',
-                  borderRadius: '8px',
-                  color: '#F9FAFB'
-                }}
-              />
-              <Legend />
-              <Area
-                type="monotone"
-                dataKey="requests"
-                stackId="1"
-                stroke="#3B82F6"
-                fill="#3B82F6"
-                fillOpacity={0.6}
-                name="Requests"
-              />
-              <Area
-                type="monotone"
-                dataKey="tokens"
-                stackId="2"
-                stroke="#8B5CF6"
-                fill="#8B5CF6"
-                fillOpacity={0.6}
-                name="Tokens"
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      {/* Additional Charts */}
-      <div className="grid grid-cols-1 desktop:grid-cols-2 gap-6">
-        {/* Cost Trend Line Chart */}
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Cost Trend</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={getDailyUsageData()}>
-              <XAxis
-                dataKey="date"
-                stroke="#6B7280"
-                fontSize={12}
-                interval={timeRange === '1y' ? 0 : 'preserveStartEnd'}
-              />
-              <YAxis
-                stroke="#6B7280"
-                fontSize={12}
-              />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: '#1F2937',
-                  border: '1px solid #374151',
-                  borderRadius: '8px',
-                  color: '#F9FAFB'
-                }}
-              />
-              <Legend />
-              <Line
-                type="monotone"
-                dataKey="cost"
-                stroke="#10B981"
-                strokeWidth={2}
-                dot={{ fill: '#10B981', strokeWidth: 2, r: 4 }}
-                name="Cost ($)"
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Requests vs Tokens Bar Chart */}
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Requests vs Tokens</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={(getDailyUsageData() || []).slice(-7)}>
-              <XAxis
-                dataKey="date"
-                stroke="#6B7280"
-                fontSize={12}
-                interval={timeRange === '1y' ? 0 : 'preserveStartEnd'}
-              />
-              <YAxis
-                stroke="#6B7280"
-                fontSize={12}
-              />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: '#1F2937',
-                  border: '1px solid #374151',
-                  borderRadius: '8px',
-                  color: '#F9FAFB'
-                }}
-              />
-              <Legend />
-              <Bar dataKey="requests" fill="#3B82F6" name="Requests" />
-              <Bar dataKey="tokens" fill="#8B5CF6" name="Tokens (÷100)" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };
 

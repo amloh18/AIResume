@@ -3,9 +3,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-  Briefcase, Search, Plus, Filter, MoreVertical, Edit, Power, CheckCircle, AlertCircle, RefreshCw 
+  Briefcase, Search, Plus, Filter, MoreVertical, Edit, Power, CheckCircle, 
+  AlertCircle, RefreshCw, Globe, Zap, Shield, TrendingUp, ArrowUpRight, X
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface Tenant {
   _id: string;
@@ -22,6 +24,7 @@ export default function BusinessManagement() {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [mounted, setMounted] = useState(false);
   
   // Modals state
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -36,16 +39,24 @@ export default function BusinessManagement() {
     rateLimit: 60
   });
 
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const fetchTenants = async () => {
+    if (!mounted) return;
     setLoading(true);
     try {
       const res = await fetch('/api/admin/b2b/tenants');
+      if (!res.ok) throw new Error('API request failed');
       const data = await res.json();
       if (data.success) {
-        setTenants(data.tenants);
+        setTenants(data.tenants || []);
       }
     } catch (error) {
-      toast.error('Failed to load businesses');
+      console.error('Fetch error:', error);
+      toast.error('Loading Failed');
+      setTenants([]);
     } finally {
       setLoading(false);
     }
@@ -53,7 +64,7 @@ export default function BusinessManagement() {
 
   useEffect(() => {
     fetchTenants();
-  }, []);
+  }, [mounted]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,17 +74,18 @@ export default function BusinessManagement() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
       });
+      if (!res.ok) throw new Error('Creation failed');
       const data = await res.json();
       if (data.success) {
-        toast.success('Business account created successfully');
+        toast.success('Business Added');
         setShowCreateModal(false);
         setFormData({ name: '', contactEmail: '', subscriptionTier: 'free', rateLimit: 60 });
         fetchTenants();
       } else {
-        toast.error(data.error || 'Failed to create account');
+        toast.error(data.error || 'Failed to add business');
       }
     } catch (error) {
-      toast.error('An error occurred');
+      toast.error('Connection Error');
     }
   };
 
@@ -91,22 +103,23 @@ export default function BusinessManagement() {
           isActive: formData.isActive
         })
       });
+      if (!res.ok) throw new Error('Update failed');
       const data = await res.json();
       if (data.success) {
-        toast.success('Business account updated');
+        toast.success('Business Updated');
         setShowEditModal(false);
         setSelectedTenant(null);
         fetchTenants();
       } else {
-        toast.error(data.error || 'Failed to update account');
+        toast.error(data.error || 'Update Failed');
       }
     } catch (error) {
-      toast.error('An error occurred');
+      toast.error('Connection Error');
     }
   };
 
   const toggleStatus = async (tenant: Tenant) => {
-    if (!confirm(`Are you sure you want to ${tenant.isActive ? 'suspend' : 'activate'} ${tenant.name}?`)) return;
+    if (!confirm(`Confirm ${tenant.isActive ? 'suspension' : 'activation'} of ${tenant.name}?`)) return;
 
     try {
       const res = await fetch(`/api/admin/b2b/tenants/${tenant._id}`, {
@@ -114,101 +127,155 @@ export default function BusinessManagement() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isActive: !tenant.isActive })
       });
+      if (!res.ok) throw new Error('Status update failed');
       const data = await res.json();
       if (data.success) {
-        toast.success(`Account ${tenant.isActive ? 'suspended' : 'activated'}`);
+        toast.success(`${tenant.name} ${tenant.isActive ? 'suspended' : 'activated'}`);
         fetchTenants();
       }
     } catch (error) {
-      toast.error('An error occurred');
+      toast.error('Connection Error');
     }
   };
 
-  const filteredTenants = tenants.filter(t => 
-    t.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    t.contactEmail.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredTenants = (tenants || []).filter(t => 
+    (t.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+    (t.contactEmail || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Businesses (B2B)</h2>
-          <p className="text-muted-foreground text-sm mt-1">Manage B2B tenants, API quotas, and subscriptions.</p>
-        </div>
-        <button 
-          onClick={() => setShowCreateModal(true)}
-          className="bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2"
-        >
-          <Plus className="w-4 h-4" /> Add Business
-        </button>
-      </div>
+  const container = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: { staggerChildren: 0.05 }
+    }
+  };
 
-      <div className="bg-white dark:bg-black/40 border dark:border-gray-800 rounded-xl overflow-hidden shadow-sm">
-        <div className="p-4 border-b dark:border-gray-800 flex flex-col sm:flex-row gap-4 items-center justify-between">
-          <div className="relative w-full sm:w-96">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <input 
-              type="text" 
-              placeholder="Search businesses..." 
+  const item = {
+    hidden: { opacity: 0, x: -10 },
+    show: { opacity: 1, x: 0 }
+  };
+
+  if (!mounted) return null;
+
+  return (
+    <motion.div variants={container} initial="hidden" animate="show" className="space-y-10">
+      {/* Command Header */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
+        <div>
+          <h1 className="text-4xl font-black text-white tracking-tighter uppercase">
+            Business <span className="text-emerald-500">Accounts</span>
+          </h1>
+          <p className="text-white/40 text-xs font-bold uppercase tracking-[0.2em] mt-2">
+            Manage Organizations • {tenants.length} Active Businesses
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="relative group">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 group-focus-within:text-emerald-400 transition-colors" />
+            <input
+              type="text"
+              placeholder="Search businesses..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-gray-50 dark:bg-gray-900 border dark:border-gray-800 rounded-md text-sm"
+              className="pl-12 pr-6 py-3 bg-white/5 border border-white/5 rounded-2xl text-sm text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:bg-white/10 w-full sm:w-64 transition-all"
             />
           </div>
-          <button onClick={fetchTenants} className="p-2 border dark:border-gray-800 rounded-md hover:bg-gray-50 dark:hover:bg-gray-900">
-            <RefreshCw className="w-4 h-4 text-muted-foreground" />
+          
+          <button onClick={fetchTenants} className="p-3 bg-white/5 border border-white/5 rounded-2xl hover:bg-white/10 transition-all text-white/40 hover:text-white">
+            <RefreshCw className="w-5 h-5" />
+          </button>
+
+          <button 
+            onClick={() => setShowCreateModal(true)}
+            className="bg-emerald-600 hover:bg-emerald-500 text-black font-black rounded-2xl px-8 py-4 shadow-[0_0_30px_rgba(16,185,129,0.2)] flex items-center gap-2 text-xs uppercase tracking-widest"
+          >
+            <Plus className="w-5 h-5" /> Add Business
           </button>
         </div>
+      </div>
 
+      {/* Quick Metrics */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+        {[
+          { label: 'Total Businesses', val: tenants.length, icon: Globe, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+          { label: 'Total Usage', val: '2.4M', icon: Zap, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+          { label: 'Active', val: tenants.filter(t => t.isActive).length, icon: Shield, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+          { label: 'Growth', val: '+14%', icon: TrendingUp, color: 'text-purple-500', bg: 'bg-purple-500/10' },
+        ].map((m, i) => (
+          <div key={i} className="bg-white/5 border border-white/5 p-6 rounded-[2rem] flex flex-col justify-between h-32 group hover:bg-white/[0.08] transition-all">
+            <div className="flex justify-between items-start">
+              <div className={`p-2 rounded-xl ${m.bg} ${m.color}`}>
+                <m.icon className="w-5 h-5" />
+              </div>
+              <ArrowUpRight className="w-4 h-4 text-white/20 group-hover:text-white transition-colors" />
+            </div>
+            <div>
+              <p className="text-white/20 text-[10px] font-black uppercase tracking-widest">{m.label}</p>
+              <p className="text-2xl font-black text-white">{m.val.toLocaleString()}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Tenants Table */}
+      <div className="bg-white/[0.02] border border-white/5 rounded-[2.5rem] overflow-hidden shadow-2xl">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
-            <thead className="bg-gray-50 dark:bg-gray-900/50 text-muted-foreground border-b dark:border-gray-800">
-              <tr>
-                <th className="px-6 py-3 font-medium">Business Name</th>
-                <th className="px-6 py-3 font-medium">Plan</th>
-                <th className="px-6 py-3 font-medium">Status</th>
-                <th className="px-6 py-3 font-medium">API Usage</th>
-                <th className="px-6 py-3 font-medium">Rate Limit</th>
-                <th className="px-6 py-3 font-medium text-right">Actions</th>
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-white/5 bg-white/5">
+                <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Organization</th>
+                <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Plan</th>
+                <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Status</th>
+                <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Usage</th>
+                <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Speed Limit</th>
+                <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em] text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y dark:divide-gray-800">
+            <tbody className="divide-y divide-white/5">
               {loading ? (
-                <tr><td colSpan={6} className="px-6 py-8 text-center text-muted-foreground">Loading businesses...</td></tr>
+                <tr><td colSpan={6} className="px-8 py-20 text-center text-white/20 font-black uppercase tracking-widest text-xs italic">Loading Accounts...</td></tr>
               ) : filteredTenants.length === 0 ? (
-                <tr><td colSpan={6} className="px-6 py-8 text-center text-muted-foreground">No businesses found.</td></tr>
+                <tr><td colSpan={6} className="px-8 py-20 text-center text-white/20 font-black uppercase tracking-widest text-xs italic">No businesses found</td></tr>
               ) : (
                 filteredTenants.map(tenant => (
-                  <tr key={tenant._id} className="hover:bg-gray-50/50 dark:hover:bg-gray-900/50 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="font-medium text-gray-900 dark:text-gray-100">{tenant.name}</div>
-                      <div className="text-xs text-muted-foreground">{tenant.contactEmail}</div>
+                  <motion.tr key={tenant._id} variants={item} className="group hover:bg-white/[0.03] transition-colors cursor-default">
+                    <td className="px-8 py-6">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-blue-400 flex items-center justify-center text-white font-black text-sm group-hover:shadow-[0_0_15px_rgba(59,130,246,0.3)] transition-all">
+                          {(tenant.name || 'B').charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <div className="text-sm font-black text-white group-hover:text-emerald-400 transition-colors">{tenant.name || 'Unknown'}</div>
+                          <div className="text-xs text-white/30 font-medium">{tenant.contactEmail || 'No Email'}</div>
+                        </div>
+                      </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${
-                        tenant.subscriptionTier === 'enterprise' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300' :
-                        tenant.subscriptionTier === 'pro' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' :
-                        'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
+                    <td className="px-8 py-6">
+                      <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${
+                        tenant.subscriptionTier === 'enterprise' ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' :
+                        tenant.subscriptionTier === 'pro' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
+                        'bg-white/5 text-white/40 border-white/10'
                       }`}>
                         {tenant.subscriptionTier}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
-                      <span className={`flex items-center gap-1.5 text-xs font-medium ${tenant.isActive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                        {tenant.isActive ? <CheckCircle className="w-3.5 h-3.5" /> : <AlertCircle className="w-3.5 h-3.5" />}
-                        {tenant.isActive ? 'Active' : 'Suspended'}
-                      </span>
+                    <td className="px-8 py-6">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-1.5 h-1.5 rounded-full ${tenant.isActive ? 'bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-red-500'}`} />
+                        <span className={`text-xs font-bold ${tenant.isActive ? 'text-emerald-400' : 'text-red-400'} capitalize`}>{tenant.isActive ? 'Active' : 'Suspended'}</span>
+                      </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="font-medium">{tenant.apiUsageCount.toLocaleString()}</div>
-                      <div className="text-xs text-muted-foreground">Total calls</div>
+                    <td className="px-8 py-6">
+                      <div className="text-xs font-black text-white">{tenant.apiUsageCount.toLocaleString()}</div>
+                      <div className="text-[10px] text-white/20 font-bold uppercase tracking-widest">Calls</div>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="font-medium">{tenant.rateLimit}</div>
-                      <div className="text-xs text-muted-foreground">req / min</div>
+                    <td className="px-8 py-6">
+                      <div className="text-xs font-black text-white">{tenant.rateLimit}</div>
+                      <div className="text-[10px] text-white/20 font-bold uppercase tracking-widest">RPM</div>
                     </td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-8 py-6 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <button 
                           onClick={() => {
@@ -216,21 +283,19 @@ export default function BusinessManagement() {
                             setFormData({ ...formData, subscriptionTier: tenant.subscriptionTier, rateLimit: tenant.rateLimit, isActive: tenant.isActive } as any);
                             setShowEditModal(true);
                           }}
-                          className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded"
-                          title="Edit Settings"
+                          className="p-2.5 rounded-xl bg-white/5 hover:bg-emerald-500/10 text-white/30 hover:text-emerald-400 transition-all border border-transparent hover:border-emerald-500/20"
                         >
                           <Edit className="w-4 h-4" />
                         </button>
                         <button 
                           onClick={() => toggleStatus(tenant)}
-                          className={`p-1.5 rounded ${tenant.isActive ? 'text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30' : 'text-gray-500 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30'}`}
-                          title={tenant.isActive ? 'Suspend' : 'Activate'}
+                          className={`p-2.5 rounded-xl bg-white/5 transition-all border border-transparent ${tenant.isActive ? 'hover:bg-red-500/10 text-white/30 hover:text-red-400 hover:border-red-500/20' : 'hover:bg-emerald-500/10 text-white/30 hover:text-emerald-400 hover:border-emerald-500/20'}`}
                         >
                           <Power className="w-4 h-4" />
                         </button>
                       </div>
                     </td>
-                  </tr>
+                  </motion.tr>
                 ))
               )}
             </tbody>
@@ -238,76 +303,64 @@ export default function BusinessManagement() {
         </div>
       </div>
 
-      {/* Create Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-xl w-full max-w-md overflow-hidden">
-            <div className="p-6 border-b dark:border-gray-800">
-              <h3 className="text-lg font-bold">Create New Business (B2B)</h3>
-              <p className="text-sm text-muted-foreground mt-1">This will create a new tenant and assign the email as the B2B admin.</p>
-            </div>
-            <form onSubmit={handleCreate} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Company Name</label>
-                <input required type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full px-3 py-2 border dark:border-gray-800 rounded-md bg-transparent" placeholder="Acme Corp" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Admin Email</label>
-                <input required type="email" value={formData.contactEmail} onChange={e => setFormData({...formData, contactEmail: e.target.value})} className="w-full px-3 py-2 border dark:border-gray-800 rounded-md bg-transparent" placeholder="admin@acmecorp.com" />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
+      {/* Modals */}
+      <AnimatePresence>
+        {(showCreateModal || (showEditModal && selectedTenant)) && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/80 backdrop-blur-xl" onClick={() => { setShowCreateModal(false); setShowEditModal(false); }} />
+            <motion.div initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 20 }} className="relative bg-[#111111] border border-white/10 rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden">
+              <div className="p-8 border-b border-white/5 bg-white/2 flex items-center justify-between">
                 <div>
-                  <label className="block text-sm font-medium mb-1">Plan</label>
-                  <select value={formData.subscriptionTier} onChange={e => setFormData({...formData, subscriptionTier: e.target.value})} className="w-full px-3 py-2 border dark:border-gray-800 rounded-md bg-transparent">
-                    <option value="free">Free</option>
-                    <option value="pro">Pro</option>
-                    <option value="enterprise">Enterprise</option>
-                  </select>
+                  <h3 className="text-xl font-black text-white uppercase tracking-tight">
+                    {showCreateModal ? 'Add Business' : 'Edit Business'}
+                  </h3>
+                  <p className="text-white/40 text-xs font-bold uppercase tracking-widest mt-1">Management Panel</p>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Rate Limit (req/min)</label>
-                  <input type="number" value={formData.rateLimit} onChange={e => setFormData({...formData, rateLimit: parseInt(e.target.value)})} className="w-full px-3 py-2 border dark:border-gray-800 rounded-md bg-transparent" />
-                </div>
+                <button onClick={() => { setShowCreateModal(false); setShowEditModal(false); }} className="p-3 bg-white/5 hover:bg-white/10 rounded-2xl text-white/40 hover:text-white transition-all">
+                  <X className="w-5 h-5" />
+                </button>
               </div>
-              <div className="pt-4 flex gap-3 justify-end">
-                <button type="button" onClick={() => setShowCreateModal(false)} className="px-4 py-2 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md">Cancel</button>
-                <button type="submit" className="px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-md">Create Business</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
-      {/* Edit Modal */}
-      {showEditModal && selectedTenant && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-xl w-full max-w-md overflow-hidden">
-            <div className="p-6 border-b dark:border-gray-800">
-              <h3 className="text-lg font-bold">Edit Settings: {selectedTenant.name}</h3>
-            </div>
-            <form onSubmit={handleUpdate} className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Plan</label>
-                  <select value={formData.subscriptionTier} onChange={e => setFormData({...formData, subscriptionTier: e.target.value})} className="w-full px-3 py-2 border dark:border-gray-800 rounded-md bg-transparent">
-                    <option value="free">Free</option>
-                    <option value="pro">Pro</option>
-                    <option value="enterprise">Enterprise</option>
-                  </select>
+              <form onSubmit={showCreateModal ? handleCreate : handleUpdate} className="p-10 space-y-8">
+                {showCreateModal && (
+                  <>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-white/40 uppercase tracking-widest ml-1">Company Name</label>
+                      <input required type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full px-6 py-4 bg-black/40 border border-white/5 focus:border-emerald-500/50 rounded-2xl text-white transition-all" placeholder="Enter company name" />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-white/40 uppercase tracking-widest ml-1">Contact Email</label>
+                      <input required type="email" value={formData.contactEmail} onChange={e => setFormData({...formData, contactEmail: e.target.value})} className="w-full px-6 py-4 bg-black/40 border border-white/5 focus:border-emerald-500/50 rounded-2xl text-white transition-all" placeholder="admin@company.com" />
+                    </div>
+                  </>
+                )}
+
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-white/40 uppercase tracking-widest ml-1">Tier Allocation</label>
+                    <select value={formData.subscriptionTier} onChange={e => setFormData({...formData, subscriptionTier: e.target.value})} className="w-full px-6 py-4 bg-black/40 border border-white/5 focus:border-emerald-500/50 rounded-2xl text-white transition-all appearance-none">
+                      <option value="free">Standard</option>
+                      <option value="pro">Advanced</option>
+                      <option value="enterprise">Enterprise</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-white/40 uppercase tracking-widest ml-1">Speed Limit (RPM)</label>
+                    <input type="number" value={formData.rateLimit} onChange={e => setFormData({...formData, rateLimit: parseInt(e.target.value)})} className="w-full px-6 py-4 bg-black/40 border border-white/5 focus:border-emerald-500/50 rounded-2xl text-white transition-all" />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Rate Limit (req/min)</label>
-                  <input type="number" value={formData.rateLimit} onChange={e => setFormData({...formData, rateLimit: parseInt(e.target.value)})} className="w-full px-3 py-2 border dark:border-gray-800 rounded-md bg-transparent" />
+
+                <div className="pt-6 flex gap-4">
+                  <button type="button" onClick={() => { setShowCreateModal(false); setShowEditModal(false); }} className="flex-1 px-8 py-4 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all">Cancel</button>
+                  <button type="submit" className="flex-1 px-8 py-4 bg-emerald-600 hover:bg-emerald-500 text-black rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-lg shadow-emerald-500/20 transition-all">
+                    {showCreateModal ? 'Add Business' : 'Save Changes'}
+                  </button>
                 </div>
-              </div>
-              <div className="pt-4 flex gap-3 justify-end">
-                <button type="button" onClick={() => setShowEditModal(false)} className="px-4 py-2 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md">Cancel</button>
-                <button type="submit" className="px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-md">Save Changes</button>
-              </div>
-            </form>
+              </form>
+            </motion.div>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }

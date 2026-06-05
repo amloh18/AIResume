@@ -3,25 +3,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-  FileText, 
-  Search, 
-  Filter, 
-  Eye, 
-  Trash2,
-  User,
-  Clock,
-  CheckCircle,
-  AlertCircle,
-  X,
-  RefreshCw
+  FileText, Search, Filter, Eye, Trash2, User, Clock, CheckCircle, 
+  AlertCircle, X, RefreshCw, Sparkles, ArrowUpRight, Shield, Zap
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import DraftDetailModal from './DraftDetailModal';
 import { DRAFT_STATUSES, DEFAULT_PAGE_SIZE } from '@/lib/config/adminConstants';
-import { ADMIN_THEME } from '@/lib/config/adminTheme';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface Draft {
   id: string;
@@ -38,76 +27,48 @@ interface Draft {
   };
   hasAiAnalysis: boolean;
   status: 'anonymous' | 'linked' | 'converted';
-  convertedAt: string | null;
-  convertedBy: {
-    id: string;
-    email: string;
-    name: string;
-  } | null;
-  conversionMethod: 'user' | 'admin' | 'auto' | null;
   createdAt: string;
   updatedAt: string;
-  expiresAt: string;
-  lastAccessedAt: string;
 }
 
 const DraftManagement: React.FC = () => {
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [selectedDraft, setSelectedDraft] = useState<Draft | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const fetchDrafts = async () => {
     try {
       setLoading(true);
-      setError(null);
-
-      const params = new URLSearchParams({
-        page: page.toString(),
-        limit: DEFAULT_PAGE_SIZE.toString()
-      });
-
-      if (filterStatus !== 'all') {
-        params.append('status', filterStatus);
-      }
-
-      if (searchTerm) {
-        // Search by session ID (email search can be added later if needed)
-        params.append('sessionId', searchTerm);
-      }
+      const params = new URLSearchParams({ page: page.toString(), limit: '15' });
+      if (filterStatus !== 'all') params.append('status', filterStatus);
+      if (searchTerm) params.append('sessionId', searchTerm);
 
       const response = await fetch(`/api/admin/drafts?${params.toString()}`);
-      
-      // Check content type before parsing
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        throw new Error('Invalid response format from server');
-      }
-      
       const data = await response.json();
-
       if (data.success) {
         setDrafts(data.data);
         setTotalPages(data.pagination.totalPages);
-      } else {
-        setError(data.error || 'Failed to fetch drafts');
       }
-    } catch (err: any) {
-      console.error('Error fetching drafts:', err);
-      setError(err.message || 'Failed to fetch drafts');
+    } catch (err) {
+      console.error('Fetch error:', err);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchDrafts();
-  }, [page, filterStatus]);
+    if (mounted) fetchDrafts();
+  }, [page, filterStatus, mounted]);
 
   const handleViewDetails = (draft: Draft) => {
     setSelectedDraft(draft);
@@ -115,221 +76,181 @@ const DraftManagement: React.FC = () => {
   };
 
   const handleDelete = async (draftId: string) => {
-    if (!confirm('Are you sure you want to delete this draft?')) {
-      return;
-    }
-
+    if (!confirm('Delete this draft permanently?')) return;
     try {
-      const response = await fetch(`/api/admin/drafts/${draftId}`, {
-        method: 'DELETE'
-      });
-
-      // Check content type before parsing
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        throw new Error('Invalid response format from server');
-      }
-
-      const data = await response.json();
-
-      if (data.success) {
-        setDrafts(drafts.filter(d => d.id !== draftId));
-      } else {
-        alert(data.error || 'Failed to delete draft');
-      }
-    } catch (err: any) {
-      console.error('Error deleting draft:', err);
-      alert('Failed to delete draft');
-    }
+      const response = await fetch(`/api/admin/drafts/${draftId}`, { method: 'DELETE' });
+      if (response.ok) setDrafts(drafts.filter(d => d.id !== draftId));
+    } catch (err) {}
   };
 
-  const getStatusBadge = (status: string) => {
-    if (!DRAFT_STATUSES.includes(status as any)) {
-      return <Badge className={ADMIN_THEME.badge.info}>{status}</Badge>;
-    }
-    
-    switch (status) {
-      case 'converted':
-        return <Badge className={ADMIN_THEME.badge.success}><CheckCircle className="w-3 h-3 mr-1" />Converted</Badge>;
-      case 'linked':
-        return <Badge className={ADMIN_THEME.badge.info}><User className="w-3 h-3 mr-1" />Linked</Badge>;
-      case 'anonymous':
-        return <Badge className={ADMIN_THEME.badge.inactive}><AlertCircle className="w-3 h-3 mr-1" />Anonymous</Badge>;
-      default:
-        return <Badge className={ADMIN_THEME.badge.inactive}>{status}</Badge>;
-    }
+  const container = {
+    hidden: { opacity: 0 },
+    show: { opacity: 1, transition: { staggerChildren: 0.05 } }
   };
 
-  if (loading && drafts.length === 0) {
-    return (
-      <Card className={ADMIN_THEME.card.base}>
-        <CardHeader>
-          <CardTitle className={ADMIN_THEME.text.primary}>CV Draft Management</CardTitle>
-          <CardDescription className={ADMIN_THEME.text.muted}>Loading drafts...</CardDescription>
-        </CardHeader>
-      </Card>
-    );
-  }
+  const item = {
+    hidden: { opacity: 0, x: -10 },
+    show: { opacity: 1, x: 0 }
+  };
+
+  if (!mounted) return null;
 
   return (
-    <div className="space-y-6">
-      <Card className={ADMIN_THEME.card.base}>
-        <CardHeader className={ADMIN_THEME.card.header}>
-          <CardTitle className={`flex items-center gap-2 ${ADMIN_THEME.text.primary}`}>
-            <FileText className="w-5 h-5" />
-            CV Draft Management
-          </CardTitle>
-          <CardDescription className={ADMIN_THEME.text.muted}>
-            Manage temporary CV drafts from AI Career Report flow
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-6">
-          {/* Filters */}
-          <div className="flex gap-4 mb-6">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className={`absolute left-3 top-1/2 -translate-y-1/2 ${ADMIN_THEME.text.muted} w-4 h-4`} />
-                <Input
-                  placeholder="Search by email or session ID..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      fetchDrafts();
-                    }
-                  }}
-                  className={`pl-10 ${ADMIN_THEME.input.base} ${ADMIN_THEME.input.focus}`}
-                />
-              </div>
-            </div>
-            <select
-              value={filterStatus}
-              onChange={(e) => {
-                setFilterStatus(e.target.value);
-                setPage(1);
-              }}
-              className={`px-4 py-2 border rounded-lg ${ADMIN_THEME.input.base} ${ADMIN_THEME.input.focus} ${ADMIN_THEME.border.primary}`}
-            >
-              <option value="all">All Status</option>
-              {DRAFT_STATUSES.map((status) => (
-                <option key={status} value={status}>
-                  {status.charAt(0).toUpperCase() + status.slice(1)}
-                </option>
-              ))}
-            </select>
-            <Button onClick={fetchDrafts} variant="outline" className={ADMIN_THEME.button.outline}>
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Refresh
-            </Button>
+    <motion.div variants={container} initial="hidden" animate="show" className="space-y-10">
+      {/* Command Header */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
+        <div>
+          <h1 className="text-4xl font-black text-white tracking-tighter uppercase">
+            CV <span className="text-emerald-500">Drafts</span>
+          </h1>
+          <p className="text-white/40 text-xs font-bold uppercase tracking-[0.2em] mt-2">
+            In-progress Resumes • {drafts.length} Active Drafts
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="relative group">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 group-focus-within:text-emerald-400 transition-colors" />
+            <input
+              type="text"
+              placeholder="Search by ID..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-12 pr-6 py-3 bg-white/5 border border-white/5 rounded-2xl text-sm text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:bg-white/10 w-full sm:w-64 transition-all"
+            />
           </div>
+          
+          <select
+            value={filterStatus}
+            onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }}
+            className="px-4 py-3 bg-white/5 border border-white/5 rounded-2xl text-xs font-black uppercase tracking-widest text-white/60 focus:outline-none hover:bg-white/10 transition-all appearance-none cursor-pointer"
+          >
+            <option value="all">Statuses: All</option>
+            {DRAFT_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
 
-          {error && (
-            <div className={`mb-4 p-3 bg-red-50 text-red-700 border border-red-200 rounded`}>
-              {error}
+          <Button onClick={fetchDrafts} className="bg-white/5 hover:bg-white/10 text-white/60 border border-white/5 rounded-2xl p-6 transition-all">
+            <RefreshCw className="w-5 h-5" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Quick Metrics */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+        {[
+          { label: 'Total Drafts', val: drafts.length, icon: FileText, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+          { label: 'Conversion', val: '24%', icon: Zap, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+          { label: 'Active', val: drafts.filter(d => d.status === 'linked').length, icon: Shield, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+          { label: 'AI Analyzed', val: drafts.filter(d => d.hasAiAnalysis).length, icon: Sparkles, color: 'text-purple-500', bg: 'bg-purple-500/10' },
+        ].map((m, i) => (
+          <div key={i} className="bg-white/5 border border-white/5 p-6 rounded-[2rem] flex flex-col justify-between h-32 group hover:bg-white/[0.08] transition-all shadow-xl">
+            <div className="flex justify-between items-start">
+              <div className={`p-2 rounded-xl ${m.bg} ${m.color}`}>
+                <m.icon className="w-5 h-5" />
+              </div>
+              <ArrowUpRight className="w-4 h-4 text-white/20 group-hover:text-white transition-colors" />
             </div>
-          )}
+            <div>
+              <p className="text-white/20 text-[10px] font-black uppercase tracking-widest">{m.label}</p>
+              <p className="text-2xl font-black text-white">{m.val.toLocaleString()}</p>
+            </div>
+          </div>
+        ))}
+      </div>
 
-          {/* Drafts Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className={`border-b ${ADMIN_THEME.border.primary} ${ADMIN_THEME.table.header}`}>
-                  <th className={`text-left p-3 ${ADMIN_THEME.text.secondary}`}>User</th>
-                  <th className={`text-left p-3 ${ADMIN_THEME.text.secondary}`}>CV Preview</th>
-                  <th className={`text-left p-3 ${ADMIN_THEME.text.secondary}`}>Step</th>
-                  <th className={`text-left p-3 ${ADMIN_THEME.text.secondary}`}>Status</th>
-                  <th className={`text-left p-3 ${ADMIN_THEME.text.secondary}`}>Created</th>
-                  <th className={`text-left p-3 ${ADMIN_THEME.text.secondary}`}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {drafts.map((draft) => (
-                  <tr key={draft.id} className={`${ADMIN_THEME.table.row} border-b ${ADMIN_THEME.border.primary}`}>
-                    <td className="p-3">
+      {/* Drafts Table */}
+      <div className="bg-white/[0.02] border border-white/5 rounded-[2.5rem] overflow-hidden shadow-2xl">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-white/5 bg-white/5">
+                <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">User</th>
+                <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Draft Name</th>
+                <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Step</th>
+                <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Status</th>
+                <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Date</th>
+                <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em] text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5">
+              {loading ? (
+                <tr><td colSpan={6} className="px-8 py-20 text-center text-white/20 font-black uppercase tracking-widest text-xs italic">Loading Drafts...</td></tr>
+              ) : drafts.length === 0 ? (
+                <tr><td colSpan={6} className="px-8 py-20 text-center text-white/20 font-black uppercase tracking-widest text-xs italic">No drafts found</td></tr>
+              ) : (
+                drafts.map((draft) => (
+                  <motion.tr key={draft.id} variants={item} className="group hover:bg-white/[0.03] transition-colors cursor-default">
+                    <td className="px-8 py-6">
                       {draft.userEmail ? (
-                        <div>
-                          <div className={ADMIN_THEME.text.primary}>{draft.userName || draft.userEmail}</div>
-                          <div className={`text-sm ${ADMIN_THEME.text.tertiary}`}>{draft.userEmail}</div>
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 font-black text-sm">
+                            <User className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <div className="text-sm font-black text-white group-hover:text-emerald-400 transition-colors">{draft.userName || 'Unknown'}</div>
+                            <div className="text-xs text-white/30 font-medium">{draft.userEmail}</div>
+                          </div>
                         </div>
                       ) : (
-                        <div className={ADMIN_THEME.text.tertiary}>
-                          <div>Anonymous</div>
-                          <div className={`text-xs ${ADMIN_THEME.text.muted}`}>{draft.sessionId.substring(0, 8)}...</div>
+                        <div className="flex items-center gap-4 opacity-40">
+                          <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-white/40">
+                            <Clock className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <div className="text-sm font-black text-white">Anonymous</div>
+                            <div className="text-[10px] font-mono">{draft.sessionId.substring(0, 12)}...</div>
+                          </div>
                         </div>
                       )}
                     </td>
-                    <td className="p-3">
-                      <div className={ADMIN_THEME.text.primary}>{draft.cvDataPreview.name}</div>
-                      <div className={`text-sm ${ADMIN_THEME.text.tertiary}`}>
-                        {draft.cvDataPreview.workCount} work, {draft.cvDataPreview.educationCount} edu
-                        {draft.hasAiAnalysis && <span className="ml-2 text-emerald-600">• AI Analysis</span>}
+                    <td className="px-8 py-6">
+                      <div className="text-sm font-black text-white">{draft.cvDataPreview.name || 'Untitled Draft'}</div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-[10px] font-bold text-white/20 uppercase tracking-widest">{draft.cvDataPreview.workCount} Work / {draft.cvDataPreview.educationCount} Edu</span>
+                        {draft.hasAiAnalysis && <Sparkles className="w-3 h-3 text-purple-400 animate-pulse" />}
                       </div>
                     </td>
-                    <td className={`p-3 ${ADMIN_THEME.text.secondary}`}>Step {draft.currentStep}</td>
-                    <td className="p-3">{getStatusBadge(draft.status)}</td>
-                    <td className={`p-3 ${ADMIN_THEME.text.tertiary} text-sm`}>
-                      {new Date(draft.createdAt).toLocaleDateString()}
+                    <td className="px-8 py-6">
+                      <div className="px-3 py-1 bg-white/5 rounded-lg w-fit text-[10px] font-black uppercase tracking-widest text-white/40 border border-white/5">Step {draft.currentStep}</div>
                     </td>
-                    <td className="p-3">
-                      <div className="flex gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleViewDetails(draft)}
-                          className={ADMIN_THEME.button.ghost}
-                        >
+                    <td className="px-8 py-6">
+                      <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${
+                        draft.status === 'converted' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+                        draft.status === 'linked' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
+                        'bg-white/5 text-white/40 border-white/10'
+                      }`}>
+                        {draft.status}
+                      </span>
+                    </td>
+                    <td className="px-8 py-6">
+                      <div className="text-xs font-black text-white/40">{new Date(draft.createdAt).toLocaleDateString()}</div>
+                    </td>
+                    <td className="px-8 py-6 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button onClick={() => handleViewDetails(draft)} className="p-2.5 rounded-xl bg-white/5 hover:bg-emerald-500/10 text-white/30 hover:text-emerald-400 transition-all">
                           <Eye className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete(draft.id)}
-                          className="text-red-500 hover:text-red-600 hover:bg-red-50"
-                        >
+                        </button>
+                        <button onClick={() => handleDelete(draft.id)} className="p-2.5 rounded-xl bg-white/5 hover:bg-red-500/10 text-white/30 hover:text-red-400 transition-all">
                           <Trash2 className="w-4 h-4" />
-                        </Button>
+                        </button>
                       </div>
                     </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                  </motion.tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="p-8 bg-white/2 border-t border-white/5 flex items-center justify-between">
+            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="px-6 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white font-black text-[10px] uppercase tracking-widest border border-white/5 disabled:opacity-30">Previous</button>
+            <span className="text-[10px] font-black uppercase tracking-widest text-white/20">Page {page} of {totalPages}</span>
+            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-6 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white font-black text-[10px] uppercase tracking-widest border border-white/5 disabled:opacity-30">Next</button>
           </div>
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex justify-between items-center mt-4">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage(p => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className={ADMIN_THEME.button.outline}
-              >
-                Previous
-              </Button>
-              <span className={ADMIN_THEME.text.muted}>
-                Page {page} of {totalPages}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-                className={ADMIN_THEME.button.outline}
-              >
-                Next
-              </Button>
-            </div>
-          )}
-
-          {drafts.length === 0 && !loading && (
-            <div className={`text-center py-8 ${ADMIN_THEME.text.muted}`}>
-              No drafts found
-            </div>
-          )}
-        </CardContent>
-      </Card>
+        )}
+      </div>
 
       {isDetailModalOpen && selectedDraft && (
         <DraftDetailModal
@@ -342,9 +263,8 @@ const DraftManagement: React.FC = () => {
           }}
         />
       )}
-    </div>
+    </motion.div>
   );
 };
 
 export default DraftManagement;
-

@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     ] = await Promise.all([
       User.countDocuments(),
       User.countDocuments({ 
-        lastActiveAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } 
+        lastLogin: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } 
       }),
       CV.countDocuments(),
       JobApplication.countDocuments()

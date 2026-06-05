@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
 
     // Calculate success rate based on applications (mock logic for now as we don't have outcome data easily accessible)
     // In a real scenario, this would check for 'hired' status in applications
-    const successRate = totalApplications > 0 ? "15%" : "0%";
+    const successRate = totalApplications > 0 ? 15 : 0;
 
     const metrics = {
       totalUsers,

@@ -67,9 +67,26 @@ export async function GET(request: NextRequest) {
     };
 
     // Calculate metrics
-    const totalTokens = aiUsageLogs.reduce((sum, log) => sum + (log.aiMetadata?.tokensUsed || 0), 0);
-    const totalCost = aiUsageLogs.reduce((sum, log) => sum + calculateLogCost(log), 0);
+    let totalTokens = 0;
+    let totalCost = 0;
+    let inputCostTotal = 0;
+    let outputCostTotal = 0;
     const totalRequests = aiUsageLogs.length;
+
+    aiUsageLogs.forEach(log => {
+      totalTokens += log.aiMetadata?.tokensUsed || 0;
+      
+      let inputTokens = log.aiMetadata?.inputTokens || Math.ceil((log.aiMetadata?.tokensUsed || 0) * 0.8);
+      let outputTokens = log.aiMetadata?.outputTokens || ((log.aiMetadata?.tokensUsed || 0) - inputTokens);
+      
+      const inputCost = (inputTokens / 1_000_000) * INPUT_COST_PER_1M;
+      const outputCost = (outputTokens / 1_000_000) * OUTPUT_COST_PER_1M;
+      
+      inputCostTotal += inputCost;
+      outputCostTotal += outputCost;
+      totalCost += (inputCost + outputCost);
+    });
+
     const averageTokensPerRequest = totalRequests > 0 ? totalTokens / totalRequests : 0;
     const costPerToken = totalTokens > 0 ? totalCost / totalTokens : 0;
 
@@ -172,6 +189,8 @@ export async function GET(request: NextRequest) {
     const aiData = {
       totalTokens,
       totalCost: Math.round(totalCost * 100) / 100,
+      inputCost: inputCostTotal,
+      outputCost: outputCostTotal,
       totalRequests,
       averageTokensPerRequest: Math.round(averageTokensPerRequest * 100) / 100,
       costPerToken: Math.round(costPerToken * 1000000) / 1000000,

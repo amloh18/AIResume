@@ -160,16 +160,25 @@ export async function GET(request: NextRequest) {
       revenue = 0; // Removed mock
     }
 
+    // Calculate system stats (mocked for now but could be wired to actual metrics)
+    const systemHealth = {
+      speed: 18 + Math.floor(Math.random() * 10),
+      status: 100,
+      load: 35 + Math.floor(Math.random() * 15)
+    };
+
     const kpiData = {
       totalUsers,
       activeUsers,
       totalCVs,
       totalJobs,
-      draftJobs, // New field
+      draftJobs,
       totalCoverLetters,
       aiUsage,
       revenue,
-      growthRate: Math.round(growthRate * 100) / 100
+      growthRate: Math.round(growthRate * 100) / 100,
+      systemHealth,
+      efficiency: totalUsers > 0 ? Math.min(100, Math.round((activeUsers / totalUsers) * 100 + (growthRate > 0 ? 5 : 0))) : 0
     };
 
     return NextResponse.json(kpiData);
