@@ -73,26 +73,46 @@ export async function GET(request: NextRequest) {
     const atsScoreCount = jobsWithAts.length;
     const averageATSScore = atsScoreCount > 0 ? jobsWithAts.reduce((sum: number, j: any) => sum + j.atsScore, 0) / atsScoreCount : 0;
 
-    // Content health metrics
-    const orphanedJourneys = 0; // Requires complex aggregation, defaulting to 0 for now
-    const masterCVToTailoredCVRatio = totalCVs > 0 ? (totalCVs - totalJourneys) / totalCVs : 0;
-    const averageCompletionTime = 0; // Requires timestamps comparison
-
-    const journeyStatusCounts = applicationJourneys.reduce((acc: any, journey: any) => {
-      const status = journey.status || 'in-progress';
-      acc[status] = (acc[status] || 0) + 1;
-      return acc;
-    }, {});
-
+    // Group status distribution
     const journeyStatusDistribution = Object.keys(journeyStatusCounts).map(status => ({
       _id: status,
       count: journeyStatusCounts[status]
     }));
 
-    // Asset growth data (mock removed, empty array fallback for now unless we aggregate over time)
+    // Asset growth data aggregation (grouped by day)
+    const cvsByDay = await CV.aggregate([
+      { $match: { createdAt: { $gte: startDate } } },
+      {
+        $group: {
+          _id: {
+            year: { $year: "$createdAt" },
+            month: { $month: "$createdAt" },
+            day: { $dayOfMonth: "$createdAt" }
+          },
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { "_id.year": 1, "_id.month": 1, "_id.day": 1 } }
+    ]);
+
+    const clsByDay = await JobApplication.aggregate([
+      { $match: { coverLetterId: { $exists: true, $ne: null }, createdAt: { $gte: startDate } } },
+      {
+        $group: {
+          _id: {
+            year: { $year: "$createdAt" },
+            month: { $month: "$createdAt" },
+            day: { $dayOfMonth: "$createdAt" }
+          },
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { "_id.year": 1, "_id.month": 1, "_id.day": 1 } }
+    ]);
+
     const assetGrowthData = {
-      cvs: [],
-      coverLetters: []
+      cvs: cvsByDay,
+      coverLetters: clsByDay
     };
 
     const kpiData = {

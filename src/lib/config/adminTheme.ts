@@ -1,97 +1,101 @@
 /**
- * Admin Panel Theme Constants
- * Centralized theme configuration for consistent admin UI styling
+ * Admin Panel Theme Constants - Obsidian & Emerald Redesign
+ * Centralized theme configuration for high-end admin UI styling
  */
 
 export const ADMIN_THEME = {
   page: {
-    background: 'bg-[#f7f7f7] dark:bg-[#f7f7f7]',
+    background: 'bg-[#0a0a0a] dark:bg-[#0a0a0a]',
   },
 
   // Background Colors
   background: {
-    primary: 'bg-[#f7f7f7] dark:bg-[#f7f7f7]',
-    secondary: 'bg-white dark:bg-white',
-    tertiary: 'bg-slate-50 dark:bg-slate-50',
-    hover: 'hover:bg-slate-50 dark:hover:bg-slate-50',
-    card: 'bg-white dark:bg-white',
-    modal: 'bg-white dark:bg-white',
+    primary: 'bg-[#0a0a0a] dark:bg-[#0a0a0a]',
+    secondary: 'bg-[#111111] dark:bg-[#111111]',
+    tertiary: 'bg-[#1a1a1a] dark:bg-[#1a1a1a]',
+    hover: 'hover:bg-[#1a1a1a] dark:hover:bg-[#1a1a1a]',
+    card: 'bg-[#111111] dark:bg-[#111111]',
+    modal: 'bg-[#111111] dark:bg-[#111111]',
+    glass: 'bg-white/5 backdrop-blur-xl border border-white/10',
+    glassHover: 'hover:bg-white/10 transition-all duration-300',
   },
 
   // Text Colors
   text: {
-    primary: 'text-slate-900 dark:text-slate-900',
-    secondary: 'text-slate-600 dark:text-slate-600',
+    primary: 'text-white dark:text-white',
+    secondary: 'text-slate-400 dark:text-slate-400',
     tertiary: 'text-slate-500 dark:text-slate-500',
-    muted: 'text-slate-400 dark:text-slate-400',
-    inverse: 'text-white dark:text-white',
+    muted: 'text-slate-600 dark:text-slate-600',
+    accent: 'text-emerald-400 dark:text-emerald-400',
+    inverse: 'text-black dark:text-black',
   },
 
   // Border Colors
   border: {
-    primary: 'border-slate-200 dark:border-slate-200',
-    secondary: 'border-slate-300 dark:border-slate-300',
-    hover: 'hover:border-slate-300 dark:hover:border-slate-300',
-    focus: 'focus:border-emerald-600 dark:focus:border-emerald-600',
+    primary: 'border-white/10 dark:border-white/10',
+    secondary: 'border-white/20 dark:border-white/20',
+    hover: 'hover:border-emerald-500/50 dark:hover:border-emerald-500/50',
+    focus: 'focus:border-emerald-500 dark:focus:border-emerald-500',
+    accent: 'border-emerald-500/30 dark:border-emerald-500/30',
   },
 
   // Button Styles
   button: {
-    primary: 'bg-emerald-700 hover:bg-emerald-800 text-white dark:bg-emerald-700 dark:hover:bg-emerald-800 dark:text-white',
-    secondary: 'bg-slate-100 hover:bg-slate-200 text-slate-900 dark:bg-slate-100 dark:hover:bg-slate-200 dark:text-slate-900',
-    success: 'bg-emerald-700 hover:bg-emerald-800 text-white dark:bg-emerald-700 dark:hover:bg-emerald-800 dark:text-white',
-    danger: 'bg-red-600 hover:bg-red-700 text-white dark:bg-red-600 dark:hover:bg-red-700 dark:text-white',
-    warning: 'bg-amber-600 hover:bg-amber-700 text-white dark:bg-amber-600 dark:hover:bg-amber-700 dark:text-white',
-    outline: 'border border-slate-200 hover:bg-slate-50 text-slate-700 dark:border-slate-200 dark:hover:bg-slate-50 dark:text-slate-700',
-    ghost: 'hover:bg-slate-50 text-slate-700 dark:hover:bg-slate-50 dark:text-slate-700',
+    primary: 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-[0_0_20px_rgba(16,185,129,0.2)] transition-all duration-300',
+    secondary: 'bg-white/10 hover:bg-white/20 text-white backdrop-blur-md border border-white/10 transition-all duration-300',
+    success: 'bg-emerald-600 hover:bg-emerald-500 text-white transition-all',
+    danger: 'bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 transition-all',
+    warning: 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 border border-amber-500/30 transition-all',
+    outline: 'border border-white/10 hover:bg-white/5 text-slate-300 transition-all',
+    ghost: 'hover:bg-white/5 text-slate-400 hover:text-white transition-all',
   },
 
   // Input Styles
   input: {
-    base: 'bg-white dark:bg-white border-slate-200 dark:border-slate-200 text-slate-900 dark:text-slate-900 placeholder-slate-400 dark:placeholder-slate-400',
-    focus: 'focus:border-emerald-600 focus:ring-emerald-600 dark:focus:border-emerald-600 dark:focus:ring-emerald-600',
-    disabled: 'disabled:bg-slate-100 disabled:text-slate-400 dark:disabled:bg-slate-100 dark:disabled:text-slate-400',
+    base: 'bg-black/40 border-white/10 text-white placeholder-slate-600 focus:ring-emerald-500/20',
+    focus: 'focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-500/20 transition-all duration-300',
+    disabled: 'opacity-50 cursor-not-allowed',
   },
 
   // Badge/Status Colors
   badge: {
-    active: 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-50 dark:text-emerald-700 dark:border-emerald-200',
-    inactive: 'bg-slate-50 text-slate-600 border border-slate-200 dark:bg-slate-50 dark:text-slate-600 dark:border-slate-200',
-    draft: 'bg-slate-50 text-slate-700 border border-slate-200 dark:bg-slate-50 dark:text-slate-700 dark:border-slate-200',
-    scheduled: 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-50 dark:text-amber-700 dark:border-amber-200',
-    sent: 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-50 dark:text-emerald-700 dark:border-emerald-200',
-    cancelled: 'bg-red-50 text-red-700 border border-red-200 dark:bg-red-50 dark:text-red-700 dark:border-red-200',
-    success: 'bg-emerald-700 text-white dark:bg-emerald-700 dark:text-white',
-    error: 'bg-red-600 text-white dark:bg-red-600 dark:text-white',
-    warning: 'bg-amber-600 text-white dark:bg-amber-600 dark:text-white',
-    info: 'bg-emerald-700 text-white dark:bg-emerald-700 dark:text-white',
+    active: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',
+    inactive: 'bg-slate-500/10 text-slate-400 border border-slate-500/20',
+    draft: 'bg-blue-500/10 text-blue-400 border border-blue-500/20',
+    scheduled: 'bg-amber-500/10 text-amber-400 border border-amber-500/20',
+    sent: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',
+    cancelled: 'bg-red-500/10 text-red-400 border border-red-500/20',
+    success: 'bg-emerald-500 text-black font-bold',
+    error: 'bg-red-500 text-white',
+    warning: 'bg-amber-500 text-black',
+    info: 'bg-blue-500 text-white',
   },
 
   // Card Styles
   card: {
-    base: 'bg-white dark:bg-white border border-slate-200 dark:border-slate-200 rounded-2xl shadow-sm text-slate-900 dark:text-slate-900',
-    header: 'border-b border-slate-200 dark:border-slate-200 text-slate-900 dark:text-slate-900',
-    content: 'text-slate-900 dark:text-slate-900',
+    base: 'bg-[#111111] border border-white/10 rounded-[2rem] shadow-2xl overflow-hidden transition-all duration-300',
+    header: 'px-8 py-6 border-b border-white/5 bg-white/2',
+    content: 'p-8',
   },
 
   // Table Styles
   table: {
-    header: 'bg-slate-50 dark:bg-slate-50 text-slate-600 dark:text-slate-600',
-    row: 'hover:bg-slate-50 dark:hover:bg-slate-50',
-    cell: 'text-slate-900 dark:text-slate-900',
+    header: 'bg-white/5 text-slate-400 font-medium uppercase tracking-wider text-xs',
+    row: 'border-b border-white/5 hover:bg-white/2 transition-colors',
+    cell: 'py-4 px-6 text-slate-300',
   },
 
   // Modal Styles
   modal: {
-    overlay: 'bg-slate-900/40 dark:bg-slate-900/40 backdrop-blur-sm',
-    container: 'bg-white dark:bg-white border border-slate-200 dark:border-slate-200 rounded-2xl',
-    header: 'border-b border-slate-200 dark:border-slate-200 text-slate-900 dark:text-slate-900',
+    overlay: 'bg-black/80 backdrop-blur-md transition-all duration-500',
+    container: 'bg-[#111111] border border-white/10 rounded-[2.5rem] shadow-[0_0_50px_rgba(0,0,0,0.5)]',
+    header: 'p-8 border-b border-white/5',
   },
 
   // Loading States
   loading: {
-    spinner: 'border-emerald-700 dark:border-emerald-700',
-    skeleton: 'bg-slate-200 dark:bg-slate-200',
+    spinner: 'border-emerald-500',
+    skeleton: 'bg-white/5 animate-pulse rounded-2xl',
   },
 } as const;
 

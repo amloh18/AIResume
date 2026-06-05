@@ -27,10 +27,30 @@ export class CampaignEmailService {
         };
 
         try {
+            // Check Daily Send Limit (Hostinger: 1000 per 24h)
+            const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+            const recentCampaigns = await EmailCampaign.find({
+                sentAt: { $gte: twentyFourHoursAgo },
+                status: 'sent'
+            });
+            const totalSentRecently = recentCampaigns.reduce((sum, c) => sum + (c.sentCount || 0), 0);
+            
+            const HOSTINGER_DAILY_LIMIT = 1000;
+            if (totalSentRecently >= HOSTINGER_DAILY_LIMIT) {
+                throw new Error(`Daily send limit reached (${totalSentRecently}/${HOSTINGER_DAILY_LIMIT}). Hostinger allows 1000 emails per 24 hours.`);
+            }
+
             // 1. Fetch the campaign
             const campaign = await EmailCampaign.findById(campaignId);
             if (!campaign) {
                 throw new Error(`Campaign not found: ${campaignId}`);
+            }
+
+            // Check Size Limit (Hostinger: 35MB)
+            const contentSize = Buffer.byteLength(campaign.htmlContent, 'utf8');
+            const sizeInMB = contentSize / (1024 * 1024);
+            if (sizeInMB > 30) { // Safety margin
+                throw new Error(`Email size exceeds Hostinger limit (Current: ${sizeInMB.toFixed(2)}MB, Limit: 35MB).`);
             }
 
             // Check status (unless dry run)

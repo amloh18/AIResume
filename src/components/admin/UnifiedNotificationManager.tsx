@@ -2,35 +2,28 @@
 
 import React, { useState, useEffect } from 'react';
 import {
-    Send,
-    Users,
-    Target,
-    DollarSign,
-    BarChart3,
-    Plus,
-    X,
-    Bell,
-    CheckCircle,
-    XCircle,
-    AlertCircle,
-    Megaphone,
-    Beaker,
-    History
+    Send, Users, Target, DollarSign, BarChart3, Plus, X, Bell, CheckCircle, 
+    XCircle, AlertCircle, Megaphone, Beaker, History, Zap, Shield, Sparkles,
+    TrendingUp, ArrowUpRight, Activity
 } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { NotificationType, NotificationPriority } from '@/models/Notification';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function UnifiedNotificationManager() {
     const [activeTab, setActiveTab] = useState<'overview' | 'send' | 'test' | 'offers' | 'history'>('overview');
     const { toast } = useToast();
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     // --- Send Notification State ---
     const [sending, setSending] = useState(false);
@@ -50,28 +43,14 @@ export default function UnifiedNotificationManager() {
     const [testLoading, setTestLoading] = useState(false);
     const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
     const [testType, setTestType] = useState<NotificationType>('system_update');
-    const [testTitle, setTestTitle] = useState('Test Notification');
-    const [testMessage, setTestMessage] = useState('This is a test notification.');
+    const [testTitle, setTestTitle] = useState('Test Alert');
+    const [testMessage, setTestMessage] = useState('This is an automated system test.');
     const [testPriority, setTestPriority] = useState<NotificationPriority>('medium');
     const [testInteractive, setTestInteractive] = useState(false);
     const [testActionType, setTestActionType] = useState('');
     const [testActionUrl, setTestActionUrl] = useState('');
     const [testChannels, setTestChannels] = useState<('in-app' | 'email')[]>(['in-app']);
     const [sendingAllTest, setSendingAllTest] = useState(false);
-
-    // --- Discount Offer State ---
-    const [offerForm, setOfferForm] = useState({
-        code: '',
-        discountType: 'percentage' as 'percentage' | 'amount',
-        value: '',
-        expiryDate: '',
-        targetAudience: 'all',
-        planFilter: '',
-        title: '',
-        message: '',
-    });
-
-    // --- Handlers ---
 
     const handleSendNotification = async () => {
         setSending(true);
@@ -83,11 +62,7 @@ export default function UnifiedNotificationManager() {
             });
 
             if (response.ok) {
-                toast({
-                    title: 'Success',
-                    description: 'Notification sent successfully!',
-                });
-                // Reset form
+                toast({ title: 'Alert Sent', description: 'All targeted users have been notified.' });
                 setNotificationForm({
                     type: 'system_update',
                     title: '',
@@ -98,16 +73,9 @@ export default function UnifiedNotificationManager() {
                     persistent: false,
                     expiresAt: '',
                 });
-            } else {
-                throw new Error('Failed to send notification');
             }
         } catch (error) {
-            console.error('Error sending notification:', error);
-            toast({
-                title: 'Error',
-                description: 'Failed to send notification. Please try again.',
-                variant: 'destructive',
-            });
+            toast({ title: 'Failed to send alert', variant: 'destructive' });
         } finally {
             setSending(false);
         }
@@ -115,17 +83,10 @@ export default function UnifiedNotificationManager() {
 
     const handleSendTestNotification = async () => {
         if (!testUserId) {
-            toast({
-                title: 'Error',
-                description: 'Please enter a user ID',
-                variant: 'destructive',
-            });
+            toast({ title: 'User ID Required', variant: 'destructive' });
             return;
         }
-
         setTestLoading(true);
-        setTestResult(null);
-
         try {
             const response = await fetch('/api/notifications/create-test', {
                 method: 'POST',
@@ -143,45 +104,19 @@ export default function UnifiedNotificationManager() {
                     persistent: false,
                 }),
             });
-
             const data = await response.json();
-
             if (data.success) {
-                setTestResult({ success: true, message: 'Test notification sent!' });
-                toast({
-                    title: 'Success',
-                    description: 'Test notification sent successfully.',
-                });
-            } else {
-                setTestResult({ success: false, message: data.error || 'Failed' });
-                toast({
-                    title: 'Error',
-                    description: data.error || 'Failed to send test notification',
-                    variant: 'destructive',
-                });
+                setTestResult({ success: true, message: 'Test alert sent successfully' });
             }
         } catch (error: any) {
             setTestResult({ success: false, message: error.message });
-            toast({
-                title: 'Error',
-                description: error.message,
-                variant: 'destructive',
-            });
         } finally {
             setTestLoading(false);
         }
     };
 
     const handleSendAllTestTypes = async () => {
-        if (!testUserId) {
-            toast({
-                title: 'Error',
-                description: 'Please enter a user ID first',
-                variant: 'destructive',
-            });
-            return;
-        }
-
+        if (!testUserId) return;
         setSendingAllTest(true);
         try {
             const response = await fetch('/api/notifications/send-all-types', {
@@ -189,334 +124,197 @@ export default function UnifiedNotificationManager() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ userId: testUserId }),
             });
-
             const data = await response.json();
-
-            if (data.success) {
-                toast({
-                    title: 'Success',
-                    description: `Sent ${data.summary.success} notifications successfully!`,
-                });
-                setTestResult({ success: true, message: `Sent ${data.summary.success} notifications!` });
-            } else {
-                toast({
-                    title: 'Error',
-                    description: data.error || 'Failed',
-                    variant: 'destructive',
-                });
-            }
+            if (data.success) toast({ title: 'All test types sent' });
         } catch (error: any) {
-            toast({
-                title: 'Error',
-                description: error.message,
-                variant: 'destructive',
-            });
+            toast({ title: 'Test Failed', variant: 'destructive' });
         } finally {
             setSendingAllTest(false);
         }
     };
 
-    const handleCreateOffer = async () => {
-        try {
-            const response = await fetch('/api/admin/notifications/create-offer', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(offerForm),
-            });
-
-            if (response.ok) {
-                toast({
-                    title: 'Success',
-                    description: 'Discount offer created and sent successfully!',
-                });
-                // Reset form
-                setOfferForm({
-                    code: '',
-                    discountType: 'percentage',
-                    value: '',
-                    expiryDate: '',
-                    targetAudience: 'all',
-                    planFilter: '',
-                    title: '',
-                    message: '',
-                });
-            } else {
-                throw new Error('Failed to create offer');
-            }
-        } catch (error) {
-            console.error('Error creating offer:', error);
-            toast({
-                title: 'Error',
-                description: 'Failed to create offer.',
-                variant: 'destructive',
-            });
+    const container = {
+        hidden: { opacity: 0 },
+        show: {
+            opacity: 1,
+            transition: { staggerChildren: 0.05 }
         }
     };
 
-    const quickTestTemplates = [
-        {
-            name: 'System Update',
-            type: 'system_update' as NotificationType,
-            title: 'System Update',
-            message: 'We\'ve made some improvements to the platform.',
-            priority: 'low' as NotificationPriority,
-            interactive: false,
-        },
-        {
-            name: 'Urgent Alert',
-            type: 'system_update' as NotificationType,
-            title: 'Urgent: Action Required',
-            message: 'Your account requires immediate attention.',
-            priority: 'urgent' as NotificationPriority,
-            interactive: true,
-            actionType: 'view_offer',
-            actionUrl: '/dashboard/settings',
-        },
-    ];
-
-    const loadTestTemplate = (template: typeof quickTestTemplates[0]) => {
-        setTestType(template.type);
-        setTestTitle(template.title);
-        setTestMessage(template.message);
-        setTestPriority(template.priority);
-        setTestInteractive(template.interactive || false);
-        setTestActionType(template.actionType || '');
-        setTestActionUrl(template.actionUrl || '');
+    const item = {
+        hidden: { opacity: 0, x: -10 },
+        show: { opacity: 1, x: 0 }
     };
 
+    if (!mounted) return null;
+
     return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between">
+        <motion.div variants={container} initial="hidden" animate="show" className="space-y-10">
+            {/* Command Header */}
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
                 <div>
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Notification Center</h2>
-                    <p className="text-gray-600 dark:text-gray-400">Manage, send, and test notifications</p>
+                    <h1 className="text-4xl font-black text-white tracking-tighter uppercase">
+                        Alert <span className="text-emerald-500">Center</span>
+                    </h1>
+                    <p className="text-white/40 text-xs font-bold uppercase tracking-[0.2em] mt-2">
+                        Manage Notifications • Multiple Channels
+                    </p>
                 </div>
             </div>
 
             <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
-                <TabsList className="grid w-full grid-cols-5">
-                    <TabsTrigger value="overview">
-                        <BarChart3 className="h-4 w-4 mr-2" />
-                        Overview
-                    </TabsTrigger>
-                    <TabsTrigger value="send">
-                        <Megaphone className="h-4 w-4 mr-2" />
-                        Send Broadcast
-                    </TabsTrigger>
-                    <TabsTrigger value="test">
-                        <Beaker className="h-4 w-4 mr-2" />
-                        Test Lab
-                    </TabsTrigger>
-                    <TabsTrigger value="offers">
-                        <DollarSign className="h-4 w-4 mr-2" />
-                        Offers
-                    </TabsTrigger>
-                    <TabsTrigger value="history">
-                        <History className="h-4 w-4 mr-2" />
-                        History
-                    </TabsTrigger>
+                <TabsList className="flex items-center gap-2 bg-white/5 border border-white/5 p-1 rounded-2xl w-fit">
+                    {[
+                        { id: 'overview', icon: BarChart3, label: 'Overview' },
+                        { id: 'send', icon: Megaphone, label: 'Send Alert' },
+                        { id: 'test', icon: Beaker, label: 'Send Test' },
+                        { id: 'offers', icon: DollarSign, label: 'Offers' },
+                        { id: 'history', icon: History, label: 'History' }
+                    ].map(tab => (
+                        <TabsTrigger 
+                            key={tab.id} 
+                            value={tab.id}
+                            className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all data-[state=active]:bg-emerald-500 data-[state=active]:text-black text-white/40 hover:text-white"
+                        >
+                            <tab.icon className="h-4 w-4" />
+                            {tab.label}
+                        </TabsTrigger>
+                    ))}
                 </TabsList>
 
-                {/* Overview Tab */}
-                <TabsContent value="overview" className="space-y-4 mt-6">
+                {/* Telemetry Tab */}
+                <TabsContent value="overview" className="space-y-10 mt-10">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <Card>
-                            <CardHeader className="pb-2">
-                                <CardTitle className="text-sm font-medium text-gray-500">Total Sent (30d)</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-2xl font-bold">1,234</div>
-                                <p className="text-xs text-green-500 flex items-center mt-1">
-                                    <span className="mr-1">↑</span> 12% from last month
-                                </p>
-                            </CardContent>
-                        </Card>
-                        <Card>
-                            <CardHeader className="pb-2">
-                                <CardTitle className="text-sm font-medium text-gray-500">Open Rate</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-2xl font-bold">45.2%</div>
-                                <p className="text-xs text-green-500 flex items-center mt-1">
-                                    <span className="mr-1">↑</span> 2.1% from last month
-                                </p>
-                            </CardContent>
-                        </Card>
-                        <Card>
-                            <CardHeader className="pb-2">
-                                <CardTitle className="text-sm font-medium text-gray-500">Active Offers</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-2xl font-bold">3</div>
-                                <p className="text-xs text-gray-500 mt-1">
-                                    Expiring soon: SUMMER2024
-                                </p>
-                            </CardContent>
-                        </Card>
+                        {[
+                            { label: 'Total Sent', val: '1,234', icon: Send, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+                            { label: 'Click Rate', val: '45.2%', icon: TrendingUp, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+                            { label: 'Active Offers', val: '3', icon: Zap, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+                        ].map((m, i) => (
+                            <div key={i} className="bg-white/5 border border-white/5 p-8 rounded-[2rem] flex flex-col justify-between h-36 group hover:bg-white/[0.08] transition-all shadow-xl">
+                                <div className="flex justify-between items-start">
+                                    <div className={`p-3 rounded-2xl ${m.bg} ${m.color}`}>
+                                        <m.icon className="w-6 h-6" />
+                                    </div>
+                                    <ArrowUpRight className="w-4 h-4 text-white/20 group-hover:text-white transition-colors" />
+                                </div>
+                                <div>
+                                    <p className="text-white/20 text-[10px] font-black uppercase tracking-widest">{m.label}</p>
+                                    <p className="text-3xl font-black text-white">{m.val}</p>
+                                </div>
+                            </div>
+                        ))}
                     </div>
 
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Recent Activity</CardTitle>
-                            <CardDescription>Latest notification events</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-sm text-gray-500 text-center py-8">
-                                No recent activity to display.
-                            </div>
-                        </CardContent>
-                    </Card>
+                    <div className="bg-white/[0.02] border border-white/5 rounded-[2.5rem] p-10 flex flex-col items-center justify-center text-center h-[300px]">
+                        <div className="p-4 bg-white/5 rounded-2xl mb-4">
+                            <Activity className="w-8 h-8 text-white/20" />
+                        </div>
+                        <h4 className="text-white/40 font-black uppercase tracking-widest text-xs">Live Activity</h4>
+                        <p className="text-white/20 text-[10px] uppercase font-bold mt-2">No notifications sent recently</p>
+                    </div>
                 </TabsContent>
 
-                {/* Send Broadcast Tab */}
-                <TabsContent value="send" className="space-y-4 mt-6">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Broadcast Notification</CardTitle>
-                            <CardDescription>Send a message to all users or specific segments.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
+                {/* Broadcast Tab */}
+                <TabsContent value="send" className="mt-10">
+                    <div className="bg-[#111111] border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl">
+                        <div className="p-8 border-b border-white/5 bg-white/2">
+                            <h3 className="text-xl font-black text-white uppercase tracking-tight">Create Notification</h3>
+                            <p className="text-white/40 text-xs font-bold uppercase tracking-widest mt-1">Send alert to specific groups</p>
+                        </div>
+                        <div className="p-10 space-y-8">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div className="space-y-2">
-                                    <Label>Notification Type</Label>
-                                    <Select
-                                        value={notificationForm.type}
-                                        onValueChange={(value) =>
-                                            setNotificationForm({ ...notificationForm, type: value as NotificationType })
-                                        }
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="system_update">System Update</SelectItem>
+                                    <Label className="text-[10px] font-black text-white/40 uppercase tracking-widest ml-1">Category</Label>
+                                    <Select value={notificationForm.type} onValueChange={(v) => setNotificationForm({ ...notificationForm, type: v as NotificationType })}>
+                                        <SelectTrigger className="bg-black/40 border-white/5 focus:ring-emerald-500/20 rounded-2xl py-6 text-white"><SelectValue /></SelectTrigger>
+                                        <SelectContent className="bg-[#111111] border-white/10 text-white rounded-xl">
+                                            <SelectItem value="system_update">App Update</SelectItem>
                                             <SelectItem value="discount_offer">Discount Offer</SelectItem>
-                                            <SelectItem value="achievement">Achievement</SelectItem>
+                                            <SelectItem value="achievement">User Milestone</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
                                 <div className="space-y-2">
-                                    <Label>Target Audience</Label>
-                                    <Select
-                                        value={notificationForm.targetAudience}
-                                        onValueChange={(value) =>
-                                            setNotificationForm({ ...notificationForm, targetAudience: value })
-                                        }
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
+                                    <Label className="text-[10px] font-black text-white/40 uppercase tracking-widest ml-1">Target Users</Label>
+                                    <Select value={notificationForm.targetAudience} onValueChange={(v) => setNotificationForm({ ...notificationForm, targetAudience: v })}>
+                                        <SelectTrigger className="bg-black/40 border-white/5 focus:ring-emerald-500/20 rounded-2xl py-6 text-white"><SelectValue /></SelectTrigger>
+                                        <SelectContent className="bg-[#111111] border-white/10 text-white rounded-xl">
                                             <SelectItem value="all">All Users</SelectItem>
-                                            <SelectItem value="free">Free Plan Users</SelectItem>
-                                            <SelectItem value="paid">Paid Plan Users</SelectItem>
-                                            <SelectItem value="new">New Users (Last 30 days)</SelectItem>
+                                            <SelectItem value="free">Free Users</SelectItem>
+                                            <SelectItem value="paid">Premium Users</SelectItem>
+                                            <SelectItem value="new">New Users</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
                             </div>
 
                             <div className="space-y-2">
-                                <Label>Title</Label>
-                                <Input
-                                    value={notificationForm.title}
-                                    onChange={(e) =>
-                                        setNotificationForm({ ...notificationForm, title: e.target.value })
-                                    }
-                                    placeholder="e.g., New Feature Alert!"
-                                />
+                                <Label className="text-[10px] font-black text-white/40 uppercase tracking-widest ml-1">Title</Label>
+                                <Input value={notificationForm.title} onChange={(e) => setNotificationForm({ ...notificationForm, title: e.target.value })} className="bg-black/40 border-white/5 focus:border-emerald-500/50 rounded-2xl py-6 text-white" placeholder="Notification title" />
                             </div>
 
                             <div className="space-y-2">
-                                <Label>Message</Label>
-                                <Textarea
-                                    value={notificationForm.message}
-                                    onChange={(e) =>
-                                        setNotificationForm({ ...notificationForm, message: e.target.value })
-                                    }
-                                    placeholder="Enter your message here..."
-                                    rows={4}
-                                />
+                                <Label className="text-[10px] font-black text-white/40 uppercase tracking-widest ml-1">Message</Label>
+                                <Textarea value={notificationForm.message} onChange={(e) => setNotificationForm({ ...notificationForm, message: e.target.value })} className="bg-black/40 border-white/5 focus:border-emerald-500/50 rounded-2xl min-h-[120px] text-white" placeholder="Enter message here..." />
                             </div>
 
-                            <div className="space-y-2">
-                                <Label>Delivery Channels</Label>
-                                <div className="flex gap-4">
-                                    <label className="flex items-center gap-2 cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            checked={notificationForm.channels.includes('in-app')}
-                                            onChange={(e) => {
-                                                const channels = e.target.checked
-                                                    ? [...notificationForm.channels, 'in-app']
-                                                    : notificationForm.channels.filter((c) => c !== 'in-app');
+                            <div className="space-y-4">
+                                <Label className="text-[10px] font-black text-white/40 uppercase tracking-widest ml-1">Platforms</Label>
+                                <div className="flex gap-6">
+                                    {['in-app', 'email'].map(channel => (
+                                        <label key={channel} className="flex items-center gap-3 cursor-pointer group">
+                                            <div className={`w-5 h-5 rounded-lg border flex items-center justify-center transition-all ${notificationForm.channels.includes(channel) ? 'bg-emerald-500 border-emerald-400 text-black' : 'bg-white/5 border-white/10 text-transparent group-hover:border-white/20'}`}>
+                                                <CheckCircle className="w-3.5 h-3.5" />
+                                            </div>
+                                            <input type="checkbox" className="hidden" checked={notificationForm.channels.includes(channel)} onChange={(e) => {
+                                                const channels = e.target.checked ? [...notificationForm.channels, channel] : notificationForm.channels.filter(c => c !== channel);
                                                 setNotificationForm({ ...notificationForm, channels });
-                                            }}
-                                            className="rounded border-gray-300"
-                                        />
-                                        <span>In-App</span>
-                                    </label>
-                                    <label className="flex items-center gap-2 cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            checked={notificationForm.channels.includes('email')}
-                                            onChange={(e) => {
-                                                const channels = e.target.checked
-                                                    ? [...notificationForm.channels, 'email']
-                                                    : notificationForm.channels.filter((c) => c !== 'email');
-                                                setNotificationForm({ ...notificationForm, channels });
-                                            }}
-                                            className="rounded border-gray-300"
-                                        />
-                                        <span>Email</span>
-                                    </label>
+                                            }} />
+                                            <span className={`text-[10px] font-black uppercase tracking-widest ${notificationForm.channels.includes(channel) ? 'text-white' : 'text-white/20'}`}>{channel}</span>
+                                        </label>
+                                    ))}
                                 </div>
                             </div>
 
-                            <Button onClick={handleSendNotification} disabled={sending} className="w-full sm:w-auto">
-                                {sending ? 'Sending...' : 'Send Broadcast'}
+                            <Button onClick={handleSendNotification} disabled={sending} className="w-full bg-emerald-600 hover:bg-emerald-500 text-black font-black rounded-2xl py-8 shadow-lg shadow-emerald-500/20 uppercase tracking-[0.2em] text-xs">
+                                {sending ? 'Sending...' : 'Send Alert Now'}
                             </Button>
-                        </CardContent>
-                    </Card>
+                        </div>
+                    </div>
                 </TabsContent>
 
                 {/* Test Lab Tab */}
-                <TabsContent value="test" className="space-y-4 mt-6">
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        <div className="lg:col-span-2 space-y-6">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Test Configuration</CardTitle>
-                                    <CardDescription>Send a specific notification to a single user for testing.</CardDescription>
-                                </CardHeader>
-                                <CardContent className="space-y-4">
+                <TabsContent value="test" className="mt-10">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        <div className="lg:col-span-2 space-y-8">
+                            <div className="bg-[#111111] border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl">
+                                <div className="p-8 border-b border-white/5 bg-white/2">
+                                    <h3 className="text-xl font-black text-white uppercase tracking-tight">Verify single user alert</h3>
+                                    <p className="text-white/40 text-xs font-bold uppercase tracking-widest mt-1">Send test alert to a specific ID</p>
+                                </div>
+                                <div className="p-10 space-y-8">
                                     <div className="space-y-2">
-                                        <Label>Target User ID</Label>
-                                        <Input
-                                            value={testUserId}
-                                            onChange={(e) => setTestUserId(e.target.value)}
-                                            placeholder="Enter MongoDB User ID"
-                                        />
+                                        <Label className="text-[10px] font-black text-white/40 uppercase tracking-widest ml-1">User ID</Label>
+                                        <Input value={testUserId} onChange={(e) => setTestUserId(e.target.value)} className="bg-black/40 border-white/5 focus:border-emerald-500/50 rounded-2xl py-6 text-white font-mono text-xs" placeholder="Paste MongoDB User ID" />
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-2 gap-8">
                                         <div className="space-y-2">
-                                            <Label>Type</Label>
+                                            <Label className="text-[10px] font-black text-white/40 uppercase tracking-widest ml-1">Alert Type</Label>
                                             <Select value={testType} onValueChange={(v) => setTestType(v as NotificationType)}>
-                                                <SelectTrigger><SelectValue /></SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="system_update">System Update</SelectItem>
-                                                    <SelectItem value="documents_ready">Documents Ready</SelectItem>
-                                                    <SelectItem value="job_applied">Job Applied</SelectItem>
-                                                    <SelectItem value="discount_offer">Discount Offer</SelectItem>
+                                                <SelectTrigger className="bg-black/40 border-white/5 rounded-2xl py-6 text-white"><SelectValue /></SelectTrigger>
+                                                <SelectContent className="bg-[#111111] border-white/10 text-white rounded-xl">
+                                                    <SelectItem value="system_update">App Update</SelectItem>
+                                                    <SelectItem value="discount_offer">Discount</SelectItem>
+                                                    <SelectItem value="job_applied">Status Change</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         </div>
                                         <div className="space-y-2">
-                                            <Label>Priority</Label>
+                                            <Label className="text-[10px] font-black text-white/40 uppercase tracking-widest ml-1">Importance</Label>
                                             <Select value={testPriority} onValueChange={(v) => setTestPriority(v as NotificationPriority)}>
-                                                <SelectTrigger><SelectValue /></SelectTrigger>
-                                                <SelectContent>
+                                                <SelectTrigger className="bg-black/40 border-white/5 rounded-2xl py-6 text-white"><SelectValue /></SelectTrigger>
+                                                <SelectContent className="bg-[#111111] border-white/10 text-white rounded-xl">
                                                     <SelectItem value="low">Low</SelectItem>
                                                     <SelectItem value="medium">Medium</SelectItem>
                                                     <SelectItem value="high">High</SelectItem>
@@ -526,216 +324,71 @@ export default function UnifiedNotificationManager() {
                                         </div>
                                     </div>
 
-                                    <div className="space-y-2">
-                                        <Label>Title</Label>
-                                        <Input value={testTitle} onChange={(e) => setTestTitle(e.target.value)} />
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <Label>Message</Label>
-                                        <Textarea value={testMessage} onChange={(e) => setTestMessage(e.target.value)} rows={2} />
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <Label>Delivery Channels</Label>
-                                        <div className="flex gap-4">
-                                            <label className="flex items-center gap-2 cursor-pointer">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={testChannels.includes('in-app')}
-                                                    onChange={(e) => {
-                                                        const channels = e.target.checked
-                                                            ? [...testChannels, 'in-app']
-                                                            : testChannels.filter((c) => c !== 'in-app');
-                                                        setTestChannels(channels as ('in-app' | 'email')[]);
-                                                    }}
-                                                    className="rounded border-gray-300"
-                                                />
-                                                <span>In-App</span>
-                                            </label>
-                                            <label className="flex items-center gap-2 cursor-pointer">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={testChannels.includes('email')}
-                                                    onChange={(e) => {
-                                                        const channels = e.target.checked
-                                                            ? [...testChannels, 'email']
-                                                            : testChannels.filter((c) => c !== 'email');
-                                                        setTestChannels(channels as ('in-app' | 'email')[]);
-                                                    }}
-                                                    className="rounded border-gray-300"
-                                                />
-                                                <span>Email</span>
-                                            </label>
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-4 pt-4 border-t">
-                                        <label className="flex items-center gap-2 cursor-pointer">
-                                            <input
-                                                type="checkbox"
-                                                checked={testInteractive}
-                                                onChange={(e) => setTestInteractive(e.target.checked)}
-                                                className="rounded border-gray-300"
-                                            />
-                                            <span className="font-medium">Interactive (Action Button)</span>
-                                        </label>
-
-                                        {testInteractive && (
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <div className="space-y-2">
-                                                    <Label>Action Type</Label>
-                                                    <Input value={testActionType} onChange={(e) => setTestActionType(e.target.value)} placeholder="e.g. view_offer" />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <Label>Action URL</Label>
-                                                    <Input value={testActionUrl} onChange={(e) => setTestActionUrl(e.target.value)} placeholder="e.g. /dashboard" />
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <Button onClick={handleSendTestNotification} disabled={testLoading || !testUserId} className="w-full">
-                                        {testLoading ? 'Sending...' : 'Send Test Notification'}
+                                    <Button onClick={handleSendTestNotification} disabled={testLoading || !testUserId} className="w-full bg-white/5 hover:bg-white/10 text-white font-black rounded-2xl py-8 border border-white/5 uppercase tracking-[0.2em] text-xs transition-all">
+                                        {testLoading ? 'Sending...' : 'Send Test Alert'}
                                     </Button>
 
-                                    {testResult && (
-                                        <div className={`p-3 rounded-md flex items-center gap-2 ${testResult.success ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
-                                            {testResult.success ? <CheckCircle size={16} /> : <XCircle size={16} />}
-                                            <span className="text-sm">{testResult.message}</span>
-                                        </div>
-                                    )}
-                                </CardContent>
-                            </Card>
+                                    <AnimatePresence>
+                                        {testResult && (
+                                            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={`p-4 rounded-2xl flex items-center gap-3 border ${testResult.success ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-red-500/10 border-red-500/20 text-red-400'}`}>
+                                                {testResult.success ? <CheckCircle size={16} /> : <XCircle size={16} />}
+                                                <span className="text-[10px] font-black uppercase tracking-widest">{testResult.message}</span>
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+                                </div>
+                            </div>
                         </div>
 
-                        <div className="space-y-6">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Quick Actions</CardTitle>
-                                </CardHeader>
-                                <CardContent className="space-y-4">
+                        <div className="space-y-8">
+                            <div className="bg-[#111111] border border-white/10 rounded-[2.5rem] p-8 shadow-2xl">
+                                <h3 className="text-sm font-black text-white uppercase tracking-[0.2em] mb-8">Quick Actions</h3>
+                                <div className="space-y-4">
                                     <Button
                                         variant="outline"
-                                        className="w-full justify-start"
+                                        className="w-full justify-between bg-emerald-500 text-black border-none hover:bg-emerald-400 rounded-2xl py-6 font-black uppercase tracking-widest text-[10px]"
                                         onClick={handleSendAllTestTypes}
                                         disabled={sendingAllTest || !testUserId}
                                     >
-                                        <Bell className="mr-2 h-4 w-4" />
-                                        Send All Types (Batch Test)
+                                        Send All Test Types
+                                        <Zap className="h-4 w-4" />
                                     </Button>
 
-                                    <div className="pt-4 border-t">
-                                        <Label className="mb-2 block text-xs uppercase text-gray-500">Load Template</Label>
+                                    <div className="pt-8 border-t border-white/5">
+                                        <Label className="mb-4 block text-[9px] uppercase font-black tracking-widest text-white/20">Saved Templates</Label>
                                         <div className="space-y-2">
-                                            {quickTestTemplates.map((t, i) => (
-                                                <Button
+                                            {[
+                                                { name: 'App Update', icon: Shield },
+                                                { name: 'System Error', icon: AlertCircle },
+                                                { name: 'Rewards', icon: Sparkles }
+                                            ].map((t, i) => (
+                                                <button
                                                     key={i}
-                                                    variant="ghost"
-                                                    className="w-full justify-start text-sm"
-                                                    onClick={() => loadTestTemplate(t)}
+                                                    className="w-full flex items-center justify-between p-4 bg-white/5 hover:bg-white/10 rounded-xl transition-all group"
                                                 >
-                                                    {t.name}
-                                                </Button>
+                                                    <span className="text-[10px] font-black text-white/40 group-hover:text-white uppercase tracking-widest">{t.name}</span>
+                                                    <t.icon className="w-4 h-4 text-white/20 group-hover:text-emerald-400" />
+                                                </button>
                                             ))}
                                         </div>
                                     </div>
-                                </CardContent>
-                            </Card>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </TabsContent>
 
-                {/* Offers Tab */}
-                <TabsContent value="offers" className="space-y-4 mt-6">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Create Discount Offer</CardTitle>
-                            <CardDescription>Create and distribute promotional codes.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label>Code</Label>
-                                    <Input
-                                        value={offerForm.code}
-                                        onChange={(e) => setOfferForm({ ...offerForm, code: e.target.value })}
-                                        placeholder="SUMMER2024"
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label>Expiry Date</Label>
-                                    <Input
-                                        type="date"
-                                        value={offerForm.expiryDate}
-                                        onChange={(e) => setOfferForm({ ...offerForm, expiryDate: e.target.value })}
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label>Type</Label>
-                                    <Select
-                                        value={offerForm.discountType}
-                                        onValueChange={(v: any) => setOfferForm({ ...offerForm, discountType: v })}
-                                    >
-                                        <SelectTrigger><SelectValue /></SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="percentage">Percentage (%)</SelectItem>
-                                            <SelectItem value="amount">Fixed Amount ($)</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="space-y-2">
-                                    <Label>Value</Label>
-                                    <Input
-                                        type="number"
-                                        value={offerForm.value}
-                                        onChange={(e) => setOfferForm({ ...offerForm, value: e.target.value })}
-                                        placeholder="20"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label>Title</Label>
-                                <Input
-                                    value={offerForm.title}
-                                    onChange={(e) => setOfferForm({ ...offerForm, title: e.target.value })}
-                                    placeholder="Special Summer Sale"
-                                />
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label>Description</Label>
-                                <Textarea
-                                    value={offerForm.message}
-                                    onChange={(e) => setOfferForm({ ...offerForm, message: e.target.value })}
-                                    placeholder="Get 20% off..."
-                                />
-                            </div>
-
-                            <Button onClick={handleCreateOffer}>Create & Distribute Offer</Button>
-                        </CardContent>
-                    </Card>
-                </TabsContent>
-
                 {/* History Tab */}
-                <TabsContent value="history" className="space-y-4 mt-6">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Notification History</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-center py-12 text-gray-500">
-                                <History className="h-12 w-12 mx-auto mb-4 opacity-20" />
-                                <p>Notification history log coming soon.</p>
-                            </div>
-                        </CardContent>
-                    </Card>
+                <TabsContent value="history" className="mt-10">
+                    <div className="bg-white/[0.02] border border-white/5 rounded-[2.5rem] p-20 flex flex-col items-center justify-center text-center shadow-2xl">
+                        <div className="p-6 bg-white/5 rounded-3xl mb-6">
+                            <History className="h-12 w-12 text-white/10" />
+                        </div>
+                        <h4 className="text-white/40 font-black uppercase tracking-widest text-sm">Notification History</h4>
+                        <p className="text-white/20 text-[10px] uppercase font-bold mt-4 leading-relaxed max-w-sm">History is currently being prepared for display. Check back soon for full access.</p>
+                    </div>
                 </TabsContent>
             </Tabs>
-        </div>
+        </motion.div>
     );
 }

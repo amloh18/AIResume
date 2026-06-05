@@ -30,7 +30,6 @@ export default function CampaignFilters({ filters, onChange, twoColumn = false }
         const data = await response.json();
         if (data.success) {
           const plans = data.plans || [];
-          // Always include 'free' plan if not already present
           if (!plans.includes('free')) {
             plans.unshift('free');
           }
@@ -38,8 +37,7 @@ export default function CampaignFilters({ filters, onChange, twoColumn = false }
         }
       }
     } catch (error) {
-      console.error('Error fetching plans for campaign filters:', error);
-      // Fallback to just free plan
+      console.error('Error fetching plans:', error);
       setAvailablePlans(['free']);
     }
   };
@@ -52,21 +50,16 @@ export default function CampaignFilters({ filters, onChange, twoColumn = false }
         if (data.success && data.regions) {
           setAvailableRegions(data.regions);
         } else {
-          // Fallback to common regions
           setAvailableRegions(['US', 'GB', 'IN', 'CA', 'AU', 'EU']);
         }
       } else {
-        // Fallback to common regions
         setAvailableRegions(['US', 'GB', 'IN', 'CA', 'AU', 'EU']);
       }
     } catch (error) {
-      console.error('Error fetching regions:', error);
-      // Fallback to common regions
       setAvailableRegions(['US', 'GB', 'IN', 'CA', 'AU', 'EU']);
     }
   };
 
-  // Sync localFilters when filters prop changes (e.g., when preset is applied)
   useEffect(() => {
     isSyncingFromProps.current = true;
     setLocalFilters({
@@ -79,7 +72,6 @@ export default function CampaignFilters({ filters, onChange, twoColumn = false }
   }, [filters]);
 
   useEffect(() => {
-    // Don't call onChange if we're syncing from props (to avoid infinite loop)
     if (!isSyncingFromProps.current) {
       onChange(localFilters);
     }
@@ -110,16 +102,6 @@ export default function CampaignFilters({ filters, onChange, twoColumn = false }
   const clearUserAge = () => {
     const { userAge, ...rest } = localFilters;
     setLocalFilters(rest);
-  };
-
-  const handleDateRangeChange = (field: string, type: 'startDate' | 'endDate', value: string) => {
-    setLocalFilters({
-      ...localFilters,
-      [field]: {
-        ...(localFilters[field] || {}),
-        [type]: value ? new Date(value).toISOString() : undefined,
-      },
-    });
   };
 
   const handleUsageMetricChange = (field: string, value: number) => {
@@ -158,416 +140,91 @@ export default function CampaignFilters({ filters, onChange, twoColumn = false }
   const hasActiveFilters = Object.keys(localFilters).length > 0;
 
   return (
-    <div className={twoColumn ? "grid grid-cols-2 gap-4" : "space-y-6"}>
+    <div className={twoColumn ? "grid grid-cols-2 gap-6" : "space-y-8"}>
       {!twoColumn && (
-        <>
-          {/* Header */}
-          <div className="flex items-center justify-between col-span-2">
-            <div className="flex items-center gap-2">
-              <Filter className="w-5 h-5 text-lime-400" />
-              <h3 className="text-lg font-semibold text-white">Target Audience Filters</h3>
-            </div>
-            {hasActiveFilters && (
-              <button
-                onClick={clearAllFilters}
-                className="text-sm text-red-400 hover:text-red-300 transition-colors"
-              >
-                Clear All
-              </button>
-            )}
+        <div className="flex items-center justify-between col-span-2">
+          <div className="flex items-center gap-2">
+            <Filter className="w-5 h-5 text-emerald-500" />
+            <h3 className="text-lg font-black text-white uppercase tracking-tight">Targeting Matrix</h3>
           </div>
-        </>
+          {hasActiveFilters && (
+            <button onClick={clearAllFilters} className="text-[10px] font-black uppercase text-red-400 hover:text-red-300 transition-colors tracking-widest">
+              Reset Sector
+            </button>
+          )}
+        </div>
       )}
 
       {/* Membership Plans */}
-      <div className="bg-white/5 border border-white/10 rounded-lg p-4">
-        <h4 className="text-sm font-medium text-gray-300 mb-3">Membership Plans</h4>
+      <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-6">
+        <h4 className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] mb-4 ml-1">Tier Allocation</h4>
         <div className="grid grid-cols-2 gap-3">
-          {availablePlans.length > 0 ? (
-            availablePlans.map((plan) => {
-              const isChecked = localFilters.membershipPlans?.includes(plan) ?? false;
-              return (
-                <label
-                  key={plan}
-                  className="flex items-center gap-2 p-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg cursor-pointer transition-colors"
-                >
-                  <input
-                    type="checkbox"
-                    checked={isChecked}
-                    onChange={(e) => handlePlanChange(plan, e.target.checked)}
-                    className="w-4 h-4 text-lime-500 bg-white/10 border-white/20 rounded focus:ring-lime-400"
-                  />
-                  <span className="text-white capitalize">{plan}</span>
-                </label>
-              );
-            })
-          ) : (
-            <div className="col-span-2 text-sm text-gray-400">Loading plans...</div>
-          )}
+          {availablePlans.map((plan) => {
+            const isChecked = localFilters.membershipPlans?.includes(plan) ?? false;
+            return (
+              <label key={plan} className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all border ${isChecked ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-white/5 border-white/5 hover:border-white/10'}`}>
+                <input type="checkbox" checked={isChecked} onChange={(e) => handlePlanChange(plan, e.target.checked)} className="w-4 h-4 text-emerald-500 bg-black/40 border-white/10 rounded" />
+                <span className={`text-xs font-bold capitalize ${isChecked ? 'text-emerald-400' : 'text-white/60'}`}>{plan}</span>
+              </label>
+            );
+          })}
         </div>
       </div>
 
       {/* User Age */}
-      <div className="bg-white/5 border border-white/10 rounded-lg p-4">
-        <h4 className="text-sm font-medium text-gray-300 mb-3">User Age</h4>
-        <div className="space-y-3">
-          <div className="flex items-center gap-3">
-            <select
-              value={localFilters.userAge?.type || ''}
-              onChange={(e) => handleUserAgeChange(e.target.value as any, localFilters.userAge?.days)}
-              className="flex-1 px-3 py-2 bg-white/5 border border-white/10 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-400/50"
-            >
-              <option value="">Select user type...</option>
-              <option value="new_users">New Users</option>
-              <option value="existing_users">Existing Users</option>
-            </select>
+      <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-6">
+        <h4 className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] mb-4 ml-1">Temporal Filter</h4>
+        <div className="space-y-4">
+          <select value={localFilters.userAge?.type || ''} onChange={(e) => handleUserAgeChange(e.target.value as any, localFilters.userAge?.days)} className="w-full px-4 py-2.5 bg-black/40 border border-white/5 text-xs font-bold text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all">
+            <option value="">All Identity Types</option>
+            <option value="new_users">New Recruits</option>
+            <option value="existing_users">Veteran Nodes</option>
+          </select>
 
-            {localFilters.userAge && (
-              <>
-                <select
-                  value={localFilters.userAge.days || 7}
-                  onChange={(e) => handleUserAgeChange(localFilters.userAge.type, parseInt(e.target.value))}
-                  className="px-3 py-2 bg-white/5 border border-white/10 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-400/50"
-                >
-                  <option value={7}>Last 7 days</option>
-                  <option value={15}>Last 15 days</option>
-                  <option value={30}>Last 30 days</option>
-                  <option value={60}>Last 60 days</option>
-                  <option value={90}>Last 90 days</option>
-                </select>
-                <button
-                  onClick={clearUserAge}
-                  className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-                >
-                  <X className="w-4 h-4 text-red-400" />
-                </button>
-              </>
-            )}
-          </div>
+          {localFilters.userAge && (
+            <div className="flex gap-2">
+              <select value={localFilters.userAge.days || 7} onChange={(e) => handleUserAgeChange(localFilters.userAge.type, parseInt(e.target.value))} className="flex-1 px-4 py-2.5 bg-black/40 border border-white/5 text-xs font-bold text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
+                {[7, 15, 30, 60, 90].map(d => <option key={d} value={d}>Last {d} Days</option>)}
+              </select>
+              <button onClick={clearUserAge} className="p-2.5 bg-red-500/10 text-red-400 rounded-xl hover:bg-red-500/20 transition-all"><X className="w-4 h-4" /></button>
+            </div>
+          )}
         </div>
-      </div>
-
-      {/* Registration Date Range - Predefined */}
-      <div className="bg-white/5 border border-white/10 rounded-lg p-4">
-        <h4 className="text-sm font-medium text-gray-300 mb-3">Registration Date</h4>
-        <select
-          value={localFilters.registrationDateRange?.preset || ''}
-          onChange={(e) => {
-            const preset = e.target.value;
-            if (!preset) {
-              const { registrationDateRange, ...rest } = localFilters;
-              setLocalFilters(rest);
-              return;
-            }
-
-            const now = new Date();
-            let startDate: Date;
-
-            switch (preset) {
-              case 'last7days':
-                startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-                break;
-              case 'last30days':
-                startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-                break;
-              case 'thisMonth':
-                startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-                break;
-              case 'lastMonth':
-                startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-                const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
-                setLocalFilters({
-                  ...localFilters,
-                  registrationDateRange: {
-                    preset,
-                    startDate: startDate.toISOString(),
-                    endDate: endOfLastMonth.toISOString(),
-                  },
-                });
-                return;
-              case 'lastQuarter':
-                const currentQuarter = Math.floor(now.getMonth() / 3);
-                const lastQuarterStart = new Date(now.getFullYear(), (currentQuarter - 1) * 3, 1);
-                const lastQuarterEnd = new Date(now.getFullYear(), currentQuarter * 3, 0);
-                setLocalFilters({
-                  ...localFilters,
-                  registrationDateRange: {
-                    preset,
-                    startDate: lastQuarterStart.toISOString(),
-                    endDate: lastQuarterEnd.toISOString(),
-                  },
-                });
-                return;
-              case 'thisYear':
-                startDate = new Date(now.getFullYear(), 0, 1);
-                break;
-              default:
-                startDate = now;
-            }
-
-            setLocalFilters({
-              ...localFilters,
-              registrationDateRange: {
-                preset,
-                startDate: startDate.toISOString(),
-                endDate: now.toISOString(),
-              },
-            });
-          }}
-          className="w-full px-3 py-2 bg-white/5 border border-white/10 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-400/50"
-        >
-          <option value="">All Time</option>
-          <option value="last7days">Last 7 Days</option>
-          <option value="last30days">Last 30 Days</option>
-          <option value="thisMonth">This Month</option>
-          <option value="lastMonth">Last Month</option>
-          <option value="lastQuarter">Last Quarter</option>
-          <option value="thisYear">This Year</option>
-        </select>
-      </div>
-
-      {/* Last Active Range - Predefined */}
-      <div className="bg-white/5 border border-white/10 rounded-lg p-4">
-        <h4 className="text-sm font-medium text-gray-300 mb-3">Last Active</h4>
-        <select
-          value={localFilters.lastActiveRange?.preset || ''}
-          onChange={(e) => {
-            const preset = e.target.value;
-            if (!preset) {
-              const { lastActiveRange, ...rest } = localFilters;
-              setLocalFilters(rest);
-              return;
-            }
-
-            const now = new Date();
-            let startDate: Date;
-
-            switch (preset) {
-              case 'last7days':
-                startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-                break;
-              case 'last30days':
-                startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-                break;
-              case 'last60days':
-                startDate = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
-                break;
-              case 'last90days':
-                startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-                break;
-              case 'inactive30':
-                // Users NOT active in last 30 days
-                const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-                setLocalFilters({
-                  ...localFilters,
-                  lastActiveRange: {
-                    preset,
-                    endDate: thirtyDaysAgo.toISOString(),
-                  },
-                });
-                return;
-              case 'inactive60':
-                const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
-                setLocalFilters({
-                  ...localFilters,
-                  lastActiveRange: {
-                    preset,
-                    endDate: sixtyDaysAgo.toISOString(),
-                  },
-                });
-                return;
-              default:
-                startDate = now;
-            }
-
-            setLocalFilters({
-              ...localFilters,
-              lastActiveRange: {
-                preset,
-                startDate: startDate.toISOString(),
-                endDate: now.toISOString(),
-              },
-            });
-          }}
-          className="w-full px-3 py-2 bg-white/5 border border-white/10 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-400/50"
-        >
-          <option value="">Any Time</option>
-          <option value="last7days">Active in Last 7 Days</option>
-          <option value="last30days">Active in Last 30 Days</option>
-          <option value="last60days">Active in Last 60 Days</option>
-          <option value="last90days">Active in Last 90 Days</option>
-          <option value="inactive30">Inactive for 30+ Days</option>
-          <option value="inactive60">Inactive for 60+ Days</option>
-        </select>
       </div>
 
       {/* Usage Metrics */}
-      <div className="bg-white/5 border border-white/10 rounded-lg p-4">
-        <h4 className="text-sm font-medium text-gray-300 mb-3">Usage Metrics</h4>
-        <div className="grid grid-cols-2 gap-4">
+      <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-6">
+        <h4 className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] mb-4 ml-1">Activity Depth</h4>
+        <div className="space-y-4">
           <div>
-            <label className="block text-xs text-gray-400 mb-1">Min CVs Created</label>
-            <input
-              type="number"
-              min="0"
-              value={localFilters.usageMetrics?.minCVsCreated ?? ''}
-              onChange={(e) => handleUsageMetricChange('minCVsCreated', parseInt(e.target.value) || 0)}
-              className="w-full px-3 py-2 bg-white/5 border border-white/10 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-400/50"
-              placeholder="0"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-gray-400 mb-1">Max CVs Created</label>
-            <input
-              type="number"
-              min="0"
-              value={localFilters.usageMetrics?.maxCVsCreated ?? ''}
-              onChange={(e) => handleUsageMetricChange('maxCVsCreated', parseInt(e.target.value) || 0)}
-              className="w-full px-3 py-2 bg-white/5 border border-white/10 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-400/50"
-              placeholder="999"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-gray-400 mb-1">Min Journeys Completed</label>
-            <input
-              type="number"
-              min="0"
-              value={localFilters.usageMetrics?.minJourneysCompleted ?? ''}
-              onChange={(e) => handleUsageMetricChange('minJourneysCompleted', parseInt(e.target.value) || 0)}
-              className="w-full px-3 py-2 bg-white/5 border border-white/10 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-400/50"
-              placeholder="0"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-gray-400 mb-1">Max Journeys Completed</label>
-            <input
-              type="number"
-              min="0"
-              value={localFilters.usageMetrics?.maxJourneysCompleted ?? ''}
-              onChange={(e) => handleUsageMetricChange('maxJourneysCompleted', parseInt(e.target.value) || 0)}
-              className="w-full px-3 py-2 bg-white/5 border border-white/10 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-400/50"
-              placeholder="999"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-gray-400 mb-1">Min Usage (Minutes)</label>
-            <input
-              type="number"
-              min="0"
-              value={localFilters.usageMetrics?.minUsageMinutes ?? ''}
-              onChange={(e) => handleUsageMetricChange('minUsageMinutes', parseInt(e.target.value) || 0)}
-              className="w-full px-3 py-2 bg-white/5 border border-white/10 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-400/50"
-              placeholder="e.g. 10"
-            />
+            <label className="text-[9px] font-black text-white/20 uppercase tracking-widest mb-2 block ml-1">Min Activity (Minutes)</label>
+            <input type="number" min="0" value={localFilters.usageMetrics?.minUsageMinutes ?? ''} onChange={(e) => handleUsageMetricChange('minUsageMinutes', parseInt(e.target.value) || 0)} className="w-full px-4 py-2.5 bg-black/40 border border-white/5 text-xs font-bold text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20" placeholder="0" />
           </div>
         </div>
       </div>
-
-      {/* Boolean Filters */}
-      <div className="bg-white/5 border border-white/10 rounded-lg p-4">
-        <h4 className="text-sm font-medium text-gray-300 mb-3">Additional Filters</h4>
-        <div className="space-y-3">
-          <div>
-            <label className="block text-xs text-gray-400 mb-1">Email Verified</label>
-            <select
-              value={
-                localFilters.emailVerified === true
-                  ? 'true'
-                  : localFilters.emailVerified === false
-                    ? 'false'
-                    : ''
-              }
-              onChange={(e) =>
-                handleBooleanFilter(
-                  'emailVerified',
-                  e.target.value === '' ? null : e.target.value === 'true'
-                )
-              }
-              className="w-full px-3 py-2 bg-white/5 border border-white/10 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-400/50"
-            >
-              <option value="">Any</option>
-              <option value="true">Verified</option>
-              <option value="false">Not Verified</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-xs text-gray-400 mb-1">Include Deleted Users</label>
-            <select
-              value={
-                localFilters.isDeleted === true
-                  ? 'true'
-                  : localFilters.isDeleted === false
-                    ? 'false'
-                    : ''
-              }
-              onChange={(e) =>
-                handleBooleanFilter(
-                  'isDeleted',
-                  e.target.value === '' ? null : e.target.value === 'true'
-                )
-              }
-              className="w-full px-3 py-2 bg-white/5 border border-white/10 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-400/50"
-            >
-              <option value="">Active Users Only</option>
-              <option value="true">Deleted Users Only</option>
-              <option value="false">Active Users</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-
 
       {/* Region Filter */}
-      <div className="bg-white/5 border border-white/10 rounded-lg p-4">
-        <h4 className="text-sm font-medium text-gray-300 mb-3">Region / Country</h4>
-        <select
-          value={localFilters.region || ''}
-          onChange={(e) => handleRegionChange(e.target.value)}
-          className="w-full px-3 py-2 bg-white/5 border border-white/10 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-400/50"
-        >
-          <option value="">All Regions</option>
-          {availableRegions.map((region) => (
-            <option key={region} value={region}>
-              {region}
-            </option>
-          ))}
+      <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-6">
+        <h4 className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] mb-4 ml-1">Geographic Sector</h4>
+        <select value={localFilters.region || ''} onChange={(e) => handleRegionChange(e.target.value)} className="w-full px-4 py-2.5 bg-black/40 border border-white/5 text-xs font-bold text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
+          <option value="">Global Broadcast</option>
+          {availableRegions.map((region) => <option key={region} value={region}>{region}</option>)}
         </select>
       </div>
 
       {/* Summary */}
-      {
-        hasActiveFilters && (
-          <div className={`bg-lime-500/10 border border-lime-500/20 rounded-lg p-4 ${twoColumn ? 'col-span-2' : ''}`}>
-            <h4 className="text-sm font-medium text-lime-400 mb-2">Active Filters</h4>
-            <div className="text-xs text-gray-300 space-y-1">
-              {localFilters.membershipPlans?.length > 0 && (
-                <div>• Plans: {localFilters.membershipPlans.join(', ')}</div>
-              )}
-              {localFilters.userAge && (
-                <div>
-                  • {localFilters.userAge.type === 'new_users' ? 'New' : 'Existing'} users (last{' '}
-                  {localFilters.userAge.days} days)
-                </div>
-              )}
-              {localFilters.emailVerified !== undefined && (
-                <div>• Email {localFilters.emailVerified ? 'verified' : 'not verified'}</div>
-              )}
-              {localFilters.isDeleted !== undefined && (
-                <div>• {localFilters.isDeleted ? 'Deleted' : 'Active'} users</div>
-              )}
-              {localFilters.region && (
-                <div>• Region: {localFilters.region}</div>
-              )}
-              {localFilters.usageMetrics?.minUsageMinutes && (
-                <div>• Min Usage: {localFilters.usageMetrics.minUsageMinutes} minutes</div>
-              )}
-            </div>
+      {hasActiveFilters && (
+        <div className={`bg-emerald-500/5 border border-emerald-500/10 rounded-2xl p-6 ${twoColumn ? 'col-span-2' : ''}`}>
+          <h4 className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+            <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" /> Active Matrix Scope
+          </h4>
+          <div className="text-[10px] text-white/40 font-bold uppercase tracking-widest space-y-2">
+            {localFilters.membershipPlans?.length > 0 && <div>• Tiers: {localFilters.membershipPlans.join(', ')}</div>}
+            {localFilters.userAge && <div>• {localFilters.userAge.type === 'new_users' ? 'New' : 'Veteran'} ({localFilters.userAge.days}d)</div>}
+            {localFilters.region && <div>• Sector: {localFilters.region}</div>}
           </div>
-        )
-      }
-    </div >
+        </div>
+      )}
+    </div>
   );
 }
-

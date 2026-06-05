@@ -2,11 +2,12 @@
 
 import React, { useState, useEffect } from 'react';
 import {
-  Users, FileText, TrendingUp, Activity, Clock, Briefcase, Play, Square, Pause, Plus, ArrowUpRight, ArrowUp
+  Users, FileText, TrendingUp, Activity, Clock, Briefcase, Play, Square, Pause, Plus, ArrowUpRight, ArrowUp, Sparkles, Database, Shield, Zap, Calendar
 } from 'lucide-react';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area
 } from 'recharts';
+import { motion } from 'framer-motion';
 
 interface KPIData {
   totalUsers?: number;
@@ -18,6 +19,12 @@ interface KPIData {
   aiUsage?: number;
   revenue?: number;
   growthRate?: number;
+  systemHealth?: {
+    speed: number;
+    status: number;
+    load: number;
+  };
+  efficiency?: number;
 }
 
 interface ChartData {
@@ -34,33 +41,38 @@ interface AdminKPIsProps {
 }
 
 const AdminKPIs: React.FC<AdminKPIsProps> = ({ onTabChange }) => {
-  const [kpiData, setKpiData] = useState<KPIData | null>(null);
+  const [kpiData, setKPIData] = useState<KPIData | null>(null);
   const [chartData, setChartData] = useState<ChartData[]>([]);
   const [recentUsers, setRecentUsers] = useState<any[]>([]);
   const [recentActivities, setRecentActivities] = useState<any[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [time, setTime] = useState(new Date());
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     const timer = setInterval(() => setTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
 
   useEffect(() => {
+    if (!mounted) return;
     Promise.all([
       fetchKPIData(),
       fetchChartData(),
       fetchRecentUsers(),
       fetchRecentActivities()
     ]).finally(() => setDataLoading(false));
-  }, []);
+  }, [mounted]);
+
+  if (!mounted) return null;
 
   const fetchKPIData = async () => {
     try {
       const response = await fetch(`/api/admin/kpis?range=30d`);
       if (response.ok) {
         const data = await response.json();
-        setKpiData(data);
+        setKPIData(data);
       }
     } catch (error) {
       console.error('Error fetching KPI data:', error);
@@ -81,7 +93,7 @@ const AdminKPIs: React.FC<AdminKPIsProps> = ({ onTabChange }) => {
 
   const fetchRecentUsers = async () => {
     try {
-      const response = await fetch('/api/admin/users?limit=4');
+      const response = await fetch('/api/admin/users?limit=6');
       if (response.ok) {
         const data = await response.json();
         setRecentUsers(data.users || []);
@@ -93,7 +105,7 @@ const AdminKPIs: React.FC<AdminKPIsProps> = ({ onTabChange }) => {
 
   const fetchRecentActivities = async () => {
     try {
-      const response = await fetch('/api/admin/activity?limit=4');
+      const response = await fetch('/api/admin/activity?limit=6');
       if (response.ok) {
         const data = await response.json();
         setRecentActivities(data.activities || []);
@@ -110,210 +122,243 @@ const AdminKPIs: React.FC<AdminKPIsProps> = ({ onTabChange }) => {
   };
 
   const pieData = [
-    { name: 'Completed CVs', value: kpiData?.totalCVs || 45, color: '#185b3a' },
-    { name: 'Active Users', value: kpiData?.activeUsers || 30, color: '#84cc16' },
-    { name: 'Jobs Tracked', value: kpiData?.totalJobs || 25, color: '#e5e7eb' },
+    { name: 'Completed CVs', value: kpiData?.totalCVs || 0, color: '#10b981' },
+    { name: 'Active Users', value: kpiData?.activeUsers || 0, color: '#3b82f6' },
+    { name: 'Jobs Tracked', value: kpiData?.totalJobs || 0, color: '#6366f1' },
   ];
 
-  // Fallbacks for UI if API fails or no data
-  const fallbackUsers = [
-    { name: 'System Admin', email: 'admin@cvcircle.com', status: 'active', plan: 'Premium' },
-    { name: 'New User', email: 'user@example.com', status: 'active', plan: 'Free' }
-  ];
+  const container = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
 
-  const displayUsers = recentUsers.length > 0 ? recentUsers.slice(0, 4) : fallbackUsers;
-  
-  const displayActivities = recentActivities.length > 0 ? recentActivities.slice(0, 4) : [
-    { action: 'User Registered', timestamp: new Date().toISOString(), type: 'user' },
-    { action: 'CV Generated', timestamp: new Date().toISOString(), type: 'document' }
-  ];
+  const item = {
+    hidden: { opacity: 0, y: 20 },
+    show: { opacity: 1, y: 0 }
+  };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <motion.div 
+      variants={container}
+      initial="hidden"
+      animate="show"
+      className="space-y-10"
+    >
+      {/* Header Section */}
+      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">Dashboard</h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">Monitor your system performance and user activity.</p>
+          <motion.h1 
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="text-5xl font-black text-white tracking-tighter"
+          >
+            ADMIN <span className="text-emerald-500">DASHBOARD</span>
+          </motion.h1>
+          <p className="text-white/40 font-medium tracking-[0.2em] uppercase text-xs mt-2">
+            Live Stats & Analytics • v2.6.0
+          </p>
         </div>
+        
         <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 px-5 py-2.5 bg-[#185b3a] hover:bg-[#114028] text-white rounded-full font-medium transition-colors shadow-sm">
-            <Plus className="w-4 h-4" />
-            Add Action
-          </button>
-          <button className="flex items-center gap-2 px-5 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-full font-medium transition-colors shadow-sm">
+          <button className="px-6 py-3 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 text-white font-bold text-sm transition-all backdrop-blur-md">
             Export Data
           </button>
+          <button className="px-6 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-black font-black text-sm transition-all shadow-[0_0_30px_rgba(16,185,129,0.3)]">
+            + New Task
+          </button>
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Dark Green Card */}
-        <button 
+      {/* Bento Grid Layout */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-6 auto-rows-[160px]">
+        
+        {/* Large Stats Card (Obsidian Emerald) */}
+        <motion.button 
+          variants={item}
           onClick={() => onTabChange?.('management', 'users')}
-          className="bg-[#185b3a] rounded-3xl p-6 text-white relative overflow-hidden shadow-lg shadow-[#185b3a]/20 text-left hover:scale-[1.02] transition-transform duration-200"
+          className="lg:col-span-4 lg:row-span-2 bg-[#111111] border border-white/10 rounded-[2.5rem] p-8 relative overflow-hidden group text-left shadow-2xl"
         >
-          <div className="flex justify-between items-start mb-4">
-            <p className="text-lime-50 font-medium text-lg">Total Users</p>
-            <div className="w-8 h-8 rounded-full border border-lime-400/30 flex items-center justify-center bg-white/10 backdrop-blur-sm">
-              <ArrowUpRight className="w-4 h-4 text-lime-300" />
-            </div>
-          </div>
-          <h2 className="text-5xl font-bold mb-6 tracking-tight">
-            {kpiData?.totalUsers?.toLocaleString() || '0'}
-          </h2>
-          <div className="flex items-center gap-2 text-sm text-lime-100/80">
-            <span className="flex items-center gap-1 px-2 py-0.5 rounded bg-white/10 text-lime-300">
-              <ArrowUp className="w-3 h-3" />
-              {calculateChange(kpiData?.totalUsers || 0, 50)}
-            </span>
-            Increased from last month
-          </div>
-        </button>
-
-        {/* White Cards */}
-        {[
-          { title: 'Active Users', value: kpiData?.activeUsers?.toLocaleString() || '0', change: calculateChange(kpiData?.activeUsers || 0, 20), tab: 'analytics', subTab: 'logs' },
-          { title: 'Total CVs', value: kpiData?.totalCVs?.toLocaleString() || '0', change: calculateChange(kpiData?.totalCVs || 0, 30), tab: 'management', subTab: 'drafts' },
-          { title: 'Jobs Tracked', value: kpiData?.totalJobs?.toLocaleString() || '0', status: 'Active', tab: 'analytics', subTab: 'journey' },
-        ].map((card, idx) => (
-          <button 
-            key={idx} 
-            onClick={() => onTabChange?.(card.tab, card.subTab)}
-            className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col justify-between text-left hover:shadow-md hover:scale-[1.02] transition-all duration-200"
-          >
-            <div className="flex justify-between items-start mb-4">
-              <p className="text-gray-600 dark:text-gray-400 font-medium text-lg">{card.title}</p>
-              <div className="w-8 h-8 rounded-full border border-gray-200 dark:border-gray-600 flex items-center justify-center">
-                <ArrowUpRight className="w-4 h-4 text-gray-400" />
+          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <div className="relative z-10 flex flex-col h-full justify-between">
+            <div className="flex justify-between items-start">
+              <div className="p-3 bg-emerald-500/10 rounded-2xl border border-emerald-500/20">
+                <Users className="w-6 h-6 text-emerald-500" />
+              </div>
+              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-black tracking-widest uppercase">
+                <ArrowUp className="w-3 h-3" />
+                {kpiData?.growthRate !== undefined ? `${kpiData.growthRate > 0 ? '+' : ''}${kpiData.growthRate}%` : '0%'}
               </div>
             </div>
-            <h2 className="text-5xl font-bold text-gray-900 dark:text-white mb-6 tracking-tight">{card.value}</h2>
-            <div className="flex items-center gap-2 text-sm text-gray-500">
-              {card.change ? (
-                <>
-                  <span className="flex items-center gap-1 px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
-                    <ArrowUp className="w-3 h-3" />
-                    {card.change}
-                  </span>
-                  Increased from last month
-                </>
-              ) : (
-                <span className="text-gray-400">System tracked</span>
-              )}
+            <div>
+              <p className="text-white/30 text-xs font-black uppercase tracking-[0.2em] mb-2">Total Users</p>
+              <h2 className="text-6xl font-black text-white tracking-tighter">
+                {kpiData?.totalUsers?.toLocaleString() || '0'}
+              </h2>
             </div>
-          </button>
-        ))}
-      </div>
+            <div className="flex items-center gap-4 text-xs font-bold text-white/20">
+              <span className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                {kpiData?.activeUsers || 0} Online
+              </span>
+              <span>•</span>
+              <span>Updated Just Now</span>
+            </div>
+          </div>
+        </motion.button>
 
-      {/* Middle Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Project Analytics Bar Chart */}
-        <button 
-          onClick={() => onTabChange?.('analytics', 'ai')}
-          className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 text-left hover:shadow-md transition-shadow duration-200"
+        {/* System Health (Medium) */}
+        <motion.button 
+          variants={item}
+          onClick={() => onTabChange?.('analytics', 'system')}
+          className="lg:col-span-5 lg:row-span-2 bg-[#111111] border border-white/10 rounded-[2.5rem] p-8 relative overflow-hidden group text-left shadow-2xl"
         >
-          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6">System Analytics</h3>
-          <div className="h-[250px] w-full">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 blur-[100px] rounded-full" />
+          <div className="relative z-10 h-full flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-white font-black text-sm uppercase tracking-[0.2em]">System Health</h3>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                  <span className="text-[10px] text-emerald-500 font-black uppercase tracking-widest">Healthy</span>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-8">
+                <div>
+                  <p className="text-white/30 text-[10px] font-black uppercase tracking-widest mb-1">Speed</p>
+                  <p className="text-3xl font-black text-white">{kpiData?.systemHealth?.speed || 24}<span className="text-sm text-white/30 ml-1">ms</span></p>
+                </div>
+                <div>
+                  <p className="text-white/30 text-[10px] font-black uppercase tracking-widest mb-1">Status</p>
+                  <p className="text-3xl font-black text-white">{kpiData?.systemHealth?.status || 100}<span className="text-sm text-white/30 ml-1">%</span></p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-white/30 mb-1">
+                <span>Server Load</span>
+                <span>{kpiData?.systemHealth?.load || 42}%</span>
+              </div>
+              <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
+                <motion.div 
+                  initial={{ width: 0 }}
+                  animate={{ width: `${kpiData?.systemHealth?.load || 42}%` }}
+                  className="h-full bg-gradient-to-r from-emerald-600 to-emerald-400"
+                />
+              </div>
+              <div className="flex gap-2">
+                <div className={`h-1 flex-1 rounded-full ${kpiData?.systemHealth?.load && kpiData.systemHealth.load > 25 ? 'bg-emerald-500/40' : 'bg-white/10'}`} />
+                <div className={`h-1 flex-1 rounded-full ${kpiData?.systemHealth?.load && kpiData.systemHealth.load > 50 ? 'bg-emerald-500/40' : 'bg-white/10'}`} />
+                <div className={`h-1 flex-1 rounded-full ${kpiData?.systemHealth?.load && kpiData.systemHealth.load > 75 ? 'bg-emerald-500/40' : 'bg-white/10'}`} />
+                <div className={`h-1 flex-1 rounded-full ${kpiData?.systemHealth?.load && kpiData.systemHealth.load > 90 ? 'bg-emerald-500/40' : 'bg-white/10'}`} />
+              </div>
+            </div>
+          </div>
+        </motion.button>
+
+        {/* Small Action Card (Obsidian) */}
+        <motion.div 
+          variants={item}
+          onClick={() => onTabChange?.('management', 'pricing')}
+          className="lg:col-span-3 lg:row-span-1 bg-emerald-600 rounded-[2rem] p-6 flex items-center justify-between group cursor-pointer shadow-lg shadow-emerald-500/20"
+        >
+          <div className="text-black">
+            <h4 className="text-[10px] font-black uppercase tracking-widest opacity-60">Revenue</h4>
+            <p className="text-2xl font-black tracking-tighter">₹{(kpiData?.revenue || 0).toLocaleString()}</p>
+          </div>
+          <div className="p-3 bg-black/10 rounded-2xl">
+            <TrendingUp className="w-6 h-6 text-black" />
+          </div>
+        </motion.div>
+
+        {/* Small Stat Card (Obsidian) */}
+        <motion.div 
+          variants={item}
+          onClick={() => onTabChange?.('analytics', 'ai')}
+          className="lg:col-span-3 lg:row-span-1 bg-[#111111] border border-white/10 rounded-[2rem] p-6 flex items-center justify-between group hover:border-emerald-500/50 transition-all cursor-pointer shadow-xl"
+        >
+          <div>
+            <h4 className="text-[10px] font-black uppercase tracking-widest text-white/30">AI Activity</h4>
+            <p className="text-2xl font-black text-white tracking-tighter">{(kpiData?.aiUsage || 0).toLocaleString()}</p>
+          </div>
+          <div className="p-3 bg-white/5 rounded-2xl text-emerald-500">
+            <Zap className="w-6 h-6" />
+          </div>
+        </motion.div>
+
+        {/* System Analytics Area Chart (Wide) */}
+        <motion.button 
+          variants={item}
+          onClick={() => onTabChange?.('analytics', 'ai')}
+          className="lg:col-span-8 lg:row-span-3 bg-[#111111] border border-white/10 rounded-[2.5rem] p-8 text-left shadow-2xl relative overflow-hidden group"
+        >
+          <div className="flex justify-between items-center mb-10">
+            <div>
+              <h3 className="text-white font-black text-lg tracking-tight">Usage Trends</h3>
+              <p className="text-white/30 text-xs font-medium mt-1 uppercase tracking-widest">Last 7 Days</p>
+            </div>
+            <div className="flex items-center gap-2 px-4 py-2 bg-white/5 rounded-xl border border-white/5 text-[10px] font-black uppercase tracking-widest text-white/40">
+              <Calendar className="w-3 h-3" />
+              This Week
+            </div>
+          </div>
+          
+          <div className="h-[280px] w-full">
             {chartData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }} barSize={40}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
-                  <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 12 }} dy={10} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 12 }} />
-                  <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                  <Bar dataKey="users" fill="#185b3a" radius={[20, 20, 20, 20]} name="Users" />
-                  <Bar dataKey="cvs" fill="#84cc16" radius={[20, 20, 20, 20]} name="CVs" />
-                </BarChart>
+                <AreaChart data={chartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                    </linearGradient>
+                    <linearGradient id="colorCvs" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
+                  <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: 'rgba(255,255,255,0.2)', fontSize: 10, fontWeight: 900 }} dy={10} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fill: 'rgba(255,255,255,0.2)', fontSize: 10, fontWeight: 900 }} />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', color: '#fff' }}
+                    itemStyle={{ fontSize: '12px', fontWeight: 700 }}
+                  />
+                  <Area type="monotone" dataKey="users" stroke="#10b981" strokeWidth={4} fillOpacity={1} fill="url(#colorUsers)" name="New Users" />
+                  <Area type="monotone" dataKey="cvs" stroke="#3b82f6" strokeWidth={4} fillOpacity={1} fill="url(#colorCvs)" name="CVs Created" />
+                </AreaChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-full w-full flex items-center justify-center text-gray-400">Loading chart data...</div>
+              <div className="h-full w-full flex items-center justify-center text-white/20 uppercase font-black tracking-widest text-xs">Awaiting Data Streams...</div>
             )}
           </div>
-        </button>
+        </motion.button>
 
-        {/* Reminders & Alerts */}
-        <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col justify-between">
-          <div>
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6">System Status</h3>
-            <div className="mb-6">
-              <h4 className="text-2xl font-bold text-[#185b3a] dark:text-lime-400 mb-2 leading-tight">All Systems Operational</h4>
-              <p className="text-gray-500 flex items-center gap-2">
-                <Clock className="w-4 h-4" />
-                Last checked: {time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-              </p>
-            </div>
-          </div>
-          <button 
-            onClick={() => onTabChange?.('analytics', 'system')}
-            className="w-full flex items-center justify-center gap-2 px-5 py-4 bg-[#185b3a] hover:bg-[#114028] text-white rounded-2xl font-medium transition-colors shadow-md"
-          >
-            <Activity className="w-5 h-5" />
-            View Full Report
-          </button>
-        </div>
-      </div>
-
-      {/* Bottom Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recent Users */}
-        <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white">Recent Users</h3>
-            <button 
-              onClick={() => onTabChange?.('management', 'users')}
-              className="px-4 py-1.5 text-sm border border-gray-200 dark:border-gray-700 rounded-full hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300"
-            >
-              View All
-            </button>
-          </div>
-          <div className="space-y-4">
-            {displayUsers.map((user, idx) => {
-              const name = user.name || user.firstName || 'Unknown User';
-              const email = user.email || 'No email';
-              const isPremium = user.subscription?.planKey !== 'free';
-              
-              return (
-                <div key={idx} className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex-shrink-0 flex items-center justify-center font-bold text-[#185b3a] dark:text-lime-400">
-                    {name.charAt(0).toUpperCase()}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{name}</p>
-                    <p className="text-xs text-gray-500 truncate">{email}</p>
-                  </div>
-                  <span className={`text-[10px] px-2 py-1 rounded-md font-medium ${
-                    isPremium ? 'text-green-700 bg-green-100 dark:bg-green-900/30 dark:text-green-400' 
-                             : 'text-gray-600 bg-gray-100 dark:bg-gray-700 dark:text-gray-300'
-                  }`}>
-                    {isPremium ? 'Premium' : 'Free'}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Project Progress */}
-        <button 
-          onClick={() => onTabChange?.('analytics', 'journey')}
-          className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 text-left hover:shadow-md transition-shadow duration-200"
+        {/* Side Panel: Resource Distribution */}
+        <motion.div 
+          variants={item}
+          className="lg:col-span-4 lg:row-span-3 bg-[#111111] border border-white/10 rounded-[2.5rem] p-8 shadow-2xl flex flex-col"
         >
-          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Resource Usage</h3>
-          <div className="h-[200px] relative">
+          <h3 className="text-white font-black text-lg tracking-tight mb-2">User Breakdown</h3>
+          <p className="text-white/30 text-[10px] font-black uppercase tracking-widest mb-6">Platform Activity</p>
+          
+          <div className="flex-1 relative">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
                   data={pieData}
                   cx="50%"
                   cy="50%"
-                  innerRadius={60}
-                  outerRadius={80}
-                  paddingAngle={5}
+                  innerRadius={70}
+                  outerRadius={100}
+                  paddingAngle={8}
                   dataKey="value"
-                  startAngle={180}
-                  endAngle={0}
+                  stroke="none"
                 >
                   {pieData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
@@ -321,77 +366,58 @@ const AdminKPIs: React.FC<AdminKPIsProps> = ({ onTabChange }) => {
                 </Pie>
               </PieChart>
             </ResponsiveContainer>
-            <div className="absolute inset-0 flex flex-col items-center justify-center mt-8">
-              <span className="text-4xl font-bold text-gray-900 dark:text-white">
-                {kpiData?.totalCVs ? Math.round((kpiData.totalCVs / (kpiData.totalCVs + (kpiData.activeUsers || 0))) * 100) : 0}%
-              </span>
-              <span className="text-sm text-gray-500">CV Completion</span>
+            <div className="absolute inset-0 flex flex-col items-center justify-center mt-2">
+              <span className="text-3xl font-black text-white tracking-tighter">{kpiData?.efficiency || 0}%</span>
+              <span className="text-[10px] font-black text-white/20 uppercase tracking-widest">Efficiency</span>
             </div>
           </div>
-          <div className="flex justify-center gap-4 mt-4 text-sm text-gray-600 dark:text-gray-400">
-            {pieData.map((item, idx) => (
-              <div key={idx} className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
-                <span className="text-xs truncate">{item.name}</span>
+          
+          <div className="space-y-3 mt-6">
+            {pieData.map((item, idx) => {
+              const total = pieData.reduce((acc, curr) => acc + curr.value, 0);
+              const percentage = total > 0 ? Math.round((item.value / total) * 100) : 0;
+              return (
+                <div key={idx} className="flex items-center justify-between bg-white/[0.02] p-3 rounded-2xl border border-white/5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
+                    <span className="text-xs font-bold text-white/60">{item.name}</span>
+                  </div>
+                  <span className="text-xs font-black text-white">{percentage}%</span>
+                </div>
+              );
+            })}
+          </div>
+        </motion.div>
+
+        {/* Active Nodes (Small Grid) - NOW FULL WIDTH */}
+        <motion.div 
+          variants={item}
+          className="lg:col-span-12 lg:row-span-2 bg-[#111111] border border-white/10 rounded-[2.5rem] p-8 shadow-2xl"
+        >
+          <div className="flex justify-between items-center mb-8">
+            <h3 className="text-white font-black text-lg tracking-tight">Users List</h3>
+            <button 
+              onClick={() => onTabChange?.('management', 'users')}
+              className="px-4 py-2 bg-white/5 rounded-xl hover:bg-white/10 transition-colors text-[10px] font-black uppercase tracking-widest text-white/40"
+            >
+              View Full Directory
+            </button>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
+            {recentUsers.slice(0, 12).map((user, idx) => (
+              <div key={idx} className="flex flex-col items-center justify-center bg-white/[0.02] p-6 rounded-[1.5rem] border border-white/5 text-center hover:bg-white/[0.05] transition-all group">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-600 to-emerald-400 flex items-center justify-center text-black font-black text-lg mb-4 group-hover:shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all">
+                  {(user.name || user.firstName || 'U').charAt(0).toUpperCase()}
+                </div>
+                <p className="text-sm font-black text-white truncate w-full px-2">{user.name || user.firstName || 'User'}</p>
+                <p className="text-[10px] font-bold text-white/20 uppercase tracking-[0.15em] mt-1">{user.subscription?.planKey || 'Free'}</p>
               </div>
             ))}
           </div>
-        </button>
+        </motion.div>
 
-        {/* Time Tracker / Project List */}
-        <div className="flex flex-col gap-6">
-          <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 flex-1">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white">Recent Activity</h3>
-              <button 
-                onClick={() => onTabChange?.('analytics', 'logs')}
-                className="text-xs text-gray-400 hover:text-[#185b3a] font-bold"
-              >
-                View All
-              </button>
-            </div>
-            <div className="space-y-4">
-              {displayActivities.map((act, idx) => {
-                const date = new Date(act.timestamp || act.createdAt);
-                const isRecent = (new Date().getTime() - date.getTime()) < 86400000; // Less than 24h
-                
-                return (
-                  <div key={idx} className="flex items-start gap-3">
-                    <div className={`mt-1 ${idx === 0 ? 'text-blue-500' : idx === 1 ? 'text-emerald-500' : 'text-amber-500'}`}>
-                      <Activity className="w-4 h-4" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{act.title || act.action}</p>
-                      <p className="text-xs text-gray-500">
-                        {isRecent ? 'Today' : date.toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Dark Time Tracker Card */}
-          <div className="bg-[#185b3a] rounded-3xl p-6 shadow-lg relative overflow-hidden flex flex-col items-center justify-center text-white h-40">
-            <div className="absolute inset-0 opacity-20 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-lime-400 via-transparent to-transparent"></div>
-            
-            <h3 className="text-lime-50 font-medium self-start absolute top-6 left-6">System Time</h3>
-            <div className="text-4xl font-bold tracking-wider mt-4 font-mono">
-              {time.toLocaleTimeString('en-US', { hour12: false })}
-            </div>
-            <div className="flex gap-4 mt-6 absolute bottom-6">
-              <button className="w-10 h-10 bg-white text-[#185b3a] rounded-full flex items-center justify-center hover:bg-lime-50 transition-colors shadow-md">
-                <Pause className="w-4 h-4 fill-current" />
-              </button>
-              <button className="w-10 h-10 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors shadow-md">
-                <Square className="w-4 h-4 fill-current" />
-              </button>
-            </div>
-          </div>
-        </div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 

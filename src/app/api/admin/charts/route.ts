@@ -54,21 +54,26 @@ export async function GET(request: NextRequest) {
       }
 
       // Get data for this period
-      const [users, cvs, jobs, aiActivity] = await Promise.all([
-        User.countDocuments({
-          createdAt: { $gte: currentDate, $lt: nextDate }
-        }),
-        CV.countDocuments({
-          createdAt: { $gte: currentDate, $lt: nextDate }
-        }),
-        JobApplication.countDocuments({
-          createdAt: { $gte: currentDate, $lt: nextDate }
-        }),
-        ActivityLog ? ActivityLog.countDocuments({
-          logType: 'ai',
-          createdAt: { $gte: currentDate, $lt: nextDate }
-        }) : Promise.resolve(0)
+      const usersTask = User.countDocuments({
+        createdAt: { $gte: currentDate, $lt: nextDate }
+      });
+      const cvsTask = CV.countDocuments({
+        createdAt: { $gte: currentDate, $lt: nextDate }
+      });
+      const jobsTask = JobApplication.countDocuments({
+        createdAt: { $gte: currentDate, $lt: nextDate }
+      });
+      
+      const aiTask = ActivityLog ? ActivityLog.aggregate([
+        { $match: { logType: 'ai', createdAt: { $gte: currentDate, $lt: nextDate } } },
+        { $group: { _id: null, totalTokens: { $sum: '$aiMetadata.tokensUsed' } } }
+      ]) : Promise.resolve([]);
+
+      const [users, cvs, jobs, aiResult] = await Promise.all([
+        usersTask, cvsTask, jobsTask, aiTask
       ]);
+
+      const aiUsage = aiResult[0]?.totalTokens || 0;
 
       chartData.push({
         date: currentDate.toISOString().split('T')[0],
@@ -76,7 +81,7 @@ export async function GET(request: NextRequest) {
         users,
         cvs,
         jobs,
-        aiUsage: aiActivity
+        aiUsage
       });
 
       currentDate.setTime(nextDate.getTime());

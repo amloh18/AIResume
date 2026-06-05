@@ -20,6 +20,12 @@ import {
   ChevronUp,
   AlertCircle,
   Loader2,
+  Database,
+  Edit,
+  Filter,
+  Shield,
+  Clock,
+  Zap,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
@@ -31,6 +37,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -38,6 +45,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 interface Campaign {
   _id?: string;
@@ -76,11 +84,11 @@ interface Props {
   onSave: () => void;
 }
 
-type Step = "template" | "audience" | "review" | "send";
+type Step = "design" | "dispatch";
 
 export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
   const { toast } = useToast();
-  const [currentStep, setCurrentStep] = useState<Step>("template");
+  const [currentStep, setCurrentStep] = useState<Step>("design");
   const [selectedTemplate, setSelectedTemplate] =
     useState<CampaignTemplate | null>(null);
   const [showTemplateSelector, setShowTemplateSelector] = useState(!campaign);
@@ -88,15 +96,14 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
   const [previewMode, setPreviewMode] = useState(false);
   const [targetedCount, setTargetedCount] = useState(0);
   const [previewingTargets, setPreviewingTargets] = useState(false);
-  const [testEmails, setTestEmails] = useState("amlohsl@icloud.com, amlowwh@gmail.com");
+  const [testEmails, setTestEmails] = useState("amlohsl@icloud.com");
   const [previewedEmails, setPreviewedEmails] = useState<string[]>([]);
   const [availableTemplates, setAvailableTemplates] =
     useState<CampaignTemplate[]>(campaignTemplates);
   const [templateCategoryFilter, setTemplateCategoryFilter] =
     useState<string>("all");
-  const [isTargetAudienceExpanded, setIsTargetAudienceExpanded] =
-    useState(false);
-  const [showFilterPresets, setShowFilterPresets] = useState(true);
+  const [activeDesignTab, setActiveDesignTab] = useState<"template" | "editor" | "preview">("template");
+  const [processingFile, setProcessingFile] = useState(false);
 
   // AI Template Generation State
   const [showAiPrompt, setShowAiPrompt] = useState(false);
@@ -146,66 +153,135 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
     csvRecipients: [],
   });
 
-  const handleCsvUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const steps: { id: Step; label: string; icon: any }[] = [
+    { id: "design", label: "Email Content", icon: FileText },
+    { id: "dispatch", label: "Recipients & Send", icon: Send },
+  ];
+
+  const currentStepIndex = steps.findIndex((s) => s.id === currentStep);
+  const isFirstStep = currentStepIndex === 0;
+  const isLastStep = currentStepIndex === steps.length - 1;
+
+  const nextStep = () => {
+    if (!canProceed()) {
+      toast({
+        title: "Incomplete Step",
+        description: "Please complete all required fields before proceeding",
+        variant: "destructive"
+      });
+      return;
+    }
+    if (!isLastStep) setCurrentStep(steps[currentStepIndex + 1].id);
+  };
+
+  const prevStep = () => {
+    if (!isFirstStep) setCurrentStep(steps[currentStepIndex - 1].id);
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const text = event.target?.result as string;
-      if (!text) return;
+    setProcessingFile(true);
+    const extension = file.name.split('.').pop()?.toLowerCase();
+    
+    try {
+        const recipients: Array<{ name: string; email: string }> = [];
 
-      const lines = text.split(/\r?\n/);
-      const recipients: Array<{ name: string; email: string }> = [];
-      
-      lines.forEach((line, index) => {
-        const trimmedLine = line.trim();
-        if (!trimmedLine) return;
-        
-        // Skip header if it contains "email"
-        if (index === 0 && trimmedLine.toLowerCase().includes("email")) return;
+        if (extension === 'xlsx' || extension === 'xls') {
+            const XLSX = await import('xlsx');
+            const reader = new FileReader();
+            
+            reader.onload = (event) => {
+                try {
+                    const data = new Uint8Array(event.target?.result as ArrayBuffer);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
 
-        const parts = trimmedLine.split(",").map(s => s.trim().replace(/^"|"$/g, ""));
-        
-        let name = "Valued User";
-        let email = "";
+                    jsonData.forEach((row, index) => {
+                        if (index === 0) return; // Skip header
+                        
+                        let name = "Valued User";
+                        let email = "";
 
-        if (parts.length >= 2) {
-          // Check if first part is name and second is email, or vice versa
-          if (parts[1].includes("@")) {
-            name = parts[0] || name;
-            email = parts[1];
-          } else if (parts[0].includes("@")) {
-            email = parts[0];
-            name = parts[1] || name;
-          }
-        } else if (parts.length === 1 && parts[0].includes("@")) {
-          email = parts[0];
+                        // Smart detection: find email and name in columns
+                        row.forEach(cell => {
+                            const val = String(cell || '').trim();
+                            if (val.includes('@') && val.includes('.')) {
+                                email = val;
+                            } else if (val && name === "Valued User" && isNaN(Number(val))) {
+                                name = val;
+                            }
+                        });
+
+                        if (email) {
+                            recipients.push({ name, email });
+                        }
+                    });
+
+                    if (recipients.length > 0) {
+                        setFormData(prev => ({ ...prev, csvRecipients: recipients }));
+                        toast({ title: "Data Ingested", description: `Successfully merged ${recipients.length} identities from Excel.`, variant: "success" });
+                        handlePreviewTargets();
+                    } else {
+                        toast({ title: "No Data Found", description: "Could not find valid email addresses in the file.", variant: "destructive" });
+                    }
+                } catch (err) {
+                    toast({ title: "Parsing Error", description: "Failed to read Excel structure.", variant: "destructive" });
+                } finally {
+                    setProcessingFile(false);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+            return;
         }
 
-        if (email && email.includes("@")) {
-          recipients.push({ name, email });
-        }
-      });
+        // CSV Parsing
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            try {
+                const text = event.target?.result as string;
+                if (!text) return;
 
-      if (recipients.length > 0) {
-        setFormData(prev => ({ ...prev, csvRecipients: recipients }));
-        toast({
-          title: "CSV Uploaded",
-          description: `Successfully parsed ${recipients.length} recipients.`,
-          variant: "success"
-        });
-        // Trigger preview update
-        handlePreviewTargets();
-      } else {
-        toast({
-          title: "Upload Failed",
-          description: "No valid email addresses found in CSV.",
-          variant: "destructive"
-        });
-      }
-    };
-    reader.readAsText(file);
+                const lines = text.split(/\r?\n/);
+                
+                lines.forEach((line, index) => {
+                    const trimmedLine = line.trim();
+                    if (!trimmedLine) return;
+                    if (index === 0 && trimmedLine.toLowerCase().includes("email")) return;
+
+                    const parts = trimmedLine.split(",").map(s => s.trim().replace(/^"|"$/g, ""));
+                    let name = "Valued User";
+                    let email = "";
+
+                    parts.forEach(part => {
+                        if (part.includes('@') && part.includes('.')) email = part;
+                        else if (part && name === "Valued User" && isNaN(Number(part))) name = part;
+                    });
+
+                    if (email) recipients.push({ name, email });
+                });
+
+                if (recipients.length > 0) {
+                    setFormData(prev => ({ ...prev, csvRecipients: recipients }));
+                    toast({ title: "CSV Ingested", description: `Captured ${recipients.length} identity nodes.`, variant: "success" });
+                    handlePreviewTargets();
+                } else {
+                    toast({ title: "Upload Failed", description: "No valid email stream detected.", variant: "destructive" });
+                }
+            } finally {
+                setProcessingFile(false);
+            }
+        };
+        reader.readAsText(file);
+
+    } catch (error) {
+        console.error("File processing error:", error);
+        toast({ title: "System Error", description: "Failed to initialize ingestion protocol.", variant: "destructive" });
+        setProcessingFile(false);
+    }
   };
 
   useEffect(() => {
@@ -224,48 +300,11 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
         if (template) {
           setSelectedTemplate(template);
           setShowTemplateSelector(false);
+          setActiveDesignTab("editor");
         }
       }
     }
   }, [campaign]);
-
-  // Auto-update recipient count when filters change
-  useEffect(() => {
-    const fetchRecipientCount = async () => {
-      try {
-        const response = await fetch(
-          "/api/admin/email-campaigns/preview-targets",
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              targetFilters: formData.targetFilters,
-              csvRecipients: formData.csvRecipients,
-              limit: 0, // Just get count, no preview emails needed
-            }),
-          },
-        );
-
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success) {
-            setTargetedCount(data.totalCount || 0);
-            console.log('✅ Auto-updated recipient count:', data.totalCount);
-          }
-        }
-      } catch (error) {
-        console.error('Failed to auto-fetch recipient count:', error);
-        // Don't set to 0 on error - keep previous count
-      }
-    };
-
-    // Debounce the API call to avoid too many requests
-    const timeoutId = setTimeout(() => {
-      fetchRecipientCount();
-    }, 500); // Wait 500ms after last filter change
-
-    return () => clearTimeout(timeoutId);
-  }, [formData.targetFilters, formData.csvRecipients]);
 
   useEffect(() => {
     if (selectedTemplate) {
@@ -277,7 +316,6 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
 
       setFormData((prev) => ({
         ...prev,
-        // Auto-generate name if creating new or if name is empty
         campaignName: !campaign || !prev.campaignName
           ? `${selectedTemplate.name} - ${dateStr}`
           : prev.campaignName,
@@ -294,25 +332,6 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
     }
   }, [selectedTemplate]);
 
-  // Auto-update targeted count when filters change
-  // Note: Empty filters {} is valid and means "all users" (excluding unsubscribed)
-  useEffect(() => {
-    // Debounce the API call
-    const timeoutId = setTimeout(() => {
-      handlePreviewTargets();
-    }, 500);
-
-    return () => clearTimeout(timeoutId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formData.targetFilters]);
-
-  // Load user data when entering review step
-  useEffect(() => {
-    if (currentStep === 'review' && previewedEmails.length === 0) {
-      handlePreviewTargets();
-    }
-  }, [currentStep, formData.targetFilters, previewedEmails]);
-
   const handleInputChange = (field: keyof Campaign, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
@@ -320,6 +339,7 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
   const handleTemplateSelect = (template: CampaignTemplate) => {
     setSelectedTemplate(template);
     setShowTemplateSelector(false);
+    setActiveDesignTab("editor");
   };
 
   const handleGenerateAiTemplate = async () => {
@@ -339,9 +359,7 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
         })
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to generate template");
-      }
+      if (!response.ok) throw new Error("Failed to generate template");
 
       const data = await response.json();
       
@@ -364,6 +382,7 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
         setSelectedTemplate(newTemplate);
         setShowAiPrompt(false);
         setAiPrompt("");
+        setActiveDesignTab("editor");
         
         toast({ title: "Template Generated", description: "Your AI template is ready to use!", variant: "success" });
       } else {
@@ -392,29 +411,7 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
         },
       );
 
-      // Check if response is ok and has content
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Preview targets API error:", response.status, errorText);
-        toast({
-          title: "Preview Failed",
-          description: `Failed to preview targets: ${response.status} ${response.statusText}`,
-          variant: "destructive"
-        });
-        setPreviewingTargets(false);
-        return;
-      }
-
-      // Check content type before parsing JSON
-      const contentType = response.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
-        const errorText = await response.text();
-        console.error("Non-JSON response from preview-targets:", errorText);
-        toast({
-          title: "Error",
-          description: "Invalid response from server. Please try again.",
-          variant: "destructive"
-        });
         setPreviewingTargets(false);
         return;
       }
@@ -424,27 +421,12 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
       if (data.success) {
         setTargetedCount(data.totalCount || 0);
         if (data.users && data.users.length > 0) {
-          console.log("Preview users:", data.users);
-          // Extract emails from users and save to state
           const emails = data.users.map((user: any) => user.email).filter(Boolean);
           setPreviewedEmails(emails);
         }
-      } else {
-        toast({
-          title: "Preview Failed",
-          description: `Failed to preview targets: ${data.error || "Unknown error"}`,
-          variant: "destructive"
-        });
-        setTargetedCount(0);
       }
     } catch (error: any) {
       console.error("Failed to preview targets:", error);
-      toast({
-        title: "Error",
-        description: `Error: ${error.message || "Failed to preview targets. Please try again."}`,
-        variant: "destructive"
-      });
-      setTargetedCount(0);
     } finally {
       setPreviewingTargets(false);
     }
@@ -452,20 +434,12 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
 
   const handleSendTest = async () => {
     if (!testEmails.trim()) {
-      toast({
-        title: "Validation Error",
-        description: "Please enter at least one email address",
-        variant: "destructive"
-      });
+      toast({ title: "Validation Error", description: "Please enter an email address", variant: "destructive" });
       return;
     }
 
-    const emailList = testEmails
-      .split(",")
-      .map((e) => e.trim())
-      .filter(Boolean);
-
-    setLoading(true); // Reuse loading or add specific state
+    const emailList = testEmails.split(",").map((e) => e.trim()).filter(Boolean);
+    setLoading(true);
     try {
       const response = await fetch("/api/admin/email-campaigns/test", {
         method: "POST",
@@ -480,34 +454,13 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
       });
 
       const data = await response.json();
-
       if (data.success) {
-        if (data.results.failed > 0) {
-          toast({
-            title: "Test Email Status",
-            description: `Sent: ${data.results.sent}, Failed: ${data.results.failed}. Error: ${data.results.errors[0] || 'Unknown error'}`,
-            variant: "destructive"
-          });
-        } else {
-          toast({
-            title: "Test Emails Sent",
-            description: `Successfully sent to ${data.results.sent} recipients.`,
-            variant: "success"
-          });
-        }
+        toast({ title: "Test Sent", variant: "success" });
       } else {
-        toast({
-          title: "Send Failed",
-          description: data.error || "Failed to send test emails",
-          variant: "destructive"
-        });
+        toast({ title: "Send Failed", description: data.error, variant: "destructive" });
       }
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "An error occurred",
-        variant: "destructive"
-      });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -517,186 +470,70 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
     setFormData((prev) => ({
       ...prev,
       targetFilters: filters,
-      filterPresetName: presetName,
     }));
-    setShowFilterPresets(false);
-    // Immediately load preview data for the selected preset
     setTimeout(() => handlePreviewTargets(), 100);
   };
 
-  const handleSaveCustomPreset = (name: string, filters: any) => {
-    // TODO: Implement saving custom preset to backend
-    console.log("Saving custom preset:", name, filters);
-    toast({
-      title: "Preset Saved",
-      description: `Custom preset "${name}" saved successfully!`,
-      variant: "success"
-    });
-  };
-
   const handleSave = async (status: "draft" | "scheduled" | "sent" | "recurring") => {
-    // Validation
     if (!formData.campaignName || formData.campaignName.length < 5) {
-      toast({ title: "Validation Error", description: "Campaign name must be at least 5 characters", variant: "destructive" });
+      toast({ title: "Validation Error", description: "Name too short", variant: "destructive" });
       return;
     }
-    if (!formData.subject) {
-      toast({ title: "Validation Error", description: "Subject line is required", variant: "destructive" });
+    if (!formData.subject || !formData.htmlContent) {
+      toast({ title: "Validation Error", description: "Subject and content required", variant: "destructive" });
       return;
     }
-    if (!formData.htmlContent) {
-      toast({ title: "Validation Error", description: "Email content is required", variant: "destructive" });
-      return;
-    }
-    if (!formData.fromName || !formData.fromEmail) {
-      toast({ title: "Validation Error", description: "Sender information is required", variant: "destructive" });
-      return;
-    }
-    // Empty filters {} is valid (means "all users"), so no validation needed
 
     setLoading(true);
     try {
-      const url = campaign?._id
-        ? `/api/admin/email-campaigns/${campaign._id}`
-        : "/api/admin/email-campaigns";
-
+      const url = campaign?._id ? `/api/admin/email-campaigns/${campaign._id}` : "/api/admin/email-campaigns";
       const method = campaign?._id ? "PUT" : "POST";
 
-      // Determine scheduled date/time if needed
       let scheduledAt = undefined;
-      if (
-        formData.sendType === "scheduled" &&
-        formData.sendDate &&
-        formData.sendTime
-      ) {
+      if (formData.sendType === "scheduled" && formData.sendDate && formData.sendTime) {
         const [hours, minutes] = formData.sendTime.split(":");
         const date = new Date(formData.sendDate);
         date.setHours(parseInt(hours), parseInt(minutes));
         scheduledAt = date.toISOString();
       }
 
-      // 1. Save/Update Campaign First
       const saveResponse = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...formData,
           targetFilters: formData.targetFilters || {},
-          status: status === "sent" ? "draft" : status, // Save as draft first if sending now, to prevent premature 'sent' status before actual send
+          status: status === "sent" ? "draft" : status,
           scheduledAt,
           targetedUserCount: targetedCount,
           abTestConfig: abTestConfig.enabled ? abTestConfig : undefined,
         }),
       });
 
-      const contentType = saveResponse.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
-        throw new Error("Invalid response format from server");
-      }
-
       const saveData = await saveResponse.json();
+      if (!saveData.success) throw new Error(saveData.error || "Failed to save");
 
-      if (!saveData.success) {
-        throw new Error(saveData.error || "Failed to save campaign");
-      }
-
-      const campaignId = saveData.campaign._id;
-
-      // 2. If "Send Now" (status === 'sent'), trigger the send endpoint
       if (status === "sent") {
-        const sendResponse = await fetch(`/api/admin/email-campaigns/${campaignId}/send`, {
-          method: "POST",
-        });
-
+        const sendResponse = await fetch(`/api/admin/email-campaigns/${saveData.campaign._id}/send`, { method: "POST" });
         const sendData = await sendResponse.json();
-
-        if (!sendData.success) {
-          // If send fails, the user will be alerted but campaign remains saved as draft (from step 1) or whatever state it was
-          throw new Error(sendData.error || "Campaign saved but failed to send");
-        }
-
-        toast({
-          title: "Campaign Sent",
-          description: `Campaign sent successfully! Sent: ${sendData.sentValues?.sent}, Failed: ${sendData.sentValues?.failed}`,
-          variant: "success"
-        });
+        if (!sendData.success) throw new Error(sendData.error || "Failed to send");
+        toast({ title: "Campaign Dispatched", variant: "success" });
       } else {
-        toast({
-          title: "Campaign Saved",
-          description: "Campaign saved successfully!",
-          variant: "success"
-        });
+        toast({ title: "Campaign Saved", variant: "success" });
       }
-
       onSave();
     } catch (error: any) {
-      console.error("Failed to save/send campaign:", error);
-      toast({
-        title: "Error",
-        description: `Error: ${error.message}`,
-        variant: "destructive"
-      });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
       setLoading(false);
     }
   };
 
-  const steps: { id: Step; label: string; icon: React.ReactNode }[] = [
-    {
-      id: "template",
-      label: "1. Select Template",
-      icon: <FileText className="w-4 h-4" />,
-    },
-    {
-      id: "audience",
-      label: "2. Select Target Users",
-      icon: <Users className="w-4 h-4" />,
-    },
-    { id: "review", label: "3. Review", icon: <Eye className="w-4 h-4" /> },
-    { id: "send", label: "4. Send", icon: <Send className="w-4 h-4" /> },
-  ];
-
-  const currentStepIndex = steps.findIndex((s) => s.id === currentStep);
-  const isFirstStep = currentStepIndex === 0;
-  const isLastStep = currentStepIndex === steps.length - 1;
-
   const canProceed = () => {
-    switch (currentStep) {
-      case "template":
-        return selectedTemplate !== null && formData.campaignName.length >= 5;
-      case "audience":
-        // Empty filters {} is valid (means "all users")
-        // Always allow proceeding from audience step
-        return true;
-      case "review":
-        return true;
-      case "send":
-        return true;
-      default:
-        return false;
+    if (currentStep === "design") {
+      return selectedTemplate !== null && formData.campaignName.length >= 5 && formData.subject.length > 0;
     }
-  };
-
-  const nextStep = () => {
-    if (!canProceed()) {
-      toast({
-        title: "Incomplete Step",
-        description: "Please complete all required fields before proceeding",
-        variant: "destructive"
-      });
-      return;
-    }
-    const nextIndex = currentStepIndex + 1;
-    if (nextIndex < steps.length) {
-      setCurrentStep(steps[nextIndex].id);
-    }
-  };
-
-  const prevStep = () => {
-    const prevIndex = currentStepIndex - 1;
-    if (prevIndex >= 0) {
-      setCurrentStep(steps[prevIndex].id);
-    }
+    return true;
   };
 
   const filteredTemplates =
@@ -708,802 +545,266 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex justify-end"
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/80 backdrop-blur-xl z-50 flex justify-end"
       onClick={onClose}
     >
       <motion.div
         initial={{ x: "100%" }}
         animate={{ x: 0 }}
         exit={{ x: "100%" }}
-        transition={{ type: "spring", damping: 20 }}
+        transition={{ type: "spring", damping: 25, stiffness: 200 }}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-4xl h-full flex flex-col bg-gray-900 border-l border-gray-700 shadow-2xl overflow-hidden"
+        className="w-full max-w-5xl h-full flex flex-col bg-[#050505] border-l border-white/5 shadow-2xl overflow-hidden relative"
       >
+        {/* Loading Overlay */}
+        <AnimatePresence>
+            {processingFile && (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[60] bg-black/60 backdrop-blur-md flex flex-col items-center justify-center">
+                    <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }} className="w-12 h-12 border-2 border-emerald-500 border-t-transparent rounded-full mb-4" />
+                    <p className="text-white font-black uppercase tracking-widest text-[10px]">Processing Data Protocol...</p>
+                </motion.div>
+            )}
+        </AnimatePresence>
+
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-700">
-          <div>
-            <h2 className="text-2xl font-bold text-white">
-              {campaign ? "Edit Campaign" : "Create Email Campaign"}
-            </h2>
-            <p className="text-gray-400 text-sm mt-1">
-              {campaign
-                ? "Update your email campaign"
-                : "Create engaging email campaigns for your users"}
-            </p>
+        <div className="h-24 flex items-center justify-between px-8 border-b border-white/5 bg-white/2 backdrop-blur-md z-10">
+          <div className="flex items-center gap-6">
+            <div className="p-3 bg-emerald-500/10 rounded-2xl border border-emerald-500/20">
+              <Mail className="w-6 h-6 text-emerald-500" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-black text-white tracking-tighter uppercase">
+                {campaign ? "Edit" : "New"} <span className="text-emerald-500">Email</span>
+              </h2>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest bg-emerald-500/10 px-2 py-0.5 rounded-md">
+                  {formData.campaignType}
+                </span>
+              </div>
+            </div>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
-          >
-            <X className="w-6 h-6 text-gray-400" />
-          </button>
-        </div>
 
-        {/* Progress Indicator */}
-        <div className="px-6 py-4 border-b border-gray-700 bg-gray-800">
-          <div className="flex items-center justify-between">
-            {steps.map((step, index) => (
-              <React.Fragment key={step.id}>
-                <div className="flex items-center">
-                  <div
-                    className={`flex items-center justify-center w-8 h-8 rounded-full border-2 ${currentStepIndex >= index
-                      ? "bg-blue-600 border-blue-600 text-white"
-                      : "border-gray-600 text-gray-400"
-                      }`}
-                  >
-                    {currentStepIndex > index ? (
-                      <CheckCircle className="w-5 h-5" />
-                    ) : (
-                      <span>{index + 1}</span>
-                    )}
-                  </div>
-                  <span
-                    className={`ml-2 text-sm ${currentStep === step.id
-                      ? "text-white font-medium"
-                      : "text-gray-400"
-                      }`}
-                  >
-                    {step.label}
-                  </span>
-                </div>
-                {index < steps.length - 1 && (
-                  <ChevronRight className="w-4 h-4 text-gray-600 mx-2" />
-                )}
-              </React.Fragment>
-            ))}
-          </div>
-        </div>
-
-        {/* Content */}
-        <div className="p-6 flex-1 overflow-y-auto">
-          <AnimatePresence mode="wait">
-            {currentStep === "template" && (
-              <motion.div
-                key="template"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                className="space-y-6"
-              >
-                <h3 className="text-xl font-semibold text-white mb-4">
-                  Select an Email Template
-                </h3>
-
-                {/* Template Selection */}
-                <div className="mb-6">
-                  <div className="mb-4 flex items-center justify-between">
-                    <Select
-                      value={templateCategoryFilter}
-                      onValueChange={setTemplateCategoryFilter}
-                    >
-                      <SelectTrigger className="w-48 bg-gray-800 border-gray-700 text-white">
-                        <SelectValue placeholder="Filter by category" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-gray-900 border-gray-700 text-white">
-                        <SelectItem
-                          value="all"
-                          className="text-white focus:bg-gray-800"
-                        >
-                          All Categories
-                        </SelectItem>
-                        <SelectItem
-                          value="onboarding"
-                          className="text-white focus:bg-gray-800"
-                        >
-                          Onboarding
-                        </SelectItem>
-                        <SelectItem
-                          value="upsell"
-                          className="text-white focus:bg-gray-800"
-                        >
-                          Upsell & Monetization
-                        </SelectItem>
-                        <SelectItem
-                          value="engagement"
-                          className="text-white focus:bg-gray-800"
-                        >
-                          Engagement
-                        </SelectItem>
-                        <SelectItem
-                          value="transactional"
-                          className="text-white focus:bg-gray-800"
-                        >
-                          Transactional
-                        </SelectItem>
-                        <SelectItem
-                          value="trigger"
-                          className="text-white focus:bg-gray-800"
-                        >
-                          Trigger / Automated
-                        </SelectItem>
-                        <SelectItem
-                          value="newsletter"
-                          className="text-white focus:bg-gray-800"
-                        >
-                          Newsletter (Manual)
-                        </SelectItem>
-                        <SelectItem
-                          value="retention"
-                          className="text-white focus:bg-gray-800"
-                        >
-                          Retention / Win-back
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                    
-                    <button
-                      onClick={() => setShowAiPrompt(!showAiPrompt)}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors border ${showAiPrompt ? 'bg-blue-600 border-blue-500 text-white' : 'bg-gray-800 border-gray-700 text-gray-300 hover:text-white hover:border-gray-600'}`}
-                    >
-                      <Sparkles className="w-4 h-4" />
-                      Create with AI
-                    </button>
-                  </div>
-                  
-                  <AnimatePresence>
-                    {showAiPrompt && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="mb-6 overflow-hidden"
-                      >
-                        <div className="p-4 bg-gradient-to-r from-blue-900/40 to-purple-900/40 border border-blue-800/50 rounded-lg space-y-3">
-                          <Label className="text-blue-200 flex items-center gap-2">
-                            <Sparkles className="w-4 h-4 text-blue-400" />
-                            Describe the email you want to send
-                          </Label>
-                          <Textarea
-                            value={aiPrompt}
-                            onChange={(e) => setAiPrompt(e.target.value)}
-                            placeholder="E.g., An upsell email for our Day Pass targeting users who have created 3 free resumes but haven't upgraded yet. Offer them a 20% discount code: PRO20."
-                            className="bg-gray-900/80 border-blue-800/50 text-white min-h-[100px] resize-none"
-                          />
-                          <div className="flex justify-end">
-                            <button
-                              onClick={handleGenerateAiTemplate}
-                              disabled={isGeneratingAi || !aiPrompt.trim()}
-                              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all disabled:opacity-50"
-                            >
-                              {isGeneratingAi ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                              {isGeneratingAi ? 'Generating Template...' : 'Generate Template'}
-                            </button>
-                          </div>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-
-                  <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4 max-h-96 overflow-y-auto">
-                    {filteredTemplates.map((template) => (
-                      <Card
-                        key={template.id}
-                        className={`cursor-pointer transition-all ${selectedTemplate?.id === template.id
-                          ? "bg-blue-500/20 border-blue-500 ring-2 ring-blue-500"
-                          : "bg-gray-800 border-gray-700 hover:border-blue-500"
-                          }`}
-                        onClick={() => handleTemplateSelect(template)}
-                      >
-                        <CardContent className="p-4">
-                          <div className="flex items-start justify-between mb-2">
-                            <div>
-                              <h4 className="text-white font-semibold">
-                                {template.name}
-                              </h4>
-                              <p className="text-gray-400 text-sm mt-1">
-                                {template.description}
-                              </p>
-                            </div>
-                            <span className="px-2 py-1 text-xs bg-gray-700 text-gray-300 rounded">
-                              {template.category}
-                            </span>
-                          </div>
-                          <div className="mt-3 text-xs text-gray-500">
-                            Scenario: {template.scenario.replace("_", " ")}
-                          </div>
-                          {selectedTemplate?.id === template.id && (
-                            <div className="mt-2 flex items-center text-blue-400 text-sm">
-                              <CheckCircle className="w-4 h-4 mr-1" />
-                              Selected
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Campaign Name - shown after template selection */}
-                {selectedTemplate && (
-                  <div className="mt-6">
-                    <Label className="text-gray-300">Campaign Name *</Label>
-                    <Input
-                      value={formData.campaignName}
-                      onChange={(e) =>
-                        handleInputChange("campaignName", e.target.value)
-                      }
-                      className="bg-gray-800 border-gray-700 text-white mt-1"
-                      placeholder="e.g., Welcome New Users - December 2024"
-                      minLength={5}
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      {formData.campaignName.length}/5 min characters
-                    </p>
-                  </div>
-                )}
-
-                {selectedTemplate && (
-                  <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-                    <p className="text-sm text-blue-300">
-                      <strong>Template Selected:</strong>{" "}
-                      {selectedTemplate.name}
-                    </p>
-                    <p className="text-xs text-gray-400 mt-1">
-                      Click "Next" to configure your target audience
-                    </p>
-                  </div>
-                )}
-              </motion.div>
-            )}
-
-            {currentStep === "audience" && (
-              <motion.div
-                key="audience"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                className="space-y-6"
-              >
-                <h3 className="text-xl font-semibold text-white mb-4">
-                  Select Target Users
-                </h3>
-
-                {/* Estimated Recipients - MOVED TO TOP */}
-                <div className="bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-blue-500/30 rounded-lg p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-sm text-gray-300 mb-1">
-                        Estimated Recipients
-                      </div>
-                      <div className="text-4xl font-bold text-white">
-                        {targetedCount.toLocaleString()}
-                      </div>
-                      <p className="text-xs text-gray-400 mt-2">
-                        {targetedCount === 0
-                          ? "Select filters or upload CSV to target users"
-                          : "users will receive this campaign"}
-                      </p>
-                    </div>
-                    <button
-                      onClick={handlePreviewTargets}
-                      disabled={previewingTargets || targetedCount === 0}
-                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <Eye className="w-4 h-4" />
-                      {previewingTargets ? "Loading..." : "Preview Users"}
-                    </button>
-                  </div>
-
-                  {/* Preview Users List */}
-                  {previewedEmails.length > 0 && (
-                    <div className="mt-4 pt-4 border-t border-blue-500/20">
-                      <h5 className="text-sm font-semibold text-white mb-2">
-                        Sample Recipients:
-                      </h5>
-                      <div className="max-h-40 overflow-y-auto space-y-1">
-                        {previewedEmails.map((email: string, idx: number) => (
-                          <div
-                            key={idx}
-                            className="text-sm text-gray-300 bg-gray-800/50 px-3 py-1.5 rounded"
-                          >
-                            {email}
-                          </div>
-                        ))}
-                      </div>
-                      <p className="text-xs text-gray-400 mt-2">
-                        Showing {previewedEmails.length} of {targetedCount} recipients
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                {/* CSV Upload Section */}
-                <div className="mb-6">
-                  <h4 className="text-lg font-semibold text-white mb-4">
-                    Bulk Import via CSV (Optional)
-                  </h4>
-                  <div className="p-6 bg-gray-800 border border-gray-700 rounded-lg border-dashed">
-                    <div className="flex flex-col items-center justify-center text-center">
-                      <div className="p-3 bg-blue-500/10 rounded-full mb-3">
-                        <Mail className="w-6 h-6 text-blue-400" />
-                      </div>
-                      <h5 className="text-white font-medium mb-1">Upload Recipient List</h5>
-                      <p className="text-sm text-gray-400 mb-4 max-w-md">
-                        Upload a CSV file with names and email addresses. We'll add these to your target audience.
-                      </p>
-                      
-                      <div className="w-full max-w-sm">
-                        <Input
-                          type="file"
-                          accept=".csv"
-                          onChange={handleCsvUpload}
-                          className="bg-gray-900 border-gray-700 text-gray-300 file:bg-gray-800 file:text-gray-300 file:border-0 file:mr-4 file:px-4 file:py-2 hover:file:bg-gray-700"
-                        />
-                      </div>
-                      
-                      <div className="mt-4 grid grid-cols-2 gap-4 text-left w-full max-w-md">
-                        <div className="text-xs text-gray-500">
-                          <span className="text-gray-400 font-semibold block mb-1">Format A:</span>
-                          John Doe, john@example.com
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          <span className="text-gray-400 font-semibold block mb-1">Format B:</span>
-                          john@example.com
-                        </div>
-                      </div>
-
-                      {formData.csvRecipients && formData.csvRecipients.length > 0 && (
-                        <div className="mt-6 flex items-center gap-2 px-3 py-1.5 bg-green-500/10 border border-green-500/20 rounded-full text-green-400 text-sm">
-                          <CheckCircle className="w-4 h-4" />
-                          {formData.csvRecipients.length} recipients imported
-                          <button 
-                            onClick={() => setFormData(prev => ({ ...prev, csvRecipients: [] }))}
-                            className="ml-2 text-gray-400 hover:text-white"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Filter Presets */}
-                <div className="mb-6">
-                  <FilterPresets
-                    onApplyPreset={handleApplyFilterPreset}
-                    currentFilters={formData.targetFilters}
-                    onSaveCustomPreset={handleSaveCustomPreset}
-                  />
-                </div>
-
-                {/* Target Audience Filters */}
-                <div className="mb-6">
-                  <h4 className="text-lg font-semibold text-white mb-4">
-                    Refine Audience (Optional)
-                  </h4>
-                  <CampaignFilters
-                    filters={formData.targetFilters}
-                    onChange={(filters) =>
-                      handleInputChange("targetFilters", filters)
-                    }
-                    twoColumn={true}
-                  />
-                </div>
-
-                {targetedCount > 0 && (
-                  <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
-                    <p className="text-sm text-green-300">
-                      ✓ Audience selected! Click "Next" to review your campaign
-                      before sending.
-                    </p>
-                  </div>
-                )}
-              </motion.div>
-            )}
-
-            {currentStep === "review" && (
-              <motion.div
-                key="review"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                className="space-y-6"
-              >
-                <h3 className="text-xl font-semibold text-white mb-4">
-                  Review Campaign
-                </h3>
-
-                {/* Email Template Preview */}
-                <div>
-                  <h4 className="text-lg font-semibold text-white mb-3">
-                    Email Template Preview
-                  </h4>
-                  <div className="bg-white border border-gray-700 rounded-lg p-6 max-h-96 overflow-y-auto">
-                    <div
-                      dangerouslySetInnerHTML={{ __html: formData.htmlContent }}
-                    />
-                  </div>
-                </div>
-
-                {/* Ready to Send - Filtered Users */}
-                <div className="bg-gradient-to-r from-green-500/20 to-blue-500/20 border border-green-500/30 rounded-lg p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <h4 className="text-sm font-semibold text-green-300 mb-1">
-                        Ready to Send
-                      </h4>
-                      <div className="text-4xl font-bold text-white">
-                        {targetedCount.toLocaleString()}
-                      </div>
-                      <p className="text-sm text-gray-300 mt-1">
-                        filtered users selected
-                      </p>
-                    </div>
-                    <div className="text-green-400">
-                      <CheckCircle className="w-16 h-16" />
-                    </div>
-                  </div>
-
-                  {/* List of Filtered User Emails */}
-                  {previewedEmails.length > 0 && (
-                    <div className="mt-4 pt-4 border-t border-green-500/20">
-                      <h5 className="text-sm font-semibold text-white mb-2">
-                        Sample Recipients:
-                      </h5>
-                      <div className="max-h-40 overflow-y-auto space-y-1">
-                        {previewedEmails.map((email: string, idx: number) => (
-                          <div
-                            key={idx}
-                            className="text-sm text-gray-300 bg-gray-800/50 px-3 py-1.5 rounded"
-                          >
-                            {email}
-                          </div>
-                        ))}
-                      </div>
-                      <p className="text-xs text-gray-400 mt-2">
-                        Showing {previewedEmails.length} of {targetedCount} recipients
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-                  <p className="text-sm text-blue-300">
-                    Review your campaign above. Click "Next" to choose when to send.
-                  </p>
-                </div>
-              </motion.div>
-            )}
-
-            {currentStep === "send" && (
-              <motion.div
-                key="schedule"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                className="space-y-6"
-              >
-                {/* Test Send Section */}
-                <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
-                  <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                    <Mail className="w-4 h-4" />
-                    Send Test Email
-                  </h3>
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <div className="flex-1">
-                      <Input
-                        value={testEmails}
-                        onChange={(e) => setTestEmails(e.target.value)}
-                        placeholder="Enter email addresses (comma separated)"
-                        className="bg-gray-900 border-gray-600 text-white"
-                      />
-                      <p className="text-xs text-gray-400 mt-2">
-                        Separate multiple emails with commas.
-                      </p>
-                    </div>
-                    <button
-                      onClick={handleSendTest}
-                      className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white border border-gray-600 rounded-lg whitespace-nowrap h-10"
-                    >
-                      Send Test
-                    </button>
-                  </div>
-                </div>
-
-                <h3 className="text-lg font-semibold text-white">
-                  Scheduling Options
-                </h3>
-
-                <div>
-                  <Label className="text-gray-300">Send Type *</Label>
-                  <div className="mt-2 space-y-2">
-                    {["now", "scheduled", "recurring"].map((type) => (
-                      <label
-                        key={type}
-                        className="flex items-center gap-3 p-3 bg-white border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50"
-                      >
-                        <input
-                          type="radio"
-                          name="sendType"
-                          value={type}
-                          checked={formData.sendType === type}
-                          onChange={(e) =>
-                            handleInputChange("sendType", e.target.value)
-                          }
-                          className="w-4 h-4 text-emerald-700"
-                        />
-                        <span className="text-slate-900 capitalize">
-                          {type === "now"
-                            ? "Send Now"
-                            : type === "scheduled"
-                              ? "Schedule for Later"
-                              : "Recurring Campaign"}
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                {formData.sendType === "scheduled" && (
-                  <div className="space-y-4">
-                    <div>
-                      <Label className="text-gray-300">Send Date *</Label>
-                      <Input
-                        type="date"
-                        value={formData.sendDate}
-                        onChange={(e) =>
-                          handleInputChange("sendDate", e.target.value)
-                        }
-                        className="bg-gray-800 border-gray-700 text-white mt-1"
-                        min={new Date().toISOString().split("T")[0]}
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-gray-300">Send Time *</Label>
-                      <Input
-                        type="time"
-                        value={formData.sendTime}
-                        onChange={(e) =>
-                          handleInputChange("sendTime", e.target.value)
-                        }
-                        className="bg-gray-800 border-gray-700 text-white mt-1"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-gray-300">Timezone</Label>
-                      <Input
-                        value={formData.timezone}
-                        onChange={(e) =>
-                          handleInputChange("timezone", e.target.value)
-                        }
-                        className="bg-gray-800 border-gray-700 text-white mt-1"
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {formData.sendType === "recurring" && (
-                  <div className="space-y-4">
-                    <div>
-                      <Label className="text-gray-300">Frequency *</Label>
-                      <Select
-                        value={formData.recurringFrequency}
-                        onValueChange={(value) =>
-                          handleInputChange("recurringFrequency", value)
-                        }
-                      >
-                        <SelectTrigger className="bg-gray-800 border-gray-700 text-white mt-1">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className="bg-gray-900 border-gray-700 text-white">
-                          <SelectItem
-                            value="daily"
-                            className="text-white focus:bg-gray-800"
-                          >
-                            Daily
-                          </SelectItem>
-                          <SelectItem
-                            value="weekly"
-                            className="text-white focus:bg-gray-800"
-                          >
-                            Weekly
-                          </SelectItem>
-                          <SelectItem
-                            value="monthly"
-                            className="text-white focus:bg-gray-800"
-                          >
-                            Monthly
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label className="text-gray-300">Start Date *</Label>
-                      <Input
-                        type="date"
-                        value={formData.sendDate}
-                        onChange={(e) =>
-                          handleInputChange("sendDate", e.target.value)
-                        }
-                        className="bg-gray-800 border-gray-700 text-white mt-1"
-                        min={new Date().toISOString().split("T")[0]}
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-gray-300">
-                        End Date (Optional)
-                      </Label>
-                      <Input
-                        type="date"
-                        value={formData.recurringEndDate}
-                        onChange={(e) =>
-                          handleInputChange("recurringEndDate", e.target.value)
-                        }
-                        className="bg-gray-800 border-gray-700 text-white mt-1"
-                        min={formData.sendDate}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                <div className="space-y-4 mt-6">
-                  <h3 className="text-lg font-semibold text-white">
-                    Goals and Tracking
-                  </h3>
-
-                  <div>
-                    <Label className="text-gray-300">Campaign Goal</Label>
-                    <Select
-                      value={formData.campaignGoal}
-                      onValueChange={(value) =>
-                        handleInputChange("campaignGoal", value)
-                      }
-                    >
-                      <SelectTrigger className="bg-gray-800 border-gray-700 text-white mt-1">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-gray-900 border-gray-700 text-white">
-                        <SelectItem
-                          value="clicks"
-                          className="text-white focus:bg-gray-800"
-                        >
-                          Clicks
-                        </SelectItem>
-                        <SelectItem
-                          value="conversions"
-                          className="text-white focus:bg-gray-800"
-                        >
-                          Conversions
-                        </SelectItem>
-                        <SelectItem
-                          value="opens"
-                          className="text-white focus:bg-gray-800"
-                        >
-                          Opens
-                        </SelectItem>
-                        <SelectItem
-                          value="signups"
-                          className="text-white focus:bg-gray-800"
-                        >
-                          Signups
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <Label className="text-gray-300">UTM Source</Label>
-                      <Input
-                        value={formData.utmSource}
-                        onChange={(e) =>
-                          handleInputChange("utmSource", e.target.value)
-                        }
-                        className="bg-gray-800 border-gray-700 text-white mt-1"
-                        placeholder="email"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-gray-300">UTM Medium</Label>
-                      <Input
-                        value={formData.utmMedium}
-                        onChange={(e) =>
-                          handleInputChange("utmMedium", e.target.value)
-                        }
-                        className="bg-gray-800 border-gray-700 text-white mt-1"
-                        placeholder="campaign"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-gray-300">UTM Campaign</Label>
-                      <Input
-                        value={formData.utmCampaign}
-                        onChange={(e) =>
-                          handleInputChange("utmCampaign", e.target.value)
-                        }
-                        className="bg-gray-800 border-gray-700 text-white mt-1"
-                        placeholder={formData.campaignName
-                          .toLowerCase()
-                          .replace(/\s+/g, "-")}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-
-
-        {/* Footer */}
-        <div className="flex items-center justify-between p-6 border-t border-gray-700 bg-gray-800">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-gray-400 hover:text-white transition-colors"
-          >
-            Cancel
-          </button>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             <button
-              onClick={() => handleSave("draft")}
-              disabled={loading}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 border border-gray-600 text-white rounded-lg transition-all disabled:opacity-50"
+              onClick={onClose}
+              className="p-3 bg-white/5 hover:bg-red-500/20 hover:text-red-400 rounded-xl transition-all border border-transparent hover:border-red-500/20"
             >
-              <Save className="w-4 h-4" />
-              Save Draft
+              <X className="w-5 h-5" />
             </button>
-            {!isFirstStep && (
-              <button
-                onClick={prevStep}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 border border-gray-600 text-white rounded-lg transition-all"
-              >
-                <ChevronLeft className="w-4 h-4" />
-                Back
-              </button>
-            )}
-            {!isLastStep ? (
-              <button
-                onClick={nextStep}
-                disabled={!canProceed()}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Next
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            ) : (
-              <button
-                onClick={() =>
-                  handleSave(
-                    formData.sendType === "now"
-                      ? "sent"
-                      : formData.sendType === "recurring"
-                        ? "recurring"
-                        : "scheduled"
-                  )
-                }
-                disabled={loading || !canProceed()}
-                className="flex items-center gap-2 px-4 py-2 bg-lime-500 hover:bg-lime-600 text-black font-semibold rounded-lg transition-all disabled:opacity-50"
-              >
-                <Send className="w-4 h-4" />
-                {formData.sendType === "now"
-                  ? "Send Now"
-                  : formData.sendType === "scheduled"
-                    ? "Schedule"
-                    : "Start Recurring"}
-              </button>
-            )}
           </div>
+        </div>
+
+        {/* Progress Tracker (2 Steps) */}
+        <div className="px-8 py-6 bg-white/[0.01] border-b border-white/5">
+          <div className="flex items-center justify-center gap-12 max-w-lg mx-auto">
+            {steps.map((step, idx) => {
+              const isActive = step.id === currentStep;
+              const isCompleted = currentStepIndex > idx;
+              return (
+                <React.Fragment key={step.id}>
+                  <div className="flex flex-col items-center gap-3 relative">
+                    <button
+                      onClick={() => isCompleted && setCurrentStep(step.id)}
+                      className={`w-12 h-12 rounded-2xl border flex items-center justify-center transition-all duration-500 ${
+                        isActive 
+                          ? 'bg-emerald-500 border-emerald-400 text-black shadow-[0_0_30px_rgba(16,185,129,0.4)]' 
+                          : isCompleted 
+                            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
+                            : 'bg-white/5 border-white/5 text-white/20'
+                      }`}
+                    >
+                      {isCompleted ? <CheckCircle className="w-6 h-6" /> : <step.icon className="w-6 h-6" />}
+                    </button>
+                    <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${isActive ? 'text-emerald-400' : 'text-white/20'}`}>
+                      {step.label}
+                    </span>
+                  </div>
+                  {idx < steps.length - 1 && (
+                    <div className="w-24 h-[2px] bg-white/5 relative overflow-hidden">
+                      <motion.div 
+                        initial={{ scaleX: 0 }}
+                        animate={{ scaleX: isCompleted ? 1 : 0 }}
+                        className="absolute inset-0 bg-emerald-500 origin-left"
+                      />
+                    </div>
+                  )}
+                </React.Fragment>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Content Area */}
+        <div className="flex-1 overflow-y-auto p-8 scrollbar-hide">
+          <div className="max-w-4xl mx-auto">
+            <AnimatePresence mode="wait">
+              {currentStep === "design" && (
+                <motion.div key="design" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="space-y-8">
+                  <div className="flex justify-center mb-8">
+                    <Tabs value={activeDesignTab} onValueChange={(v: any) => setActiveDesignTab(v)} className="bg-white/5 p-1 rounded-2xl border border-white/5">
+                        <TabsList className="bg-transparent border-0">
+                            <TabsTrigger value="template" className="rounded-xl px-8 data-[state=active]:bg-emerald-500 data-[state=active]:text-black text-[10px] font-black uppercase tracking-widest transition-all">1. Choose Template</TabsTrigger>
+                            <TabsTrigger value="editor" className="rounded-xl px-8 data-[state=active]:bg-emerald-500 data-[state=active]:text-black text-[10px] font-black uppercase tracking-widest transition-all">2. Edit Content</TabsTrigger>
+                            <TabsTrigger value="preview" className="rounded-xl px-8 data-[state=active]:bg-emerald-500 data-[state=active]:text-black text-[10px] font-black uppercase tracking-widest transition-all">3. Visual Preview</TabsTrigger>
+                        </TabsList>
+                    </Tabs>
+                  </div>
+
+                  {activeDesignTab === "template" && (
+                    <section className="space-y-8">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <h3 className="text-xl font-black text-white uppercase tracking-tight">Blueprints</h3>
+                                <p className="text-white/30 text-xs font-bold mt-1">Select a starting protocol</p>
+                            </div>
+                            <button onClick={() => setShowAiPrompt(!showAiPrompt)} className={`flex items-center gap-2 px-4 py-2 rounded-xl border ${showAiPrompt ? 'bg-purple-600 border-purple-500 text-white' : 'bg-white/5 border-white/5 text-white/40 hover:text-white'}`}>
+                                <Sparkles className="w-4 h-4" />
+                                <span className="text-[10px] font-black uppercase tracking-widest">Build with AI</span>
+                            </button>
+                        </div>
+                        {showAiPrompt && (
+                             <div className="p-6 bg-purple-500/5 border border-purple-500/20 rounded-[2rem] space-y-4">
+                                <Label className="text-purple-300 text-[10px] font-black uppercase tracking-widest flex items-center gap-2"><Sparkles className="w-3.5 h-3.5" /> Define Mission</Label>
+                                <Textarea value={aiPrompt} onChange={(e) => setAiPrompt(e.target.value)} placeholder="Describe the campaign mission..." className="bg-black/40 border-purple-500/20 text-white rounded-2xl min-h-[100px]" />
+                                <button onClick={handleGenerateAiTemplate} disabled={isGeneratingAi} className="w-full py-4 bg-purple-600 hover:bg-purple-500 text-white rounded-xl font-black uppercase tracking-widest text-[10px]">
+                                    {isGeneratingAi ? <Loader2 className="w-4 h-4 animate-spin inline mr-2" /> : <Sparkles className="w-4 h-4 inline mr-2" />} Synthesize
+                                </button>
+                             </div>
+                        )}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {filteredTemplates.map((template) => (
+                                <div key={template.id} onClick={() => handleTemplateSelect(template)} className={`p-5 rounded-[2rem] border transition-all cursor-pointer ${selectedTemplate?.id === template.id ? 'bg-emerald-500/10 border-emerald-500/50 shadow-xl' : 'bg-white/[0.02] border-white/5 hover:border-white/20'}`}>
+                                    <h4 className="text-sm font-black text-white uppercase">{template.name}</h4>
+                                    <p className="text-[10px] text-white/30 font-bold mt-1">{template.description}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </section>
+                  )}
+
+                  {activeDesignTab === "editor" && (
+                    <section className="space-y-6">
+                        <div className="grid grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                                <Label className="text-[10px] font-black text-white/30 uppercase tracking-widest">Internal Name</Label>
+                                <Input value={formData.campaignName} onChange={(e) => handleInputChange("campaignName", e.target.value)} className="bg-white/5 border-white/5 rounded-2xl py-6" />
+                            </div>
+                            <div className="space-y-2">
+                                <Label className="text-[10px] font-black text-white/30 uppercase tracking-widest">Subject Line</Label>
+                                <Input value={formData.subject} onChange={(e) => handleInputChange("subject", e.target.value)} className="bg-white/5 border-white/5 rounded-2xl py-6" />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                                <Label className="text-[10px] font-black text-white/30 uppercase tracking-widest">From Name</Label>
+                                <Input value={formData.fromName} onChange={(e) => handleInputChange("fromName", e.target.value)} className="bg-white/5 border-white/5 rounded-2xl py-6" />
+                            </div>
+                            <div className="space-y-2">
+                                <Label className="text-[10px] font-black text-white/30 uppercase tracking-widest">From Email</Label>
+                                <Input value={formData.fromEmail} onChange={(e) => handleInputChange("fromEmail", e.target.value)} className="bg-white/5 border-white/5 rounded-2xl py-6" />
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-[10px] font-black text-white/30 uppercase tracking-widest">HTML Payload</Label>
+                            <Textarea value={formData.htmlContent} onChange={(e) => handleInputChange("htmlContent", e.target.value)} className="bg-white/5 border-white/5 rounded-2xl min-h-[400px] font-mono text-xs" />
+                        </div>
+                    </section>
+                  )}
+
+                  {activeDesignTab === "preview" && (
+                    <section className="bg-white rounded-[2.5rem] p-10 shadow-2xl min-h-[500px] border border-white/10">
+                        <div dangerouslySetInnerHTML={{ 
+                          __html: formData.htmlContent.replace(/{{appUrl}}/g, window.location.origin) 
+                        }} />
+                    </section>
+                  )}
+                </motion.div>
+              )}
+
+              {currentStep === "dispatch" && (
+                <motion.div key="dispatch" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="space-y-10">
+                  {/* Email Preview Mini-Card - ADDED AS REQUESTED */}
+                  <div className="bg-[#111111] border border-white/10 rounded-[2rem] p-6 flex items-center justify-between group">
+                    <div className="flex items-center gap-4">
+                        <div className="p-3 bg-white/5 rounded-xl text-white/40"><Mail className="w-5 h-5" /></div>
+                        <div>
+                            <p className="text-[10px] font-black text-white/30 uppercase tracking-widest">Current Payload</p>
+                            <p className="text-sm font-bold text-white">{formData.subject || "No Subject"}</p>
+                        </div>
+                    </div>
+                    <button onClick={() => { setCurrentStep("design"); setActiveDesignTab("preview"); }} className="text-[10px] font-black uppercase text-emerald-500 border border-emerald-500/20 px-4 py-2 rounded-xl hover:bg-emerald-500/10 transition-all">Review Design</button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <section className="space-y-6">
+                        <h4 className="text-lg font-black text-white uppercase">Sector Filtering</h4>
+                        <div className="bg-white/[0.02] border border-white/5 rounded-[2rem] p-6">
+                            <FilterPresets onApplyPreset={handleApplyFilterPreset} currentFilters={formData.targetFilters} />
+                            <div className="mt-6"><CampaignFilters filters={formData.targetFilters} onChange={(f) => handleInputChange("targetFilters", f)} /></div>
+                        </div>
+                    </section>
+                    
+                    <section className="space-y-6">
+                        <h4 className="text-lg font-black text-white uppercase">Bulk Ingestion</h4>
+                        <div className="bg-white/[0.02] border border-white/5 rounded-[2rem] p-8 border-dashed flex flex-col items-center text-center">
+                            <Database className="w-8 h-8 text-emerald-500 mb-4" />
+                            <p className="text-[10px] text-white/30 font-bold mb-6">Upload CSV or XLSX protocols</p>
+                            <Input type="file" accept=".csv,.xlsx,.xls" onChange={handleFileUpload} className="bg-white/5 border-white/5 h-12 file:bg-white/10 file:text-white file:rounded-lg file:px-4" />
+                            {formData.csvRecipients && formData.csvRecipients.length > 0 && (
+                                <div className="mt-4 px-4 py-2 bg-emerald-500/10 text-emerald-400 rounded-xl text-[10px] font-black uppercase">{formData.csvRecipients.length} Identities Merged</div>
+                            )}
+                        </div>
+
+                        <div className="bg-emerald-600 rounded-[2rem] p-8 text-black">
+                            <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Total Target Base</p>
+                            <h2 className="text-5xl font-black tracking-tighter">{targetedCount.toLocaleString()}</h2>
+                        </div>
+                    </section>
+                  </div>
+
+                  <section className="bg-white/[0.02] border border-white/5 rounded-[2.5rem] p-10">
+                    <h3 className="text-lg font-black text-white uppercase mb-8 flex items-center gap-3"><Clock className="w-5 h-5 text-emerald-500" /> Temporal Dispatch</h3>
+                    <div className="grid grid-cols-3 gap-4">
+                      {['now', 'scheduled', 'recurring'].map(type => (
+                        <div key={type} onClick={() => handleInputChange("sendType", type)} className={`p-6 rounded-[2rem] border transition-all cursor-pointer ${formData.sendType === type ? 'bg-emerald-500 border-emerald-400 text-black' : 'bg-white/[0.02] border-white/5 text-white hover:border-white/20'}`}>
+                          <h4 className="text-sm font-black uppercase">{type}</h4>
+                        </div>
+                      ))}
+                    </div>
+                    {formData.sendType === "scheduled" && (
+                        <div className="grid grid-cols-2 gap-4 mt-8">
+                            <Input type="date" value={formData.sendDate} onChange={(e) => handleInputChange("sendDate", e.target.value)} className="bg-black/40 border-white/5 rounded-2xl py-6" />
+                            <Input type="time" value={formData.sendTime} onChange={(e) => handleInputChange("sendTime", e.target.value)} className="bg-black/40 border-white/5 rounded-2xl py-6" />
+                        </div>
+                    )}
+                  </section>
+
+                  <section className="bg-white/[0.02] border border-white/5 rounded-[2.5rem] p-10">
+                    <h3 className="text-lg font-black text-white uppercase mb-8 flex items-center gap-3"><Mail className="w-5 h-5 text-emerald-500" /> Test Dispatch</h3>
+                    <div className="flex gap-4">
+                        <Input value={testEmails} onChange={(e) => setTestEmails(e.target.value)} className="bg-black/40 border-white/5 rounded-2xl py-6" />
+                        <button onClick={handleSendTest} className="px-8 py-4 bg-white/5 hover:bg-white/10 rounded-2xl font-black text-[10px] uppercase border border-white/5">Deploy Test</button>
+                    </div>
+                  </section>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+
+        {/* Command Footer */}
+        <div className="h-24 px-8 border-t border-white/5 bg-white/2 backdrop-blur-md flex items-center justify-between z-20">
+          <Button variant="ghost" onClick={prevStep} disabled={currentStepIndex === 0} className="text-white/40 hover:text-white font-black text-xs uppercase tracking-widest"><ChevronLeft className="w-5 h-5 mr-2" /> Reverse</Button>
+          <div className="flex items-center gap-4">
+            <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em]">Step {currentStepIndex + 1} of {steps.length}</span>
+            <div className="flex gap-1.5">{steps.map((s, i) => (<div key={i} className={`w-12 h-1 rounded-full ${i <= currentStepIndex ? 'bg-emerald-500' : 'bg-white/10'}`} />))}</div>
+          </div>
+          {currentStepIndex < steps.length - 1 ? (
+            <Button onClick={nextStep} className="bg-emerald-600 hover:bg-emerald-500 text-black font-black rounded-2xl px-12 py-6">Next Step <ChevronRight className="w-5 h-5 ml-2" /></Button>
+          ) : (
+            <Button onClick={() => handleSave(formData.sendType === "now" ? "sent" : formData.sendType === "recurring" ? "recurring" : "scheduled")} disabled={loading} className="bg-emerald-600 hover:bg-emerald-500 text-black font-black rounded-2xl px-12 py-6">{loading ? <Loader2 className="animate-spin" /> : <Send className="w-5 h-5 mr-2" />} Dispatch Matrix</Button>
+          )}
         </div>
       </motion.div >
     </motion.div >
