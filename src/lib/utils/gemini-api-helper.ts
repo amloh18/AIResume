@@ -76,7 +76,8 @@ function getGeminiApiKeys(): Array<{ name: string; key: string }> {
     process.env.gemini_api_key ||
     process.env.GEMINI_API_KEY ||
     process.env.gemini_api_key1 ||
-    process.env.GEMINI_API_KEY1;
+    process.env.GEMINI_API_KEY1 ||
+    process.env.NEXT_PUBLIC_GEMINI_API_KEY;
 
   if (secondaryKey) {
     keys.push({
@@ -109,8 +110,9 @@ async function callGemini(options: GeminiCallOptions, apiKey: string): Promise<s
   try {
     const genAI = new GoogleGenAI({ apiKey });
 
-    // Use gemini-2.0-flash-lite-preview-02-05 as default for speed and cost efficiency
-    const modelName = options.model || 'gemini-2.0-flash-lite-preview-02-05';
+    // Use gemini-2.5-flash as default for speed and cost efficiency
+    const primaryModel = options.model || 'gemini-2.5-flash';
+    const fallbackModel = 'gemini-2.0-flash';
 
     // Combine system prompt and user prompt
     let fullPrompt = options.prompt;
@@ -118,15 +120,31 @@ async function callGemini(options: GeminiCallOptions, apiKey: string): Promise<s
       fullPrompt = `${options.systemPrompt}\n\n${options.prompt}`;
     }
 
-    // Generate content using the new SDK API
-    const result = await genAI.models.generateContent({
-      model: modelName,
-      contents: fullPrompt,
-      config: {
-        temperature: options.temperature || 0.7,
-        maxOutputTokens: options.maxTokens || 2048,
-      }
-    });
+    let result;
+    let usedModel = primaryModel;
+
+    try {
+      // Generate content using the new SDK API
+      result = await genAI.models.generateContent({
+        model: primaryModel,
+        contents: [{ role: 'user', parts: [{ text: fullPrompt }] }],
+        config: {
+          temperature: options.temperature || 0.7,
+          maxOutputTokens: options.maxTokens || 2048,
+        }
+      });
+    } catch (primaryError) {
+      console.warn(`⚠️ ${primaryModel} failed with key, trying ${fallbackModel}...`);
+      usedModel = fallbackModel;
+      result = await genAI.models.generateContent({
+        model: fallbackModel,
+        contents: [{ role: 'user', parts: [{ text: fullPrompt }] }],
+        config: {
+          temperature: options.temperature || 0.7,
+          maxOutputTokens: options.maxTokens || 2048,
+        }
+      });
+    }
 
     const text = result.text || '';
 
@@ -149,7 +167,7 @@ async function callGemini(options: GeminiCallOptions, apiKey: string): Promise<s
     try {
       await ActivityLogService.logAI({
         userId: options.userId,
-        model: modelName,
+        model: usedModel,
         tokensUsed,
         cost,
         prompt: fullPrompt.substring(0, 1000), // Log only the first 1000 chars of prompt

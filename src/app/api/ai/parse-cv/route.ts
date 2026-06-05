@@ -1,30 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import mammoth from 'mammoth';
-import { GoogleGenAI } from '@google/genai';
+import { callGeminiWithAllKeysFallback } from '@/lib/utils/gemini-api-fallback';
 
 // pdf-parse is loaded dynamically to avoid bundling test files
-
-// Get API key with fallback
-function getGeminiApiKey(): string | null {
-  return (
-    process.env.gemini_api_key || 
-    process.env.GEMINI_API_KEY ||
-    process.env.gemini_api_key1 ||
-    process.env.GEMINI_API_KEY1 ||
-    process.env.NEXT_PUBLIC_GEMINI_API_KEY ||
-    null
-  );
-}
-
-function getGeminiApiKey2(): string | null {
-  return (
-    process.env.gemini_api_key2 || 
-    process.env.GEMINI_API_KEY2 ||
-    process.env['GEMINI_API-KEY2'] ||
-    process.env['gemini_api-key2'] ||
-    null
-  );
-}
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -51,50 +29,22 @@ Date formatting rules: Prefer YYYY-MM. If only a year is known use YYYY. If date
 
   const prompt = `${system}\n\nCV Content:\n${content}`;
   
-  // Use Gemini API with fallback
-  const apiKeys = [
-    { name: 'gemini_api_key', key: getGeminiApiKey() },
-    { name: 'gemini_api_key2', key: getGeminiApiKey2() }
-  ].filter(k => k.key);
-
-  if (apiKeys.length === 0) {
-    throw new Error('No Gemini API keys configured');
+  try {
+    const text = await callGeminiWithAllKeysFallback(prompt, {
+      action: 'cv_parsing',
+      endpoint: '/api/ai/parse-cv'
+    });
+    
+    // Clean possible code fences
+    const cleaned = text
+      .replace(/```json[\s\S]*?\n/g, '')
+      .replace(/```/g, '')
+      .trim();
+    return cleaned;
+  } catch (error: any) {
+    console.error('AI parsing error:', error);
+    throw new Error(`AI error: ${error.message}`);
   }
-
-  let lastError: Error | null = null;
-
-  for (const { name, key } of apiKeys) {
-    try {
-      console.log(`🔑 Attempting Gemini API call with ${name}...`);
-      const genAI = new GoogleGenAI({ apiKey: key! });
-      const result = await genAI.models.generateContent({
-        model: 'gemini-2.0-flash-lite-preview-02-05',
-        contents: prompt
-      });
-      const text = result.text || '';
-      
-      if (text) {
-        console.log(`✅ Gemini API call successful with ${name}`);
-        // Clean possible code fences
-        const cleaned = text
-          .replace(/```json[\s\S]*?\n/g, '')
-          .replace(/```/g, '')
-          .trim();
-        return cleaned;
-      }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error(`❌ ${name} failed:`, errorMessage);
-      lastError = error instanceof Error ? error : new Error(String(error));
-      
-      if (apiKeys.indexOf(apiKeys.find(k => k.name === name)!) === apiKeys.length - 1) {
-        throw new Error(`AI error: ${errorMessage}`);
-      }
-      console.log(`⏭️  Continuing to next API key...`);
-    }
-  }
-
-  throw lastError || new Error('Failed to call Gemini API');
 }
 
 async function extractFromPDF(buffer: Buffer): Promise<string> {

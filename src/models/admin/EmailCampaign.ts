@@ -124,6 +124,12 @@ export interface IEmailCampaign extends Document {
   templateId?: string;
   templateName?: string;
 
+  // CSV Recipients
+  csvRecipients?: Array<{
+    name: string;
+    email: string;
+  }>;
+
   // Creator info
   createdBy: mongoose.Types.ObjectId;
   createdByName: string;
@@ -286,6 +292,10 @@ const EmailCampaignSchema = new Schema<IEmailCampaign>(
     replyTo: String,
     templateId: String,
     templateName: String,
+    csvRecipients: [{
+      name: String,
+      email: String,
+    }],
     createdBy: {
       type: Schema.Types.ObjectId,
       required: true,

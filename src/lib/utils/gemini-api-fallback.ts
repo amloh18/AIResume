@@ -51,7 +51,8 @@ function getAllGeminiApiKeys(): Array<{ name: string; key: string }> {
     process.env.gemini_api_key ||
     process.env.GEMINI_API_KEY ||
     process.env.gemini_api_key1 ||
-    process.env.GEMINI_API_KEY1;
+    process.env.GEMINI_API_KEY1 ||
+    process.env.NEXT_PUBLIC_GEMINI_API_KEY;
   if (key1) {
     keys.push({ name: 'gemini_api_key', key: key1 });
   }
@@ -101,26 +102,45 @@ export async function callGeminiWithAllKeysFallback(
       console.log(`🔑 Attempting Gemini API call with ${name}...`);
       const genAI = new GoogleGenAI({ apiKey: key });
       
-      const modelName = options?.model || 'gemini-2.0-flash-lite-preview-02-05';
+      const primaryModel = options?.model || 'gemini-2.5-flash';
+      const fallbackModel = 'gemini-2.0-flash';
+      
       const contents = typeof prompt === 'string' 
         ? [{ role: 'user', parts: [{ text: prompt }] }]
         : prompt;
 
       const callStart = Date.now();
-      const result = await genAI.models.generateContent({
-        model: modelName,
-        contents,
-        config: {
-          temperature: options?.temperature || 0.7,
-          maxOutputTokens: options?.maxTokens || 2048,
-        }
-      });
+      let result;
+      let usedModel = primaryModel;
+
+      try {
+        result = await genAI.models.generateContent({
+          model: primaryModel,
+          contents,
+          config: {
+            temperature: options?.temperature || 0.7,
+            maxOutputTokens: options?.maxTokens || 2048,
+          }
+        });
+      } catch (primaryError) {
+        console.warn(`⚠️ ${primaryModel} failed with ${name}, trying ${fallbackModel}...`);
+        usedModel = fallbackModel;
+        result = await genAI.models.generateContent({
+          model: fallbackModel,
+          contents,
+          config: {
+            temperature: options?.temperature || 0.7,
+            maxOutputTokens: options?.maxTokens || 2048,
+          }
+        });
+      }
+
       const latencySeconds = (Date.now() - callStart) / 1000;
 
       const text = result.text || '';
 
       if (text) {
-        console.log(`✅ Gemini API call successful with ${name}`);
+        console.log(`✅ Gemini API call successful with ${name} using ${usedModel}`);
 
         // Try to get token usage if available in the SDK response, otherwise estimate
         const usageMetadata = (result as any).usageMetadata;
@@ -138,7 +158,7 @@ export async function callGeminiWithAllKeysFallback(
         try {
           await ActivityLogService.logAI({
             userId: options?.userId,
-            model: modelName,
+            model: usedModel,
             tokensUsed,
             cost,
             prompt: promptString.substring(0, 1000), // Log only the first 1000 chars
@@ -162,7 +182,7 @@ export async function callGeminiWithAllKeysFallback(
             properties: {
               $ai_trace_id: randomUUID(),
               $ai_provider: 'google',
-              $ai_model: modelName,
+              $ai_model: usedModel,
               $ai_input_tokens: inputTokens,
               $ai_output_tokens: outputTokens,
               $ai_latency: latencySeconds,
