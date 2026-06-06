@@ -256,26 +256,48 @@ async function handleProPlanPayment(
   let amount = regionalPriceObj ? (regionalPriceObj.price * 100) : 0;
   let currency = regionalPriceObj?.currency || 'USD';
 
-  // If amount is still 0, try to use Polar IDs directly on the plan root
-  if (amount === 0) {
-    if (planKey.includes('monthly')) {
-      amount = (plan.price_monthly || 0) * 100;
+  // Always resolve the product ID for the given interval if not set by regional pricing
+  if (!productId) {
+    if (interval === 'monthly') {
+      productId = plan.polarProductId_monthly;
+    } else if (interval === 'yearly') {
+      productId = plan.polarProductId_yearly;
+    } else if (interval === 'quarterly') {
+      productId = plan.polarProductId_quarterly;
+    } else if (interval === 'one-time') {
+      productId = plan.polarProductId_one_time;
+    }
+  }
+
+  // Always resolve the price ID for the given interval if not set by regional pricing
+  if (!priceId) {
+    if (interval === 'monthly') {
       priceId = plan.polarPriceId_monthly;
-      productId = productId || plan.polarProductId_monthly;
-    } else if (planKey.includes('yearly')) {
-      amount = (plan.price_yearly || 0) * 100;
+    } else if (interval === 'yearly') {
       priceId = plan.polarPriceId_yearly;
-      productId = productId || plan.polarProductId_yearly;
-    } else if (planKey.includes('quarterly')) {
-      amount = (plan.price_quarterly || 0) * 100;
+    } else if (interval === 'quarterly') {
       priceId = plan.polarPriceId_quarterly;
-      productId = productId || plan.polarProductId_quarterly;
+    } else if (interval === 'one-time') {
+      priceId = plan.polarPriceId_one_time;
+    }
+  }
+
+  // If amount is still 0, try to use USD price from the plan root
+  if (amount === 0) {
+    if (interval === 'monthly') {
+      amount = (plan.price_monthly || 0) * 100;
+    } else if (interval === 'yearly') {
+      amount = (plan.price_yearly || 0) * 100;
+    } else if (interval === 'quarterly') {
+      amount = (plan.price_quarterly || 0) * 100;
+    } else if (interval === 'one-time') {
+      amount = (plan.price_one_time || 0) * 100;
     }
   }
 
   console.log('Polar pricing:', {
     planKey,
-    interval,
+    interval: interval,
     amount,
     currency,
     priceId,
@@ -305,23 +327,33 @@ async function handleProPlanPayment(
       session_id: '{CHECKOUT_SESSION_ID}'
     });
 
+    // Build metadata and clean any empty strings/null/undefined to satisfy Polar's validation constraints
+    const metadata: Record<string, string> = {};
+    const rawMetadata = {
+      planKey,
+      userId: user._id.toString(),
+      planId: plan._id.toString(),
+      interval: interval,
+      region: countryCode,
+      couponCode: couponDiscount?.code || '',
+      couponId: couponDiscount?.id || '',
+      prorationCreditApplied: prorationCredit.toString(),
+      transitionType: transition.type
+    };
+
+    for (const [key, value] of Object.entries(rawMetadata)) {
+      if (value !== null && value !== undefined && value !== '') {
+        metadata[key] = value;
+      }
+    }
+
     const checkoutResponse = await PolarService.createCheckout({
       productPriceId: priceId!,
       productId: productId,
       customerEmail: billingDetails?.email || user.email,
       customerName: billingDetails?.name || `${user.firstName || ''} ${user.lastName || ''}`.trim(),
       successUrl: successUrl,
-      metadata: {
-        planKey,
-        userId: user._id.toString(),
-        planId: plan._id.toString(),
-        interval,
-        region: countryCode,
-        couponCode: couponDiscount?.code || '',
-        couponId: couponDiscount?.id || '',
-        prorationCreditApplied: prorationCredit.toString(),
-        transitionType: transition.type
-      }
+      metadata: metadata
     });
 
     if (!checkoutResponse.success || !checkoutResponse.url) {
