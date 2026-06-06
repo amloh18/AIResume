@@ -14,11 +14,198 @@ export interface SubscriptionActivationResult {
   error?: string;
 }
 
+export const PLAN_TIERS: Record<string, number> = {
+  free: 1, // Basic
+  starter_monthly: 1, // Basic
+  starter_yearly: 1, // Basic
+  focused_monthly: 2, // Mid
+  focused_yearly: 2, // Mid
+  smart_quarterly: 3, // Pro
+  smart_yearly: 3, // Pro
+  pro_monthly: 2,
+  pro_quarterly: 2,
+  pro_yearly: 3,
+  pro_lifetime: 3
+};
+
 /**
  * Subscription Management Service
  * Handles subscription activation, renewal, and time-based calculations
  */
 class SubscriptionService {
+  /**
+   * Get plan tier
+   */
+  getPlanTier(planKey: string): number {
+    if (!planKey) return 1;
+    return PLAN_TIERS[planKey] || 1;
+  }
+
+  /**
+   * Analyze transition between two plans based on hierarchy and frequency
+   */
+  analyzeSubscriptionTransition(
+    currentPlanKey: string,
+    targetPlanKey: string,
+    currentInterval?: string,
+    targetInterval?: string
+  ): {
+    type: 'upgrade' | 'downgrade' | 'cross_cycle_upgrade' | 'none';
+    message: string;
+    isDowngrade: boolean;
+    isImmediate: boolean;
+  } {
+    const currentTier = this.getPlanTier(currentPlanKey);
+    const targetTier = this.getPlanTier(targetPlanKey);
+    
+    const curInterval = currentInterval || (currentPlanKey.includes('yearly') ? 'yearly' : currentPlanKey.includes('quarterly') ? 'quarterly' : 'monthly');
+    const tgtInterval = targetInterval || (targetPlanKey.includes('yearly') ? 'yearly' : targetPlanKey.includes('quarterly') ? 'quarterly' : 'monthly');
+
+    if (currentPlanKey === targetPlanKey) {
+      return { type: 'none', message: 'No plan change selected', isDowngrade: false, isImmediate: true };
+    }
+
+    if (targetTier > currentTier) {
+      return {
+        type: 'upgrade',
+        message: 'Upgrade to a higher tier plan. You will receive immediate access with prorated credit.',
+        isDowngrade: false,
+        isImmediate: true
+      };
+    }
+
+    if (targetTier < currentTier) {
+      return {
+        type: 'downgrade',
+        message: 'Downgrade to a lower tier plan. This change will take effect at the end of your current billing cycle.',
+        isDowngrade: true,
+        isImmediate: false
+      };
+    }
+
+    // Same tier: check frequency
+    // Monthly/Quarterly to Yearly -> upgrade (Cross-Cycle Upgrade)
+    const isCurrentShorter = curInterval === 'monthly' || curInterval === 'quarterly';
+    const isTargetYearly = tgtInterval === 'yearly';
+
+    if (isCurrentShorter && isTargetYearly) {
+      return {
+        type: 'cross_cycle_upgrade',
+        message: 'Switching to annual billing. Immediate switch with prorated credit applied.',
+        isDowngrade: false,
+        isImmediate: true
+      };
+    }
+
+    // Changing same tier to shorter frequency (e.g. focused_yearly to focused_monthly) -> downgrade
+    if (curInterval === 'yearly' && (tgtInterval === 'monthly' || tgtInterval === 'quarterly')) {
+      return {
+        type: 'downgrade',
+        message: 'Downgrade billing frequency. This change will take effect at the end of your current billing cycle.',
+        isDowngrade: true,
+        isImmediate: false
+      };
+    }
+
+    // Same tier, same frequency
+    return { type: 'none', message: 'No billing cycle change selected', isDowngrade: false, isImmediate: true };
+  }
+
+  /**
+   * Calculate proration credit based on calendar days remaining in current period
+   */
+  calculateProrationCredit(
+    currentPeriodStart: Date | string | undefined,
+    currentPeriodEnd: Date | string | undefined,
+    purchasePrice: number | undefined
+  ): number {
+    if (!currentPeriodStart || !currentPeriodEnd || !purchasePrice || purchasePrice <= 0) {
+      return 0;
+    }
+
+    const start = new Date(currentPeriodStart);
+    const end = new Date(currentPeriodEnd);
+    const now = new Date();
+
+    if (now >= end || now <= start) {
+      return 0;
+    }
+
+    const oneDay = 24 * 60 * 60 * 1000;
+    const totalDays = Math.ceil((end.getTime() - start.getTime()) / oneDay);
+    const remainingDays = Math.ceil((end.getTime() - now.getTime()) / oneDay);
+
+    if (totalDays <= 0 || remainingDays <= 0) {
+      return 0;
+    }
+
+    const credit = (remainingDays / totalDays) * purchasePrice;
+    return Math.round(credit * 100) / 100;
+  }
+
+  /**
+   * Apply a pending downgrade to a user's subscription
+   */
+  async applyPendingDowngrade(userId: string): Promise<boolean> {
+    try {
+      await connectToDatabase();
+      const user = await User.findById(userId);
+      if (!user || !user.subscription || user.subscription.downgradeStatus !== 'pending') {
+        return false;
+      }
+
+      const newPlanKey = user.subscription.pendingDowngradePlanKey;
+      if (!newPlanKey) return false;
+
+      const PricingPlan = await getAdminPricingPlan();
+      const plan = await PricingPlan.findOne({ key: newPlanKey });
+      if (!plan) {
+        console.error(`Downgrade plan ${newPlanKey} not found for user ${userId}`);
+        return false;
+      }
+
+      const now = new Date();
+      const expiresAt = new Date(now);
+      expiresAt.setMonth(expiresAt.getMonth() + 1); // Default to monthly interval
+
+      // Switch to new plan
+      user.currentPlanKey = newPlanKey;
+      user.subscription.planKey = newPlanKey as any;
+      user.subscription.downgradeStatus = 'none';
+      user.subscription.pendingDowngradePlanKey = null;
+      
+      // If the target plan is free / starter_monthly, activate it fully
+      if (newPlanKey === 'starter_monthly' || newPlanKey === 'free') {
+        user.subscription.status = 'active';
+        user.subscription.provider = 'none';
+        user.subscription.purchasePrice = 0;
+        user.subscription.autoRenew = true;
+        user.subscription.accessExpiresAt = expiresAt;
+        user.subscription.currentPeriodStart = now;
+        user.subscription.currentPeriodEnd = expiresAt;
+        user.subscription.usageResetDate = expiresAt;
+      } else {
+        // Paid plan downgrade
+        user.subscription.status = 'active'; // Transition is successful
+        user.subscription.currentPeriodStart = now;
+        user.subscription.currentPeriodEnd = expiresAt;
+        user.subscription.accessExpiresAt = expiresAt;
+        user.subscription.usageResetDate = expiresAt;
+      }
+
+      await user.save();
+
+      // Initialize credits for new plan
+      await creditService.initializeCredits(userId, newPlanKey);
+
+      console.log(`Successfully completed downgrade transition to ${newPlanKey} for user ${userId}`);
+      return true;
+    } catch (error) {
+      console.error(`Error applying downgrade for user ${userId}:`, error);
+      return false;
+    }
+  }
+
   /**
    * Create a new subscription document and update the user's plan inside a transaction session
    */
@@ -49,30 +236,63 @@ class SubscriptionService {
     let autoRenew = false;
 
     // Calculate expiry date based on plan type
-    if (planKey === 'pro_monthly') {
+    if (planKey === 'pro_monthly' || planKey === 'focused_monthly' || planKey === 'starter_monthly') {
       expiresAt.setMonth(expiresAt.getMonth() + 1);
       autoRenew = true;
-    } else if (planKey === 'pro_quarterly') {
+    } else if (planKey === 'pro_quarterly' || planKey === 'smart_quarterly') {
       expiresAt = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
-    } else if (planKey === 'pro_yearly') {
+      autoRenew = false;
+    } else if (planKey === 'pro_yearly' || planKey === 'starter_yearly' || planKey === 'focused_yearly' || planKey === 'smart_yearly') {
       expiresAt = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
       autoRenew = billingCycle === 'yearly';
     } else if (planKey === 'pro_lifetime') {
       expiresAt = new Date(now.getTime() + 36500 * 24 * 60 * 60 * 1000);
+      autoRenew = false;
     } else {
       // Fallback
       expiresAt.setMonth(expiresAt.getMonth() + 1);
+      autoRenew = false;
     }
-
-    const usageResetDate = planKey === 'pro_monthly'
-      ? new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
-      : expiresAt;
 
     // Retrieve user inside the transaction to get cumulative access end time if applicable
     const user = await User.findById(userId).session(session);
     if (!user) {
       throw new Error(`User not found: ${userId}`);
     }
+
+    // Check for subscription upgrade or cross-cycle transition to apply proration credit
+    const transition = this.analyzeSubscriptionTransition(user.currentPlanKey || 'free', planKey);
+    if ((transition.type === 'upgrade' || transition.type === 'cross_cycle_upgrade') && amount > 0) {
+      const oldSub = user.subscription;
+      if (oldSub && oldSub.status === 'active' && oldSub.purchasePrice > 0) {
+        const prorationCredit = this.calculateProrationCredit(
+          oldSub.currentPeriodStart,
+          oldSub.currentPeriodEnd,
+          oldSub.purchasePrice
+        );
+        
+        if (prorationCredit > 0) {
+          let newPlanDays = 30;
+          if (billingCycle === 'yearly') newPlanDays = 365;
+          else if (billingCycle === 'quarterly') newPlanDays = 90;
+          
+          const newPlanDailyRate = amount / newPlanDays;
+          if (newPlanDailyRate > 0) {
+            const additionalDays = Math.round(prorationCredit / newPlanDailyRate);
+            if (additionalDays > 0) {
+              console.log(`Applying proration credit: $${prorationCredit} -> extending subscription by ${additionalDays} days`);
+              expiresAt.setDate(expiresAt.getDate() + additionalDays);
+              metadata.prorationCreditApplied = prorationCredit;
+              metadata.prorationDaysAdded = additionalDays;
+            }
+          }
+        }
+      }
+    }
+
+    const usageResetDate = (planKey === 'pro_monthly' || planKey === 'focused_monthly' || planKey === 'starter_monthly')
+      ? new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
+      : expiresAt;
 
     const Subscription = await import('@/models/Subscription').then(m => m.default);
     const subDocs = await Subscription.create([{
@@ -93,7 +313,9 @@ class SubscriptionService {
       metadata: {
         polarCustomerId: metadata.polarCustomerId,
         invoiceUrl: metadata.invoiceUrl,
-        receiptUrl: metadata.receiptUrl
+        receiptUrl: metadata.receiptUrl,
+        prorationCreditApplied: metadata.prorationCreditApplied,
+        prorationDaysAdded: metadata.prorationDaysAdded
       }
     }], { session });
 
@@ -136,7 +358,7 @@ class SubscriptionService {
    */
   async activateProPlan(
     userId: string,
-    planKey: 'starter_yearly' | 'focused_monthly' | 'focused_yearly' | 'smart_quarterly' | 'smart_yearly' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly' | 'pro_lifetime',
+    planKey: 'starter_monthly' | 'starter_yearly' | 'focused_monthly' | 'focused_yearly' | 'smart_quarterly' | 'smart_yearly' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly' | 'pro_lifetime',
     interval: 'monthly' | 'quarterly' | 'yearly' | 'lifetime' | 'one-time',
     paymentId: string,
     region: string,
@@ -183,13 +405,13 @@ class SubscriptionService {
       let autoRenew = false;
 
       // Calculate expiry based on plan type
-      if (planKey === 'pro_monthly' || planKey === 'focused_monthly') {
+      if (planKey === 'pro_monthly' || planKey === 'focused_monthly' || planKey === 'starter_monthly') {
         // Monthly: recurring subscription
         const nextMonth = new Date(now);
         nextMonth.setMonth(nextMonth.getMonth() + 1);
         expiresAt = nextMonth;
         daysRemaining = 30;
-        autoRenew = true; // Only monthly plans auto-renew
+        autoRenew = true; // Monthly plans auto-renew
       } else if (planKey === 'pro_quarterly' || planKey === 'smart_quarterly') {
         // Quarterly: one-time payment for 90 days
         expiresAt = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
@@ -210,7 +432,7 @@ class SubscriptionService {
       }
 
       // Calculate usage reset date (monthly for monthly, at expiry for quarterly/yearly)
-      const usageResetDate = (planKey === 'pro_monthly' || planKey === 'focused_monthly')
+      const usageResetDate = (planKey === 'pro_monthly' || planKey === 'focused_monthly' || planKey === 'starter_monthly')
         ? new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
         : expiresAt;
 
@@ -444,11 +666,12 @@ class SubscriptionService {
 
   /**
    * Check and update expired subscriptions
-   * Called by cron job to mark subscriptions as expired
+   * Called by cron job to mark subscriptions as expired and process pending downgrades
    */
   async checkAndUpdateExpiredSubscriptions(): Promise<{
     expired: number;
     updated: number;
+    downgradesApplied: number;
   }> {
     try {
       await connectToDatabase();
@@ -456,7 +679,24 @@ class SubscriptionService {
       const now = new Date();
       const GRACE_PERIOD_MS = 3 * 24 * 60 * 60 * 1000; // 3 days grace period
 
-      // Find subscriptions that should be expired (past grace period)
+      // 1. Process pending downgrades first if renewal date is reached
+      const pendingDowngradesDue = await User.find({
+        'subscription.downgradeStatus': 'pending',
+        $or: [
+          { 'subscription.currentPeriodEnd': { $lte: now } },
+          { 'subscription.accessExpiresAt': { $lte: now } }
+        ]
+      });
+
+      let downgradesApplied = 0;
+      for (const user of pendingDowngradesDue) {
+        const success = await this.applyPendingDowngrade(user._id.toString());
+        if (success) {
+          downgradesApplied++;
+        }
+      }
+
+      // 2. Find subscriptions that should be expired (past grace period)
       const expiredSubscriptions = await User.find({
         $or: [
           // Day pass, quarterly, yearly: check accessExpiresAt
@@ -492,11 +732,12 @@ class SubscriptionService {
 
       return {
         expired: expiredSubscriptions.length,
-        updated
+        updated,
+        downgradesApplied
       };
     } catch (error) {
       console.error('Error checking expired subscriptions:', error);
-      return { expired: 0, updated: 0 };
+      return { expired: 0, updated: 0, downgradesApplied: 0 };
     }
   }
   /**

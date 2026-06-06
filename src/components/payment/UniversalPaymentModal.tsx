@@ -79,6 +79,109 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
     polar: boolean | null;
   }>({ polar: null });
   const [providerHealthLoading, setProviderHealthLoading] = useState(false);
+  const [userSubscription, setUserSubscription] = useState<any>(null);
+
+  const PLAN_TIERS: Record<string, number> = {
+    free: 1,
+    starter_monthly: 1,
+    starter_yearly: 1,
+    focused_monthly: 2,
+    focused_yearly: 2,
+    smart_quarterly: 3,
+    smart_yearly: 3,
+    pro_monthly: 2,
+    pro_quarterly: 2,
+    pro_yearly: 3,
+    pro_lifetime: 3
+  };
+
+  const getTransitionInfo = (targetPlanKey: string) => {
+    const currentPlanKey = currentUserPlan || 'free';
+    const currentTier = PLAN_TIERS[currentPlanKey] || 1;
+    const targetTier = PLAN_TIERS[targetPlanKey] || 1;
+    
+    const currentInterval = currentPlanKey.includes('yearly') ? 'yearly' : currentPlanKey.includes('quarterly') ? 'quarterly' : 'monthly';
+    const targetInterval = targetPlanKey.includes('yearly') ? 'yearly' : targetPlanKey.includes('quarterly') ? 'quarterly' : 'monthly';
+
+    if (currentPlanKey === targetPlanKey) {
+      return { type: 'none', message: '', isDowngrade: false, isImmediate: true };
+    }
+
+    if (targetTier > currentTier) {
+      return {
+        type: 'upgrade',
+        message: 'Upgrade Mode: You will get immediate access. Unused time will be credited.',
+        isDowngrade: false,
+        isImmediate: true
+      };
+    }
+
+    if (targetTier < currentTier) {
+      return {
+        type: 'downgrade',
+        message: 'Downgrade Mode: You will retain access until the end of your billing cycle. Changes will take effect on renewal.',
+        isDowngrade: true,
+        isImmediate: false
+      };
+    }
+
+    // Same tier, check billing frequency
+    const isCurrentShorter = currentInterval === 'monthly' || currentInterval === 'quarterly';
+    const isTargetYearly = targetInterval === 'yearly';
+
+    if (isCurrentShorter && isTargetYearly) {
+      return {
+        type: 'cross_cycle_upgrade',
+        message: 'Switching to Annual: Unused credit will apply to your annual plan immediately.',
+        isDowngrade: false,
+        isImmediate: true
+      };
+    }
+
+    if (currentInterval === 'yearly' && (targetInterval === 'monthly' || targetInterval === 'quarterly')) {
+      return {
+        type: 'downgrade',
+        message: 'Downgrade Mode: You will retain access until the end of your billing cycle. Changes will take effect on renewal.',
+        isDowngrade: true,
+        isImmediate: false
+      };
+    }
+
+    return { type: 'none', message: '', isDowngrade: false, isImmediate: true };
+  };
+
+  const getSimulatedProrationCredit = () => {
+    if (!userSubscription || !selectedPlan) return 0;
+    
+    const transition = getTransitionInfo(selectedPlan.key);
+    if (transition.type !== 'upgrade' && transition.type !== 'cross_cycle_upgrade') {
+      return 0;
+    }
+
+    const { currentPeriodStart, currentPeriodEnd, purchasePrice } = userSubscription;
+    if (!currentPeriodStart || !currentPeriodEnd || !purchasePrice || purchasePrice <= 0) {
+      return 0;
+    }
+
+    const start = new Date(currentPeriodStart);
+    const end = new Date(currentPeriodEnd);
+    const now = new Date();
+
+    if (now >= end || now <= start) {
+      return 0;
+    }
+
+    const oneDay = 24 * 60 * 60 * 1000;
+    const totalDays = Math.ceil((end.getTime() - start.getTime()) / oneDay);
+    const remainingDays = Math.ceil((end.getTime() - now.getTime()) / oneDay);
+
+    if (totalDays <= 0 || remainingDays <= 0) {
+      return 0;
+    }
+
+    const credit = (remainingDays / totalDays) * purchasePrice;
+    return Math.round(credit * 100) / 100;
+  };
 
   // Use the shared pricing hook only if props are not provided
   // Hooks must be called unconditionally at top level
@@ -323,6 +426,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
           const userData = await userResponse.json();
           if (userData.success && userData.user) {
             setCurrentUserPlan(userData.user.currentPlanKey || 'free');
+            setUserSubscription(userData.user.subscription || null);
           }
         }
 
@@ -528,10 +632,10 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
   const getBillingInterval = (plan: PricingPlan) => {
     if (plan.key === 'free') return 'free';
     // Determine interval from plan key first, then fallback to billingCycle
-    if (plan.key === 'pro_quarterly') return 'quarterly';
-    if (plan.key === 'pro_yearly') return 'yearly';
-    if (plan.key === 'pro_lifetime') return 'lifetime';
-    if (plan.key === 'pro_monthly') return 'monthly';
+    if (plan.key.includes('quarterly') || plan.key.includes('quaterly')) return 'quarterly';
+    if (plan.key.includes('yearly') || plan.key.includes('yealry')) return 'yearly';
+    if (plan.key.includes('lifetime')) return 'lifetime';
+    if (plan.key.includes('monthly')) return 'monthly';
     return plan.billingCycle || 'monthly';
   };
 
@@ -558,6 +662,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
   // Check if a plan is the user's current plan
   const isCurrentPlan = (plan: PricingPlan) => {
     if (adminMode) return false;
+    if (currentUserPlan === 'free' && plan.key === 'starter_monthly') return true;
     return plan.key === currentUserPlan;
   };
 
@@ -671,10 +776,10 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
         if (response.ok) {
           const data = await response.json();
 
-          if (data.zero_amount && data.success) {
+          if (data.downgrade_scheduled && data.success) {
             onSuccess?.(data.subscription);
-            alert(data.message || 'Plan activated successfully. No payment was required.');
             onClose();
+            alert(data.message || 'Subscription scheduled to downgrade at renewal.');
             if (returnUrl) {
               window.location.href = returnUrl;
             } else {
@@ -683,10 +788,24 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
             return;
           }
 
-          // Polar Checkout — always redirect
-          if (data.url) {
-            window.location.href = data.url;
+          if (data.zero_amount && data.success) {
+            onSuccess?.(data.subscription);
+            onClose();
+            // Use the URL returned by the server (it has the correct query params already)
+            const redirectTarget = data.url || data.redirect_url || returnUrl;
+            if (redirectTarget) {
+              window.location.href = redirectTarget;
+            } else {
+              window.location.reload();
+            }
+            return;
           }
+
+          // Polar Checkout — always redirect
+          if (data.url || data.redirect_url) {
+            window.location.href = data.url || data.redirect_url;
+          }
+
         } else {
           // Handle error response
           let errorMessage = 'Failed to create checkout session';
@@ -750,8 +869,23 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
     if (plan.key === 'free') return false;
     if (currentUserPlan === 'free') return true;
 
-    const planOrder = { free: 0, pro_monthly: 1, pro_quarterly: 2, pro_yearly: 3, pro_lifetime: 4 };
-    return planOrder[plan.key as keyof typeof planOrder] > planOrder[currentUserPlan as keyof typeof planOrder];
+    const planOrder: Record<string, number> = {
+      free: 0,
+      starter_monthly: 1,
+      starter_yearly: 2,
+      focused_monthly: 3,
+      focused_yearly: 4,
+      smart_quarterly: 5,
+      smart_yearly: 6,
+      pro_monthly: 3,
+      pro_quarterly: 4,
+      pro_yearly: 5,
+      pro_lifetime: 7
+    };
+    
+    const targetOrder = planOrder[plan.key] ?? 0;
+    const currentOrder = planOrder[currentUserPlan] ?? 0;
+    return targetOrder > currentOrder;
   };
 
   // Get plan icon component (matching landing page)
@@ -878,31 +1012,30 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
             }}
             onClick={onClose}
           />
-
-          {/* Modal Container - Centered with backdrop */}
+          {/* Modal Container - Full Screen Takeover */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 dark:bg-black/70 backdrop-blur-sm p-4"
+            className="fixed inset-0 z-[99999] w-screen h-screen bg-black/60 dark:bg-black/70 backdrop-blur-sm overflow-hidden"
             onClick={(e) => e.target === e.currentTarget && onClose?.()}
           >
             <motion.div
-              initial={{ scale: 0.95, opacity: 0, y: 10 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.95, opacity: 0, y: 10 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="relative flex bg-white dark:bg-[#141810] rounded-2xl shadow-2xl w-full max-w-[1400px] max-h-[96vh] overflow-hidden"
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 30 }}
+              transition={{ type: 'spring', damping: 28, stiffness: 220 }}
+              className="relative flex flex-col tablet:flex-row bg-[#FAF9F5] dark:bg-[#0B0D08] w-full h-full overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Close Button - Moved to outer container */}
+              {/* Close Button - Premium floating layout */}
               <button
                 onClick={onClose}
-                className="absolute top-4 right-4 tablet:top-6 tablet:right-6 p-2 bg-white/80 dark:bg-black/20 hover:bg-white dark:hover:bg-black/40 rounded-full transition-all flex-shrink-0 z-[100] shadow-sm hover:shadow-md active:scale-95"
+                className="absolute top-4 right-4 tablet:top-6 tablet:right-6 p-2.5 bg-white/80 dark:bg-white/5 hover:bg-white dark:hover:bg-white/10 rounded-full border border-gray-200/60 dark:border-white/10 transition-all flex-shrink-0 z-[100] shadow-sm hover:shadow-md active:scale-95 group"
                 aria-label="Close"
               >
-                <X className="w-5 h-5 text-gray-800 dark:text-white" />
+                <X className="w-5 h-5 text-gray-800 dark:text-white group-hover:rotate-90 transition-transform duration-300" />
               </button>
 
               {/* Left Side - Features & Info */}
@@ -916,161 +1049,132 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                   stiffness: 200,
                   mass: 0.8
                 }}
-                className="w-full tablet:w-[38%] bg-[#f3f2ee] dark:bg-[#141810] overflow-y-auto hidden tablet:block"
+                className="w-full tablet:w-[40%] bg-[#F5F4F0] dark:bg-[#12140F] overflow-y-auto hidden tablet:flex flex-col border-r border-gray-200/50 dark:border-white/5 h-full"
               >
-                <div className="p-6 tablet:p-10 max-w-2xl mx-auto h-full flex flex-col bg-[#f3f2ee] dark:bg-[#141810] rounded-l-2xl">
-                {/* Logo & Main Heading Combined */}
-                <div className="mb-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <Logo size="sm" />
-                    <span className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Premium Toolkit</span>
-                  </div>
-                  <h1 className="text-2xl tablet:text-3xl font-bold mb-3 text-gray-900 dark:text-white">
-                    Unlock Your Full Career Potential
-                  </h1>
-                  <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed">
-                    All-in-one solution for your career growth. Create professional CVs, optimize for ATS systems, and track your job applications.
-                  </p>
-                </div>
-
-                {/* Premium Toolkit Section - More Compact Grid */}
-                <div className="mb-6 flex-1">
-                  <h2 className="text-sm font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                    <Zap className="w-4 h-4 text-lime-500" />
-                    <span>EVERYTHING YOU NEED TO SUCCEED</span>
-                  </h2>
-                  <ul className="grid grid-cols-1 tablet:grid-cols-2 gap-x-6 gap-y-4">
-                    <li className="flex items-start gap-2">
-                      <div className="p-1 rounded bg-gray-100 dark:bg-white/5 mt-0.5">
-                        <FileText className="w-3.5 h-3.5 text-gray-600 dark:text-lime-500" />
-                      </div>
-                      <div className="text-xs text-gray-700 dark:text-gray-300 leading-snug">
-                        <strong className="text-gray-900 dark:text-white block mb-0.5 text-[11px]">Dynamic Layout System</strong>
-                        Smart snippet system to create unlimited, tailored resume templates.
-                      </div>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <div className="p-1 rounded bg-gray-100 dark:bg-white/5 mt-0.5">
-                        <Target className="w-3.5 h-3.5 text-gray-600 dark:text-lime-500" />
-                      </div>
-                      <div className="text-xs text-gray-700 dark:text-gray-300 leading-snug">
-                        <strong className="text-gray-900 dark:text-white block mb-0.5 text-[11px]">Precision Job Pipeline</strong>
-                        Real-time stage tracking with AI-generated follow-up & email suggestions.
-                      </div>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <div className="p-1 rounded bg-gray-100 dark:bg-white/5 mt-0.5">
-                        <Globe className="w-3.5 h-3.5 text-gray-600 dark:text-lime-500" />
-                      </div>
-                      <div className="text-xs text-gray-700 dark:text-gray-300 leading-snug">
-                        <strong className="text-gray-900 dark:text-white block mb-0.5 text-[11px]">One-Click Sourcing</strong>
-                        Save roles via extension or paste directly with instant AI insights.
-                      </div>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <div className="p-1 rounded bg-gray-100 dark:bg-white/5 mt-0.5">
-                        <Zap className="w-3.5 h-3.5 text-gray-600 dark:text-lime-500" />
-                      </div>
-                      <div className="text-xs text-gray-700 dark:text-gray-300 leading-snug">
-                        <strong className="text-gray-900 dark:text-white block mb-0.5 text-[11px]">Automated Tailoring</strong>
-                        Save a job and get a perfectly matched CV & Cover Letter instantly.
-                      </div>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <div className="p-1 rounded bg-gray-100 dark:bg-white/5 mt-0.5 flex items-center justify-center">
-                        <span className="text-[10px] font-black text-gray-600 dark:text-lime-500 leading-none">in</span>
-                      </div>
-                      <div className="text-xs text-gray-700 dark:text-gray-300 leading-snug">
-                        <strong className="text-gray-900 dark:text-white block mb-0.5 text-[11px]">LinkedIn Optimizer</strong>
-                        Visual, section-by-section guide to perfecting your professional profile.
-                      </div>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <div className="p-1 rounded bg-gray-100 dark:bg-white/5 mt-0.5">
-                        <Users className="w-3.5 h-3.5 text-gray-600 dark:text-lime-500" />
-                      </div>
-                      <div className="text-xs text-gray-700 dark:text-gray-300 leading-snug">
-                        <strong className="text-gray-900 dark:text-white block mb-0.5 text-[11px]">AI Interview Simulator</strong>
-                        Role-specific mock interviews with real-time performance feedback.
-                      </div>
-                    </li>
-                    <li className="col-span-1 tablet:col-span-2 flex items-start gap-2 p-2 bg-purple-500/5 rounded-lg border border-purple-500/10">
-                      <div className="p-1 rounded bg-purple-500/10 mt-0.5">
-                        <Sparkles className="w-3.5 h-3.5 text-purple-500" />
-                      </div>
-                      <div className="text-xs text-gray-700 dark:text-gray-300 leading-snug">
-                        <strong className="text-gray-900 dark:text-white flex items-center gap-2 mb-0.5 text-[11px]">
-                          Autonomous Applications
-                          <span className="text-[8px] bg-purple-500 text-white px-1.5 py-0.5 rounded-full font-black uppercase tracking-tighter">Coming Soon</span>
-                        </strong>
-                        Relax while CVCircle completes the 'Whole Circle' of your job hunt autonomously.
-                      </div>
-                    </li>
-                  </ul>
-                </div>
-
-                {/* Live Testimonials - Side-by-Side */}
-                <div className="mb-6 pt-6 border-t border-gray-200 dark:border-white/10">
-                  <h2 className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-4">SUCCESS STORIES</h2>
-                  <div className="grid grid-cols-1 desktop:grid-cols-2 gap-4">
-                    <div className="bg-white/50 dark:bg-white/5 p-3 rounded-xl border border-gray-200 dark:border-white/10 shadow-sm flex flex-col justify-between">
-                      <p className="text-[11px] text-gray-600 dark:text-gray-400 italic mb-2 leading-relaxed">
-                        "CVCircle doubled my interview callbacks in just two weeks!"
-                      </p>
-                      <div className="flex items-center gap-2">
-                        <div className="w-5 h-5 rounded-full bg-lime-500 flex items-center justify-center text-[9px] font-bold text-black flex-shrink-0">
-                          S
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-[10px] font-bold text-gray-900 dark:text-white truncate">Sarah B.</p>
-                          <p className="text-[8px] text-gray-500 truncate">Sales Director</p>
-                        </div>
-                      </div>
+                <div className="p-8 tablet:p-12 max-w-2xl mx-auto h-full flex flex-col justify-between">
+                  {/* Brand & Hero */}
+                  <div className="space-y-6 mb-8">
+                    <div className="flex items-center gap-3">
+                      <Logo size="sm" />
+                      <span className="text-[10px] font-mono tracking-widest text-gray-400 dark:text-gray-500 uppercase border border-gray-200 dark:border-white/10 px-2 py-0.5 rounded">
+                        [ 01 / PREMIUM SUITE ]
+                      </span>
                     </div>
-                    <div className="bg-white/50 dark:bg-white/5 p-3 rounded-xl border border-gray-200 dark:border-white/10 shadow-sm flex flex-col justify-between">
-                      <p className="text-[11px] text-gray-600 dark:text-gray-400 italic mb-2 leading-relaxed">
-                        "The AI Interview Coach helped me land my dream role."
-                      </p>
-                      <div className="flex items-center gap-2">
-                        <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0">
-                          A
+                    
+                    <h1 className="text-3xl tablet:text-4xl font-extrabold text-gray-900 dark:text-white leading-[1.15] tracking-tight">
+                      Empowering career growth through design and intelligence.
+                    </h1>
+                    
+                    <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed max-w-md">
+                      Join thousands of top professionals who use CVCircle to land roles at Google, Stripe, and Apple. Fully integrated toolkit for CV analysis, tracking, and preparation.
+                    </p>
+                  </div>
+
+                  {/* High-End Feature Grid */}
+                  <div className="space-y-4 mb-8 flex-1">
+                    <span className="text-[10px] font-mono tracking-widest text-gray-400 dark:text-gray-500 uppercase block">
+                      [ KEY ADVANTAGES ]
+                    </span>
+                    
+                    <div className="divide-y divide-gray-200/60 dark:divide-white/5 border-t border-b border-gray-200/60 dark:border-white/5">
+                      <div className="py-3.5 flex items-start gap-4 hover:bg-white/30 dark:hover:bg-white/5 px-2 rounded-xl transition-all duration-200 group">
+                        <div className="p-2 bg-white dark:bg-[#1A201A] border border-gray-200/60 dark:border-white/5 rounded-xl group-hover:scale-105 transition-transform flex-shrink-0">
+                          <FileText className="w-4 h-4 text-lime-600 dark:text-lime-400" />
                         </div>
-                        <div className="min-w-0">
-                          <p className="text-[10px] font-bold text-gray-900 dark:text-white truncate">Aisha T.</p>
-                          <p className="text-[8px] text-gray-500 truncate">Recent Graduate</p>
+                        <div>
+                          <h3 className="text-xs font-black text-gray-950 dark:text-white tracking-wide uppercase">Dynamic Snippet System</h3>
+                          <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-snug mt-0.5">Build unlimited, tailored resume segments with precision templates.</p>
+                        </div>
+                      </div>
+
+                      <div className="py-3.5 flex items-start gap-4 hover:bg-white/30 dark:hover:bg-white/5 px-2 rounded-xl transition-all duration-200 group">
+                        <div className="p-2 bg-white dark:bg-[#1A201A] border border-gray-200/60 dark:border-white/5 rounded-xl group-hover:scale-105 transition-transform flex-shrink-0">
+                          <Target className="w-4 h-4 text-lime-600 dark:text-lime-400" />
+                        </div>
+                        <div>
+                          <h3 className="text-xs font-black text-gray-950 dark:text-white tracking-wide uppercase">Automated ATS Alignment</h3>
+                          <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-snug mt-0.5">Optimize layout, spelling, and keywords instantly to match jobs.</p>
+                        </div>
+                      </div>
+
+                      <div className="py-3.5 flex items-start gap-4 hover:bg-white/30 dark:hover:bg-white/5 px-2 rounded-xl transition-all duration-200 group">
+                        <div className="p-2 bg-white dark:bg-[#1A201A] border border-gray-200/60 dark:border-white/5 rounded-xl group-hover:scale-105 transition-transform flex-shrink-0">
+                          <Users className="w-4 h-4 text-lime-600 dark:text-lime-400" />
+                        </div>
+                        <div>
+                          <h3 className="text-xs font-black text-gray-950 dark:text-white tracking-wide uppercase">AI Interview Simulation</h3>
+                          <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-snug mt-0.5">Interactive, role-specific coaching with instant feedback.</p>
                         </div>
                       </div>
                     </div>
                   </div>
+
+                  {/* Success Stories & Testimonials */}
+                  <div className="space-y-4 mb-8 pt-4">
+                    <span className="text-[10px] font-mono tracking-widest text-gray-400 dark:text-gray-500 uppercase block">
+                      [ SOCIAL PROOF ]
+                    </span>
+                    
+                    <div className="bg-white/60 dark:bg-white/5 border border-gray-200/60 dark:border-white/5 rounded-2xl p-4 shadow-sm backdrop-blur-sm">
+                      <div className="flex gap-0.5 text-lime-500 mb-2">
+                        {[...Array(5)].map((_, i) => (
+                          <Star key={i} className="w-3.5 h-3.5 fill-lime-500 text-lime-500" />
+                        ))}
+                      </div>
+                      <p className="text-xs text-gray-700 dark:text-gray-300 italic leading-relaxed">
+                        "CVCircle completely modernized my application flow. The ATS scoring was spot-on, and I secured 3 callbacks within the first week of upgrading."
+                      </p>
+                      <div className="flex items-center gap-3 mt-3">
+                        <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-lime-400 to-lime-600 flex items-center justify-center text-[10px] font-black text-black">
+                          SB
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-black text-gray-900 dark:text-white">Sarah Bernstein</h4>
+                          <p className="text-[9px] font-mono text-gray-500 uppercase">Sales Director, FinTech</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Trust Badges */}
+                  <div className="pt-4 border-t border-gray-200/60 dark:border-white/5 flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-2">
+                      <Shield className="w-4 h-4 text-lime-600 dark:text-lime-400" />
+                      <span className="text-[10px] font-mono uppercase text-gray-500 dark:text-gray-400">Secure SSL</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-lime-600 dark:text-lime-400" />
+                      <span className="text-[10px] font-mono uppercase text-gray-500 dark:text-gray-400">Cancel Anytime</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-lime-600 dark:text-lime-400" />
+                      <span className="text-[10px] font-mono uppercase text-gray-500 dark:text-gray-400">99.8% Success</span>
+                    </div>
+                  </div>
                 </div>
+              </motion.div>
 
-                {/* Trust Elements - Bottom */}
-                {/* Trust Elements moved to right panel */}
-                <div className="mt-auto border-t border-gray-200" />
-              </div>
-            </motion.div>
-
-            {/* Right Side - Payment Interface */}
-            <motion.div
-              initial={{ x: '100%', opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: '100%', opacity: 0 }}
-              transition={{
-                type: 'spring',
-                damping: 25,
-                stiffness: 200,
-                mass: 0.8,
-                delay: 0.1
-              }}
-              className="w-full tablet:w-[62%] bg-[#f3f2ee] dark:bg-[#141810] overflow-y-auto"
-            >
-              <div className="p-4 tablet:p-8 max-w-full mx-auto bg-[#f3f2ee] dark:bg-[#141810] rounded-lg">
+              {/* Right Side - Payment Interface */}
+              <motion.div
+                initial={{ x: '100%', opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: '100%', opacity: 0 }}
+                transition={{
+                  type: 'spring',
+                  damping: 25,
+                  stiffness: 200,
+                  mass: 0.8,
+                  delay: 0.1
+                }}
+                className="w-full tablet:w-[60%] bg-white dark:bg-[#0B0D08] overflow-y-auto h-full flex flex-col"
+              >
+                <div className="p-8 tablet:p-12 max-w-6xl mx-auto w-full flex flex-col justify-between min-h-full bg-transparent">
 
                 {/* Header */}
                 {/* Header moved inside plans container */}
 
                 {/* Content */}
-                <div className="space-y-6">
+                 <div className="flex-1 flex flex-col justify-between w-full">
                   {step === 1 && (
                     <>
                       {/* Current Plan Info - Displayed outside cards */}
@@ -1085,7 +1189,13 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                           ? pricingPlans.filter(plan => plan.key !== 'free' && !isCurrentPlan(plan))
                           : [];
 
-                        const currentPlan = pricingPlans.find((plan: PricingPlan) => isCurrentPlan(plan));
+                        let currentPlan = pricingPlans.find((plan: PricingPlan) => isCurrentPlan(plan));
+                        if (currentPlan && (currentPlan.key === 'free' || currentPlan.key === 'starter_monthly')) {
+                          const starterPlan = pricingPlans.find(p => p.key === 'starter_monthly');
+                          if (starterPlan) {
+                            currentPlan = starterPlan;
+                          }
+                        }
 
                         // Filter plans based on selected billing cycle
                         const subscriptionPlans = availablePlans.filter(plan => {
@@ -1093,6 +1203,8 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                           if (billingCycle === 'yearly') {
                             return key.includes('yearly') || key.includes('lifetime');
                           } else {
+                            // Exclude starter_monthly in the main cards list for monthly billing view
+                            if (key === 'starter_monthly') return false;
                             return key.includes('monthly') || key.includes('quarterly');
                           }
                         });
@@ -1101,10 +1213,10 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                         const displayPlans = subscriptionPlans.length > 0 ? subscriptionPlans : availablePlans;
 
                         return (
-                          <div className="flex flex-col gap-4 bg-gray-50 dark:bg-[#1A201A] rounded-2xl p-4 border border-gray-100 dark:border-gray-800 max-w-full mx-auto w-full transition-all duration-300">
+                          <div className="flex flex-col gap-6 max-w-full mx-auto w-full transition-all duration-300">
 
                             {/* --- HEADER MOVED INSIDE --- */}
-                            <div className="flex flex-col tablet:flex-row tablet:items-center justify-between gap-3 mb-2 px-2">
+                            <div className="flex flex-col tablet:flex-row tablet:items-center justify-between gap-3 mb-2 px-0">
                               <div>
                                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
                                   Choose Your Plan
@@ -1144,7 +1256,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
 
                             {/* --- CURRENT PLAN MOVED INSIDE --- */}
                             {currentPlan && !adminMode && (
-                              <div className="mx-2 p-3 bg-white dark:bg-[#232f1c] rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm">
+                              <div className="mx-0 p-3 bg-white dark:bg-[#232f1c] rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm">
                                 <div className="flex items-center gap-4">
                                   <div className="flex-shrink-0">
                                     <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-lime-500/10 text-lime-600 dark:text-lime-400">
@@ -1163,7 +1275,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
 
                             {/* Subscription Plans - Grid Layout */}
                             {displayPlans.length > 0 && (
-                              <div className="grid grid-cols-1 tablet:grid-cols-3 gap-3 px-2">
+                              <div className={`grid grid-cols-1 ${displayPlans.length === 2 ? 'tablet:grid-cols-2 max-w-[800px] mx-auto' : 'tablet:grid-cols-3'} gap-3 px-0 w-full`}>
                                 {displayPlans.map((plan) => {
                                   const dbPlan = plan as unknown as DatabasePricingPlan;
                                   const regionalPrice = getRegionalPrice(dbPlan);
@@ -1174,11 +1286,16 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                                   const Icon = getPlanIcon(plan.key);
                                   const isFocused = plan.key.includes('focused');
 
-                                  const displayPrice = monthlyEquivalent.showMonthly ? monthlyEquivalent.price : (regionalPrice || `${currencySymbol}${effectivePrice}`);
                                   const totalAmount = regionalPrice || `${currencySymbol}${effectivePrice}`;
-                                  const totalText = monthlyEquivalent.showMonthly 
-                                    ? `${totalAmount} total`
-                                    : '';
+                                  const isQuarterlyPlan = plan.key.includes('quarterly') || plan.key.includes('quaterly');
+                                  
+                                  const displayPrice = isQuarterlyPlan
+                                    ? totalAmount
+                                    : (monthlyEquivalent.showMonthly ? monthlyEquivalent.price : totalAmount);
+                                    
+                                  const totalText = isQuarterlyPlan
+                                    ? ''
+                                    : (monthlyEquivalent.showMonthly ? `${totalAmount} total` : '');
 
                                   return (
                                     <div
@@ -1188,28 +1305,26 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                                         setSelectedPlan(plan);
                                       }}
                                       className={`group relative flex flex-col p-5 rounded-3xl border-2 transition-all duration-300 cursor-pointer ${
-                                        isFocused
-                                          ? 'bg-gray-900 border-gray-900 dark:bg-[#1A201A] dark:border-lime-500/50 shadow-xl scale-[1.02] z-10'
-                                          : isSelected
-                                            ? 'border-lime-500 bg-white dark:bg-[#1A201A]'
-                                            : 'border-gray-200 hover:border-gray-300 dark:border-white/5 bg-white dark:bg-white/5'
+                                        isSelected
+                                          ? 'border-lime-500 bg-white dark:bg-[#1A201A] shadow-lg shadow-lime-500/10 scale-[1.02] z-10'
+                                          : 'border-gray-200 hover:border-gray-300 dark:border-white/5 bg-white dark:bg-white/5'
                                       }`}
                                     >
                                       {/* Selection Indicator & Badge */}
-                                      {isFocused && (
+                                      {isSelected && (
                                         <div className="absolute top-4 right-4 text-lime-500 bg-lime-500/10 rounded-full p-0.5">
-                                          <CheckCircle className="w-5 h-5" />
+                                          <CheckCircle className="w-5 h-5 fill-lime-500 text-black dark:text-[#1A201A]" />
                                         </div>
                                       )}
                                       
                                       <div className={`p-2 w-fit rounded-xl mb-4 ${
-                                        isFocused ? 'bg-lime-500/20 text-lime-500' : 'bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400'
+                                        isSelected ? 'bg-lime-500/20 text-lime-500' : 'bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400'
                                       }`}>
                                         <Icon size={18} />
                                       </div>
 
                                       <div className="mb-6">
-                                        <h3 className={`font-bold text-lg mb-1 ${isFocused ? 'text-white' : 'text-gray-900 dark:text-white'}`}>
+                                        <h3 className="font-bold text-lg mb-1 text-gray-900 dark:text-white">
                                           {plan.name.replace(' Monthly', '').replace(' Yearly', '').replace(' Quarterly', '')}
                                         </h3>
                                         {isFocused && (
@@ -1218,40 +1333,62 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                                           </span>
                                         )}
                                         
-                                        <div className="flex items-baseline gap-1 mt-2">
-                                          <span className={`text-3xl font-black ${isFocused ? 'text-white' : 'text-gray-900 dark:text-white'}`}>
-                                            {displayPrice.split('/')[0]}
-                                          </span>
-                                          <span className={`text-xs font-bold ${isFocused ? 'text-gray-400' : 'text-gray-500'}`}>
-                                            {monthlyEquivalent.showMonthly ? '/mo' : plan.key.includes('lifetime') ? '/one-time' : '/period'}
-                                          </span>
-                                        </div>
-                                        {totalText && (
-                                          <p className={`text-[10px] font-bold mt-1 ${isFocused ? 'text-gray-400' : 'text-gray-500'}`}>
-                                            {totalText}
-                                          </p>
-                                        )}
+                                        {plan.key === 'starter_monthly' ? (
+                                           <div className="mt-2">
+                                             <div className="flex items-baseline gap-2">
+                                               <span className="text-sm line-through text-gray-400 dark:text-gray-500 font-bold">
+                                                 $4.99
+                                               </span>
+                                               <span className="text-3xl font-black text-gray-900 dark:text-white">
+                                                 $0.00
+                                               </span>
+                                               <span className="text-xs font-bold text-gray-500">
+                                                 /month
+                                               </span>
+                                             </div>
+                                             <p className="text-[10px] font-bold text-indigo-500 dark:text-indigo-400 mt-1 leading-tight">
+                                               Free Subscription ($0 invoices will be emailed)
+                                             </p>
+                                           </div>
+                                         ) : (
+                                           <>
+                                             <div className="flex items-baseline gap-1 mt-2">
+                                               <span className="text-3xl font-black text-gray-900 dark:text-white">
+                                                 {displayPrice.split('/')[0]}
+                                               </span>
+                                               <span className="text-xs font-bold text-gray-500">
+                                                 {isQuarterlyPlan
+                                                   ? '/quarter'
+                                                   : (monthlyEquivalent.showMonthly 
+                                                     ? '/month' 
+                                                     : plan.key.includes('lifetime') 
+                                                       ? '/one-time' 
+                                                       : plan.key.includes('monthly')
+                                                         ? '/month'
+                                                         : '/period')}
+                                               </span>
+                                             </div>
+                                             {totalText && (
+                                               <p className="text-[10px] font-bold mt-1 text-gray-500">
+                                                 {totalText}
+                                               </p>
+                                             )}
+                                           </>
+                                         )}
                                       </div>
-
                                       {/* Feature Tags */}
-                                      <div className="flex-1 space-y-3 mb-8">
-                                        {plan.features.slice(0, 4).map((feature, i) => (
-                                          <div key={i} className="flex items-start gap-2">
-                                            <Check className={`w-3 h-3 mt-0.5 flex-shrink-0 ${isFocused ? 'text-lime-500' : 'text-lime-500'}`} />
-                                            <span className={`text-[11px] font-bold leading-tight ${isFocused ? 'text-gray-300' : 'text-gray-600 dark:text-gray-400'}`}>
+                                      <div className="flex-1 space-y-3 mb-6">
+                                        {plan.features.slice(0, 6).map((feature, i) => (
+                                          <div key={i} className="flex items-start gap-2.5">
+                                            <div className="w-4 h-4 rounded-full bg-lime-500/10 dark:bg-lime-500/20 flex items-center justify-center mt-0.5 flex-shrink-0">
+                                              <Check className="w-2.5 h-2.5 text-lime-600 dark:text-lime-400" />
+                                            </div>
+                                            <span className="text-[11px] font-medium leading-tight text-gray-600 dark:text-gray-400">
                                               {feature.split(':')[0]}
                                             </span>
                                           </div>
                                         ))}
                                       </div>
-
-                                      <button className={`w-full py-2.5 rounded-xl font-bold text-xs transition-all ${
-                                        isFocused 
-                                          ? 'bg-lime-500 hover:bg-lime-600 text-black shadow-lg shadow-lime-500/20' 
-                                          : 'border border-lime-500/50 text-lime-600 dark:text-lime-400 hover:bg-lime-500/5'
-                                      }`}>
-                                        Choose Plan
-                                      </button>
                                     </div>
                                   );
                                 })}
@@ -1263,10 +1400,19 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                               <button
                                 onClick={() => setStep(2)}
                                 disabled={!selectedPlan || isCurrentPlan(selectedPlan)}
-                                className="w-full tablet:w-auto px-16 py-4 bg-[#80FF00] hover:bg-[#99ff33] text-black rounded-2xl font-black disabled:bg-gray-200 dark:disabled:bg-gray-800 disabled:text-gray-400 dark:disabled:text-gray-600 disabled:cursor-not-allowed transition-all shadow-xl shadow-lime-500/20 active:scale-95 text-base flex items-center justify-center gap-3"
+                                className="w-full tablet:w-auto px-16 py-4 bg-[#80FF00] hover:bg-[#99ff33] text-black rounded-2xl font-black disabled:bg-gray-200 dark:disabled:bg-gray-800 disabled:text-gray-400 dark:disabled:text-gray-600 disabled:cursor-not-allowed transition-all shadow-xl shadow-lime-500/20 active:scale-95 text-base flex items-center justify-center gap-3 group"
                               >
-                                <Shield className="w-5 h-5 opacity-50" />
-                                <span>Continue to Payment</span>
+                                <Shield className="w-5 h-5 opacity-50 group-hover:scale-110 transition-transform" />
+                                <span>
+                                  {!selectedPlan
+                                    ? 'Select a Plan'
+                                    : isCurrentPlan(selectedPlan)
+                                      ? 'Active Plan Selected'
+                                      : selectedPlan.key === 'starter_monthly'
+                                        ? 'Activate Free Plan'
+                                        : `Continue with ${selectedPlan.name.replace(' Monthly', '').replace(' Yearly', '').replace(' Quarterly', '')}`}
+                                </span>
+                                <ArrowRight className="w-4 h-4 opacity-70 group-hover:translate-x-1 transition-transform" />
                               </button>
                               <div className="mt-3 flex items-center gap-2 text-gray-500 dark:text-gray-400">
                                 <Shield className="w-3.5 h-3.5 text-lime-500" />
@@ -1278,25 +1424,28 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                         );
                       })()}
 
-                      {/* Trust Elements Footer (Simplified) */}
-                      <div className="mt-8 pt-6 border-t border-gray-100 dark:border-white/5">
-                        <div className="grid grid-cols-2 gap-8 mb-6 max-w-4xl mx-auto">
-                          <div className="flex items-start gap-3">
-                            <div className="p-1.5 rounded-lg bg-green-500/10 mt-1">
-                              <Shield className="w-4 h-4 text-green-600 dark:text-green-400" />
-                            </div>
+                      {/* Trust Elements Footer */}
+                      <div className="mt-auto pt-8 border-t border-gray-200/40 dark:border-white/5">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto mb-6">
+                          <div className="flex items-start gap-3 p-3 bg-gray-50/50 dark:bg-white/5 rounded-xl border border-gray-200/50 dark:border-white/5">
+                            <Shield className="w-5 h-5 text-lime-600 dark:text-lime-400 mt-0.5 flex-shrink-0" />
                             <div>
-                              <span className="block text-xs font-black text-gray-900 dark:text-white uppercase tracking-wider">100% Satisfaction</span>
-                              <span className="text-[10px] text-gray-500 dark:text-gray-400 leading-tight">Full refund if not satisfied. No questions asked.</span>
+                              <span className="block text-xs font-black text-gray-950 dark:text-white uppercase tracking-wider">Secure Checkout</span>
+                              <span className="text-[10px] text-gray-500 dark:text-gray-400 leading-tight">256-bit SSL encrypted transaction via Polar.</span>
                             </div>
                           </div>
-                          <div className="flex items-start gap-3">
-                            <div className="p-1.5 rounded-lg bg-blue-500/10 mt-1">
-                              <ArrowRight className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                            </div>
+                          <div className="flex items-start gap-3 p-3 bg-gray-50/50 dark:bg-white/5 rounded-xl border border-gray-200/50 dark:border-white/5">
+                            <CheckCircle className="w-5 h-5 text-lime-600 dark:text-lime-400 mt-0.5 flex-shrink-0" />
                             <div>
-                              <span className="block text-xs font-black text-gray-900 dark:text-white uppercase tracking-wider">No Obligation</span>
-                              <span className="text-[10px] text-gray-500 dark:text-gray-400 leading-tight">Switch anytime if you find a better price.</span>
+                              <span className="block text-xs font-black text-gray-950 dark:text-white uppercase tracking-wider">Flexible Billing</span>
+                              <span className="text-[10px] text-gray-500 dark:text-gray-400 leading-tight">Cancel your subscription at any time with one click.</span>
+                            </div>
+                          </div>
+                          <div className="flex items-start gap-3 p-3 bg-gray-50/50 dark:bg-white/5 rounded-xl border border-gray-200/50 dark:border-white/5">
+                            <Gift className="w-5 h-5 text-lime-600 dark:text-lime-400 mt-0.5 flex-shrink-0" />
+                            <div>
+                              <span className="block text-xs font-black text-gray-950 dark:text-white uppercase tracking-wider">Value Guarantee</span>
+                              <span className="text-[10px] text-gray-500 dark:text-gray-400 leading-tight">Get invoice receipt and immediate account update.</span>
                             </div>
                           </div>
                         </div>
@@ -1314,57 +1463,169 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
 
                   {
                     step === 2 && selectedPlan && (
-                      <>
-                        {/* Back Button */}
+                      <div className="flex flex-col flex-1 w-full justify-between items-center text-center max-w-2xl mx-auto py-4">
+                        {/* Centered Back Button */}
                         <button
                           onClick={() => setStep(1)}
-                          className="flex items-center text-sm tablet:text-base text-gray-600 hover:text-gray-900 mb-4 tablet:mb-6"
+                          className="flex items-center gap-2 text-xs font-mono uppercase text-gray-400 hover:text-gray-900 dark:hover:text-white mb-6 transition-colors mx-auto"
                         >
-                          <span className="hidden tablet:inline">← Back to Plans</span>
-                          <span className="tablet:hidden">← Back</span>
+                          <span>← Back to Plans</span>
                         </button>
 
-                        {/* Single Column Layout for Side Panel */}
-                        <div className="flex flex-col gap-4 tablet:gap-6">
-                          {/* Order Summary */}
-                          <div className="p-4 tablet:p-6 flex flex-col bg-gray-50 dark:bg-[#232f1c] rounded-2xl border border-gray-200 dark:border-lime-500/20">
-                            {/* Title */}
-                            <h2 className="text-2xl tablet:text-3xl font-bold text-gray-900 dark:text-white mb-4 tablet:mb-6">
-                              Complete Your Order
-                            </h2>
+                        <div className="w-full flex flex-col items-center">
+                          {/* Heading */}
+                          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
+                            Complete Your Order
+                          </h2>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-6">
+                            Please review your subscription details below
+                          </p>
 
-                            {/* Plan Details Box */}
-                            <div className="rounded-lg p-3 tablet:p-4 mb-4 tablet:mb-6 bg-white dark:bg-[#232f1c] border border-gray-200 dark:border-lime-500/20">
-                              <div className="mb-2">
-                                <h3 className="text-lg tablet:text-xl font-bold text-gray-900 dark:text-white mb-1">
-                                  {(() => {
-                                    if (!selectedPlan) return 'No Plan Selected';
-                                    if (selectedPlan.key === 'pro_lifetime') return 'Pro Annual Plan';
-                                    if (selectedPlan.key === 'pro_yearly') return 'Pro Yearly Plan';
-                                    if (selectedPlan.key === 'pro_quarterly') return 'Pro Quarterly Plan';
-                                    if (selectedPlan.key === 'pro_monthly') return 'Pro Monthly Plan';
-                                    return selectedPlan.name || `Plan ${selectedPlan.key}`;
-                                  })()}
-                                </h3>
-                                <p className="text-gray-600 dark:text-white/60 text-xs tablet:text-sm">
-                                  {(() => {
-                                    if (!selectedPlan) return 'Please select a plan';
-                                    const billingInterval = getBillingInterval(selectedPlan);
-                                    if (billingInterval === 'one-time') {
-                                      return 'One-time payment. Access to all premium features.';
-                                    } else if (billingInterval === 'yearly') {
-                                      return 'Billed once yearly. Access to all premium features.';
-                                    } else if (billingInterval === 'quarterly') {
-                                      return 'Billed once quarterly. Access to all premium features.';
-                                    } else {
-                                      return 'Billed monthly. Access to all premium features.';
-                                    }
-                                  })()}
-                                </p>
+                          {/* Plan Details Display */}
+                          <div className="mb-6">
+                            <h3 className="text-2xl font-black text-gray-900 dark:text-white mb-1">
+                              {(() => {
+                                if (!selectedPlan) return 'No Plan Selected';
+                                if (selectedPlan.key === 'pro_lifetime') return 'Pro Annual Plan';
+                                if (selectedPlan.key === 'pro_yearly') return 'Pro Yearly Plan';
+                                if (selectedPlan.key === 'pro_quarterly') return 'Pro Quarterly Plan';
+                                if (selectedPlan.key === 'pro_monthly') return 'Pro Monthly Plan';
+                                return selectedPlan.name || `Plan ${selectedPlan.key}`;
+                              })()}
+                            </h3>
+                            <p className="text-gray-500 dark:text-gray-400 text-xs">
+                              {(() => {
+                                if (!selectedPlan) return 'Please select a plan';
+                                const billingInterval = getBillingInterval(selectedPlan);
+                                if (billingInterval === 'one-time') {
+                                  return 'One-time payment. Access to all premium features.';
+                                } else if (billingInterval === 'yearly') {
+                                  return 'Billed once yearly. Access to all premium features.';
+                                } else if (billingInterval === 'quarterly') {
+                                  return 'Billed once quarterly. Access to all premium features.';
+                                } else {
+                                  return 'Billed monthly. Access to all premium features.';
+                                }
+                              })()}
+                            </p>
+                          </div>
+
+                          {/* Transition Info Banner */}
+                          {(() => {
+                            const transitionInfo = getTransitionInfo(selectedPlan.key);
+                            if (transitionInfo.type === 'none') return null;
+                            const prorationCredit = getSimulatedProrationCredit();
+                            
+                            if (transitionInfo.isDowngrade) {
+                              return (
+                                <div className="my-2 p-4 rounded-3xl bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-500/30 text-left max-w-md w-full mx-auto shadow-sm">
+                                  <div className="flex gap-2">
+                                    <Info className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                                    <div>
+                                      <p className="text-xs font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wider">Downgrade Scheduled</p>
+                                      <p className="text-[11px] text-amber-700 dark:text-amber-400 mt-1 leading-normal">
+                                        {transitionInfo.message}
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            } else {
+                              const targetPrice = getPlanPrice(selectedPlan);
+                              const isYearly = selectedPlan.key.includes('yearly');
+                              const daysInPeriod = isYearly ? 365 : (selectedPlan.key.includes('quarterly') ? 90 : 30);
+                              const extensionDays = targetPrice > 0 ? Math.round(prorationCredit / (targetPrice / daysInPeriod)) : 0;
+                              
+                              return (
+                                <div className="my-2 p-4 rounded-3xl bg-lime-50/70 dark:bg-lime-950/10 border border-lime-200 dark:border-lime-500/30 text-left max-w-md w-full mx-auto shadow-sm">
+                                  <div className="flex gap-2">
+                                    <Sparkles className="w-5 h-5 text-lime-600 dark:text-lime-400 flex-shrink-0 mt-0.5" />
+                                    <div>
+                                      <p className="text-xs font-bold text-lime-800 dark:text-lime-300 uppercase tracking-wider">Immediate Plan Switch</p>
+                                      <p className="text-[11px] text-gray-600 dark:text-gray-400 mt-1 leading-normal">
+                                        {transitionInfo.message}
+                                      </p>
+                                      {prorationCredit > 0 && extensionDays > 0 && (
+                                        <p className="text-[11px] text-lime-700 dark:text-lime-400 font-extrabold mt-1.5 leading-snug">
+                                          ★ Proration credit of {getCurrencySymbol()}{prorationCredit.toFixed(2)} will extend your new plan by {extensionDays} additional days!
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            }
+                          })()}
+
+                          {/* Selected Plan Benefits box */}
+                          <div className="w-full max-w-md mx-auto my-6 p-6 bg-gray-50/50 dark:bg-white/5 rounded-3xl border border-gray-200/50 dark:border-white/5 text-left">
+                            <h4 className="text-[10px] font-mono tracking-widest text-gray-400 dark:text-gray-500 uppercase mb-4 text-center">
+                              [ INCLUDED BENEFITS ]
+                            </h4>
+                            <div className="space-y-3">
+                              {selectedPlan.features.slice(0, 6).map((feature, i) => (
+                                <div key={i} className="flex items-start gap-2.5">
+                                  <div className="w-4 h-4 rounded-full bg-lime-500/10 dark:bg-lime-500/20 flex items-center justify-center mt-0.5 flex-shrink-0">
+                                    <Check className="w-2.5 h-2.5 text-lime-600 dark:text-lime-400" />
+                                  </div>
+                                  <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+                                    {feature.split(':')[0]}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Coupon Code Section */}
+                          <div className="w-full max-w-md mx-auto mb-6 text-left">
+                            <p className="text-gray-900 dark:text-white mb-2 text-xs font-mono uppercase tracking-wider text-center">[ Have a coupon code? ]</p>
+                            <div className="flex gap-2">
+                              <input
+                                type="text"
+                                value={discountCode}
+                                onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
+                                placeholder="Enter code here"
+                                className="flex-1 px-4 py-2.5 rounded-xl text-sm bg-gray-50 dark:bg-[#232f1c] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 border border-gray-300 dark:border-white/20 focus:outline-none focus:ring-2 focus:ring-lime-500 dark:focus:ring-[#80FF00]/50 focus:border-lime-500 dark:focus:border-[#80FF00]/50 transition-colors"
+                              />
+                              <button
+                                onClick={applyDiscountCode}
+                                disabled={!discountCode.trim() || loading}
+                                className="px-6 py-2.5 bg-gray-950 dark:bg-lime-500 hover:bg-gray-900 dark:hover:bg-lime-600 text-white dark:text-black rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-bold text-sm"
+                              >
+                                Apply
+                              </button>
+                            </div>
+
+                            {appliedDiscount && (
+                              <div className="mt-3 flex items-center justify-between rounded-xl p-3 bg-lime-50 dark:bg-lime-900/20 border border-lime-300 dark:border-lime-500/30">
+                                <div className="flex items-center">
+                                  <Gift className="w-4 h-4 mr-2 text-lime-600 dark:text-lime-400" />
+                                  <span className="text-sm text-lime-700 dark:text-lime-300">
+                                    {appliedDiscount.description}
+                                  </span>
+                                </div>
+                                <button
+                                  onClick={removeDiscountCode}
+                                  className="text-lime-600 dark:text-lime-400 hover:opacity-80 transition-opacity"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
                               </div>
-                              <div className="text-xl tablet:text-2xl font-bold text-gray-900 dark:text-white">
+                            )}
+
+                            {discountError && (
+                              <div className="mt-2 text-sm text-red-600 dark:text-red-400">
+                                {discountError}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Price Summary */}
+                          <div className="w-full max-w-md mx-auto mb-6 space-y-3 p-4 bg-gray-50/30 dark:bg-white/5 rounded-2xl border border-gray-200/40 dark:border-white/5">
+                            <div className="flex justify-between text-gray-600 dark:text-gray-400 text-xs">
+                              <span>Subtotal</span>
+                              <span className="font-semibold text-gray-900 dark:text-white">
                                 {(() => {
-                                  if (!selectedPlan) return 'N/A';
                                   const regionalPrice = (selectedPlan as any).regionalPricing;
                                   const currencySymbol = regionalPrice?.currencySymbol || regionalPricing?.currencySymbol || getCurrencySymbol();
                                   const price = getPlanPrice(selectedPlan).toFixed(2);
@@ -1372,127 +1633,118 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                                   const isUSD = currency === 'USD';
                                   return isUSD ? `${currencySymbol}${price}` : `$${getUSDPlanPrice(selectedPlan).toFixed(2)} (~${currencySymbol}${price})`;
                                 })()}
-                              </div>
+                              </span>
                             </div>
 
-                            {/* Coupon Code Section */}
-                            <div className="mb-4 tablet:mb-6">
-                              <p className="text-gray-900 dark:text-white mb-2 tablet:mb-3 text-xs tablet:text-sm font-medium">Have a coupon code?</p>
-                              <div className="flex flex-col tablet:flex-row gap-2">
-                                <input
-                                  type="text"
-                                  value={discountCode}
-                                  onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
-                                  placeholder="Enter code here"
-                                  className="flex-1 px-3 tablet:px-4 py-2 tablet:py-2.5 rounded-lg text-sm tablet:text-base bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 border border-gray-300 dark:border-white/20 focus:outline-none focus:ring-2 focus:ring-lime-500 dark:focus:ring-[#80FF00]/50 focus:border-lime-500 dark:focus:border-[#80FF00]/50 transition-colors"
-                                />
-                                <button
-                                  onClick={applyDiscountCode}
-                                  disabled={!discountCode.trim() || loading}
-                                  className="w-full tablet:w-auto px-4 tablet:px-6 py-2 tablet:py-2.5 bg-gray-800 dark:bg-lime-500 hover:bg-gray-900 dark:hover:bg-lime-600 text-white dark:text-black rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium text-sm tablet:text-base"
-                                >
-                                  Apply
-                                </button>
-                              </div>
+                            <div className="flex justify-between text-gray-600 dark:text-gray-400 text-xs">
+                              <span>Discount</span>
+                              <span className={appliedDiscount ? 'text-green-600 dark:text-lime-400 font-bold' : 'text-gray-500'}>
+                                {appliedDiscount ? (
+                                  <>
+                                    {(() => {
+                                      const regionalPrice = selectedPlan ? (selectedPlan as any).regionalPricing : null;
+                                      const currencySymbol = regionalPrice?.currencySymbol || regionalPricing?.currencySymbol || getCurrencySymbol();
+                                      const discountAmount = getPlanPrice(selectedPlan) - getFinalPrice();
+                                      const currency = regionalPrice?.currency || regionalPricing?.currency || 'USD';
+                                      const isUSD = currency === 'USD';
+                                      if (isUSD) {
+                                        return `-${currencySymbol}${discountAmount.toFixed(2)}`;
+                                      } else {
+                                        const usdDiscountAmount = getUSDPlanPrice(selectedPlan) - getUSDFinalPrice();
+                                        return `-$${usdDiscountAmount.toFixed(2)} (~${currencySymbol}${discountAmount.toFixed(2)})`;
+                                      }
+                                    })()}
+                                  </>
+                                ) : (
+                                  <>
+                                    {(() => {
+                                      const regionalPrice = selectedPlan ? (selectedPlan as any).regionalPricing : null;
+                                      const currencySymbol = regionalPrice?.currencySymbol || regionalPricing?.currencySymbol || getCurrencySymbol();
+                                      const currency = regionalPrice?.currency || regionalPricing?.currency || 'USD';
+                                      const isUSD = currency === 'USD';
+                                      return isUSD ? `-${currencySymbol}0.00` : `-$0.00 (~${currencySymbol}0.00)`;
+                                    })()}
+                                  </>
+                                )}
+                              </span>
+                            </div>
 
-                              {appliedDiscount && (
-                                <div className="mt-3 flex items-center justify-between rounded-lg p-3 bg-lime-50 dark:bg-lime-900/20 border border-lime-300 dark:border-lime-500/30">
-                                  <div className="flex items-center">
-                                    <Gift className="w-4 h-4 mr-2 text-lime-600 dark:text-lime-400" />
-                                    <span className="text-sm text-lime-700 dark:text-lime-300">
-                                      {appliedDiscount.description}
+                            {/* Proration Credit Row */}
+                            {(() => {
+                              const prorationCredit = getSimulatedProrationCredit();
+                              if (prorationCredit <= 0) return null;
+                              return (
+                                <div className="flex justify-between text-green-600 dark:text-lime-400 text-xs">
+                                  <span>Proration Credit Applied</span>
+                                  <span className="font-bold">
+                                    -{getCurrencySymbol()}{prorationCredit.toFixed(2)}
+                                  </span>
+                                </div>
+                              );
+                            })()}
+
+                            {/* Cost display split by upgrade/downgrade */}
+                            {(() => {
+                              const transitionInfo = getTransitionInfo(selectedPlan.key);
+                              const currencySymbol = getCurrencySymbol();
+                              
+                              if (transitionInfo.isDowngrade) {
+                                return (
+                                  <>
+                                    <div className="flex justify-between text-gray-900 dark:text-white font-black text-sm pt-2 border-t border-gray-200/50 dark:border-white/10">
+                                      <span>Due Today</span>
+                                      <span className="text-gray-500">
+                                        {currencySymbol}0.00
+                                      </span>
+                                    </div>
+                                    <div className="flex justify-between text-gray-900 dark:text-white font-black text-base pt-1">
+                                      <span>Next Renewal Rate</span>
+                                      <span className="text-lime-600 dark:text-lime-400">
+                                        {currencySymbol}{getFinalPrice().toFixed(2)}
+                                      </span>
+                                    </div>
+                                    {userSubscription?.currentPeriodEnd && (
+                                      <div className="text-[10px] text-gray-400 mt-1 text-center font-bold">
+                                        Downgrade takes effect on: {new Date(userSubscription.currentPeriodEnd).toLocaleDateString('en-US', {
+                                          year: 'numeric',
+                                          month: 'long',
+                                          day: 'numeric'
+                                        })}
+                                      </div>
+                                    )}
+                                  </>
+                                );
+                              } else {
+                                return (
+                                  <div className="flex justify-between text-gray-900 dark:text-white font-black text-base pt-2 border-t border-gray-200/50 dark:border-white/10">
+                                    <span>Total Amount</span>
+                                    <span className="text-lime-600 dark:text-lime-400">
+                                      {(() => {
+                                        const regionalPrice = selectedPlan ? (selectedPlan as any).regionalPricing : null;
+                                        const price = getFinalPrice().toFixed(2);
+                                        const currency = regionalPrice?.currency || regionalPricing?.currency || 'USD';
+                                        const isUSD = currency === 'USD';
+                                        return isUSD ? `${currencySymbol}${price}` : `$${getUSDFinalPrice().toFixed(2)} (~${currencySymbol}${price})`;
+                                      })()}
                                     </span>
                                   </div>
-                                  <button
-                                    onClick={removeDiscountCode}
-                                    className="text-lime-600 dark:text-lime-400 hover:opacity-80 transition-opacity"
-                                  >
-                                    <X className="w-4 h-4" />
-                                  </button>
-                                </div>
-                              )}
+                                );
+                              }
+                            })()}
 
-                              {discountError && (
-                                <div className="mt-2 text-sm text-red-600 dark:text-red-400">
-                                  {discountError}
-                                </div>
-                              )}
-                            </div>
+                          </div>
 
-                            {/* Price Summary */}
-                            <div className="mb-4 tablet:mb-6 space-y-2 tablet:space-y-3">
-                              <div className="flex justify-between text-gray-900 dark:text-white text-sm tablet:text-base">
-                                <span>Subtotal</span>
-                                <span>
-                                  {(() => {
-                                    const regionalPrice = (selectedPlan as any).regionalPricing;
-                                    const currencySymbol = regionalPrice?.currencySymbol || regionalPricing?.currencySymbol || getCurrencySymbol();
-                                    const price = getPlanPrice(selectedPlan).toFixed(2);
-                                    const currency = regionalPrice?.currency || regionalPricing?.currency || 'USD';
-                                    const isUSD = currency === 'USD';
-                                    return isUSD ? `${currencySymbol}${price}` : `$${getUSDPlanPrice(selectedPlan).toFixed(2)} (~${currencySymbol}${price})`;
-                                  })()}
-                                </span>
-                              </div>
-
-                              <div className="flex justify-between text-gray-900 dark:text-white text-sm tablet:text-base">
-                                <span>Discount</span>
-                                <span className={appliedDiscount ? 'text-green-600 dark:text-lime-400' : 'text-gray-600 dark:text-white/60'}>
-                                  {appliedDiscount ? (
-                                    <>
-                                      {(() => {
-                                        const regionalPrice = selectedPlan ? (selectedPlan as any).regionalPricing : null;
-                                        const currencySymbol = regionalPrice?.currencySymbol || regionalPricing?.currencySymbol || getCurrencySymbol();
-                                        const discountAmount = getPlanPrice(selectedPlan) - getFinalPrice();
-                                        const currency = regionalPrice?.currency || regionalPricing?.currency || 'USD';
-                                        const isUSD = currency === 'USD';
-                                        if (isUSD) {
-                                          return `-${currencySymbol}${discountAmount.toFixed(2)}`;
-                                        } else {
-                                          const usdDiscountAmount = getUSDPlanPrice(selectedPlan) - getUSDFinalPrice();
-                                          return `-$${usdDiscountAmount.toFixed(2)} (~${currencySymbol}${discountAmount.toFixed(2)})`;
-                                        }
-                                      })()}
-                                    </>
-                                  ) : (
-                                    <>
-                                      {(() => {
-                                        const regionalPrice = selectedPlan ? (selectedPlan as any).regionalPricing : null;
-                                        const currencySymbol = regionalPrice?.currencySymbol || regionalPricing?.currencySymbol || getCurrencySymbol();
-                                        const currency = regionalPrice?.currency || regionalPricing?.currency || 'USD';
-                                        const isUSD = currency === 'USD';
-                                        return isUSD ? `-${currencySymbol}0.00` : `-$0.00 (~${currencySymbol}0.00)`;
-                                      })()}
-                                    </>
-                                  )}
-                                </span>
-                              </div>
-
-                              <div className="flex justify-between text-gray-900 dark:text-white font-bold text-base tablet:text-lg pt-2 border-t border-gray-200 dark:border-lime-500/20">
-                                <span>Total</span>
-                                <span className="text-blue-600 dark:text-lime-400">
-                                  {(() => {
-                                    const regionalPrice = selectedPlan ? (selectedPlan as any).regionalPricing : null;
-                                    const currencySymbol = regionalPrice?.currencySymbol || regionalPricing?.currencySymbol || getCurrencySymbol();
-                                    const price = getFinalPrice().toFixed(2);
-                                    const currency = regionalPrice?.currency || regionalPricing?.currency || 'USD';
-                                    const isUSD = currency === 'USD';
-                                    return isUSD ? `${currencySymbol}${price}` : `$${getUSDFinalPrice().toFixed(2)} (~${currencySymbol}${price})`;
-                                  })()}
-                                </span>
-                              </div>
-                            </div>
-
-                            {/* Provider Health Status */}
-                            {providerHealthLoading ? (
-                              <div className="mb-4 p-3 bg-gray-100 dark:bg-white/5 rounded-lg text-sm text-gray-500 dark:text-white/40 flex items-center gap-2">
+                          {/* Provider Health Status */}
+                          {!getTransitionInfo(selectedPlan.key).isDowngrade && (
+                            providerHealthLoading ? (
+                              <div className="mb-4 p-3 bg-gray-100 dark:bg-white/5 rounded-lg text-sm text-gray-500 dark:text-white/40 flex items-center justify-center gap-2 max-w-md w-full mx-auto">
                                 <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-gray-400"></div>
-                                Checking system status...
+                                <span>Checking system status...</span>
                               </div>
                             ) : (
                               <>
                                 {providerHealth.polar === false && (
-                                  <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-500/30 rounded-lg">
+                                  <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-500/30 rounded-lg max-w-md w-full mx-auto text-left">
                                     <div className="flex items-start gap-2">
                                       <Info className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
                                       <div className="flex-1">
@@ -1507,52 +1759,48 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                                   </div>
                                 )}
                               </>
-                            )}
+                            )
+                          )}
 
-                            {/* Proceed to Payment Button */}
-                            <button
-                              onClick={handlePayment}
-                              disabled={loading}
-                              className="w-full py-4 tablet:py-4 bg-gray-900 dark:bg-[#80FF00] hover:bg-gray-800 dark:hover:bg-[#99ff33] text-white dark:text-black font-black uppercase tracking-tighter italic rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-3 mt-auto text-base shadow-xl shadow-lime-500/10 active:scale-95"
-                            >
-                              {loading ? (
-                                <>
-                                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-current"></div>
-                                  <span>Securing Session...</span>
-                                </>
-                              ) : (
-                                <>
-                                  <span>Secure Checkout</span>
-                                  <ArrowRight className="w-5 h-5" />
-                                </>
-                              )}
-                            </button>
-                            {/* Terms and Conditions */}
-                            <div className="mt-4 text-center">
-                              <p className="text-xs text-gray-600 dark:text-white/60">
-                                By proceeding, you agree to our{' '}
-                                <a
-                                  href="/terms"
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-lime-600 dark:text-[rgb(129,255,0)] hover:underline"
-                                >
-                                  Terms of Service
-                                </a>
-                                {' '}and{' '}
-                                <a
-                                  href="/privacy-policy"
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-lime-600 dark:text-[rgb(129,255,0)] hover:underline"
-                                >
-                                  Privacy Policy
-                                </a>
-                              </p>
-                            </div>
+                          {/* Proceed to Payment Button */}
+                          <button
+                            onClick={handlePayment}
+                            disabled={loading}
+                            className="w-full max-w-md py-4 bg-[#80FF00] hover:bg-[#99ff33] text-black rounded-2xl font-black disabled:bg-gray-200 dark:disabled:bg-gray-800 disabled:text-gray-400 dark:disabled:text-gray-600 disabled:cursor-not-allowed transition-all shadow-xl shadow-lime-500/20 active:scale-95 text-base flex items-center justify-center gap-3 mx-auto"
+                          >
+                            {loading ? (
+                              <>
+                                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-current"></div>
+                                <span>Securing Session...</span>
+                              </>
+                            ) : (
+                              <>
+                                <span>
+                                  {(() => {
+                                    if (selectedPlan?.key === 'starter_monthly') return 'Subscribe for Free';
+                                    if (getTransitionInfo(selectedPlan.key).isDowngrade) return 'Schedule Downgrade';
+                                    return 'Secure Checkout';
+                                  })()}
+                                </span>
+                                <ArrowRight className="w-5 h-5" />
+                              </>
+                            )}
+                          </button>
+
+                          {/* Terms and Conditions */}
+                          <div className="mt-4 text-center max-w-md mx-auto">
+                            <p className="text-[10px] text-gray-500 dark:text-white/40 leading-relaxed">
+                              By proceeding, you agree to our{' '}
+                              <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-lime-600 dark:text-[rgb(129,255,0)] hover:underline">
+                                Terms of Service
+                              </a>{' '}and{' '}
+                              <a href="/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-lime-600 dark:text-[rgb(129,255,0)] hover:underline">
+                                Privacy Policy
+                              </a>
+                            </p>
                           </div>
                         </div>
-                      </>
+                      </div>
                     )
                   }
                 </div>

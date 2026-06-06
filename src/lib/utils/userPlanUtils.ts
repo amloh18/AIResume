@@ -1,9 +1,11 @@
 export type PlanKey =
   | 'free'
   | 'starter_monthly'
+  | 'starter_yearly'
   | 'starter_yealry'
   | 'focused_monthly'
   | 'focused_yearly'
+  | 'smart_quarterly'
   | 'smart_quaterly'
   | 'smart_yearly'
   | 'pro_monthly'
@@ -12,11 +14,13 @@ export type PlanKey =
   | 'pro_lifetime';
 
 export const PLAN_NAMES: Record<PlanKey, string> = {
-  free: 'Free Plan',
-  starter_monthly: 'Starter Monthly',
-  starter_yealry: 'Starter Yearly',
+  free: 'Free (No Subscription)',
+  starter_monthly: 'Starter Monthly ($0 Subscription)',
+  starter_yearly: 'Starter Yearly ($19.99/yr)',
+  starter_yealry: 'Starter Yearly ($19.99/yr)',
   focused_monthly: 'Focused Monthly',
   focused_yearly: 'Focused Yearly',
+  smart_quarterly: 'Smart Quarterly',
   smart_quaterly: 'Smart Quarterly',
   smart_yearly: 'Smart Yearly',
   pro_monthly: 'Pro Monthly',

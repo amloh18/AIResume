@@ -8,6 +8,14 @@ export async function GET(request: NextRequest) {
     const webhookSecret = process.env.POLAR_WEBHOOK_SECRET;
 
     if (!accessToken) {
+      if (process.env.NODE_ENV !== 'production') {
+        return NextResponse.json({
+          configured: false,
+          healthy: true,
+          mock: true,
+          message: 'Polar is not configured, running in development fallback mode'
+        });
+      }
       return NextResponse.json({
         configured: false,
         error: 'POLAR_ACCESS_TOKEN is not configured',
@@ -25,6 +33,14 @@ export async function GET(request: NextRequest) {
 
     const polar = getPolar();
     if (!polar) {
+      if (process.env.NODE_ENV !== 'production') {
+        return NextResponse.json({
+          configured: false,
+          healthy: true,
+          mock: true,
+          message: 'Failed to initialize Polar instance, running in development fallback mode'
+        });
+      }
       return NextResponse.json({
         configured: false,
         error: 'Failed to initialize Polar instance',
@@ -44,6 +60,16 @@ export async function GET(request: NextRequest) {
       });
     } catch (error: any) {
       console.error('Polar health check API test failed:', error);
+      
+      if (process.env.NODE_ENV !== 'production') {
+        return NextResponse.json({
+          configured: true,
+          healthy: true,
+          mock: true,
+          message: 'Polar API failed, but running in development fallback mode',
+          error: error?.message || 'Unknown error'
+        });
+      }
       
       return NextResponse.json({
         configured: true,

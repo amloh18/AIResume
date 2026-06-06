@@ -175,6 +175,8 @@ export interface IUser extends Document {
     interval: 'one-time' | 'monthly' | 'quarterly' | 'yearly';
     seats: number;
     storageUsed: number;
+    downgradeStatus?: 'pending' | 'none';
+    pendingDowngradePlanKey?: string | null;
   };
 
   // Basic UI Settings
@@ -681,6 +683,15 @@ const userSchema = new Schema<IUser>({
     storageUsed: {
       type: Number,
       default: 0
+    },
+    downgradeStatus: {
+      type: String,
+      enum: ['pending', 'none'],
+      default: 'none'
+    },
+    pendingDowngradePlanKey: {
+      type: String,
+      default: null
     }
   },
   settings: {

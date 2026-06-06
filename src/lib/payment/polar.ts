@@ -14,19 +14,15 @@ function getPolarInstance(): Polar | null {
     return null;
   }
   
-  const isTestKey = accessToken.startsWith('polar_oat_') || accessToken.includes('sandbox');
-  
-  if (process.env.NODE_ENV === 'production' && isTestKey) {
-    console.warn('⚠️  Using Polar TEST keys in production. Ensure this is intentional.');
-  }
-  
   if (!polarInstance) {
     try {
+      // Default to production. Set POLAR_MODE=sandbox only if you explicitly want sandbox.
+      const serverMode = (process.env.POLAR_MODE as 'sandbox' | 'production') || 'production';
       polarInstance = new Polar({
         accessToken: accessToken,
-        server: process.env.POLAR_MODE || 'production'
+        server: serverMode
       });
-      console.log('✅ Polar instance initialized successfully');
+      console.log(`✅ Polar instance initialized successfully in ${serverMode} mode`);
     } catch (error) {
       console.error('❌ Failed to initialize Polar instance:', error);
       return null;
@@ -43,7 +39,8 @@ export function getPolar(): Polar | null {
 export const polar = getPolarInstance();
 
 export interface CreateCheckoutParams {
-  productPriceId: string;
+  productPriceId: string;   // Polar price ID (for DB lookup and fallback)
+  productId?: string;        // Polar product ID (preferred for new SDK)
   customerId?: string;
   customerEmail?: string;
   customerName?: string;
@@ -84,12 +81,18 @@ export class PolarService {
     
     try {
       console.log('🚀 Creating Polar checkout with:', {
+        productId: params.productId,
         productPriceId: params.productPriceId,
         customerEmail: params.customerEmail,
       });
 
+      // New SDK (v0.48+) uses products[] with product IDs.
+      // We use the product ID if available, otherwise fall back to the price ID
+      // (works for Polar products that have only one price).
+      const productIdToUse = params.productId || params.productPriceId;
+
       const checkout = await polarInstance.checkouts.create({
-        products: [params.productPriceId],
+        products: [productIdToUse],
         successUrl: params.successUrl,
         customerEmail: params.customerEmail,
         customerName: params.customerName,

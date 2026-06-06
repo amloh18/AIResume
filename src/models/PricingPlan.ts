@@ -43,6 +43,15 @@ export interface IPricingPlan extends Document {
   polarPriceId_quarterly?: string;
   polarPriceId_yearly?: string;
   polarPriceId_one_time?: string;
+  polarProductId_monthly?: string;
+  polarProductId_quarterly?: string;
+  polarProductId_yearly?: string;
+  polarProductId_one_time?: string;
+  // Canonical USD prices
+  price_monthly?: number;
+  price_quarterly?: number;
+  price_yearly?: number;
+  price_one_time?: number;
   // Day Pass specific
   dayPassDuration?: number; // in hours
   // Time-based fields
@@ -224,6 +233,27 @@ const pricingPlanSchema = new Schema<IPricingPlan>({
   polarPriceId_quarterly: String,
   polarPriceId_yearly: String,
   polarPriceId_one_time: String,
+  polarProductId_monthly: String,
+  polarProductId_quarterly: String,
+  polarProductId_yearly: String,
+  polarProductId_one_time: String,
+  // Canonical USD prices
+  price_monthly: {
+    type: Number,
+    min: [0, 'Price cannot be negative']
+  },
+  price_quarterly: {
+    type: Number,
+    min: [0, 'Price cannot be negative']
+  },
+  price_yearly: {
+    type: Number,
+    min: [0, 'Price cannot be negative']
+  },
+  price_one_time: {
+    type: Number,
+    min: [0, 'Price cannot be negative']
+  },
   // Day Pass specific
   dayPassDuration: {
     type: Number,

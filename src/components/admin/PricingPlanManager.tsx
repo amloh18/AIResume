@@ -179,7 +179,7 @@ const PricingPlanManager: React.FC = () => {
                         </div>
                       </td>
                       <td className="px-8 py-6">
-                        <div className="text-xs font-black text-white">${(plan.price_monthly || plan.price_one_time || 0).toFixed(2)}</div>
+                        <div className="text-xs font-black text-white">${(plan.price_monthly || plan.price_quarterly || plan.price_yearly || plan.price_one_time || 0).toFixed(2)}</div>
                       </td>
                       <td className="px-8 py-6">
                         <span className="text-[10px] font-black uppercase tracking-widest text-white/40">{plan.billingCycle}</span>
@@ -289,7 +289,25 @@ const PricingPlanManager: React.FC = () => {
         )}
       </AnimatePresence>
 
-      <AddPricingModal isOpen={isAddCountryModalOpen} onClose={() => setIsAddCountryModalOpen(false)} plans={safePlans} />
+      <AddPricingModal 
+        isOpen={isAddCountryModalOpen} 
+        onClose={() => setIsAddCountryModalOpen(false)} 
+        onSuccess={() => {
+          refetch();
+          const fetchPricingData = async () => {
+            setLoadingPricing(true);
+            try {
+              const response = await fetch('/api/admin/country-pricing');
+              const data = await response.json();
+              if (data.success) {
+                setCountryPricing(data.data?.countryPricing || data.countryPricing || []);
+              }
+            } catch (error) {} finally { setLoadingPricing(false); }
+          };
+          fetchPricingData();
+        }}
+        plans={safePlans} 
+      />
     </motion.div>
   );
 };

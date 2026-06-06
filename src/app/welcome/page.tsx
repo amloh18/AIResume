@@ -1,7 +1,7 @@
 // @ts-nocheck
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { useSession, signIn } from 'next-auth/react';
@@ -38,7 +38,8 @@ import {
   LayoutGrid,
   Trophy,
   TrendingUp,
-  Lightbulb
+  Lightbulb,
+  History
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Logo from '@/components/ui/Logo';
@@ -100,6 +101,76 @@ const WelcomePage: React.FC = () => {
   const [showJsonModal, setShowJsonModal] = useState(false);
   const [jsonInput, setJsonInput] = useState('');
   const [jsonError, setJsonError] = useState('');
+
+  // Dynamic description mappings for strengths and weaknesses
+  const getStrengthDescription = (strength: string) => {
+    const str = strength.toLowerCase();
+    if (str.includes('keyword') || str.includes('alignment')) return 'Excellent alignment with industry-standard terminology.';
+    if (str.includes('structure') || str.includes('layout')) return 'Easy for human recruiters and ATS software to scan quickly.';
+    if (str.includes('contact') || str.includes('email') || str.includes('phone') || str.includes('details')) return 'Essential details are prominent and formatted correctly.';
+    if (str.includes('skills') || str.includes('expertise')) return 'Well-defined skill sections showing technical competencies.';
+    if (str.includes('experience') || str.includes('work') || str.includes('history') || str.includes('timeline')) return 'Rich work history with clear progression and dates.';
+    return 'Contributes to a highly readable and professional CV.';
+  };
+
+  const getWeaknessDescription = (weakness: string) => {
+    const str = weakness.toLowerCase();
+    if (str.includes('keyword') || str.includes('missing')) return 'Essential industry terms are missing; this hurts ATS keyword screening.';
+    if (str.includes('quantified') || str.includes('achievement') || str.includes('metrics') || str.includes('results')) return 'Recruiters favor metrics (e.g. sales grown 20%, time saved by 5h).';
+    if (str.includes('summary') || str.includes('profile') || str.includes('objective')) return 'A strong summary at the top helps frame your career elevator pitch.';
+    if (str.includes('skills') || str.includes('technical')) return 'Define a clearer skills section to highlight core keywords.';
+    if (str.includes('length') || str.includes('word')) return 'Adjust length to avoid fluff and keep sections crisp.';
+    return 'Improve this section to optimize your resume and bypass ATS filters.';
+  };
+
+  const defaultSnapshot = useMemo(() => ({
+    healthIndex: cvScore || 65,
+    breakdown: {
+      structure: 14,
+      readability: 13,
+      contentStrength: 12,
+      skillsKeywords: 11,
+      impactAchievements: 10,
+    },
+    stats: {
+      pagesDetected: 1,
+      totalWords: 350,
+      experienceYears: 2,
+      skillsFound: 8,
+      sectionsDetected: 5
+    },
+    missingKeywords: ['Agile', 'Leadership', 'Project Management', 'Data Analysis', 'Stakeholder Management'],
+    strengths: ['Clear experience timeline', 'Strong contact layout', 'Essential skills listing'],
+    weaknesses: ['Add metrics/quantified results', 'Add industry standard keywords', 'Include professional summary'],
+    potentialBoost: 15,
+    topPriority: 'Add quantified achievements to work history'
+  }), [cvScore]);
+
+  const activeSnapshot = useMemo(() => {
+    if (!analysisSnapshot) return defaultSnapshot;
+    return {
+      healthIndex: analysisSnapshot.healthIndex ?? cvScore ?? defaultSnapshot.healthIndex,
+      breakdown: {
+        structure: analysisSnapshot.breakdown?.structure ?? defaultSnapshot.breakdown.structure,
+        readability: analysisSnapshot.breakdown?.readability ?? defaultSnapshot.breakdown.readability,
+        contentStrength: analysisSnapshot.breakdown?.contentStrength ?? defaultSnapshot.breakdown.contentStrength,
+        skillsKeywords: analysisSnapshot.breakdown?.skillsKeywords ?? defaultSnapshot.breakdown.skillsKeywords,
+        impactAchievements: analysisSnapshot.breakdown?.impactAchievements ?? defaultSnapshot.breakdown.impactAchievements,
+      },
+      stats: {
+        pagesDetected: analysisSnapshot.stats?.pagesDetected ?? defaultSnapshot.stats.pagesDetected,
+        totalWords: analysisSnapshot.stats?.totalWords ?? defaultSnapshot.stats.totalWords,
+        experienceYears: analysisSnapshot.stats?.experienceYears ?? defaultSnapshot.stats.experienceYears,
+        skillsFound: analysisSnapshot.stats?.skillsFound ?? defaultSnapshot.stats.skillsFound,
+        sectionsDetected: analysisSnapshot.stats?.sectionsDetected ?? defaultSnapshot.stats.sectionsDetected,
+      },
+      missingKeywords: analysisSnapshot.missingKeywords ?? defaultSnapshot.missingKeywords,
+      strengths: analysisSnapshot.strengths?.length ? analysisSnapshot.strengths : defaultSnapshot.strengths,
+      weaknesses: analysisSnapshot.weaknesses?.length ? analysisSnapshot.weaknesses : defaultSnapshot.weaknesses,
+      potentialBoost: analysisSnapshot.potentialBoost ?? defaultSnapshot.potentialBoost,
+      topPriority: analysisSnapshot.topPriority ?? defaultSnapshot.topPriority,
+    };
+  }, [analysisSnapshot, defaultSnapshot, cvScore]);
 
   // Helper Functions
   const saveSession = async (updates: any) => {
@@ -277,9 +348,10 @@ Please find the CV data attached.`;
             if (onboarding.current_stage && userLifecycleState !== 'ONBOARDING_COMPLETE') {
               const stepMatch = onboarding.current_stage.match(/STEP_(\d+)/);
               if (stepMatch) {
-                const step = parseInt(stepMatch[1]);
+                const step = Math.max(1, parseInt(stepMatch[1]));
                 if (step > 1) {
                   setIsResuming(true);
+                  setCurrentStep(step);
                 }
               }
             }
@@ -879,23 +951,25 @@ Please find the CV data attached.`;
         <Logo size="sm" />
         
         {/* Horizontal Progress Bar */}
-        <div className="hidden md:flex items-center gap-2 text-xs font-semibold text-gray-400">
-          <span>Step {currentStep} of 10</span>
-          <div className={`w-32 h-2 rounded-full overflow-hidden transition-colors duration-300 ${
-            currentStep === 4 ? 'bg-white/10' : 'bg-gray-150'
-          }`}>
-            <div 
-              className={`h-full transition-all duration-500 ease-out ${
-                currentStep === 4 ? 'bg-[#80FF00]' : 'bg-black'
-              }`}
-              style={{ width: `${currentStep * 10}%` }}
-            />
+        {!isLoadingSession && (
+          <div className="hidden md:flex items-center gap-2 text-xs font-semibold text-gray-400">
+            <span>Step {currentStep} of 10</span>
+            <div className={`w-32 h-2 rounded-full overflow-hidden transition-colors duration-300 ${
+              currentStep === 4 ? 'bg-white/10' : 'bg-gray-150'
+            }`}>
+              <div 
+                className={`h-full transition-all duration-500 ease-out ${
+                  currentStep === 4 ? 'bg-[#80FF00]' : 'bg-black'
+                }`}
+                style={{ width: `${currentStep * 10}%` }}
+              />
+            </div>
           </div>
-        </div>
+        )}
       </header>
 
       {/* Main Container */}
-      <main className="max-w-4xl mx-auto w-full px-6 py-12 flex-1 flex flex-col justify-center">
+      <main className={`${currentStep === 3 ? 'max-w-6xl' : 'max-w-4xl'} mx-auto w-full px-6 py-12 flex-1 flex flex-col justify-center transition-all duration-300`}>
         
         <AnimatePresence mode="wait">
           {isResuming ? (
@@ -905,36 +979,68 @@ Please find the CV data attached.`;
               initial="hidden"
               animate="visible"
               exit="exit"
-              className="w-full bg-white border border-gray-200 rounded-[2rem] p-8 md:p-12 shadow-sm max-w-2xl mx-auto"
+              className="w-full bg-white border border-gray-150 rounded-[2.5rem] p-8 md:p-12 shadow-[0_20px_50px_rgba(0,0,0,0.05)] max-w-2xl mx-auto relative overflow-hidden"
             >
+              {/* Subtle top decoration line */}
+              <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-[#80FF00] via-emerald-400 to-[#80FF00]" />
+
               <div className="space-y-8">
-                <div className="space-y-3 text-center">
-                  <div className="inline-flex p-3 rounded-2xl bg-[#80FF00]/10 text-black mb-2">
-                    <Sparkles className="h-8 w-8 text-[#80FF00]" />
+                <div className="space-y-4 text-center">
+                  <div className="relative inline-flex items-center justify-center p-4 rounded-3xl bg-[#80FF00]/10 text-black mb-2 shadow-[0_0_20px_rgba(128,255,0,0.15)]">
+                    <div className="absolute inset-0 bg-[#80FF00]/5 rounded-3xl animate-pulse" />
+                    <History className="h-8 w-8 text-[#80FF00] relative z-10" />
                   </div>
-                  <h1 className="text-4xl font-extrabold tracking-tight">Welcome Back</h1>
-                  <p className="text-gray-500 text-lg">We've saved your progress. Pick up right where you left off.</p>
+                  <h1 className="text-4xl font-extrabold tracking-tight text-gray-900 animate-fade-in">Welcome Back</h1>
+                  <p className="text-gray-500 text-base max-w-md mx-auto">
+                    We've safely saved your progress. Let's pick up right where you left off.
+                  </p>
                 </div>
 
-                <div className="bg-slate-50 rounded-2xl p-6 space-y-4 border border-gray-100">
-                  <div className="flex items-center gap-3 text-sm font-bold text-green-600">
-                    <CheckCircle className="h-5 w-5" /> <span>Primary CV Created</span>
+                {/* Progress Card */}
+                <div className="bg-slate-50/80 rounded-[2rem] p-6 space-y-6 border border-gray-150">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black uppercase tracking-widest text-gray-400">Your Progress</span>
+                    <span className="text-xs font-black text-black bg-[#80FF00] px-2.5 py-1 rounded-full shadow-sm">
+                      Step {currentStep} of 10
+                    </span>
                   </div>
-                  <div className="flex items-center gap-3 text-sm font-bold text-green-600">
-                    <CheckCircle className="h-5 w-5" /> <span>ATS Analysis Complete</span>
+
+                  {/* Progress Line */}
+                  <div className="space-y-2">
+                    <div className="w-full bg-gray-200 h-2.5 rounded-full overflow-hidden p-0.5 border border-gray-200/50">
+                      <motion.div 
+                        className="bg-gradient-to-r from-[#80FF00] to-emerald-400 h-full rounded-full transition-all duration-500 shadow-[0_0_8px_rgba(128,255,0,0.5)]" 
+                        initial={{ width: 0 }}
+                        animate={{ width: `${currentStep * 10}%` }}
+                      />
+                    </div>
                   </div>
-                  {status === 'authenticated' ? (
-                    <div className="flex items-center gap-3 text-sm font-bold text-green-600">
-                      <CheckCircle className="h-5 w-5" /> <span>Account Verified</span>
+
+                  {/* Milestone list */}
+                  <div className="space-y-4 pt-2 border-t border-gray-200/50">
+                    <div className="flex items-center gap-3 text-sm font-bold text-green-700">
+                      <CheckCircle className="h-5 w-5 text-green-600 fill-green-100" />
+                      <span>Primary CV Created</span>
                     </div>
-                  ) : (
-                    <div className="flex items-center gap-3 text-sm font-bold text-amber-600">
-                      <AlertTriangle className="h-5 w-5" /> <span>Authentication Pending</span>
+                    <div className="flex items-center gap-3 text-sm font-bold text-green-700">
+                      <CheckCircle className="h-5 w-5 text-green-600 fill-green-100" />
+                      <span>ATS Analysis Complete</span>
                     </div>
-                  )}
-                  <div className="flex items-center gap-3 text-sm font-bold text-gray-400">
-                    <div className="w-5 h-5 rounded-full border-2 border-gray-200" /> 
-                    <span>{11 - currentStep} steps remaining to full unlock</span>
+                    {status === 'authenticated' ? (
+                      <div className="flex items-center gap-3 text-sm font-bold text-green-700">
+                        <CheckCircle className="h-5 w-5 text-green-600 fill-green-100" />
+                        <span>Account Verified</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-3 text-sm font-bold text-amber-700">
+                        <AlertTriangle className="h-5 w-5 text-amber-500" />
+                        <span>Authentication Pending</span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-3 text-sm font-bold text-gray-500">
+                      <div className="w-5 h-5 rounded-full border-2 border-gray-300 bg-white" />
+                      <span>{11 - currentStep} steps remaining to unlock full dashboard</span>
+                    </div>
                   </div>
                 </div>
 
@@ -942,17 +1048,16 @@ Please find the CV data attached.`;
                   <Button 
                     onClick={() => {
                       setIsResuming(false);
-                      // Step was already set in initSession
                     }}
-                    className="w-full bg-black text-white hover:bg-slate-900 font-extrabold py-6 rounded-2xl flex items-center justify-center gap-2 shadow-sm"
+                    className="w-full bg-black text-white hover:bg-slate-900 font-extrabold py-6 rounded-2xl flex items-center justify-center gap-2 shadow-lg hover:shadow-xl hover:scale-[1.01] active:scale-[0.99] transition-all uppercase tracking-tight text-sm"
                   >
-                    Continue Setup <ArrowRight className="h-5 w-5" />
+                    Resume Onboarding <ArrowRight className="h-5 w-5" />
                   </Button>
                   {primaryCvId && (
                     <Button 
                       variant="ghost"
                       onClick={() => router.push(`/editor?cvId=${primaryCvId}`)}
-                      className="w-full text-gray-500 font-bold py-4 hover:bg-slate-100 rounded-2xl"
+                      className="w-full text-gray-500 font-bold py-4 hover:bg-slate-100 rounded-2xl transition-colors"
                     >
                       Open Primary CV
                     </Button>
@@ -1120,33 +1225,102 @@ Please find the CV data attached.`;
                     )}
                   </div>
                 ) : (
-                  <div className="space-y-6 max-w-md mx-auto py-8">
-                    <div className="text-center space-y-2">
-                      <Loader2 className="h-10 w-10 animate-spin mx-auto text-[#80FF00]" />
-                      <h3 className="font-bold text-lg">Parsing Experience Details</h3>
-                      <p className="text-sm text-gray-500">Parsing: {droppedFile}</p>
-                    </div>
+                  <div className="max-w-xl mx-auto py-6">
+                    <style dangerouslySetInnerHTML={{__html: `
+                      @keyframes scanline {
+                        0% { top: 0%; opacity: 0.8; }
+                        50% { top: 100%; opacity: 0.8; }
+                        100% { top: 0%; opacity: 0.8; }
+                      }
+                      .animate-scanline {
+                        animation: scanline 3s ease-in-out infinite;
+                      }
+                    `}} />
+                    
+                    <div className="bg-white dark:bg-black/25 rounded-[2rem] border border-gray-150 dark:border-white/5 shadow-xl p-8 space-y-8 relative overflow-hidden">
+                      {/* Scanning Document Animation */}
+                      <div className="relative w-44 h-56 mx-auto bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl shadow-inner flex flex-col justify-between p-4 overflow-hidden group">
+                        {/* Scan Line */}
+                        <div className="absolute left-0 right-0 h-1 bg-gradient-to-r from-transparent via-[#80FF00] to-transparent shadow-[0_0_8px_#80FF00] animate-scanline z-20" />
+                        
+                        {/* Dummy Document Elements */}
+                        <div className="space-y-3">
+                          <div className="h-3 bg-gray-300 dark:bg-white/20 rounded w-2/3" />
+                          <div className="h-2 bg-gray-200 dark:bg-white/10 rounded w-5/6" />
+                          <div className="h-2 bg-gray-200 dark:bg-white/10 rounded w-full" />
+                        </div>
+                        <div className="space-y-2">
+                          <div className="h-2 bg-gray-200 dark:bg-white/10 rounded w-full" />
+                          <div className="h-2 bg-gray-200 dark:bg-white/10 rounded w-4/5" />
+                        </div>
+                        <div className="space-y-2">
+                          <div className="h-3 bg-gray-300 dark:bg-white/20 rounded w-1/2" />
+                          <div className="h-2 bg-gray-200 dark:bg-white/10 rounded w-full" />
+                        </div>
+                        
+                        {/* Glowing Overlay */}
+                        <div className="absolute inset-0 bg-[#80FF00]/[0.02] pointer-events-none" />
+                      </div>
 
-                    <div className="w-full bg-gray-150 h-3 rounded-full overflow-hidden">
-                      <div className="bg-black h-full transition-all duration-300" style={{ width: `${parseProgress}%` }} />
-                    </div>
+                      {/* Header */}
+                      <div className="text-center space-y-2">
+                        <h3 className="font-extrabold text-xl text-gray-900 dark:text-white">Parsing Experience Details</h3>
+                        <p className="text-xs text-gray-500 max-w-sm mx-auto truncate">File: {droppedFile}</p>
+                      </div>
 
-                    <div className="space-y-2 border border-gray-100 rounded-xl p-4 bg-slate-50 text-sm">
-                      <div className="flex items-center gap-2 font-medium">
-                        <div className={`w-2 h-2 rounded-full ${parseStep >= 0 ? 'bg-[#80FF00]' : 'bg-gray-300'}`} />
-                        <span className={parseStep >= 0 ? 'text-black' : 'text-gray-400'}>Reading document layers</span>
+                      {/* Progress bar */}
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-xs font-bold text-gray-600 dark:text-gray-400 px-1">
+                          <span>Import Progress</span>
+                          <span>{parseProgress}%</span>
+                        </div>
+                        <div className="w-full bg-gray-100 dark:bg-white/5 h-3 rounded-full overflow-hidden p-0.5 border border-gray-200/50 dark:border-white/5">
+                          <div 
+                            className="bg-gradient-to-r from-[#80FF00] to-emerald-400 h-full rounded-full transition-all duration-300 shadow-[0_0_8px_rgba(128,255,0,0.5)]" 
+                            style={{ width: `${parseProgress}%` }} 
+                          />
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2 font-medium">
-                        <div className={`w-2 h-2 rounded-full ${parseStep >= 1 ? 'bg-[#80FF00]' : 'bg-gray-300'}`} />
-                        <span className={parseStep >= 1 ? 'text-black' : 'text-gray-400'}>Extracting work histories</span>
-                      </div>
-                      <div className="flex items-center gap-2 font-medium">
-                        <div className={`w-2 h-2 rounded-full ${parseStep >= 2 ? 'bg-[#80FF00]' : 'bg-gray-300'}`} />
-                        <span className={parseStep >= 2 ? 'text-black' : 'text-gray-400'}>Formatting section maps</span>
-                      </div>
-                      <div className="flex items-center gap-2 font-medium">
-                        <div className={`w-2 h-2 rounded-full ${parseStep >= 3 ? 'bg-[#80FF00]' : 'bg-gray-300'}`} />
-                        <span className={parseStep >= 3 ? 'text-black' : 'text-gray-400'}>Indexing skills keywords</span>
+
+                      {/* Steps Checklist */}
+                      <div className="space-y-3 bg-gray-50/50 dark:bg-white/[0.02] border border-gray-150 dark:border-white/5 rounded-2xl p-5 text-sm">
+                        {[
+                          'Reading document layers',
+                          'Extracting work histories',
+                          'Formatting section maps',
+                          'Indexing skills keywords'
+                        ].map((label, stepIdx) => {
+                          const isCompleted = parseStep > stepIdx;
+                          const isActive = parseStep === stepIdx;
+                          
+                          return (
+                            <div 
+                              key={stepIdx} 
+                              className={`flex items-center gap-3 transition-all duration-300 ${
+                                isCompleted ? 'text-gray-900 dark:text-white font-bold' : isActive ? 'text-gray-900 dark:text-white font-extrabold' : 'text-gray-400'
+                              }`}
+                            >
+                              <div className="flex-shrink-0">
+                                {isCompleted ? (
+                                  <div className="w-5 h-5 rounded-full bg-[#80FF00] flex items-center justify-center text-black shadow-md shadow-lime-500/20">
+                                    <Check size={11} strokeWidth={4} />
+                                  </div>
+                                ) : isActive ? (
+                                  <div className="w-5 h-5 rounded-full border-2 border-[#80FF00] flex items-center justify-center bg-[#80FF00]/10 relative">
+                                    <div className="w-2 h-2 rounded-full bg-[#80FF00] animate-ping absolute" />
+                                    <div className="w-2 h-2 rounded-full bg-[#80FF00]" />
+                                  </div>
+                                ) : (
+                                  <div className="w-5 h-5 rounded-full border-2 border-gray-200 dark:border-white/10" />
+                                )}
+                              </div>
+                              <span className="flex-1">{label}</span>
+                              {isActive && (
+                                <span className="text-[10px] uppercase font-black text-[#80FF00] tracking-widest animate-pulse">Analyzing...</span>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   </div>
@@ -1277,25 +1451,25 @@ Please find the CV data attached.`;
                           fill="transparent" 
                           strokeDasharray="439.8"
                           initial={{ strokeDashoffset: 439.8 }}
-                          animate={{ strokeDashoffset: 439.8 - (439.8 * cvScore) / 100 }}
+                          animate={{ strokeDashoffset: 439.8 - (439.8 * (activeSnapshot.healthIndex || 0)) / 100 }}
                           transition={{ duration: 1.5, ease: "easeOut" }}
                           strokeLinecap="round"
                         />
                       </svg>
                       <div className="absolute flex flex-col items-center">
-                        <span className="text-4xl font-black">{cvScore}%</span>
+                        <span className="text-4xl font-black">{activeSnapshot.healthIndex}%</span>
                         <span className="text-[10px] text-gray-400 uppercase tracking-widest font-black">Score</span>
                       </div>
                     </div>
                     <div className="space-y-1">
                       <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#80FF00]/10 text-green-700 rounded-full text-xs font-bold">
                         <div className="w-2 h-2 rounded-full bg-green-500" />
-                        {cvScore >= 80 ? 'Excellent' : cvScore >= 60 ? 'Fair' : 'Needs Improvement'}
+                        {activeSnapshot.healthIndex >= 80 ? 'Excellent' : activeSnapshot.healthIndex >= 60 ? 'Fair' : 'Needs Improvement'}
                       </div>
                       <p className="text-xs text-gray-500 max-w-[180px] mx-auto mt-2 leading-relaxed">
-                        {cvScore >= 80 
+                        {activeSnapshot.healthIndex >= 80 
                           ? 'Your CV is highly competitive and ready for elite roles!' 
-                          : cvScore >= 60 
+                          : activeSnapshot.healthIndex >= 60 
                           ? 'Your CV has a solid foundation. Let\'s make it stand out!' 
                           : 'Your CV needs significant optimization to bypass modern ATS.'}
                       </p>
@@ -1311,11 +1485,11 @@ Please find the CV data attached.`;
                     
                     <div className="space-y-4">
                       {[
-                        { label: 'Structure & Formatting', score: analysisSnapshot?.breakdown?.structure || 0, color: 'bg-green-500', icon: Palette },
-                        { label: 'ATS Readability', score: analysisSnapshot?.breakdown?.readability || 0, color: 'bg-indigo-500', icon: FileText },
-                        { label: 'Content Strength', score: analysisSnapshot?.breakdown?.contentStrength || 0, color: 'bg-orange-500', icon: Sparkles },
-                        { label: 'Skills & Keywords', score: analysisSnapshot?.breakdown?.skillsKeywords || 0, color: 'bg-blue-500', icon: Target },
-                        { label: 'Impact & Achievements', score: analysisSnapshot?.breakdown?.impactAchievements || 0, color: 'bg-teal-500', icon: Zap },
+                        { label: 'Structure & Formatting', score: activeSnapshot.breakdown.structure, color: 'bg-green-500', icon: Palette },
+                        { label: 'ATS Readability', score: activeSnapshot.breakdown.readability, color: 'bg-indigo-500', icon: FileText },
+                        { label: 'Content Strength', score: activeSnapshot.breakdown.contentStrength, color: 'bg-orange-500', icon: Sparkles },
+                        { label: 'Skills & Keywords', score: activeSnapshot.breakdown.skillsKeywords, color: 'bg-blue-500', icon: Target },
+                        { label: 'Impact & Achievements', score: activeSnapshot.breakdown.impactAchievements, color: 'bg-teal-500', icon: Zap },
                       ].map((item, idx) => {
                         const Icon = item.icon;
                         return (
@@ -1348,11 +1522,11 @@ Please find the CV data attached.`;
                     <h3 className="text-xs font-black uppercase tracking-widest text-gray-400">At a Glance</h3>
                     <div className="space-y-4">
                       {[
-                        { label: 'Pages Detected', value: analysisSnapshot?.stats?.pagesDetected || 0, icon: FileText },
-                        { label: 'Total Words', value: analysisSnapshot?.stats?.totalWords || 0, icon: Mail },
-                        { label: 'Experience', value: `${analysisSnapshot?.stats?.experienceYears || 0} years`, icon: Briefcase },
-                        { label: 'Top Skills Found', value: analysisSnapshot?.stats?.skillsFound || 0, icon: Zap },
-                        { label: 'Sections Detected', value: `${analysisSnapshot?.stats?.sectionsDetected || 0}/9`, icon: LayoutGrid },
+                        { label: 'Pages Detected', value: activeSnapshot.stats.pagesDetected, icon: FileText },
+                        { label: 'Total Words', value: activeSnapshot.stats.totalWords, icon: Mail },
+                        { label: 'Experience', value: `${activeSnapshot.stats.experienceYears} years`, icon: Briefcase },
+                        { label: 'Top Skills Found', value: activeSnapshot.stats.skillsFound, icon: Zap },
+                        { label: 'Sections Detected', value: `${activeSnapshot.stats.sectionsDetected}/9`, icon: LayoutGrid },
                       ].map((stat, idx) => {
                         const Icon = stat.icon;
                         return (
@@ -1377,12 +1551,12 @@ Please find the CV data attached.`;
                       <h3 className="text-sm font-black uppercase tracking-tight">Your Strengths</h3>
                     </div>
                     <div className="space-y-4">
-                      {(analysisSnapshot?.strengths || []).map((s, idx) => (
+                      {activeSnapshot.strengths.map((s, idx) => (
                         <div key={idx} className="flex gap-3">
                           <div className="mt-1 p-1 bg-white rounded shadow-sm text-green-600"><Check size={10} strokeWidth={4} /></div>
                           <div>
                             <p className="text-xs font-bold text-gray-800">{s}</p>
-                            <p className="text-[10px] text-gray-500 mt-0.5">Your CV has a clear section hierarchy and layout.</p>
+                            <p className="text-[10px] text-gray-500 mt-0.5">{getStrengthDescription(s)}</p>
                           </div>
                         </div>
                       ))}
@@ -1403,12 +1577,12 @@ Please find the CV data attached.`;
                       <h3 className="text-sm font-black uppercase tracking-tight">Areas to Improve</h3>
                     </div>
                     <div className="space-y-4">
-                      {(analysisSnapshot?.weaknesses || []).map((w, idx) => (
+                      {activeSnapshot.weaknesses.map((w, idx) => (
                         <div key={idx} className="flex gap-3">
                           <div className="mt-1 p-1 bg-white rounded shadow-sm text-orange-600"><Zap size={10} fill="currentColor" /></div>
                           <div>
                             <p className="text-xs font-bold text-gray-800">{w}</p>
-                            <p className="text-[10px] text-gray-500 mt-0.5">Add more role-relevant keywords to your profile.</p>
+                            <p className="text-[10px] text-gray-500 mt-0.5">{getWeaknessDescription(w)}</p>
                           </div>
                         </div>
                       ))}
@@ -1418,7 +1592,7 @@ Please find the CV data attached.`;
                         <div className="p-2 bg-white rounded-lg text-orange-600 shadow-sm"><TrendingUp size={16} /></div>
                         <div>
                           <p className="text-xs font-black text-orange-800">Potential Score Boost</p>
-                          <p className="text-[10px] text-orange-700/70">+{analysisSnapshot?.potentialBoost || 0} points</p>
+                          <p className="text-[10px] text-orange-700/70">+{activeSnapshot.potentialBoost} points</p>
                         </div>
                       </div>
                       <ArrowRight size={14} className="text-orange-300" />
@@ -1433,7 +1607,7 @@ Please find the CV data attached.`;
                     </div>
                     
                     <div className="flex flex-wrap gap-2 mb-auto">
-                      {(analysisSnapshot?.missingKeywords || []).map((k, idx) => (
+                      {activeSnapshot.missingKeywords.map((k, idx) => (
                         <div key={idx} className="px-3 py-1.5 bg-white border border-blue-100 text-blue-600 text-[10px] font-bold rounded-lg shadow-sm">
                           {k}
                         </div>
@@ -1469,7 +1643,7 @@ Please find the CV data attached.`;
                   
                   <div className="flex items-center gap-10 relative z-10">
                     <div className="text-center">
-                      <span className="text-3xl font-black">{cvScore + (analysisSnapshot?.potentialBoost || 0)}%</span>
+                      <span className="text-3xl font-black">{(activeSnapshot.healthIndex || 0) + (activeSnapshot.potentialBoost || 0)}%</span>
                       <p className="text-[10px] font-black text-indigo-200 uppercase tracking-widest mt-1">Potential Score</p>
                     </div>
                     
@@ -1479,7 +1653,7 @@ Please find the CV data attached.`;
                       <div>
                         <p className="text-[10px] font-black text-indigo-200 uppercase tracking-widest mb-1">Top Priority</p>
                         <p className="text-xs font-bold text-white max-w-[200px] leading-tight group-hover:text-white transition-colors">
-                          {analysisSnapshot?.topPriority || 'Complete your profile to see tailored recommendations...'}
+                          {activeSnapshot.topPriority || 'Complete your profile to see tailored recommendations...'}
                         </p>
                       </div>
                       <ChevronRight size={18} className="text-indigo-300 group-hover/btn:translate-x-1 transition-transform" />
