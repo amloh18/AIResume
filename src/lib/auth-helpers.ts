@@ -42,7 +42,7 @@ export async function getAuthenticatedUser(request?: NextRequest): Promise<AuthR
       // If not found in User collection, check AdminAuth collection
       if (!dbUser) {
         const AdminAuth = (await import('@/models/AdminAuth')).default;
-        const adminUser = await AdminAuth.findOne({ email }).lean().exec();
+        const adminUser = await AdminAuth.findOne({ email }).lean().exec() as any;
         
         if (adminUser) {
           // Map AdminAuth user to the expected user format

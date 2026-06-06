@@ -416,8 +416,10 @@ export default withSentryConfig(nextConfig, {
   // side errors will fail.
   tunnelRoute: "/monitoring",
 
-  // Hides source maps from generated client bundles
-  hideSourceMaps: true,
+  // Hides source maps from generated client bundles by deleting them after upload
+  sourcemaps: {
+    deleteSourcemapsAfterUpload: true,
+  },
 
   webpack: {
     // Enables automatic instrumentation of Vercel Cron Monitors. (Does not yet work with App Router route handlers.)

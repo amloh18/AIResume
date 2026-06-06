@@ -1655,17 +1655,45 @@ const MembershipBilling = ({ user }: { user: User }) => {
                     );
                   })()}
 
-                  {subscription?.amount && subscription?.currency && (
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-gray-600 dark:text-gray-400 flex items-center gap-1.5">
-                        <DollarSign className="w-4 h-4" /> Price
-                      </span>
-                      <div>
-                        <span className="font-semibold text-gray-900 dark:text-white">{formatCurrency(subscription.amount, subscription.currency)}</span>
-                        <span className="text-gray-500 dark:text-gray-400">/{subscription.billingCycle || 'mo'}</span>
+                  {(() => {
+                    const isFree = currentPlanKey === 'free';
+                    const isStarter = currentPlanKey === 'starter_monthly';
+                    const displayAmount = isStarter ? 0 : (subscription?.amount ?? 0);
+                    const displayCurrency = subscription?.currency || 'USD';
+                    const displayInterval = subscription?.billingCycle || 'mo';
+
+                    if (isFree) {
+                      return (
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-gray-600 dark:text-gray-400 flex items-center gap-1.5">
+                            <DollarSign className="w-4 h-4" /> Price
+                          </span>
+                          <span className="font-semibold text-gray-900 dark:text-white">Free (No Subscription)</span>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div className="space-y-1">
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-gray-600 dark:text-gray-400 flex items-center gap-1.5">
+                            <DollarSign className="w-4 h-4" /> Price
+                          </span>
+                          <div>
+                            <span className="font-semibold text-gray-900 dark:text-white">
+                              {formatCurrency(displayAmount, displayCurrency)}
+                            </span>
+                            <span className="text-gray-500 dark:text-gray-400">/{displayInterval}</span>
+                          </div>
+                        </div>
+                        {isStarter && (
+                          <p className="text-[10px] text-right font-medium text-indigo-600 dark:text-indigo-400">
+                            Free Subscription ($0 invoices will be emailed from Polar)
+                          </p>
+                        )}
                       </div>
-                    </div>
-                  )}
+                    );
+                  })()}
 
                   <div className="pt-2">
                     <a href="#payment-history" className="text-sm text-lime-600 dark:text-lime-400 hover:text-lime-700 dark:hover:text-lime-300 font-medium flex items-center gap-1 transition-colors">

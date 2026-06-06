@@ -290,6 +290,9 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
           const selectedProPlan = filteredPlans.find(p => p.key === selectedMobilePlanKey);
 
           const getMobilePlanPriceDisplay = (plan: DatabasePricingPlan) => {
+            if (plan.key === 'starter_monthly') {
+              return '$0.00';
+            }
             const regionalPrice = getRegionalPrice(plan);
             if (plan.key === 'starter_yearly') {
               return regionalPrice.endsWith('*')
@@ -301,6 +304,14 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
           };
 
           const getMobilePlanSubtext = (plan: DatabasePricingPlan) => {
+            if (plan.key === 'starter_monthly') {
+              return (
+                <div className="flex flex-col items-center text-center">
+                  <span className="text-[8px] text-gray-400 font-normal mt-0.5">monthly subscription</span>
+                  <span className="text-[7px] text-indigo-500 font-semibold mt-0.5 leading-tight">*polar $0 invoices sent</span>
+                </div>
+              );
+            }
             if (plan.key === 'starter_yearly') {
               return (
                 <div className="flex flex-col items-center">
@@ -455,8 +466,17 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
                             }`}
                           >
                             <div className="flex flex-col items-center justify-start min-h-[64px]">
-                              {plan.key === 'free' || plan.key === 'starter_monthly' ? (
-                                <div className="text-xl tablet:text-2xl font-extrabold text-gray-900 dark:text-white">Free</div>
+                               {plan.key === 'free' ? (
+                                <div className="flex flex-col items-center">
+                                  <span className="text-xl tablet:text-2xl font-extrabold text-gray-900 dark:text-white leading-tight">Free</span>
+                                  <span className="text-[9px] text-gray-400 mt-0.5 font-normal">no subscription</span>
+                                </div>
+                              ) : plan.key === 'starter_monthly' ? (
+                                <div className="flex flex-col items-center">
+                                  <span className="text-xl tablet:text-2xl font-extrabold text-gray-900 dark:text-white leading-tight">$0.00</span>
+                                  <span className="text-[9px] text-gray-400 mt-0.5 font-normal">monthly subscription*</span>
+                                  <span className="text-[8px] text-indigo-500 mt-0.5 font-semibold text-center leading-tight">*polar $0 invoices sent</span>
+                                </div>
                               ) : plan.key === 'starter_yearly' ? (
                                 <div className="flex flex-col items-center">
                                   {plan.isPromotionActive && (
@@ -518,14 +538,18 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
                             <motion.button
                               onClick={() => handlePlanSelect(plan)}
                               className={`w-full py-2 px-3 text-xs font-bold rounded-lg transition-all duration-300 ${
-                                plan.key === 'starter_monthly'
+                                plan.key === 'free' || plan.key === 'starter_monthly'
                                   ? 'bg-gray-200 hover:bg-gray-300 dark:bg-white/10 dark:hover:bg-white/20 text-gray-900 dark:text-white'
                                   : 'bg-[#81ff00] hover:bg-lime-400 text-black shadow-md hover:shadow-lime-400/20'
                               }`}
                               whileHover={{ scale: 1.03 }}
                               whileTap={{ scale: 0.97 }}
                             >
-                              {plan.key === 'starter_monthly' ? 'Get Started' : 'Choose Plan'}
+                              {plan.key === 'free' 
+                                ? 'Get Started Free' 
+                                : plan.key === 'starter_monthly' 
+                                  ? 'Subscribe Free' 
+                                  : 'Choose Plan'}
                             </motion.button>
                           </td>
                         );
@@ -659,7 +683,7 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
                             whileHover={{ scale: 1.03 }}
                             whileTap={{ scale: 0.97 }}
                           >
-                            {leftPlan.key === 'starter_monthly' ? 'Get Started' : 'Choose Plan'}
+                            {leftPlan.key === 'starter_monthly' ? 'Subscribe Free' : 'Choose Plan'}
                           </motion.button>
                         )}
                       </td>

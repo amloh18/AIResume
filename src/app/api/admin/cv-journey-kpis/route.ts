@@ -74,6 +74,29 @@ export async function GET(request: NextRequest) {
     const averageATSScore = atsScoreCount > 0 ? jobsWithAts.reduce((sum: number, j: any) => sum + j.atsScore, 0) / atsScoreCount : 0;
 
     // Group status distribution
+    const journeyStatusCounts = applicationJourneys.reduce((acc: any, journey: any) => {
+      const status = journey.status || 'draft';
+      acc[status] = (acc[status] || 0) + 1;
+      return acc;
+    }, {});
+
+    const orphanedJourneys = applicationJourneys.filter((j: any) => !j.userId).length;
+
+    const masterCVToTailoredCVRatio = totalJourneys > 0 ? totalCVs / totalJourneys : 0;
+
+    const completedJourneysList = applicationJourneys.filter((j: any) => j.status === 'completed');
+    const averageCompletionTime = completedJourneysList.length > 0
+      ? completedJourneysList.reduce((sum: number, j: any) => {
+          const start = j.createdAt || j.metadata?.createdAt || j.lastWorkedOn;
+          const end = j.completedAt || j.metadata?.completedAt || j.lastWorkedOn;
+          if (start && end) {
+            const diff = new Date(end).getTime() - new Date(start).getTime();
+            return sum + Math.max(0, diff);
+          }
+          return sum;
+        }, 0) / (completedJourneysList.length * 60 * 1000) // in minutes
+      : 0;
+
     const journeyStatusDistribution = Object.keys(journeyStatusCounts).map(status => ({
       _id: status,
       count: journeyStatusCounts[status]

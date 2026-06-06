@@ -225,6 +225,130 @@ export default function SidebarMembershipCard() {
     );
   }
 
+  // --- Starter Monthly (indigo/purple) ---
+  if (planKey === 'starter_monthly') {
+    return (
+      <>
+        <div className="rounded-2xl p-3 text-white shadow-sm shadow-black/20 dark:shadow-black/40 bg-gradient-to-br from-indigo-600 to-purple-700">
+          <div className="text-sm font-semibold mb-1">
+            Starter Monthly
+          </div>
+          <div className="text-[11px] text-white/80 mb-2">
+            Free Subscription ($0/mo)
+          </div>
+
+          {!isUnlimited && limit > 0 && (
+            <div className="mb-3">
+              <div className="flex items-center justify-between text-[11px] text-white/80 mb-1">
+                <span>Feature usage</span>
+                <span>{used}/{limit}</span>
+              </div>
+              <div className="h-2 bg-white/20 rounded-full overflow-hidden">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${progressPercent}%` }}
+                  transition={{ duration: 0.5 }}
+                  className="h-2 bg-white rounded-full"
+                />
+              </div>
+            </div>
+          )}
+
+          {!hasCredits && (
+            <div className="text-xs text-yellow-300 mb-2 font-medium">
+              ⚠️ Feature limit reached. Upgrade to continue.
+            </div>
+          )}
+
+          <p className="text-[10px] text-white/80 leading-snug mb-3">
+            You are subscribed to the $0/mo Starter plan. You will receive $0 invoice receipts from Polar.
+          </p>
+
+          <div className="text-[11px] font-semibold mb-1.5">
+            Upgrade to Pro to get:
+          </div>
+
+          <ul className="text-[10px] text-white/95 space-y-0.5 mb-3 list-none p-0">
+            <li>• Unlimited job creation & tracking</li>
+            <li>• Unlimited ATS checks per job</li>
+            <li>• Premium templates</li>
+            <li>• Priority support</li>
+          </ul>
+
+          <div className="space-y-2">
+            <motion.button
+              onClick={openMembership}
+              className="w-full bg-white/20 hover:bg-white/30 text-white text-xs font-semibold py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5"
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+            >
+              <Star className="w-3 h-3" />
+              Upgrade to Pro
+            </motion.button>
+
+            <motion.button
+              onClick={() => setShowPaymentModal(true)}
+              className="w-full bg-white/20 hover:bg-white/30 text-white text-xs font-semibold py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5"
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+            >
+              <Zap className="w-3 h-3" />
+              View All Plans
+            </motion.button>
+          </div>
+        </div>
+        <UniversalPaymentModal
+          isOpen={showPaymentModal}
+          onClose={() => setShowPaymentModal(false)}
+          onSuccess={() => {
+            setShowPaymentModal(false);
+            window.location.reload();
+          }}
+          triggerContext="sidebar-view-all-plans"
+        />
+      </>
+    );
+  }
+
+  // --- Starter Yearly (lime/greenish) ---
+  if (planKey === 'starter_yearly') {
+    return (
+      <div className="rounded-2xl p-3 bg-gradient-to-br from-lime-600 to-lime-700 text-white shadow-sm shadow-black/20 dark:shadow-black/40">
+        <div className="flex items-center justify-between mb-2">
+          <div>
+            <div className="text-sm font-semibold">Starter Yearly</div>
+            <div className="text-[11px] text-white/80">Active subscriber</div>
+          </div>
+          {nextReset && (
+            <div className="text-[10px] text-white/70 bg-white/10 px-2 py-1 rounded-full">
+              Renews {nextReset.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+            </div>
+          )}
+        </div>
+
+        <div className="bg-white/15 rounded-xl p-3 mb-2">
+          <div className="text-xs text-white/80 mb-0.5">CVs created this year</div>
+          <div className="text-xl font-bold">{totalCreated}</div>
+          <div className="text-[10px] text-white/70 mt-0.5">Unlimited CVs & AI Cover Letters</div>
+        </div>
+
+        <div className="text-xs text-white/90 leading-relaxed mb-3">
+          <span>Starter Yearly • No Job Tracker included. Upgrade to Focused/Smart for Job Tracker.</span>
+        </div>
+
+        <motion.button
+          onClick={openMembership}
+          className="w-full bg-white/20 hover:bg-white/30 text-white text-xs font-semibold py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5"
+          whileHover={{ scale: 1.03 }}
+          whileTap={{ scale: 0.97 }}
+        >
+          <Zap className="w-3 h-3" />
+          Upgrade to Focused
+        </motion.button>
+      </div>
+    );
+  }
+
   // --- Pro Monthly (blue) ---
   if (planKey === 'pro_monthly') {
     return (

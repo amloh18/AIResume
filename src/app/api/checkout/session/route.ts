@@ -12,6 +12,7 @@ import Coupon from '@/models/Coupon';
 import DiscountCode from '@/models/DiscountCode';
 
 type PaidPlanKey = 
+  | 'starter_monthly'
   | 'starter_yearly' 
   | 'focused_monthly' 
   | 'focused_yearly' 
@@ -26,6 +27,7 @@ interface ZeroAmountActivationParams {
   currency?: string;
   couponDiscount?: any;
   priceInMinorUnits?: number;
+  returnUrl?: string;
 }
 
 async function activatePlanWithCoupon({
@@ -35,7 +37,8 @@ async function activatePlanWithCoupon({
   regionInfo,
   currency = 'GBP',
   couponDiscount,
-  priceInMinorUnits = 0
+  priceInMinorUnits = 0,
+  returnUrl
 }: ZeroAmountActivationParams) {
   if (!user?._id) {
     return NextResponse.json(
@@ -73,18 +76,27 @@ async function activatePlanWithCoupon({
 
   const updatedUser = await User.findById(user._id).select('currentPlanKey subscription').lean();
 
+  // Build a redirect URL so the client navigates to the dashboard after activation
+  const successRedirectUrl = constructSuccessUrl(
+    returnUrl || `${process.env.NEXTAUTH_URL || ''}/dashboard`,
+    { success: 'true', activated: 'true' }
+  );
+
   return NextResponse.json({
     success: true,
     zero_amount: true,
-    provider: 'coupon',
-    planKey: updatedUser?.currentPlanKey || planKey,
-    subscription: updatedUser?.subscription || null,
+    provider: couponDiscount ? 'coupon' : 'free',
+    planKey: (updatedUser as any)?.currentPlanKey || planKey,
+    subscription: (updatedUser as any)?.subscription || null,
+    url: successRedirectUrl,
+    redirect_url: successRedirectUrl,
     message: couponDiscount
       ? `Coupon ${couponDiscount.code} covered the full amount. Plan activated without payment.`
-      : 'Plan activated without payment.',
+      : 'Plan activated successfully.',
     coupon: couponDiscount ? { code: couponDiscount.code, id: couponDiscount.id } : null
   });
 }
+
 
 export async function POST(request: NextRequest) {
   try {
@@ -95,7 +107,18 @@ export async function POST(request: NextRequest) {
 
     await getConnection();
 
-    const body = await request.json();
+    let body: any;
+    try {
+      body = await request.json();
+    } catch (e) {
+      console.warn('⚠️ Checkout session: Invalid or empty request body received.');
+      return NextResponse.json({ error: 'Invalid or empty request body' }, { status: 400 });
+    }
+
+    if (!body) {
+      return NextResponse.json({ error: 'Request body is required' }, { status: 400 });
+    }
+
     console.log('Checkout session request body:', JSON.stringify(body, null, 2));
 
     const {
@@ -179,6 +202,38 @@ async function handleProPlanPayment(
   const planKey = plan.key as PaidPlanKey;
   const countryCode = regionInfo?.countryCode || 'US';
 
+  // Analyze transition type (upgrade, downgrade, cross-cycle, none)
+  const transition = subscriptionService.analyzeSubscriptionTransition(
+    user.currentPlanKey || 'free',
+    planKey,
+    user.subscription?.interval,
+    interval
+  );
+
+  if (transition.isDowngrade) {
+    // Schedule downgrade locally
+    await User.findByIdAndUpdate(user._id, {
+      $set: {
+        'subscription.downgradeStatus': 'pending',
+        'subscription.pendingDowngradePlanKey': planKey
+      }
+    });
+
+    return NextResponse.json({
+      success: true,
+      downgrade_scheduled: true,
+      planKey: planKey,
+      message: `Your subscription has been scheduled to downgrade to ${plan.name} at the end of your current billing cycle.`
+    });
+  }
+
+  // Calculate proration credit if upgrade/cross-cycle
+  const prorationCredit = subscriptionService.calculateProrationCredit(
+    user.subscription?.currentPeriodStart,
+    user.subscription?.currentPeriodEnd,
+    user.subscription?.purchasePrice
+  );
+
   // Use regionalPricing array directly from the plan document
   let regionalPriceObj = plan.regionalPricing?.find((rp: any) => 
     rp.region?.toUpperCase() === countryCode.toUpperCase()
@@ -197,6 +252,7 @@ async function handleProPlanPayment(
   }
 
   let priceId = regionalPriceObj?.polarPriceId;
+  let productId = regionalPriceObj?.polarProductId;
   let amount = regionalPriceObj ? (regionalPriceObj.price * 100) : 0;
   let currency = regionalPriceObj?.currency || 'USD';
 
@@ -205,12 +261,15 @@ async function handleProPlanPayment(
     if (planKey.includes('monthly')) {
       amount = (plan.price_monthly || 0) * 100;
       priceId = plan.polarPriceId_monthly;
+      productId = productId || plan.polarProductId_monthly;
     } else if (planKey.includes('yearly')) {
       amount = (plan.price_yearly || 0) * 100;
       priceId = plan.polarPriceId_yearly;
+      productId = productId || plan.polarProductId_yearly;
     } else if (planKey.includes('quarterly')) {
       amount = (plan.price_quarterly || 0) * 100;
       priceId = plan.polarPriceId_quarterly;
+      productId = productId || plan.polarProductId_quarterly;
     }
   }
 
@@ -219,8 +278,12 @@ async function handleProPlanPayment(
     interval,
     amount,
     currency,
+    priceId,
+    productId,
     regionalPricingFound: !!regionalPriceObj,
-    regionCode: countryCode
+    regionCode: countryCode,
+    transitionType: transition.type,
+    prorationCredit
   });
 
   if (couponDiscount) {
@@ -229,19 +292,25 @@ async function handleProPlanPayment(
   }
 
   if (amount <= 0) {
-    return activatePlanWithCoupon({ user, planKey, interval, regionInfo, currency, couponDiscount, priceInMinorUnits: amount });
+    return activatePlanWithCoupon({ user, planKey, interval, regionInfo, currency, couponDiscount, priceInMinorUnits: amount, returnUrl });
   }
 
-  if (!priceId) {
+  if (!priceId && !productId) {
     return NextResponse.json({ error: `No payment configuration found for ${planKey}` }, { status: 400 });
   }
 
   try {
+    const successUrl = constructSuccessUrl(returnUrl || `${process.env.NEXTAUTH_URL || ''}/dashboard`, {
+      success: 'true',
+      session_id: '{CHECKOUT_SESSION_ID}'
+    });
+
     const checkoutResponse = await PolarService.createCheckout({
-      productPriceId: priceId,
+      productPriceId: priceId!,
+      productId: productId,
       customerEmail: billingDetails?.email || user.email,
       customerName: billingDetails?.name || `${user.firstName || ''} ${user.lastName || ''}`.trim(),
-      successUrl: `${returnUrl || process.env.NEXTAUTH_URL}/dashboard?success=true&session_id={CHECKOUT_SESSION_ID}`,
+      successUrl: successUrl,
       metadata: {
         planKey,
         userId: user._id.toString(),
@@ -249,7 +318,9 @@ async function handleProPlanPayment(
         interval,
         region: countryCode,
         couponCode: couponDiscount?.code || '',
-        couponId: couponDiscount?.id || ''
+        couponId: couponDiscount?.id || '',
+        prorationCreditApplied: prorationCredit.toString(),
+        transitionType: transition.type
       }
     });
 
@@ -257,10 +328,34 @@ async function handleProPlanPayment(
       throw new Error(checkoutResponse.error || 'Failed to create Polar checkout session');
     }
 
-    return NextResponse.json({ provider: 'polar', redirect_url: checkoutResponse.url });
+    return NextResponse.json({ 
+      provider: 'polar', 
+      redirect_url: checkoutResponse.url,
+      url: checkoutResponse.url 
+    });
 
   } catch (error) {
     console.error('Polar Checkout Session error:', error);
     return NextResponse.json({ error: 'Payment setup failed' }, { status: 500 });
+  }
+}
+
+// Helper to construct success URLs by safely appending query parameters without malforming paths
+function constructSuccessUrl(base: string, params: Record<string, string>): string {
+  try {
+    const isRelative = !base.startsWith('http://') && !base.startsWith('https://');
+    const url = new URL(base, isRelative ? 'http://localhost' : undefined);
+    
+    for (const [key, value] of Object.entries(params)) {
+      url.searchParams.set(key, value);
+    }
+    
+    return isRelative ? `${url.pathname}${url.search}${url.hash}` : url.toString();
+  } catch (e) {
+    const separator = base.includes('?') ? '&' : '?';
+    const queryStr = Object.entries(params)
+      .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+      .join('&');
+    return `${base}${separator}${queryStr}`;
   }
 }

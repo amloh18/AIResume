@@ -206,24 +206,38 @@ const RedesignedPricingCards: React.FC<RedesignedPricingCardsProps> = ({
 
           {/* Pricing */}
           <div className="text-center mb-8">
-            {plan.key === 'free' || plan.key === 'starter_monthly' ? (
-              <div className="text-4xl font-bold text-gray-900 dark:text-white mb-2">Free</div>
+            {plan.key === 'free' ? (
+              <>
+                <div className="text-4xl font-bold text-gray-900 dark:text-white mb-2">Free</div>
+                <div className="text-gray-600 dark:text-gray-300 text-sm">
+                  No subscription required
+                </div>
+              </>
+            ) : plan.key === 'starter_monthly' ? (
+              <>
+                <div className="text-4xl font-bold text-gray-900 dark:text-white mb-2">$0.00</div>
+                <div className="text-gray-600 dark:text-gray-300 text-sm">
+                  per month (with $0 invoice receipts)
+                </div>
+              </>
             ) : (
-              <div className="text-4xl font-bold text-gray-900 dark:text-white mb-2 flex items-center justify-center gap-2">
-                {plan.isPromotionActive && (
-                  <span className="text-xl text-gray-400 dark:text-gray-500 line-through font-semibold">
-                    {plan.regionalPricing?.currencySymbol || plan.currencySymbol || '$'}
-                    {plan.price_yearly || plan.price_monthly || plan.price_quarterly || plan.price_one_time}
+              <>
+                <div className="text-4xl font-bold text-gray-900 dark:text-white mb-2 flex items-center justify-center gap-2">
+                  {plan.isPromotionActive && (
+                    <span className="text-xl text-gray-400 dark:text-gray-500 line-through font-semibold">
+                      {plan.regionalPricing?.currencySymbol || plan.currencySymbol || '$'}
+                      {plan.price_yearly || plan.price_monthly || plan.price_quarterly || plan.price_one_time}
+                    </span>
+                  )}
+                  <span>
+                    {plan.regionalPricing?.displayPrice || `${plan.regionalPricing?.currencySymbol || plan.currencySymbol || '$'}${price}`}
                   </span>
-                )}
-                <span>
-                  {plan.regionalPricing?.displayPrice || `${plan.regionalPricing?.currencySymbol || plan.currencySymbol || '$'}${price}`}
-                </span>
-              </div>
+                </div>
+                <div className="text-gray-600 dark:text-gray-300 text-sm">
+                  {getBillingText(plan)}
+                </div>
+              </>
             )}
-            <div className="text-gray-600 dark:text-gray-300 text-sm">
-              {getBillingText(plan)}
-            </div>
           </div>
 
           {/* Features */}
@@ -294,7 +308,7 @@ const RedesignedPricingCards: React.FC<RedesignedPricingCardsProps> = ({
                 : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600'
                 }`}
             >
-              {plan.key === 'free' ? 'Get Started Free' : 'Choose Plan'}
+              {plan.key === 'free' ? 'Get Started Free' : plan.key === 'starter_monthly' ? 'Subscribe Free' : 'Choose Plan'}
               <ArrowRight className="w-4 h-4" />
             </button>
           )}

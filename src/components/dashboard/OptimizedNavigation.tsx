@@ -989,6 +989,132 @@ const OptimizedNavigation: React.FC = () => {
               );
             }
 
+            // Starter Monthly plan card
+            if (currentPlan === 'starter_monthly') {
+              return (
+                <div className={`hidden ${isDesktopExpanded ? 'lg:block' : ''} rounded-2xl p-3 text-white border-2 border-white/20 bg-gradient-to-br from-indigo-600 to-purple-700`}>
+                  <div className="text-sm font-semibold mb-1">
+                    Starter Monthly
+                  </div>
+                  <div className="text-[11px] text-white/80 mb-2">
+                    Free Subscription ($0/mo)
+                  </div>
+
+                  {!isUnlimited && limit > 0 && (
+                    <div className="mb-3">
+                      <div className="flex items-center justify-between text-[11px] text-white/80 mb-1">
+                        <span>Job usage</span>
+                        <span>{used}/{limit}</span>
+                      </div>
+                      <div className="h-2 bg-white/20 rounded-full overflow-hidden">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${progressPercent}%` }}
+                          transition={{ duration: 0.5 }}
+                          className="h-2 bg-white rounded-full"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {!hasCredits && (
+                    <div className="text-xs text-yellow-300 mb-2 font-medium">
+                      ⚠️ Job Tracker limit reached. Upgrade to Pro.
+                    </div>
+                  )}
+
+                  <p className="text-[10px] text-white/80 leading-snug mb-3">
+                    You are subscribed to the $0/mo Starter plan. You will receive $0 invoice receipts from Polar.
+                  </p>
+
+                  <div className="text-[11px] font-semibold mb-1.5">
+                    What you can do:
+                  </div>
+
+                  <ul className="text-[11px] text-white/90 space-y-0.5 mb-3 list-none p-0">
+                    <li className="flex items-center gap-1.5">
+                      <span>✓</span>
+                      <span>Create Master CV</span>
+                    </li>
+                    <li className="flex items-center gap-1.5">
+                      <span>✓</span>
+                      <span>Track up to 3 jobs ({remaining} remaining)</span>
+                    </li>
+                  </ul>
+
+                  <div className="space-y-2">
+                    <motion.button
+                      onClick={() => {
+                        setPreselectedPlanKey('focused_monthly');
+                        setShowSubscriptionModal(true);
+                      }}
+                      className="w-full bg-white/20 hover:bg-white/30 text-white text-xs font-semibold py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5"
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.97 }}
+                    >
+                      <Star className="w-3 h-3" />
+                      Upgrade to Pro
+                    </motion.button>
+
+                    <motion.button
+                      onClick={() => {
+                        setPreselectedPlanKey(undefined);
+                        setShowSubscriptionModal(true);
+                      }}
+                      className="w-full bg-white/20 hover:bg-white/30 text-white text-xs font-semibold py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5"
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.97 }}
+                    >
+                      <Zap className="w-3 h-3" />
+                      View All Plans
+                    </motion.button>
+                  </div>
+                </div>
+              );
+            }
+
+            // Starter Yearly plan card
+            if (currentPlan === 'starter_yearly') {
+              return (
+                <div className={`hidden ${isDesktopExpanded ? 'lg:block' : ''} rounded-2xl p-3 text-white border-2 border-white/20 bg-gradient-to-br from-lime-600 to-lime-700`}>
+                  <div className="flex items-center justify-between mb-2">
+                    <div>
+                      <div className="text-sm font-semibold">Starter Yearly</div>
+                      <div className="text-[11px] text-white/80">Active subscriber</div>
+                    </div>
+                    {nextReset && (
+                      <div className="text-[10px] text-white/70 bg-white/10 px-2 py-1 rounded-full">
+                        Renews {nextReset.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="bg-white/15 rounded-xl p-3 mb-2">
+                    <div className="text-xs text-white/80 mb-0.5">CVs created this year</div>
+                    <div className="text-xl font-bold">{totalCreated}</div>
+                    <div className="text-[10px] text-white/70 mt-0.5">Unlimited CVs & AI Cover Letters</div>
+                  </div>
+
+                  <div className="text-xs text-white/90 leading-relaxed mb-3">
+                    <span>Starter Yearly • No Job Tracker included. Upgrade to Focused/Smart for Job Tracker.</span>
+                  </div>
+
+                  <motion.button
+                    onClick={() => {
+                      setPreselectedPlanKey('focused_yearly');
+                      setShowSubscriptionModal(true);
+                    }}
+                    className="w-full bg-white/20 hover:bg-white/30 text-white text-xs font-semibold py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5"
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                  >
+                    <Zap className="w-3 h-3" />
+                    Upgrade to Focused
+                  </motion.button>
+                </div>
+              );
+            }
+
             // Fallback for any other plan types
             return null;
           })()}

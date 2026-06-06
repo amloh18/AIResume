@@ -1,158 +1,134 @@
 // @ts-nocheck
+export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
-import { getConnection } from '@/lib/database/connection-manager';
-import { getCountryPricing } from '@/lib/services/countryPricingService';
-import { createErrorResponse } from '@/lib/api/error-handler';
+import { detectUserRegion } from '@/lib/services/regionDetectionService';
 
 /**
- * GET /api/pricing/regional
- * Get regional pricing for a country code
- * Query params: countryCode (optional, defaults to default pricing)
+ * GET /api/pricing/regional?countryCode=IN
  * 
- * IMPORTANT: This route MUST always return JSON, never HTML
+ * Returns the user's detected/requested locale info for CLIENT-SIDE display conversion.
+ * Actual checkout prices are always USD — Polar handles real currency conversion at checkout.
  * 
- * Now uses CountryPricing collection (normalized structure)
+ * This endpoint is for UX only: showing approximate local prices in the UI.
  */
+
+// Static exchange rates vs USD (refresh periodically in a production environment)
+const USD_EXCHANGE_RATES: Record<string, number> = {
+  USD: 1.00,
+  EUR: 0.92,
+  GBP: 0.79,
+  INR: 83.50,
+  CAD: 1.37,
+  AUD: 1.53,
+  SGD: 1.35,
+  JPY: 157.00,
+  CHF: 0.90,
+  SEK: 10.60,
+  NOK: 10.90,
+  DKK: 6.95,
+  PLN: 3.98,
+  BRL: 5.05,
+  MXN: 17.20,
+  AED: 3.67,
+  SAR: 3.75,
+  PKR: 278.00,
+  BDT: 110.00,
+  NGN: 1600.00,
+  ZAR: 18.90,
+  KES: 129.00,
+  MYR: 4.72,
+  PHP: 56.50,
+  THB: 36.20,
+  IDR: 16200.00,
+  VND: 25200.00,
+  KRW: 1370.00,
+  TWD: 32.30,
+  HKD: 7.82,
+  CNY: 7.24,
+};
+
+const COUNTRY_CURRENCY: Record<string, { currency: string; symbol: string; locale: string }> = {
+  US: { currency: 'USD', symbol: '$',    locale: 'en-US' },
+  GB: { currency: 'GBP', symbol: '£',    locale: 'en-GB' },
+  IN: { currency: 'INR', symbol: '₹',    locale: 'en-IN' },
+  CA: { currency: 'CAD', symbol: 'CA$',  locale: 'en-CA' },
+  AU: { currency: 'AUD', symbol: 'A$',   locale: 'en-AU' },
+  DE: { currency: 'EUR', symbol: '€',    locale: 'de-DE' },
+  FR: { currency: 'EUR', symbol: '€',    locale: 'fr-FR' },
+  IT: { currency: 'EUR', symbol: '€',    locale: 'it-IT' },
+  ES: { currency: 'EUR', symbol: '€',    locale: 'es-ES' },
+  NL: { currency: 'EUR', symbol: '€',    locale: 'nl-NL' },
+  BE: { currency: 'EUR', symbol: '€',    locale: 'nl-BE' },
+  AT: { currency: 'EUR', symbol: '€',    locale: 'de-AT' },
+  CH: { currency: 'CHF', symbol: 'CHF',  locale: 'de-CH' },
+  SE: { currency: 'SEK', symbol: 'kr',   locale: 'sv-SE' },
+  NO: { currency: 'NOK', symbol: 'kr',   locale: 'nb-NO' },
+  DK: { currency: 'DKK', symbol: 'kr',   locale: 'da-DK' },
+  FI: { currency: 'EUR', symbol: '€',    locale: 'fi-FI' },
+  PL: { currency: 'PLN', symbol: 'zł',   locale: 'pl-PL' },
+  IE: { currency: 'EUR', symbol: '€',    locale: 'en-IE' },
+  PT: { currency: 'EUR', symbol: '€',    locale: 'pt-PT' },
+  GR: { currency: 'EUR', symbol: '€',    locale: 'el-GR' },
+  SG: { currency: 'SGD', symbol: 'S$',   locale: 'en-SG' },
+  JP: { currency: 'JPY', symbol: '¥',    locale: 'ja-JP' },
+  KR: { currency: 'KRW', symbol: '₩',    locale: 'ko-KR' },
+  MY: { currency: 'MYR', symbol: 'RM',   locale: 'ms-MY' },
+  PH: { currency: 'PHP', symbol: '₱',    locale: 'en-PH' },
+  TH: { currency: 'THB', symbol: '฿',    locale: 'th-TH' },
+  ID: { currency: 'IDR', symbol: 'Rp',   locale: 'id-ID' },
+  BR: { currency: 'BRL', symbol: 'R$',   locale: 'pt-BR' },
+  MX: { currency: 'MXN', symbol: '$',    locale: 'es-MX' },
+  ZA: { currency: 'ZAR', symbol: 'R',    locale: 'en-ZA' },
+  PK: { currency: 'PKR', symbol: '₨',    locale: 'en-PK' },
+  AE: { currency: 'AED', symbol: 'AED',  locale: 'ar-AE' },
+  SA: { currency: 'SAR', symbol: 'SAR',  locale: 'ar-SA' },
+  NG: { currency: 'NGN', symbol: '₦',    locale: 'en-NG' },
+};
+
 export async function GET(request: NextRequest) {
   try {
-    await getConnection();
-
     const { searchParams } = new URL(request.url);
-    const countryCode = searchParams.get('countryCode');
+    let countryCode = searchParams.get('countryCode')?.toUpperCase();
 
-    let pricingData;
-
-    try {
-      const targetCountryCode = countryCode || 'US'; // Default to US if no country code provided
-      let countryPricing = await getCountryPricing(targetCountryCode);
-      
-      // Fallback if not found
-      if (!countryPricing) {
-        countryPricing = await getCountryPricing('US');
+    // Auto-detect from IP if not provided
+    if (!countryCode) {
+      const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined;
+      try {
+        const region = await detectUserRegion(ip);
+        countryCode = region?.countryCode || 'US';
+      } catch {
+        countryCode = 'US';
       }
-      
-      if (countryPricing) {
-        const currency = countryPricing.currency;
-        const currencySymbol = countryPricing.currencySymbol;
-        const isUSD = currency === 'USD';
-
-        const baseUSDPrice = {
-          monthly: 12.99,
-          quarterly: 34.99,
-          yearly: 99.00,
-          lifetime: 199.00
-        };
-
-        let monthlyVal = baseUSDPrice.monthly;
-        let quarterlyVal = baseUSDPrice.quarterly;
-        let yearlyVal = baseUSDPrice.yearly;
-        let lifetimeVal = baseUSDPrice.lifetime;
-
-        if (!isUSD) {
-          const { LocationService } = await import('@/lib/payment/locationService');
-          monthlyVal = Math.round(LocationService.convertPrice(baseUSDPrice.monthly, 'USD', currency).convertedPrice);
-          quarterlyVal = Math.round(LocationService.convertPrice(baseUSDPrice.quarterly, 'USD', currency).convertedPrice);
-          yearlyVal = Math.round(LocationService.convertPrice(baseUSDPrice.yearly, 'USD', currency).convertedPrice);
-          lifetimeVal = Math.round(LocationService.convertPrice(baseUSDPrice.lifetime, 'USD', currency).convertedPrice);
-        }
-
-        pricingData = {
-          currency: currency,
-          currencySymbol: currencySymbol,
-          monthly: isUSD ? `${currencySymbol}${monthlyVal.toFixed(2)}` : `${currencySymbol}${monthlyVal}`,
-          quarterly: isUSD ? `${currencySymbol}${quarterlyVal.toFixed(2)}` : `${currencySymbol}${quarterlyVal}`,
-          yearly: isUSD ? `${currencySymbol}${yearlyVal.toFixed(2)}` : `${currencySymbol}${yearlyVal >= 1000 ? yearlyVal.toLocaleString() : yearlyVal}`,
-          lifetime: isUSD ? `${currencySymbol}${lifetimeVal.toFixed(2)}` : `${currencySymbol}${lifetimeVal >= 1000 ? lifetimeVal.toLocaleString() : lifetimeVal}`,
-          // Include additional data for new structure
-          countryCode: countryPricing.countryCode,
-          countryName: countryPricing.countryName,
-          regionId: countryPricing.regionId,
-          planPrices: {
-            free: { price: 0, planId: countryPricing.planPrices?.free?.planId?.toString() || '' },
-            monthly: { price: monthlyVal, planId: countryPricing.planPrices?.monthly?.planId?.toString() || '' },
-            quarterly: { price: quarterlyVal, planId: countryPricing.planPrices?.quarterly?.planId?.toString() || '' },
-            yearly: { price: yearlyVal, planId: countryPricing.planPrices?.yearly?.planId?.toString() || '' },
-            lifetime: { price: lifetimeVal, planId: countryPricing.planPrices?.lifetime?.planId?.toString() || '' }
-          }
-        };
-      }
-    } catch (dbError) {
-      console.error('Database error fetching pricing:', dbError);
-      // Return JSON error, never HTML
-      return NextResponse.json(
-        { 
-          success: false,
-          error: 'Failed to fetch pricing data from database',
-          message: dbError instanceof Error ? dbError.message : 'Unknown database error'
-        },
-        { status: 500 }
-      );
     }
 
-    if (!pricingData) {
-      return NextResponse.json(
-        { 
-          success: false,
-          error: 'Pricing data not found' 
-        },
-        { status: 404 }
-      );
-    }
+    const localInfo = COUNTRY_CURRENCY[countryCode] || COUNTRY_CURRENCY['US'];
+    const rate = USD_EXCHANGE_RATES[localInfo.currency] ?? 1;
 
-    // Format response to match the expected RegionalPricing interface
-    const responseData: any = {
+    return NextResponse.json({
       success: true,
-      pricing: {
-        currency: pricingData.currency,
-        currencySymbol: pricingData.currencySymbol,
-        monthly: typeof pricingData.monthly === 'string' 
-          ? pricingData.monthly 
-          : `${pricingData.currencySymbol}${pricingData.monthly}`,
-        quarterly: typeof pricingData.quarterly === 'string' 
-          ? pricingData.quarterly 
-          : `${pricingData.currencySymbol}${pricingData.quarterly}`,
-        yearly: typeof pricingData.yearly === 'string' 
-          ? pricingData.yearly 
-          : `${pricingData.currencySymbol}${pricingData.yearly >= 1000 
-            ? pricingData.yearly.toLocaleString() 
-            : pricingData.yearly}`,
-        lifetime: typeof pricingData.lifetime === 'string' 
-          ? pricingData.lifetime 
-          : `${pricingData.currencySymbol}${pricingData.lifetime >= 1000 
-            ? pricingData.lifetime.toLocaleString() 
-            : pricingData.lifetime}`,
-      }
-    };
-
-    // Include additional CountryPricing data if available
-    if (pricingData.countryCode) {
-      responseData.pricing.countryCode = pricingData.countryCode;
-      responseData.pricing.countryName = pricingData.countryName;
-      responseData.pricing.regionId = pricingData.regionId;
-      if (pricingData.planPrices) {
-        responseData.pricing.planPrices = pricingData.planPrices;
-      }
-    }
-
-    // Also return raw numeric values for calculations
-    if (pricingData.planPrices) {
-      responseData.raw = {
-        currency: pricingData.currency,
-        currencySymbol: pricingData.currencySymbol,
-        monthly: pricingData.planPrices.monthly.price,
-        quarterly: pricingData.planPrices.quarterly.price,
-        yearly: pricingData.planPrices.yearly.price,
-        lifetime: pricingData.planPrices.lifetime.price
-      };
-    } else {
-      responseData.raw = pricingData;
-    }
-
-    return NextResponse.json(responseData);
+      countryCode,
+      currency: localInfo.currency,
+      currencySymbol: localInfo.symbol,
+      locale: localInfo.locale,
+      // Exchange rate vs USD — use this to convert display prices client-side
+      exchangeRate: rate,
+      // Note: Polar handles real conversion at checkout. These rates are for display only.
+      displayOnly: true,
+    }, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400',
+      },
+    });
   } catch (error) {
-    // CRITICAL: Always return JSON, never let Next.js return HTML
-    console.error('Error fetching regional pricing:', error);
-    return createErrorResponse(error);
+    console.error('Regional pricing error:', error);
+    return NextResponse.json({
+      success: true,
+      countryCode: 'US',
+      currency: 'USD',
+      currencySymbol: '$',
+      locale: 'en-US',
+      exchangeRate: 1,
+      displayOnly: true,
+    });
   }
 }
-

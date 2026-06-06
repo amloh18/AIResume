@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     await getConnection();
 
     // Find user and their subscription
-    const user = await User.findOne({ email: userEmail })
+    let user = await User.findOne({ email: userEmail })
       .populate('subscription')
       .exec();
 
@@ -37,6 +37,22 @@ export async function GET(request: NextRequest) {
         { success: false, error: 'User not found' },
         { status: 404 }
       );
+    }
+
+    // Check if there is a pending downgrade that should have taken effect
+    if (user.subscription?.downgradeStatus === 'pending' && user.subscription.currentPeriodEnd) {
+      const now = new Date();
+      const renewalDate = new Date(user.subscription.currentPeriodEnd);
+      if (now >= renewalDate) {
+        await subscriptionService.applyPendingDowngrade(user._id.toString());
+        // Re-fetch user to get updated data
+        const updatedUser = await User.findOne({ email: userEmail })
+          .populate('subscription')
+          .exec();
+        if (updatedUser) {
+          user = updatedUser;
+        }
+      }
     }
 
     const effective = subscriptionService.getEffectivePlan(user);
@@ -62,7 +78,12 @@ export async function GET(request: NextRequest) {
             day: 'numeric'
           }),
           planId: freePlan?._id || null,
-          planDetails: freePlan
+          planDetails: freePlan,
+          downgradeStatus: user.subscription?.downgradeStatus || 'none',
+          pendingDowngradePlanKey: user.subscription?.pendingDowngradePlanKey || null,
+          currentPeriodStart: null,
+          currentPeriodEnd: null,
+          purchasePrice: 0
         }
       });
     }
@@ -85,7 +106,12 @@ export async function GET(request: NextRequest) {
             day: 'numeric'
           }),
       planId: planDetails?._id || null,
-      planDetails: planDetails
+      planDetails: planDetails,
+      downgradeStatus: effectiveSub.downgradeStatus || 'none',
+      pendingDowngradePlanKey: effectiveSub.pendingDowngradePlanKey || null,
+      currentPeriodStart: effectiveSub.currentPeriodStart || null,
+      currentPeriodEnd: effectiveSub.currentPeriodEnd || null,
+      purchasePrice: effectiveSub.purchasePrice || 0
     };
 
     return NextResponse.json({
