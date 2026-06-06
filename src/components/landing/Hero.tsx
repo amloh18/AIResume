@@ -72,12 +72,37 @@ const Hero = () => {
 
           {/* Headline & CTAs */}
           <motion.h1
-            className="text-3xl tablet:text-4xl desktop:text-5xl font-bold text-white mb-6 tracking-tight leading-[1.1] max-w-5xl desktop:max-w-none text-center"
+            className="text-2xl tablet:text-4xl desktop:text-6xl font-bold text-white mb-12 tracking-tight leading-[1.3] max-w-7xl mx-auto text-center px-4"
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, ease: "easeOut" }}
           >
-            Smart AI Tools to Land Your Dream Job
+            <span className="relative inline-block">
+              <span className="relative z-10 block py-4 px-8 whitespace-nowrap">
+                Smart AI Job Search Tool<br />
+                Optimize Resumes & Track Applications
+              </span>
+              
+              {/* Realistic Single Brush Shape */}
+              <svg 
+                className="absolute inset-0 w-full h-full z-0 pointer-events-none" 
+                viewBox="0 0 100 100" 
+                preserveAspectRatio="none"
+              >
+                <defs>
+                  <filter id="highlighter-brush">
+                    <feTurbulence type="fractalNoise" baseFrequency="0.08" numOctaves="4" result="noise" />
+                    <feDisplacementMap in="SourceGraphic" in2="noise" scale="6" />
+                  </filter>
+                </defs>
+                <path 
+                  d="M2,12 C20,10 40,15 60,12 C80,10 98,14 98,12 L97,88 C80,85 60,90 40,88 C20,85 3,89 2,88 Z" 
+                  fill="#81ff00" 
+                  fillOpacity="0.55"
+                  filter="url(#highlighter-brush)"
+                />
+              </svg>
+            </span>
           </motion.h1>
 
           <motion.p
@@ -86,10 +111,7 @@ const Hero = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.3, ease: "easeOut" }}
           >
-            <span className="text-white font-semibold">Stop wasting time. Start getting interviews.</span>
-            <br className="hidden tablet:block" />
-            {' '}Your all-in-one job search copilot with automated CV tailoring, 
-            cover letter generation, and smart application tracking.
+            <span className="text-white font-semibold">Stop wasting time. Use the ultimate AI job search copilot for automated CV tailoring, instant cover letter generation, and smart application tracking.</span>
           </motion.p>
 
           <motion.div

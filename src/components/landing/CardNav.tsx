@@ -17,12 +17,22 @@ interface SubmenuItem {
   isExternal?: boolean;
 }
 
+interface FeaturedItem {
+  title: string;
+  description: string;
+  href: string;
+  image?: string;
+  badge?: string;
+  actionText?: string;
+}
+
 interface NavLink {
   label: string;
   href: string;
   ariaLabel?: string;
   isExternal?: boolean;
   submenu?: SubmenuItem[];
+  featured?: FeaturedItem;
 }
 
 interface CardNavProps {
@@ -101,6 +111,7 @@ const CardNav = ({
     
     // Close mobile menu when clicking a link
     setIsMobileMenuOpen(false);
+    setHoveredLink(null);
     
     if (href.startsWith('#')) {
       const element = document.querySelector(href);
@@ -169,34 +180,67 @@ const CardNav = ({
                     {link.label}
                   </button>
                   
-                  {/* Submenu Dropdown */}
+                  {/* Mega Menu Dropdown */}
                   {hasSubmenu && (
                     <div className="submenu-dropdown">
-                      {link.submenu!.map((subLink, subIndex) => (
-                        <button
-                          key={`sub-${link.label}-${subIndex}`}
-                          className="submenu-link"
-                          onClick={() => scrollToSection(subLink.href, subLink.isExternal)}
-                          aria-label={subLink.ariaLabel}
-                        >
-                          {subLink.snapshot && subLink.icon && (
-                            <div className={`submenu-link-icon border ${subLink.snapshot}`}>
-                              {subLink.icon}
-                            </div>
-                          )}
-                          {!subLink.snapshot && subLink.icon && (
-                            <div className="submenu-link-icon bg-white/5 border border-white/10">
-                              {subLink.icon}
-                            </div>
-                          )}
-                          <div className="submenu-link-content">
-                            <span className="submenu-link-title">{subLink.label}</span>
-                            {subLink.description && (
-                              <span className="submenu-link-desc">{subLink.description}</span>
+                      <div className="submenu-main">
+                        <div className="submenu-grid">
+                          {link.submenu!.map((subLink, subIndex) => (
+                            <button
+                              key={`sub-${link.label}-${subIndex}`}
+                              className="submenu-link"
+                              onClick={() => scrollToSection(subLink.href, subLink.isExternal)}
+                              aria-label={subLink.ariaLabel}
+                            >
+                              {subLink.icon && (
+                                <div className={`submenu-link-icon ${subLink.snapshot || 'bg-white/5 border border-white/10'}`}>
+                                  {subLink.icon}
+                                </div>
+                              )}
+                              <div className="submenu-link-content">
+                                <span className="submenu-link-title">{subLink.label}</span>
+                                {subLink.description && (
+                                  <span className="submenu-link-desc">{subLink.description}</span>
+                                )}
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Featured Section */}
+                      {link.featured && (
+                        <div className="submenu-featured">
+                          <div className="featured-card">
+                            {link.featured.image && (
+                              <div className="featured-image">
+                                <Image 
+                                  src={link.featured.image} 
+                                  alt={link.featured.title}
+                                  fill
+                                  className="object-cover"
+                                />
+                                {link.featured.badge && (
+                                  <span className="featured-badge">{link.featured.badge}</span>
+                                )}
+                              </div>
                             )}
+                            <div className="featured-content">
+                              <h4 className="featured-title">{link.featured.title}</h4>
+                              <p className="featured-desc">{link.featured.description}</p>
+                              <button 
+                                className="featured-action"
+                                onClick={() => scrollToSection(link.featured!.href)}
+                              >
+                                {link.featured.actionText || 'Learn More'}
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                                </svg>
+                              </button>
+                            </div>
                           </div>
-                        </button>
-                      ))}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

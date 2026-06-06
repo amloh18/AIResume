@@ -1,10 +1,11 @@
 import Link from 'next/link';
 import { Metadata } from 'next';
-import { ArrowRight, Calendar, Clock, Tag, BookOpen, ChevronRight, Sparkles, CheckCircle, FileText, Briefcase, Chrome, Globe, LayoutDashboard } from 'lucide-react';
+import { ArrowRight, Calendar, Clock, Tag, BookOpen, ChevronRight } from 'lucide-react';
 import { getAllArticles, getAllCategories } from '@/data/blogs';
 import { MotionDiv, MotionH1, MotionP } from '@/components/ui/motion-wrapper';
 import CardNav from '@/components/landing/CardNav';
 import Footer from '@/components/landing/Footer';
+import { navLinks } from '@/data/navigation';
 
 export const metadata: Metadata = {
   title: 'Blog — Career Advice, CV Tips & ATS Optimization | CVCircle',
@@ -12,114 +13,6 @@ export const metadata: Metadata = {
   keywords: ['CV blog', 'resume tips', 'ATS optimization', 'career advice', 'job search 2026', 'AI resume'],
   alternates: { canonical: '/blog' },
 };
-
-const navLinks = [
-  {
-    label: 'Products',
-    href: '#features',
-    ariaLabel: 'View products section',
-    submenu: [
-      {
-        label: 'AI Resume Builder',
-        description: 'Create ATS-friendly resumes in minutes with AI assistance and mix-and-match layout blocks.',
-        href: '#features',
-        ariaLabel: 'AI-powered resume builder',
-        icon: <Sparkles className="w-6 h-6 text-lime-400" />,
-        snapshot: 'bg-gradient-to-br from-lime-500/20 to-green-600/20 border-lime-500/30',
-      },
-      {
-        label: 'ATS Scanner',
-        description: 'Test your resume against job descriptions for keyword matches and format compatibility.',
-        href: '#features',
-        ariaLabel: 'ATS compatibility check',
-        icon: <CheckCircle className="w-6 h-6 text-blue-400" />,
-        snapshot: 'bg-gradient-to-br from-blue-500/20 to-cyan-600/20 border-blue-500/30',
-      },
-      {
-        label: 'Cover Letter Generator',
-        description: 'Generate tailored, professional cover letters perfectly matching your target role.',
-        href: '#features',
-        ariaLabel: 'Cover letter generator',
-        icon: <FileText className="w-6 h-6 text-purple-400" />,
-      },
-      {
-        label: 'Smart Job Tracker',
-        description: 'Organize and track all your applications and upcoming interviews in one place.',
-        href: '#features',
-        ariaLabel: 'Job tracker',
-        icon: <Briefcase className="w-6 h-6 text-orange-400" />,
-      },
-    ],
-  },
-  {
-    label: 'Extension',
-    href: '#chrome-extension',
-    ariaLabel: 'View browser extension section',
-    submenu: [
-      {
-        label: 'Chrome Add-on',
-        description: 'Analyze jobs, extract requirements, and sync data directly from Google Chrome.',
-        href: '#chrome-extension',
-        ariaLabel: 'Chrome extension',
-        icon: <Chrome className="w-6 h-6 text-yellow-400" />,
-      },
-      {
-        label: 'Edge Add-on',
-        description: 'Native support for Microsoft Edge browser with full tracking capabilities.',
-        href: '#chrome-extension',
-        ariaLabel: 'Edge extension',
-        icon: <Globe className="w-6 h-6 text-blue-400" />,
-      },
-      {
-        label: 'One-Click Save',
-        description: 'Save job descriptions from LinkedIn, Indeed, and more with a single click.',
-        href: '#chrome-extension',
-        ariaLabel: 'One-click save',
-        icon: <LayoutDashboard className="w-6 h-6 text-emerald-400" />,
-      },
-    ],
-  },
-  {
-    label: 'Resources',
-    href: '#how-it-works',
-    ariaLabel: 'View resources',
-    submenu: [
-      {
-        label: 'How it Works',
-        description: 'Step-by-step guide to building your master CV and landing your dream job.',
-        href: '#how-it-works',
-        ariaLabel: 'Learn how to create a resume',
-        icon: <LayoutDashboard className="w-5 h-5 text-gray-400" />,
-      },
-      {
-        label: 'Blog',
-        description: 'Research-backed career guides, ATS tips, and resume tutorials from CVCircle.',
-        href: '/blog',
-        ariaLabel: 'Read the CVCircle blog',
-        icon: <BookOpen className="w-5 h-5 text-gray-400" />,
-      },
-      {
-        label: 'Interview Prep',
-        description: 'Practice answering questions tailored specifically to your target job descriptions.',
-        href: '#features',
-        ariaLabel: 'Interview preparation',
-        icon: <Sparkles className="w-5 h-5 text-gray-400" />,
-      },
-      {
-        label: 'FAQ',
-        description: 'Find answers to common questions and get support from our team.',
-        href: '#faq',
-        ariaLabel: 'View FAQ',
-        icon: <Briefcase className="w-5 h-5 text-gray-400" />,
-      },
-    ],
-  },
-  {
-    label: 'Pricing',
-    href: '/sign-up',
-    ariaLabel: 'View pricing section',
-  },
-];
 
 const categoryColors: Record<string, { badge: string; dot: string }> = {
   'CVCircle vs Competitors': { badge: 'bg-purple-900/40 text-purple-300 border-purple-700/30', dot: 'bg-purple-400' },
