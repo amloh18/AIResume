@@ -320,7 +320,7 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
     return <Renderer isDark={isDark} showIcons={ctx?.design?.showHeaderIcons ?? true} titleKey={titleKey}><EditableWrapper path={`sectionTitles.${titleKey}`} nowrap /></Renderer>;
   };
 
-  const showInlineControls = !readOnly && primaryTitleKey;
+  const showInlineControls = !readOnly && !ctx?.moriChatMode && primaryTitleKey;
   const canAddListEntry = SnippetComponent && ['Experience', 'Education', 'Projects', 'Certifications', 'Awards', 'Publications', 'Volunteer', 'References'].includes(SnippetComponent.category);
   const controls = showInlineControls ? (
     <div className="absolute -top-4 right-0 opacity-0 group-hover/inner:opacity-100 transition-opacity flex items-center bg-white border border-gray-200 shadow-sm rounded-md overflow-hidden z-[50] no-print font-sans">
@@ -339,9 +339,24 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
     </div>
   ) : null;
 
+  const handleMoriClick = (e: React.MouseEvent) => {
+    if (!ctx?.moriChatMode) return;
+    // We only want to trigger this if we didn't click on an inner element that already triggered it.
+    // e.stopPropagation() handles that if inner elements also call it.
+    e.stopPropagation();
+    const text = (e.currentTarget as HTMLElement).innerText || '';
+    const path = SnippetComponent.category.toLowerCase();
+    window.dispatchEvent(new CustomEvent('mori-cv-selection', { 
+      detail: { path, text: `(Section ${SnippetComponent.category}): ${text.substring(0, 100)}...` } 
+    }));
+  };
+
   const content = SnippetComponent.render({ data: cvData, Editable: EditableWrapper, zoneId, isDark, Title, moveEntry, deleteEntry, showIcons: ctx?.design?.showContactIcons ?? true, design: ctx?.design, activeTemplate, layoutZones });
-    return (
-      <div draggable={!isHeader && !readOnly} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragOver={handleDragOver} className={`relative group/snippet transition-all duration-300 ease-in-out ${!isHeader && !readOnly ? 'cursor-move' : ''} snippet-anim ${isBeingDragged ? 'opacity-0 pointer-events-none' : 'opacity-100 scale-100'} ${showDropLine ? 'mt-10' : 'mt-0'}`} style={isHeader ? {} : { marginBottom: isLastSnippetInZone ? 0 : 'var(--cv-section-gap, 16px)', visibility: isBeingDragged ? 'hidden' : 'visible' }}>
+  
+  const moriHoverClass = ctx?.moriChatMode ? 'hover:bg-emerald-500/10 hover:shadow-[0_0_0_2px_rgba(16,185,129,0.4)] cursor-pointer rounded-lg transition-all' : '';
+  
+  return (
+      <div draggable={!isHeader && !readOnly && !ctx?.moriChatMode} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragOver={handleDragOver} className={`relative group/snippet transition-all duration-300 ease-in-out ${!isHeader && !readOnly && !ctx?.moriChatMode ? 'cursor-move' : ''} snippet-anim ${isBeingDragged ? 'opacity-0 pointer-events-none' : 'opacity-100 scale-100'} ${showDropLine ? 'mt-10' : 'mt-0'} ${moriHoverClass}`} style={isHeader ? {} : { marginBottom: isLastSnippetInZone ? 0 : 'var(--cv-section-gap, 16px)', visibility: isBeingDragged ? 'hidden' : 'visible' }} onClick={handleMoriClick}>
       {showDropLine && <div className="absolute -top-8 left-0 w-full min-h-[30px] rounded-xl border-2 border-dashed border-emerald-400 bg-emerald-50/95 shadow-[0_0_0_1px_rgba(16,185,129,0.1),0_10px_30px_rgba(16,185,129,0.12)] flex items-center justify-center pointer-events-none z-30 animate-pulse"><span className="px-3 py-1 rounded-full bg-white text-[10px] font-bold uppercase tracking-[0.22em] text-emerald-700">Drop Section Here</span></div>}
         <div className={`relative hover:z-30 group/inner w-full`}>
         {controls}

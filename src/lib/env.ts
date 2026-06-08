@@ -65,7 +65,6 @@ interface EnvironmentConfig {
   
   // AI Services
   GEMINI_API_KEY?: string;
-  PERPLEXITY_API_KEY?: string;
   
   // Payment Services
   STRIPE_SECRET_KEY?: string;
@@ -166,7 +165,6 @@ function validateEnvironment(): EnvironmentConfig {
     EMAIL_SERVER_USER: process.env.EMAIL_SERVER_USER,
     EMAIL_SERVER_PASSWORD: process.env.EMAIL_SERVER_PASSWORD,
     GEMINI_API_KEY: process.env.GEMINI_API_KEY,
-    PERPLEXITY_API_KEY: process.env.PERPLEXITY_API_KEY,
     STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
     STRIPE_PUBLISHABLE_KEY: process.env.STRIPE_PUBLISHABLE_KEY,
     STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
@@ -199,7 +197,6 @@ try {
     EMAIL_SERVER_USER: process.env.EMAIL_SERVER_USER,
     EMAIL_SERVER_PASSWORD: process.env.EMAIL_SERVER_PASSWORD,
     GEMINI_API_KEY: process.env.GEMINI_API_KEY,
-    PERPLEXITY_API_KEY: process.env.PERPLEXITY_API_KEY,
     STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
     STRIPE_PUBLISHABLE_KEY: process.env.STRIPE_PUBLISHABLE_KEY,
     STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,

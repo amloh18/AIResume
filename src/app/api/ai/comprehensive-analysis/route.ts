@@ -129,10 +129,10 @@ Guidelines:
 7. Make suggestions job-specific when job data is available
 `;
 
-    // Check if AI API keys are available
+    // Check if AI API key is available
     if (!hasAIApiKeys()) {
       return NextResponse.json(
-        { success: false, error: 'AI API keys not configured (gemini_api_key or gemini_api_key2)' },
+        { success: false, error: 'AI API key not configured (gemini_api_key)' },
         { status: 500 }
       );
     }
