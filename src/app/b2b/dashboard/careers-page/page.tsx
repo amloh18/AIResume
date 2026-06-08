@@ -74,13 +74,13 @@ export default function CareersPageSettings() {
   const careersUrl = `${baseUrl}/careers/${formData.slug}`;
 
   return (
-    <div className="space-y-8 pb-10">
-      <div className={`relative overflow-hidden rounded-3xl p-8 md:p-12 ${glassCard}`}>
-        <div className="relative z-10 md:w-2/3">
-          <h1 className="text-4xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300">
-            Public Careers Page
+    <div className="space-y-12 pb-20">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 border-b border-white/5 pb-12">
+        <div>
+          <h1 className="text-5xl md:text-7xl font-black tracking-tighter mb-4 uppercase text-white">
+            PUBLIC <span className="text-[#80FF00]">CAREERS</span>
           </h1>
-          <p className="text-lg text-gray-600 dark:text-gray-300 mt-4 max-w-xl">
+          <p className="text-xl text-gray-500 font-medium max-w-xl">
             Create a branded landing page for your active jobs. Candidates can apply directly, and their CVs will be automatically parsed into your Smart Roster.
           </p>
         </div>

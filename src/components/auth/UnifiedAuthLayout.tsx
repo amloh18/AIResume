@@ -103,64 +103,65 @@ export default function UnifiedAuthLayout({
 
   if (variant === 'b2b') {
     return (
-      <div className="min-h-screen flex bg-gray-50 dark:bg-[#0A0A0A]">
+      <div className="min-h-screen flex bg-[#0d1209] selection:bg-[#80FF00] selection:text-black">
         {/* Left Side - 50% - B2B Branding */}
-        <div className="hidden lg:flex basis-1/2 shrink-0 grow-0 relative overflow-hidden bg-white dark:bg-black border-r border-gray-200 dark:border-white/10 items-center justify-center">
-          {/* Glassmorphism accent */}
-          <div className="absolute inset-0 bg-gradient-to-br from-[#80FF00]/10 via-transparent to-transparent opacity-50" />
-          
-          <div className="relative z-10 flex flex-col w-full p-12 max-w-2xl">
-            <div className="flex items-center gap-3 mb-16 drop-shadow-sm">
+        <div className="hidden lg:flex basis-1/2 shrink-0 grow-0 relative overflow-hidden bg-black items-center justify-center border-r border-white/5">
+          {/* Dynamic background elements */}
+          <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-[#80FF00]/10 rounded-full blur-[120px]" />
+
+          <div className="relative z-10 flex flex-col w-full p-20 max-w-2xl">
+            <div className="flex items-center gap-3 mb-24">
               <Logo size="lg" />
-              <span className="px-2.5 py-1 text-xs font-semibold bg-[#80FF00]/20 text-[#4C9900] dark:text-[#80FF00] rounded-full border border-[#80FF00]/30">
-                B2B Gateway
+              <span className="px-3 py-1 text-[10px] font-black tracking-[0.2em] bg-[#80FF00] text-black rounded-full uppercase">
+                Enterprise
               </span>
             </div>
-            
+
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.2 }}
             >
-              <h1 className="text-5xl font-bold tracking-tight text-gray-900 dark:text-white mb-6">
-                Intelligent ATS <br/>
-                <span className="text-[#5AB300] dark:text-[#80FF00]">Scoring Engine.</span>
+              <h1 className="text-6xl font-black tracking-tighter text-white mb-8 leading-[0.9]">
+                INFRASTRUCTURE <br/>
+                FOR <span className="text-[#80FF00]">TALENT.</span>
               </h1>
-              <p className="text-xl text-gray-600 dark:text-gray-400 font-medium">
-                Seamless API integration and visual dashboard for enterprise teams.
+              <p className="text-xl text-gray-500 font-medium leading-relaxed">
+                Visual dashboard and API-first screening infrastructure for modern recruitment platforms.
               </p>
             </motion.div>
           </div>
         </div>
-
         {/* Right Side - Auth Form */}
-        <div className="w-full lg:basis-1/2 lg:shrink-0 lg:grow-0 flex items-center justify-center px-4 py-12 relative">
+        <div className="w-full lg:basis-1/2 lg:shrink-0 lg:grow-0 flex items-center justify-center px-4 py-12 relative overflow-hidden">
+          <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-600/5 rounded-full blur-[100px]" />
+          
           {showBackButton && (
-            <div className="absolute top-8 left-8">
+            <div className="absolute top-12 left-12">
               <Link
                 href={backHref}
-                className="flex items-center gap-2 text-gray-500 hover:text-gray-900 dark:text-white/60 dark:hover:text-white transition-colors duration-200"
+                className="flex items-center gap-2 text-gray-500 hover:text-[#80FF00] transition-colors duration-300 font-black text-[10px] tracking-widest uppercase"
               >
                 <ArrowLeft className="w-4 h-4" />
-                <span className="text-sm">{backText}</span>
+                <span>{backText}</span>
               </Link>
             </div>
           )}
 
-          <div className="w-full max-w-md">
+          <div className="w-full max-w-md relative z-10">
             <motion.div
               initial={{ opacity: 0, y: 20, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               transition={{ duration: 0.5, ease: "easeOut" }}
-              className="bg-white/60 dark:bg-black/40 backdrop-blur-xl rounded-xl border border-white/20 dark:border-white/10 shadow-2xl p-8"
+              className="bg-white/5 backdrop-blur-3xl rounded-[40px] border border-white/10 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.8)] p-12"
             >
-              <div className="mb-8 lg:hidden flex items-center justify-center gap-3">
+              <div className="mb-12 lg:hidden flex flex-col items-center gap-4">
                 <Logo size="md" />
-                <span className="px-2 py-0.5 text-[10px] font-semibold bg-[#80FF00]/20 text-[#4C9900] dark:text-[#80FF00] rounded-full border border-[#80FF00]/30">
-                  B2B Gateway
+                <span className="px-3 py-1 text-[8px] font-black tracking-[0.2em] bg-[#80FF00] text-black rounded-full uppercase">
+                  Enterprise Gateway
                 </span>
               </div>
-              <div className="text-center">
+              <div className="text-center text-white">
                 {children}
               </div>
             </motion.div>

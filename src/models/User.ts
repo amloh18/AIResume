@@ -737,6 +737,10 @@ const userSchema = new Schema<IUser>({
     role: {
       type: String,
       enum: ['admin', 'recruiter', 'member']
+    },
+    setupComplete: {
+      type: Boolean,
+      default: false
     }
   },
   onboarding: {

@@ -55,7 +55,7 @@ const CardNav = ({
   const navRef = useRef<HTMLElement>(null);
   const router = useRouter();
   const pathname = usePathname();
-  const isBusinessRoute = pathname === '/business';
+  const isBusinessRoute = pathname?.startsWith('/b2b');
 
   // Handle scroll behavior
   useEffect(() => {
@@ -123,7 +123,11 @@ const CardNav = ({
       }
     } else {
       if (isExternal) {
-        window.open(href, '_blank', 'noopener,noreferrer');
+        if (href.startsWith('/')) {
+           router.push(href);
+        } else {
+          window.open(href, '_blank', 'noopener,noreferrer');
+        }
       } else {
         router.push(href);
       }
@@ -253,7 +257,7 @@ const CardNav = ({
               <button
                 type="button"
                 className="card-nav-business-button hidden md:flex"
-                onClick={() => scrollToSection('/business', true)}
+                onClick={() => scrollToSection('/b2b', true)}
               >
                 Business
               </button>
@@ -311,7 +315,7 @@ const CardNav = ({
               <button
                 type="button"
                 className="mobile-cta-button mb-4"
-                onClick={() => scrollToSection('/business', true)}
+                onClick={() => scrollToSection('/b2b', true)}
               >
                 Business
               </button>

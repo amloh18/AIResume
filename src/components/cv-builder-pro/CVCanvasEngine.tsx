@@ -28,6 +28,7 @@ export interface CVCanvasBuilderProps {
   cvId?: string | null;
   jobId?: string | null;
   role?: string | null;
+  moriChatMode?: boolean;
 }
 
 export interface CVCanvasBuilderRef {
@@ -311,7 +312,7 @@ const mergeSkillSuggestionsIntoCV = (sourceCvData: any, categories: Array<{ cate
   };
 };
 
-const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ cvData, onDataChange, theme = 'dark', template, onTemplateChange, readOnly = false, cvId, jobId, role }, ref) => {
+const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ cvData, onDataChange, theme = 'dark', template, onTemplateChange, readOnly = false, cvId, jobId, role, moriChatMode = false }, ref) => {
   const [activeTemplate, setActiveTemplate] = useState(cvData?.metadata?.canvasTemplate || template || CANVAS_TEMPLATES[0]);
   const [focusedNode, setFocusedNode] = useState<HTMLElement | null>(null);
   const [zones, setZones] = useState<Record<string, any[]>>(cvData?.metadata?.canvasZones || {});
@@ -998,6 +999,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
         setFocusedNode,
         aiIssues: [...aiIssues, ...grammarIssues],
         activeIssueId,
+        moriChatMode,
         onIssueClick: (id: string) => {
           const all = [...aiIssues, ...grammarIssues];
           const issue = all.find((i: any) => i.id === id);

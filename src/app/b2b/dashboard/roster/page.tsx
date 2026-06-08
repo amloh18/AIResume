@@ -87,12 +87,12 @@ export default function RosterPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'new': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
-      case 'reviewed': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300';
-      case 'shortlisted': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
-      case 'rejected': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
-      case 'hired': return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300';
-      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
+      case 'new': return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
+      case 'reviewed': return 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20';
+      case 'shortlisted': return 'bg-[#80FF00]/10 text-[#80FF00] border-[#80FF00]/20';
+      case 'rejected': return 'bg-red-500/10 text-red-400 border-red-500/20';
+      case 'hired': return 'bg-purple-500/10 text-purple-400 border-purple-500/20';
+      default: return 'bg-white/5 text-gray-400 border-white/10';
     }
   };
 
@@ -169,240 +169,183 @@ export default function RosterPage() {
   };
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto pb-10">
-      <div className={`relative overflow-hidden rounded-3xl p-8 md:p-12 ${glassCard}`}>
-        <div className="relative z-10 md:w-2/3">
-          <h1 className="text-4xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300">
-            Smart Roster
+    <div className="space-y-12 pb-20">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 border-b border-white/5 pb-12">
+        <div>
+          <h1 className="text-5xl md:text-7xl font-black tracking-tighter mb-4 uppercase text-white">
+            SMART <span className="text-[#80FF00]">ROSTER</span>
           </h1>
-          <p className="text-lg text-gray-600 dark:text-gray-300 mt-4 max-w-xl">
+          <p className="text-xl text-gray-500 font-medium max-w-xl">
             Manage and filter your parsed candidates. View detailed analysis and match scores.
           </p>
         </div>
+        <div className="flex gap-4">
+          <input 
+            type="file" 
+            multiple 
+            accept=".pdf,.doc,.docx" 
+            className="hidden" 
+            ref={fileInputRef}
+            onChange={handleFileUpload}
+          />
+          <button 
+            onClick={() => fileInputRef.current?.click()} 
+            disabled={isUploading}
+            className="px-8 py-4 bg-[#80FF00] text-black font-black rounded-2xl flex items-center gap-2 hover:scale-105 transition-all text-xs tracking-widest uppercase"
+          >
+            {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UploadCloud className="w-4 h-4" />}
+            SCAN CVs
+          </button>
+        </div>
       </div>
 
-      <Card className={glassCard}>
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <div>
-              <CardTitle>Candidate Database</CardTitle>
-              <CardDescription>
-                Showing {total} total candidates
-              </CardDescription>
-            </div>
-            <div className="flex gap-2">
-              <Button 
-                variant="secondary"
-                onClick={() => {
-                  toast.success('Database Refresh initiated. Rediscovering top past candidates...', { icon: '🔄' });
-                  fetchCandidates();
-                }}
-                className="flex items-center gap-2"
-              >
-                <Search className="w-4 h-4" />
-                Database Refresh
-              </Button>
+      <div className="p-10 bg-white/5 border border-white/10 backdrop-blur-xl rounded-[40px] shadow-2xl">
+        <div className="flex flex-col gap-8 mb-12">
+          <form onSubmit={handleSearch} className="flex gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
               <input 
-                type="file" 
-                multiple 
-                accept=".pdf,.doc,.docx" 
-                className="hidden" 
-                ref={fileInputRef}
-                onChange={handleFileUpload}
+                placeholder="SEARCH ASSETS BY NAME OR EMAIL..." 
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-12 pr-6 py-4 bg-white/5 border border-white/10 rounded-2xl text-xs font-bold tracking-widest uppercase focus:outline-none focus:border-[#80FF00] transition-all text-white"
               />
-              <Button 
-                onClick={() => fileInputRef.current?.click()} 
-                disabled={isUploading}
-                className="flex items-center gap-2"
-              >
-                {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UploadCloud className="w-4 h-4" />}
-                Scan CVs
-              </Button>
             </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col gap-4 mb-6">
-            <form onSubmit={handleSearch} className="flex-1 flex gap-2">
-              <div className="relative flex-1">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search by name or email..."
-                  className="pl-8"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-              </div>
-              <Button type="submit" variant="secondary">Search</Button>
-            </form>
-            <div className="flex flex-wrap gap-2 items-center">
-              <div className="flex items-center gap-2">
-                <Filter className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium">Filters:</span>
-              </div>
-              <Input
-                placeholder="Skill (e.g. React)"
-                className="w-[140px]"
-                value={skillFilter}
-                onChange={(e) => setSkillFilter(e.target.value)}
-                onBlur={fetchCandidates}
-                onKeyDown={(e) => e.key === 'Enter' && fetchCandidates()}
-              />
-              <Input
-                placeholder="Location"
-                className="w-[140px]"
-                value={locationFilter}
-                onChange={(e) => setLocationFilter(e.target.value)}
-                onBlur={fetchCandidates}
-                onKeyDown={(e) => e.key === 'Enter' && fetchCandidates()}
-              />
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="new">New</SelectItem>
-                  <SelectItem value="reviewed">Reviewed</SelectItem>
-                  <SelectItem value="shortlisted">Shortlisted</SelectItem>
-                  <SelectItem value="rejected">Rejected</SelectItem>
-                  <SelectItem value="hired">Hired</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={minScoreFilter} onValueChange={setMinScoreFilter}>
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="Min Score" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="0">Any Score</SelectItem>
-                  <SelectItem value="50">50+</SelectItem>
-                  <SelectItem value="70">70+</SelectItem>
-                  <SelectItem value="85">85+</SelectItem>
-                  <SelectItem value="90">90+</SelectItem>
-                </SelectContent>
-              </Select>
+            <button type="submit" className="px-8 bg-white/10 text-white font-black rounded-2xl hover:bg-white hover:text-black transition-all text-xs tracking-widest uppercase">
+              FILTER
+            </button>
+          </form>
+          
+          <div className="flex flex-wrap gap-4 items-center">
+            <div className="flex items-center gap-2 mr-4">
+              <Filter className="h-4 w-4 text-gray-500" />
+              <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Quick Params:</span>
             </div>
+            <input
+              placeholder="SKILL..."
+              className="px-6 py-3 bg-white/5 border border-white/10 rounded-xl text-[10px] font-bold tracking-widest uppercase focus:outline-none focus:border-[#80FF00] transition-all text-white"
+              value={skillFilter}
+              onChange={(e) => setSkillFilter(e.target.value)}
+              onBlur={fetchCandidates}
+            />
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[160px] bg-white/5 border-white/10 text-white h-12 rounded-xl text-[10px] font-bold tracking-widest uppercase">
+                <SelectValue placeholder="STATUS" />
+              </SelectTrigger>
+              <SelectContent className="bg-[#0d1209] border-white/10 text-white">
+                <SelectItem value="all">ALL STATUSES</SelectItem>
+                <SelectItem value="new">NEW</SelectItem>
+                <SelectItem value="reviewed">REVIEWED</SelectItem>
+                <SelectItem value="shortlisted">SHORTLISTED</SelectItem>
+                <SelectItem value="rejected">REJECTED</SelectItem>
+                <SelectItem value="hired">HIRED</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
+        </div>
 
-          <div className="border rounded-md overflow-x-auto">
-            <table className="w-full text-sm text-left min-w-[800px]">
-              <thead className="bg-muted/50 text-muted-foreground border-b">
-                <tr>
-                  <th className="px-4 py-3 font-medium">Candidate</th>
-                  <th className="px-4 py-3 font-medium">Email</th>
-                  <th className="px-4 py-3 font-medium">Match Score</th>
-                  <th className="px-4 py-3 font-medium">Status</th>
-                  <th className="px-4 py-3 font-medium">Added</th>
-                  <th className="px-4 py-3 font-medium text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center">
-                      <Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" />
-                    </td>
-                  </tr>
-                ) : candidates.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
-                      No candidates found matching your criteria.
-                    </td>
-                  </tr>
-                ) : (
-                  candidates.map((candidate) => (
-                    <tr key={candidate._id} className="border-b last:border-0 hover:bg-muted/30">
-                      <td className="px-4 py-3 font-medium">
-                        {candidate.firstName || candidate.lastName
-                          ? `${candidate.firstName || ''} ${candidate.lastName || ''}`.trim()
-                          : candidate.cvData?.basics?.name || 'Unknown Candidate'}
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground">
-                        {candidate.email || candidate.cvData?.basics?.email || 'N/A'}
-                      </td>
-                      <td className="px-4 py-3">
-                        {candidate.score !== undefined ? (
-                          <div className="flex items-center gap-2">
-                            <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
-                              <div 
-                                className={`h-full ${
-                                  candidate.score >= 80 ? 'bg-green-500' :
-                                  candidate.score >= 60 ? 'bg-yellow-500' : 'bg-red-500'
-                                }`}
-                                style={{ width: `${candidate.score}%` }}
-                              />
-                            </div>
-                            <span className="font-medium">{candidate.score}</span>
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <Badge variant="outline" className={getStatusColor(candidate.status)}>
-                          {candidate.status.charAt(0).toUpperCase() + candidate.status.slice(1)}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground">
-                        {format(new Date(candidate.createdAt), 'MMM d, yyyy')}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => router.push(`/b2b/dashboard/roster/${candidate._id}`)}
-                          >
-                            <Eye className="h-4 w-4 mr-1" />
-                            View
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            className="text-destructive hover:bg-destructive/10"
-                            onClick={() => handleDelete(candidate._id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead className="border-b border-white/5">
+              <tr>
+                <th className="px-8 py-6 text-[10px] font-black tracking-widest text-gray-500 uppercase">Candidate Asset</th>
+                <th className="px-8 py-6 text-[10px] font-black tracking-widest text-gray-500 uppercase text-center">Match</th>
+                <th className="px-8 py-6 text-[10px] font-black tracking-widest text-gray-500 uppercase text-center">Status</th>
+                <th className="px-8 py-6 text-[10px] font-black tracking-widest text-gray-500 uppercase text-right">Added On</th>
+                <th className="px-8 py-6 text-[10px] font-black tracking-widest text-gray-500 uppercase text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5">
+              {loading ? (
+                <tr><td colSpan={5} className="px-8 py-20 text-center"><Loader2 className="h-8 w-8 animate-spin mx-auto text-[#80FF00]" /></td></tr>
+              ) : candidates.length === 0 ? (
+                <tr><td colSpan={5} className="px-8 py-20 text-center text-gray-500 font-bold uppercase tracking-widest">No Active Assets</td></tr>
+              ) : (
+                candidates.map((candidate) => (
+                  <tr key={candidate._id} className="hover:bg-white/[0.02] transition-colors group">
+                    <td className="px-8 py-6">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center font-black text-xs text-[#80FF00] group-hover:bg-[#80FF00] group-hover:text-black transition-all">
+                          {(candidate.firstName || 'U')[0].toUpperCase()}
                         </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                        <div>
+                          <div className="font-bold text-white uppercase tracking-tight">
+                            {candidate.firstName || candidate.lastName
+                              ? `${candidate.firstName || ''} ${candidate.lastName || ''}`.trim()
+                              : candidate.cvData?.basics?.name || 'UNKNOWN ASSET'}
+                          </div>
+                          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-tighter">
+                            {candidate.email || 'NO EMAIL'}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-8 py-6 text-center">
+                      {candidate.score !== undefined ? (
+                        <span className="text-2xl font-black tracking-tighter text-white">{candidate.score}</span>
+                      ) : <span className="text-gray-500">-</span>}
+                    </td>
+                    <td className="px-8 py-6 text-center">
+                      <span className={cn(
+                        "px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border",
+                        getStatusColor(candidate.status)
+                      )}>
+                        {candidate.status}
+                      </span>
+                    </td>
+                    <td className="px-8 py-6 text-right text-[10px] font-bold text-gray-500 uppercase">
+                      {format(new Date(candidate.createdAt), 'MMM dd, yyyy')}
+                    </td>
+                    <td className="px-8 py-6 text-right">
+                      <div className="flex items-center justify-end gap-3">
+                        <button 
+                          className="p-3 bg-white/5 border border-white/10 rounded-xl hover:bg-white hover:text-black transition-all"
+                          onClick={() => router.push(`/b2b/dashboard/roster/${candidate._id}`)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </button>
+                        <button 
+                          className="p-3 bg-red-500/10 border border-red-500/20 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all"
+                          onClick={() => handleDelete(candidate._id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
-          {!loading && totalPages > 1 && (
-            <div className="flex items-center justify-between mt-4">
-              <div className="text-sm text-muted-foreground">
-                Showing {(page - 1) * 10 + 1} to {Math.min(page * 10, total)} of {total} entries
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage(p => Math.max(1, p - 1))}
-                  disabled={page === 1}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <div className="text-sm font-medium px-2">
-                  Page {page} of {totalPages}
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                  disabled={page === totalPages}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
+      {!loading && totalPages > 1 && (
+        <div className="flex items-center justify-between mt-8">
+          <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest">
+            Showing {(page - 1) * 10 + 1} TO {Math.min(page * 10, total)} OF {total} ASSETS
+          </div>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="p-3 bg-white/5 border border-white/10 rounded-xl text-white disabled:opacity-30 transition-all hover:bg-white/10"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <div className="text-xs font-black tracking-widest uppercase">
+              PAGE {page} / {totalPages}
             </div>
-          )}
-        </CardContent>
-      </Card>
+            <button
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className="p-3 bg-white/5 border border-white/10 rounded-xl text-white disabled:opacity-30 transition-all hover:bg-white/10"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

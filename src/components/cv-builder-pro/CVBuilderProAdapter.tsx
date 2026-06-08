@@ -14,11 +14,12 @@ interface CVBuilderProAdapterProps {
   cvId?: string | null;
   jobId?: string | null;
   role?: string | null;
+  moriChatMode?: boolean;
 }
 
 const stripHtml = (value: string) => value.replace(/<[^>]+>/g, '').trim();
 
-const CVBuilderProAdapter = forwardRef<CVCanvasBuilderRef, CVBuilderProAdapterProps>(({ cvData, template, onDataChange, onTemplateChange, theme, readOnly = false, cvId, jobId, role }: CVBuilderProAdapterProps, ref) => {
+const CVBuilderProAdapter = forwardRef<CVCanvasBuilderRef, CVBuilderProAdapterProps>(({ cvData, template, onDataChange, onTemplateChange, theme, readOnly = false, cvId, jobId, role, moriChatMode = false }: CVBuilderProAdapterProps, ref) => {
   const canvasData = useMemo(() => normalizeCvDataForCanvas(cvData), [cvData]);
 
   const handleDataChange = useCallback((updatedCanvasData: any) => {
@@ -226,6 +227,7 @@ const CVBuilderProAdapter = forwardRef<CVCanvasBuilderRef, CVBuilderProAdapterPr
       cvId={cvId}
       jobId={jobId}
       role={role}
+      moriChatMode={moriChatMode}
     />
   );
 });

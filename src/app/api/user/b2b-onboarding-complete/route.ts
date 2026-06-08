@@ -44,7 +44,7 @@ export async function PATCH(request: NextRequest) {
     await user.save();
 
     // Invalidate user cache to force fresh data fetch
-    await invalidateCache(`user:${user._id}`);
+    await invalidateCache(`user:${user._id.toString()}`);
 
     return NextResponse.json({
       success: true,

@@ -16,11 +16,14 @@ const adminRoutes = [
 ]
 
 const b2bRoutes = [
-  '/b2b',
+  '/b2b/dashboard',
+  '/b2b/onboarding',
+  '/b2b/api-keys',
 ]
 
 const publicRoutes = [
   '/',
+  '/b2b',
   '/sign-in',
   '/b2b/login',
   '/admin/login',
@@ -52,6 +55,9 @@ const isPublicRoute = (req: NextRequest) => {
   return publicRoutes.some((route) => {
     if (route === '/') {
       return pathname === '/';
+    }
+    if (route === '/b2b') {
+      return pathname === '/b2b' || pathname === '/b2b/';
     }
     return pathname.startsWith(route);
   });

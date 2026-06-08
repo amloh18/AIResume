@@ -38,27 +38,29 @@ export default async function APIKeysPage() {
   const tenant = tenantId ? await Tenant.findById(tenantId).lean() as any : null;
 
   return (
-    <div className="space-y-8 pb-10">
-      <div className={`relative overflow-hidden rounded-3xl p-8 md:p-12 ${glassCard}`}>
-        <div className="relative z-10 md:w-2/3">
-          <h1 className="text-4xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300">
-            API Keys & Webhooks
+    <div className="space-y-12 pb-20">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 border-b border-white/5 pb-12">
+        <div>
+          <h1 className="text-5xl md:text-7xl font-black tracking-tighter mb-4 uppercase text-white">
+            API & <span className="text-[#80FF00]">INTEGRATIONS</span>
           </h1>
-          <p className="text-lg text-gray-600 dark:text-gray-300 mt-4 max-w-xl">
-            Manage your API credentials and webhook configurations for integrations.
+          <p className="text-xl text-gray-500 font-medium max-w-xl">
+            Manage your API credentials and webhook configurations for custom platform integrations.
           </p>
         </div>
       </div>
 
-      <ApiKeysManager 
-        initialApiKeys={JSON.parse(JSON.stringify(apiKeys))} 
-        apiUsageCount={tenant?.apiUsageCount || 0} 
-      />
+      <div className="space-y-8">
+        <ApiKeysManager 
+          initialApiKeys={JSON.parse(JSON.stringify(apiKeys))} 
+          apiUsageCount={tenant?.apiUsageCount || 0} 
+        />
 
-      <WebhookConfig 
-        initialUrl={tenant?.settings?.webhookUrl || ''} 
-        initialSecret={tenant?.settings?.webhookSecret || ''} 
-      />
+        <WebhookConfig 
+          initialUrl={tenant?.settings?.webhookUrl || ''} 
+          initialSecret={tenant?.settings?.webhookSecret || ''} 
+        />
+      </div>
     </div>
   );
 }
