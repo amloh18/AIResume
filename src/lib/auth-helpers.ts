@@ -64,7 +64,7 @@ export async function getAuthenticatedUser(request?: NextRequest): Promise<AuthR
       
       if (dbUser) {
         return {
-          user: dbUser,
+          user: JSON.parse(JSON.stringify(dbUser)),
           userEmail: dbUser.email,
           userId: dbUser._id.toString(),
         };
@@ -96,7 +96,7 @@ export async function getAuthenticatedUser(request?: NextRequest): Promise<AuthR
       if (!dbUser) return null;
 
       return {
-        user: dbUser,
+        user: JSON.parse(JSON.stringify(dbUser)),
         userEmail: dbUser.email,
         userId: dbUser._id.toString(),
       };

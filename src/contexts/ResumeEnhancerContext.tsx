@@ -120,6 +120,9 @@ export interface ResumeEnhancerState {
   // Document Formatting Preferences
   dateFormat: DateFormatStyle;  // User-selected date format for CV
   paperSize: PaperSize;         // Detected or user-selected paper size
+
+  // Mori Chat Mode
+  moriChatMode: boolean;
 }
 
 // Action Types
@@ -190,7 +193,8 @@ type ResumeEnhancerAction =
   | { type: 'SET_STRATEGIC_FIX_DATA'; payload: { strategicFix: any; authenticOpt: any; required: boolean; annotationLog: any[]; nextSteps: string[] } }
   // Document Formatting Actions
   | { type: 'SET_DATE_FORMAT'; payload: DateFormatStyle }
-  | { type: 'SET_PAPER_SIZE'; payload: PaperSize };
+  | { type: 'SET_PAPER_SIZE'; payload: PaperSize }
+  | { type: 'SET_MORI_CHAT_MODE'; payload: boolean };
 
 // Initial State
 const initialState: ResumeEnhancerState = {
@@ -256,7 +260,8 @@ const initialState: ResumeEnhancerState = {
   nextSteps: [],
   // Document Formatting Preferences
   dateFormat: 'MMM_YYYY',
-  paperSize: 'A4'
+  paperSize: 'A4',
+  moriChatMode: false
 };
 
 // Reducer
@@ -265,6 +270,8 @@ function resumeEnhancerReducer(
   action: ResumeEnhancerAction
 ): ResumeEnhancerState {
   switch (action.type) {
+    case 'SET_MORI_CHAT_MODE':
+      return { ...state, moriChatMode: action.payload };
     case 'SET_MODE':
       return { ...state, mode: action.payload };
 

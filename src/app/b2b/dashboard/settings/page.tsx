@@ -30,45 +30,43 @@ export default async function SettingsPage() {
   }
 
   return (
-    <div className="space-y-8 pb-10">
-      <div className={`relative overflow-hidden rounded-3xl p-8 md:p-12 ${glassCard}`}>
-        <div className="relative z-10 md:w-2/3">
-          <h1 className="text-4xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300">
-            Settings
+    <div className="space-y-12 pb-20">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 border-b border-white/5 pb-12">
+        <div>
+          <h1 className="text-5xl md:text-7xl font-black tracking-tighter mb-4 uppercase text-white">
+            PLATFORM <span className="text-[#80FF00]">SETTINGS</span>
           </h1>
-          <p className="text-lg text-gray-600 dark:text-gray-300 mt-4 max-w-xl">
-            Manage your tenant configuration and team members.
+          <p className="text-xl text-gray-500 font-medium max-w-xl">
+            Manage your tenant configuration, team permissions, and enterprise-grade integrations.
           </p>
         </div>
       </div>
 
-      <div className="mt-8 mb-4">
-        <h2 className="text-2xl font-bold tracking-tight">ATS Integrations</h2>
-        <p className="text-muted-foreground mt-1 mb-6">Connect your Applicant Tracking Systems to automatically parse and score incoming candidates.</p>
-        <ATSIntegrationsManager />
-      </div>
+      <div className="space-y-12">
+        <div className="bg-white/5 border border-white/10 rounded-[40px] p-10">
+          <h2 className="text-2xl font-black tracking-tight uppercase text-white mb-2">ATS Integrations</h2>
+          <p className="text-gray-500 font-medium mb-8">Connect your Applicant Tracking Systems to automatically parse and score incoming candidates.</p>
+          <ATSIntegrationsManager />
+        </div>
 
-      <TeamManagement />
+        <TeamManagement />
 
-      <Card className={glassCard}>
-        <CardHeader>
-          <CardTitle>Danger Zone</CardTitle>
-          <CardDescription>Irreversible actions for your tenant account.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex justify-between items-center p-4 border border-red-200 dark:border-red-900 rounded-lg bg-red-50 dark:bg-red-950/20">
+        <div className="bg-red-500/5 border border-red-500/10 rounded-[40px] p-10">
+          <h3 className="text-2xl font-black tracking-tight uppercase text-red-500 mb-2">Danger Zone</h3>
+          <p className="text-gray-500 font-medium mb-8">Irreversible actions for your tenant account.</p>
+          <div className="flex justify-between items-center p-8 border border-red-500/20 rounded-3xl bg-red-500/5">
             <div>
-              <h4 className="font-medium text-red-800 dark:text-red-300">Suspend Account</h4>
-              <p className="text-sm text-red-600 dark:text-red-400 mt-1">
+              <h4 className="font-bold text-red-400 uppercase tracking-tight">Suspend Account</h4>
+              <p className="text-sm text-gray-500 mt-1">
                 Temporarily pause all API access. You will not be billed while suspended.
               </p>
             </div>
-            <button className="px-4 py-2 bg-red-600 text-white rounded-md text-sm font-medium hover:bg-red-700">
+            <button className="px-8 py-4 bg-red-600/20 text-red-500 border border-red-500/20 rounded-2xl text-xs font-black tracking-widest uppercase hover:bg-red-600 hover:text-white transition-all">
               Suspend
             </button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }

@@ -133,104 +133,106 @@ export default function B2BJobsPage() {
   );
 
   return (
-    <div className="space-y-8 pb-10">
-      <div className={`relative overflow-hidden rounded-3xl p-8 md:p-12 ${glassCard}`}>
-        <div className="relative z-10 md:w-2/3">
-          <h1 className="text-4xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300">
-            Jobs & Requisitions
+    <div className="space-y-12 pb-20">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 border-b border-white/5 pb-12">
+        <div>
+          <h1 className="text-5xl md:text-7xl font-black tracking-tighter mb-4 uppercase text-white">
+            JOBS & <span className="text-[#80FF00]">REQUISITIONS</span>
           </h1>
-          <p className="text-lg text-gray-600 dark:text-gray-300 mt-4 max-w-xl">
+          <p className="text-xl text-gray-500 font-medium max-w-xl">
             Manage your open positions and use them as scoring rubrics for incoming candidates.
           </p>
         </div>
       </div>
 
-      <Card className={glassCard}>
-        <CardHeader>
-          <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
-            <div>
-              <CardTitle>Active Requisitions</CardTitle>
-              <CardDescription>You have {jobs.length} total jobs.</CardDescription>
-            </div>
-            <div className="flex gap-2">
-              <div className="relative w-full md:w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input 
-                  placeholder="Search jobs..." 
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-              <Button onClick={fetchJobs} variant="outline" size="icon">
-                <RefreshCw className="h-4 w-4" />
-              </Button>
-              <Button onClick={handleOpenCreate} className="gap-2">
-                <Plus className="h-4 w-4" /> Create Job
-              </Button>
-            </div>
+      <div className="p-10 bg-white/5 border border-white/10 backdrop-blur-xl rounded-[40px] shadow-2xl">
+        <div className="flex flex-col md:flex-row justify-between md:items-center gap-8 mb-12">
+          <div>
+            <h2 className="text-2xl font-black tracking-tight uppercase text-white">Active Positions</h2>
+            <p className="text-sm font-bold text-gray-500 uppercase tracking-widest mt-1">Found {jobs.length} requisitions</p>
           </div>
-        </CardHeader>
-        <CardContent>
-          <div className="border rounded-md overflow-x-auto">
-            <table className="w-full text-sm text-left min-w-[800px]">
-              <thead className="bg-muted/50 text-muted-foreground border-b">
+          <div className="flex flex-wrap gap-4">
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+              <input 
+                placeholder="SEARCH POSITIONS..." 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-12 pr-6 py-4 bg-white/5 border border-white/10 rounded-2xl text-xs font-bold tracking-widest uppercase focus:outline-none focus:border-[#80FF00] transition-all w-full md:w-64 text-white"
+              />
+            </div>
+            <button onClick={fetchJobs} className="p-4 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 transition-all text-[#80FF00]">
+              <RefreshCw className="h-5 w-5" />
+            </button>
+            <button onClick={handleOpenCreate} className="px-8 py-4 bg-[#80FF00] text-black font-black rounded-2xl flex items-center gap-2 hover:scale-105 transition-all text-xs tracking-widest uppercase">
+              <Plus className="h-4 w-4" /> NEW JOB
+            </button>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead className="border-b border-white/5">
+              <tr>
+                <th className="px-8 py-6 text-[10px] font-black tracking-widest text-gray-500 uppercase">Position Title</th>
+                <th className="px-8 py-6 text-[10px] font-black tracking-widest text-gray-500 uppercase">Department</th>
+                <th className="px-8 py-6 text-[10px] font-black tracking-widest text-gray-500 uppercase">Location</th>
+                <th className="px-8 py-6 text-[10px] font-black tracking-widest text-gray-500 uppercase text-center">Status</th>
+                <th className="px-8 py-6 text-[10px] font-black tracking-widest text-gray-500 uppercase text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5">
+              {loading ? (
                 <tr>
-                  <th className="px-4 py-3 font-medium">Job Title</th>
-                  <th className="px-4 py-3 font-medium">Company</th>
-                  <th className="px-4 py-3 font-medium">Location</th>
-                  <th className="px-4 py-3 font-medium">Status</th>
-                  <th className="px-4 py-3 font-medium text-right">Actions</th>
+                  <td colSpan={5} className="px-8 py-20 text-center">
+                    <Loader2 className="h-8 w-8 animate-spin mx-auto text-[#80FF00]" />
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y">
-                {loading ? (
-                  <tr>
-                    <td colSpan={5} className="px-4 py-8 text-center">
-                      <Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" />
-                    </td>
-                  </tr>
-                ) : filteredJobs.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
-                      No jobs found. Create one to get started.
-                    </td>
-                  </tr>
-                ) : (
-                  filteredJobs.map(job => (
-                    <tr key={job._id} className="hover:bg-muted/50 transition-colors">
-                      <td className="px-4 py-3 font-medium flex items-center gap-2">
-                        <Briefcase className="h-4 w-4 text-primary" />
-                        {job.jobTitle}
-                      </td>
-                      <td className="px-4 py-3">{job.company}</td>
-                      <td className="px-4 py-3 text-muted-foreground flex items-center gap-1">
-                        {job.location && <MapPin className="h-3 w-3" />}
-                        {job.location || 'Remote'}
-                      </td>
-                      <td className="px-4 py-3">
-                        <Badge variant={job.status === 'created' ? 'default' : 'secondary'} className="capitalize">
-                          {job.status}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button variant="ghost" size="icon" onClick={() => handleOpenEdit(job)}>
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => handleDelete(job._id)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+              ) : filteredJobs.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-8 py-20 text-center text-gray-500 font-bold uppercase tracking-widest">
+                    No active requisitions
+                  </td>
+                </tr>
+              ) : (
+                filteredJobs.map(job => (
+                  <tr key={job._id} className="hover:bg-white/[0.02] transition-colors group">
+                    <td className="px-8 py-6">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-[#80FF00]">
+                          <Briefcase className="h-5 w-5" />
                         </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+                        <span className="font-bold text-white uppercase tracking-tight">{job.jobTitle}</span>
+                      </div>
+                    </td>
+                    <td className="px-8 py-6 text-sm font-bold text-gray-400 uppercase tracking-tighter">{job.company}</td>
+                    <td className="px-8 py-6 text-sm font-bold text-gray-500 uppercase tracking-widest">
+                      {job.location || 'REMOTE'}
+                    </td>
+                    <td className="px-8 py-6 text-center">
+                      <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border border-white/10 ${
+                        job.status === 'created' ? "bg-[#80FF00]/10 text-[#80FF00]" : "bg-white/5 text-gray-500"
+                      }`}>
+                        {job.status}
+                      </span>
+                    </td>
+                    <td className="px-8 py-6 text-right">
+                      <div className="flex items-center justify-end gap-3">
+                        <button className="p-3 bg-white/5 border border-white/10 rounded-xl hover:bg-white hover:text-black transition-all" onClick={() => handleOpenEdit(job)}>
+                          <Edit className="h-4 w-4" />
+                        </button>
+                        <button className="p-3 bg-red-500/10 border border-red-500/20 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all" onClick={() => handleDelete(job._id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
       {/* Modal */}
       {showModal && (

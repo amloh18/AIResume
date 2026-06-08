@@ -21,10 +21,13 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
   const activeIssueId = explicitActiveIssueId || ctx?.activeIssueId;
   const onIssueClick = explicitOnIssueClick || ctx?.onIssueClick;
   const dateFormat = explicitDateFormat || ctx?.design?.dateFormat || 'MMM YYYY';
+  const moriChatMode = ctx?.moriChatMode || false;
 
   const contentRef = useRef<HTMLSpanElement>(null);
   const [isEditing, setIsEditing] = useState(false);
   const value = getNestedValue(data, path) || '';
+
+  const isEditable = !readOnly && !moriChatMode;
 
   useEffect(() => {
     if (contentRef.current) {
@@ -69,11 +72,21 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
     }
   }, [value, isEditing, aiIssues, activeIssueId, path]);
 
-  const handleInput = () => !readOnly && contentRef.current && onChange(path, contentRef.current.innerHTML);
+  const handleInput = () => isEditable && contentRef.current && onChange(path, contentRef.current.innerHTML);
   const handleKeyDown = (e: React.KeyboardEvent) => { if (!multiline && e.key === 'Enter') e.preventDefault(); };
-  const handleFocus = () => { if (readOnly) return; setIsEditing(true); if (setFocusedRef) setFocusedRef(contentRef.current); };
-  const handleBlur = () => { if (readOnly) return; setIsEditing(false); if (setFocusedRef) setTimeout(() => setFocusedRef(null), 200); };
+  const handleFocus = () => { if (!isEditable) return; setIsEditing(true); if (setFocusedRef) setFocusedRef(contentRef.current); };
+  const handleBlur = () => { if (!isEditable) return; setIsEditing(false); if (setFocusedRef) setTimeout(() => setFocusedRef(null), 200); };
   const handleClick = (e: React.MouseEvent) => {
+    if (moriChatMode) {
+      e.preventDefault();
+      e.stopPropagation();
+      const text = contentRef.current?.innerText || '';
+      window.dispatchEvent(new CustomEvent('mori-cv-selection', { 
+        detail: { path, text } 
+      }));
+      return;
+    }
+
     if ((e.target as HTMLElement).tagName === 'MARK' && onIssueClick) {
       const el = e.target as HTMLElement;
       const id = el.getAttribute('data-issue');
@@ -82,7 +95,7 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
     }
   };
   const handlePaste = (e: React.ClipboardEvent) => {
-    if (readOnly) return;
+    if (!isEditable) return;
     e.preventDefault();
     const text = e.clipboardData.getData('text/plain');
     // Ensure we don't paste line breaks if not multiline
@@ -136,8 +149,11 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
   else if (lowerPath.includes('issuer')) emptyText = "Issuing Organization";
   else if (lowerPath.includes('publisher')) emptyText = "Publisher Name";
 
+  const moriHoverClass = moriChatMode ? 'hover:bg-emerald-500/20 hover:shadow-[0_0_0_2px_rgba(16,185,129,0.4)] cursor-pointer rounded-sm' : '';
+  const editHoverClass = isEditable ? 'hover:bg-emerald-50/30 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-emerald-500/50 focus:shadow-md border-b border-transparent hover:border-gray-300 focus:border-emerald-400 focus:text-gray-900 dark:focus:text-white rounded-sm px-1.5 py-0.5 -mx-1.5 -my-0.5' : '';
+
   return (
-      <span ref={contentRef} data-path={path} data-empty-text={emptyText} contentEditable={!readOnly} suppressContentEditableWarning onPaste={handlePaste} onInput={handleInput} onKeyDown={handleKeyDown} onFocus={handleFocus} onBlur={handleBlur} onClick={handleClick} className={`outline-none transition-all duration-200 inline-block max-w-full ${wrapClass} ${!readOnly ? 'hover:bg-emerald-50/30 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-emerald-500/50 focus:shadow-md border-b border-transparent hover:border-gray-300 focus:border-emerald-400 focus:text-gray-900 dark:focus:text-white rounded-sm px-1.5 py-0.5 -mx-1.5 -my-0.5 z-40 relative empty:min-w-[60px] empty:inline-block empty:border-dashed empty:border-gray-300 empty:after:content-[attr(data-empty-text)] empty:after:text-gray-400 empty:after:text-xs empty:after:italic' : ''}`} style={{ minHeight: '1.2em' }} />
+      <span ref={contentRef} data-path={path} data-empty-text={emptyText} contentEditable={isEditable} suppressContentEditableWarning onPaste={handlePaste} onInput={handleInput} onKeyDown={handleKeyDown} onFocus={handleFocus} onBlur={handleBlur} onClick={handleClick} className={`outline-none transition-all duration-200 inline-block max-w-full ${wrapClass} ${moriHoverClass} ${editHoverClass} z-40 relative empty:min-w-[60px] empty:inline-block empty:border-dashed empty:border-gray-300 empty:after:content-[attr(data-empty-text)] empty:after:text-gray-400 empty:after:text-xs empty:after:italic`} style={{ minHeight: '1.2em' }} />
     );
   };
   

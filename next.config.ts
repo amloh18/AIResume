@@ -349,6 +349,16 @@ const nextConfig: NextConfig = {
   
   transpilePackages: ['next-auth'],
 
+  async redirects() {
+    return [
+      {
+        source: '/business',
+        destination: '/b2b',
+        permanent: true,
+      },
+    ];
+  },
+
   // External packages for server-side rendering
   serverExternalPackages: [
     'mongoose',

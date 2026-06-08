@@ -610,70 +610,57 @@ export class UnifiedAuthService {
         },
 
          async session({ session, token }) {
-          // Check if this is an admin user first
+          // Check if this is an admin user
           const isAdmin = token.type === 'admin' || token.role === 'admin' || token.role === 'superadmin';
 
-          if (isAdmin) {
-            // Admin user - use token data directly (don't fetch from User model)
-            session.user.id = (token.id as string) || '';
-            session.user.email = (token.email as string) || '';
-            session.user.name = (token.name as string) || (token.email as string)?.split('@')[0] || 'Admin';
-            (session.user as any).role = (token.role as string) || 'admin';
-            (session.user as any).type = 'admin';
-            (session.user as any).planKey = 'admin';
-            (session.user as any).subscriptionStatus = 'active';
-          } else {
-            // Regular user - fetch fresh user data from cache or DB
-            // IMPORTANT: Only store minimal data in session to prevent cookie size issues
-            if (token && session?.user && token.id) {
-              try {
-                const userData = await UnifiedAuthService.fetchUserData(token.id as string);
+          // Fetch fresh user data from cache or DB for all users with an ID
+          if (token && session?.user && token.id) {
+            try {
+              const userData = await UnifiedAuthService.fetchUserData(token.id as string);
 
-                if (userData) {
-                  // Store only essential fields - keep session minimal
-                  session.user.id = userData.id;
-                  session.user.email = userData.email || (token.email as string) || '';
-                  session.user.name = userData.name || '';
-                  session.user.image = userData.image ?? undefined;
-                  (session.user as any).role = userData.role || 'user';
-                  (session.user as any).type = 'user';
-                  (session.user as any).planKey = userData.planKey || 'free';
-                  (session.user as any).subscriptionStatus = userData.subscriptionStatus || 'inactive';
-                  (session.user as any).isB2b = !!userData.isB2b;
-                } else {
-                  // Fallback to token data if user not found
-                  session.user.id = (token.id as string) || '';
-                  session.user.email = (token.email as string) || '';
-                  session.user.name = '';
-                  (session.user as any).role = 'user';
-                  (session.user as any).type = 'user';
-                  (session.user as any).planKey = 'free';
-                  (session.user as any).subscriptionStatus = 'inactive';
-                  (session.user as any).isB2b = !!token.isB2b;
-                }
-                
-                // Add LinkedIn data to session if present in token
-                if (token.linkedInId) {
-                  (session.user as any).linkedInId = token.linkedInId;
-                }
-                if (token.linkedInAccessToken) {
-                  try {
-                    // Decrypt token for use in server-side API calls
-                    (session.user as any).linkedInAccessToken = decryptToken(token.linkedInAccessToken as string);
-                  } catch (error) {
-                    console.error('Failed to decrypt LinkedIn token for session:', error);
-                    // Don't fail the entire session if decryption fails
-                  }
-                }
-              } catch (error) {
-                console.error('❌ Error in session callback:', error);
-                // Fallback to minimal token data on error
+              if (userData) {
+                // Store essential fields from DB
+                session.user.id = userData.id;
+                session.user.email = userData.email || (token.email as string) || '';
+                session.user.name = userData.name || '';
+                session.user.image = userData.image ?? undefined;
+                (session.user as any).role = userData.role || token.role || 'user';
+                (session.user as any).type = isAdmin ? 'admin' : 'user';
+                (session.user as any).planKey = userData.planKey || (isAdmin ? 'admin' : 'free');
+                (session.user as any).subscriptionStatus = userData.subscriptionStatus || (isAdmin ? 'active' : 'inactive');
+                (session.user as any).isB2b = !!userData.isB2b;
+                (session.user as any).b2b = userData.b2b;
+              } else {
+                // Fallback to token data if user not found in User model (e.g., direct AdminAuth user)
                 session.user.id = (token.id as string) || '';
                 session.user.email = (token.email as string) || '';
-                session.user.name = '';
-                (session.user as any).role = 'user';
-                (session.user as any).type = 'user';
+                session.user.name = (token.name as string) || (token.email as string)?.split('@')[0] || '';
+                (session.user as any).role = (token.role as string) || (isAdmin ? 'admin' : 'user');
+                (session.user as any).type = isAdmin ? 'admin' : 'user';
+                (session.user as any).planKey = isAdmin ? 'admin' : 'free';
+                (session.user as any).subscriptionStatus = isAdmin ? 'active' : 'inactive';
+                (session.user as any).isB2b = !!token.isB2b;
               }
+              
+              // Add LinkedIn data to session if present in token
+              if (token.linkedInId) {
+                (session.user as any).linkedInId = token.linkedInId;
+              }
+              if (token.linkedInAccessToken) {
+                try {
+                  // Decrypt token for use in server-side API calls
+                  (session.user as any).linkedInAccessToken = decryptToken(token.linkedInAccessToken as string);
+                } catch (error) {
+                  console.error('Failed to decrypt LinkedIn token for session:', error);
+                }
+              }
+            } catch (error) {
+              console.error('❌ Error in session callback:', error);
+              // Fallback to minimal token data on error
+              session.user.id = (token.id as string) || '';
+              session.user.email = (token.email as string) || '';
+              (session.user as any).role = (token.role as string) || (isAdmin ? 'admin' : 'user');
+              (session.user as any).type = isAdmin ? 'admin' : 'user';
             }
           }
 
@@ -690,6 +677,7 @@ export class UnifiedAuthService {
               planKey: String((session.user as any)?.planKey || (isAdmin ? 'admin' : 'free')).substring(0, 50),
               subscriptionStatus: String((session.user as any)?.subscriptionStatus || (isAdmin ? 'active' : 'inactive')).substring(0, 50),
               isB2b: !!(session.user as any)?.isB2b,
+              b2b: (session.user as any)?.b2b,
             },
             expires: session.expires
           };
@@ -809,49 +797,64 @@ export class UnifiedAuthService {
         return cached;
       }
 
-      // Fetch from database - only select fields we need to prevent large payloads
+      // Fetch from database
       await getConnection();
-      const user = await User.findById(userId)
+      
+      // Try User collection first
+      let userDoc = await User.findById(userId)
         .select('_id email firstName lastName avatar role currentPlanKey subscription.status b2b')
         .lean()
         .exec();
 
-      if (!user) {
-        return null;
+      // If not found in User, check AdminAuth
+      if (!userDoc) {
+        const AdminAuth = (await import('@/models/AdminAuth')).default;
+        const adminUser = await AdminAuth.findById(userId).lean().exec();
+        
+        if (adminUser) {
+          userDoc = {
+            ...adminUser,
+            firstName: 'Admin',
+            lastName: 'User',
+            role: adminUser.role || 'admin',
+          };
+        }
       }
-      const userDoc = Array.isArray(user) ? user[0] : user;
+
       if (!userDoc) {
         return null;
       }
 
-      // Create minimal user data object - only include what we need
-      // Ensure image is a URL string, not a large base64 or buffer
+      // Handle the case where userDoc might be an array (rare MongoDB edge case)
+      const doc = Array.isArray(userDoc) ? userDoc[0] : userDoc;
+      if (!doc) return null;
+
+      // Create minimal user data object
       let avatarUrl: string | null = null;
-      if (userDoc.avatar) {
-        if (typeof userDoc.avatar === 'string' && userDoc.avatar.length < 1000) {
-          // Only include if it's a reasonable length (likely a URL)
-          avatarUrl = userDoc.avatar;
-        } else if (typeof userDoc.avatar === 'object') {
-          // If it's an object, try to extract URL
-          avatarUrl = (userDoc.avatar as any).url || null;
+      if (doc.avatar) {
+        if (typeof doc.avatar === 'string' && doc.avatar.length < 1000) {
+          avatarUrl = doc.avatar;
+        } else if (typeof doc.avatar === 'object') {
+          avatarUrl = (doc.avatar as any).url || null;
         }
       }
 
       const userData = {
-        id: String(userDoc._id),
-        email: userDoc.email || '',
-        name: `${userDoc.firstName || ''} ${userDoc.lastName || ''}`.trim() || 'User',
+        id: String(doc._id),
+        email: doc.email || '',
+        name: `${doc.firstName || ''} ${doc.lastName || ''}`.trim() || 'User',
         image: avatarUrl,
-        role: userDoc.role || 'user',
-        planKey: userDoc.currentPlanKey || 'free',
-        subscriptionStatus: (userDoc as any).subscription?.status || 'inactive',
-        isB2b: !!userDoc.b2b?.tenantId || !!(userDoc as any).isB2b,
-        b2b: userDoc.b2b ? {
-          tenantId: userDoc.b2b.tenantId,
-          role: userDoc.b2b.role,
-          setupComplete: userDoc.b2b.setupComplete || false,
-        } : undefined,
+        role: doc.role || 'user',
+        planKey: doc.currentPlanKey || 'free',
+        subscriptionStatus: (doc as any).subscription?.status || 'inactive',
+        isB2b: !!(doc.b2b?.tenantId) || !!(doc as any).isB2b,
+        b2b: doc.b2b ? JSON.parse(JSON.stringify({
+          tenantId: String(doc.b2b.tenantId),
+          role: doc.b2b.role,
+          setupComplete: !!doc.b2b.setupComplete,
+        })) : undefined,
       };
+
 
       // Cache for 5 minutes
       await setCache(cacheKey, userData, 300);

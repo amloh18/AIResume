@@ -5,7 +5,7 @@ import B2BDashboardClient from '@/components/b2b/B2BDashboardClient';
 
 export default async function B2BDashboardPage() {
   const authResult = await getAuthenticatedUser();
-  if (!authResult) redirect('/sign-in');
+  if (!authResult) redirect('/b2b/login');
 
   const user = authResult.user;
   const isGlobalAdmin = user.role === 'admin' || user.role === 'superadmin';
