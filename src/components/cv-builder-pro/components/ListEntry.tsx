@@ -1,12 +1,15 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import { ChevronUp, ChevronDown, Trash2 } from 'lucide-react';
+import { CanvasContext } from './CoreUI';
 
 // REUSABLE ENTRY WRAPPER
 // ==========================================
 const ListEntry = ({ collection, index, moveEntry, deleteEntry, children }: any) => {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const ctx = useContext(CanvasContext);
+  const moriChatMode = ctx?.moriChatMode || false;
 
   useEffect(() => {
     if (!confirmingDelete) return undefined;
@@ -24,9 +27,24 @@ const ListEntry = ({ collection, index, moveEntry, deleteEntry, children }: any)
     setConfirmingDelete(false);
   };
 
+  const handleMoriClick = (e: React.MouseEvent) => {
+    if (!moriChatMode) return;
+    e.stopPropagation();
+    const text = (e.currentTarget as HTMLElement).innerText || '';
+    const path = `${collection}[${index}]`;
+    window.dispatchEvent(new CustomEvent('mori-cv-selection', { 
+      detail: { path, text: `(Record from ${collection}): ${text.substring(0, 100)}...` } 
+    }));
+  };
+
+  const baseClass = "relative group/entry cv-item cv-page-breakable transition-all duration-200 rounded-md border border-transparent";
+  const hoverClass = moriChatMode 
+    ? "hover:bg-emerald-500/10 hover:shadow-[0_0_0_2px_rgba(16,185,129,0.4)] cursor-pointer z-40" 
+    : "hover:bg-[#10b981]/[0.02] shadow-none hover:shadow-[0_2px_8px_rgba(16,185,129,0.05)] group-hover/snippet:z-30 hover:z-40 hover:border-transparent";
+
   return (
-    <div className="relative group/entry cv-item cv-page-breakable transition-all duration-200 hover:bg-[#10b981]/[0.02] rounded-md shadow-none hover:shadow-[0_2px_8px_rgba(16,185,129,0.05)] group-hover/snippet:z-30 hover:z-40 border border-transparent hover:border-transparent">
-      <div className="absolute -left-[34px] top-0 bottom-0 flex flex-col items-center justify-center opacity-0 group-hover/entry:opacity-100 group-focus-within/entry:opacity-100 pointer-events-none group-hover/entry:pointer-events-auto group-focus-within/entry:pointer-events-auto transition-opacity duration-200 no-print z-50">
+    <div onClick={handleMoriClick} className={`${baseClass} ${hoverClass}`}>
+      <div className={`absolute -left-[34px] top-0 bottom-0 flex flex-col items-center justify-center opacity-0 group-hover/entry:opacity-100 group-focus-within/entry:opacity-100 pointer-events-none group-hover/entry:pointer-events-auto group-focus-within/entry:pointer-events-auto transition-opacity duration-200 no-print z-50 ${moriChatMode ? 'hidden' : ''}`}>
         <div className="flex flex-col gap-1 bg-white shadow-[0_8px_24px_rgba(15,23,42,0.12)] border border-gray-200 rounded-lg p-1 pointer-events-auto relative group-hover/entry:bg-white">
           <button
             onClick={(e: any) => { e.stopPropagation(); moveEntry(collection, index, -1); }}

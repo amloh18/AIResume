@@ -31,9 +31,8 @@ interface EnvConfig {
   EMAIL_SERVER_USER: string;
   EMAIL_SERVER_PASSWORD: string;
   
-  // AI Services
+  // AI Services (primary key used across the app)
   GEMINI_API_KEY: string;
-  PERPLEXITY_API_KEY: string;
   
   // Payment Processing
   STRIPE_SECRET_KEY: string;
@@ -86,7 +85,6 @@ const REQUIRED_VARS: (keyof EnvConfig)[] = [
   'EMAIL_SERVER_USER',
   'EMAIL_SERVER_PASSWORD',
   'GEMINI_API_KEY',
-  'PERPLEXITY_API_KEY',
   'STRIPE_SECRET_KEY',
   'STRIPE_PUBLISHABLE_KEY',
   'STRIPE_WEBHOOK_SECRET',
@@ -118,7 +116,6 @@ const PRODUCTION_VARS: (keyof EnvConfig)[] = [
   'EMAIL_SERVER_USER',
   'EMAIL_SERVER_PASSWORD',
   'GEMINI_API_KEY',
-  'PERPLEXITY_API_KEY',
   'STRIPE_SECRET_KEY',
   'STRIPE_WEBHOOK_SECRET',
   'FIREBASE_PRIVATE_KEY'
@@ -131,7 +128,6 @@ const SENSITIVE_VARS: (keyof EnvConfig)[] = [
   'GOOGLE_CLIENT_SECRET',
   'EMAIL_SERVER_PASSWORD',
   'GEMINI_API_KEY',
-  'PERPLEXITY_API_KEY',
   'STRIPE_SECRET_KEY',
   'STRIPE_WEBHOOK_SECRET',
   'FIREBASE_PRIVATE_KEY',

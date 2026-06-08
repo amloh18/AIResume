@@ -197,10 +197,10 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = () => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-white dark:bg-gray-950 rounded-xl border border-gray-200 dark:border-white/[0.06] overflow-y-auto hide-scrollbar text-gray-900 dark:text-white">
+    <div className="h-full flex flex-col bg-white dark:bg-[var(--bg-secondary)] rounded-xl border border-gray-200 dark:border-white/[0.06] overflow-y-auto hide-scrollbar text-gray-900 dark:text-white">
 
       {/* ── Header ── */}
-      <div className="sticky top-0 z-20 flex items-center justify-between px-4 py-3 bg-white/95 dark:bg-gray-950/95 backdrop-blur-sm border-b border-gray-100 dark:border-white/[0.04]">
+      <div className="sticky top-0 z-20 flex items-center justify-between px-4 py-3 bg-white/95 dark:bg-[var(--bg-secondary)] backdrop-blur-sm border-b border-gray-100 dark:border-white/[0.04]">
         <div className="flex items-center gap-1 bg-gray-100 dark:bg-white/5 p-1 rounded-lg">
            <button 
              onClick={() => dispatch({ type: 'SET_MORI_CHAT_MODE', payload: false })}

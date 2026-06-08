@@ -1,7 +1,7 @@
 /**
  * Gemini API Helper Utility
- * Provides unified interface for Google Gemini API calls with gemini_api_key and gemini_api_key2 fallback
- * Uses @google/genai package with gemini-2.0-flash-lite-preview-02-05 model
+ * Provides unified interface for Google Gemini API calls using gemini_api_key
+ * Uses @google/genai package with gemini-2.5-flash (with model fallback to gemini-2.0-flash)
  */
 
 import { GoogleGenAI } from '@google/genai';
@@ -21,22 +21,15 @@ interface GeminiCallOptions {
 interface GeminiResponse {
   content: string;
   provider: 'gemini';
-  apiKeyUsed: string;
+  apiKeyUsed: 'gemini_api_key';
 }
 
-// Round-robin key rotation counter (module-level to persist across calls)
-let currentKeyIndex = 0;
-
-/**
- * Check if error is a quota/rate limit error (429)
- */
 function isQuotaError(error: any): boolean {
   if (!error) return false;
-  
+
   const errorMessage = error instanceof Error ? error.message : String(error);
   const errorString = JSON.stringify(error);
-  
-  // Check for 429 status code or quota-related error messages
+
   return (
     errorMessage.includes('429') ||
     errorMessage.includes('quota') ||
@@ -49,72 +42,28 @@ function isQuotaError(error: any): boolean {
   );
 }
 
-/**
- * Get available Gemini API keys in priority order
- * Checks all three keys: gemini_api_key, gemini_api_key2, gemini_api_key3
- * Priority: gemini_api_key2 first (primary), then gemini_api_key, then gemini_api_key3
- */
-function getGeminiApiKeys(): Array<{ name: string; key: string }> {
-  const keys: Array<{ name: string; key: string }> = [];
-
-  // PRIMARY: Try gemini_api_key2 first (check multiple naming conventions)
-  const primaryKey =
-    process.env.gemini_api_key2 ||
-    process.env.GEMINI_API_KEY2 ||
-    process.env['GEMINI_API-KEY2'] ||
-    process.env['gemini_api-key2'];
-
-  if (primaryKey) {
-    keys.push({
-      name: 'gemini_api_key2',
-      key: primaryKey
-    });
-  }
-
-  // SECONDARY: Use gemini_api_key
-  const secondaryKey =
+function getGeminiApiKey(): string {
+  const key =
     process.env.gemini_api_key ||
     process.env.GEMINI_API_KEY ||
     process.env.gemini_api_key1 ||
     process.env.GEMINI_API_KEY1 ||
     process.env.NEXT_PUBLIC_GEMINI_API_KEY;
 
-  if (secondaryKey) {
-    keys.push({
-      name: 'gemini_api_key',
-      key: secondaryKey
-    });
+  if (!key) {
+    throw new Error('No Gemini API key configured. Please set gemini_api_key.');
   }
 
-  // TERTIARY: Use gemini_api_key3 as final fallback
-  const tertiaryKey =
-    process.env.gemini_api_key3 ||
-    process.env.GEMINI_API_KEY3 ||
-    process.env['GEMINI_API-KEY3'] ||
-    process.env['gemini_api-key3'];
-
-  if (tertiaryKey) {
-    keys.push({
-      name: 'gemini_api_key3',
-      key: tertiaryKey
-    });
-  }
-
-  return keys;
+  return key;
 }
 
-/**
- * Call Gemini API using @google/genai package
- */
 async function callGemini(options: GeminiCallOptions, apiKey: string): Promise<string> {
   try {
     const genAI = new GoogleGenAI({ apiKey });
 
-    // Use gemini-2.5-flash as default for speed and cost efficiency
     const primaryModel = options.model || 'gemini-2.5-flash';
     const fallbackModel = 'gemini-2.0-flash';
 
-    // Combine system prompt and user prompt
     let fullPrompt = options.prompt;
     if (options.systemPrompt) {
       fullPrompt = `${options.systemPrompt}\n\n${options.prompt}`;
@@ -124,7 +73,6 @@ async function callGemini(options: GeminiCallOptions, apiKey: string): Promise<s
     let usedModel = primaryModel;
 
     try {
-      // Generate content using the new SDK API
       result = await genAI.models.generateContent({
         model: primaryModel,
         contents: [{ role: 'user', parts: [{ text: fullPrompt }] }],
@@ -134,7 +82,7 @@ async function callGemini(options: GeminiCallOptions, apiKey: string): Promise<s
         }
       });
     } catch (primaryError) {
-      console.warn(`⚠️ ${primaryModel} failed with key, trying ${fallbackModel}...`);
+      console.warn(`⚠️ ${primaryModel} failed, trying ${fallbackModel}...`);
       usedModel = fallbackModel;
       result = await genAI.models.generateContent({
         model: fallbackModel,
@@ -152,25 +100,22 @@ async function callGemini(options: GeminiCallOptions, apiKey: string): Promise<s
       throw new Error('Gemini API returned empty response');
     }
 
-    // Try to get token usage if available in the SDK response, otherwise estimate
     const usageMetadata = (result as any).usageMetadata;
     const inputTokens = usageMetadata?.promptTokenCount || Math.ceil(fullPrompt.length / 4);
     const outputTokens = usageMetadata?.candidatesTokenCount || Math.ceil(text.length / 4);
     const tokensUsed = inputTokens + outputTokens;
-    
-    // Cost constants (using gemini flash lite / 1.5 flash pricing)
+
     const INPUT_COST_PER_1M = 0.075;
     const OUTPUT_COST_PER_1M = 0.30;
     const cost = (inputTokens / 1_000_000) * INPUT_COST_PER_1M + (outputTokens / 1_000_000) * OUTPUT_COST_PER_1M;
 
-    // Log the AI usage to ActivityLogService
     try {
       await ActivityLogService.logAI({
         userId: options.userId,
         model: usedModel,
         tokensUsed,
         cost,
-        prompt: fullPrompt.substring(0, 1000), // Log only the first 1000 chars of prompt
+        prompt: fullPrompt.substring(0, 1000),
         responseLength: text.length,
         action: options.action || 'gemini_generation',
         endpoint: options.endpoint || options.action || 'unknown_endpoint',
@@ -188,87 +133,58 @@ async function callGemini(options: GeminiCallOptions, apiKey: string): Promise<s
 }
 
 /**
- * Call Gemini API with automatic fallback and round-robin key rotation
- * Uses round-robin rotation to distribute load evenly across all keys
- * Automatically falls back to next key ONLY on quota/rate limit errors
+ * Call Gemini API with model fallback using the single configured key.
+ * Hard-fails immediately if gemini_api_key is not configured.
+ * If the primary model fails (non-quota errors) there is no key retry;
+ * only the configured model falls back to gemini-2.0-flash.
  */
 export async function callGeminiWithFallback(options: GeminiCallOptions): Promise<GeminiResponse> {
-  const apiKeys = getGeminiApiKeys();
-
-  if (apiKeys.length === 0) {
-    throw new Error('No Gemini API keys configured. Please set gemini_api_key, gemini_api_key2, or gemini_api_key3');
+  let apiKey: string;
+  try {
+    apiKey = getGeminiApiKey();
+  } catch {
+    throw new Error('No Gemini API key configured. Please set gemini_api_key.');
   }
 
-  // Round-robin: start with next key in rotation to distribute load evenly
-  const startIndex = currentKeyIndex % apiKeys.length;
-  currentKeyIndex = (currentKeyIndex + 1) % apiKeys.length;
-
-  let lastError: Error | null = null;
-
-  // Try keys starting from the rotated position
-  for (let i = 0; i < apiKeys.length; i++) {
-    const actualIndex = (startIndex + i) % apiKeys.length;
-    const { name, key } = apiKeys[actualIndex];
-    const isLastKey = i === apiKeys.length - 1;
-    
-    try {
-      console.log(`🔑 Attempting Gemini API call with ${name} (round-robin position ${actualIndex + 1}/${apiKeys.length})...`);
-
-      const content = await callGemini(options, key);
-
-      console.log(`✅ Gemini API call successful with ${name}`);
-      return {
-        content,
-        provider: 'gemini',
-        apiKeyUsed: name
-      };
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      const isQuota = isQuotaError(error);
-      
-      lastError = error instanceof Error ? error : new Error(String(error));
-
-      // ONLY fallback to next key if it's a quota/rate limit error
-      if (isQuota) {
-        console.warn(`⚠️ ${name} quota exceeded (429), falling back to next key...`);
-        
-        // If this is the last key, throw the error
-        if (isLastKey) {
-          throw new Error(`All Gemini API keys quota exhausted. Last error (${name}): ${errorMessage}`);
-        }
-        
-        // Otherwise, continue to next key
-        console.log(`⏭️  Continuing to next API key...`);
-        continue;
-      } else {
-        // For non-quota errors (network, parsing, invalid response, etc.), fail immediately
-        // Don't waste other keys on errors that won't be fixed by trying another key
-        console.error(`❌ ${name} failed with non-quota error:`, errorMessage);
-        throw new Error(`Gemini API error (${name}): ${errorMessage}`);
-      }
-    }
+  try {
+    console.log(`🔑 Attempting Gemini API call...`);
+    const content = await callGemini(options, apiKey);
+    console.log(`✅ Gemini API call successful`);
+    return {
+      content,
+      provider: 'gemini',
+      apiKeyUsed: 'gemini_api_key'
+    };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    throw new Error(`Gemini API error: ${errorMessage}`);
   }
-
-  throw lastError || new Error('Failed to call Gemini API');
 }
 
 /**
- * Check if Gemini API keys are available
+ * Check if Gemini API key is available
  */
 export function hasGeminiApiKeys(): boolean {
-  return getGeminiApiKeys().length > 0;
+  try {
+    return Boolean(getGeminiApiKey());
+  } catch {
+    return false;
+  }
 }
 
 /**
- * Get the name of the available API keys (for logging)
+ * Get the configured API key name for logging
  */
 export function getAvailableGeminiKeys(): string[] {
-  return getGeminiApiKeys().map(k => k.name);
+  try {
+    return [getGeminiApiKey() ? 'gemini_api_key' : 'none'];
+  } catch {
+    return [];
+  }
 }
 
 /**
  * Legacy compatibility: Alias for callGeminiWithFallback
- * This maintains backward compatibility with existing code
  */
 export async function callAIWithFallback(options: GeminiCallOptions): Promise<GeminiResponse> {
   return callGeminiWithFallback(options);
@@ -287,4 +203,3 @@ export function hasAIApiKeys(): boolean {
 export function getAvailableAIKeys(): string[] {
   return getAvailableGeminiKeys();
 }
-

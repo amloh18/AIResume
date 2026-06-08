@@ -1,9 +1,7 @@
 /**
  * AI API Helper Utility
- * Provides unified interface for Google Gemini API calls with gemini_api_key and gemini_api_key2 fallback
- * Uses @google/genai package with gemini-2.0-flash-lite-preview-02-05 model
- * 
- * This file now uses Gemini API instead of OpenAI/Perplexity
+ * Provides unified interface for Google Gemini API calls using gemini_api_key
+ * Uses @google/genai package with gemini-2.5-flash (model fallback to gemini-2.0-flash)
  */
 
 import { GoogleGenAI } from '@google/genai';
@@ -51,57 +49,21 @@ function isQuotaError(error: any): boolean {
 }
 
 /**
- * Get available Gemini API keys in priority order
- * Checks all three keys: gemini_api_key, gemini_api_key2, gemini_api_key3
- * Priority: gemini_api_key2 first (primary), then gemini_api_key, then gemini_api_key3
+ * Get available Gemini API key
  */
-function getGeminiApiKeys(): Array<{ name: string; key: string }> {
-  const keys: Array<{ name: string; key: string }> = [];
-
-  // PRIMARY: Try gemini_api_key2 first (check multiple naming conventions)
-  const primaryKey =
-    process.env.gemini_api_key2 ||
-    process.env.GEMINI_API_KEY2 ||
-    process.env['GEMINI_API-KEY2'] ||
-    process.env['gemini_api-key2'];
-
-  if (primaryKey) {
-    keys.push({
-      name: 'gemini_api_key2',
-      key: primaryKey
-    });
-  }
-
-  // SECONDARY: Use gemini_api_key
-  const secondaryKey =
+function getGeminiApiKey(): string {
+  const key =
     process.env.gemini_api_key ||
     process.env.GEMINI_API_KEY ||
     process.env.gemini_api_key1 ||
     process.env.GEMINI_API_KEY1 ||
     process.env.NEXT_PUBLIC_GEMINI_API_KEY;
 
-  if (secondaryKey) {
-    keys.push({
-      name: 'gemini_api_key',
-      key: secondaryKey
-    });
+  if (!key) {
+    throw new Error('No Gemini API key configured. Please set gemini_api_key.');
   }
 
-  // TERTIARY: Use gemini_api_key3 as final fallback
-  const tertiaryKey =
-    process.env.gemini_api_key3 ||
-    process.env.GEMINI_API_KEY3 ||
-    process.env['GEMINI_API-KEY3'] ||
-    process.env['gemini_api-key3'];
-
-  if (tertiaryKey) {
-    keys.push({
-      name: 'gemini_api_key3',
-      key: tertiaryKey
-    });
-  }
-
-  return keys;
+  return key;
 }
 
 /**
@@ -193,73 +155,52 @@ async function callGemini(options: AICallOptions, apiKey: string): Promise<strin
 }
 
 /**
- * Call Gemini API with automatic fallback
- * Tries all available keys: gemini_api_key2 (primary), gemini_api_key, gemini_api_key3
- * Automatically falls back to next key on quota/rate limit errors
+ * Call Gemini API using the configured key
  */
 export async function callAIWithFallback(options: AICallOptions): Promise<AIResponse> {
-  const apiKeys = getGeminiApiKeys();
-
-  if (apiKeys.length === 0) {
-    throw new Error('No Gemini API keys configured. Please set gemini_api_key, gemini_api_key2, or gemini_api_key3');
+  let apiKey: string;
+  try {
+    apiKey = getGeminiApiKey();
+  } catch {
+    throw new Error('No Gemini API key configured. Please set gemini_api_key.');
   }
 
-  let lastError: Error | null = null;
-  const currentKeyIndex = apiKeys.findIndex(k => k.name === 'gemini_api_key2') >= 0
-    ? apiKeys.findIndex(k => k.name === 'gemini_api_key2')
-    : 0;
-
-  for (let i = 0; i < apiKeys.length; i++) {
-    const { name, key } = apiKeys[i];
-    const isLastKey = i === apiKeys.length - 1;
-
-    try {
-      console.log(`🔑 Attempting Gemini API call with ${name}...`);
-
-      const content = await callGemini(options, key);
-
-      console.log(`✅ Gemini API call successful with ${name}`);
-      return {
-        content,
-        provider: 'gemini',
-        apiKeyUsed: name
-      };
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      const isQuota = isQuotaError(error);
-
-      if (isQuota) {
-        console.warn(`⚠️ ${name} quota exceeded (429), falling back to next key...`);
-      } else {
-        console.error(`❌ ${name} failed:`, errorMessage);
-      }
-
-      lastError = error instanceof Error ? error : new Error(String(error));
-
-      // If this is the last key, throw the error
-      if (isLastKey) {
-        throw new Error(`All Gemini API keys failed. Last error (${name}): ${errorMessage}`);
-      }
-
-      // Otherwise, continue to next key
-      console.log(`⏭️  Continuing to next API key...`);
-    }
+  try {
+    console.log(`🔑 Attempting Gemini API call...`);
+    const content = await callGemini(options, apiKey);
+    console.log(`✅ Gemini API call successful`);
+    return {
+      content,
+      provider: 'gemini',
+      apiKeyUsed: 'gemini_api_key'
+    };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    throw new Error(`Gemini API error: ${errorMessage}`);
   }
-
-  throw lastError || new Error('Failed to call Gemini API');
 }
 
 /**
  * Check if Gemini API keys are available
  */
 export function hasAIApiKeys(): boolean {
-  return getGeminiApiKeys().length > 0;
+  try {
+    return Boolean(getGeminiApiKey());
+  } catch {
+    return false;
+  }
 }
 
 /**
  * Get the name of the available API keys (for logging)
  */
 export function getAvailableAIKeys(): string[] {
-  return getGeminiApiKeys().map(k => k.name);
+  try {
+    return [getGeminiApiKey() ? 'gemini_api_key' : 'none'];
+  } catch {
+    return [];
+  }
 }
+
+
 

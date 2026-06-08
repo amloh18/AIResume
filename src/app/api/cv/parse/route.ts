@@ -587,10 +587,10 @@ async function structureTextWithAI(rawText: string): Promise<any> {
   const { callAIWithFallback, hasAIApiKeys } = await import('@/lib/utils/ai-api-helper');
 
   if (!hasAIApiKeys()) {
-    throw new Error('No AI API keys configured (gemini_api_key or gemini_api_key2). AI parsing is unavailable.');
+    throw new Error('No AI API key configured (gemini_api_key). AI parsing is unavailable.');
   }
 
-  console.log(`🔑 Using AI API helper with gemini_api_key and gemini_api_key2 fallback`);
+  console.log(`🔑 Using AI API helper with gemini_api_key`);
 
   // Create a simplified schema for the AI prompt to save tokens
   // Note: courses in education and highlights in projects are optional
