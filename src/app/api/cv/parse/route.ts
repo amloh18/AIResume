@@ -562,6 +562,9 @@ async function extractTextFromFile(fileBuffer: Buffer, mimeType: string): Promis
     const { data: { text } } = await worker.recognize(fileBuffer);
     await worker.terminate();
     rawText = text || '';
+  } else if (mimeType === 'text/plain') {
+    console.log('Extracting text from plain text file...');
+    rawText = fileBuffer.toString('utf-8');
   } else {
     throw new Error(`Unsupported file type: ${mimeType}`);
   }

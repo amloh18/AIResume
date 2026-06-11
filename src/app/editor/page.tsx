@@ -105,10 +105,10 @@ function ResumeEnhancerPageContent() {
           setIsGuestMode(false);
         } else {
           // STRICT SECURITY CHECK:
-          // A user can ONLY be a guest if they are explicitly trying to create a NEW CV from scratch.
-          // If they pass a cvId, clId, or journeyId, it implies they are trying to access existing data.
+          // A user can ONLY be a guest if they are explicitly trying to create a NEW CV from scratch or restoring an onboarding draft.
+          // If they pass a cvId, clId, or journeyId, it implies they are trying to access existing authenticated data.
           // In that case, they MUST authenticate, so we do NOT allow guest mode.
-          if (mode === 'create' && !cvId && !clId && !journeyId) {
+          if ((mode === 'create' || restoreDraftParam) && !cvId && !clId && !journeyId) {
             setIsGuestMode(true);
           } else {
             setIsGuestMode(false); // Force authentication via RouteGuard

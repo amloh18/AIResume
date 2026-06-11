@@ -7,26 +7,30 @@ import { getAuthenticatedUser } from '@/lib/auth-helpers';
 export async function POST(request: NextRequest) {
   try {
     await getConnection();
-    const authResult = await getAuthenticatedUser();
     
-    if (!authResult) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
-
     const body = await request.json();
-    const { cvId } = body;
+    const { cvId, cvData: directCvData } = body;
 
-    if (!cvId) {
-      return NextResponse.json({ success: false, error: 'cvId is required' }, { status: 400 });
+    let cvData = directCvData;
+    let cv = null;
+
+    if (!cvData && cvId) {
+      const authResult = await getAuthenticatedUser();
+      if (!authResult) {
+        return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+      }
+      cv = await CV.findOne({ _id: cvId, userId: authResult.userId });
+      if (!cv) {
+        return NextResponse.json({ success: false, error: 'CV not found' }, { status: 404 });
+      }
+      cvData = cv.cvData;
     }
 
-    const cv = await CV.findOne({ _id: cvId, userId: authResult.userId });
-    if (!cv) {
-      return NextResponse.json({ success: false, error: 'CV not found' }, { status: 404 });
+    if (!cvData) {
+      return NextResponse.json({ success: false, error: 'cvId or cvData is required' }, { status: 400 });
     }
 
     const scoreManager = CentralScoreManager.getInstance();
-    const cvData = cv.cvData;
     
     // Calculate industry-specific keyword match
     const industryMatch = scoreManager.calculateIndustryKeywordMatch(cvData);
@@ -106,9 +110,11 @@ export async function POST(request: NextRequest) {
     // Helper to get Industry Standard Keywords (copying the constant if needed or importing)
     // For now using the defaults if the manager doesn't export them easily
     
-    await CV.findByIdAndUpdate(cvId, {
-      $set: { 'metadata.analysisSnapshot': snapshot }
-    });
+    if (cvId && cv) {
+      await CV.findByIdAndUpdate(cvId, {
+        $set: { 'metadata.analysisSnapshot': snapshot }
+      });
+    }
 
     return NextResponse.json({
       success: true,

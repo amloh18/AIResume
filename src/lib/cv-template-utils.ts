@@ -231,6 +231,9 @@ export async function getDefaultTemplate() {
  */
 export async function getTemplateById(templateId: string) {
   try {
+    if (!templateId || !mongoose.Types.ObjectId.isValid(templateId)) {
+      return null;
+    }
     const template = await Template.findById(templateId).lean();
     return template;
   } catch (error) {
@@ -244,6 +247,9 @@ export async function getTemplateById(templateId: string) {
  */
 export async function validateTemplate(templateId: string): Promise<boolean> {
   try {
+    if (!templateId || !mongoose.Types.ObjectId.isValid(templateId)) {
+      return false;
+    }
     const template = await Template.findOne({
       _id: templateId,
       isActive: true,

@@ -496,6 +496,12 @@ export async function PUT(
         console.log('✅ CV UPDATE API - Using hardcoded template:', hardcodedTemplate.name);
       } else {
         // Check database templates
+        if (!updateData.templateId || typeof updateData.templateId !== 'string' || !mongoose.Types.ObjectId.isValid(updateData.templateId)) {
+          return NextResponse.json(
+            { success: false, error: 'Invalid template specified' },
+            { status: 400 }
+          );
+        }
         const template = await Template.findById(updateData.templateId);
         if (!template || !template.isActive || !template.globalAccess) {
           return NextResponse.json(
@@ -774,7 +780,7 @@ export async function PUT(
         const hardcodedTemplate = getTemplateById(cv.templateId?.toString());
         if (hardcodedTemplate) {
           templateData = hardcodedTemplate;
-        } else {
+        } else if (mongoose.Types.ObjectId.isValid(cv.templateId?.toString())) {
           const template = await Template.findById(cv.templateId);
           if (template) {
             templateData = template.toJSON();

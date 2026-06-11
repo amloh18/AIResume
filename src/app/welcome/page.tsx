@@ -46,6 +46,7 @@ import Logo from '@/components/ui/Logo';
 import { usePaymentModal } from '@/contexts/PaymentModalContext';
 import CodeVerificationScreen from '@/components/auth/CodeVerificationScreen';
 import { toast } from 'react-hot-toast';
+import guestCVService from '@/lib/services/guestCVService';
 
 interface OnboardingState {
   intent: string;
@@ -187,50 +188,85 @@ const WelcomePage: React.FC = () => {
 
   const savePrimaryCV = async (cvData: any, title: string, score: number) => {
     try {
-      // 1. Create/Update Primary CV
-      const response = await fetch('/api/cvs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: title || 'Primary CV',
-          cvData: cvData,
-          cvType: 'master',
-          isMaster: true,
-          metadata: {
-            isMaster: true,
-            isUserMaster: true,
-            createdVia: 'onboarding',
-            atsScore: score
-          }
-        })
-      });
-      
-      const result = await response.json();
-      const masterCvId = result.cv?.id || result.cv?._id || result.data?.cv?.id || result.existingMasterCVId;
-      
-      if (masterCvId) {
-        setPrimaryCvId(masterCvId);
-        
-        // 2. Generate Analysis Snapshot
-        const analysisRes = await fetch('/api/cv/analysis-snapshot', {
+      if (status === 'authenticated') {
+        // 1. Create/Update Primary CV for Authenticated User
+        const response = await fetch('/api/cvs', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ cvId: masterCvId })
+          body: JSON.stringify({
+            title: title || 'Primary CV',
+            cvData: cvData,
+            cvType: 'master',
+            isMaster: true,
+            metadata: {
+              isMaster: true,
+              isUserMaster: true,
+              createdVia: 'onboarding',
+              atsScore: score
+            }
+          })
         });
-        const analysisData = await analysisRes.json();
-        if (analysisData.success) {
-          setAnalysisSnapshot(analysisData.data);
-          setCVScore(analysisData.data.healthIndex);
-        }
-
-        // 3. Update onboarding session
-        await saveSession({
-          primary_cv_id: masterCvId,
-          userLifecycleState: 'PRIMARY_CV_CREATED'
-        });
-        setLifecycleState('PRIMARY_CV_CREATED');
         
-        return masterCvId;
+        const result = await response.json();
+        const masterCvId = result.cv?.id || result.cv?._id || result.data?.cv?.id || result.existingMasterCVId;
+        
+        if (masterCvId) {
+          setPrimaryCvId(masterCvId);
+          
+          // 2. Generate Analysis Snapshot
+          const analysisRes = await fetch('/api/cv/analysis-snapshot', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ cvId: masterCvId })
+          });
+          const analysisData = await analysisRes.json();
+          if (analysisData.success) {
+            setAnalysisSnapshot(analysisData.data);
+            setCVScore(analysisData.data.healthIndex);
+          }
+
+          // 3. Update onboarding session
+          await saveSession({
+            primary_cv_id: masterCvId,
+            userLifecycleState: 'PRIMARY_CV_CREATED'
+          });
+          setLifecycleState('PRIMARY_CV_CREATED');
+          
+          return masterCvId;
+        }
+      } else {
+        // Guest user - save to guest draft!
+        const draftResult = await guestCVService.saveGuestDraft({
+          cvData: cvData,
+          currentStep: 3, // Start at Step 3 (Surgeon Builder) in the editor
+          completedSteps: [],
+          cvTitle: title || 'Primary CV',
+        });
+        
+        if (draftResult.success) {
+          setPrimaryCvId('guest-draft');
+          
+          // Generate analysis snapshot directly from cvData
+          const analysisRes = await fetch('/api/cv/analysis-snapshot', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ cvData: cvData })
+          });
+          const analysisData = await analysisRes.json();
+          if (analysisData.success) {
+            setAnalysisSnapshot(analysisData.data);
+            setCVScore(analysisData.data.healthIndex);
+          }
+
+          // Also save onboarding session if an anonymous user exists
+          await saveSession({
+            primary_cv_id: 'guest-draft',
+            userLifecycleState: 'PRIMARY_CV_CREATED'
+          });
+          setLifecycleState('PRIMARY_CV_CREATED');
+          
+          return 'guest-draft';
+        }
       }
     } catch (err) {
       console.error('Failed to save primary CV:', err);
@@ -446,6 +482,9 @@ Please find the CV data attached.`;
         // Clear local storage
         localStorage.removeItem('cvcircle_onboarding_state');
         
+        // Check and transfer guest draft if authenticated
+        checkAndTransferGuestDraft();
+        
         // If they fast-tracked, call completion logic instead of simple redirect
         if (parsed.fastTrackToEditor) {
           completeOnboarding('/editor', parsed);
@@ -511,39 +550,73 @@ Please find the CV data attached.`;
   };
 
   // Onboarding Completion Endpoint call
-  const completeOnboarding = async (redirectUrl: string, overrideState?: OnboardingState) => {
+  // Helper to check and transfer guest draft if authenticated
+  async function checkAndTransferGuestDraft(forceAuth = false) {
+    if (status === 'authenticated' || forceAuth) {
+      try {
+        const sessionId = guestCVService.getSessionId();
+        if (sessionId) {
+          const hasDraft = await guestCVService.hasDraft(sessionId);
+          if (hasDraft) {
+            console.log('🔄 Onboarding - Transferring guest draft to authenticated user...');
+            const transferRes = await guestCVService.transferDraftToUser(sessionId, session?.user?.id);
+            if (transferRes.success && transferRes.cvId) {
+              console.log('✅ Onboarding - Draft transferred successfully. CV ID:', transferRes.cvId);
+              setPrimaryCvId(transferRes.cvId);
+              return transferRes.cvId;
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Failed to transfer guest draft in onboarding:', err);
+      }
+    }
+    return null;
+  };
+
+  // Onboarding Completion Endpoint call
+  const completeOnboarding = async (redirectUrl: string, overrideState?: OnboardingState, forceAuth = false) => {
     const s_cvScore = overrideState?.cvScore ?? cvScore;
 
     try {
+      // Transfer draft first if authenticated
+      let activeCvId = primaryCvId;
+      const isUserAuth = status === 'authenticated' || forceAuth;
+      if (isUserAuth) {
+        const transferredCvId = await checkAndTransferGuestDraft(forceAuth);
+        if (transferredCvId) {
+          activeCvId = transferredCvId;
+        }
+      }
+
       const rec = getRecommendedTier(overrideState);
       let primary_goal: 'cv' | 'tracker' | 'auto_apply' = 'cv';
       let recommended_plan = 'starter_monthly';
       const isScratch = seedingMethod === 'scratch';
+      
+      // All three user types (Starter, Focused, Smart) must go to the editor to complete their primary CV
       let activation_route = isScratch 
         ? '/editor?mode=create&step=2&master=true'
         : '/editor?doc=master-cv&mode=improve&step=2';
+        
       let dashboard_layout_type: 'cv' | 'tracker' | 'auto_apply' = 'cv';
 
       if (rec.type === 3) {
         primary_goal = 'auto_apply';
         recommended_plan = 'smart_quarterly';
-        activation_route = '/dashboard/jobs?tab=auto-apply&setup=1';
         dashboard_layout_type = 'auto_apply';
       } else if (rec.type === 2) {
         primary_goal = 'tracker';
         recommended_plan = 'focused_monthly';
-        activation_route = '/dashboard/tracker?newJob=1';
         dashboard_layout_type = 'tracker';
       }
 
-      let targetRoute = redirectUrl === '/dashboard' ? '/dashboard' : activation_route;
-
-      if (primaryCvId) {
-        activation_route = `/editor?cvId=${primaryCvId}&mode=edit-master&improve=true&step=2`;
-        if (redirectUrl !== '/dashboard') {
-          targetRoute = activation_route;
-        }
+      // If user has a valid primaryCvId (and not 'guest-draft'), route to it in edit-master mode
+      if (activeCvId && activeCvId !== 'guest-draft') {
+        activation_route = `/editor?cvId=${activeCvId}&mode=edit-master&improve=true&step=2`;
       }
+
+      let targetRoute = redirectUrl === '/dashboard' ? '/dashboard' : activation_route;
 
       // Update session status
       await saveSession({
@@ -554,7 +627,7 @@ Please find the CV data attached.`;
         dashboard_layout_type
       });
 
-      if (status === 'authenticated') {
+      if (isUserAuth) {
         openPaymentModal({
           preselectedPlanKey: recommended_plan === 'starter_monthly' ? 'focused_monthly' : recommended_plan,
           triggerContext: 'onboarding-exit',
@@ -720,6 +793,18 @@ Please find the CV data attached.`;
           body: formData,
         });
 
+        if (!response.ok) {
+          const contentType = response.headers.get('content-type');
+          let errMsg = 'Failed to parse CV';
+          if (contentType && contentType.includes('application/json')) {
+            const errData = await response.json();
+            errMsg = errData.error || errMsg;
+          } else {
+            errMsg = `Failed to parse CV: HTTP ${response.status}`;
+          }
+          throw new Error(errMsg);
+        }
+
         const result = await response.json();
         
         clearInterval(progressInterval);
@@ -743,13 +828,11 @@ Please find the CV data attached.`;
         } else {
           throw new Error(result.error || "Parsing failed");
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error("Parsing error:", err);
-        triggerNotification("Failed to parse CV. Continuing with basic profile.");
-        setTimeout(() => {
-          setIsParsing(false);
-          handleNext();
-        }, 800);
+        const errMsg = err?.message || "Failed to parse CV. Please try again or Start Fresh.";
+        toast.error(errMsg, { duration: 5000, position: 'bottom-right' });
+        setIsParsing(false);
       }
     }
   };
@@ -823,7 +906,7 @@ Please find the CV data attached.`;
           setAuthSuccess('Signed in successfully! Continuing...');
           setTimeout(() => {
             if (fastTrackToEditor) {
-              completeOnboarding('/editor');
+              completeOnboarding('/editor', undefined, true);
             } else {
               setCurrentStep(5);
             }
@@ -873,7 +956,7 @@ Please find the CV data attached.`;
         setAuthSuccess('Account verified and logged in!');
         setTimeout(() => {
           if (fastTrackToEditor) {
-            completeOnboarding('/editor');
+            completeOnboarding('/editor', undefined, true);
           } else {
             setCurrentStep(5);
           }
@@ -2434,7 +2517,7 @@ Please find the CV data attached.`;
                   onClick={handleNext}
                   disabled={
                     (currentStep === 1 && !intent) ||
-                    (currentStep === 2 && !seedingMethod) ||
+                    (currentStep === 2 && (!seedingMethod || (seedingMethod !== 'scratch' && !parsedCVData))) ||
                     (currentStep === 5 && !searchStatus) ||
                     (currentStep === 6 && !monthlyVolume) ||
                     (currentStep === 7 && !trackerInterest) ||

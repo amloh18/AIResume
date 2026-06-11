@@ -4,8 +4,9 @@ import { authOptions } from '@/lib/auth';
 import { getConnection } from '@/lib/database';
 import MoriChat from '@/models/MoriChat';
 
-export async function GET(req: NextRequest, { params }: { params: { chatId: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ chatId: string }> }) {
   try {
+    const { chatId } = await params;
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -13,7 +14,7 @@ export async function GET(req: NextRequest, { params }: { params: { chatId: stri
 
     await getConnection();
 
-    const chat = await MoriChat.findOne({ _id: params.chatId, userId: session.user.id }).lean();
+    const chat = await MoriChat.findOne({ _id: chatId, userId: session.user.id }).lean();
     if (!chat) {
       return NextResponse.json({ error: 'Chat not found' }, { status: 404 });
     }
@@ -25,8 +26,9 @@ export async function GET(req: NextRequest, { params }: { params: { chatId: stri
   }
 }
 
-export async function PUT(req: NextRequest, { params }: { params: { chatId: string } }) {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ chatId: string }> }) {
   try {
+    const { chatId } = await params;
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -40,7 +42,7 @@ export async function PUT(req: NextRequest, { params }: { params: { chatId: stri
     await getConnection();
 
     const chat = await MoriChat.findOneAndUpdate(
-      { _id: params.chatId, userId: session.user.id },
+      { _id: chatId, userId: session.user.id },
       { $set: { title: body.title } },
       { new: true }
     ).lean();
@@ -56,8 +58,9 @@ export async function PUT(req: NextRequest, { params }: { params: { chatId: stri
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { chatId: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ chatId: string }> }) {
   try {
+    const { chatId } = await params;
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -65,7 +68,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { chatId: s
 
     await getConnection();
 
-    const result = await MoriChat.deleteOne({ _id: params.chatId, userId: session.user.id });
+    const result = await MoriChat.deleteOne({ _id: chatId, userId: session.user.id });
     if (result.deletedCount === 0) {
       return NextResponse.json({ error: 'Chat not found' }, { status: 404 });
     }

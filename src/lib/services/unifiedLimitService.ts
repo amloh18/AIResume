@@ -280,7 +280,14 @@ class UnifiedLimitService {
                 return { hasAccess: false, tier: 'free', reason: 'User not found' };
             }
 
-            const template = await Template.findById(templateId);
+            let template = null;
+            if (templateId && mongoose.Types.ObjectId.isValid(templateId.toString())) {
+                template = await Template.findById(templateId);
+            } else if (templateId) {
+                const { getTemplateById } = await import('@/lib/templates/template-utils');
+                template = getTemplateById(templateId.toString());
+            }
+
             if (!template) {
                 return { hasAccess: false, tier: 'free', reason: 'Template not found' };
             }
@@ -343,7 +350,14 @@ class UnifiedLimitService {
 
             if (cv.documentState === 'read-only') {
                 // Check if it's because of premium template
-                const template = await Template.findById(cv.templateId);
+                let template = null;
+                if (cv.templateId && mongoose.Types.ObjectId.isValid(cv.templateId.toString())) {
+                    template = await Template.findById(cv.templateId);
+                } else if (cv.templateId) {
+                    const { getTemplateById } = await import('@/lib/templates/template-utils');
+                    template = getTemplateById(cv.templateId.toString());
+                }
+
                 if (template?.tier === 'premium') {
                     const limits = this.getPlanLimits(user.currentPlanKey);
                     if (limits.templates !== 'all') {
