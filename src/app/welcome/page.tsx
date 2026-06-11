@@ -387,7 +387,7 @@ Please find the CV data attached.`;
                 const step = Math.max(1, parseInt(stepMatch[1]));
                 if (step > 1) {
                   setIsResuming(true);
-                  setCurrentStep(step);
+                  setCurrentStep(step === 4 ? 5 : step);
                 }
               }
             }
@@ -489,7 +489,8 @@ Please find the CV data attached.`;
         if (parsed.fastTrackToEditor) {
           completeOnboarding('/editor', parsed);
         } else {
-          setCurrentStep(parsed.step || 5);
+          const restoredStep = parsed.step || 5;
+          setCurrentStep(restoredStep === 4 ? 5 : restoredStep);
         }
       } catch (e) {
         console.error('Error restoring onboarding state:', e);
@@ -498,30 +499,22 @@ Please find the CV data attached.`;
   }, [status, router]);
 
   // Handle Next Navigation
-  const handleNext = () => {
-    // Skip Step 3 (Analysis) for scratch CVs
-    if (currentStep === 2 && (intent === 'cv_scratch' || seedingMethod === 'scratch')) {
-      if (status === 'authenticated') {
-        setCurrentStep(5); // Skip Step 3 and Step 4 (Auth Wall)
-      } else {
-        setCurrentStep(4); // Skip Step 3
-      }
+  const handleNext = (overrideSeedingMethod?: string) => {
+    const activeSeedingMethod = overrideSeedingMethod || seedingMethod;
+    // Skip Step 3 (Analysis) and Step 4 (Auth Wall) for scratch CVs
+    if (currentStep === 2 && (intent === 'cv_scratch' || activeSeedingMethod === 'scratch')) {
+      setCurrentStep(5);
       return;
     }
 
     if (currentStep === 3 && (intent === 'cv' || intent === 'cv_scratch')) {
-      // Type 1 User Fast-Track check: If user fast-tracks, set flag & go to auth or editor
-      if (status === 'authenticated') {
-        completeOnboarding('/editor');
-      } else {
-        setFastTrackToEditor(true);
-        setCurrentStep(4);
-      }
+      // Type 1 User Fast-Track check: Route directly to editor (supports both auth and guest modes)
+      completeOnboarding('/editor');
       return;
     }
 
-    if (currentStep === 3 && status === 'authenticated') {
-      // If already logged in, skip auth wall (step 4)
+    if (currentStep === 3) {
+      // For all other users continuing onboarding, go to Step 5 (skipping Step 4)
       setCurrentStep(5);
       return;
     }
@@ -536,14 +529,12 @@ Please find the CV data attached.`;
   };
 
   const handleBack = () => {
-    if (currentStep === 5 && status === 'authenticated') {
+    if (currentStep === 5) {
       if (intent === 'cv_scratch' || seedingMethod === 'scratch') {
         setCurrentStep(2);
       } else {
         setCurrentStep(3);
       }
-    } else if (currentStep === 4 && (intent === 'cv_scratch' || seedingMethod === 'scratch')) {
-      setCurrentStep(2);
     } else if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
     }
@@ -1270,7 +1261,7 @@ Please find the CV data attached.`;
                               if (method.id === 'scratch') {
                                 setParsedCVData(null); // CRITICAL: Reset any previously parsed data for scratch mode
                                 setCVScore(0);
-                                handleNext();
+                                handleNext('scratch');
                               } else if (method.id === 'json') {
                                 setShowJsonModal(true);
                               }
@@ -1748,12 +1739,7 @@ Please find the CV data attached.`;
                 <div className="flex flex-col items-center gap-4 pt-4 border-t border-gray-100">
                   <Button 
                     onClick={() => {
-                      if (status === 'authenticated') {
-                        completeOnboarding('/editor');
-                      } else {
-                        setFastTrackToEditor(true);
-                        setCurrentStep(4);
-                      }
+                      completeOnboarding('/editor');
                     }}
                     className="w-full bg-[#80FF00] hover:bg-[#70e600] text-black font-extrabold py-6 rounded-2xl flex items-center justify-center gap-2 shadow-sm transition-all text-sm uppercase tracking-tight"
                   >
