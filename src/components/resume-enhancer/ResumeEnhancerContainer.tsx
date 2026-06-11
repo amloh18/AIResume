@@ -816,8 +816,8 @@ export default function ResumeEnhancerContainer({
   }, [isGuestMode, sessionStatus, session?.user?.id]); // Removed isTransferringDraft from deps to prevent loop
 
   // Helper function to show auth prompt for guest users
-  const checkAndShowAuthPrompt = (action: 'save' | 'fix-cv') => {
-    if (isGuestMode && !hasShownAuthPrompt) {
+  const checkAndShowAuthPrompt = (action: 'save' | 'fix-cv', force = false) => {
+    if (isGuestMode && (force || !hasShownAuthPrompt)) {
       setShowAuthPrompt(true);
       setHasShownAuthPrompt(true);
       return true; // Indicates auth prompt was shown
@@ -2251,11 +2251,11 @@ export default function ResumeEnhancerContainer({
     }
   };
 
-  const handleSmartSave = async () => {
+  const handleSmartSave = async (isManualClick = false) => {
     if (saveStatus === 'saving') return;
 
     // Check if auth prompt should be shown for guest users
-    if (checkAndShowAuthPrompt('save')) {
+    if (isManualClick && checkAndShowAuthPrompt('save', true)) {
       return; // Stop execution, auth prompt will be shown
     }
 
@@ -2696,7 +2696,7 @@ export default function ResumeEnhancerContainer({
           {/* Save button - only show on step 3, 4, and 5 */}
           {(state.currentStep === 3 || state.currentStep === 4 || state.currentStep === 5) && (
             <motion.button
-              onClick={handleSmartSave}
+              onClick={() => handleSmartSave(true)}
               disabled={saveStatus === 'saving'}
               className="p-1.5 sm:px-4 sm:py-1.5 bg-lime-500 dark:bg-[#80FF00] hover:bg-lime-600 dark:hover:bg-[#70e600] disabled:bg-gray-300 dark:disabled:bg-[var(--bg-tertiary)] disabled:cursor-not-allowed text-black disabled:text-gray-500 dark:disabled:text-[color:var(--text-tertiary)] rounded-full text-xs font-semibold transition-colors flex items-center space-x-1.5 shadow-md hover:shadow-lg overflow-hidden min-w-[36px] sm:min-w-[85px] justify-center"
               title="Save"
@@ -2882,7 +2882,7 @@ export default function ResumeEnhancerContainer({
                     className="h-full min-h-0 flex flex-col w-full"
                   >
                     <ErrorBoundary stepName="Review & Download" onReset={() => dispatch({ type: 'SET_STEP', payload: 5 })}>
-                      <Step4Review onSave={handleSmartSave} />
+                      <Step4Review onSave={() => handleSmartSave(true)} />
                     </ErrorBoundary>
                   </motion.div>
                 )}
