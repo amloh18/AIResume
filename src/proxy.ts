@@ -102,6 +102,14 @@ export default async function proxy(req: NextRequest) {
       '/api/webhooks',
       '/api/health',
       '/api/v1/b2b',
+      '/api/user/onboarding-session',
+      '/api/cv/parse',
+      '/api/cv-draft/save',
+      '/api/cv-draft/load',
+      '/api/cvs',
+      '/api/cv/analysis-snapshot',
+      '/api/pricing-plans',
+      '/api/user/subscription',
     ];
 
     if (publicApiRoutes.some(route => pathname.startsWith(route))) {

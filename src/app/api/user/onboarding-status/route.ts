@@ -1,24 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { getAuthenticatedUser } from '@/lib/auth-helpers';
 import { getConnection } from '@/lib/database';
 import User from '@/models/User';
 import CV from '@/models/CV';
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const authResult = await getAuthenticatedUser(request);
     
-    if (!session?.user?.id) {
+    if (!authResult) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
       );
     }
 
+    const userId = authResult.userId;
+
     await getConnection();
 
-    const user = await User.findById(session.user.id);
+    const user = await User.findById(userId);
     
     if (!user) {
       return NextResponse.json(
@@ -59,14 +60,16 @@ export async function GET(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const authResult = await getAuthenticatedUser(request);
     
-    if (!session?.user?.id) {
+    if (!authResult) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
       );
     }
+
+    const userId = authResult.userId;
 
     const body = await request.json();
     await getConnection();
@@ -93,7 +96,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     await User.findByIdAndUpdate(
-      session.user.id,
+      userId,
       {
         $set: updateFields
       }

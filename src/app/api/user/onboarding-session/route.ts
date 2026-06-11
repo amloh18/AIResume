@@ -1,30 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { cookies } from 'next/headers';
+import { getAuthenticatedUser } from '@/lib/auth-helpers';
 import { userRepository } from '@/lib/repositories/user-repository';
 import { getConnection } from '@/lib/database/connection-manager';
 
 export async function GET(request: NextRequest) {
   try {
     await getConnection();
-    const session = await getServerSession(authOptions);
-    let userId = session?.user?.id;
-
-    if (!userId) {
-      const cookieStore = await cookies();
-      const anonymousToken = cookieStore.get('cvcircle_anonymous_token')?.value;
-      if (anonymousToken) {
-        const anonUser = await userRepository.findByAnonymousToken(anonymousToken);
-        if (anonUser) {
-          userId = anonUser._id.toString();
-        }
-      }
-    }
-
-    if (!userId) {
+    const authResult = await getAuthenticatedUser(request);
+    
+    if (!authResult) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
+
+    const userId = authResult.userId;
 
     const user = await userRepository.findById(userId);
     if (!user) {
@@ -48,23 +36,13 @@ export async function GET(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     await getConnection();
-    const session = await getServerSession(authOptions);
-    let userId = session?.user?.id;
-
-    if (!userId) {
-      const cookieStore = await cookies();
-      const anonymousToken = cookieStore.get('cvcircle_anonymous_token')?.value;
-      if (anonymousToken) {
-        const anonUser = await userRepository.findByAnonymousToken(anonymousToken);
-        if (anonUser) {
-          userId = anonUser._id.toString();
-        }
-      }
-    }
-
-    if (!userId) {
+    const authResult = await getAuthenticatedUser(request);
+    
+    if (!authResult) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
+
+    const userId = authResult.userId;
 
     const body = await request.json();
     const { 

@@ -24,8 +24,12 @@ const RouteGuard: React.FC<RouteGuardProps> = ({
 
     if (requireAuth && status === 'unauthenticated' && !isRedirecting) {
       setIsRedirecting(true);
+      const queryString = typeof window !== 'undefined'
+        ? window.location.search.replace(/^\?/, '')
+        : '';
+      const callbackUrl = queryString ? `${pathname}?${queryString}` : pathname;
       // Redirect to sign-in page with callback URL
-      router.push(`/sign-in?callbackUrl=${encodeURIComponent(pathname)}`);
+      router.push(`/sign-in?callbackUrl=${encodeURIComponent(callbackUrl)}`);
     }
   }, [status, requireAuth, pathname, router, isRedirecting]);
 

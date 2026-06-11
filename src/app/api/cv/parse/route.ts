@@ -6,11 +6,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { UnifiedCVDataStructure, DEFAULT_UNIFIED_CV_DATA } from '@/types/unified-cv-schema';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { sanitizeErrorMessage } from '@/lib/api/error-handler';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { rateLimiter, rateLimitConfigs } from '@/lib/rate-limiter';
+import { getAuthenticatedUser } from '@/lib/auth-helpers';
 
 // ============================================================================
 // TEXT CLEANING UTILITY - ATS Compatible
@@ -233,6 +232,10 @@ const cvDataSchema = z.object({
 async function extractTextFromFile(fileBuffer: Buffer, mimeType: string): Promise<string> {
   let rawText = '';
 
+  const toPlainUint8Array = (buffer: Buffer): Uint8Array => {
+    return new Uint8Array(buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength));
+  };
+
   // 1. Handle DOCX files
   if (mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
     console.log('Attempting Method: doc-parse (mammoth)...');
@@ -310,7 +313,8 @@ async function extractTextFromFile(fileBuffer: Buffer, mimeType: string): Promis
           }
         }
 
-        // Disable worker for server-side usage if GlobalWorkerOptions exists
+        // Configure worker for Node.js environment
+        // Intentionally setting workerSrc to empty string or omitting it to avoid web worker initialization errors in Node.js
         if (pdfjs.GlobalWorkerOptions) {
           pdfjs.GlobalWorkerOptions.workerSrc = '';
         }
@@ -322,11 +326,12 @@ async function extractTextFromFile(fileBuffer: Buffer, mimeType: string): Promis
         }
 
         const loadingTask = getDocument({
-          data: fileBuffer,
+          data: toPlainUint8Array(fileBuffer),
           useWorkerFetch: false,
           isEvalSupported: false,
           useSystemFonts: true,
           verbosity: 0, // Suppress warnings
+          standardFontDataUrl: 'node_modules/pdfjs-dist/standard_fonts/',
         });
 
         const pdfDocument = await loadingTask.promise;
@@ -449,14 +454,31 @@ async function extractTextFromFile(fileBuffer: Buffer, mimeType: string): Promis
 
           console.log('🔄 Converting PDF pages to images...');
 
-          // Convert pages (limit to first 3 pages for CVs)
-          const results = await convert.bulk(3, { responseType: 'base64' });
+          // Convert pages (limit to first 3 pages for CVs). Try pages individually so
+          // one-page scanned PDFs do not fail because page 2 or 3 is absent.
+          const results: any[] = [];
+          for (const pageNumber of [1, 2, 3]) {
+            try {
+              results.push(await convert(pageNumber, { responseType: 'buffer' }));
+            } catch (pageConvertError) {
+              if (pageNumber === 1) throw pageConvertError;
+              console.warn(`⚠️ PDF page ${pageNumber} conversion skipped:`, pageConvertError instanceof Error ? pageConvertError.message : String(pageConvertError));
+            }
+          }
           console.log(`✅ Converted ${results?.length || 0} pages to images`);
 
           // Track generated image file paths for cleanup
           const generatedImagePaths: string[] = [];
 
-          if (results && results.length > 0 && results[0] && results[0].base64) {
+          const getImageInput = (result: any): Buffer | string | null => {
+            if (!result) return null;
+            if (result.buffer) return Buffer.isBuffer(result.buffer) ? result.buffer : Buffer.from(result.buffer);
+            if (result.base64) return `data:image/png;base64,${result.base64}`;
+            if (result.path && fs.existsSync(result.path)) return result.path;
+            return null;
+          };
+
+          if (results && results.length > 0 && results.some((result: any) => getImageInput(result))) {
             const worker = await createWorker('eng');
             // tesseract.js worker methods (TypeScript types may be incomplete)
             const workerAny = worker as any;
@@ -467,7 +489,7 @@ async function extractTextFromFile(fileBuffer: Buffer, mimeType: string): Promis
             for (let pageIdx = 0; pageIdx < results.length; pageIdx++) {
               try {
                 const result = results[pageIdx] as any;
-                if (!result || !result.base64) {
+                if (!getImageInput(result)) {
                   console.warn(`⚠️ Page ${pageIdx + 1} has no image data, skipping`);
                   continue;
                 }
@@ -477,8 +499,14 @@ async function extractTextFromFile(fileBuffer: Buffer, mimeType: string): Promis
                   generatedImagePaths.push(result.path as string);
                 }
 
+                const imageInput = getImageInput(result);
+                if (!imageInput) {
+                  console.warn(`⚠️ Page ${pageIdx + 1} has no usable image data, skipping`);
+                  continue;
+                }
+
                 console.log(`🔄 Processing page ${pageIdx + 1} via OCR...`);
-                const { data: { text } } = await worker.recognize(`data:image/png;base64,${result.base64}`);
+                const { data: { text } } = await worker.recognize(imageInput);
                 if (text && text.trim().length > 0) {
                   rawText += text + '\n';
                   console.log(`✅ Page ${pageIdx + 1} OCR: extracted ${text.trim().length} characters`);
@@ -1257,8 +1285,8 @@ export async function POST(request: NextRequest) {
   try {
     console.log('CV Parse API called');
 
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.id;
+    const authResult = await getAuthenticatedUser(request);
+    const userId = authResult?.userId;
 
     // Rate Limiting (using AI config since parsing is heavy)
     // If no userId, use IP-based rate limiting (handled by passing undefined to checkLimit)

@@ -191,7 +191,7 @@ export async function POST(request: NextRequest) {
 
     if (!session?.user?.id) {
       response.cookies.set('cv-draft-session-id', sessionId, {
-        httpOnly: true,
+        httpOnly: false,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
         maxAge: 7 * 24 * 60 * 60, // 7 days
@@ -216,4 +216,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

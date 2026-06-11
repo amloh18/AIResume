@@ -30,12 +30,13 @@ export async function GET(request: NextRequest) {
           
           // If anonymous draft is newer, use it and link to user
           if (anonymousDraft && anonymousDraft.updatedAt > draft.updatedAt) {
+            const previousUserDraftId = draft._id;
             anonymousDraft.userId = session.user.id;
             await anonymousDraft.save();
             draft = anonymousDraft;
             
             // Delete old draft
-            await TemporaryCVDraft.deleteOne({ _id: draft._id });
+            await TemporaryCVDraft.deleteOne({ _id: previousUserDraftId });
           } else if (anonymousDraft) {
             // Delete anonymous draft if user draft is newer
             await TemporaryCVDraft.deleteOne({ _id: anonymousDraft._id });
@@ -106,4 +107,3 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-
