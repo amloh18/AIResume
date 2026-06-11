@@ -21,8 +21,9 @@ import ScoreBreakdown from '@/components/ui/ScoreBreakdown';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useSession } from 'next-auth/react';
 import { downloadCanvasAsPDF } from '@/lib/utils/downloadCanvas';
+import AuthPromptModal from '../AuthPromptModal';
 
-export default function Step4Review() {
+export default function Step4Review({ onSave }: { onSave?: () => Promise<void> }) {
   const { state, setTemplate, dispatch, goToStep } = useResumeEnhancer();
   const router = useRouter();
   const { openPaymentModal } = usePaymentModal();
@@ -33,6 +34,7 @@ export default function Step4Review() {
   const [isDownloading, setIsDownloading] = useState(false);
   const [showCoverLetterPreview, setShowCoverLetterPreview] = useState(false);
   const [coverLetterData, setCoverLetterData] = useState<any>(null);
+  const [showAuthPrompt, setShowAuthPrompt] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -231,6 +233,11 @@ export default function Step4Review() {
   };
 
   const handleDownload = async (format: 'pdf' | 'docx' = 'pdf') => {
+    if (!session || !session.user) {
+      setShowAuthPrompt(true);
+      return;
+    }
+
     if (!state.selectedTemplate) {
       alert('Please select a template before downloading');
       return;
@@ -238,6 +245,9 @@ export default function Step4Review() {
 
     setIsDownloading(true);
     try {
+      if (onSave) {
+        await onSave();
+      }
       const baseName = state.cvTitle || state.jobData?.title || state.targetRole || 'CV';
 
       if (format === 'pdf') {
@@ -574,6 +584,38 @@ export default function Step4Review() {
                 </button>
               </div>
             )}
+
+            {!isJourneyCV && (
+              <div className="flex flex-col sm:flex-row gap-4 pt-4">
+                <button
+                  onClick={async () => {
+                    setIsDownloading(true);
+                    try {
+                      if (onSave) {
+                        await onSave();
+                      }
+                      if (typeof window !== 'undefined') {
+                        sessionStorage.setItem('masterCVCreated', 'true');
+                      }
+                      router.push('/dashboard');
+                    } catch (err) {
+                      console.error('Failed to save CV:', err);
+                      alert('Failed to save CV. Please try again.');
+                    } finally {
+                      setIsDownloading(false);
+                    }
+                  }}
+                  disabled={isDownloading}
+                  className="flex-1 py-4 bg-[#80FF00] hover:bg-[#70e600] text-black rounded-2xl font-extrabold transition-all flex flex-col items-center justify-center shadow-md shadow-lime-500/20 active:scale-95 disabled:opacity-50"
+                >
+                  <div className="flex items-center gap-2 text-lg mb-0.5">
+                    <CheckCircle2 className="w-5 h-5 text-black" />
+                    <span>Finish & Go to Dashboard</span>
+                  </div>
+                  <span className="text-xs text-black/60 font-semibold">Save your Master CV and exit</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -774,6 +816,13 @@ export default function Step4Review() {
         cvType={state.cvType === 'journey' ? 'journey' : (state.cvType === 'master' ? 'master' : 'standalone')}
         cvId={state.cvId}
         coverLetterId={state.coverLetterId}
+      />
+
+      <AuthPromptModal
+        isOpen={showAuthPrompt}
+        onClose={() => setShowAuthPrompt(false)}
+        onContinueGuest={() => setShowAuthPrompt(false)}
+        currentStep={5}
       />
     </div>
   );

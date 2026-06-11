@@ -150,6 +150,10 @@ Only include the exact fields that need to be updated in the "update" JSON. The 
       });
     }
 
+    if (!chatRecord) {
+      return NextResponse.json({ error: 'Chat session not found or failed to create' }, { status: 404 });
+    }
+
     return NextResponse.json({
       chatId: chatRecord._id,
       title: chatRecord.title,

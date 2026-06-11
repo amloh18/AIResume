@@ -758,8 +758,8 @@ export default function ResumeEnhancerContainer({
 
   // Guest mode: Check for authentication after signup/signin
   useEffect(() => {
-    // Only attempt transfer if we are in guest mode, user is authenticated, and we haven't tried yet
-    if (isGuestMode && sessionStatus === 'authenticated' && session?.user?.id && !transferAttemptedRef.current) {
+    // Only attempt transfer if user is authenticated and we haven't tried yet
+    if (sessionStatus === 'authenticated' && session?.user?.id && !transferAttemptedRef.current) {
       const transferDraft = async () => {
         // Mark as attempted immediately to prevent concurrent or repeat calls
         transferAttemptedRef.current = true;
@@ -2882,7 +2882,7 @@ export default function ResumeEnhancerContainer({
                     className="h-full min-h-0 flex flex-col w-full"
                   >
                     <ErrorBoundary stepName="Review & Download" onReset={() => dispatch({ type: 'SET_STEP', payload: 5 })}>
-                      <Step4Review />
+                      <Step4Review onSave={handleSmartSave} />
                     </ErrorBoundary>
                   </motion.div>
                 )}
