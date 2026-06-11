@@ -281,19 +281,19 @@ export async function PUT(
   try {
     console.log('🔍 CV UPDATE API - Starting update request');
 
-    // Check authentication
-    const session = await getServerSession(authOptions);
-    console.log('🔍 CV UPDATE API - Session:', session);
-    console.log('🔍 CV UPDATE API - User ID:', session?.user?.id);
-    console.log('🔍 CV UPDATE API - User email:', session?.user?.email);
-
-    if (!session?.user?.email) {
-      console.log('❌ CV UPDATE API - No valid session found');
+    // Use getAuthenticatedUser for consistent user ID resolution
+    const authResult = await getAuthenticatedUser();
+    
+    if (!authResult) {
+      console.log('❌ CV UPDATE API - No valid authentication found');
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
       );
     }
+
+    const userId = authResult.userId;
+    console.log('🔍 CV UPDATE API - Auth check:', { hasAuth: true, email: authResult.userEmail, userId });
 
     await getConnection();
     console.log('🔍 CV UPDATE API - Database connected');
@@ -304,10 +304,10 @@ export async function PUT(
 
     const cvId = toObjectId(id);
 
-    // Build query using session user ID
+    // Build query using canonical user ID from database lookup
     const query: Record<string, any> = {
       _id: cvId,
-      userId: new mongoose.Types.ObjectId(session.user.id)
+      userId: new mongoose.Types.ObjectId(userId)
     };
 
     console.log('🔍 CV UPDATE API - Query:', query);
@@ -679,7 +679,7 @@ export async function PUT(
     }
 
     await CV.updateOne(
-      { _id: cvId, userId: new mongoose.Types.ObjectId(session.user.id) },
+      { _id: cvId, userId: new mongoose.Types.ObjectId(userId) },
       updateOperations
     );
 
@@ -754,8 +754,8 @@ export async function PUT(
     try {
       const { ActivityLogService } = await import('@/lib/services/activityLogService');
       await ActivityLogService.logUserAction({
-        userId: session.user.id,
-        userEmail: session.user.email,
+        userId: userId,
+        userEmail: authResult.userEmail,
         action: 'cv_updated',
         resourceType: 'cv',
         resourceId: cv._id.toString(),
@@ -791,7 +791,7 @@ export async function PUT(
       const { CVS3Service } = await import('@/lib/services/cvS3Service');
       const s3Url = await CVS3Service.saveCVToS3(
         cv._id.toString(),
-        cv.userId.toString(),
+        userId,
         cv.cvData,
         templateData
       );
@@ -857,14 +857,17 @@ export async function DELETE(
   try {
     console.log('🔍 CV DELETE API - Starting delete request');
 
-    // Check authentication
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
+    // Use getAuthenticatedUser for consistent user ID resolution
+    const authResult = await getAuthenticatedUser();
+    
+    if (!authResult) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
       );
     }
+
+    const userId = authResult.userId;
 
     await getConnection();
     console.log('🔍 CV DELETE API - Database connected');
@@ -875,10 +878,10 @@ export async function DELETE(
     const cvId = toObjectId(id);
     console.log('🔍 CV DELETE API - Converted CV ID:', cvId);
 
-    // Build query using session user ID (consistent with GET and PUT)
+    // Build query using canonical user ID from database lookup
     const query: Record<string, any> = {
       _id: cvId,
-      userId: new mongoose.Types.ObjectId(session.user.id)
+      userId: new mongoose.Types.ObjectId(userId)
     };
 
     console.log('🔍 CV DELETE API - Query:', query);
@@ -907,8 +910,8 @@ export async function DELETE(
     try {
       const { ActivityLogService } = await import('@/lib/services/activityLogService');
       await ActivityLogService.logUserAction({
-        userId: session.user.id,
-        userEmail: session.user.email,
+        userId: userId,
+        userEmail: authResult.userEmail,
         action: 'cv_deleted',
         resourceType: 'cv',
         resourceId: cvId.toString(),
@@ -928,7 +931,7 @@ export async function DELETE(
       const { getPostHogClient } = await import('@/lib/posthog-server');
       const posthog = getPostHogClient();
       posthog.capture({
-        distinctId: session.user.id,
+        distinctId: userId,
         event: 'cv_deleted',
         properties: {
           cv_id: cvId.toString(),
