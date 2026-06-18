@@ -133,6 +133,7 @@ export class UnifiedAuthService {
                 name: String(result.user.name || '').substring(0, 100),
                 role: result.user.role,
                 isB2b: isB2b,
+                userLifecycleState: result.user.userLifecycleState,
                 // Only include image if it's a short URL (not a large base64 string)
                 image: result.user.image && typeof result.user.image === 'string' && result.user.image.length < 500
                   ? result.user.image.substring(0, 500)
@@ -507,6 +508,7 @@ export class UnifiedAuthService {
                 }
 
                 user.id = oauthUser.id;
+            (user as any).userLifecycleState = oauthUser.userLifecycleState;
                 // Store LinkedIn-specific data in user object for JWT callback
                 if (linkedInAccessToken) {
                   (user as any).linkedInId = linkedInId;
@@ -627,6 +629,7 @@ export class UnifiedAuthService {
                 (session.user as any).role = userData.role || token.role || 'user';
                 (session.user as any).type = isAdmin ? 'admin' : 'user';
                 (session.user as any).planKey = userData.planKey || (isAdmin ? 'admin' : 'free');
+                (session.user as any).userLifecycleState = token.userLifecycleState || userData.userLifecycleState || 'ACTIVE';
                 (session.user as any).subscriptionStatus = userData.subscriptionStatus || (isAdmin ? 'active' : 'inactive');
                 (session.user as any).isB2b = !!userData.isB2b;
                 (session.user as any).b2b = userData.b2b;

@@ -177,7 +177,7 @@ interface Step1ParserProps {
 export default function Step1Parser({ onComplete, userHasMasterCV = false, mode = 'create', cvType, isGuestMode = false }: Step1ParserProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { state, dispatch, setFresherMode, detectFresherMode, determineCVType, setJdText, goToStep } = useResumeEnhancer();
+  const { state, dispatch, setFresherMode, detectFresherMode, determineCVType, setJdText, goToStep, setTemplateOverlayOpen } = useResumeEnhancer();
   const { user } = useUnifiedAuth();
   const [parseMethod, setParseMethod] = useState<'upload' | 'manual' | 'job' | 'linkedin' | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -997,7 +997,7 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
                         
                         if (!draftCV.template || draftCV.currentStep === 2) {
                           goToStep(1); // Since step 2 is an overlay
-                          window.dispatchEvent(new CustomEvent('show-template-overlay'));
+                          setTemplateOverlayOpen(true);
                         } else {
                           goToStep(Math.max(3, draftCV.currentStep || 3) as 1 | 2 | 3 | 4 | 5);
                         }

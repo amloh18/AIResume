@@ -100,7 +100,7 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
 
     const handleFinishOnboarding = async () => {
       try {
-        const res = await fetch('/api/user/onboarding-status', {
+        const res = await fetch('/api/user/onboarding', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

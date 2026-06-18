@@ -1,6 +1,0 @@
-- [x] Green dashed borders appear around sections instead of blue ones.
-- [x] Individual list entries no longer show blue borders on hover.
-- [x] Section toolbars do not overlap with section titles or text.
-- [x] Empty text fields have a thin line or larger click target, making them easy to select.
-- [x] Clicking on a skills field displays a "Suggest Skills" AI option in the formatting toolbar.
-- [x] Empty skills sections display a clear option (like a + icon or mock pills) to add a new skill.

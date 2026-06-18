@@ -1,9 +1,0 @@
-- [x] Local grammar engine can detect and return issues for complex words (purple), adverbs (blue), and passive voice (green).
-- [x] Local grammar engine can categorize sentences as lengthy (yellow) or meandering/complex (red).
-- [x] Editor areas correctly highlight identified text issues with appropriate background colors.
-- [x] Clicking a highlighted issue opens the Grammar Correction Card with the specific rule and suggestion.
-- [x] Grammar Correction Card applies the suggestion, replacing the highlighted text in the editor.
-- [x] Free users see blurred text and an "Upgrade to Pro" button when clicking the Inline AI Suggest button in the formatting toolbar.
-- [x] Inline AI Suggest does not make API calls for Free users.
-- [x] Free users are limited to exactly 1 usage of the AI Analysis Sidebar.
-- [x] AI Analysis Sidebar results for Free users are limited to grammar and context issues only.

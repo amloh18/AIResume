@@ -89,9 +89,9 @@ export default function ResumeEnhancerContainer({
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
-  const { state, dispatch, goToStep, loadCV, setRoleContext, resetState } = useResumeEnhancer();
+  const { state, dispatch, goToStep, loadCV, setRoleContext, resetState, setJobSidebarOpen, setTemplateOverlayOpen } = useResumeEnhancer();
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
-  const [showTemplateOverlay, setShowTemplateOverlay] = useState(false);
+  const showTemplateOverlay = state.isTemplateOverlayOpen;
   const [showRoleModal, setShowRoleModal] = useState(false);
 
   // Map internal steps (1-5) to display steps (1-5) for the step indicator
@@ -122,7 +122,7 @@ export default function ResumeEnhancerContainer({
   const justSavedRef = useRef<boolean>(false);
   const [activeSection, setActiveSection] = useState<string>('personal');
   const [isScoreAnalysisCompact, setIsScoreAnalysisCompact] = useState(false);
-  const [showJobSidebar, setShowJobSidebar] = useState(false);
+  const showJobSidebar = state.isJobSidebarOpen;
   const [showEditJobSidebar, setShowEditJobSidebar] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [selectedJob, setSelectedJob] = useState<any>(null);
@@ -203,29 +203,45 @@ export default function ResumeEnhancerContainer({
   const coverLetterBlockedMessage = 'Cover letter editing is unavailable for Master CVs. Use a journey or standalone CV to write a job-specific cover letter.';
 
   const goToStepSafely = useCallback((step: 1 | 2 | 3 | 4 | 5, options?: { silent?: boolean }) => {
+    // Phase 1: Master CV Guard
     if (step === 4 && isMasterCV) {
       if (!options?.silent) {
         toast.error(coverLetterBlockedMessage);
       }
+      // If we are currently on step 4 or moving to it, bounce back to 3
       goToStep(3);
       return false;
     }
 
+    // Phase 2: Bootstrap Safeguard for Step 2 (Templates)
+    // Ensure we have minimal data before showing templates
+    if (step === 2 || (step === 1 && state.isTemplateOverlayOpen)) {
+      const hasData = state.cvData?.basics?.name || state.cvData?.basics?.email || (state.cvData?.work && state.cvData.work.length > 0);
+      if (!hasData) {
+        if (!options?.silent) {
+          toast.error("Please upload your resume or select 'Start Fresh' before selecting a visual theme.");
+        }
+        goToStep(1);
+        setTemplateOverlayOpen(false);
+        return false;
+      }
+    }
+
     goToStep(step);
     return true;
-  }, [coverLetterBlockedMessage, goToStep, isMasterCV]);
+  }, [coverLetterBlockedMessage, goToStep, isMasterCV, state.cvData, state.isTemplateOverlayOpen, setTemplateOverlayOpen]);
 
   useEffect(() => {
     const handleOpenJobSidebar = () => {
       const currentJob = state.jobData;
       if (currentJob && (currentJob.id || currentJob._id)) {
         setSelectedJob(currentJob);
-        setShowJobSidebar(true);
+        setJobSidebarOpen(true);
       } else {
         setShowEditJobSidebar(true);
       }
     };
-    const handleShowTemplateOverlay = () => setShowTemplateOverlay(true);
+    const handleShowTemplateOverlay = () => setTemplateOverlayOpen(true);
     const handleOpenCoverLetter = () => {
       goToStepSafely(4);
     };
@@ -236,7 +252,7 @@ export default function ResumeEnhancerContainer({
         const currentJob = state.jobData;
         if (currentJob && (currentJob.id || currentJob._id)) {
           setSelectedJob(currentJob);
-          setShowJobSidebar(true);
+          setJobSidebarOpen(true);
         } else {
           setShowEditJobSidebar(true);
         }
@@ -254,7 +270,7 @@ export default function ResumeEnhancerContainer({
       window.removeEventListener('open-cover-letter', handleOpenCoverLetter);
       window.removeEventListener('open-ats-scanner', handleOpenAtsScanner);
     };
-  }, [goToStepSafely, state.jobData]);
+  }, [goToStepSafely, state.jobData, setJobSidebarOpen, setTemplateOverlayOpen]);
 
   useEffect(() => {
     if (isMasterCV && state.currentStep === 4) {
@@ -667,7 +683,7 @@ export default function ResumeEnhancerContainer({
             if (draft.currentStep) {
               if (draft.currentStep === 2) {
                 goToStepSafely(1, { silent: true });
-                setShowTemplateOverlay(true);
+                setTemplateOverlayOpen(true);
               } else {
                 goToStepSafely(draft.currentStep as 1 | 2 | 3 | 4);
               }
@@ -1140,7 +1156,7 @@ export default function ResumeEnhancerContainer({
             if (targetStep === 2) {
               // Step 2 is the template overlay, which needs Step 1 as background
               goToStepSafely(1, { silent: true });
-              setShowTemplateOverlay(true);
+              setTemplateOverlayOpen(true);
             } else {
               goToStepSafely(targetStep, { silent: true });
             }
@@ -1401,7 +1417,7 @@ export default function ResumeEnhancerContainer({
           const targetStep = requestedStep || 1;
           if (targetStep === 2) {
             goToStepSafely(1, { silent: true });
-            setShowTemplateOverlay(true);
+            setTemplateOverlayOpen(true);
           } else {
             goToStepSafely(targetStep, { silent: true });
           }
@@ -1480,7 +1496,7 @@ export default function ResumeEnhancerContainer({
         }
 
         // Proceed directly to template overlay (skip role modal) for new CVs
-        setShowTemplateOverlay(true);
+        setTemplateOverlayOpen(true);
         return;
       }
     }
@@ -1584,7 +1600,7 @@ export default function ResumeEnhancerContainer({
       }
 
       // Show template overlay for new CV (only in create mode)
-      setShowTemplateOverlay(true);
+      setTemplateOverlayOpen(true);
     }
   };
 
@@ -1904,7 +1920,7 @@ export default function ResumeEnhancerContainer({
           });
 
           // Show template overlay for new CV
-          setShowTemplateOverlay(true);
+          setTemplateOverlayOpen(true);
         } else {
           // Journey creation failed
           throw new Error('Journey creation failed');
@@ -1924,7 +1940,7 @@ export default function ResumeEnhancerContainer({
       alert(error instanceof Error ? error.message : 'Failed to create job. Please try again.');
       // Continue as standalone
       dispatch({ type: 'SET_CV_TYPE', payload: 'standalone' });
-      setShowTemplateOverlay(true);
+      setTemplateOverlayOpen(true);
     } finally {
       setShowJobParserDialog(false);
       setPendingRoleData(null);
@@ -1932,7 +1948,7 @@ export default function ResumeEnhancerContainer({
   };
 
   const handleStep2Complete = () => {
-    setShowTemplateOverlay(false);
+    setTemplateOverlayOpen(false);
 
     // Guest mode: Save draft after template selection
     if (isGuestMode) {
@@ -2959,7 +2975,7 @@ export default function ResumeEnhancerContainer({
           job={selectedJob}
           journeys={journeysForJob}
           onClose={() => {
-            setShowJobSidebar(false);
+            setJobSidebarOpen(false);
             setSelectedJob(null);
             setJourneysForJob([]);
           }}

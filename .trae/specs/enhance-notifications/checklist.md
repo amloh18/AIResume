@@ -1,5 +1,0 @@
-- [x] Application tracker notifications use encouraging, user-first language (e.g., "Ready for your next big step!").
-- [x] ATS and CV document notifications clearly state the value and next steps, shifting from robotic ("ATS score ready") to supportive ("Your ATS score is here! Let's boost it.").
-- [x] All interactive notifications have a valid, specific deep link in `actionUrl` (e.g., `/dashboard/tracker` instead of `/applications`).
-- [x] Toast notifications correctly render the new copy and interactive buttons.
-- [x] Clicking a CTA inside a toast notification successfully navigates the user to the correct deep-linked `actionUrl` defined in the template.

@@ -23,7 +23,7 @@ interface Step4CoverLetterProps {
 }
 
 export default function Step4CoverLetter({ onComplete }: Step4CoverLetterProps) {
-  const { state, dispatch } = useResumeEnhancer();
+  const { state, dispatch, setJobSidebarOpen } = useResumeEnhancer();
   const { isAuthenticated } = useUnifiedAuth();
   const [isGenerating, setIsGenerating] = useState(false);
   const [isEditing, setIsEditing] = useState(true);
@@ -495,7 +495,7 @@ export default function Step4CoverLetter({ onComplete }: Step4CoverLetterProps) 
 
             <div className="grid grid-cols-2 gap-2">
               <button 
-                onClick={() => window.dispatchEvent(new CustomEvent('open-job-sidebar'))}
+                onClick={() => setJobSidebarOpen(true)}
                 className="py-2 text-[10px] font-black uppercase tracking-tighter italic text-white bg-gray-900 dark:bg-white/10 hover:bg-gray-800 rounded-lg transition-all"
               >
                 View JD
