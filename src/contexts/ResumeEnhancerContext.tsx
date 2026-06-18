@@ -963,6 +963,9 @@ export function ResumeEnhancerProvider({ children }: { children: ReactNode }) {
     detectFresherMode,
     determineCVType,
     getAnalysisModeInfo,
+    // Phase 3 view controls
+    setJobSidebarOpen,
+    setTemplateOverlayOpen,
     // Enhanced validation helpers (NEW)
     getAnalysisModeWithWarnings,
     validateAndSetJD,
@@ -990,6 +993,8 @@ export function ResumeEnhancerProvider({ children }: { children: ReactNode }) {
     detectFresherMode,
     determineCVType,
     getAnalysisModeInfo,
+    setJobSidebarOpen,
+    setTemplateOverlayOpen,
     getAnalysisModeWithWarnings,
     validateAndSetJD,
     validateAndSetRole,
