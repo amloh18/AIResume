@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
     
     const masterCV = await CV.findOne({ userId: user._id, 'metadata.isMaster': true });
     const hasMasterCV = !!masterCV;
-    const hasSeenWelcome = user.settings?.hasSeenWelcome || false;
+    const hasSeenWelcome = (user.settings as any)?.hasSeenWelcome || false;
 
     return NextResponse.json({
       success: true,
