@@ -72,9 +72,11 @@ function DashboardContent() {
   };
 
   useEffect(() => {
+    // Only fetching onboarding status for non-redirect purposes if needed.
+    // The actual redirection is now handled in the server-side layout.
     const fetchStatus = async () => {
       try {
-        const res = await fetch('/api/user/onboarding-status');
+        const res = await fetch('/api/user/onboarding');
         const result = await res.json();
         if (result.success && result.data) {
           const onboarding = result.data.onboarding || {};
@@ -82,11 +84,6 @@ function DashboardContent() {
           
           if (onboarding.confidence_score) {
             setCvScore(onboarding.confidence_score);
-          }
-          
-          if (onboarding.activation_status === 'pending' && onboarding.activation_route) {
-            router.push(onboarding.activation_route);
-            return;
           }
         }
       } catch (err) {
@@ -101,7 +98,7 @@ function DashboardContent() {
     } else if (status === 'unauthenticated') {
       setIsLoading(false);
     }
-  }, [status, router]);
+  }, [status]);
 
   const handleTouchStart = (e: React.TouchEvent) => {
     setTouchStart(e.targetTouches[0].clientY);

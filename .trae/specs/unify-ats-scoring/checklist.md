@@ -1,6 +1,0 @@
-- [x] `cvAnalyticsService.ts` no longer contains phantom ATS endpoints.
-- [x] `AIService.ts` no longer contains stubbed ATS methods.
-- [x] `AIAssistantService.ts`, `ATSCompatibilityMeter.tsx`, `ats-keyword-service.ts`, and `resumeEnhancerFactors.ts` no longer contain independent ATS score calculation formulas.
-- [x] `JourneyTimelineCard.tsx`, `JourneyStatusBanner.tsx`, and `ATSDeepDiveModal.tsx` use the global ATS context/service instead of making independent fetch requests.
-- [x] The backend API route (`/api/ats/calculate-score/route.ts`) is cleaned up from frontend race condition workarounds (e.g., `calculationLocks`).
-- [x] The app successfully builds and displays consistent ATS scores across all views.

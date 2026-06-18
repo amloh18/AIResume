@@ -121,6 +121,10 @@ export interface ResumeEnhancerState {
   dateFormat: DateFormatStyle;  // User-selected date format for CV
   paperSize: PaperSize;         // Detected or user-selected paper size
 
+  // Centralized View State (Phase 3)
+  isJobSidebarOpen: boolean;
+  isTemplateOverlayOpen: boolean;
+
   // Mori Chat Mode
   moriChatMode: boolean;
 }
@@ -194,6 +198,8 @@ type ResumeEnhancerAction =
   // Document Formatting Actions
   | { type: 'SET_DATE_FORMAT'; payload: DateFormatStyle }
   | { type: 'SET_PAPER_SIZE'; payload: PaperSize }
+  | { type: 'SET_JOB_SIDEBAR_OPEN'; payload: boolean }
+  | { type: 'SET_TEMPLATE_OVERLAY_OPEN'; payload: boolean }
   | { type: 'SET_MORI_CHAT_MODE'; payload: boolean };
 
 // Initial State
@@ -261,6 +267,8 @@ const initialState: ResumeEnhancerState = {
   // Document Formatting Preferences
   dateFormat: 'MMM_YYYY',
   paperSize: 'A4',
+  isJobSidebarOpen: false,
+  isTemplateOverlayOpen: false,
   moriChatMode: false
 };
 
@@ -270,6 +278,10 @@ function resumeEnhancerReducer(
   action: ResumeEnhancerAction
 ): ResumeEnhancerState {
   switch (action.type) {
+    case 'SET_JOB_SIDEBAR_OPEN':
+      return { ...state, isJobSidebarOpen: action.payload };
+    case 'SET_TEMPLATE_OVERLAY_OPEN':
+      return { ...state, isTemplateOverlayOpen: action.payload };
     case 'SET_MORI_CHAT_MODE':
       return { ...state, moriChatMode: action.payload };
     case 'SET_MODE':
@@ -694,6 +706,9 @@ interface ResumeEnhancerContextType {
   detectFresherMode: () => boolean;
   determineCVType: () => 'master' | 'journey' | 'standalone';
   getAnalysisModeInfo: () => AnalysisModeResult;
+  // Phase 3 view controls
+  setJobSidebarOpen: (isOpen: boolean) => void;
+  setTemplateOverlayOpen: (isOpen: boolean) => void;
   // Enhanced validation helpers (NEW)
   getAnalysisModeWithWarnings: () => AnalysisModeInfo;
   validateAndSetJD: (text: string) => void;
@@ -786,6 +801,17 @@ export function ResumeEnhancerProvider({ children }: { children: ReactNode }) {
 
   const updateKeywordGap = React.useCallback((keyword: string, updates: Partial<KeywordGap>) => {
     dispatch({ type: 'UPDATE_KEYWORD_GAP', payload: { keyword, updates } });
+  }, []);
+
+  /**
+   * Phase 3 View Controls
+   */
+  const setJobSidebarOpen = React.useCallback((isOpen: boolean) => {
+    dispatch({ type: 'SET_JOB_SIDEBAR_OPEN', payload: isOpen });
+  }, []);
+
+  const setTemplateOverlayOpen = React.useCallback((isOpen: boolean) => {
+    dispatch({ type: 'SET_TEMPLATE_OVERLAY_OPEN', payload: isOpen });
   }, []);
 
   /**

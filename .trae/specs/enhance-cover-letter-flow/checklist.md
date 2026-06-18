@@ -1,9 +1,0 @@
-- [x] Resume Enhancer flow includes Cover Letter as Step 4 and Review as Step 5.
-- [x] Cover Letter step is skippable, allowing direct progression to Review.
-- [x] Cover letter UI uses the snippet-based responsive layout with a single-column body and customizable header.
-- [x] AI generation is only available when a Job Description is linked.
-- [x] AI generation clearly warns about credit usage before proceeding.
-- [x] Manual cover letter creation is supported and falls back gracefully when no JD is linked.
-- [x] Guest users can create and save cover letters locally via `guestCVService`.
-- [x] The UI displays "offline saved only" when disconnected and prevents data loss.
-- [x] Legacy cover letter editor components are removed or fully migrated to the new system.

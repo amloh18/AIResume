@@ -53,7 +53,7 @@ function SectionHeader({ icon, title }: { icon: React.ReactNode; title: string }
 /* ─────────────── Main Component ─────────────── */
 export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = () => {
   const { atsScore, atsAnalysis, isATSLoading, refreshATSScore } = useATS();
-  const { state, dispatch, goToStep } = useResumeEnhancer();
+  const { state, dispatch, goToStep, setJobSidebarOpen } = useResumeEnhancer();
   const router = useRouter();
   const isMasterCV = state.cvType === 'master';
   const [isPurposeExpanded, setIsPurposeExpanded] = useState(false);
@@ -421,7 +421,7 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = () => {
                 <div className="space-y-2">
                   <div
                     className="cursor-pointer hover:bg-white/60 dark:hover:bg-white/5 p-2 -mx-1 rounded-lg transition-colors"
-                    onClick={() => window.dispatchEvent(new CustomEvent('open-job-sidebar'))}
+                    onClick={() => setJobSidebarOpen(true)}
                   >
                     <div className="flex items-center gap-1.5 mb-1">
                       <Briefcase className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
@@ -435,13 +435,13 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = () => {
                   </div>
                   <div className="flex gap-1.5">
                     <button
-                      onClick={() => window.dispatchEvent(new CustomEvent('open-job-sidebar'))}
+                      onClick={() => setJobSidebarOpen(true)}
                       className="flex-1 py-1.5 text-[11px] font-bold text-white bg-emerald-500 hover:bg-emerald-600 dark:bg-lime-500/20 dark:text-lime-300 dark:hover:bg-lime-500/30 rounded-lg transition-colors border border-emerald-600/20 dark:border-lime-500/20"
                     >
                       Update Target
                     </button>
                     <button
-                      onClick={() => window.dispatchEvent(new CustomEvent('open-job-sidebar'))}
+                      onClick={() => setJobSidebarOpen(true)}
                       className="flex-1 py-1.5 text-[11px] font-bold text-emerald-700 bg-emerald-100 hover:bg-emerald-200 dark:bg-white/5 dark:text-white/70 dark:hover:bg-white/10 rounded-lg transition-colors border border-emerald-200 dark:border-white/10"
                     >
                       Job Details
@@ -454,7 +454,7 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = () => {
                     Add a job description to get specific ATS feedback and keyword matches.
                   </p>
                   <button
-                    onClick={() => window.dispatchEvent(new CustomEvent('open-job-sidebar'))}
+                    onClick={() => setJobSidebarOpen(true)}
                     className="w-full py-2 text-[11px] font-bold text-white bg-emerald-500 hover:bg-emerald-600 dark:bg-lime-500/20 dark:text-lime-300 dark:hover:bg-lime-500/30 rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm border border-emerald-600/20 dark:border-lime-500/20"
                   >
                     <FileText className="w-3.5 h-3.5" /> Paste Job Description

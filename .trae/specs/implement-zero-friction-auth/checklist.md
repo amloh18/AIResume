@@ -1,6 +1,0 @@
-- [x] Global Auth Modal state is implemented and accessible across the app.
-- [x] `middleware.ts` no longer hard-redirects protected page routes to `/sign-in`.
-- [x] `RouteGuard` intercepts unauthenticated users and shows the Auth Modal overlay without changing the URL.
-- [x] Successful login via the modal automatically dismisses the modal and refreshes the underlying page state.
-- [x] Global fetch/axios interceptor catches 401 errors and opens the Auth Modal.
-- [x] Accessing a URL with a `cvId` parameter while logged out correctly triggers the Auth Modal and does not grant unauthorized access.

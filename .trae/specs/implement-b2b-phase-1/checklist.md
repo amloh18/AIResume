@@ -1,5 +1,0 @@
-- [x] `b2bplan.md` is created with the full 4-phase roadmap.
-- [x] B2B scoring API returns an `analysis_summary` powered by Gemini.
-- [x] Stripe billing is integrated and tracks API usage volume.
-- [x] B2B Dashboard features glassmorphism UI elements.
-- [x] B2B Dashboard features flat startup illustrations.

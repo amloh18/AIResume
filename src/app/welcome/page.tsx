@@ -176,7 +176,7 @@ const WelcomePage: React.FC = () => {
   // Helper Functions
   const saveSession = async (updates: any) => {
     try {
-      await fetch('/api/user/onboarding-session', {
+      await fetch('/api/user/onboarding', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updates)
@@ -367,7 +367,7 @@ Please find the CV data attached.`;
         await fetch('/api/auth/anonymous-session');
         
         // Fetch detailed onboarding session
-        const sessionRes = await fetch('/api/user/onboarding-session');
+        const sessionRes = await fetch('/api/user/onboarding');
         const sessionData = await sessionRes.json();
         
         if (sessionData.success && sessionData.data) {
@@ -481,9 +481,6 @@ Please find the CV data attached.`;
         
         // Clear local storage
         localStorage.removeItem('cvcircle_onboarding_state');
-        
-        // Check and transfer guest draft if authenticated
-        checkAndTransferGuestDraft();
         
         // If they fast-tracked, call completion logic instead of simple redirect
         if (parsed.fastTrackToEditor) {
@@ -1756,76 +1753,16 @@ Please find the CV data attached.`;
             )}
 
             {/* Step 4: Auth Wall */}
-            {currentStep === 4 && isVerifying && (
-              <div className="py-4">
-                <CodeVerificationScreen
-                  email={authEmail}
-                  type="email-verification"
-                  onCodeVerified={handleVerifyCodeSubmitDirect}
-                  onResendCode={handleResendCode}
-                  isLoading={authLoading}
-                  error={authError}
-                  success={authSuccess}
-                  remainingAttempts={3}
-                  cooldownSeconds={60}
-                  onBack={() => {
-                    setIsVerifying(false);
-                    setAuthError('');
-                    setAuthSuccess('');
-                  }}
-                />
-              </div>
-            )}
-
-            {currentStep === 4 && !isVerifying && (
+            {currentStep === 4 && (
               <div className="space-y-6">
                 
-                {/* Mode Toggle Switch */}
-                <div className="mb-6 flex justify-center">
-                  <div className="relative inline-flex items-center bg-gray-100 dark:bg-[#1A1A1A] rounded-md p-1.5 border border-gray-200 dark:border-white/10">
-                    <button
-                      type="button"
-                      onClick={() => { setAuthTab('signin'); setAuthError(''); setAuthSuccess(''); }}
-                      className={`relative px-8 py-3 text-base font-medium rounded-sm transition-all duration-300 z-10 ${
-                        authTab === 'signin'
-                          ? 'text-black font-semibold'
-                          : 'text-gray-500 hover:text-gray-800 dark:text-white/70 dark:hover:text-white'
-                      }`}
-                    >
-                      Sign In
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setAuthTab('signup'); setAuthError(''); setAuthSuccess(''); }}
-                      className={`relative px-8 py-3 text-base font-medium rounded-sm transition-all duration-300 z-10 ${
-                        authTab === 'signup'
-                          ? 'text-black font-semibold'
-                          : 'text-gray-500 hover:text-gray-800 dark:text-white/70 dark:hover:text-white'
-                      }`}
-                    >
-                      Sign Up
-                    </button>
-                    <motion.div
-                      className="absolute top-1.5 bottom-1.5 bg-[#80FF00] rounded-sm z-0 shadow-sm"
-                      initial={false}
-                      animate={{
-                        left: authTab === 'signin' ? '0.375rem' : '50%',
-                        right: authTab === 'signup' ? '0.375rem' : '50%',
-                      }}
-                      transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                    />
-                  </div>
-                </div>
-
                 {/* Title & Subtitle */}
                 <div className="text-center mb-6">
                   <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                    {authTab === 'signin' ? 'Sign In' : 'Create your account'}
+                    Save Your Progress
                   </h2>
                   <p className="text-gray-600 dark:text-white/70 text-sm max-w-sm mx-auto">
-                    {authTab === 'signin'
-                      ? 'Welcome back! Please enter your credentials to access your account.'
-                      : 'Sign up now to start managing your job applications and CVs.'}
+                    Create an account or sign in to save your CV, view your score, and continue your onboarding journey.
                   </p>
                 </div>
 
@@ -1890,110 +1827,35 @@ Please find the CV data attached.`;
                   </div>
                 </div>
 
-                {/* Inline Form */}
-                <form onSubmit={handleEmailAuthSubmit} className="space-y-4">
-                  {authError && (
-                    <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-3 rounded-sm text-xs font-medium flex items-center gap-2">
-                      <AlertTriangle className="h-4 w-4 flex-shrink-0" />
-                      <span>{authError}</span>
-                    </div>
-                  )}
-
-                  {authSuccess && (
-                    <div className="bg-green-500/10 border border-green-500/20 text-green-400 p-3 rounded-sm text-xs font-medium flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 flex-shrink-0" />
-                      <span>{authSuccess}</span>
-                    </div>
-                  )}
-
-                  {/* Name field (Sign Up only) */}
-                  {authTab === 'signup' && (
-                    <div className="flex flex-col gap-2">
-                      <label htmlFor="authName" className="text-sm font-medium text-gray-700 dark:text-white/80 w-full flex-shrink-0 text-left">
-                        Full Name
-                      </label>
-                      <div className="relative w-full flex items-center">
-                        <UserIcon className="absolute left-4 text-gray-400 w-5 h-5 flex items-center justify-center pointer-events-none" />
-                        <input
-                          type="text"
-                          id="authName"
-                          value={authName}
-                          onChange={e => setAuthName(e.target.value)}
-                          placeholder="Your Name"
-                          required
-                          className="w-full pl-11 pr-4 py-3 bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 border border-gray-300 dark:border-[#80FF00]/50 focus:border-2 focus:border-[#80FF00] rounded-sm outline-none focus:outline-none transition-all duration-200"
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Email Field */}
-                  <div className="flex flex-col gap-2">
-                    <label htmlFor="authEmail" className="text-sm font-medium text-gray-700 dark:text-white/80 w-full flex-shrink-0 text-left">
-                      Email Address
-                    </label>
-                    <div className="relative w-full flex items-center">
-                      <Mail className="absolute left-4 text-gray-400 w-5 h-5 flex items-center justify-center pointer-events-none" />
-                      <input
-                        type="email"
-                        id="authEmail"
-                        value={authEmail}
-                        onChange={e => setAuthEmail(e.target.value)}
-                        placeholder="you@example.com"
-                        required
-                        className="w-full pl-11 pr-4 py-3 bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 border border-gray-300 dark:border-[#80FF00]/50 focus:border-2 focus:border-[#80FF00] rounded-sm outline-none focus:outline-none transition-all duration-200"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Password Field */}
-                  <div className="flex flex-col gap-2">
-                    <label htmlFor="authPassword" className="text-sm font-medium text-gray-700 dark:text-white/80 w-full flex-shrink-0 text-left">
-                      Password
-                    </label>
-                    <div className="relative w-full flex items-center">
-                      <Lock className="absolute left-4 text-gray-400 w-5 h-5 flex items-center justify-center pointer-events-none" />
-                      <input
-                        type={showPassword ? 'text' : 'password'}
-                        id="authPassword"
-                        value={authPassword}
-                        onChange={e => setAuthPassword(e.target.value)}
-                        placeholder="••••••••"
-                        required
-                        className="w-full pl-11 pr-12 py-3 bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 border border-gray-300 dark:border-[#80FF00]/50 focus:border-2 focus:border-[#80FF00] rounded-sm outline-none focus:outline-none transition-all duration-200"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        tabIndex={-1}
-                        className="absolute right-3 text-gray-400 hover:text-gray-600 dark:text-white/60 dark:hover:text-white transition-colors flex items-center justify-center w-8 h-full z-10"
-                      >
-                        {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Submit Button */}
+                {/* Email Sign Up/In Buttons */}
+                <div className="space-y-4">
                   <motion.button
-                    type="submit"
-                    disabled={authLoading}
-                    className="w-full bg-[#80FF00] hover:bg-[#70e600] text-gray-900 dark:text-black font-semibold py-3 px-6 rounded-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-6"
+                    type="button"
+                    onClick={() => {
+                      saveStateToLocalStorage(5);
+                      router.push('/sign-up?callbackUrl=/welcome');
+                    }}
+                    className="w-full bg-[#80FF00] hover:bg-[#70e600] text-gray-900 font-semibold py-3 px-6 rounded-sm transition-all duration-200 flex items-center justify-center gap-2"
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                   >
-                    {authLoading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Processing...
-                      </>
-                    ) : (
-                      <>
-                        {authTab === 'signup' ? 'Create Account' : 'Sign In'}
-                        <ArrowRight className="w-4 h-4" />
-                      </>
-                    )}
+                    Create Account
+                    <ArrowRight className="w-4 h-4" />
                   </motion.button>
-                </form>
+
+                  <motion.button
+                    type="button"
+                    onClick={() => {
+                      saveStateToLocalStorage(5);
+                      router.push('/sign-in?callbackUrl=/welcome');
+                    }}
+                    className="w-full bg-white dark:bg-[#1A1A1A] hover:bg-gray-50 dark:hover:bg-[#2A2A2A] text-gray-900 dark:text-white border border-gray-300 dark:border-white/10 font-semibold py-3 px-6 rounded-sm transition-all duration-200 flex items-center justify-center gap-2"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    Sign In
+                  </motion.button>
+                </div>
 
                 {/* Footer Links */}
                 <div className="mt-8 pt-4 border-t border-gray-200 dark:border-gray-600/30">

@@ -2,18 +2,14 @@
 
 import React, { createContext, useContext, ReactNode } from 'react';
 import { useSession, signOut } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
+import guestCVService from '@/lib/services/guestCVService';
 
 /**
  * AuthContext - Thin wrapper around NextAuth's session management
  * 
  * This context provides a simplified API for authentication that wraps NextAuth's useSession hook.
  * All session management is handled by NextAuth with secure HTTP-only cookies.
- * 
- * Migration Notes:
- * - Replaced custom JWT/session logic with NextAuth
- * - Removed localStorage session storage (security vulnerability)
- * - All authentication flows now use NextAuth providers
  */
 
 interface User {
@@ -39,9 +35,6 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 /**
  * useAuth Hook
- * 
- * Primary hook for accessing authentication state throughout the application.
- * Use this instead of directly calling NextAuth's useSession in most components.
  */
 export function useAuth() {
   const context = useContext(AuthContext);
@@ -57,9 +50,6 @@ interface AuthProviderProps {
 
 /**
  * AuthProvider Component
- * 
- * Wraps NextAuth's SessionProvider functionality with a simplified API.
- * Must be nested inside NextAuth's SessionProvider in the app layout.
  */
 export function AuthProvider({ children }: AuthProviderProps) {
   const { data: session, status } = useSession();
@@ -78,6 +68,49 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const checkAuth = (): boolean => {
     return status === 'authenticated';
   };
+
+  // Centralized Global Guest Draft Transfer
+  // Whenever the user becomes authenticated, check for an existing guest draft
+  // and transfer it to their account automatically.
+  React.useEffect(() => {
+    let isMounted = true;
+    
+    async function transferDraft() {
+      if (status === 'authenticated' && session?.user?.id) {
+        try {
+          const sessionId = guestCVService.getSessionId();
+          if (sessionId) {
+            const hasDraft = await guestCVService.hasDraft(sessionId);
+            if (hasDraft && isMounted) {
+              console.log('🔄 AuthContext - Automatically transferring guest draft...');
+              const transferRes = await guestCVService.transferDraftToUser(sessionId, session.user.id);
+              if (transferRes.success && transferRes.cvId && isMounted) {
+                console.log('✅ AuthContext - Guest draft transferred! New CV ID:', transferRes.cvId);
+                
+                // Optionally trigger an onboarding sync to mark CV as created
+                await fetch('/api/user/onboarding', {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    onboarding: { primary_cv_id: transferRes.cvId },
+                    userLifecycleState: 'PRIMARY_CV_CREATED'
+                  })
+                });
+              }
+            }
+          }
+        } catch (err) {
+          console.error('Failed to transfer guest draft in AuthContext:', err);
+        }
+      }
+    }
+
+    transferDraft();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [status, session?.user?.id]);
 
   const logout = async () => {
     try {
