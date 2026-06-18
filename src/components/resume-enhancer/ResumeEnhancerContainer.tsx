@@ -656,9 +656,12 @@ export default function ResumeEnhancerContainer({
     }
   }, [cvId, state.cvId]);
 
+  const hasRestoredDraftRef = useRef(false);
+
   // Load draft on mount if restoreDraft is true (for both Guest and Authenticated users)
   useEffect(() => {
-    if (restoreDraft) {
+    if (restoreDraft && !hasRestoredDraftRef.current) {
+      hasRestoredDraftRef.current = true;
       const loadDraft = async () => {
         try {
           let result;
@@ -679,13 +682,16 @@ export default function ResumeEnhancerContainer({
               dispatch({ type: 'SET_CV_DATA', payload: draft.cvData });
             }
 
+            // Determine target step: URL requestedStep takes priority over draft step for onboarding flow
+            const targetStep = requestedStep || draft.currentStep;
+
             // Restore step (step 2 was template overlay, go to step 1 and show overlay)
-            if (draft.currentStep) {
-              if (draft.currentStep === 2) {
+            if (targetStep) {
+              if (targetStep === 2) {
                 goToStepSafely(1, { silent: true });
                 setTemplateOverlayOpen(true);
               } else {
-                goToStepSafely(draft.currentStep as 1 | 2 | 3 | 4);
+                goToStepSafely(targetStep as 1 | 2 | 3 | 4);
               }
             }
 
@@ -714,16 +720,16 @@ export default function ResumeEnhancerContainer({
               setActiveSection(draft.activeSection);
             }
 
-            console.log(`✅ ${isGuestMode ? 'Guest' : 'Authenticated'} draft restored successfully`);
+            console.log(`✅ ${isGuestMode ? 'Guest' : 'Authenticated'} draft restored successfully (step: ${targetStep})`);
           }
         } catch (error) {
           console.error(`Failed to load ${isGuestMode ? 'guest' : 'authenticated'} draft:`, error);
         }
       };
-
       loadDraft();
     }
-  }, [goToStepSafely, isGuestMode, restoreDraft, dispatch, setRoleContext]);
+  }, [requestedStep, goToStepSafely, isGuestMode, restoreDraft, dispatch, setRoleContext]);
+
 
   // Guest mode: Auto-save draft
   useEffect(() => {
@@ -1243,7 +1249,15 @@ export default function ResumeEnhancerContainer({
 
             dispatch({ type: 'SET_MODE', payload: 'edit' });
             
-            goToStep(3);
+            // Respect requested step or default to builder (3)
+            const targetStep = requestedStep || 3;
+            if (targetStep === 2) {
+              goToStepSafely(1, { silent: true });
+              setTemplateOverlayOpen(true);
+            } else {
+              goToStepSafely(targetStep as any, { silent: true });
+            }
+            
             setCompletedSteps([1, 2]);
 
             initializedRef.current = { mode, cvId };

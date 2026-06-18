@@ -67,25 +67,15 @@ export default function RedesignedDashboardView({ tier, isExpanded = false }: Re
   
   const getKPIs = () => {
     const handleKPIClick = (title: string) => {
-      if (title === "CV Score") {
-        router.push('/editor');
-        return;
-      }
-
-      if (tier === 'starter') {
-        openPaymentModal({ 
-          triggerContext: `dashboard-kpi-${title.toLowerCase().replace(' ', '-')}`,
-          preselectedPlanKey: 'focused_monthly'
-        });
-        return;
-      }
-
       switch (title) {
+        case "CV Score":
+          router.push('/editor?step=1');
+          break;
         case "Tailored CVs":
-          router.push('/editor');
+          router.push('/dashboard/canvas');
           break;
         case "Cover Letters":
-          router.push('/dashboard/tracker');
+          router.push('/dashboard/canvas?tab=cover-letters');
           break;
         case "ATS Scans":
           router.push('/dashboard/tracker');
@@ -111,7 +101,7 @@ export default function RedesignedDashboardView({ tier, isExpanded = false }: Re
         trendDirection: 'up' as const,
         loading: secondaryLoading.cvs,
         onClick: () => handleKPIClick("CV Score"),
-        actionLabel: "Open Canvas"
+        actionLabel: "Open Editor"
       },
       { 
         title: "Tailored CVs", 
@@ -121,7 +111,7 @@ export default function RedesignedDashboardView({ tier, isExpanded = false }: Re
         subtitle: `${goals.cvsCreatedThisMonth} this month`,
         loading: secondaryLoading.cvs,
         onClick: () => handleKPIClick("Tailored CVs"),
-        actionLabel: tier === 'starter' ? "Upgrade" : "Open Canvas"
+        actionLabel: "Open Canvas"
       },
       { 
         title: "Cover Letters", 
@@ -130,7 +120,7 @@ export default function RedesignedDashboardView({ tier, isExpanded = false }: Re
         color: "#1c4ce8",
         loading: secondaryLoading.coverLetters,
         onClick: () => handleKPIClick("Cover Letters"),
-        actionLabel: tier === 'starter' ? "Upgrade" : "Open Tracker"
+        actionLabel: "Open Canvas"
       },
       { 
         title: "ATS Scans", 
@@ -139,7 +129,7 @@ export default function RedesignedDashboardView({ tier, isExpanded = false }: Re
         color: "#6138db",
         loading: secondaryLoading.analytics,
         onClick: () => handleKPIClick("ATS Scans"),
-        actionLabel: tier === 'starter' ? "Upgrade" : "Open Tracker"
+        actionLabel: "Open Tracker"
       },
     ];
 

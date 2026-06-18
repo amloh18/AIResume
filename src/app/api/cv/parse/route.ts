@@ -240,10 +240,16 @@ async function extractTextFromFile(fileBuffer: Buffer, mimeType: string): Promis
   if (mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
     console.log('Attempting Method: doc-parse (mammoth)...');
     if (!mammoth) {
-      throw new Error('mammoth library not available for DOCX parsing');
+      throw new Error('Word document parser not available.');
     }
     const result = await mammoth.extractRawText({ buffer: fileBuffer });
     rawText = result.value || '';
+  }
+  // 1b. Handle legacy DOC files
+  else if (mimeType === 'application/msword') {
+    console.log('Attempting Method: legacy-doc-parse...');
+    // mammoth only supports .docx, so we suggest conversion
+    throw new Error('Legacy .doc files are not directly supported. Please save your CV as .docx or .pdf and try again.');
   }
   // 2. Handle PDF files
   else if (mimeType === 'application/pdf') {
@@ -264,25 +270,17 @@ async function extractTextFromFile(fileBuffer: Buffer, mimeType: string): Promis
           pdfParseSucceeded = true;
           console.log('✅ Method 1 (pdf-parse) succeeded:', rawText.length, 'characters');
         } else {
-          const errorMsg = `pdf-parse returned insufficient text (${extractedText.length} chars, minimum 50 required)`;
+          const errorMsg = `PDF appears to be an image or scanned document (only ${extractedText.length} characters found).`;
           console.log(`⚠️ ${errorMsg}`);
-          if (data?.text) {
-            console.log(`📝 Sample text (first 100 chars): ${data.text.substring(0, 100)}`);
-          }
           extractionErrors.push(errorMsg);
         }
       } catch (e1) {
-        const errorMsg = `pdf-parse execution failed: ${e1 instanceof Error ? e1.message : String(e1)}`;
+        const errorMsg = `Fast PDF parsing failed.`;
         console.log(`⚠️ ${errorMsg}`);
-        if (e1 instanceof Error && e1.stack) {
-          console.log(`📚 Stack trace: ${e1.stack.substring(0, 200)}`);
-        }
         extractionErrors.push(errorMsg);
       }
     } catch (loadError) {
-      const errorMsg = `pdf-parse library not available: ${loadError instanceof Error ? loadError.message : String(loadError)}`;
-      console.log(`⚠️ ${errorMsg}`);
-      extractionErrors.push(errorMsg);
+      extractionErrors.push('Fast PDF parser not available.');
     }
 
     // Attempt 2: pdfjs-dist fallback (Method 2) - only if pdf-parse didn't work
@@ -309,20 +307,18 @@ async function extractTextFromFile(fileBuffer: Buffer, mimeType: string): Promis
             // Try standard import
             pdfjs = await import('pdfjs-dist');
           } catch (e2) {
-            throw new Error(`Failed to import pdfjs-dist: ${e1 instanceof Error ? e1.message : String(e1)}`);
+            throw new Error(`Failed to initialize advanced PDF parser.`);
           }
         }
 
         // Configure worker for Node.js environment
-        // Intentionally setting workerSrc to empty string or omitting it to avoid web worker initialization errors in Node.js
         if (pdfjs.GlobalWorkerOptions) {
           pdfjs.GlobalWorkerOptions.workerSrc = '';
         }
 
-        // Set up document loading - handle both old and new API
         const getDocument = pdfjs.getDocument || pdfjs.default?.getDocument;
         if (!getDocument) {
-          throw new Error('pdfjs-dist getDocument method not found');
+          throw new Error('Advanced PDF parser method not found.');
         }
 
         const loadingTask = getDocument({
@@ -330,16 +326,14 @@ async function extractTextFromFile(fileBuffer: Buffer, mimeType: string): Promis
           useWorkerFetch: false,
           isEvalSupported: false,
           useSystemFonts: true,
-          verbosity: 0, // Suppress warnings
+          verbosity: 0,
           standardFontDataUrl: 'node_modules/pdfjs-dist/standard_fonts/',
         });
 
         const pdfDocument = await loadingTask.promise;
         const numPages = pdfDocument.numPages;
-        console.log(`📄 PDF has ${numPages} pages`);
-
+        
         let extractedText = '';
-        // Process up to 5 pages (most CVs are 1-2 pages)
         const maxPages = Math.min(numPages, 5);
 
         for (let pageNum = 1; pageNum <= maxPages; pageNum++) {
@@ -354,26 +348,21 @@ async function extractTextFromFile(fileBuffer: Buffer, mimeType: string): Promis
 
             if (pageText.length > 0) {
               extractedText += pageText + '\n';
-              console.log(`✅ Page ${pageNum}: extracted ${pageText.length} characters`);
             }
           } catch (pageError) {
-            console.warn(`⚠️ Failed to extract text from page ${pageNum}:`, pageError instanceof Error ? pageError.message : String(pageError));
+            console.warn(`⚠️ Failed to extract text from page ${pageNum}`);
           }
         }
 
         if (extractedText.trim().length >= 50) {
           rawText = extractedText.trim();
           pdfParseSucceeded = true;
-          console.log('✅ Method 2 (pdfjs-dist) succeeded:', rawText.length, 'characters');
+          console.log('✅ Method 2 (pdfjs-dist) succeeded');
         } else {
-          const errorMsg = `pdfjs-dist returned insufficient text (${extractedText.trim().length} chars)`;
-          console.log(`⚠️ ${errorMsg}`);
-          extractionErrors.push(errorMsg);
+          extractionErrors.push('Advanced text extraction returned insufficient text.');
         }
       } catch (pdfjsError) {
-        const errorMsg = `pdfjs-dist failed: ${pdfjsError instanceof Error ? pdfjsError.message : String(pdfjsError)}`;
-        console.log(`⚠️ ${errorMsg}`);
-        extractionErrors.push(errorMsg);
+        extractionErrors.push('Advanced text extraction failed.');
       }
     }
 
@@ -383,19 +372,17 @@ async function extractTextFromFile(fileBuffer: Buffer, mimeType: string): Promis
         console.log('Attempting Method 3: OCR (tesseract + pdf2pic)...');
 
         if (!createWorker) {
-          throw new Error('tesseract.js not available');
+          throw new Error('OCR engine not available.');
         }
 
         // Load pdf2pic dynamically to avoid bundling test files
-        console.log('Loading pdf2pic dynamically...');
         const pdf2pic = await import('pdf2pic');
         const pdf2picFromPath = pdf2pic.fromPath;
 
         if (!pdf2picFromPath) {
-          throw new Error('pdf2pic library not available for PDF to image conversion (requires ImageMagick/Ghostscript)');
+          throw new Error('PDF-to-Image converter not available.');
         }
 
-        // pdf2pic requires a file path, so we need to write the buffer to a temp file first
         const fs = require('fs');
         const path = require('path');
         const os = require('os');
@@ -403,17 +390,12 @@ async function extractTextFromFile(fileBuffer: Buffer, mimeType: string): Promis
         let tempFilePath: string | null = null;
 
         try {
-          // CRITICAL: Use /tmp explicitly for serverless environments (Vercel, AWS Lambda, etc.)
-          // This is the ONLY writable directory on serverless platforms
           const tempDir = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME ? '/tmp' : os.tmpdir();
 
-          // Ensure /tmp directory exists (it should, but we'll check anyway)
           if (!fs.existsSync(tempDir)) {
             try {
               fs.mkdirSync(tempDir, { recursive: true });
             } catch (mkdirError) {
-              console.warn(`⚠️ Could not create temp directory ${tempDir}, using fallback:`, mkdirError instanceof Error ? mkdirError.message : String(mkdirError));
-              // Fallback to os.tmpdir() if /tmp doesn't work
               const fallbackDir = os.tmpdir();
               if (!fs.existsSync(fallbackDir)) {
                 fs.mkdirSync(fallbackDir, { recursive: true });
@@ -422,53 +404,28 @@ async function extractTextFromFile(fileBuffer: Buffer, mimeType: string): Promis
           }
 
           tempFilePath = path.join(tempDir, `cv-parse-ocr-${Date.now()}-${Math.random().toString(36).substring(7)}.pdf`);
-
           fs.writeFileSync(tempFilePath, fileBuffer, { flag: 'w' });
-          console.log(`📝 Wrote PDF buffer to temp file for OCR: ${tempFilePath}`);
 
-          // Verify file was written
-          if (!fs.existsSync(tempFilePath)) {
-            throw new Error('Failed to write temporary PDF file');
-          }
-
-          const fileStats = fs.statSync(tempFilePath);
-          if (fileStats.size === 0) {
-            throw new Error('Temporary PDF file is empty');
-          }
-
-          // Ensure tempFilePath is not null before using it
-          if (!tempFilePath) {
-            throw new Error('Temporary file path is null');
-          }
-
-          // Use pdf2pic with explicit /tmp directory for serverless compatibility
-          // This ensures pdf2pic writes to the only writable directory on Vercel/serverless
           const convert = pdf2picFromPath(tempFilePath, {
-            density: 100,
-            saveFilename: 'cv_page', // Prefix for temp image files
-            savePath: tempDir,       // Explicitly use /tmp for serverless
+            density: 150, // Increased for better OCR but not too slow
+            saveFilename: 'cv_page',
+            savePath: tempDir,
             format: 'png',
             width: 2000,
             height: 3000
           });
 
-          console.log('🔄 Converting PDF pages to images...');
+          console.log('🔄 Converting PDF pages to images for OCR...');
 
-          // Convert pages (limit to first 3 pages for CVs). Try pages individually so
-          // one-page scanned PDFs do not fail because page 2 or 3 is absent.
           const results: any[] = [];
-          for (const pageNumber of [1, 2, 3]) {
+          for (const pageNumber of [1, 2]) { // Limit to 2 pages for OCR to avoid timeouts
             try {
               results.push(await convert(pageNumber, { responseType: 'buffer' }));
             } catch (pageConvertError) {
               if (pageNumber === 1) throw pageConvertError;
-              console.warn(`⚠️ PDF page ${pageNumber} conversion skipped:`, pageConvertError instanceof Error ? pageConvertError.message : String(pageConvertError));
+              break;
             }
           }
-          console.log(`✅ Converted ${results?.length || 0} pages to images`);
-
-          // Track generated image file paths for cleanup
-          const generatedImagePaths: string[] = [];
 
           const getImageInput = (result: any): Buffer | string | null => {
             if (!result) return null;
@@ -480,99 +437,54 @@ async function extractTextFromFile(fileBuffer: Buffer, mimeType: string): Promis
 
           if (results && results.length > 0 && results.some((result: any) => getImageInput(result))) {
             const worker = await createWorker('eng');
-            // tesseract.js worker methods (TypeScript types may be incomplete)
-            const workerAny = worker as any;
-            if (workerAny.loadLanguage) await workerAny.loadLanguage('eng');
-            if (workerAny.initialize) await workerAny.initialize('eng');
-
-            // Process each page
+            
             for (let pageIdx = 0; pageIdx < results.length; pageIdx++) {
               try {
-                const result = results[pageIdx] as any;
-                if (!getImageInput(result)) {
-                  console.warn(`⚠️ Page ${pageIdx + 1} has no image data, skipping`);
-                  continue;
-                }
+                const imageInput = getImageInput(results[pageIdx]);
+                if (!imageInput) continue;
 
-                // Store image path for cleanup if available
-                if (result.path) {
-                  generatedImagePaths.push(result.path as string);
-                }
-
-                const imageInput = getImageInput(result);
-                if (!imageInput) {
-                  console.warn(`⚠️ Page ${pageIdx + 1} has no usable image data, skipping`);
-                  continue;
-                }
-
-                console.log(`🔄 Processing page ${pageIdx + 1} via OCR...`);
+                console.log(`🔄 OCR processing page ${pageIdx + 1}...`);
                 const { data: { text } } = await worker.recognize(imageInput);
                 if (text && text.trim().length > 0) {
                   rawText += text + '\n';
-                  console.log(`✅ Page ${pageIdx + 1} OCR: extracted ${text.trim().length} characters`);
-                } else {
-                  console.warn(`⚠️ Page ${pageIdx + 1} OCR: no text extracted`);
                 }
               } catch (pageOcrError) {
-                console.warn(`⚠️ OCR failed for page ${pageIdx + 1}:`, pageOcrError instanceof Error ? pageOcrError.message : String(pageOcrError));
+                console.warn(`⚠️ OCR failed for page ${pageIdx + 1}`);
               }
             }
 
             await worker.terminate();
-            console.log('📊 PDF OCR parsing - total text length:', rawText.length);
           } else {
-            throw new Error('pdf2pic conversion returned no valid results');
+            throw new Error('Failed to convert PDF to images.');
           }
 
-          // Clean up generated image files from /tmp
-          for (const imagePath of generatedImagePaths) {
-            try {
-              if (fs.existsSync && fs.existsSync(imagePath)) {
-                fs.unlinkSync(imagePath);
-                console.log(`🗑️ Cleaned up temp image: ${imagePath}`);
-              }
-            } catch (imageCleanupError) {
-              console.warn(`⚠️ Failed to delete temp image ${imagePath}:`, imageCleanupError instanceof Error ? imageCleanupError.message : String(imageCleanupError));
+          // Cleanup image files
+          for (const result of results) {
+            if (result.path && fs.existsSync(result.path)) {
+              try { fs.unlinkSync(result.path); } catch (e) {}
             }
           }
         } catch (pdf2picErr) {
-          const errorMsg = pdf2picErr instanceof Error ? pdf2picErr.message : String(pdf2picErr);
-          console.error('❌ pdf2pic error:', errorMsg);
-          // Don't throw here - preserve any text we might have gotten from pdf-parse
-          // rawText might already contain partial text from pdf-parse, so don't reset it
+          console.error('❌ OCR fallback failed:', pdf2picErr instanceof Error ? pdf2picErr.message : String(pdf2picErr));
+          extractionErrors.push('Visual character recognition failed.');
         } finally {
-          // Clean up temp PDF file
-          if (tempFilePath) {
-            try {
-              if (fs.existsSync && fs.existsSync(tempFilePath)) {
-                fs.unlinkSync(tempFilePath);
-                console.log(`🗑️ Cleaned up temp PDF file: ${tempFilePath}`);
-              }
-            } catch (cleanupError) {
-              console.warn('⚠️ Failed to delete temp PDF file:', cleanupError instanceof Error ? cleanupError.message : String(cleanupError));
-            }
+          if (tempFilePath && fs.existsSync(tempFilePath)) {
+            try { fs.unlinkSync(tempFilePath); } catch (e) {}
           }
         }
       } catch (e3) {
-        const errorMsg = `Method 3 (OCR) failed: ${e3 instanceof Error ? e3.message : String(e3)}`;
-        console.error(`❌ ${errorMsg}`);
-        extractionErrors.push(errorMsg);
-        // Don't throw here - let it fall through to final validation
+        extractionErrors.push('OCR engine failure.');
       }
     }
 
     // If all methods failed, throw error with details
     if (!rawText || rawText.trim().length < 50) {
-      const errorDetails = extractionErrors.length > 0
-        ? `\nFailed methods:\n${extractionErrors.map((e, i) => `  ${i + 1}. ${e}`).join('\n')}`
-        : '';
       throw new Error(
-        `All PDF text extraction methods failed.${errorDetails}\n\n` +
-        `Please ensure:\n` +
-        `- pdf-parse is installed (npm install pdf-parse)\n` +
-        `- pdfjs-dist is installed (npm install pdfjs-dist)\n` +
-        `- For scanned PDFs: pdf2pic and tesseract.js are installed (npm install pdf2pic tesseract.js)\n` +
-        `- For pdf2pic: ImageMagick/Ghostscript must be installed on the server`
+        `Unable to extract text from this PDF. It may be protected, corrupted, or contains only images that are too blurry to read.\n\n` +
+        `Suggestions:\n` +
+        `- Try a different PDF version\n` +
+        `- Export your CV as a standard PDF from Word/Google Docs\n` +
+        `- Or, use the "Start Fresh" option to build your CV manually.`
       );
     }
   }
@@ -1320,6 +1232,7 @@ export async function POST(request: NextRequest) {
     const allowedTypes = [
       'application/pdf',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/msword', // Added .doc support
       'image/jpeg',
       'image/png',
       'image/jpg',
@@ -1329,7 +1242,7 @@ export async function POST(request: NextRequest) {
     if (!allowedTypes.includes(file.type)) {
       console.error('Unsupported file type:', file.type);
       return NextResponse.json(
-        { error: `Unsupported file type: ${file.type}` },
+        { error: `Unsupported file type: ${file.type}. Please upload PDF, DOCX, or Image files.` },
         { status: 400 }
       );
     }

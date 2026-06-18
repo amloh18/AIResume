@@ -103,6 +103,9 @@ const WelcomePage: React.FC = () => {
   const [jsonInput, setJsonInput] = useState('');
   const [jsonError, setJsonError] = useState('');
 
+  const [showLinkedInModal, setShowLinkedInModal] = useState(false);
+  const [linkedinUrl, setLinkedinUrl] = useState('');
+
   // Dynamic description mappings for strengths and weaknesses
   const getStrengthDescription = (strength: string) => {
     const str = strength.toLowerCase();
@@ -198,6 +201,7 @@ const WelcomePage: React.FC = () => {
             cvData: cvData,
             cvType: 'master',
             isMaster: true,
+            currentStep: 2,
             metadata: {
               isMaster: true,
               isUserMaster: true,
@@ -238,7 +242,7 @@ const WelcomePage: React.FC = () => {
         // Guest user - save to guest draft!
         const draftResult = await guestCVService.saveGuestDraft({
           cvData: cvData,
-          currentStep: 3, // Start at Step 3 (Surgeon Builder) in the editor
+          currentStep: 2, // Start at Step 2 (Templates) in the editor
           completedSteps: [],
           cvTitle: title || 'Primary CV',
         });
@@ -326,21 +330,73 @@ Please find the CV data attached.`;
   };
 
   const handleJsonSubmit = async () => {
+    if (!jsonInput.trim()) return;
+    setJsonError('');
+
     try {
-      const parsed = JSON.parse(jsonInput);
-      setParsedCVData(parsed);
-      setSeedingMethod('json');
+      // 1. Try to parse as JSON first
+      const trimmedInput = jsonInput.trim();
+      if (trimmedInput.startsWith('{') || trimmedInput.startsWith('[')) {
+        try {
+          const result = JSON.parse(trimmedInput);
+          setParsedCVData(result);
+          const score = result.analysis?.score || result._score || 72;
+          setCVScore(score);
+          await savePrimaryCV(result, 'Imported JSON', score);
+
+          triggerNotification("JSON Data imported!");
+          setShowJsonModal(false);
+          handleNext();
+          return;
+        } catch (e) {
+          console.warn("Input looked like JSON but failed to parse. Falling back to text parsing...");
+        }
+      }
+
+      // 2. Fallback to Text Parsing (AI Analysis)
+      setDroppedFile('Pasted Content');
+      setIsParsing(true);
+      setParseProgress(0);
+      setParseStep(0);
       setShowJsonModal(false);
-      
-      // Early CV Creation
-      await savePrimaryCV(parsed, droppedFile || 'Primary CV', cvScore);
-      
-      handleNext();
-    } catch (e) {
-      setJsonError('Invalid JSON format. Please check and try again.');
+
+      const formData = new FormData();
+      const file = new File([jsonInput], 'pasted-cv.txt', { type: 'text/plain' });
+      formData.append('file', file);
+
+      const progressInterval = setInterval(() => {
+        setParseProgress(prev => {
+          if (prev >= 95) {
+            return 95;
+          }
+          if (prev === 20) setParseStep(1);
+          if (prev === 45) setParseStep(2);
+          if (prev === 70) setParseStep(3);
+          if (prev === 90) setParseStep(4);
+          return prev + 5;
+        });
+      }, 250);
+
+      const response = await fetch('/api/cv/parse', {
+        method: 'POST',
+        body: formData,
+      });
+
+      clearInterval(progressInterval);
+      await processParseResponse(response, 'Pasted CV');
+    } catch (err: any) {
+      console.error("Import error:", err);
+      setJsonError(err?.message || "Failed to process data. Please check and try again.");
+      setIsParsing(false);
     }
   };
 
+  const handleLinkedInSubmit = async () => {
+    if (!linkedinUrl.trim()) return;
+    triggerNotification("LinkedIn sync starting soon!");
+    setShowLinkedInModal(false);
+    // Future: trigger actual sync
+  };
   // Inline Auth Form State
   const [authTab, setAuthTab] = useState<'signup' | 'signin'>('signup');
   const [authEmail, setAuthEmail] = useState('');
@@ -747,6 +803,81 @@ Please find the CV data attached.`;
     }
   };
 
+  const processParseResponse = async (response: Response, fileName: string) => {
+    if (!response.ok) {
+      const contentType = response.headers.get('content-type');
+      let errMsg = 'Failed to parse CV';
+      if (contentType && contentType.includes('application/json')) {
+        const errData = await response.json();
+        errMsg = errData.error || errMsg;
+      } else {
+        errMsg = `Failed to parse CV: HTTP ${response.status}`;
+      }
+      throw new Error(errMsg);
+    }
+
+    const result = await response.json();
+    setParseProgress(100);
+
+    if (result._parsed || result.basics || result.work) {
+      setParsedCVData(result);
+      const score = result.analysis?.score || result._score || 68;
+      setCVScore(score);
+      await savePrimaryCV(result, fileName, score);
+      
+      triggerNotification("CV Parsed successfully!");
+      setTimeout(() => {
+        setIsParsing(false);
+        handleNext();
+      }, 800);
+    } else {
+      throw new Error(result.error || "Parsing failed");
+    }
+  };
+
+  const handlePasteSubmit = async () => {
+    if (!pasteInput.trim()) return;
+    
+    setDroppedFile('Pasted Content');
+    setIsParsing(true);
+    setParseProgress(0);
+    setParseStep(0);
+    setPasteError('');
+    setShowPasteModal(false);
+
+    const formData = new FormData();
+    const file = new File([pasteInput], 'pasted-cv.txt', { type: 'text/plain' });
+    formData.append('file', file);
+
+    try {
+      const progressInterval = setInterval(() => {
+        setParseProgress(prev => {
+          if (prev >= 95) {
+            return 95;
+          }
+          if (prev === 20) setParseStep(1);
+          if (prev === 45) setParseStep(2);
+          if (prev === 70) setParseStep(3);
+          if (prev === 90) setParseStep(4);
+          return prev + 5;
+        });
+      }, 250);
+
+      const response = await fetch('/api/cv/parse', {
+        method: 'POST',
+        body: formData,
+      });
+
+      clearInterval(progressInterval);
+      await processParseResponse(response, 'Pasted CV');
+    } catch (err: any) {
+      console.error("Paste parsing error:", err);
+      const errMsg = err?.message || "Failed to parse text. Please try again or Start Fresh.";
+      toast.error(errMsg, { duration: 5000, position: 'bottom-right' });
+      setIsParsing(false);
+    }
+  };
+
   // Actual Parser Implementation
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -764,62 +895,30 @@ Please find the CV data attached.`;
         // Start visual progress simulator in parallel
         const progressInterval = setInterval(() => {
           setParseProgress(prev => {
-            if (prev >= 90) {
-              clearInterval(progressInterval);
-              return 90;
+            if (prev >= 95) {
+              // Stay at 95% until actual processing finishes
+              return 95;
             }
             // Update steps based on progress
-            if (prev === 25) setParseStep(1);
-            if (prev === 50) setParseStep(2);
-            if (prev === 75) setParseStep(3);
+            if (prev === 20) setParseStep(1);
+            if (prev === 45) setParseStep(2);
+            if (prev === 70) setParseStep(3);
+            if (prev === 90) setParseStep(4); // New "Finalizing" step
             return prev + 5;
           });
-        }, 200);
+        }, 250);
 
         const response = await fetch('/api/cv/parse', {
           method: 'POST',
           body: formData,
         });
 
-        if (!response.ok) {
-          const contentType = response.headers.get('content-type');
-          let errMsg = 'Failed to parse CV';
-          if (contentType && contentType.includes('application/json')) {
-            const errData = await response.json();
-            errMsg = errData.error || errMsg;
-          } else {
-            errMsg = `Failed to parse CV: HTTP ${response.status}`;
-          }
-          throw new Error(errMsg);
-        }
-
-        const result = await response.json();
-        
         clearInterval(progressInterval);
-        setParseProgress(100);
-
-        // The API returns the CV data structure directly if successful, with a _parsed flag
-        if (result._parsed || result.basics || result.work) {
-          // Store the whole result as the CV data
-          setParsedCVData(result);
-          
-          // Early CV Creation
-          const score = result.analysis?.score || result._score || 68;
-          setCVScore(score);
-          await savePrimaryCV(result, file.name, score);
-          
-          triggerNotification("CV Parsed successfully!");
-          setTimeout(() => {
-            setIsParsing(false);
-            handleNext();
-          }, 800);
-        } else {
-          throw new Error(result.error || "Parsing failed");
-        }
+        await processParseResponse(response, file.name);
       } catch (err: any) {
         console.error("Parsing error:", err);
         const errMsg = err?.message || "Failed to parse CV. Please try again or Start Fresh.";
-        toast.error(errMsg, { duration: 5000, position: 'bottom-right' });
+        toast.error(errMsg, { duration: 8000, position: 'bottom-right' });
         setIsParsing(false);
       }
     }
@@ -1241,11 +1340,11 @@ Please find the CV data attached.`;
 
                 {!isParsing ? (
                   <div className="space-y-6">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                       {[
                         { id: 'upload', title: 'Upload CV', desc: 'PDF, Word, TXT', icon: Upload },
-                        { id: 'linkedin', title: 'LinkedIn', desc: 'Profile PDF', icon: Linkedin },
-                        { id: 'json', title: 'JSON Data', desc: 'Copy-Paste JSON', icon: FileJson },
+                        { id: 'json', title: 'Paste CV', desc: 'JSON or Text', icon: FileJson },
+                        { id: 'linkedin', title: 'LinkedIn', desc: 'Sync Profile', icon: Linkedin, soon: true },
                         { id: 'scratch', title: 'Start Fresh', desc: 'No file - manual', icon: Sparkles }
                       ].map(method => {
                         const Icon = method.icon;
@@ -1256,17 +1355,24 @@ Please find the CV data attached.`;
                             onClick={() => {
                               setSeedingMethod(method.id);
                               if (method.id === 'scratch') {
-                                setParsedCVData(null); // CRITICAL: Reset any previously parsed data for scratch mode
+                                setParsedCVData(null); 
                                 setCVScore(0);
                                 handleNext('scratch');
                               } else if (method.id === 'json') {
                                 setShowJsonModal(true);
+                              } else if (method.id === 'linkedin') {
+                                setShowLinkedInModal(true);
                               }
                             }}
-                            className={`p-6 border-2 rounded-2xl text-center flex flex-col items-center justify-center gap-3 transition-all ${
+                            className={`p-6 border-2 rounded-2xl text-center flex flex-col items-center justify-center gap-3 transition-all relative ${
                               isSelected ? 'border-black bg-slate-50' : 'border-gray-200 hover:border-gray-300'
                             }`}
                           >
+                            {method.soon && (
+                              <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-black text-[#80FF00] text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest shadow-sm z-10">
+                                Coming Soon
+                              </div>
+                            )}
                             <div className={`p-3 rounded-xl ${isSelected ? 'bg-black text-[#80FF00]' : 'bg-gray-150'}`}>
                               <Icon className="h-5 w-5" />
                             </div>
@@ -1359,7 +1465,8 @@ Please find the CV data attached.`;
                           'Reading document layers',
                           'Extracting work histories',
                           'Formatting section maps',
-                          'Indexing skills keywords'
+                          'Indexing skills keywords',
+                          'Finalizing & Saving'
                         ].map((label, stepIdx) => {
                           const isCompleted = parseStep > stepIdx;
                           const isActive = parseStep === stepIdx;
@@ -1414,11 +1521,11 @@ Please find the CV data attached.`;
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
                             <div className="p-2 bg-black rounded-lg text-[#80FF00]">
-                              <Sparkles size={24} />
+                              <FileJson size={24} />
                             </div>
                             <div>
-                              <h2 className="text-2xl font-black">AI-Powered Import</h2>
-                              <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">Fast-track your tailored CV</p>
+                              <h2 className="text-2xl font-black">Paste CV Data</h2>
+                              <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">JSON or Plain Text Import</p>
                             </div>
                           </div>
                           <button onClick={() => setShowJsonModal(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
@@ -1427,48 +1534,24 @@ Please find the CV data attached.`;
                         </div>
 
                         <div className="space-y-4">
-                          <div className="p-5 bg-lime-50 rounded-[24px] border border-lime-100 space-y-4">
-                            <h4 className="text-xs font-black uppercase tracking-widest text-lime-800 flex items-center gap-2">
-                              <Zap size={14} className="fill-lime-800" /> Getting started is simple
+                          <div className="p-5 bg-[#80FF00]/5 rounded-[24px] border border-[#80FF00]/10 space-y-2">
+                            <h4 className="text-xs font-black uppercase tracking-widest text-black flex items-center gap-2">
+                              <Info size={14} className="fill-black text-[#80FF00]" /> How it works
                             </h4>
-                            
-                            <div className="space-y-4 text-xs leading-relaxed text-lime-900/80">
-                              <div className="flex gap-3">
-                                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-lime-200 text-lime-800 flex items-center justify-center font-black">1</span>
-                                <p>Attach your CV or paste your LinkedIn profile into <strong>Claude or ChatGPT</strong>.</p>
-                              </div>
-                              <div className="flex gap-3">
-                                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-lime-200 text-lime-800 flex items-center justify-center font-black">2</span>
-                                <p>Copy our specialized AI prompt below and paste it into the chat.</p>
-                              </div>
-                              <div className="flex gap-3">
-                                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-lime-200 text-lime-800 flex items-center justify-center font-black">3</span>
-                                <p>Copy the JSON output provided by the AI and paste it into the box below.</p>
-                              </div>
-                            </div>
-
-                            <div className="pt-2">
-                              <Button 
-                                onClick={copyJsonSample}
-                                className="w-full bg-lime-800 hover:bg-lime-900 text-white font-bold rounded-xl flex items-center justify-center gap-2 h-10 shadow-sm"
-                              >
-                                <Copy size={14} /> Copy AI Prompt
-                              </Button>
-                              <p className="text-[10px] text-lime-700/60 text-center mt-2 font-medium italic">
-                                Voila! It's that easy to get a tailored CV. You can choose premium templates later.
-                              </p>
-                            </div>
+                            <p className="text-[11px] leading-relaxed text-gray-600">
+                              Paste your CV in <strong>JSON</strong> format or simply paste your <strong>Raw Text</strong>. Our AI will automatically detect the format and structure your profile.
+                            </p>
                           </div>
 
                           <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-2">JSON Input</label>
+                            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-2">Content</label>
                             <textarea 
                               value={jsonInput}
                               onChange={(e) => {
                                 setJsonInput(e.target.value);
                                 setJsonError('');
                               }}
-                              placeholder='Paste the { "basics": ... } code block here'
+                              placeholder='Paste your JSON code or full CV text here...'
                               className="w-full h-40 p-5 bg-slate-50 border border-gray-100 rounded-[24px] font-mono text-[11px] outline-none focus:border-black focus:bg-white transition-all shadow-inner"
                             />
                             {jsonError && <p className="text-xs text-red-500 font-bold ml-2">{jsonError}</p>}
@@ -1483,6 +1566,70 @@ Please find the CV data attached.`;
                             className="flex-[2] bg-black text-white hover:bg-slate-900 rounded-2xl font-bold py-6 shadow-xl disabled:opacity-30"
                           >
                             Import & Continue
+                          </Button>
+                        </div>
+                      </motion.div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* LinkedIn Modal */}
+                <AnimatePresence>
+                  {showLinkedInModal && (
+                    <motion.div 
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm"
+                    >
+                      <motion.div 
+                        initial={{ scale: 0.9, y: 20 }}
+                        animate={{ scale: 1, y: 0 }}
+                        className="bg-white rounded-3xl p-8 max-w-xl w-full shadow-2xl space-y-6"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-[#0077B5] rounded-lg text-white">
+                              <Linkedin size={24} />
+                            </div>
+                            <div>
+                              <h2 className="text-2xl font-black">Sync LinkedIn</h2>
+                              <p className="text-xs text-[#0077B5] font-bold uppercase tracking-wider">Coming Soon</p>
+                            </div>
+                          </div>
+                          <button onClick={() => setShowLinkedInModal(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                            <X size={20} />
+                          </button>
+                        </div>
+
+                        <div className="space-y-4">
+                          <div className="p-5 bg-blue-50 rounded-[24px] border border-blue-100 space-y-2">
+                            <h4 className="text-xs font-black uppercase tracking-widest text-blue-800">Direct Profile Sync</h4>
+                            <p className="text-[11px] leading-relaxed text-blue-900/70">
+                              We're building a native LinkedIn integration. For now, please enter your profile URL to join the early access queue for automated profile updates.
+                            </p>
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-2">LinkedIn URL</label>
+                            <input 
+                              type="text"
+                              value={linkedinUrl}
+                              onChange={(e) => setLinkedinUrl(e.target.value)}
+                              placeholder="https://linkedin.com/in/yourprofile"
+                              className="w-full p-5 bg-slate-50 border border-gray-100 rounded-[24px] text-sm outline-none focus:border-black focus:bg-white transition-all shadow-inner"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex gap-3">
+                          <Button onClick={() => setShowLinkedInModal(false)} variant="ghost" className="flex-1 rounded-2xl font-bold py-6">Cancel</Button>
+                          <Button 
+                            onClick={handleLinkedInSubmit}
+                            disabled={!linkedinUrl.trim()}
+                            className="flex-[2] bg-black text-white hover:bg-slate-900 rounded-2xl font-bold py-6 shadow-xl disabled:opacity-30"
+                          >
+                            Join Waitlist
                           </Button>
                         </div>
                       </motion.div>

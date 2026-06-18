@@ -24,18 +24,21 @@ function ResumeEnhancerPageContent() {
   const typeParam = searchParams.get('type');
   const rawModeParam = searchParams.get('mode');
   const rawCvId = searchParams.get('cvId');
-  const rawJourneyId = searchParams.get('journeyId');
+  // Determine the mode
   const normalizedLegacyMode =
     rawModeParam === 'cvedit'
       ? (rawJourneyId ? 'journey' : 'edit')
       : rawModeParam === 'cledit'
         ? 'edit-cover-letter'
-        : rawModeParam;
+        : (rawModeParam === 'improve' || rawModeParam === 'mode-improve')
+          ? 'edit-master'
+          : rawModeParam;
+
   let mode: 'create' | 'edit' | 'edit-master' | 'journey' | 'edit-cover-letter' | 'create-cover-letter' =
     (normalizedLegacyMode === 'edit' || normalizedLegacyMode === 'edit-master' || normalizedLegacyMode === 'journey' || normalizedLegacyMode === 'edit-cover-letter' || normalizedLegacyMode === 'create-cover-letter')
       ? normalizedLegacyMode
       : 'create';
-  
+
   const rawClId = searchParams.get('clId') || searchParams.get('coverLetterId');
   const clId = (rawClId && rawClId !== 'undefined') ? rawClId : undefined;
   
