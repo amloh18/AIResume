@@ -100,17 +100,16 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
     // Ensure pricingPlans is always an array
     const safePlans = Array.isArray(pricingPlans) ? pricingPlans : [];
     
-    // Support both spellings for robustness
+    // Support both spellings for robustness — exclude 'free' plan from the table
     const activeKeys = billingInterval === 'monthly'
-      ? ['free', 'starter_monthly', 'focused_monthly', 'smart_quarterly']
-      : ['free', 'starter_yearly', 'focused_yearly', 'smart_yearly'];
+      ? ['starter_monthly', 'focused_monthly', 'smart_quarterly']
+      : ['starter_yearly', 'focused_yearly', 'smart_yearly'];
       
     return safePlans
       .filter(plan => activeKeys.includes(plan.key))
       .sort((a, b) => {
         // Find best match in activeKeys to preserve intended order
         const getIndex = (key: string) => {
-          if (key === 'free') return -1;
           if (billingInterval === 'monthly') {
             if (key === 'starter_monthly') return 0;
             if (key === 'focused_monthly') return 1;
@@ -281,6 +280,8 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
             { name: 'Job Application Tracker', free: '✓ (Basic)', starter_monthly: '✗', starter_yearly: '✗', focused_monthly: '✓ (Full)', focused_yearly: '✓ (Full)', smart_quarterly: '✓ (Full)', smart_yearly: '✓ (Full)', pro_monthly: '✓ (Full)', pro_quarterly: '✓ (Full)', pro_yearly: '✓ (Full)', pro_lifetime: '✓ (Full)' },
             { name: 'Auto Job Application Bot', free: '✗', starter_monthly: '✗', starter_yearly: '✗', focused_monthly: '✗', focused_yearly: '✗', smart_quarterly: '✓', smart_yearly: '✓', pro_monthly: '✗', pro_quarterly: '✗', pro_yearly: '✗', pro_lifetime: '✗' },
             { name: 'Permanent Career Vault', free: '✗', starter_monthly: '✗', starter_yearly: '✗', focused_monthly: '✗', focused_yearly: '✗', smart_quarterly: '✗', smart_yearly: '✗', pro_monthly: '✗', pro_quarterly: '✗', pro_yearly: '✗', pro_lifetime: '✓' },
+            { name: 'Snippets', free: '✓', starter_monthly: '✓', starter_yearly: '✓', focused_monthly: '✓', focused_yearly: '✓', smart_quarterly: '✓', smart_yearly: '✓', pro_monthly: '✓', pro_quarterly: '✓', pro_yearly: '✓', pro_lifetime: '✓' },
+            { name: 'Custom ATS Templates', free: '✓', starter_monthly: '✓', starter_yearly: '✓', focused_monthly: '✓', focused_yearly: '✓', smart_quarterly: '✓', smart_yearly: '✓', pro_monthly: '✓', pro_quarterly: '✓', pro_yearly: '✓', pro_lifetime: '✓' },
             { name: 'Customer Support Level', free: 'Standard', starter_monthly: 'Standard', starter_yearly: 'Standard', focused_monthly: 'Priority', focused_yearly: 'Priority', smart_quarterly: 'VIP 24/7 Support', smart_yearly: 'VIP 24/7 Support', pro_monthly: 'Standard', pro_quarterly: 'Priority Support', pro_yearly: 'Priority Support', pro_lifetime: 'VIP 24/7 Support' },
           ];
 
@@ -295,9 +296,9 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
             }
             const regionalPrice = getRegionalPrice(plan);
             if (plan.key === 'starter_yearly') {
-              return regionalPrice.endsWith('*')
-                ? `${regionalPrice.slice(0, -1)} (Save 50%)*`
-                : `${regionalPrice} (Save 50%)`;
+              const base = regionalPrice.endsWith('*') ? regionalPrice.slice(0, -1) : regionalPrice;
+              const suffix = regionalPrice.endsWith('*') ? '/yr*' : '/yr';
+              return `${base}${suffix}`;
             }
             const monthlyEquivalent = getMonthlyEquivalent(plan);
             return monthlyEquivalent.showMonthly ? monthlyEquivalent.price : regionalPrice;
@@ -485,7 +486,7 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
                                     </span>
                                   )}
                                   <span className="text-xl tablet:text-2xl font-extrabold text-gray-900 dark:text-white leading-tight">
-                                    {regionalPrice}
+                                    {regionalPrice.endsWith('*') ? `${regionalPrice.slice(0, -1)}/yr*` : `${regionalPrice}/yr`}
                                   </span>
                                   <span className="text-[9px] text-gray-400 mt-0.5 font-normal">billed annually</span>
                                 </div>
@@ -535,22 +536,18 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
                               isPopular ? 'bg-lime-500/[0.03] dark:bg-lime-400/[0.02] border-x border-lime-500/30' : ''
                             }`}
                           >
-                            <motion.button
-                              onClick={() => handlePlanSelect(plan)}
-                              className={`w-full py-2 px-3 text-xs font-bold rounded-lg transition-all duration-300 ${
-                                plan.key === 'free' || plan.key === 'starter_monthly'
-                                  ? 'bg-gray-200 hover:bg-gray-300 dark:bg-white/10 dark:hover:bg-white/20 text-gray-900 dark:text-white'
-                                  : 'bg-[#81ff00] hover:bg-lime-400 text-black shadow-md hover:shadow-lime-400/20'
-                              }`}
-                              whileHover={{ scale: 1.03 }}
-                              whileTap={{ scale: 0.97 }}
-                            >
-                              {plan.key === 'free' 
-                                ? 'Get Started Free' 
-                                : plan.key === 'starter_monthly' 
-                                  ? 'Subscribe Free' 
-                                  : 'Choose Plan'}
-                            </motion.button>
+                              <motion.button
+                               onClick={() => handlePlanSelect(plan)}
+                               className={`w-full py-2 px-3 text-xs font-bold rounded-lg transition-all duration-300 ${
+                                 plan.key === 'starter_monthly'
+                                   ? 'bg-gray-200 hover:bg-gray-300 dark:bg-white/10 dark:hover:bg-white/20 text-gray-900 dark:text-white'
+                                   : 'bg-[#81ff00] hover:bg-lime-400 text-black shadow-md hover:shadow-lime-400/20'
+                               }`}
+                               whileHover={{ scale: 1.03 }}
+                               whileTap={{ scale: 0.97 }}
+                             >
+                               {plan.key === 'starter_monthly' ? 'Subscribe Free' : 'Choose Plan'}
+                             </motion.button>
                           </td>
                         );
                       })}

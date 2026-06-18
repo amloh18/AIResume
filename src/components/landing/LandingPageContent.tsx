@@ -12,6 +12,7 @@ import { navLinks } from '@/data/navigation';
 const Features = dynamic(() => import('@/components/landing/Features'), { ssr: true });
 const ChromeExtension = dynamic(() => import('@/components/landing/ChromeExtension'), { ssr: true });
 const Testimonials = dynamic(() => import('@/components/landing/Testimonials'), { ssr: true });
+const CompetitorComparison = dynamic(() => import('@/components/landing/CompetitorComparison'), { ssr: true });
 const HowItWorks = dynamic(() => import('@/components/landing/HowItWorks'), { ssr: true });
 const Pricing = dynamic(() => import('@/components/landing/Pricing'), { ssr: true });
 const BlogSection = dynamic(() => import('@/components/landing/BlogSection'), { ssr: true });
@@ -75,6 +76,8 @@ export default function LandingPageContent() {
         <TestimonialSnippet index={2} />
         <ChromeExtension />
         <Testimonials />
+
+        <CompetitorComparison />
 
         <div className="dark">
           <Pricing onPlanSelect={(plan) => {
