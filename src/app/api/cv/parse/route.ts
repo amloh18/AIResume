@@ -256,235 +256,234 @@ async function extractTextFromFile(fileBuffer: Buffer, mimeType: string): Promis
     let pdfParseSucceeded = false;
     const extractionErrors: string[] = [];
 
-    // Attempt 1: Fast Text Parse (Method 1: pdf-parse)
-    // Load pdf-parse dynamically to avoid bundling test files
-    try {
-      console.log('Attempting Method 1: pdf-parse (loading dynamically)...');
-      const pdfParse = (await import('pdf-parse')).default;
-
+    // ─────────────────────────────────────────────────────────────────────────
+    // Helper: load pdfjs-dist and configure the worker for Node.js (pdfjs v5+)
+    // ─────────────────────────────────────────────────────────────────────────
+    const loadPdfjs = async () => {
+      let pdfjs: any;
       try {
-        const data = await pdfParse(fileBuffer);
-        const extractedText = data?.text?.trim() || '';
-        if (extractedText.length >= 50) {
-          rawText = extractedText;
-          pdfParseSucceeded = true;
-          console.log('✅ Method 1 (pdf-parse) succeeded:', rawText.length, 'characters');
-        } else {
-          const errorMsg = `PDF appears to be an image or scanned document (only ${extractedText.length} characters found).`;
-          console.log(`⚠️ ${errorMsg}`);
-          extractionErrors.push(errorMsg);
-        }
-      } catch (e1) {
-        const errorMsg = `Fast PDF parsing failed.`;
-        console.log(`⚠️ ${errorMsg}`);
-        extractionErrors.push(errorMsg);
+        pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
+      } catch {
+        pdfjs = await import('pdfjs-dist');
       }
-    } catch (loadError) {
-      extractionErrors.push('Fast PDF parser not available.');
+      // pdfjs v5 requires an explicit workerSrc (empty string breaks it)
+      if (pdfjs.GlobalWorkerOptions && !pdfjs.GlobalWorkerOptions.workerSrc) {
+        try {
+          const workerPath = require.resolve('pdfjs-dist/legacy/build/pdf.worker.mjs');
+          pdfjs.GlobalWorkerOptions.workerSrc = `file://${workerPath}`;
+        } catch {
+          try {
+            const workerPath = require.resolve('pdfjs-dist/build/pdf.worker.mjs');
+            pdfjs.GlobalWorkerOptions.workerSrc = `file://${workerPath}`;
+          } catch { /* leave unconfigured, will fail gracefully */ }
+        }
+      }
+      return pdfjs;
+    };
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Method 1: pdf-parse (fastest for text-based PDFs)
+    // ─────────────────────────────────────────────────────────────────────────
+    try {
+      console.log('Attempting Method 1: pdf-parse...');
+      const pdfParse = (await import('pdf-parse')).default;
+      const data = await pdfParse(fileBuffer);
+      const extractedText = data?.text?.trim() || '';
+      if (extractedText.length >= 50) {
+        rawText = extractedText;
+        pdfParseSucceeded = true;
+        console.log(`✅ Method 1 (pdf-parse) succeeded: ${rawText.length} chars`);
+      } else {
+        console.log(`⚠️ Method 1: only ${extractedText.length} chars - likely scanned PDF`);
+        extractionErrors.push(`pdf-parse: only ${extractedText.length} chars extracted`);
+      }
+    } catch (e: any) {
+      console.log(`⚠️ Method 1 failed: ${e?.message}`);
+      extractionErrors.push('pdf-parse failed.');
     }
 
-    // Attempt 2: pdfjs-dist fallback (Method 2) - only if pdf-parse didn't work
-    if (!pdfParseSucceeded && rawText.length < 50) {
+    // ─────────────────────────────────────────────────────────────────────────
+    // Method 2: pdfjs-dist text layer (handles some PDFs that pdf-parse misses)
+    // ─────────────────────────────────────────────────────────────────────────
+    if (!pdfParseSucceeded) {
       try {
-        console.log('Attempting Method 2: pdfjs-dist (loading dynamically)...');
-
-        // Polyfill DOMMatrix for Node.js environments (required for pdfjs-dist 4.0+)
-        if (typeof (global as any).DOMMatrix === 'undefined') {
-          (global as any).DOMMatrix = class DOMMatrix {
-            constructor() {
-              return {};
-            }
-          };
-        }
-
-        // Try different import paths for pdfjs-dist compatibility
-        let pdfjs: any;
-        try {
-          // Try legacy build first for Node.js compatibility
-          pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
-        } catch (e1) {
-          try {
-            // Try standard import
-            pdfjs = await import('pdfjs-dist');
-          } catch (e2) {
-            throw new Error(`Failed to initialize advanced PDF parser.`);
-          }
-        }
-
-        // Configure worker for Node.js environment
-        if (pdfjs.GlobalWorkerOptions) {
-          pdfjs.GlobalWorkerOptions.workerSrc = '';
-        }
-
+        console.log('Attempting Method 2: pdfjs-dist text layer...');
+        const pdfjs = await loadPdfjs();
         const getDocument = pdfjs.getDocument || pdfjs.default?.getDocument;
-        if (!getDocument) {
-          throw new Error('Advanced PDF parser method not found.');
-        }
+        if (!getDocument) throw new Error('pdfjs getDocument not found');
 
-        const loadingTask = getDocument({
-          data: toPlainUint8Array(fileBuffer),
-          useWorkerFetch: false,
-          isEvalSupported: false,
-          useSystemFonts: true,
-          verbosity: 0,
-          standardFontDataUrl: 'node_modules/pdfjs-dist/standard_fonts/',
-        });
-
-        const pdfDocument = await loadingTask.promise;
-        const numPages = pdfDocument.numPages;
-        
+        const doc = await getDocument({ data: toPlainUint8Array(fileBuffer), verbosity: 0 }).promise;
         let extractedText = '';
-        const maxPages = Math.min(numPages, 5);
-
+        const maxPages = Math.min(doc.numPages, 5);
         for (let pageNum = 1; pageNum <= maxPages; pageNum++) {
           try {
-            const page = await pdfDocument.getPage(pageNum);
-            const textContent = await page.getTextContent();
-            const pageText = textContent.items
+            const page = await doc.getPage(pageNum);
+            const content = await page.getTextContent();
+            const pageText = content.items
               .map((item: any) => item.str || '')
-              .filter((str: string) => str.trim().length > 0)
-              .join(' ')
-              .trim();
-
-            if (pageText.length > 0) {
-              extractedText += pageText + '\n';
-            }
-          } catch (pageError) {
-            console.warn(`⚠️ Failed to extract text from page ${pageNum}`);
-          }
+              .filter((s: string) => s.trim().length > 0)
+              .join(' ').trim();
+            if (pageText.length > 0) extractedText += pageText + '\n';
+          } catch { /* skip page */ }
         }
-
         if (extractedText.trim().length >= 50) {
           rawText = extractedText.trim();
           pdfParseSucceeded = true;
-          console.log('✅ Method 2 (pdfjs-dist) succeeded');
+          console.log(`✅ Method 2 (pdfjs text layer) succeeded: ${rawText.length} chars`);
         } else {
-          extractionErrors.push('Advanced text extraction returned insufficient text.');
+          console.log(`⚠️ Method 2: only ${extractedText.trim().length} chars - likely image PDF`);
+          extractionErrors.push('pdfjs text layer: insufficient text');
         }
-      } catch (pdfjsError) {
-        extractionErrors.push('Advanced text extraction failed.');
+      } catch (e: any) {
+        console.log(`⚠️ Method 2 failed: ${e?.message}`);
+        extractionErrors.push(`pdfjs text layer failed: ${e?.message}`);
       }
     }
 
-    // Attempt 3: OCR Fallback (Method 3: tesseract + pdf2pic) - only if previous methods didn't work
-    if (!pdfParseSucceeded && rawText.length < 50) {
+    // ─────────────────────────────────────────────────────────────────────────
+    // Method 3: pdfjs canvas render → @napi-rs/canvas PNG → tesseract OCR
+    // Pure JS, no system ImageMagick/Ghostscript needed. ~2-10s for typical CVs.
+    // ─────────────────────────────────────────────────────────────────────────
+    if (!pdfParseSucceeded) {
       try {
-        console.log('Attempting Method 3: OCR (tesseract + pdf2pic)...');
+        console.log('Attempting Method 3: pdfjs canvas render → tesseract OCR...');
 
-        if (!createWorker) {
-          throw new Error('OCR engine not available.');
+        if (!createWorker) throw new Error('tesseract.js not available');
+
+        // Load @napi-rs/canvas (pure JS canvas - no system dependencies)
+        let napiCanvas: any;
+        try {
+          const { createRequire } = await import('module');
+          const path = await import('path');
+          const requireShim = createRequire(path.join(process.cwd(), 'package.json'));
+          napiCanvas = requireShim('@napi-rs/canvas');
+        } catch (canvasErr: any) {
+          console.error('❌ Failed to load @napi-rs/canvas via createRequire:', canvasErr?.message);
+          throw new Error(`@napi-rs/canvas not available: ${canvasErr?.message}`);
         }
 
-        // Load pdf2pic dynamically to avoid bundling test files
-        const pdf2pic = await import('pdf2pic');
-        const pdf2picFromPath = pdf2pic.fromPath;
+        const pdfjs = await loadPdfjs();
+        const getDocument = pdfjs.getDocument || pdfjs.default?.getDocument;
+        if (!getDocument) throw new Error('pdfjs getDocument not found for OCR');
 
-        if (!pdf2picFromPath) {
-          throw new Error('PDF-to-Image converter not available.');
-        }
+        // NodeCanvasFactory: bridges pdfjs rendering to @napi-rs/canvas
+        const NodeCanvasFactory = {
+          create: (width: number, height: number) => {
+            const canvas = napiCanvas.createCanvas(width, height);
+            return { canvas, context: canvas.getContext('2d') };
+          },
+          reset: (pair: any, width: number, height: number) => {
+            pair.canvas.width = width;
+            pair.canvas.height = height;
+          },
+          destroy: (pair: any) => {
+            pair.canvas.width = 0;
+            pair.canvas.height = 0;
+          }
+        };
 
-        const fs = require('fs');
-        const path = require('path');
-        const os = require('os');
+        const OCR_TIMEOUT_MS = 120_000; // 2 min hard limit
+        const ocrTimeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('OCR_TIMEOUT')), OCR_TIMEOUT_MS)
+        );
 
-        let tempFilePath: string | null = null;
+        const ocrWorkPromise = (async () => {
+          const doc = await getDocument({
+            data: toPlainUint8Array(fileBuffer),
+            verbosity: 0,
+            canvasFactory: NodeCanvasFactory,
+          }).promise;
+
+          const numPages = doc.numPages;
+          const maxPages = Math.min(numPages, 3);
+          console.log(`📄 PDF has ${numPages} page(s). Rendering up to ${maxPages} for OCR...`);
+
+          const pngBuffers: Buffer[] = [];
+          const scale = 2.0; // 2x scale for good OCR accuracy
+
+          for (let pageNum = 1; pageNum <= maxPages; pageNum++) {
+            try {
+              const page = await doc.getPage(pageNum);
+              const viewport = page.getViewport({ scale });
+              const width = Math.round(viewport.width);
+              const height = Math.round(viewport.height);
+
+              console.log(`🎨 Rendering page ${pageNum} (${width}×${height})...`);
+
+              const { canvas, context } = NodeCanvasFactory.create(width, height);
+              context.fillStyle = 'white';
+              context.fillRect(0, 0, width, height);
+
+              await page.render({ canvasContext: context, viewport, canvasFactory: NodeCanvasFactory }).promise;
+              page.cleanup();
+
+              const pngBuffer = (canvas as any).toBuffer('image/png');
+              pngBuffers.push(pngBuffer);
+              console.log(`✅ Page ${pageNum} rendered → ${pngBuffer.length} bytes`);
+            } catch (renderErr: any) {
+              console.warn(`⚠️ Failed to render page ${pageNum}: ${renderErr?.message}`);
+            }
+          }
+
+          if (pngBuffers.length === 0) throw new Error('No PDF pages could be rendered for OCR.');
+
+          // Tesseract OCR on all rendered PNG buffers
+          console.log(`🔍 Running Tesseract OCR on ${pngBuffers.length} page(s)...`);
+          const worker = await createWorker('eng', 1, {
+            langPath: process.cwd(),
+            cachePath: process.cwd(),
+          });
+          let ocrText = '';
+
+          for (let i = 0; i < pngBuffers.length; i++) {
+            try {
+              console.log(`🔄 OCR page ${i + 1}...`);
+              const { data: { text } } = await (worker as any).recognize(pngBuffers[i]);
+              if (text?.trim()) {
+                ocrText += text + '\n';
+                console.log(`✅ Page ${i + 1} OCR: ${text.trim().length} chars`);
+              }
+            } catch (pageErr: any) {
+              console.warn(`⚠️ OCR failed for page ${i + 1}: ${pageErr?.message}`);
+            }
+          }
+
+          await worker.terminate();
+          return ocrText;
+        })();
 
         try {
-          const tempDir = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME ? '/tmp' : os.tmpdir();
-
-          if (!fs.existsSync(tempDir)) {
-            try {
-              fs.mkdirSync(tempDir, { recursive: true });
-            } catch (mkdirError) {
-              const fallbackDir = os.tmpdir();
-              if (!fs.existsSync(fallbackDir)) {
-                fs.mkdirSync(fallbackDir, { recursive: true });
-              }
-            }
-          }
-
-          tempFilePath = path.join(tempDir, `cv-parse-ocr-${Date.now()}-${Math.random().toString(36).substring(7)}.pdf`);
-          fs.writeFileSync(tempFilePath, fileBuffer, { flag: 'w' });
-
-          const convert = pdf2picFromPath(tempFilePath, {
-            density: 150, // Increased for better OCR but not too slow
-            saveFilename: 'cv_page',
-            savePath: tempDir,
-            format: 'png',
-            width: 2000,
-            height: 3000
-          });
-
-          console.log('🔄 Converting PDF pages to images for OCR...');
-
-          const results: any[] = [];
-          for (const pageNumber of [1, 2]) { // Limit to 2 pages for OCR to avoid timeouts
-            try {
-              results.push(await convert(pageNumber, { responseType: 'buffer' }));
-            } catch (pageConvertError) {
-              if (pageNumber === 1) throw pageConvertError;
-              break;
-            }
-          }
-
-          const getImageInput = (result: any): Buffer | string | null => {
-            if (!result) return null;
-            if (result.buffer) return Buffer.isBuffer(result.buffer) ? result.buffer : Buffer.from(result.buffer);
-            if (result.base64) return `data:image/png;base64,${result.base64}`;
-            if (result.path && fs.existsSync(result.path)) return result.path;
-            return null;
-          };
-
-          if (results && results.length > 0 && results.some((result: any) => getImageInput(result))) {
-            const worker = await createWorker('eng');
-            
-            for (let pageIdx = 0; pageIdx < results.length; pageIdx++) {
-              try {
-                const imageInput = getImageInput(results[pageIdx]);
-                if (!imageInput) continue;
-
-                console.log(`🔄 OCR processing page ${pageIdx + 1}...`);
-                const { data: { text } } = await worker.recognize(imageInput);
-                if (text && text.trim().length > 0) {
-                  rawText += text + '\n';
-                }
-              } catch (pageOcrError) {
-                console.warn(`⚠️ OCR failed for page ${pageIdx + 1}`);
-              }
-            }
-
-            await worker.terminate();
+          const ocrResult = await Promise.race([ocrWorkPromise, ocrTimeoutPromise]);
+          if (ocrResult && ocrResult.trim().length >= 50) {
+            rawText = ocrResult.trim();
+            pdfParseSucceeded = true;
+            console.log(`✅ Method 3 (pdfjs+canvas OCR) succeeded: ${rawText.length} chars`);
           } else {
-            throw new Error('Failed to convert PDF to images.');
+            extractionErrors.push('OCR extracted insufficient text.');
           }
-
-          // Cleanup image files
-          for (const result of results) {
-            if (result.path && fs.existsSync(result.path)) {
-              try { fs.unlinkSync(result.path); } catch (e) {}
-            }
-          }
-        } catch (pdf2picErr) {
-          console.error('❌ OCR fallback failed:', pdf2picErr instanceof Error ? pdf2picErr.message : String(pdf2picErr));
-          extractionErrors.push('Visual character recognition failed.');
-        } finally {
-          if (tempFilePath && fs.existsSync(tempFilePath)) {
-            try { fs.unlinkSync(tempFilePath); } catch (e) {}
+        } catch (ocrErr: any) {
+          if (ocrErr?.message === 'OCR_TIMEOUT') {
+            console.warn('⚠️ OCR timed out after 2 minutes.');
+            extractionErrors.push('OCR timed out.');
+          } else {
+            console.error(`❌ Method 3 failed: ${ocrErr?.message}`);
+            extractionErrors.push(`OCR failed: ${ocrErr?.message}`);
           }
         }
-      } catch (e3) {
-        extractionErrors.push('OCR engine failure.');
+      } catch (e3: any) {
+        console.error(`❌ Method 3 setup failed: ${e3?.message}`);
+        extractionErrors.push(`OCR engine error: ${e3?.message}`);
       }
     }
 
-    // If all methods failed, throw error with details
+    // If all methods failed, throw a clear, actionable error
     if (!rawText || rawText.trim().length < 50) {
       throw new Error(
-        `Unable to extract text from this PDF. It may be protected, corrupted, or contains only images that are too blurry to read.\n\n` +
-        `Suggestions:\n` +
-        `- Try a different PDF version\n` +
-        `- Export your CV as a standard PDF from Word/Google Docs\n` +
-        `- Or, use the "Start Fresh" option to build your CV manually.`
+        `This PDF appears to be a scanned or image-based document that could not be read.\n\n` +
+        `Please try one of these alternatives:\n` +
+        `• Export your CV as a text-based PDF from Word, Google Docs, or Canva\n` +
+        `• Use "Paste CV" to paste your CV text directly\n` +
+        `• Use "Start Fresh" to build your CV manually`
       );
     }
   }
@@ -494,7 +493,10 @@ async function extractTextFromFile(fileBuffer: Buffer, mimeType: string): Promis
     if (!createWorker) {
       throw new Error('tesseract.js not available for image OCR');
     }
-    const worker = await createWorker('eng');
+    const worker = await createWorker('eng', 1, {
+      langPath: process.cwd(),
+      cachePath: process.cwd(),
+    });
     // tesseract.js worker methods (TypeScript types may be incomplete)
     const workerAny = worker as any;
     if (workerAny.loadLanguage) await workerAny.loadLanguage('eng');

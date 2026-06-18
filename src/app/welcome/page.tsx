@@ -99,6 +99,7 @@ const WelcomePage: React.FC = () => {
   const [droppedFile, setDroppedFile] = useState<string>('');
   const [actualFile, setActualFile] = useState<File | null>(null);
   const [parsedCVData, setParsedCVData] = useState<any>(null);
+  const [parseError, setParseError] = useState<string>('');
   const [showJsonModal, setShowJsonModal] = useState(false);
   const [jsonInput, setJsonInput] = useState('');
   const [jsonError, setJsonError] = useState('');
@@ -887,13 +888,16 @@ Please find the CV data attached.`;
       setIsParsing(true);
       setParseProgress(0);
       setParseStep(0);
+      setParseError('');
 
       const formData = new FormData();
       formData.append('file', file);
 
+      let progressInterval: ReturnType<typeof setInterval> | null = null;
+
       try {
         // Start visual progress simulator in parallel
-        const progressInterval = setInterval(() => {
+        progressInterval = setInterval(() => {
           setParseProgress(prev => {
             if (prev >= 95) {
               // Stay at 95% until actual processing finishes
@@ -913,12 +917,14 @@ Please find the CV data attached.`;
           body: formData,
         });
 
-        clearInterval(progressInterval);
+        if (progressInterval) clearInterval(progressInterval);
         await processParseResponse(response, file.name);
       } catch (err: any) {
+        if (progressInterval) clearInterval(progressInterval);
         console.error("Parsing error:", err);
         const errMsg = err?.message || "Failed to parse CV. Please try again or Start Fresh.";
-        toast.error(errMsg, { duration: 8000, position: 'bottom-right' });
+        // Show error inline in the parsing UI instead of resetting silently
+        setParseError(errMsg);
         setIsParsing(false);
       }
     }
@@ -1338,66 +1344,153 @@ Please find the CV data attached.`;
                   </p>
                 </div>
 
-                {!isParsing ? (
+                {parseError ? (
+                  // Error state: show error card with options to retry or choose differently
+                  <div className="max-w-xl mx-auto py-6">
+                    <div className="bg-white rounded-[2rem] border border-red-100 shadow-xl p-8 space-y-6">
+                      <div className="flex flex-col items-center gap-4 text-center">
+                        <div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center">
+                          <AlertTriangle className="h-7 w-7 text-red-500" />
+                        </div>
+                        <div>
+                          <h3 className="font-extrabold text-xl text-gray-900">Unable to Read File</h3>
+                          <p className="text-sm text-gray-500 mt-1 truncate max-w-xs">{droppedFile}</p>
+                        </div>
+                      </div>
+
+                      <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4 text-sm text-amber-800 space-y-1">
+                        {parseError.split('\n').filter(Boolean).map((line, i) => (
+                          <p key={i} className={i === 0 ? 'font-semibold' : 'text-xs text-amber-700'}>{line}</p>
+                        ))}
+                      </div>
+
+                      <div className="flex flex-col gap-2">
+                        <button
+                          onClick={() => {
+                            setParseError('');
+                            setSeedingMethod('upload');
+                          }}
+                          className="w-full py-3 bg-black text-white font-bold rounded-xl hover:bg-gray-800 transition-colors text-sm flex items-center justify-center gap-2"
+                        >
+                          <Upload className="h-4 w-4" />
+                          Try a Different File
+                        </button>
+                        <button
+                          onClick={() => {
+                            setParseError('');
+                            setSeedingMethod('');
+                          }}
+                          className="w-full py-3 border border-gray-200 font-semibold rounded-xl hover:bg-gray-50 transition-colors text-sm text-gray-600"
+                        >
+                          Choose a Different Method
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : !isParsing ? (
                   <div className="space-y-6">
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                      {[
-                        { id: 'upload', title: 'Upload CV', desc: 'PDF, Word, TXT', icon: Upload },
-                        { id: 'json', title: 'Paste CV', desc: 'JSON or Text', icon: FileJson },
-                        { id: 'linkedin', title: 'LinkedIn', desc: 'Sync Profile', icon: Linkedin, soon: true },
-                        { id: 'scratch', title: 'Start Fresh', desc: 'No file - manual', icon: Sparkles }
-                      ].map(method => {
-                        const Icon = method.icon;
-                        const isSelected = seedingMethod === method.id;
-                        return (
-                          <button
-                            key={method.id}
-                            onClick={() => {
-                              setSeedingMethod(method.id);
-                              if (method.id === 'scratch') {
-                                setParsedCVData(null); 
-                                setCVScore(0);
-                                handleNext('scratch');
-                              } else if (method.id === 'json') {
-                                setShowJsonModal(true);
-                              } else if (method.id === 'linkedin') {
-                                setShowLinkedInModal(true);
-                              }
-                            }}
-                            className={`p-6 border-2 rounded-2xl text-center flex flex-col items-center justify-center gap-3 transition-all relative ${
-                              isSelected ? 'border-black bg-slate-50' : 'border-gray-200 hover:border-gray-300'
-                            }`}
-                          >
-                            {method.soon && (
-                              <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-black text-[#80FF00] text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest shadow-sm z-10">
-                                Coming Soon
+                    {/* Show method cards only when no seeding method is active */}
+                    {!seedingMethod && (
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full">
+                        {[
+                          { id: 'upload', title: 'Upload CV', desc: 'PDF, Word, TXT', icon: Upload },
+                          { id: 'json', title: 'Paste CV', desc: 'JSON or Text', icon: FileJson },
+                          { id: 'linkedin', title: 'LinkedIn', desc: 'Sync Profile', icon: Linkedin, soon: true },
+                          { id: 'scratch', title: 'Start Fresh', desc: 'No file - manual', icon: Sparkles }
+                        ].map(method => {
+                          const Icon = method.icon;
+                          const isSelected = seedingMethod === method.id;
+                          return (
+                            <button
+                              key={method.id}
+                              onClick={() => {
+                                setSeedingMethod(method.id);
+                                if (method.id === 'scratch') {
+                                  setParsedCVData(null); 
+                                  setCVScore(0);
+                                  handleNext('scratch');
+                                } else if (method.id === 'json') {
+                                  setShowJsonModal(true);
+                                } else if (method.id === 'linkedin') {
+                                  setShowLinkedInModal(true);
+                                }
+                              }}
+                              className={`w-full h-full p-6 border-2 rounded-2xl text-center flex flex-col items-center justify-center gap-3 transition-all relative ${
+                                isSelected ? 'border-black bg-slate-50' : 'border-gray-200 hover:border-gray-300 bg-white'
+                              }`}
+                            >
+                              {method.soon && (
+                                <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-black text-[#80FF00] text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest shadow-sm z-10">
+                                  Coming Soon
+                                </div>
+                              )}
+                              <div className={`p-3 rounded-xl ${isSelected ? 'bg-black text-[#80FF00]' : 'bg-gray-150'}`}>
+                                <Icon className="h-5 w-5" />
                               </div>
-                            )}
-                            <div className={`p-3 rounded-xl ${isSelected ? 'bg-black text-[#80FF00]' : 'bg-gray-150'}`}>
-                              <Icon className="h-5 w-5" />
+                              <div>
+                                <h3 className="font-bold text-sm">{method.title}</h3>
+                                <p className="text-[10px] text-gray-500 mt-1">{method.desc}</p>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Upload dropzone - shown fullscreen when upload is selected */}
+                    {seedingMethod === 'upload' && (
+                      <div className="space-y-3">
+                        <div className="border-2 border-dashed border-gray-300 rounded-2xl p-12 text-center hover:border-gray-500 hover:bg-gray-50 transition-all relative cursor-pointer group">
+                          <input 
+                            type="file" 
+                            accept=".pdf,.doc,.docx,.txt"
+                            onChange={handleFileUpload}
+                            className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                          />
+                          <div className="flex flex-col items-center justify-center gap-3">
+                            <div className="p-4 bg-gray-100 rounded-2xl group-hover:bg-gray-200 transition-colors">
+                              <Upload className="h-10 w-10 text-gray-500 group-hover:scale-110 transition-transform" />
                             </div>
                             <div>
-                              <h3 className="font-bold text-sm">{method.title}</h3>
-                              <p className="text-[10px] text-gray-500 mt-1">{method.desc}</p>
+                              <h4 className="font-bold text-base">Drag & drop your CV here</h4>
+                              <p className="text-sm text-gray-500 mt-1">or click to browse files</p>
                             </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    {(seedingMethod === 'upload' || seedingMethod === 'linkedin') && (
-                      <div className="border-2 border-dashed border-gray-200 rounded-2xl p-10 text-center hover:border-gray-400 transition-colors relative cursor-pointer group">
-                        <input 
-                          type="file" 
-                          accept=".pdf,.doc,.docx,.txt"
-                          onChange={handleFileUpload}
-                          className="absolute inset-0 opacity-0 cursor-pointer"
-                        />
-                        <div className="flex flex-col items-center justify-center gap-2">
-                          <Upload className="h-10 w-10 text-gray-400 group-hover:scale-110 transition-transform" />
-                          <h4 className="font-bold text-sm">Drag & drop your file here</h4>
-                          <p className="text-xs text-gray-500">Supports PDF, DOCX, TXT up to 10MB</p>
+                            <p className="text-xs text-gray-400 border border-gray-200 rounded-full px-3 py-1">PDF, DOCX, TXT · up to 10MB</p>
+                          </div>
                         </div>
+                        <button
+                          onClick={() => setSeedingMethod('')}
+                          className="w-full text-xs text-gray-400 hover:text-gray-600 flex items-center justify-center gap-1.5 py-2 transition-colors"
+                        >
+                          <ChevronLeft className="h-3 w-3" />
+                          Choose a different import method
+                        </button>
+                      </div>
+                    )}
+
+                    {/* LinkedIn dropzone */}
+                    {seedingMethod === 'linkedin' && (
+                      <div className="space-y-3">
+                        <div className="border-2 border-dashed border-gray-200 rounded-2xl p-10 text-center hover:border-gray-400 transition-colors relative cursor-pointer group">
+                          <input 
+                            type="file" 
+                            accept=".pdf,.doc,.docx,.txt"
+                            onChange={handleFileUpload}
+                            className="absolute inset-0 opacity-0 cursor-pointer"
+                          />
+                          <div className="flex flex-col items-center justify-center gap-2">
+                            <Upload className="h-10 w-10 text-gray-400 group-hover:scale-110 transition-transform" />
+                            <h4 className="font-bold text-sm">Drag & drop your file here</h4>
+                            <p className="text-xs text-gray-500">Supports PDF, DOCX, TXT up to 10MB</p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => setSeedingMethod('')}
+                          className="w-full text-xs text-gray-400 hover:text-gray-600 flex items-center justify-center gap-1.5 py-2 transition-colors"
+                        >
+                          <ChevronLeft className="h-3 w-3" />
+                          Choose a different import method
+                        </button>
                       </div>
                     )}
                   </div>
@@ -1528,7 +1621,7 @@ Please find the CV data attached.`;
                               <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">JSON or Plain Text Import</p>
                             </div>
                           </div>
-                          <button onClick={() => setShowJsonModal(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                          <button onClick={() => { setShowJsonModal(false); setSeedingMethod(''); }} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
                             <X size={20} />
                           </button>
                         </div>
@@ -1559,7 +1652,7 @@ Please find the CV data attached.`;
                         </div>
 
                         <div className="flex gap-3">
-                          <Button onClick={() => setShowJsonModal(false)} variant="ghost" className="flex-1 rounded-2xl font-bold py-6">Cancel</Button>
+                          <Button onClick={() => { setShowJsonModal(false); setSeedingMethod(''); }} variant="ghost" className="flex-1 rounded-2xl font-bold py-6">Cancel</Button>
                           <Button 
                             onClick={handleJsonSubmit}
                             disabled={!jsonInput.trim()}
@@ -1597,7 +1690,7 @@ Please find the CV data attached.`;
                               <p className="text-xs text-[#0077B5] font-bold uppercase tracking-wider">Coming Soon</p>
                             </div>
                           </div>
-                          <button onClick={() => setShowLinkedInModal(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                          <button onClick={() => { setShowLinkedInModal(false); setSeedingMethod(''); }} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
                             <X size={20} />
                           </button>
                         </div>
@@ -1623,7 +1716,7 @@ Please find the CV data attached.`;
                         </div>
 
                         <div className="flex gap-3">
-                          <Button onClick={() => setShowLinkedInModal(false)} variant="ghost" className="flex-1 rounded-2xl font-bold py-6">Cancel</Button>
+                          <Button onClick={() => { setShowLinkedInModal(false); setSeedingMethod(''); }} variant="ghost" className="flex-1 rounded-2xl font-bold py-6">Cancel</Button>
                           <Button 
                             onClick={handleLinkedInSubmit}
                             disabled={!linkedinUrl.trim()}

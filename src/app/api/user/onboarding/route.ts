@@ -68,7 +68,13 @@ export async function PATCH(request: NextRequest) {
     if (onboardingData.primary_goal) updateFields['onboarding.primary_goal'] = onboardingData.primary_goal;
     if (onboardingData.confidence_score !== undefined) updateFields['onboarding.confidence_score'] = onboardingData.confidence_score;
     if (onboardingData.recommended_plan) updateFields['onboarding.recommended_plan'] = onboardingData.recommended_plan;
-    if (onboardingData.primary_cv_id) updateFields['onboarding.primary_cv_id'] = onboardingData.primary_cv_id;
+    if (onboardingData.primary_cv_id) {
+      if (/^[0-9a-fA-F]{24}$/.test(onboardingData.primary_cv_id)) {
+        updateFields['onboarding.primary_cv_id'] = onboardingData.primary_cv_id;
+      } else {
+        console.log(`[Onboarding API] Skipping invalid primary_cv_id format: ${onboardingData.primary_cv_id}`);
+      }
+    }
     if (onboardingData.activation_status) updateFields['onboarding.activation_status'] = onboardingData.activation_status;
     if (onboardingData.activation_route) updateFields['onboarding.activation_route'] = onboardingData.activation_route;
     if (onboardingData.dashboard_layout_type) updateFields['onboarding.dashboard_layout_type'] = onboardingData.dashboard_layout_type;

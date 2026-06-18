@@ -24,6 +24,7 @@ function ResumeEnhancerPageContent() {
   const typeParam = searchParams.get('type');
   const rawModeParam = searchParams.get('mode');
   const rawCvId = searchParams.get('cvId');
+  const rawJourneyId = searchParams.get('journeyId') || searchParams.get('jobJourneyId');
   // Determine the mode
   const normalizedLegacyMode =
     rawModeParam === 'cvedit'
@@ -92,6 +93,8 @@ function ResumeEnhancerPageContent() {
           currentParams.set('mode', 'create');
           router.replace(`/editor?${currentParams.toString()}`);
         }
+      } else {
+        setIsRedirecting(false);
       }
     };
 
@@ -139,6 +142,11 @@ if (authLoading || isCheckingGuestMode || isRedirecting) {
   return <LoadingOverlay message={isRedirecting ? 'Opening Master CV' : 'Loading Editor'} />;
 }
 
+  // For guest mode, resolve mode to 'create' or 'create-cover-letter' because guests don't have database documents to edit.
+  const resolvedMode = isGuestMode 
+    ? (mode === 'edit-cover-letter' || mode === 'create-cover-letter' ? 'create-cover-letter' : 'create')
+    : mode;
+
 // For guest mode, allow access without authentication
 if (isGuestMode) {
   return (
@@ -148,7 +156,7 @@ if (isGuestMode) {
           <DashboardDataProvider>
             <ResumeEnhancerContainer
               userId="guest"
-              mode={mode}
+              mode={resolvedMode}
               cvId={cvId}
               clId={clId}
               journeyId={journeyId}

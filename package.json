@@ -153,7 +153,8 @@
     "zustand": "^5.0.7"
   },
   "optionalDependencies": {
-    "canvas": "2.11.2",
+    "@napi-rs/canvas": "^0.1.99",
+    "canvas": "^2.11.2",
     "puppeteer": "^24.15.0",
     "tesseract.js": "6.0.1"
   },
