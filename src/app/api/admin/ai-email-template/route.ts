@@ -34,14 +34,14 @@ Additional Context: ${context || 'None'}`;
     let generatedText: string | null = null;
     try {
       generatedText = await callGeminiWithAllKeysFallback(fullPrompt, {
-        model: 'gemini-2.5-flash',
+        model: 'gemini-2.5-flash-lite',
         temperature: 0.7,
         maxTokens: 2048,
       });
     } catch (error) {
       // Fallback model if the first one fails
        generatedText = await callGeminiWithAllKeysFallback(fullPrompt, {
-        model: 'gemini-2.0-flash',
+        model: 'gemini-2.5-flash',
         temperature: 0.7,
         maxTokens: 2048,
       });

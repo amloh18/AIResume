@@ -254,7 +254,7 @@ Be thorough and accurate. Include all skills mentioned in the job description.`;
         systemPrompt,
         temperature: 0.7,
         maxTokens: 4096,
-        model: 'gemini-2.0-flash-lite-preview-02-05'
+        model: 'gemini-2.5-flash-lite'
       });
 
       const text = result.content;

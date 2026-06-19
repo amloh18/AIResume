@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
     const arrayBuffer = await audioFile.arrayBuffer();
     const base64Audio = Buffer.from(arrayBuffer).toString('base64');
 
-    const model = 'gemini-2.0-flash-lite-preview-02-05';
+    const model = 'gemini-2.5-flash-lite';
     const prompt = `You are an expert interview coach analyzing a candidate's voice response.
 Please provide:
 1. The exact transcription of the audio.

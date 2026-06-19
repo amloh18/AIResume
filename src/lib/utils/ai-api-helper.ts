@@ -1,7 +1,7 @@
 /**
  * AI API Helper Utility
  * Provides unified interface for Google Gemini API calls using gemini_api_key
- * Uses @google/genai package with gemini-2.5-flash (model fallback to gemini-2.0-flash)
+ * Uses @google/genai package with gemini-2.5-flash-lite (model fallback to gemini-2.5-flash)
  */
 
 import { GoogleGenAI } from '@google/genai';
@@ -73,9 +73,9 @@ async function callGemini(options: AICallOptions, apiKey: string): Promise<strin
   try {
     const genAI = new GoogleGenAI({ apiKey });
 
-    // Use gemini-2.5-flash as default for speed and cost efficiency
-    const primaryModel = options.model || 'gemini-2.5-flash';
-    const fallbackModel = 'gemini-2.0-flash';
+    // Use gemini-2.5-flash-lite as default for speed and cost efficiency
+    const primaryModel = options.model || 'gemini-2.5-flash-lite';
+    const fallbackModel = 'gemini-2.5-flash';
 
     // Combine system prompt and user prompt
     let fullPrompt = options.prompt;

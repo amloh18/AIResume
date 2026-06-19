@@ -65,7 +65,7 @@ Generate 3 to 5 highly relevant summary items.
       `;
 
       const responseText = await callGeminiWithAllKeysFallback(prompt, {
-        model: 'gemini-2.0-flash-lite-preview-02-05',
+        model: 'gemini-2.5-flash-lite',
         temperature: 0.3,
         action: 'b2b_score_explain'
       });
