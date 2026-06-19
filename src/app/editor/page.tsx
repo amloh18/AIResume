@@ -101,6 +101,17 @@ function ResumeEnhancerPageContent() {
     handleMasterCVRedirect();
   }, [authLoading, isAuthenticated, user?.id, docParam, router]);
 
+  // Synchronize fromOnboarding URL parameter to sessionStorage for consistent master CV context
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const fromOnboarding = searchParams.get('fromOnboarding') === 'true';
+      if (fromOnboarding) {
+        sessionStorage.setItem('fromOnboarding', 'true');
+        console.log('✅ Editor - Synchronized fromOnboarding flag to sessionStorage');
+      }
+    }
+  }, [searchParams]);
+
 // Check if user has CVs to determine guest mode
   useEffect(() => {
     const checkGuestMode = async () => {
@@ -114,7 +125,7 @@ function ResumeEnhancerPageContent() {
           // A user can ONLY be a guest if they are explicitly trying to create a NEW CV from scratch or restoring an onboarding draft.
           // If they pass a cvId, clId, or journeyId, it implies they are trying to access existing authenticated data.
           // In that case, they MUST authenticate, so we do NOT allow guest mode.
-          if ((mode === 'create' || restoreDraftParam) && !cvId && !clId && !journeyId) {
+          if ((mode === 'create' || restoreDraftParam) && (!cvId || cvId === 'guest-draft') && !clId && !journeyId) {
             setIsGuestMode(true);
           } else {
             setIsGuestMode(false); // Force authentication via RouteGuard

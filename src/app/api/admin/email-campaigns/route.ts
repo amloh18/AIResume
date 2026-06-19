@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { getConnection } from '@/lib/database';
 import { getAdminEmailCampaign } from '@/models/admin-models';
-import { getTargetedUsers } from '@/lib/services/userSyncService';
+import { resolveCampaignRecipients } from '@/lib/services/userSyncService';
 import { ActivityLogService } from '@/lib/services/activityLogService';
 import { getAdminContext } from '@/lib/utils/adminAuth';
 
@@ -102,18 +102,15 @@ export async function POST(request: NextRequest) {
         const body = await request.json();
         const EmailCampaign = await getAdminEmailCampaign();
 
-        // Calculate targeted user count
+        // Calculate targeted user count and resolve recipient list
         let targetedUserCount = 0;
         try {
-            const targetedUsers = await getTargetedUsers(body.targetFilters || {});
-            targetedUserCount = targetedUsers.length;
-            
-            // Add CSV recipients to count
-            if (body.csvRecipients && Array.isArray(body.csvRecipients)) {
-                targetedUserCount += body.csvRecipients.length;
-            }
+            const recipients = await resolveCampaignRecipients(body.targetFilters || {}, body.csvRecipients || []);
+            body.recipients = recipients;
+            targetedUserCount = recipients.filter(r => !r.removed).length;
         } catch (error) {
-            console.warn('⚠️ Failed to get targeted users:', error);
+            console.error('❌ Failed to resolve recipients for campaign:', error);
+            body.recipients = [];
         }
 
         // Extract admin info from session

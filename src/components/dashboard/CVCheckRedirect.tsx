@@ -186,19 +186,49 @@ export default function CVCheckRedirect({ children }: CVCheckRedirectProps) {
           email: user.email,
           name: user.name,
           isNextAuthUser: user.isNextAuthUser,
-
         });
 
-        // Add a small delay to ensure database is updated after master CV creation
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Fast path: Check all CVs first immediately without any timeout delay
+        console.log('🔍 CVCheckRedirect - Fetching all CVs for user...');
+        const response = await fetch(`/api/cvs?userId=${user.id}`);
+        const result = await response.json();
 
-        // First, try the master CV API endpoint for a direct check
-        console.log('🔍 CVCheckRedirect - Checking master CV API first');
+        if (result.success) {
+          if (!result.data || !result.data.cvs || result.data.cvs.length === 0) {
+            console.log('📝 User has no CVs at all, redirecting to welcome immediately');
+            router.push('/welcome');
+            setIsChecking(false);
+            return;
+          }
+
+          // Check if any CV is a master CV
+          const hasMaster = result.data.cvs.some((cv: any) => {
+            const isMasterAtRoot = cv.isMaster === true;
+            const isMasterInMetadata = cv.metadata?.isMaster === true;
+            const isMasterInMetadataString = cv.metadata?.isMaster === 'true';
+            const isMasterByType = cv.cvType === 'master';
+            const isMasterByMetadataType = cv.metadata?.cvType === 'master';
+            return isMasterAtRoot || isMasterInMetadata || isMasterInMetadataString || isMasterByType || isMasterByMetadataType;
+          });
+
+          if (hasMaster) {
+            console.log('✅ Master CV found in CV list, staying on dashboard');
+            setHasMasterCV(true);
+            // Clear any onboarding flags since user has master CV
+            if (typeof window !== 'undefined') {
+              sessionStorage.removeItem('fromOnboarding');
+              sessionStorage.removeItem('needsCVSetup');
+            }
+            setIsChecking(false);
+            return;
+          }
+        }
+
+        // Fallback/Verification path: Check master CV endpoint directly if list check didn't confirm master CV
+        console.log('🔍 CVCheckRedirect - Master CV not found in list, checking master CV API directly...');
         try {
           const masterCVResponse = await fetch(`/api/cvs/master?userId=${user.id}`);
           const masterCVResult = await masterCVResponse.json();
-
-          console.log('🔍 CVCheckRedirect - Master CV API result:', masterCVResult);
 
           if (masterCVResult.success && masterCVResult.data?.masterCV) {
             console.log('✅ Master CV found via master CV API, staying on dashboard');
@@ -206,118 +236,17 @@ export default function CVCheckRedirect({ children }: CVCheckRedirectProps) {
             setIsChecking(false);
             return;
           }
-
-          // If master CV API didn't find it, try again after a short delay
-          console.log('🔍 CVCheckRedirect - Master CV not found, retrying after delay...');
-          await new Promise(resolve => setTimeout(resolve, 2000));
-
-          const retryResponse = await fetch(`/api/cvs/master?userId=${user.id}`);
-          const retryResult = await retryResponse.json();
-
-          console.log('🔍 CVCheckRedirect - Master CV API retry result:', retryResult);
-
-          if (retryResult.success && retryResult.data?.masterCV) {
-            console.log('✅ Master CV found via master CV API retry, staying on dashboard');
-            setHasMasterCV(true);
-            setIsChecking(false);
-            return;
-          }
         } catch (masterCVError) {
-          console.log('⚠️ Master CV API call failed, falling back to all CVs check:', masterCVError);
+          console.log('⚠️ Master CV API call failed, continuing to welcome redirect:', masterCVError);
         }
 
-        // Fallback: Check all CVs and look for master CV
-        console.log('🔍 CVCheckRedirect - Master CV not found, checking all CVs');
-        const response = await fetch(`/api/cvs?userId=${user.id}`);
-        const result = await response.json();
-
-        console.log('📊 CV Data Result:', result);
-        console.log('🔍 CVCheckRedirect - Full API response:', JSON.stringify(result, null, 2));
-
-        if (result.success) {
-          if (result.data && result.data.cvs && result.data.cvs.length > 0) {
-            // Debug: Log all CVs to see their structure
-            console.log('🔍 All CVs for user:', result.data.cvs.map((cv: any) => ({
-              id: cv.id,
-              title: cv.title,
-              isMaster: cv.isMaster,
-              metadata: cv.metadata
-            })));
-
-            // Check if user has any master CVs
-            // Handle both old format (isMaster at root) and new format (metadata.isMaster)
-            // Also check for cvType as an additional fallback
-            const hasMasterCV = result.data.cvs.some((cv: any) => {
-              const isMasterAtRoot = cv.isMaster === true;
-              const isMasterInMetadata = cv.metadata?.isMaster === true;
-              const isMasterInMetadataString = cv.metadata?.isMaster === 'true';
-              const isMasterByType = cv.cvType === 'master';
-              const isMasterByMetadataType = cv.metadata?.cvType === 'master';
-
-              console.log('🔍 CV Master check:', {
-                id: cv.id,
-                title: cv.title,
-                isMasterAtRoot,
-                isMasterInMetadata,
-                isMasterInMetadataString,
-                isMasterByType,
-                isMasterByMetadataType,
-                metadata: cv.metadata
-              });
-
-              return isMasterAtRoot || isMasterInMetadata || isMasterInMetadataString || isMasterByType || isMasterByMetadataType;
-            });
-
-            console.log('🔍 Master CV check result:', {
-              hasMasterCV,
-              cvCount: result.data.cvs.length,
-              masterCVs: result.data.cvs.filter((cv: any) => {
-                const isMasterAtRoot = cv.isMaster === true;
-                const isMasterInMetadata = cv.metadata?.isMaster === true;
-                const isMasterInMetadataString = cv.metadata?.isMaster === 'true';
-                const isMasterByType = cv.cvType === 'master';
-                const isMasterByMetadataType = cv.metadata?.cvType === 'master';
-                return isMasterAtRoot || isMasterInMetadata || isMasterInMetadataString || isMasterByType || isMasterByMetadataType;
-              }).length
-            });
-
-            if (hasMasterCV) {
-              console.log('✅ User has master CV, staying on dashboard');
-              setHasMasterCV(true);
-              // Clear any onboarding flags since user has master CV
-              if (typeof window !== 'undefined') {
-                sessionStorage.removeItem('fromOnboarding');
-                sessionStorage.removeItem('needsCVSetup');
-              }
-            } else {
-              console.log('📝 User has CVs but no master CV, redirecting to resume enhancer');
-              // Redirect to onboarding to create master CV
-              router.push('/welcome');
-              setIsChecking(false);
-              return;
-            }
-          } else {
-            console.log('📝 User has no CVs, redirecting to resume enhancer');
-            // Redirect to onboarding to create master CV
-            router.push('/welcome');
-            setIsChecking(false);
-            return;
-          }
-        } else {
-          console.log('❌ Failed to check CV data:', result.error);
-          console.log('🔍 CVCheckRedirect - API error details:', {
-            status: response.status,
-            statusText: response.statusText,
-            error: result.error,
-            message: result.message
-          });
-          // Fallback: redirect to onboarding if we can't check
-          router.push('/welcome');
-          setIsChecking(false);
-          return;
-        }
+        // If we reach here, user has no master CV
+        console.log('📝 User has no master CV, redirecting to welcome');
+        router.push('/welcome');
       } catch (error) {
         console.error('❌ Error checking CV status:', error);
+        // Fallback: redirect to onboarding
+        router.push('/welcome');
       } finally {
         setIsChecking(false);
       }

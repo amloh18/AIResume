@@ -10,7 +10,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import UniversalPaymentModal from '@/components/payment/UniversalPaymentModal';
 import UserActivityModal from './UserActivityModal';
-import { USER_ROLES, DEFAULT_PAGINATION_LIMIT, DEFAULT_SEARCH_DEBOUNCE_MS } from '@/lib/config/adminConstants';
+import { USER_ROLES, USER_TYPES, DEFAULT_PAGINATION_LIMIT, DEFAULT_SEARCH_DEBOUNCE_MS } from '@/lib/config/adminConstants';
 import { ADMIN_THEME } from '@/lib/config/adminTheme';
 
 interface User {
@@ -41,6 +41,7 @@ const UserManagement: React.FC = () => {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [filterRole, setFilterRole] = useState('all');
   const [filterPlan, setFilterPlan] = useState('all');
+  const [filterUserType, setFilterUserType] = useState<'all' | 'registered' | 'guest'>('registered');
   const [page, setPage] = useState(1);
   const [limit] = useState(DEFAULT_PAGINATION_LIMIT);
   const [hasMore, setHasMore] = useState(true);
@@ -86,7 +87,7 @@ const UserManagement: React.FC = () => {
     if (!mounted) return;
     setLoading(true);
     fetchUsers(true);
-  }, [debouncedSearch, filterRole, filterPlan, mounted]);
+  }, [debouncedSearch, filterRole, filterPlan, filterUserType, mounted]);
 
   const fetchPlanConfig = async () => {
     try {
@@ -115,6 +116,7 @@ const UserManagement: React.FC = () => {
       if (debouncedSearch) params.set('search', debouncedSearch);
       if (filterRole && filterRole !== 'all') params.set('role', filterRole);
       if (filterPlan && filterPlan !== 'all') params.set('plan', filterPlan);
+      if (filterUserType && filterUserType !== 'all') params.set('userType', filterUserType);
       
       const response = await fetch(`/api/admin/users?${params.toString()}`, { cache: 'no-store' });
       const contentType = response.headers.get('content-type');
@@ -249,6 +251,16 @@ const UserManagement: React.FC = () => {
                 >
                   <option value="all">Plans: All</option>
                   {planConfig.plans.map(plan => <option key={plan} value={plan}>{plan}</option>)}
+                </select>
+
+                <select
+                  value={filterUserType}
+                  onChange={(e) => setFilterUserType(e.target.value as 'all' | 'registered' | 'guest')}
+                  className="px-4 py-3 bg-white/5 border border-white/5 rounded-2xl text-xs font-black uppercase tracking-widest text-white/60 focus:outline-none hover:bg-white/10 transition-all appearance-none cursor-pointer"
+                >
+                  <option value="registered">Registered Users</option>
+                  <option value="guest">Guest Users</option>
+                  <option value="all">All Users</option>
                 </select>
               </div>
             </div>

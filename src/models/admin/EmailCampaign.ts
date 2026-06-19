@@ -130,6 +130,22 @@ export interface IEmailCampaign extends Document {
     email: string;
   }>;
 
+  // Saved Recipients
+  recipients?: Array<{
+    userId?: mongoose.Types.ObjectId;
+    email: string;
+    firstName?: string;
+    lastName?: string;
+    isCsv: boolean;
+    currentPlanKey?: string | null;
+    registrationDate?: Date | null;
+    lastActiveAt?: Date | null;
+    status: 'pending' | 'sent' | 'failed';
+    error?: string;
+    removed?: boolean;
+    sentAt?: Date;
+  }>;
+
   // Creator info
   createdBy: mongoose.Types.ObjectId;
   createdByName: string;
@@ -295,6 +311,20 @@ const EmailCampaignSchema = new Schema<IEmailCampaign>(
     csvRecipients: [{
       name: String,
       email: String,
+    }],
+    recipients: [{
+      userId: Schema.Types.ObjectId,
+      email: { type: String, required: true },
+      firstName: String,
+      lastName: String,
+      isCsv: Boolean,
+      currentPlanKey: String,
+      registrationDate: Date,
+      lastActiveAt: Date,
+      status: { type: String, enum: ['pending', 'sent', 'failed'], default: 'pending' },
+      error: String,
+      removed: { type: Boolean, default: false },
+      sentAt: Date,
     }],
     createdBy: {
       type: Schema.Types.ObjectId,

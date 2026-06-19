@@ -1,6 +1,6 @@
-import { sendEmail } from '@/lib/email-service';
+import { sendEmail, createTransporter } from '@/lib/email-service';
 import EmailCampaign from '@/models/admin/EmailCampaign';
-import { getTargetedUsers } from '@/lib/services/userSyncService';
+import { getTargetedUsers, resolveCampaignRecipients } from '@/lib/services/userSyncService';
 import { ActivityLogService } from '@/lib/services/activityLogService';
 
 interface SendResult {
@@ -63,28 +63,51 @@ export class CampaignEmailService {
                 campaign.status = 'sending';
                 campaign.sentAt = new Date();
                 campaign.performance = campaign.performance || {};
+                campaign.performance.sent = 0;
+                campaign.performance.delivered = 0;
+                campaign.performance.bounced = 0;
+                campaign.performance.softBounces = 0;
+                campaign.performance.hardBounces = 0;
+                campaign.sentCount = 0;
+                campaign.deliveredCount = 0;
+                campaign.bouncedCount = 0;
                 await campaign.save();
             }
 
-            // 3. Get recipients based on filters
-            let recipients = await getTargetedUsers(campaign.targetFilters);
-            
-            // 3b. Add CSV recipients if present
-            if (campaign.csvRecipients && campaign.csvRecipients.length > 0) {
-                const csvRecipients = campaign.csvRecipients.map(r => ({
-                    email: r.email,
-                    firstName: r.name.split(' ')[0],
-                    lastName: r.name.split(' ').slice(1).join(' ')
-                }));
-                recipients = [...recipients, ...csvRecipients];
+            // Pre-create shared transporter to avoid exhausting connection pool
+            let transporter: ReturnType<typeof createTransporter> | null = null;
+            if (!isDryRun) {
+                transporter = createTransporter();
+                if (!transporter) {
+                    await EmailCampaign.findByIdAndUpdate(campaignId, {
+                        status: 'cancelled',
+                        notes: 'Email service not configured'
+                    });
+                    throw new Error('Email service not configured');
+                }
             }
 
-            console.log(`📧 Campaign ${campaignId}: Found ${recipients.length} recipients`);
-
+            // 3. Get recipients from the saved recipients list
+            let recipients = campaign.recipients || [];
+            
+            // Fallback for legacy campaigns if list is empty
             if (recipients.length === 0) {
+                recipients = await resolveCampaignRecipients(
+                    campaign.targetFilters || {},
+                    campaign.csvRecipients || []
+                );
+                campaign.recipients = recipients;
+                await campaign.save();
+            }
+
+            // Filter out removed or already sent ones
+            const targetRecipients = recipients.filter(r => !r.removed && r.status !== 'sent');
+
+            console.log(`📧 Campaign ${campaignId}: Found ${targetRecipients.length} eligible recipients (Total: ${recipients.length})`);
+
+            if (targetRecipients.length === 0) {
                 if (!isDryRun) {
                     campaign.status = 'sent'; // Completed with 0 sends
-                    campaign.targetedUserCount = 0;
                     await campaign.save();
                 }
                 result.success = true;
@@ -93,17 +116,25 @@ export class CampaignEmailService {
 
             // 4. Send emails (Mock or Real)
             if (isDryRun) {
-                result.totalSent = recipients.length;
+                result.totalSent = targetRecipients.length;
                 result.success = true;
                 return result;
             }
 
-            // Send to each recipient
+            let hasTimedOut = false;
+
+            // Send to each recipient using shared transporter
             // Limit concurrency to avoid overwhelming the email provider
             const BATCH_SIZE = 10;
+            const BATCH_DELAY_MS = 300;
 
-            for (let i = 0; i < recipients.length; i += BATCH_SIZE) {
-                const batch = recipients.slice(i, i + BATCH_SIZE);
+            for (let i = 0; i < targetRecipients.length; i += BATCH_SIZE) {
+                const batch = targetRecipients.slice(i, i + BATCH_SIZE);
+
+                if (isDryRun) {
+                    result.totalSent += batch.length;
+                    continue;
+                }
 
                 await Promise.all(batch.map(async (user) => {
                     try {
@@ -113,12 +144,10 @@ export class CampaignEmailService {
                         let htmlContent = campaign.htmlContent;
                         let subject = campaign.subject;
 
-                        // Basic personalization
                         if (user.firstName) {
                             htmlContent = htmlContent.replace(/{{firstName}}/g, user.firstName);
                             subject = subject.replace(/{{firstName}}/g, user.firstName);
                         } else {
-                            // Fallback
                             htmlContent = htmlContent.replace(/{{firstName}}/g, 'there');
                             subject = subject.replace(/{{firstName}}/g, 'there');
                         }
@@ -129,24 +158,19 @@ export class CampaignEmailService {
 
                         htmlContent = htmlContent.replace(/{{email}}/g, user.email);
 
-                        // Replace {{appUrl}}
                         const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://cvcircle.io';
                         htmlContent = htmlContent.replace(/{{appUrl}}/g, appUrl);
 
-                        // Generate Unsubscribe Link
                         const unsubscribeUrl = `${appUrl}/unsubscribe?email=${encodeURIComponent(user.email)}&c=${campaign._id}`;
 
-                        // Replace {{unsubscribeUrl}}
                         if (htmlContent.includes('{{unsubscribeUrl}}')) {
                             htmlContent = htmlContent.replace(/{{unsubscribeUrl}}/g, unsubscribeUrl);
                         } else {
-                            // Only inject footer if {{unsubscribeUrl}} was NOT present in template
                             const unsubscribeFooter = `
                               <div style="text-align: center; margin-top: 20px; font-size: 11px; color: #666;">
                                 <a href="${unsubscribeUrl}" style="color: #666;">Unsubscribe</a> from these emails.
                               </div>
                             `;
-                            // Inject footer before closing body/html
                             if (htmlContent.includes('</body>')) {
                                 htmlContent = htmlContent.replace('</body>', `${unsubscribeFooter}</body>`);
                             } else {
@@ -154,53 +178,86 @@ export class CampaignEmailService {
                             }
                         }
 
-                        // Send via main email service
-                        const sendResponse = await sendEmail({
-                            to: user.email,
-                            subject: subject,
-                            html: htmlContent,
-                            text: campaign.plainTextContent || htmlContent, // Fallback to HTML if no text
-                            // Pass campaign ID for tracking (if supported by provider)
-                        });
+                        let sendResponse: { success: boolean; messageId?: string; error?: string };
+                        try {
+                            const mailResult = await transporter!.sendMail({
+                                from: (campaign.fromEmail ? `"${campaign.fromName || 'CVCircle'}" <${campaign.fromEmail}>` : undefined),
+                                to: user.email,
+                                subject,
+                                text: campaign.plainTextContent || htmlContent,
+                                html: htmlContent,
+                            });
+                            sendResponse = { success: true, messageId: mailResult.messageId };
+                        } catch (sendError: any) {
+                            sendResponse = { success: false, error: sendError.message };
+                        }
 
                         if (sendResponse.success) {
                             result.totalSent++;
-
-                            // Update campaign metrics incrementally (every 10 or so) to show progress
-                            if (result.totalSent % 10 === 0) {
-                                await EmailCampaign.findByIdAndUpdate(campaignId, {
-                                    $inc: { 'performance.sent': 10, 'sentCount': 10 }
-                                });
-                            }
+                            await EmailCampaign.updateOne(
+                                { _id: campaignId, 'recipients.email': user.email },
+                                {
+                                    $set: {
+                                        'recipients.$.status': 'sent',
+                                        'recipients.$.sentAt': new Date(),
+                                        'recipients.$.error': undefined,
+                                    },
+                                    $inc: {
+                                        'performance.sent': 1,
+                                        'performance.delivered': 1,
+                                        sentCount: 1,
+                                        deliveredCount: 1
+                                    }
+                                }
+                            );
                         } else {
                             result.totalFailed++;
-                            result.errors?.push(`Failed for ${user.email}: ${sendResponse.error}`);
+                            result.errors = result.errors || [];
+                            result.errors.push(`Failed for ${user.email}: ${sendResponse.error}`);
+                            await EmailCampaign.updateOne(
+                                { _id: campaignId, 'recipients.email': user.email },
+                                {
+                                    $set: {
+                                        'recipients.$.status': 'failed',
+                                        'recipients.$.error': sendResponse.error,
+                                    },
+                                    $inc: {
+                                        'performance.sent': 1,
+                                        'performance.bounced': 1,
+                                        bouncedCount: 1
+                                    }
+                                }
+                            );
                         }
 
                     } catch (err: any) {
                         console.error(`Error sending to ${user.email}:`, err);
                         result.totalFailed++;
-                        result.errors?.push(`Error for ${user.email}: ${err.message}`);
+                        result.errors = result.errors || [];
+                        result.errors.push(`Error for ${user.email}: ${err.message}`);
+                        if (!isDryRun) {
+                            await EmailCampaign.updateOne(
+                                { _id: campaignId, 'recipients.email': user.email },
+                                {
+                                    $set: {
+                                        'recipients.$.status': 'failed',
+                                        'recipients.$.error': err.message,
+                                    },
+                                    $inc: {
+                                        'performance.bounced': 1,
+                                        bouncedCount: 1
+                                    }
+                                }
+                            ).catch(() => {});
+                        }
                     }
                 }));
 
-                // Small delay between batches to be nice to SMTP
-                if (i + BATCH_SIZE < recipients.length) {
-                    await new Promise(resolve => setTimeout(resolve, 500));
+                // Small delay between batches
+                if (i + BATCH_SIZE < targetRecipients.length) {
+                    await new Promise(resolve => setTimeout(resolve, BATCH_DELAY_MS));
                 }
             }
-
-            // 5. Finalize Campaign Stats
-            campaign.status = 'sent';
-            campaign.sentCount = result.totalSent;
-            campaign.performance.sent = result.totalSent;
-
-            // Calculate delivery rate (simple approximation until webhooks are added)
-            campaign.deliveredCount = result.totalSent; // Assume delivered if sent successfully without immediate bounce
-            campaign.performance.delivered = result.totalSent;
-            campaign.performance.bounced = result.totalFailed; // Implied immediate failures
-
-            await campaign.save();
 
             // Log activity
             if (adminUser) {

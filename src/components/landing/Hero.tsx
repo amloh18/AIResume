@@ -79,8 +79,8 @@ const Hero = () => {
           >
             <span className="relative inline-block">
               <span className="relative z-10 block py-4 px-8 whitespace-nowrap">
-                Smart AI Job Search Tool<br />
-                Optimize Resumes & Track Applications
+                Free ATS Templates. Unlimited Downloads.<br />
+                No Paywalls, Advanced Customisation.
               </span>
               
               {/* Realistic Single Brush Shape */}

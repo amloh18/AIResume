@@ -13,6 +13,7 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search') || '';
     const role = searchParams.get('role') || '';
     const plan = searchParams.get('plan') || '';
+    const userType = searchParams.get('userType') || '';
 
     // Build query
     const query: any = {};
@@ -31,6 +32,12 @@ export async function GET(request: NextRequest) {
     
     if (plan && plan !== 'all') {
       query.currentPlanKey = plan;
+    }
+
+    if (userType === 'registered') {
+      query.isAnonymous = false;
+    } else if (userType === 'guest') {
+      query.isAnonymous = true;
     }
 
     // Get users with pagination

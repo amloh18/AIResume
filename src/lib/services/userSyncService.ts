@@ -346,3 +346,80 @@ export async function getTargetedUsers(filters: any = {}): Promise<any[]> {
   }
 }
 
+/**
+ * Resolves a unified list of database and CSV recipients for a campaign,
+ * merging them, deduplicating by email, and preserving any existing
+ * removed/excluded states.
+ */
+export async function resolveCampaignRecipients(
+  targetFilters: any,
+  csvRecipients: any[] = [],
+  existingRecipients: any[] = []
+): Promise<any[]> {
+  const dbUsers = await getTargetedUsers(targetFilters || {});
+  
+  const dbEntries = dbUsers.map(user => ({
+    userId: user._id as any,
+    email: user.email || '',
+    firstName: user.firstName || 'Unknown',
+    lastName: user.lastName || 'User',
+    isCsv: false,
+    currentPlanKey: user.currentPlanKey || null,
+    registrationDate: user.createdAt || user.registrationDate || null,
+    lastActiveAt: user.lastActiveAt || null,
+    status: 'pending',
+    removed: false,
+    error: undefined as string | undefined,
+    sentAt: undefined as Date | undefined,
+  }));
+
+  const csvEntries = (csvRecipients || []).map((r) => ({
+    userId: undefined as any,
+    email: r.email,
+    firstName: r.name?.split(' ')[0] || 'Valued',
+    lastName: r.name?.split(' ').slice(1).join(' ') || 'User',
+    isCsv: true,
+    currentPlanKey: null,
+    registrationDate: null,
+    lastActiveAt: null,
+    status: 'pending',
+    removed: false,
+    error: undefined as string | undefined,
+    sentAt: undefined as Date | undefined,
+  }));
+
+  const merged = [...dbEntries, ...csvEntries];
+  
+  const seenEmails = new Set<string>();
+  const deduped: any[] = [];
+
+  const existingMap = new Map<string, any>();
+  if (Array.isArray(existingRecipients)) {
+    for (const r of existingRecipients) {
+      if (r.email) {
+        existingMap.set(r.email.toLowerCase(), r);
+      }
+    }
+  }
+
+  for (const item of merged) {
+    const emailKey = String(item.email || '').toLowerCase();
+    if (emailKey && !seenEmails.has(emailKey)) {
+      seenEmails.add(emailKey);
+      
+      const existing = existingMap.get(emailKey);
+      if (existing) {
+        item.removed = !!existing.removed;
+        item.status = existing.status || 'pending';
+        item.error = existing.error;
+        item.sentAt = existing.sentAt;
+      }
+      
+      deduped.push(item);
+    }
+  }
+
+  return deduped;
+}
+
+
