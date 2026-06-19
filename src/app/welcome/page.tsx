@@ -642,7 +642,9 @@ Please find the CV data attached.`;
       // All three user types (Starter, Focused, Smart) must go to the editor to complete their primary CV
       let activation_route = isScratch 
         ? '/editor?mode=create&step=2&master=true'
-        : '/editor?doc=master-cv&mode=improve&step=2';
+        : (isUserAuth 
+            ? '/editor?doc=master-cv&mode=improve&step=2' 
+            : '/editor?cvId=guest-draft&mode=create&step=2');
         
       let dashboard_layout_type: 'cv' | 'tracker' | 'auto_apply' = 'cv';
 
@@ -672,7 +674,7 @@ Please find the CV data attached.`;
         dashboard_layout_type
       });
 
-      if (isUserAuth) {
+      if (isUserAuth && activeCvId && activeCvId !== 'guest-draft') {
         openPaymentModal({
           preselectedPlanKey: recommended_plan === 'starter_monthly' ? 'focused_monthly' : recommended_plan,
           triggerContext: 'onboarding-exit',
@@ -695,7 +697,8 @@ Please find the CV data attached.`;
           }
         });
       } else {
-        // Guest user - redirect to editor or dashboard with restore draft flag
+        // Guest user OR authenticated user with no master CV yet - redirect to editor or dashboard with restore draft flag
+        sessionStorage.setItem('fromOnboarding', 'true');
         const finalUrl = targetRoute.includes('?') 
           ? `${targetRoute}&restoreDraft=true&fromOnboarding=true`
           : `${targetRoute}?restoreDraft=true&fromOnboarding=true`;

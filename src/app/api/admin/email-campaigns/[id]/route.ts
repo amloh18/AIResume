@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { getConnection } from '@/lib/database';
 import { getAdminEmailCampaign } from '@/models/admin-models';
-import { getTargetedUsers } from '@/lib/services/userSyncService';
+import { resolveCampaignRecipients } from '@/lib/services/userSyncService';
 import { ActivityLogService } from '@/lib/services/activityLogService';
 import { getAdminContext } from '@/lib/utils/adminAuth';
 
@@ -111,18 +111,17 @@ export async function PUT(
     }
 
     // Update targeted user count if filters or CSV recipients changed
-    if (body.targetFilters || body.csvRecipients) {
+    if (body.targetFilters !== undefined || body.csvRecipients !== undefined) {
       try {
-        const targetedUsers = await getTargetedUsers(body.targetFilters || campaign.targetFilters || {});
-        body.targetedUserCount = targetedUsers.length;
+        const filters = body.targetFilters !== undefined ? body.targetFilters : campaign.targetFilters;
+        const csv = body.csvRecipients !== undefined ? body.csvRecipients : campaign.csvRecipients;
+        const existingRecipients = campaign.recipients || [];
         
-        // Add CSV recipients to count
-        const csvRecipients = body.csvRecipients || campaign.csvRecipients || [];
-        if (csvRecipients && Array.isArray(csvRecipients)) {
-          body.targetedUserCount += csvRecipients.length;
-        }
+        const recipients = await resolveCampaignRecipients(filters, csv, existingRecipients);
+        body.recipients = recipients;
+        body.targetedUserCount = recipients.filter(r => !r.removed).length;
       } catch (error) {
-        console.warn('⚠️ Failed to get targeted users during update:', error);
+        console.error('❌ Failed to resolve recipients during update:', error);
         body.targetedUserCount = campaign.targetedUserCount;
       }
     }

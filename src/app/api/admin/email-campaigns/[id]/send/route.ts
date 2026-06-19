@@ -58,16 +58,14 @@ export async function POST(
 
         console.log(`🚀 Starting send for campaign ${id}...`);
 
-        const result = await campaignEmailService.sendCampaign(id, false, session.user);
+        campaignEmailService.sendCampaign(id, false, session.user).catch((sendError) => {
+            console.error(`❌ Background send failed for campaign ${id}:`, sendError);
+        });
 
         return NextResponse.json({
-            success: result.success,
-            sentValues: {
-                sent: result.totalSent,
-                failed: result.totalFailed
-            },
-            message: result.success ? 'Campaign sent successfully' : 'Campaign completed with errors',
-            errors: result.errors
+            success: true,
+            message: 'Campaign send started. Use the performance endpoint to track progress.',
+            campaignId: id
         });
 
     } catch (error: any) {

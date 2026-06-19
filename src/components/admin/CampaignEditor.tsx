@@ -192,6 +192,14 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
             const XLSX = await import('xlsx');
             const reader = new FileReader();
             
+            reader.onerror = () => {
+                toast({ title: "Read Error", description: "Failed to read Excel file structure.", variant: "destructive" });
+                setProcessingFile(false);
+            };
+            reader.onabort = () => {
+                toast({ title: "Read Aborted", description: "Excel file read operation was aborted.", variant: "destructive" });
+                setProcessingFile(false);
+            };
             reader.onload = (event) => {
                 try {
                     const data = new Uint8Array(event.target?.result as ArrayBuffer);
@@ -224,7 +232,7 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
                     if (recipients.length > 0) {
                         setFormData(prev => ({ ...prev, csvRecipients: recipients }));
                         toast({ title: "Data Ingested", description: `Successfully merged ${recipients.length} identities from Excel.`, variant: "success" });
-                        handlePreviewTargets();
+                        handlePreviewTargets(recipients);
                     } else {
                         toast({ title: "No Data Found", description: "Could not find valid email addresses in the file.", variant: "destructive" });
                     }
@@ -240,10 +248,21 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
 
         // CSV Parsing
         const reader = new FileReader();
+        reader.onerror = () => {
+            toast({ title: "Read Error", description: "Failed to read CSV file structure.", variant: "destructive" });
+            setProcessingFile(false);
+        };
+        reader.onabort = () => {
+            toast({ title: "Read Aborted", description: "CSV file read operation was aborted.", variant: "destructive" });
+            setProcessingFile(false);
+        };
         reader.onload = (event) => {
             try {
                 const text = event.target?.result as string;
-                if (!text) return;
+                if (!text) {
+                    toast({ title: "Empty File", description: "The uploaded CSV file is empty.", variant: "destructive" });
+                    return;
+                }
 
                 const lines = text.split(/\r?\n/);
                 
@@ -267,10 +286,13 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
                 if (recipients.length > 0) {
                     setFormData(prev => ({ ...prev, csvRecipients: recipients }));
                     toast({ title: "CSV Ingested", description: `Captured ${recipients.length} identity nodes.`, variant: "success" });
-                    handlePreviewTargets();
+                    handlePreviewTargets(recipients);
                 } else {
                     toast({ title: "Upload Failed", description: "No valid email stream detected.", variant: "destructive" });
                 }
+            } catch (error) {
+                console.error("CSV Ingestion Error:", error);
+                toast({ title: "Parsing Error", description: "Failed to parse CSV file structure.", variant: "destructive" });
             } finally {
                 setProcessingFile(false);
             }
@@ -395,7 +417,7 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
     }
   };
 
-  const handlePreviewTargets = async () => {
+  const handlePreviewTargets = async (overrideCsvRecipients?: Array<{ name: string; email: string }>) => {
     setPreviewingTargets(true);
     try {
       const response = await fetch(
@@ -405,7 +427,7 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             targetFilters: formData.targetFilters,
-            csvRecipients: formData.csvRecipients,
+            csvRecipients: overrideCsvRecipients !== undefined ? overrideCsvRecipients : formData.csvRecipients,
             limit: 10,
           }),
         },
@@ -619,6 +641,16 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
                     <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${isActive ? 'text-emerald-400' : 'text-white/20'}`}>
                       {step.label}
                     </span>
+                    {idx === currentStepIndex && (
+                      <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest bg-emerald-500/10 px-2 py-0.5 rounded-md">
+                        Total Target Base {targetedCount.toLocaleString()}
+                      </span>
+                    )}
+                    {!isActive && idx <= currentStepIndex && idx !== currentStepIndex && (
+                      <span className="text-[10px] font-black text-emerald-400/70 uppercase tracking-widest bg-emerald-500/10 px-2 py-0.5 rounded-md">
+                        Total Target Base {targetedCount.toLocaleString()}
+                      </span>
+                    )}
                   </div>
                   {idx < steps.length - 1 && (
                     <div className="w-24 h-[2px] bg-white/5 relative overflow-hidden">

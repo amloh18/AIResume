@@ -18,6 +18,7 @@ import type { DateFormatStyle } from '@/lib/utils/textFormatting';
 import { usePaymentModal } from '@/contexts/PaymentModalContext';
 import CoverLetterPreview from '@/components/cv-preview/CoverLetterPreview';
 import ScoreBreakdown from '@/components/ui/ScoreBreakdown';
+import { useUserData } from '@/lib/hooks/useUserData';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useSession } from 'next-auth/react';
 import { downloadCanvasAsPDF } from '@/lib/utils/downloadCanvas';
@@ -28,6 +29,7 @@ export default function Step4Review({ onSave }: { onSave?: () => Promise<void> }
   const router = useRouter();
   const { openPaymentModal } = usePaymentModal();
   const { data: session } = useSession();
+  const { userData } = useUserData();
   const [zoom, setZoom] = useState(0.5); // Will be recalculated on mount
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [showDownloadModal, setShowDownloadModal] = useState(false);
@@ -243,62 +245,91 @@ export default function Step4Review({ onSave }: { onSave?: () => Promise<void> }
       return;
     }
 
-    setIsDownloading(true);
-    try {
-      if (onSave) {
-        await onSave();
-      }
-      const baseName = state.cvTitle || state.jobData?.title || state.targetRole || 'CV';
-
-      if (format === 'pdf') {
-        // ── WYSIWYG PDF: capture the live canvas preview from the right panel ───
-        // The server-side export uses the old TemplateRenderer which doesn’t
-        // know about canvas templates, snippets, or CSS custom properties.
-        // Capturing the DOM gives a pixel-perfect match of the preview.
-        await downloadCanvasAsPDF(`${baseName}.pdf`, {
-          paperSize: (state.paperSize as 'A4' | 'Letter') || 'A4',
-        });
-      } else {
-        // DOCX: server-side export generates a content-faithful Word doc
-        // (all sections, correct data; visual canvas styling not replicated).
-        const userId = session?.user?.id;
-        if (!userId) throw new Error('You must be signed in to download this CV.');
-
-        const response = await fetch('/api/cv/export', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            cvData: state.cvData,
-            template: state.selectedTemplate,
-            format: 'docx',
-            userId,
-            cvId: state.cvId,
-            jobId: state.jobData?._id || state.jobData?.id || state.journeyId,
-            paperSize: state.paperSize === 'Letter' ? 'Letter' : 'A4',
-            orientation: 'portrait',
-            filename: baseName,
-          }),
-        });
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.error || `Download failed with status ${response.status}`);
+    const proceedDownload = async () => {
+      setIsDownloading(true);
+      try {
+        if (onSave) {
+          await onSave();
         }
-        const blob = await response.blob();
-        const downloadUrl = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = downloadUrl;
-        link.download = `${baseName}.docx`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(downloadUrl);
+        const baseName = state.cvTitle || state.jobData?.title || state.targetRole || 'CV';
+
+        if (format === 'pdf') {
+          // ── WYSIWYG PDF: capture the live canvas preview from the right panel ───
+          // The server-side export uses the old TemplateRenderer which doesn’t
+          // know about canvas templates, snippets, or CSS custom properties.
+          // Capturing the DOM gives a pixel-perfect match of the preview.
+          await downloadCanvasAsPDF(`${baseName}.pdf`, {
+            paperSize: (state.paperSize as 'A4' | 'Letter') || 'A4',
+          });
+        } else {
+          // DOCX: server-side export generates a content-faithful Word doc
+          // (all sections, correct data; visual canvas styling not replicated).
+          const userId = session?.user?.id;
+          if (!userId) throw new Error('You must be signed in to download this CV.');
+
+          const response = await fetch('/api/cv/export', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              cvData: state.cvData,
+              template: state.selectedTemplate,
+              format: 'docx',
+              userId,
+              cvId: state.cvId,
+              jobId: state.jobData?._id || state.jobData?.id || state.journeyId,
+              paperSize: state.paperSize === 'Letter' ? 'Letter' : 'A4',
+              orientation: 'portrait',
+              filename: baseName,
+            }),
+          });
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `Download failed with status ${response.status}`);
+          }
+          const blob = await response.blob();
+          const downloadUrl = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = downloadUrl;
+          link.download = `${baseName}.docx`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          window.URL.revokeObjectURL(downloadUrl);
+        }
+      } catch (error) {
+        console.error('Download failed:', error);
+        alert(error instanceof Error ? error.message : 'Failed to download CV. Please try again.');
+      } finally {
+        setIsDownloading(false);
       }
-    } catch (error) {
-      console.error('Download failed:', error);
-      alert(error instanceof Error ? error.message : 'Failed to download CV. Please try again.');
-    } finally {
-      setIsDownloading(false);
+    };
+
+    // Check if this is a master CV and if we should trigger the paywall
+    const isMasterCV = state.cvType === 'master';
+    if (isMasterCV && (!userData || userData.currentPlanKey === 'free')) {
+      openPaymentModal({
+        preselectedPlanKey: 'focused_monthly',
+        triggerContext: 'onboarding-exit',
+        onSuccess: async () => {
+          await proceedDownload();
+        },
+        onClose: async () => {
+          try {
+            await fetch('/api/user/subscription', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ planKey: 'starter_monthly' })
+            });
+          } catch (err) {
+            console.error('Failed to auto-assign starter plan on download close:', err);
+          }
+          await proceedDownload();
+        }
+      });
+      return;
     }
+
+    await proceedDownload();
   };
 
   const calculateCompletionPercentage = () => {

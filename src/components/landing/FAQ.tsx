@@ -159,7 +159,7 @@ const FAQ = () => {
                       className={`flex-shrink-0 w-8 h-8 bg-gradient-to-br from-lime-400 to-lime-500 rounded-full flex items-center justify-center shadow-lg transition-transform duration-300 ${isOpen ? 'rotate-180 scale-110' : 'rotate-0 scale-100'
                         }`}
                     >
-                      <ChevronDown size={16} className="text-white" />
+                      <ChevronDown size={16} className="text-black" />
                     </div>
                   </button>
 

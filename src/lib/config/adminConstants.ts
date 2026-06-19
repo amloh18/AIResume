@@ -13,6 +13,9 @@ export type SubscriptionStatus = typeof SUBSCRIPTION_STATUSES[number];
 export const USER_ROLES = ['user', 'admin', 'superadmin'] as const;
 export type UserRole = typeof USER_ROLES[number];
 
+export const USER_TYPES = ['all', 'registered', 'guest'] as const;
+export type UserType = typeof USER_TYPES[number];
+
 export const TEMPLATE_TIERS = ['free', 'premium'] as const;
 export type TemplateTier = typeof TEMPLATE_TIERS[number];
 

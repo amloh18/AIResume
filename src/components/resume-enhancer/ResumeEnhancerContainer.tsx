@@ -56,6 +56,7 @@ import ATSDeepDiveModal from './ATSDeepDiveModal';
 import { useATS } from '@/contexts/ATSContext';
 import guestCVService from '@/lib/services/guestCVService';
 import { useUpgradePopupTrigger } from '@/lib/hooks/useUpgradePopupTrigger';
+import { usePaymentModal } from '@/contexts/PaymentModalContext';
 import UpgradeCard from '@/components/dashboard/UpgradeCard';
 import { generateCVTitle } from '@/lib/utils/cv-title-generator';
 import ModeValidationBanner from '@/components/resume-enhancer/components/ModeValidationBanner';
@@ -104,7 +105,8 @@ export default function ResumeEnhancerContainer({
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isSidebarAnalyzing, setIsSidebarAnalyzing] = useState(false);
   const { data: session, status: sessionStatus } = useSession();
-  const { userData } = useUserData();
+  const { userData, refetch } = useUserData();
+  const { openPaymentModal } = usePaymentModal();
   const { theme, toggleTheme } = useTheme();
   const [isUserMenuExpanded, setIsUserMenuExpanded] = useState(false);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -2289,23 +2291,24 @@ export default function ResumeEnhancerContainer({
       return; // Stop execution, auth prompt will be shown
     }
 
-    // CRITICAL FIX: Clear any old offline backups at the start to prevent stale state
-    // This ensures we don't show "Saved Offline" status due to residual localStorage data
-    if (typeof window !== 'undefined' && !isGuestMode) {
-      const hadBackup = !!localStorage.getItem('unsaved_master_cv');
-      if (hadBackup) {
-        console.log('🧹 Clearing old offline backup before save attempt');
-        localStorage.removeItem('unsaved_master_cv');
-        setHasOfflineBackup(false);
+    const executeSave = async () => {
+      // CRITICAL FIX: Clear any old offline backups at the start to prevent stale state
+      // This ensures we don't show "Saved Offline" status due to residual localStorage data
+      if (typeof window !== 'undefined' && !isGuestMode) {
+        const hadBackup = !!localStorage.getItem('unsaved_master_cv');
+        if (hadBackup) {
+          console.log('🧹 Clearing old offline backup before save attempt');
+          localStorage.removeItem('unsaved_master_cv');
+          setHasOfflineBackup(false);
+        }
       }
-    }
 
-    setSaveStatus('saving');
-    setSaveError(null);
-    dispatch({ type: 'SET_SAVING', payload: true });
+      setSaveStatus('saving');
+      setSaveError(null);
+      dispatch({ type: 'SET_SAVING', payload: true });
 
-    // Guest mode: Save to draft instead of creating CV
-    if (isGuestMode) {
+      // Guest mode: Save to draft instead of creating CV
+      if (isGuestMode) {
       try {
         await guestCVService.saveGuestDraft({
           cvData: state.cvData,
@@ -2577,6 +2580,34 @@ export default function ResumeEnhancerContainer({
       dispatch({ type: 'SET_SAVING', payload: false });
     }
   };
+
+  // Intercept manual save for authenticated users on free plan trying to save their master CV
+  if (isManualClick && !isGuestMode && isMasterCV && (!userData || userData.currentPlanKey === 'free')) {
+    openPaymentModal({
+      preselectedPlanKey: 'focused_monthly',
+      triggerContext: 'onboarding-exit',
+      onSuccess: async () => {
+        await executeSave();
+      },
+      onClose: async () => {
+        try {
+          await fetch('/api/user/subscription', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ planKey: 'starter_monthly' })
+          });
+          await refetch();
+        } catch (err) {
+          console.error('Failed to auto-assign starter plan on save close:', err);
+        }
+        await executeSave();
+      }
+    });
+    return;
+  }
+
+  await executeSave();
+};
 
   // LAYER 3: Recovery mechanism - Check localStorage on mount and attempt to restore
   useEffect(() => {

@@ -85,8 +85,7 @@ const getEmailConfig = (): EmailConfig | null => {
   return null;
 };
 
-// Create email transporter
-const createTransporter = () => {
+export const createTransporter = () => {
   const config = getEmailConfig();
 
   if (!config) {

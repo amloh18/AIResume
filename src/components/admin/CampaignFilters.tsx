@@ -73,71 +73,71 @@ export default function CampaignFilters({ filters, onChange, twoColumn = false }
     }
   }, [filters]);
 
-  // Push local changes to parent
-  useEffect(() => {
-    if (!isEqual(localFilters, filters)) {
-      onChange(localFilters);
-    }
-  }, [localFilters, filters, onChange]);
-
   const handlePlanChange = (plan: string, checked: boolean) => {
     const plans = localFilters.membershipPlans || [];
-    if (checked) {
-      setLocalFilters({
-        ...localFilters,
-        membershipPlans: [...plans, plan],
-      });
-    } else {
-      setLocalFilters({
-        ...localFilters,
-        membershipPlans: plans.filter((p: string) => p !== plan),
-      });
-    }
+    const updatedPlans = checked ? [...plans, plan] : plans.filter((p: string) => p !== plan);
+    const newFilters = {
+      ...localFilters,
+      membershipPlans: updatedPlans,
+    };
+    setLocalFilters(newFilters);
+    onChange(newFilters);
   };
 
   const handleUserAgeChange = (type: 'new_users' | 'existing_users', days?: number) => {
-    setLocalFilters({
+    const newFilters = {
       ...localFilters,
       userAge: { type, days: days || 7 },
-    });
+    };
+    setLocalFilters(newFilters);
+    onChange(newFilters);
   };
 
   const clearUserAge = () => {
     const { userAge, ...rest } = localFilters;
     setLocalFilters(rest);
+    onChange(rest);
   };
 
   const handleUsageMetricChange = (field: string, value: number) => {
-    setLocalFilters({
+    const newFilters = {
       ...localFilters,
       usageMetrics: {
         ...(localFilters.usageMetrics || {}),
         [field]: value && !isNaN(value) ? value : undefined,
       },
-    });
+    };
+    setLocalFilters(newFilters);
+    onChange(newFilters);
   };
 
   const handleBooleanFilter = (field: string, value: boolean | null) => {
+    let newFilters;
     if (value === null) {
       const { [field]: _, ...rest } = localFilters;
-      setLocalFilters(rest);
+      newFilters = rest;
     } else {
-      setLocalFilters({
+      newFilters = {
         ...localFilters,
         [field]: value,
-      });
+      };
     }
+    setLocalFilters(newFilters);
+    onChange(newFilters);
   };
 
   const handleRegionChange = (region: string) => {
-    setLocalFilters({
+    const newFilters = {
       ...localFilters,
       region: region || undefined,
-    });
+    };
+    setLocalFilters(newFilters);
+    onChange(newFilters);
   };
 
   const clearAllFilters = () => {
     setLocalFilters({});
+    onChange({});
   };
 
   const hasActiveFilters = Object.keys(localFilters).length > 0;
