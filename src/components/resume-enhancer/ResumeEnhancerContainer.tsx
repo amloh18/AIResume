@@ -216,9 +216,9 @@ export default function ResumeEnhancerContainer({
     }
 
     // Phase 2: Bootstrap Safeguard for Step 2 (Templates)
-    // Ensure we have minimal data before showing templates
+    // Ensure we have minimal data before showing templates, unless starting fresh from scratch (fresherMode)
     if (step === 2 || (step === 1 && state.isTemplateOverlayOpen)) {
-      const hasData = state.cvData?.basics?.name || state.cvData?.basics?.email || (state.cvData?.work && state.cvData.work.length > 0);
+      const hasData = state.cvData?.basics?.name || state.cvData?.basics?.email || (state.cvData?.work && state.cvData.work.length > 0) || state.fresherMode;
       if (!hasData) {
         if (!options?.silent) {
           toast.error("Please upload your resume or select 'Start Fresh' before selecting a visual theme.");
@@ -231,7 +231,7 @@ export default function ResumeEnhancerContainer({
 
     goToStep(step);
     return true;
-  }, [coverLetterBlockedMessage, goToStep, isMasterCV, state.cvData, state.isTemplateOverlayOpen, setTemplateOverlayOpen]);
+  }, [coverLetterBlockedMessage, goToStep, isMasterCV, state.cvData, state.isTemplateOverlayOpen, setTemplateOverlayOpen, state.fresherMode]);
 
   useEffect(() => {
     const handleOpenJobSidebar = () => {
