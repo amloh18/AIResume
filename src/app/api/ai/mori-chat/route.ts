@@ -15,7 +15,14 @@ export async function POST(req: NextRequest) {
 
     const { chatId, messages, cvData, selection, jobData, targetRole, seniorityLevel, cvId } = await req.json();
 
-    const latestMessage = messages[messages.length - 1];
+    const incomingLatest = messages[messages.length - 1];
+    const latestMessage = {
+      id: incomingLatest.id || Date.now().toString(),
+      role: incomingLatest.role,
+      content: incomingLatest.content,
+      timestamp: incomingLatest.timestamp || Date.now(),
+      selection: incomingLatest.selection
+    };
     
     // Construct the system prompt
     const systemPrompt = `You are Mori, an expert CV AI assistant. Your goal is to help users edit their CVs via natural language.

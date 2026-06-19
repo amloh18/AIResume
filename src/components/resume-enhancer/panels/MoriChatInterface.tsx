@@ -113,7 +113,7 @@ const MoriChatInterface: React.FC = () => {
       const payload = {
         chatId,
         cvId: state.cvId,
-        messages: messages.concat(userMessage).map(m => ({ role: m.role, content: m.content })),
+        messages: messages.concat(userMessage),
         cvData: state.cvData,
         selection: currentSelection,
         jobData: state.jobData,
@@ -127,7 +127,16 @@ const MoriChatInterface: React.FC = () => {
         body: JSON.stringify(payload)
       });
 
-      if (!response.ok) throw new Error('Mori is temporarily unavailable');
+      if (!response.ok) {
+        let errorMessage = 'Mori is temporarily unavailable';
+        try {
+          const errorData = await response.json();
+          if (errorData && errorData.error) {
+            errorMessage = errorData.error;
+          }
+        } catch (_) {}
+        throw new Error(errorMessage);
+      }
 
       const result = await response.json();
       
