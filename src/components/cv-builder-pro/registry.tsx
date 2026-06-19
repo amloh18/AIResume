@@ -35,15 +35,32 @@ export const getNetworkIcon = (network: string) => {
   return LinkIcon;
 };
 
-export const ContactLinks = ({ data, Editable, isNarrow, showIcons, design, align = 'justify-center' }: any) => {
+export const ContactLinks = ({ data, Editable, isNarrow, showIcons, design, align = 'justify-center', readOnly }: any) => {
   const links: React.ReactNode[] = [];
   const headerLinks = design?.headerLinks || {};
   const isVisible = (key: string) => headerLinks[key] !== false;
   
   const seenValues = new Set<string>();
 
-  const addLink = (key: string, value: string | undefined, node: React.ReactNode) => {
+  const hasValue = (val: any): boolean => {
+    if (!val) return false;
+    if (typeof val === 'string') {
+      return val.trim() !== '';
+    }
+    if (typeof val === 'object') {
+      return Object.values(val).some(v => typeof v === 'string' && v.trim() !== '');
+    }
+    return false;
+  };
+
+  const addLink = (key: string, value: any, node: React.ReactNode, alwaysFilterIfEmpty = false) => {
     if (!isVisible(key)) return;
+    
+    const isEmpty = !hasValue(value);
+    if (isEmpty && (readOnly || alwaysFilterIfEmpty)) {
+      return;
+    }
+
     if (value && typeof value === 'string') {
       const normalized = value.toLowerCase().replace(/^(https?:\/\/)?(www\.)?/, '').replace(/\/$/, '').trim();
       if (seenValues.has(normalized)) return;
@@ -57,11 +74,11 @@ export const ContactLinks = ({ data, Editable, isNarrow, showIcons, design, alig
   addLink('email', data?.basics?.email, <span className={`flex items-center gap-1.5 ${align}`} key="email">{showIcons && <Mail size={13} /> }<Editable path="basics.email" breakAll /></span>);
   
   // Legacy root fields
-  if (data?.basics?.linkedin) {
-    addLink('linkedin', data.basics.linkedin, <span className={`flex items-center gap-1.5 ${align}`} key="li">{showIcons && <Linkedin size={13} /> }<Editable path="basics.linkedin" breakAll /></span>);
+  if (data?.basics?.linkedin || !readOnly) {
+    addLink('linkedin', data?.basics?.linkedin, <span className={`flex items-center gap-1.5 ${align}`} key="li">{showIcons && <Linkedin size={13} /> }<Editable path="basics.linkedin" breakAll /></span>);
   }
-  if (data?.basics?.website) {
-    addLink('website', data.basics.website, <span className={`flex items-center gap-1.5 ${align}`} key="web">{showIcons && <LinkIcon size={13} /> }<Editable path="basics.website" breakAll /></span>);
+  if (data?.basics?.website || !readOnly) {
+    addLink('website', data?.basics?.website, <span className={`flex items-center gap-1.5 ${align}`} key="web">{showIcons && <LinkIcon size={13} /> }<Editable path="basics.website" breakAll /></span>);
   }
   
   // Profiles array
@@ -69,7 +86,7 @@ export const ContactLinks = ({ data, Editable, isNarrow, showIcons, design, alig
     data.basics.profiles.forEach((profile: any, index: number) => {
       const net = profile.network?.toLowerCase() || `link-${index}`;
       const Icon = getNetworkIcon(net);
-      addLink(net, profile.url, <span className={`flex items-center gap-1.5 ${align}`} key={`prof-${index}`}>{showIcons && <Icon size={13} /> }<Editable path={`basics.profiles.${index}.url`} breakAll /></span>);
+      addLink(net, profile.url, <span className={`flex items-center gap-1.5 ${align}`} key={`prof-${index}`}>{showIcons && <Icon size={13} /> }<Editable path={`basics.profiles.${index}.url`} breakAll /></span>, true);
     });
   }
 
@@ -650,19 +667,26 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
   }},
 
   // === SIDEBAR SPECIFIC ===
-  'sidebar-contact': { id: 'sidebar-contact', name: 'Contact List', category: 'Sidebar', render: ({ data, Editable, isDark, Title, showIcons, design }: any) => {
+  'sidebar-contact': { id: 'sidebar-contact', name: 'Contact List', category: 'Sidebar', render: ({ data, Editable, isDark, Title, showIcons, design, readOnly }: any) => {
     const headerLinks = design?.headerLinks || {};
     const isVisible = (key: string) => headerLinks[key] !== false;
+    const hasValue = (val: any): boolean => {
+      if (!val) return false;
+      if (typeof val === 'string') return val.trim() !== '';
+      if (typeof val === 'object') return Object.values(val).some(v => typeof v === 'string' && v.trim() !== '');
+      return false;
+    };
     return (
       <div className={`snippet-anim cv-section ${isDark ? 'text-white' : 'text-gray-900'} w-full min-w-0 cv-item-avoid`}><Title titleKey="contact" /><div className={`flex flex-col gap-2.5 cv-gap-sm ${TYPOGRAPHY.body} ${isDark ? 'text-slate-300' : 'text-gray-700'} break-all`}>
-        {isVisible('location') && <div className="flex items-center gap-2">{showIcons && <MapPin size={14} />}<Editable path="basics.location" nowrap /></div>}
-        {isVisible('phone') && <div className="flex items-center gap-2">{showIcons && <Phone size={14} />}<Editable path="basics.phone" nowrap /></div>}
-        {isVisible('email') && <div className="flex items-center gap-2">{showIcons && <Mail size={14} />}<Editable path="basics.email" breakAll /></div>}
-        {isVisible('linkedin') && (data?.basics?.linkedin || true) && <div className="flex items-center gap-2">{showIcons && <Linkedin size={14} />}<Editable path="basics.linkedin" breakAll /></div>}
-        {isVisible('website') && (data?.basics?.website || true) && <div className="flex items-center gap-2">{showIcons && <LinkIcon size={14} />}<Editable path="basics.website" breakAll /></div>}
+        {isVisible('location') && (!readOnly || hasValue(data?.basics?.location)) && <div className="flex items-center gap-2">{showIcons && <MapPin size={14} />}<Editable path="basics.location" nowrap /></div>}
+        {isVisible('phone') && (!readOnly || hasValue(data?.basics?.phone)) && <div className="flex items-center gap-2">{showIcons && <Phone size={14} />}<Editable path="basics.phone" nowrap /></div>}
+        {isVisible('email') && (!readOnly || hasValue(data?.basics?.email)) && <div className="flex items-center gap-2">{showIcons && <Mail size={14} />}<Editable path="basics.email" breakAll /></div>}
+        {isVisible('linkedin') && (data?.basics?.linkedin || !readOnly) && (!readOnly || hasValue(data?.basics?.linkedin)) && <div className="flex items-center gap-2">{showIcons && <Linkedin size={14} />}<Editable path="basics.linkedin" breakAll /></div>}
+        {isVisible('website') && (data?.basics?.website || !readOnly) && (!readOnly || hasValue(data?.basics?.website)) && <div className="flex items-center gap-2">{showIcons && <LinkIcon size={14} />}<Editable path="basics.website" breakAll /></div>}
         {data?.basics?.profiles && Array.isArray(data.basics.profiles) && data.basics.profiles.map((profile: any, index: number) => {
           const net = profile.network?.toLowerCase() || `link-${index}`;
           if (!isVisible(net)) return null;
+          if (!hasValue(profile.url)) return null;
           const Icon = getNetworkIcon(net);
           return <div key={`prof-${index}`} className="flex items-center gap-2">{showIcons && <Icon size={14} />}<Editable path={`basics.profiles.${index}.url`} breakAll /></div>;
         })}
