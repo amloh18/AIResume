@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
     let aiResponse: string | null = null;
     try {
       aiResponse = await callGeminiWithAllKeysFallback(prompt, {
-        model: 'gemini-2.0-flash-lite-preview-02-05',
+        model: 'gemini-2.5-flash-lite',
         temperature: regenerate ? 0.9 : 0.7, // Higher temperature for variations
         maxTokens: 4000,
       });

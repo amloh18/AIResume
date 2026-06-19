@@ -1,7 +1,7 @@
 /**
  * Gemini API Helper Utility
  * Provides unified interface for Google Gemini API calls using gemini_api_key
- * Uses @google/genai package with gemini-2.5-flash (with model fallback to gemini-2.0-flash)
+ * Uses @google/genai package with gemini-2.5-flash-lite (with model fallback to gemini-2.5-flash)
  */
 
 import { GoogleGenAI } from '@google/genai';
@@ -61,8 +61,8 @@ async function callGemini(options: GeminiCallOptions, apiKey: string): Promise<s
   try {
     const genAI = new GoogleGenAI({ apiKey });
 
-    const primaryModel = options.model || 'gemini-2.5-flash';
-    const fallbackModel = 'gemini-2.0-flash';
+    const primaryModel = options.model || 'gemini-2.5-flash-lite';
+    const fallbackModel = 'gemini-2.5-flash';
 
     let fullPrompt = options.prompt;
     if (options.systemPrompt) {
@@ -136,7 +136,7 @@ async function callGemini(options: GeminiCallOptions, apiKey: string): Promise<s
  * Call Gemini API with model fallback using the single configured key.
  * Hard-fails immediately if gemini_api_key is not configured.
  * If the primary model fails (non-quota errors) there is no key retry;
- * only the configured model falls back to gemini-2.0-flash.
+ * only the configured model falls back to gemini-2.5-flash.
  */
 export async function callGeminiWithFallback(options: GeminiCallOptions): Promise<GeminiResponse> {
   let apiKey: string;

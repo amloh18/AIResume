@@ -149,7 +149,7 @@ INSTRUCTIONS:
             const result = await callAIWithFallback({
                 prompt: prompt,
                 temperature: 0.4,
-                model: 'gemini-2.0-flash-lite-preview-02-05', // Match other services
+                model: 'gemini-2.5-flash-lite', // Match other services
                 responseMimeType: 'application/json',
                 responseSchema: interviewSchema,
                 maxTokens: 8192 // Prevent truncation for large outputs
@@ -351,7 +351,7 @@ Professional, encouraging, and luxury-focused. Avoid generic advice; be hyper-sp
                 prompt: userPrompt,
                 systemPrompt,
                 temperature: 0.6,
-                model: 'gemini-2.0-flash-lite-preview-02-05'
+                model: 'gemini-2.5-flash-lite'
             });
 
             return parseRobustJson(result.content);

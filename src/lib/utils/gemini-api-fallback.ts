@@ -60,8 +60,8 @@ export async function callGeminiWithAllKeysFallback(
     console.log(`🔑 Attempting Gemini API call...`);
     const genAI = new GoogleGenAI({ apiKey });
 
-    const primaryModel = options?.model || 'gemini-2.5-flash';
-    const fallbackModel = 'gemini-2.0-flash';
+    const primaryModel = options?.model || 'gemini-2.5-flash-lite';
+    const fallbackModel = 'gemini-2.5-flash';
 
     const contents = typeof prompt === 'string'
       ? [{ role: 'user', parts: [{ text: prompt }] }]

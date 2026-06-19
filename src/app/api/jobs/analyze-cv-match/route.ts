@@ -377,7 +377,7 @@ Be thorough and accurate. Consider:
       prompt,
       temperature: 0.7,
       maxTokens: 2048,
-      model: 'gemini-2.0-flash-lite-preview-02-05'
+      model: 'gemini-2.5-flash-lite'
     });
     
     const text = result.content;

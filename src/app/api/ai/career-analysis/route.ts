@@ -200,7 +200,7 @@ export async function POST(request: NextRequest) {
       await ActivityLogService.logAI({
         userId: userId,
         userEmail: userEmail,
-        model: 'gemini-2.0-flash-lite-preview-02-05',
+        model: 'gemini-2.5-flash-lite',
         tokensUsed: estimatedTokens,
         cost: estimatedCost,
         responseLength: responseLength,
