@@ -1266,7 +1266,7 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
           </div>
           
           {/* Right rail: onboarding setup checklist and AI analysis */}
-          <div className="hidden lg:flex flex-col w-[387px] shrink-0 h-full relative z-10 gap-3 min-h-0">
+          <div className={`hidden lg:flex flex-col shrink-0 h-full relative z-10 gap-3 min-h-0 transition-all duration-300 ${state.moriChatMode ? 'w-[484px]' : 'w-[387px]'}`}>
             {isImproveMode && (() => {
               const isPersonalInfoVerified = !!(state.cvData?.basics?.name?.trim() && state.cvData?.basics?.email?.trim());
               const isQualityScoreReviewed = !!(state.surgeonAnalysis || atsScore);

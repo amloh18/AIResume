@@ -2733,11 +2733,27 @@ mark[data-type="highlight"] {
 }
 
 /* Info / Improvement — soft blue (Grammarly-style) */
-.cv-highlight--info {
-  background-color: rgba(56, 189, 248, 0.12);
-  border-bottom: 2px solid rgba(56, 189, 248, 0.5);
-}
-
 .cv-highlight--info:hover {
   background-color: rgba(56, 189, 248, 0.22);
 }
+
+/* Mori Chat visual updates pulse highlight */
+@keyframes mori-pulse-highlight-kf {
+  0% {
+    background-color: rgba(20, 184, 166, 0.4); /* soft teal */
+    box-shadow: 0 0 10px rgba(20, 184, 166, 0.4);
+  }
+  50% {
+    background-color: rgba(20, 184, 166, 0.2);
+  }
+  100% {
+    background-color: transparent;
+    box-shadow: none;
+  }
+}
+
+.mori-pulse-highlight {
+  animation: mori-pulse-highlight-kf 1.5s ease-out;
+  border-radius: 4px;
+}
+
