@@ -90,7 +90,7 @@ const CVBuilderProAdapter = forwardRef<CVCanvasBuilderRef, CVBuilderProAdapterPr
       };
     }
 
-    const copyDirectly = ['projects', 'certifications', 'awards', 'publications', 'volunteer', 'references'];
+    const copyDirectly = ['projects', 'certifications', 'awards', 'publications', 'references'];
     copyDirectly.forEach(key => {
       if (updatedCanvasData[key]) {
         newCvData[key] = updatedCanvasData[key];
@@ -103,9 +103,9 @@ const CVBuilderProAdapter = forwardRef<CVCanvasBuilderRef, CVBuilderProAdapterPr
         let highlights: string[] = [];
         
         if (exp.description) {
-          const liMatches = exp.description.match(/<li>(.*?)<\/li>/g);
+          const liMatches = exp.description.match(/<li[^>]*>(.*?)<\/li>/g);
           if (liMatches) {
-            highlights = liMatches.map((li: string) => li.replace(/<\/?li>/g, '').trim());
+            highlights = liMatches.map((li: string) => li.replace(/<li[^>]*>/, '').replace(/<\/li>/, '').trim());
           }
           const pMatch = exp.description.match(/<p>(.*?)<\/p>/);
           if (pMatch) {
@@ -126,6 +126,37 @@ const CVBuilderProAdapter = forwardRef<CVCanvasBuilderRef, CVBuilderProAdapterPr
         };
       });
       delete newCvData.experience;
+    }
+
+    if (Array.isArray(updatedCanvasData?.volunteer)) {
+      newCvData.volunteer = updatedCanvasData.volunteer.map((vol: any) => {
+        let summary = '';
+        let highlights: string[] = [];
+        
+        if (vol.description) {
+          const liMatches = vol.description.match(/<li[^>]*>(.*?)<\/li>/g);
+          if (liMatches) {
+            highlights = liMatches.map((li: string) => li.replace(/<li[^>]*>/, '').replace(/<\/li>/, '').trim());
+          }
+          const pMatch = vol.description.match(/<p>(.*?)<\/p>/);
+          if (pMatch) {
+            summary = pMatch[1].replace(/<[^>]+>/g, '').trim();
+          } else {
+            summary = vol.description.replace(/<ul>[\s\S]*?<\/ul>/, '').replace(/<[^>]+>/g, '').trim();
+          }
+        }
+
+        return {
+          id: vol.id,
+          position: vol.role,
+          organization: vol.organization,
+          startDate: vol.startDate || '',
+          endDate: vol.endDate || '',
+          url: vol.url || '',
+          summary,
+          highlights
+        };
+      });
     }
     
     if (Array.isArray(updatedCanvasData?.education)) {
