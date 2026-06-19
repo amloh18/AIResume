@@ -101,7 +101,7 @@ const PersonalHeader: React.FC<PersonalHeaderProps> = ({
         {/* Professional summary is rendered separately as a section in this layout */}
         <style>{`
           .personal-header {
-            margin-bottom: ${template?.globalStyles?.spacing || '16px'};
+            margin-bottom: 0px !important;
           }
         `}</style>
       </header>
@@ -203,7 +203,7 @@ const PersonalHeader: React.FC<PersonalHeaderProps> = ({
 
       <style>{`
         .personal-header {
-          margin-bottom: ${template?.globalStyles?.spacing || '16px'};
+          margin-bottom: 0px !important;
           padding-bottom: 0;
           border-bottom: none;
         }
