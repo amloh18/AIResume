@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useContext } from 'react';
+import React, { useEffect, useState, useContext, useRef } from 'react';
 import { ChevronUp, ChevronDown, Trash2 } from 'lucide-react';
 import { CanvasContext } from './CoreUI';
 
@@ -10,6 +10,43 @@ const ListEntry = ({ collection, index, moveEntry, deleteEntry, children }: any)
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const ctx = useContext(CanvasContext);
   const moriChatMode = ctx?.moriChatMode || false;
+  const entryRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleUpdated = (e: CustomEvent) => {
+      const { collection: eventCol, index: eventIdx, highlightIndex } = e.detail;
+      if (eventCol === collection && eventIdx === index) {
+        requestAnimationFrame(() => {
+          if (typeof highlightIndex === 'number') {
+            const element = entryRef.current?.querySelector(`[data-highlight-index="${highlightIndex}"]`);
+            if (element) {
+              element.classList.remove('mori-pulse-highlight');
+              void (element as HTMLElement).offsetWidth;
+              element.classList.add('mori-pulse-highlight');
+              setTimeout(() => {
+                element.classList.remove('mori-pulse-highlight');
+              }, 2500);
+            }
+          } else {
+            const element = entryRef.current;
+            if (element) {
+              element.classList.remove('mori-pulse-highlight');
+              void (element as HTMLElement).offsetWidth;
+              element.classList.add('mori-pulse-highlight');
+              setTimeout(() => {
+                element.classList.remove('mori-pulse-highlight');
+              }, 2500);
+            }
+          }
+        });
+      }
+    };
+
+    window.addEventListener('mori-cv-updated-section', handleUpdated as EventListener);
+    return () => {
+      window.removeEventListener('mori-cv-updated-section', handleUpdated as EventListener);
+    };
+  }, [collection, index]);
 
   useEffect(() => {
     if (!confirmingDelete) return undefined;
@@ -43,7 +80,7 @@ const ListEntry = ({ collection, index, moveEntry, deleteEntry, children }: any)
     : "hover:bg-[#10b981]/[0.02] shadow-none hover:shadow-[0_2px_8px_rgba(16,185,129,0.05)] group-hover/snippet:z-30 hover:z-40 hover:border-transparent";
 
   return (
-    <div onClick={handleMoriClick} className={`${baseClass} ${hoverClass}`}>
+    <div ref={entryRef} onClick={handleMoriClick} className={`${baseClass} ${hoverClass}`} data-collection={collection} data-index={index}>
       <div className={`absolute -left-[34px] top-0 bottom-0 flex flex-col items-center justify-center opacity-0 group-hover/entry:opacity-100 group-focus-within/entry:opacity-100 pointer-events-none group-hover/entry:pointer-events-auto group-focus-within/entry:pointer-events-auto transition-opacity duration-200 no-print z-50 ${moriChatMode ? 'hidden' : ''}`}>
         <div className="flex flex-col gap-1 bg-white shadow-[0_8px_24px_rgba(15,23,42,0.12)] border border-gray-200 rounded-lg p-1 pointer-events-auto relative group-hover/entry:bg-white">
           <button

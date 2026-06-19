@@ -12,7 +12,7 @@ const buildRichTextDescription = (summary?: string, highlights?: string[]) => {
   }
 
   if (normalizedHighlights.length > 0) {
-    parts.push(`<ul>${normalizedHighlights.map((item) => `<li>${item}</li>`).join('')}</ul>`);
+    parts.push(`<ul>${normalizedHighlights.map((item, index) => `<li data-highlight-index="${index}">${item}</li>`).join('')}</ul>`);
   }
 
   return parts.join('');
@@ -74,6 +74,14 @@ export function normalizeCvDataForCanvas(cvData: UnifiedCVDataStructure | null |
       startDate: w.startDate || '',
       endDate: w.endDate || '',
       description: buildRichTextDescription(w.summary, w.highlights),
+    }));
+  }
+
+  if (Array.isArray(cvData.volunteer)) {
+    translated.volunteer = cvData.volunteer.map((v: any, index: number) => ({
+      ...v,
+      id: v.id || `vol-${index}`,
+      description: buildRichTextDescription(v.summary, v.highlights),
     }));
   }
 

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
+import { usePaymentModal } from '@/contexts/PaymentModalContext';
 import { 
   Send, Sparkles, User, Loader2, Trash2, CornerDownRight, 
   MousePointer2, MessageSquare, History, Edit2, X, Plus, ChevronRight
@@ -34,6 +35,8 @@ interface ChatHistoryItem {
 
 const MoriChatInterface: React.FC = () => {
   const { state, updateCVData } = useResumeEnhancer();
+  const { openPaymentModal } = usePaymentModal();
+  const [limitExhausted, setLimitExhausted] = useState(false);
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -62,6 +65,9 @@ const MoriChatInterface: React.FC = () => {
       if (res.ok) {
         const data = await res.json();
         setChatHistory(data.chats || []);
+        if (data.limitExhausted !== undefined) {
+          setLimitExhausted(data.limitExhausted);
+        }
       }
     } catch (e) {
       console.error('Failed to fetch history', e);
@@ -133,12 +139,18 @@ const MoriChatInterface: React.FC = () => {
           const errorData = await response.json();
           if (errorData && errorData.error) {
             errorMessage = errorData.error;
+            if (errorData.limitExhausted) {
+              setLimitExhausted(true);
+            }
           }
         } catch (_) {}
         throw new Error(errorMessage);
       }
 
       const result = await response.json();
+      if (result.limitExhausted) {
+        setLimitExhausted(true);
+      }
       
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -156,7 +168,90 @@ const MoriChatInterface: React.FC = () => {
       }
 
       if (result.updatedCV) {
-        updateCVData(result.updatedCV);
+        const oldCV = state.cvData;
+        const newCV = result.updatedCV;
+
+        updateCVData(newCV);
+
+        if (oldCV && newCV) {
+          // Compare experience (work)
+          if (Array.isArray(newCV.work) && Array.isArray(oldCV.work)) {
+            newCV.work.forEach((newJob: any, idx: number) => {
+              const oldJob = oldCV.work.find((j: any) => j.id === newJob.id) || oldCV.work[idx];
+              if (!oldJob) {
+                window.dispatchEvent(new CustomEvent('mori-cv-updated-section', {
+                  detail: { collection: 'experience', index: idx }
+                }));
+                return;
+              }
+              if (newJob.summary !== oldJob.summary || newJob.position !== oldJob.position || newJob.name !== oldJob.name) {
+                window.dispatchEvent(new CustomEvent('mori-cv-updated-section', {
+                  detail: { collection: 'experience', index: idx }
+                }));
+              }
+              if (Array.isArray(newJob.highlights) && Array.isArray(oldJob.highlights)) {
+                newJob.highlights.forEach((bullet: string, hIdx: number) => {
+                  if (bullet !== oldJob.highlights[hIdx]) {
+                    window.dispatchEvent(new CustomEvent('mori-cv-updated-section', {
+                      detail: { collection: 'experience', index: idx, highlightIndex: hIdx }
+                    }));
+                  }
+                });
+              }
+            });
+          }
+
+          // Compare volunteer
+          if (Array.isArray(newCV.volunteer) && Array.isArray(oldCV.volunteer)) {
+            newCV.volunteer.forEach((newVol: any, idx: number) => {
+              const oldVol = oldCV.volunteer.find((v: any) => v.id === newVol.id) || oldCV.volunteer[idx];
+              if (!oldVol) {
+                window.dispatchEvent(new CustomEvent('mori-cv-updated-section', {
+                  detail: { collection: 'volunteer', index: idx }
+                }));
+                return;
+              }
+              if (newVol.summary !== oldVol.summary || newVol.position !== oldVol.position || newVol.organization !== oldVol.organization) {
+                window.dispatchEvent(new CustomEvent('mori-cv-updated-section', {
+                  detail: { collection: 'volunteer', index: idx }
+                }));
+              }
+              if (Array.isArray(newVol.highlights) && Array.isArray(oldVol.highlights)) {
+                newVol.highlights.forEach((bullet: string, hIdx: number) => {
+                  if (bullet !== oldVol.highlights[hIdx]) {
+                    window.dispatchEvent(new CustomEvent('mori-cv-updated-section', {
+                      detail: { collection: 'volunteer', index: idx, highlightIndex: hIdx }
+                    }));
+                  }
+                });
+              }
+            });
+          }
+
+          // Compare education
+          if (Array.isArray(newCV.education) && Array.isArray(oldCV.education)) {
+            newCV.education.forEach((newEdu: any, idx: number) => {
+              const oldEdu = oldCV.education.find((e: any) => e.id === newEdu.id) || oldCV.education[idx];
+              if (!oldEdu || newEdu.description !== oldEdu.description || newEdu.studyType !== oldEdu.studyType || newEdu.area !== oldEdu.area || newEdu.institution !== oldEdu.institution) {
+                window.dispatchEvent(new CustomEvent('mori-cv-updated-section', {
+                  detail: { collection: 'education', index: idx }
+                }));
+              }
+            });
+          }
+
+          // Compare projects
+          if (Array.isArray(newCV.projects) && Array.isArray(oldCV.projects)) {
+            newCV.projects.forEach((newProj: any, idx: number) => {
+              const oldProj = oldCV.projects.find((p: any) => p.id === newProj.id) || oldCV.projects[idx];
+              if (!oldProj || newProj.description !== oldProj.description || newProj.name !== oldProj.name) {
+                window.dispatchEvent(new CustomEvent('mori-cv-updated-section', {
+                  detail: { collection: 'projects', index: idx }
+                }));
+              }
+            });
+          }
+        }
       }
 
       setCurrentSelection(null);
@@ -447,33 +542,56 @@ const MoriChatInterface: React.FC = () => {
           )}
         </AnimatePresence>
 
-        <div className={`pointer-events-auto relative group shadow-xl shadow-slate-200/50 dark:shadow-none bg-white dark:bg-[var(--bg-primary)] border border-slate-200 dark:border-white/10 transition-all ${currentSelection ? 'rounded-b-xl rounded-t-none border-t-0' : 'rounded-2xl'}`}>
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSend();
-              }
-            }}
-            placeholder={currentSelection ? "Instruct Mori to update this selection..." : "Ask Mori to edit your CV..."}
-            rows={1}
-            className="w-full bg-transparent px-4 py-3.5 pr-12 text-[13px] focus:outline-none resize-none dark:text-white dark:placeholder-slate-500"
-            style={{ minHeight: '48px', maxHeight: '120px' }}
-          />
-          <button
-            onClick={() => handleSend()}
-            disabled={!input.trim() || isLoading}
-            className={`absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-xl transition-all ${
-              input.trim() && !isLoading 
-                ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-md shadow-emerald-500/20 scale-100' 
-                : 'bg-slate-100 dark:bg-white/5 text-slate-400 dark:text-slate-500 scale-95'
-            }`}
-          >
-            <Send className="w-4 h-4" />
-          </button>
-        </div>
+        {limitExhausted ? (
+          <div className="pointer-events-auto relative p-5 bg-gradient-to-br from-emerald-500/10 via-teal-500/5 to-purple-500/10 dark:from-emerald-500/20 dark:to-purple-500/20 border border-emerald-500/20 dark:border-emerald-500/40 rounded-2xl shadow-xl flex flex-col items-center text-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-500 animate-pulse">
+              <Sparkles className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <div>
+              <h4 className="text-[13.5px] font-bold text-slate-800 dark:text-white">
+                Mori Chat Limit Reached
+              </h4>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 max-w-[290px] leading-relaxed">
+                You've exhausted your limit of 5 free AI conversations this month. Upgrade to Pro for unlimited edits!
+              </p>
+            </div>
+            <button
+              onClick={() => openPaymentModal({ preselectedPlanKey: 'pro_monthly', triggerContext: 'mori-chat-limit' })}
+              className="w-full py-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-xl text-[12px] font-semibold transition-all shadow-md shadow-emerald-500/20 active:scale-[0.98] flex items-center justify-center gap-1.5"
+            >
+              <span>Upgrade to Pro</span>
+              <Sparkles className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        ) : (
+          <div className={`pointer-events-auto relative group shadow-xl shadow-slate-200/50 dark:shadow-none bg-white dark:bg-[var(--bg-primary)] border border-slate-200 dark:border-white/10 transition-all ${currentSelection ? 'rounded-b-xl rounded-t-none border-t-0' : 'rounded-2xl'}`}>
+            <textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSend();
+                }
+              }}
+              placeholder={currentSelection ? "Instruct Mori to update this selection..." : "Ask Mori to edit your CV..."}
+              rows={1}
+              className="w-full bg-transparent px-4 py-3.5 pr-12 text-[13px] focus:outline-none resize-none dark:text-white dark:placeholder-slate-500"
+              style={{ minHeight: '48px', maxHeight: '120px' }}
+            />
+            <button
+              onClick={() => handleSend()}
+              disabled={!input.trim() || isLoading}
+              className={`absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-xl transition-all ${
+                input.trim() && !isLoading 
+                  ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-md shadow-emerald-500/20 scale-100' 
+                  : 'bg-slate-100 dark:bg-white/5 text-slate-400 dark:text-slate-500 scale-95'
+              }`}
+            >
+              <Send className="w-4 h-4" />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

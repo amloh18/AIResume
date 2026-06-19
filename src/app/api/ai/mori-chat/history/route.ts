@@ -27,7 +27,47 @@ export async function GET(req: NextRequest) {
       .sort({ updatedAt: -1 })
       .lean();
 
-    return NextResponse.json({ chats });
+    // Check limits for starter_monthly user
+    const User = (await import('@/models/User')).default;
+    const user = await User.findById(session.user.id).select('currentPlanKey credits.lastResetDate').lean() as any;
+    
+    let limitExhausted = false;
+    let planKey = 'free';
+
+    if (user) {
+      planKey = user.currentPlanKey || 'free';
+      if (planKey === 'starter_monthly') {
+        const lastResetDate = user.credits?.lastResetDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+        
+        // Count messages since lastResetDate
+        const userChats = await MoriChat.find({
+          userId: session.user.id,
+          updatedAt: { $gte: lastResetDate }
+        }).lean();
+
+        let inwardCount = 0;
+        let outwardCount = 0;
+
+        userChats.forEach((chat: any) => {
+          if (Array.isArray(chat.messages)) {
+            chat.messages.forEach((msg: any) => {
+              if (msg.id === 'welcome') return;
+              if (msg.role === 'user') {
+                inwardCount++;
+              } else if (msg.role === 'assistant') {
+                outwardCount++;
+              }
+            });
+          }
+        });
+
+        if (inwardCount >= 5 || outwardCount >= 5) {
+          limitExhausted = true;
+        }
+      }
+    }
+
+    return NextResponse.json({ chats, limitExhausted, planKey });
   } catch (error: any) {
     console.error('Failed to fetch Mori Chat history:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });

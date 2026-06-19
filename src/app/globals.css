@@ -2733,6 +2733,11 @@ mark[data-type="highlight"] {
 }
 
 /* Info / Improvement — soft blue (Grammarly-style) */
+.cv-highlight--info {
+  background-color: rgba(56, 189, 248, 0.12);
+  border-bottom: 2px solid rgba(56, 189, 248, 0.5);
+}
+
 .cv-highlight--info:hover {
   background-color: rgba(56, 189, 248, 0.22);
 }
