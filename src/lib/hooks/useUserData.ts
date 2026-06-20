@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 
+import { authenticatedFetch } from '@/lib/utils/apiUtils';
+
 export interface UserData {
   id: string;
   firstName: string;
@@ -62,7 +64,7 @@ export function useUserData(): UseUserDataReturn {
       console.log('🔍 useUserData - Fetching user data for:', session.user.email);
 
       // Use the standardized /api/user endpoint
-      const response = await fetch('/api/user');
+      const response = await authenticatedFetch('/api/user');
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);

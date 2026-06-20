@@ -34,6 +34,7 @@ import NotificationCenter from '@/components/notifications/NotificationCenter';
 import LoadingOverlay from '@/components/ui/LoadingOverlay';
 import RedesignedDashboardView from '@/components/dashboard/redesigned/RedesignedDashboardView';
 import { UserTier } from '@/types/dashboard-widgets';
+import { authenticatedFetch } from '@/lib/utils/apiUtils';
 
 // --- Specialized Hero Widgets (Legacy removed or moved if needed) ---
 
@@ -76,7 +77,7 @@ function DashboardContent() {
     // The actual redirection is now handled in the server-side layout.
     const fetchStatus = async () => {
       try {
-        const res = await fetch('/api/user/onboarding');
+        const res = await authenticatedFetch('/api/user/onboarding');
         const result = await res.json();
         if (result.success && result.data) {
           const onboarding = result.data.onboarding || {};

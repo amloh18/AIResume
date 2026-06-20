@@ -8,6 +8,7 @@
 import mongoose from 'mongoose';
 import { CV, Template } from '@/models';
 import { TEMPLATE_REGISTRY } from '@/lib/templates/template-registry';
+import { migrateLegacyTemplateId } from '@/lib/templates/template-utils';
 
 export interface CVWithTemplate {
   _id: string;
@@ -45,7 +46,22 @@ export async function getCVWithTemplate(cvId: string): Promise<CVWithTemplate | 
     // Get templateId as string for comparison
     // cv might be an array from query result, get first item if array
     const cvDoc = Array.isArray(cv) ? cv[0] : cv;
-    const templateIdString = cvDoc?.templateId?.toString() || '';
+    let templateIdString = cvDoc?.templateId?.toString() || '';
+
+    // Migrate any legacy templates on-the-fly to prevent rendering crashes
+    if (templateIdString && !templateIdString.startsWith('tpl-') && !mongoose.Types.ObjectId.isValid(templateIdString)) {
+      const migratedId = migrateLegacyTemplateId(templateIdString);
+      console.log(`🔄 getCVWithTemplate - Migrating legacy template ID ${templateIdString} -> ${migratedId} for CV ${cvDoc._id}`);
+      
+      // Update local object variables
+      cvDoc.templateId = migratedId;
+      templateIdString = migratedId;
+      
+      // Update database asynchronously
+      CV.updateOne({ _id: cvDoc._id }, { templateId: migratedId }).catch(err => {
+        console.error(`Failed to save migrated template ID for CV ${cvDoc._id}:`, err);
+      });
+    }
 
     // First check if it's a hardcoded template
     const hardcodedTemplate = TEMPLATE_REGISTRY.find(

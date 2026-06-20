@@ -130,7 +130,7 @@ export class CVThumbnailService {
   /**
    * Generate SVG thumbnail and upload to S3
    */
-  private static async generateCVThumbnail(cv: any, template: any): Promise<string> {
+  private static async generateCVThumbnail(cv: any, template: any): Promise<string | null> {
     try {
       // Generate SVG-based thumbnail
       const svgContent = this.generateCVThumbnailSVG(cv, template);
@@ -141,7 +141,7 @@ export class CVThumbnailService {
       });
     } catch (error) {
       console.error('❌ CVThumbnailService - Error creating CV thumbnail:', error);
-      return '';
+      return null;
     }
   }
 
@@ -155,29 +155,40 @@ export class CVThumbnailService {
     userId: string;
     cvId: string;
     keyPrefix?: string;
-  }): Promise<string> {
-    const s3Client = getS3Client();
-    const timestamp = Date.now();
-    const s3Key = `thumbnails/${userId}/${keyPrefix}${cvId}-${timestamp}.svg`;
+  }): Promise<string | null> {
+    try {
+      const s3Client = getS3Client();
+      const timestamp = Date.now();
+      const s3Key = `thumbnails/${userId}/${keyPrefix}${cvId}-${timestamp}.svg`;
 
-    const command = new PutObjectCommand({
-      Bucket: process.env.AWS_S3_BUCKET_NAME!,
-      Key: s3Key,
-      ContentType: 'image/svg+xml',
-      Body: Buffer.from(svgContent),
-      Metadata: {
-        cvId,
-        userId,
-        generatedAt: new Date().toISOString(),
-      },
-    });
+      const command = new PutObjectCommand({
+        Bucket: process.env.AWS_S3_BUCKET_NAME!,
+        Key: s3Key,
+        ContentType: 'image/svg+xml',
+        Body: Buffer.from(svgContent),
+        Metadata: {
+          cvId,
+          userId,
+          generatedAt: new Date().toISOString(),
+        },
+      });
 
-    await s3Client.send(command);
-    return getS3PublicUrl(s3Key);
+      await s3Client.send(command);
+      return getS3PublicUrl(s3Key);
+    } catch (error: any) {
+      const errorCode = error?.Code || error?.name || '';
+      console.error(`❌ S3 thumbnail upload failed for CV ${cvId}:`, {
+        code: errorCode,
+        message: error?.message,
+        fault: error?.['$fault'],
+      });
+      // Return null instead of crashing — the caller will handle missing thumbnails gracefully
+      return null;
+    }
   }
 
   /**
-   * Generate SVG content for CV thumbnail
+   * Generate SVG content for CV thumbnail matching the layout of the template
    */
   private static generateCVThumbnailSVG(cv: any, template: any): string {
     const cvData = normalizeCvDataForCanvas(cv.cvData) || cv.cvData || {};
@@ -189,7 +200,7 @@ export class CVThumbnailService {
     
     // Get CV data
     const name = cvData.basics?.name || 'Your Name';
-    const title = cvData.basics?.label || 'Professional Title';
+    const title = cvData.basics?.label || cvData.basics?.title || 'Professional Title';
     const email = cvData.basics?.email || 'email@example.com';
     const phone = cvData.basics?.phone || 'Phone';
     
@@ -199,68 +210,154 @@ export class CVThumbnailService {
     // Get education (first 2 items)
     const educationItems = cvData.education?.slice(0, 2) || [];
     
-    // Get skills (first 8 items)
-    const skills = (cvData.skills || [])
-      .slice(0, 8)
+    // Get skills
+    const skillsList = (cvData.skills || [])
       .map((skill: any) => skill.skillsText || skill.name || skill.category || skill)
-      .join(', ') || '';
+      .filter(Boolean);
+    const skillsString = skillsList.slice(0, 8).join(', ');
     
     // Template colors and styles
-    const primaryColor = templateStyles.primaryColor || '#333';
-    const backgroundColor = templateStyles.backgroundColor || '#fff';
+    const primaryColor = templateStyles.primaryColor || '#1e293b';
+    const backgroundColor = templateStyles.backgroundColor || '#ffffff';
     const fontFamily = templateStyles.fontFamily || 'Arial, sans-serif';
-    const fontSize = templateStyles.fontSize || '14px';
-    const lineHeight = templateStyles.lineHeight || '1.4';
     
     // Extract template accent color if available
-    const accentColor = templateStyles.accentColor || primaryColor;
-    
-    return `
-      <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <style>
-            .cv-text { font-family: ${fontFamily}; }
-            .cv-title { font-size: 16px; font-weight: bold; fill: ${primaryColor}; }
-            .cv-subtitle { font-size: 12px; fill: #666; }
-            .cv-body { font-size: 10px; fill: ${primaryColor}; }
-            .cv-small { font-size: 8px; fill: #666; }
-            .cv-section { font-size: 12px; font-weight: bold; fill: ${accentColor}; }
-          </style>
-        </defs>
-        
+    const accentColor = templateStyles.accentColor || templateStyles.secondaryColor || primaryColor;
+
+    // Detect layout configuration from template
+    const isTwoColumn = template.layoutType === 'two-column' || 
+                        template.layoutType === 'sidebar-left' || 
+                        template.layoutType === 'sidebar-right' || 
+                        ['tpl-2', 'tpl-3', 'tpl-4', 'tpl-5', 'tpl-9', 'tpl-10', 'tpl-11', 'tpl-12', 'tpl-13', 'tpl-15'].includes(template.id);
+                        
+    const isDarkSidebar = template.id === 'tpl-9' || template.id === 'tpl-15' || template.layoutType?.includes('dark');
+    const isCentered = !isTwoColumn && (template.id === 'tpl-6' || template.id === 'tpl-14');
+
+    let svgInnerContent = '';
+
+    if (isTwoColumn) {
+      // Sidebar layout configuration
+      const sidebarWidth = 95;
+      const sidebarBg = isDarkSidebar ? primaryColor : '#f8fafc';
+      const sidebarTextColor = isDarkSidebar ? '#e2e8f0' : '#475569';
+      const sidebarHeadingColor = isDarkSidebar ? '#ffffff' : accentColor;
+      
+      const skillsSplit = skillsList.slice(0, 6);
+
+      svgInnerContent = `
         <!-- Background -->
         <rect width="${width}" height="${height}" fill="${backgroundColor}" stroke="#e5e7eb" stroke-width="1"/>
+        <!-- Sidebar background -->
+        <rect x="0" y="0" width="${sidebarWidth}" height="${height}" fill="${sidebarBg}" stroke="#e5e7eb" stroke-width="0.5"/>
         
+        <!-- Sidebar Content -->
+        <!-- Contact Section -->
+        <text x="10" y="30" class="cv-text cv-sidebar-heading" fill="${sidebarHeadingColor}">Contact</text>
+        <line x1="10" y1="35" x2="${sidebarWidth - 10}" y2="35" stroke="${sidebarHeadingColor}" stroke-width="0.5" opacity="0.4"/>
+        
+        ${email ? `<text x="10" y="47" class="cv-text cv-sidebar-small" fill="${sidebarTextColor}">${this.escapeXml(email.length > 16 ? email.substring(0, 14) + '..' : email)}</text>` : ''}
+        ${phone ? `<text x="10" y="58" class="cv-text cv-sidebar-small" fill="${sidebarTextColor}">${this.escapeXml(phone)}</text>` : ''}
+        
+        <!-- Skills Section -->
+        ${skillsSplit.length > 0 ? `
+          <text x="10" y="85" class="cv-text cv-sidebar-heading" fill="${sidebarHeadingColor}">Skills</text>
+          <line x1="10" y1="90" x2="${sidebarWidth - 10}" y2="90" stroke="${sidebarHeadingColor}" stroke-width="0.5" opacity="0.4"/>
+          ${skillsSplit.map((s: string, idx: number) => `
+            <text x="10" y="${102 + idx * 12}" class="cv-text cv-sidebar-small" fill="${sidebarTextColor}">${this.escapeXml(s.length > 15 ? s.substring(0, 13) + '..' : s)}</text>
+          `).join('')}
+        ` : ''}
+
+        <!-- Main Area Content -->
         <!-- Header -->
-        <text x="${padding}" y="25" class="cv-text cv-title">${this.escapeXml(name)}</text>
-        <text x="${padding}" y="40" class="cv-text cv-subtitle">${this.escapeXml(title)}</text>
-        <text x="${padding}" y="55" class="cv-text cv-small">${this.escapeXml(email)} | ${this.escapeXml(phone)}</text>
+        <text x="${sidebarWidth + 12}" y="32" class="cv-text cv-title" fill="${primaryColor}">${this.escapeXml(name)}</text>
+        <text x="${sidebarWidth + 12}" y="45" class="cv-text cv-subtitle" fill="${accentColor}">${this.escapeXml(title)}</text>
         
         <!-- Work Experience -->
         ${workItems.length > 0 ? `
-          <text x="${padding}" y="80" class="cv-text cv-section">Work Experience</text>
-          <line x1="${padding}" y1="85" x2="${width - padding}" y2="85" stroke="${accentColor}" stroke-width="1"/>
+          <text x="${sidebarWidth + 12}" y="78" class="cv-text cv-section" fill="${accentColor}">Experience</text>
+          <line x1="${sidebarWidth + 12}" y1="83" x2="${width - padding}" y2="83" stroke="${accentColor}" stroke-width="0.75"/>
           ${workItems.map((job: any, index: number) => `
-            <text x="${padding}" y="${100 + index * 35}" class="cv-text cv-body">${this.escapeXml(job.position || 'Position')}</text>
-            <text x="${padding}" y="${112 + index * 35}" class="cv-text cv-small">${this.escapeXml(job.name || 'Company')} | ${this.escapeXml(job.startDate || 'Start')} - ${this.escapeXml(job.endDate || 'End')}</text>
+            <text x="${sidebarWidth + 12}" y="${95 + index * 42}" class="cv-text cv-body" fill="${primaryColor}">${this.escapeXml(job.position || 'Position')}</text>
+            <text x="${sidebarWidth + 12}" y="${106 + index * 42}" class="cv-text cv-small" fill="#475569">${this.escapeXml(job.name || 'Company')}</text>
+            <text x="${sidebarWidth + 12}" y="${116 + index * 42}" class="cv-text cv-mini" fill="#64748b">${this.escapeXml(job.startDate || '')} - ${this.escapeXml(job.endDate || 'Present')}</text>
+          `).join('')}
+        ` : ''}
+
+        <!-- Education -->
+        ${educationItems.length > 0 ? `
+          <text x="${sidebarWidth + 12}" y="185" class="cv-text cv-section" fill="${accentColor}">Education</text>
+          <line x1="${sidebarWidth + 12}" y1="190" x2="${width - padding}" y2="190" stroke="${accentColor}" stroke-width="0.75"/>
+          ${educationItems.map((edu: any, index: number) => `
+            <text x="${sidebarWidth + 12}" y="${202 + index * 36}" class="cv-text cv-body" fill="${primaryColor}">${this.escapeXml(edu.institution || 'Institution')}</text>
+            <text x="${sidebarWidth + 12}" y="${213 + index * 36}" class="cv-text cv-small" fill="#475569">${this.escapeXml(edu.area || 'Field of Study')}</text>
+            <text x="${sidebarWidth + 12}" y="${223 + index * 36}" class="cv-text cv-mini" fill="#64748b">${this.escapeXml(edu.startDate || '')} - ${this.escapeXml(edu.endDate || '')}</text>
+          `).join('')}
+        ` : ''}
+      `;
+    } else {
+      // One-column layout (Left-aligned or Centered)
+      const contentX = isCentered ? width / 2 : padding;
+      const textAnchor = isCentered ? 'middle' : 'start';
+
+      svgInnerContent = `
+        <!-- Background -->
+        <rect width="${width}" height="${height}" fill="${backgroundColor}" stroke="#e5e7eb" stroke-width="1"/>
+        <!-- Accent top bar -->
+        <rect width="${width}" height="4" fill="${accentColor}"/>
+        
+        <!-- Header -->
+        <text x="${contentX}" y="28" class="cv-text cv-title" text-anchor="${textAnchor}" fill="${primaryColor}">${this.escapeXml(name)}</text>
+        <text x="${contentX}" y="42" class="cv-text cv-subtitle" text-anchor="${textAnchor}" fill="${accentColor}">${this.escapeXml(title)}</text>
+        <text x="${contentX}" y="55" class="cv-text cv-small" text-anchor="${textAnchor}" fill="#64748b">${this.escapeXml(email)} ${phone ? `| ${phone}` : ''}</text>
+        
+        <!-- Work Experience -->
+        ${workItems.length > 0 ? `
+          <text x="${padding}" y="80" class="cv-text cv-section" fill="${accentColor}">Work Experience</text>
+          <line x1="${padding}" y1="85" x2="${width - padding}" y2="85" stroke="${accentColor}" stroke-width="0.75"/>
+          ${workItems.map((job: any, index: number) => `
+            <text x="${padding}" y="${98 + index * 42}" class="cv-text cv-body" fill="${primaryColor}">${this.escapeXml(job.position || 'Position')}</text>
+            <text x="${width - padding}" y="${98 + index * 42}" class="cv-text cv-mini" text-anchor="end" fill="#64748b">${this.escapeXml(job.startDate || '')} - ${this.escapeXml(job.endDate || 'Present')}</text>
+            <text x="${padding}" y="${110 + index * 42}" class="cv-text cv-small" fill="#475569">${this.escapeXml(job.name || 'Company')}</text>
           `).join('')}
         ` : ''}
         
         <!-- Education -->
         ${educationItems.length > 0 ? `
-          <text x="${padding}" y="${workItems.length > 0 ? 170 + workItems.length * 35 : 80}" class="cv-text cv-section">Education</text>
-          <line x1="${padding}" y1="${workItems.length > 0 ? 175 + workItems.length * 35 : 85}" x2="${width - padding}" y2="${workItems.length > 0 ? 175 + workItems.length * 35 : 85}" stroke="${accentColor}" stroke-width="1"/>
+          <text x="${padding}" y="185" class="cv-text cv-section" fill="${accentColor}">Education</text>
+          <line x1="${padding}" y1="190" x2="${width - padding}" y2="190" stroke="${accentColor}" stroke-width="0.75"/>
           ${educationItems.map((edu: any, index: number) => `
-            <text x="${padding}" y="${(workItems.length > 0 ? 190 : 100) + workItems.length * 35 + index * 25}" class="cv-text cv-body">${this.escapeXml(edu.institution || 'Institution')}</text>
-            <text x="${padding}" y="${(workItems.length > 0 ? 202 : 112) + workItems.length * 35 + index * 25}" class="cv-text cv-small">${this.escapeXml(edu.area || 'Field of Study')} | ${this.escapeXml(edu.startDate || 'Start')} - ${this.escapeXml(edu.endDate || 'End')}</text>
+            <text x="${padding}" y="${203 + index * 36}" class="cv-text cv-body" fill="${primaryColor}">${this.escapeXml(edu.institution || 'Institution')}</text>
+            <text x="${width - padding}" y="${203 + index * 36}" class="cv-text cv-mini" text-anchor="end" fill="#64748b">${this.escapeXml(edu.startDate || '')} - ${this.escapeXml(edu.endDate || '')}</text>
+            <text x="${padding}" y="${215 + index * 36}" class="cv-text cv-small" fill="#475569">${this.escapeXml(edu.area || 'Field of Study')}</text>
           `).join('')}
         ` : ''}
         
         <!-- Skills -->
-        ${skills ? `
-          <text x="${padding}" y="${height - 30}" class="cv-text cv-section">Skills</text>
-          <text x="${padding}" y="${height - 15}" class="cv-text cv-small">${this.escapeXml(skills)}</text>
+        ${skillsString ? `
+          <text x="${padding}" y="280" class="cv-text cv-section" fill="${accentColor}">Skills</text>
+          <line x1="${padding}" y1="285" x2="${width - padding}" y2="285" stroke="${accentColor}" stroke-width="0.75"/>
+          <text x="${padding}" y="298" class="cv-text cv-small" fill="#475569">${this.escapeXml(skillsString.length > 60 ? skillsString.substring(0, 57) + '...' : skillsString)}</text>
         ` : ''}
+      `;
+    }
+
+    return `
+      <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <style>
+            .cv-text { font-family: ${fontFamily}; }
+            .cv-title { font-size: 13.5px; font-weight: 800; }
+            .cv-subtitle { font-size: 9.5px; font-weight: 600; }
+            .cv-body { font-size: 8.5px; font-weight: 700; }
+            .cv-small { font-size: 7.5px; }
+            .cv-mini { font-size: 6.5px; }
+            .cv-section { font-size: 10px; font-weight: 800; letter-spacing: 0.5px; }
+            .cv-sidebar-heading { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
+            .cv-sidebar-small { font-size: 7px; font-weight: 500; }
+          </style>
+        </defs>
+        
+        ${svgInnerContent}
       </svg>
     `;
   }

@@ -484,6 +484,9 @@ function resumeEnhancerReducer(
       return { ...state, saveError: action.payload };
 
     case 'LOAD_CV':
+      const hasWorkExperience = action.payload.cvData?.work && 
+        Array.isArray(action.payload.cvData.work) && 
+        action.payload.cvData.work.some((w: any) => w && (w.name || w.company || w.position));
       return {
         ...state,
         mode: 'edit',
@@ -492,6 +495,7 @@ function resumeEnhancerReducer(
         cvType: action.payload.cvType,
         cvTitle: action.payload.cvTitle,
         cvData: action.payload.cvData,
+        fresherMode: !hasWorkExperience,
         selectedTemplate: action.payload.template || state.selectedTemplate,
         journeyId: action.payload.journeyId,
         jobData: action.payload.jobData,
