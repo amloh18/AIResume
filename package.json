@@ -21,7 +21,8 @@
     "import:uk-sponsors": "npx tsx scripts/import-uk-sponsors-standalone.ts",
     "import:us-h1b": "npx tsx scripts/import-us-h1b-standalone.ts",
     "fix:source-field": "npx tsx scripts/fix-missing-source-field.ts",
-    "migrate:cv-type": "npx tsx scripts/migrate-cv-type.ts"
+    "migrate:cv-type": "npx tsx scripts/migrate-cv-type.ts",
+    "migrate:legacy-templates": "npx tsx scripts/migrate-legacy-templates.ts"
   },
   "keywords": [
     "cv",

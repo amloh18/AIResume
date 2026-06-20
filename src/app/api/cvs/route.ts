@@ -5,7 +5,7 @@ import { CV, Template } from '@/models';
 import { createPaginationOptions, paginateQuery, createErrorResponse } from '@/lib/db-utils';
 import { UnifiedCVAPIResponse, UnifiedCVDocument, UnifiedCVRequest } from '@/types/unified-cv-schema';
 import { getAuthenticatedUser } from '@/lib/auth-helpers';
-import { getTemplateById, isHardcodedTemplate, getAllTemplates } from '@/lib/templates/template-utils';
+import { getTemplateById, isHardcodedTemplate, getAllTemplates, migrateLegacyTemplateId } from '@/lib/templates/template-utils';
 import mongoose from 'mongoose';
 import usageLimitsService from '@/lib/services/usageLimitsService';
 
@@ -132,6 +132,23 @@ export async function GET(request: NextRequest) {
     // Execute query
     console.log('🔍 CV API - Executing database query');
     const cvs = await query.lean();
+
+    // Migrate any legacy templates in the CVs array to prevent crashes
+    cvs.forEach(cv => {
+      const templateIdStr = cv.templateId?.toString() || '';
+      if (templateIdStr && !templateIdStr.startsWith('tpl-') && !mongoose.Types.ObjectId.isValid(templateIdStr)) {
+        const migratedId = migrateLegacyTemplateId(templateIdStr);
+        console.log(`🔄 CV API - Migrating legacy template ID ${templateIdStr} -> ${migratedId} for CV ${cv._id}`);
+        
+        // Update local object for current response
+        cv.templateId = migratedId;
+        
+        // Update database asynchronously
+        CV.updateOne({ _id: cv._id }, { templateId: migratedId }).catch(err => {
+          console.error(`Failed to save migrated template ID for CV ${cv._id}:`, err);
+        });
+      }
+    });
 
     // For summary projection, populate ObjectId templateIds only
     if (projection === 'summary') {

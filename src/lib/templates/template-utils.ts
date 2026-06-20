@@ -76,6 +76,55 @@ function mapCanvasTemplateToITemplate(canvasTemplate: any): ITemplate {
 }
 
 /**
+ * Maps legacy template IDs (V1, V2, cover letters, custom strings) to the new canvas template system (tpl-1 to tpl-15)
+ */
+export function migrateLegacyTemplateId(templateId: string | null | undefined): string {
+  if (!templateId) return 'tpl-1';
+
+  const templateIdStr = String(templateId).trim();
+  if (templateIdStr.startsWith('tpl-')) {
+    return templateIdStr;
+  }
+
+  const legacyMap: Record<string, string> = {
+    // V1 legacy templates
+    'data-driven-pro-template': 'tpl-2',
+    'designer-modern-template': 'tpl-7',
+    'elegant-timeline-template': 'tpl-14',
+    'executive-professional-layout-template': 'tpl-3',
+    'executive-standard-template': 'tpl-6',
+    'tech-pro-blue-template': 'tpl-8',
+    'the-modern-cv-template': 'tpl-2',
+    'executive-minimal-template': 'tpl-1',
+    'header-professional-template': 'tpl-6',
+    'minimal-professional-template': 'tpl-1',
+    'one-pager-professional-template': 'tpl-1',
+    'professional-minimal-template': 'tpl-1',
+    'professional-extended-template': 'tpl-3',
+
+    // V2 legacy templates
+    'professional-extended-v2': 'tpl-3',
+    'modern-minimal-v2': 'tpl-1',
+    'two-column-sidebar-v2': 'tpl-2',
+    'creative-bold-v2': 'tpl-9',
+    'academic-cv-v2': 'tpl-14',
+
+    // Cover letter templates incorrectly used as CV templates
+    'zurich-minimalist': 'tpl-1',
+    'oxford-traditional': 'tpl-6',
+    'london-corporate': 'tpl-3',
+    'paris-creative': 'tpl-9',
+    'silicon-valley-tech': 'tpl-8',
+    
+    // Fallbacks
+    'default': 'tpl-1',
+    'generic': 'tpl-1'
+  };
+
+  return legacyMap[templateIdStr] || 'tpl-1';
+}
+
+/**
  * Get template data by ID, checking both hardcoded templates and database
  */
 export function getTemplateById(templateId: string): ITemplate | null {
@@ -83,12 +132,14 @@ export function getTemplateById(templateId: string): ITemplate | null {
     return null;
   }
 
-  const v2Template = ALL_TEMPLATE_V2.find(t => t.id === templateId);
+  const cleanId = migrateLegacyTemplateId(templateId);
+
+  const v2Template = ALL_TEMPLATE_V2.find(t => t.id === cleanId);
   if (v2Template) {
     return mapV2ToITemplate(v2Template);
   }
 
-  const canvasTemplate = CANVAS_TEMPLATES.find(t => t.id === templateId);
+  const canvasTemplate = CANVAS_TEMPLATES.find(t => t.id === cleanId);
   if (canvasTemplate) {
     return mapCanvasTemplateToITemplate(canvasTemplate);
   }
@@ -110,5 +161,6 @@ export function getAllTemplates(): ITemplate[] {
  * Check if a template ID refers to a hardcoded template
  */
 export function isHardcodedTemplate(templateId: string): boolean {
-  return ALL_TEMPLATE_V2.some(t => t.id === templateId) || CANVAS_TEMPLATES.some(t => t.id === templateId);
+  const cleanId = migrateLegacyTemplateId(templateId);
+  return ALL_TEMPLATE_V2.some(t => t.id === cleanId) || CANVAS_TEMPLATES.some(t => t.id === cleanId);
 }
