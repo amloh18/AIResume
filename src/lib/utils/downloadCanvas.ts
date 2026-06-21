@@ -104,6 +104,18 @@ export async function downloadCanvasAsPDF(
     height: totalContentH,
     windowWidth: cvDoc.offsetWidth,
     onclone: (clonedDoc: Document) => {
+      // Disable all CSS transitions, animations, and keyframe delays in the cloned document
+      const style = clonedDoc.createElement('style');
+      style.innerHTML = `
+        * {
+          animation: none !important;
+          transition: none !important;
+          transition-duration: 0s !important;
+          animation-duration: 0s !important;
+        }
+      `;
+      clonedDoc.head.appendChild(style);
+
       const clone = clonedDoc.querySelector('.cv-document') as HTMLElement | null;
       if (clone) {
         // Remove the CSS mask that hides content in the page-gap zones

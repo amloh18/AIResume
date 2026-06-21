@@ -72,10 +72,10 @@ export default function RedesignedDashboardView({ tier, isExpanded = false }: Re
           router.push('/editor?step=1');
           break;
         case "Tailored CVs":
-          router.push('/dashboard/canvas');
+          router.push('/editor');
           break;
         case "Cover Letters":
-          router.push('/dashboard/canvas?tab=cover-letters');
+          router.push('/editor?tab=cover-letters');
           break;
         case "ATS Scans":
           router.push('/dashboard/tracker');

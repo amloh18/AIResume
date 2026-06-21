@@ -168,11 +168,11 @@ const CVManagementSection: React.FC<{
   const router = useRouter();
   const handleShowATSAnalysis = () => {
     if (masterCV) {
-      // Navigate to canvas page with openReport param to open the report sidepanel
-      router.push(`/dashboard/canvas?openReport=true&cvId=${masterCV.id}`);
+      // Navigate to editor in edit-master mode to view/edit the master CV
+      router.push(`/editor?mode=edit-master&cvId=${masterCV.id}`);
     } else {
-      // If no master CV, navigate to canvas page (will show empty state)
-      router.push('/dashboard/canvas?openReport=true');
+      // If no master CV, navigate to editor step 1
+      router.push('/editor');
     }
   };
 

@@ -488,6 +488,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     if (!container) return;
 
     let debounceTimer: ReturnType<typeof setTimeout>;
+    let settleDebounce: ReturnType<typeof setTimeout>;
     const MAX_REASONABLE_PAGES = 50;
     const MIN_SCALE = 0.25;
 
@@ -500,10 +501,8 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
       const EFFECTIVE_HEIGHT = layoutMetrics.slotHeightPx;
       const PAGE_TOP_PADDING = layoutMetrics.pageTopPaddingPx;
       const PAGE_BOTTOM_PADDING = layoutMetrics.pageBottomPaddingPx;
-      // Minimum content height to be worth pushing (avoid pushing tiny orphans)
       const MIN_PUSH_HEIGHT = 20;
 
-      // Collect only item- and top-level keep-with-next targets.
       const rawBreakables = Array.from(
         doc.querySelectorAll('.cv-page-breakable, .cv-keep-with-next')
       ) as HTMLElement[];
@@ -519,22 +518,12 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
         return true;
       });
 
-      const measureElement = (element: HTMLElement, docRect: DOMRect, scale: number) => {
-        const itemRect = element.getBoundingClientRect();
-        const top = (itemRect.top - docRect.top) / scale;
-        const height = itemRect.height / scale;
-        const bottom = top + height;
-        return { top, height, bottom };
-      };
-
-      // --- PASS 1: Reset all injected margins so we measure natural positions ---
-      allBreakables.forEach(item => { item.style.marginTop = ''; });
-      doc.style.height = '';
-
-      // --- PASS 2: measure + apply in a single rAF after DOM has settled ---
       requestAnimationFrame(() => {
+        // Reset margins to natural state first
+        allBreakables.forEach(item => { item.style.marginTop = ''; });
+        doc.style.height = '';
+
         const docRect = doc.getBoundingClientRect();
-        // Scale factor when canvas is zoomed
         const scale = docRect.width > 0 && doc.offsetWidth > 0 ? docRect.width / doc.offsetWidth : 1;
 
         if (!Number.isFinite(scale) || scale < MIN_SCALE || !Number.isFinite(EFFECTIVE_HEIGHT) || EFFECTIVE_HEIGHT <= 0) {
@@ -546,81 +535,99 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
         }
 
         const printableHeight = PAGE_HEIGHT - PAGE_TOP_PADDING - PAGE_BOTTOM_PADDING;
-        const MAX_PAGINATION_PASSES = 5;
 
-        for (let pass = 0; pass < MAX_PAGINATION_PASSES; pass += 1) {
-          let didChange = false;
-          const pushedElements = new Set<HTMLElement>();
+        // BATCH READ PHASE (Measure natural positions)
+        const naturalData = allBreakables.map((item) => {
+          const itemRect = item.getBoundingClientRect();
+          const top = (itemRect.top - docRect.top) / scale;
+          const height = itemRect.height / scale;
+          const bottom = top + height;
+          const style = window.getComputedStyle(item);
+          const naturalMargin = parseFloat(style.marginTop) || 0;
+          return {
+            element: item,
+            naturalTop: top,
+            height,
+            naturalBottom: bottom,
+            naturalMargin,
+            isKeepWithNext: item.classList.contains('cv-keep-with-next')
+          };
+        });
 
-          allBreakables.forEach((item, index) => {
-            // If an ancestor was already pushed, we don't need to push this item individually
-            // because it has already been carried over to the next page by the parent.
-            let parent = item.parentElement;
-            let isAncestorPushed = false;
-            while (parent && parent !== doc) {
-              if (pushedElements.has(parent)) {
-                isAncestorPushed = true;
-                break;
-              }
-              parent = parent.parentElement;
+        // CALCULATION PHASE (Single-pass simulator)
+        let cumulativeShift = 0;
+        const pushes = new Map<HTMLElement, number>();
+        const pushedElements = new Set<HTMLElement>();
+
+        naturalData.forEach((data, index) => {
+          const item = data.element;
+          
+          let parent = item.parentElement;
+          let isAncestorPushed = false;
+          while (parent && parent !== doc) {
+            if (pushedElements.has(parent)) {
+              isAncestorPushed = true;
+              break;
             }
-
-            if (isAncestorPushed) return;
-
-            const { top, height, bottom } = measureElement(item, docRect, scale);
-            if (![top, height, bottom].every(Number.isFinite)) return;
-
-            const pageIndex = Math.max(0, Math.floor(top / EFFECTIVE_HEIGHT));
-            const pageContentTop = pageIndex * EFFECTIVE_HEIGHT + PAGE_TOP_PADDING;
-            const pageContentBottom = pageIndex * EFFECTIVE_HEIGHT + PAGE_HEIGHT - PAGE_BOTTOM_PADDING;
-            const nextPageContentTop = (pageIndex + 1) * EFFECTIVE_HEIGHT + PAGE_TOP_PADDING;
-
-            let requiredPush = 0;
-
-            // If an entry starts inside the reserved top margin band for a page,
-            // move it down so the new page starts cleanly.
-            if (pageIndex > 0 && top < pageContentTop) {
-              requiredPush = Math.max(requiredPush, pageContentTop - top);
-            }
-
-            // If an entry crosses the printable bottom area and can fit on the next page,
-            // move the whole block instead of letting it disappear into the visual gap.
-            if (
-              bottom > pageContentBottom &&
-              height < printableHeight &&
-              height > MIN_PUSH_HEIGHT
-            ) {
-              requiredPush = Math.max(requiredPush, nextPageContentTop - top);
-            } else if (item.classList.contains('cv-keep-with-next')) {
-              // Keep section headers with the first block that follows them.
-              const nextItem = allBreakables[index + 1];
-              if (nextItem && !pushedElements.has(nextItem)) {
-                const { height: nextHeight, bottom: nextBottom } = measureElement(nextItem, docRect, scale);
-                if (
-                  nextBottom > pageContentBottom &&
-                  nextHeight < printableHeight &&
-                  nextHeight > MIN_PUSH_HEIGHT
-                ) {
-                  requiredPush = Math.max(requiredPush, nextPageContentTop - top);
-                }
-              }
-            }
-
-            const normalizedPush = Math.min(requiredPush, EFFECTIVE_HEIGHT);
-            if (Number.isFinite(normalizedPush) && normalizedPush > 0) {
-              const nextMarginTop = `${normalizedPush}px`;
-              if (item.style.marginTop !== nextMarginTop) {
-                item.style.marginTop = nextMarginTop;
-                didChange = true;
-              }
-              pushedElements.add(item);
-            }
-          });
-
-          if (!didChange) {
-            break;
+            parent = parent.parentElement;
           }
-        }
+
+          if (isAncestorPushed) return;
+
+          const shiftedTop = data.naturalTop + cumulativeShift;
+          const shiftedBottom = shiftedTop + data.height;
+
+          const pageIndex = Math.max(0, Math.floor(shiftedTop / EFFECTIVE_HEIGHT));
+          const pageContentTop = pageIndex * EFFECTIVE_HEIGHT + PAGE_TOP_PADDING;
+          const pageContentBottom = pageIndex * EFFECTIVE_HEIGHT + PAGE_HEIGHT - PAGE_BOTTOM_PADDING;
+          const nextPageContentTop = (pageIndex + 1) * EFFECTIVE_HEIGHT + PAGE_TOP_PADDING;
+
+          let requiredPush = 0;
+
+          if (pageIndex > 0 && shiftedTop < pageContentTop) {
+            requiredPush = Math.max(requiredPush, pageContentTop - shiftedTop);
+          }
+
+          if (
+            shiftedBottom > pageContentBottom &&
+            data.height < printableHeight &&
+            data.height > MIN_PUSH_HEIGHT
+          ) {
+            requiredPush = Math.max(requiredPush, nextPageContentTop - shiftedTop);
+          } else if (data.isKeepWithNext) {
+            const nextData = naturalData[index + 1];
+            if (nextData && !pushedElements.has(nextData.element)) {
+              const nextShiftedTop = nextData.naturalTop + cumulativeShift;
+              const nextShiftedBottom = nextShiftedTop + nextData.height;
+              if (
+                nextShiftedBottom > pageContentBottom &&
+                nextData.height < printableHeight &&
+                nextData.height > MIN_PUSH_HEIGHT
+              ) {
+                requiredPush = Math.max(requiredPush, nextPageContentTop - shiftedTop);
+              }
+            }
+          }
+
+          const normalizedPush = Math.min(requiredPush, EFFECTIVE_HEIGHT);
+          if (Number.isFinite(normalizedPush) && normalizedPush > 0) {
+            pushes.set(item, normalizedPush);
+            cumulativeShift += normalizedPush;
+            pushedElements.add(item);
+          }
+        });
+
+        // BATCH WRITE PHASE
+        allBreakables.forEach((item) => {
+          const pushVal = pushes.get(item) || 0;
+          if (pushVal > 0) {
+            const data = naturalData.find(d => d.element === item);
+            const naturalMargin = data?.naturalMargin || 0;
+            item.style.marginTop = `${pushVal + naturalMargin}px`;
+          } else {
+            item.style.marginTop = '';
+          }
+        });
 
         let maxBottom = 0;
         allBreakables.forEach((item) => {
@@ -630,7 +637,6 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
           }
         });
 
-        // Calculate total pages needed
         const naturalScrollHeight = doc.scrollHeight / scale;
         const measuredBottom = Math.max(maxBottom, naturalScrollHeight);
         if (!Number.isFinite(measuredBottom) || measuredBottom <= 0) {
@@ -659,13 +665,14 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
       });
     };
 
-    // Initial run with a short delay to let React finish painting
     const initTimer = setTimeout(paginate, 120);
+    const settleTimer = setTimeout(paginate, 450);
 
-    // Re-run on any size change (content grows/shrinks)
     const ro = new ResizeObserver(() => {
       clearTimeout(debounceTimer);
+      clearTimeout(settleDebounce);
       debounceTimer = setTimeout(paginate, 60);
+      settleDebounce = setTimeout(paginate, 450);
     });
 
     const docElement = container.querySelector('.cv-document');
@@ -673,7 +680,9 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
 
     return () => {
       clearTimeout(initTimer);
+      clearTimeout(settleTimer);
       clearTimeout(debounceTimer);
+      clearTimeout(settleDebounce);
       ro.disconnect();
     };
   }, [cvData, templateAnimKey, activeTemplate, layoutMetrics.pageBottomPaddingPx, layoutMetrics.pageGapPx, layoutMetrics.pageHeightPx, layoutMetrics.pageTopPaddingPx, layoutMetrics.slotHeightPx]);
@@ -941,7 +950,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
   };
 
   const handleReplaceClick = (zoneId: string, index: number, currentType: string) => { const category = SNIPPETS[currentType]?.category; setReplacingSnippet({ zoneId, index, currentType, category, isAdd: false }); };
-  const handleAddClick = (zoneId: string) => setReplacingSnippet({ zoneId, isAdd: true });
+  const handleAddClick = (zoneId: string, insertIndex?: number) => setReplacingSnippet({ zoneId, isAdd: true, insertIndex });
 
   const handleAddListEntry = (type: string) => {
     const l = type.toLowerCase();
@@ -961,7 +970,13 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     if (!replacingSnippet) return;
     setZones(prev => {
       const newZones = { ...prev };
-      if (replacingSnippet.isAdd) newZones[replacingSnippet.zoneId].push({ id: generateId(), type: newType });
+      if (replacingSnippet.isAdd) {
+        if (typeof replacingSnippet.insertIndex === 'number') {
+          newZones[replacingSnippet.zoneId].splice(replacingSnippet.insertIndex, 0, { id: generateId(), type: newType });
+        } else {
+          newZones[replacingSnippet.zoneId].push({ id: generateId(), type: newType });
+        }
+      }
       else newZones[replacingSnippet.zoneId][replacingSnippet.index] = { id: generateId(), type: newType };
       return newZones;
     });

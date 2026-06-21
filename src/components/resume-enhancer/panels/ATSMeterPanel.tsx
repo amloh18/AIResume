@@ -201,23 +201,23 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = () => {
 
       {/* ── Header ── */}
       <div className="sticky top-0 z-20 flex items-center justify-between px-4 py-3 bg-white/95 dark:bg-[var(--bg-secondary)] backdrop-blur-sm border-b border-gray-100 dark:border-white/[0.04]">
-        <div className="flex items-center gap-1 bg-gray-100 dark:bg-white/5 p-1 rounded-lg">
-           <button 
-             onClick={() => dispatch({ type: 'SET_MORI_CHAT_MODE', payload: false })}
-             className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-md transition-all ${!state.moriChatMode ? 'bg-white dark:bg-white/10 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
-           >
-             Analysis
-           </button>
-           <button 
-             onClick={() => dispatch({ type: 'SET_MORI_CHAT_MODE', payload: true })}
-             className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-md transition-all flex items-center gap-1.5 ${state.moriChatMode ? 'bg-white dark:bg-white/10 shadow-sm text-emerald-600 dark:text-emerald-400' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
-           >
-             <Sparkles className="w-3 h-3" />
-             Mori Chat
-           </button>
+        <div className="flex items-center gap-2">
+          <h3 className="text-xs font-extrabold uppercase tracking-wider text-gray-700 dark:text-gray-200">Analysis</h3>
         </div>
         
-        {!state.moriChatMode && (
+        <div className="flex items-center gap-2">
+          <button 
+             onClick={() => dispatch({ type: 'SET_MORI_CHAT_MODE', payload: !state.moriChatMode })}
+             className={`px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-md border transition-all flex items-center gap-1.5 ${
+               state.moriChatMode 
+                 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' 
+                 : 'bg-gray-50 hover:bg-gray-100 dark:bg-white/5 border-gray-200 dark:border-white/10 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+             }`}
+          >
+             <Sparkles className="w-3.5 h-3.5" />
+             {state.moriChatMode ? 'Close Mori' : 'Ask Mori'}
+          </button>
+          
           <button
             onClick={() => refreshATSScore(state.cvId || undefined, state.jobData?._id || state.jobData?.id || undefined)}
             disabled={isATSLoading}
@@ -226,15 +226,10 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = () => {
           >
             {isATSLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
           </button>
-        )}
+        </div>
       </div>
 
-      {state.moriChatMode ? (
-        <div className="flex-1 min-h-0">
-          <MoriChatInterface />
-        </div>
-      ) : (
-        <div className="flex-1 p-4 space-y-3">
+      <div className="flex-1 p-4 space-y-3">
           {/* ── Score Hero — side-by-side ring + details ── */}
           <div className="flex items-center gap-4 bg-gray-50 dark:bg-white/[0.03] border border-gray-100 dark:border-white/[0.05] rounded-xl p-4">
             {/* Ring */}
@@ -513,7 +508,6 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = () => {
           </p>
 
         </div>
-      )}
     </div>
   );
 };

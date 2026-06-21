@@ -47,7 +47,7 @@ export default function SidebarNav({ className }: SidebarNavProps) {
 
   const navItems = [
     { icon: LayoutDashboard, label: 'Dashboard', href: '/dashboard' },
-    { icon: FileText, label: 'CVs', href: '/cv' },
+    { icon: FileText, label: 'CVs', href: '/editor' },
     { icon: Briefcase, label: 'Jobs', href: '/dashboard/tracker' },
     { icon: Target, label: 'Applications', href: '/applications' },
     { icon: Mic, label: 'Interview Coach', href: '/dashboard/interview' },

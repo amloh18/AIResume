@@ -2116,7 +2116,7 @@ export default function ResumeEnhancerContainer({
     if (journeyId) {
       returnPath = '/dashboard/tracker';
     } else if (cvId && (mode === 'edit' || mode === 'edit-master')) {
-      returnPath = '/dashboard/canvas';
+      returnPath = '/editor';
     }
 
     // Only show confirmation if there are unsaved changes
@@ -2552,7 +2552,7 @@ export default function ResumeEnhancerContainer({
       // CRITICAL FIX: Don't auto-navigate from step 3 - stay on current step
       // This preserves parsed data and surgeon analysis
       if (isFinishing && savedCvId) {
-        router.push(`/dashboard/canvas?highlight=${savedCvId}`);
+        router.push(`/editor?highlight=${savedCvId}`);
       }
       // Removed: isContinuing navigation that was moving to step 4
 
