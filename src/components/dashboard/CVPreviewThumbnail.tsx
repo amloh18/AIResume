@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { memo, useEffect, useRef, useState } from 'react';
 import { FileText } from 'lucide-react';
 import CVSnapshotDocument, {
   CV_SNAPSHOT_A4_HEIGHT,
@@ -42,7 +42,14 @@ const CVPreviewThumbnail: React.FC<CVPreviewThumbnailProps> = ({
         renderWidth = containerHeight * aspectRatio;
       }
 
-      setDimensions({ width: renderWidth, height: renderHeight });
+      setDimensions((current) => {
+        const widthChanged = Math.abs(current.width - renderWidth) > 0.5;
+        const heightChanged = Math.abs(current.height - renderHeight) > 0.5;
+
+        return widthChanged || heightChanged
+          ? { width: renderWidth, height: renderHeight }
+          : current;
+      });
     };
 
     updateDimensions();
@@ -73,18 +80,27 @@ const CVPreviewThumbnail: React.FC<CVPreviewThumbnailProps> = ({
     <div ref={containerRef} className={`w-full h-full flex items-center justify-center relative overflow-hidden ${className}`}>
       {dimensions.width > 0 && dimensions.height > 0 ? (
         <div
+          className="relative overflow-hidden bg-white shrink-0"
           style={{
-            width: `${CV_SNAPSHOT_A4_WIDTH}px`,
-            height: `${CV_SNAPSHOT_A4_HEIGHT}px`,
-            transform: `scale(${dimensions.width / CV_SNAPSHOT_A4_WIDTH})`,
-            transformOrigin: 'top left',
+            width: `${dimensions.width}px`,
+            height: `${dimensions.height}px`,
           }}
         >
-          <CVSnapshotDocument cvData={cvData} template={template} documentClassName="shadow-lg" />
+          <div
+            className="absolute left-0 top-0"
+            style={{
+              width: `${CV_SNAPSHOT_A4_WIDTH}px`,
+              height: `${CV_SNAPSHOT_A4_HEIGHT}px`,
+              transform: `scale(${dimensions.width / CV_SNAPSHOT_A4_WIDTH})`,
+              transformOrigin: 'top left',
+            }}
+          >
+            <CVSnapshotDocument cvData={cvData} template={template} />
+          </div>
         </div>
       ) : null}
     </div>
   );
 };
 
-export default CVPreviewThumbnail;
+export default memo(CVPreviewThumbnail);
