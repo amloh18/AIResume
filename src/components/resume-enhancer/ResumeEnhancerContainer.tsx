@@ -92,6 +92,9 @@ export default function ResumeEnhancerContainer({
   const pathname = usePathname();
   const { state, dispatch, goToStep, loadCV, setRoleContext, resetState, setJobSidebarOpen, setTemplateOverlayOpen } = useResumeEnhancer();
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
+  const [stepOneDocumentTab, setStepOneDocumentTab] = useState<'cvs' | 'cover-letters'>(
+    searchParams.get('tab') === 'cover-letters' ? 'cover-letters' : 'cvs'
+  );
   const showTemplateOverlay = state.isTemplateOverlayOpen;
   const [showRoleModal, setShowRoleModal] = useState(false);
 
@@ -2687,8 +2690,8 @@ export default function ResumeEnhancerContainer({
   return (
     <div className="dashboard-page resume-enhancer-page min-h-screen bg-[var(--bg-primary)] text-[color:var(--text-primary)] flex flex-col">
       {/* HEADER - Top Bar */}
-      <header className="h-16 flex items-center justify-between px-6 border-b border-gray-200 dark:border-white/5 bg-white dark:bg-[#141810] sticky top-0 z-[100] shadow-sm dark:shadow-xl">
-        <div className="flex items-center gap-12 flex-1">
+      <header className={`editor-header relative min-h-16 flex items-center justify-between gap-2 px-3 sm:px-6 border-b border-[color:var(--border-primary)] bg-[var(--header-bg)] sticky top-0 z-[100] shadow-sm ${state.currentStep === 1 ? 'flex-wrap py-2 sm:py-0' : ''}`}>
+        <div className="flex items-center gap-12 flex-1 min-w-0">
           {/* Logo or Back to Dashboard if in deep editing */}
           <div className="flex items-center gap-4">
             <button
@@ -2701,7 +2704,7 @@ export default function ResumeEnhancerContainer({
             <div className="w-px h-6 bg-gray-200 dark:bg-white/10" />
             <button
               onClick={handleExit}
-              className="group flex items-center pr-12 hover:opacity-80 transition-all duration-300"
+              className="group hidden sm:flex items-center sm:pr-12 hover:opacity-80 transition-all duration-300"
             >
               <div className="flex items-center gap-3">
                 <Logo size="sm" />
@@ -2741,8 +2744,40 @@ export default function ResumeEnhancerContainer({
           </div>
         </div>
 
+        {state.currentStep === 1 && (
+          <div
+            className="step-one-header-tabs order-3 sm:order-none w-full sm:w-auto sm:absolute sm:left-1/2 sm:-translate-x-1/2 flex justify-center"
+            role="tablist"
+            aria-label="Document type"
+          >
+            <div className="relative grid grid-cols-2 w-full max-w-[330px] sm:w-[310px] rounded-full p-1 bg-[var(--bg-tertiary)] border border-[color:var(--border-primary)] shadow-inner">
+              <motion.div
+                className="absolute inset-y-1 w-[calc(50%-4px)] rounded-full bg-[var(--accent-primary)] shadow-[0_5px_18px_rgba(132,204,22,0.22)]"
+                animate={{ x: stepOneDocumentTab === 'cvs' ? 0 : '100%' }}
+                transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+              />
+              {([
+                ['cvs', 'RESUME'],
+                ['cover-letters', 'COVER LETTER'],
+              ] as const).map(([tab, label]) => (
+                <button
+                  key={tab}
+                  role="tab"
+                  aria-selected={stepOneDocumentTab === tab}
+                  onClick={() => setStepOneDocumentTab(tab)}
+                  className={`relative z-10 min-h-9 px-3 rounded-full text-[10px] sm:text-[11px] font-black tracking-[0.13em] transition-colors duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--header-bg)] ${
+                    stepOneDocumentTab === tab ? 'text-black' : 'text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)]'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Actions - Right side */}
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-1 sm:space-x-2 shrink-0">
           {state.currentStep > 1 && (
             <button
               onClick={handleBackStep}
@@ -2897,6 +2932,8 @@ export default function ResumeEnhancerContainer({
                         mode={'create'}
                         cvType={state.cvType}
                         isGuestMode={isGuestMode}
+                        activeDocumentTab={stepOneDocumentTab}
+                        onDocumentTabChange={setStepOneDocumentTab}
                       />
                     </ErrorBoundary>
                   </motion.div>

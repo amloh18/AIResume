@@ -1136,7 +1136,7 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
       <UnifiedAuthLayout
         title="Verification Required"
         subtitle="Please verify your identity"
-        showBackButton={!isModal}
+        showBackButton={false}
         backHref="/sign-in"
         backText="Back to Login"
         isModal={isModal}

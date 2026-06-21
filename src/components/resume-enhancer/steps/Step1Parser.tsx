@@ -3,25 +3,19 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
-import Image from 'next/image';
 import Logo from '@/components/ui/Logo';
-import { Upload, FileText, Edit3, CheckCircle2, Loader2, Briefcase, Sparkles, AlertTriangle, FolderOpen, Edit2, Copy, Plus, Grid, List, Trash2, MoreVertical } from 'lucide-react';
+import { Upload, FileText, Files, Gauge, Edit3, CheckCircle2, Loader2, Briefcase, Sparkles, AlertTriangle, FolderOpen, Edit2, Copy, Plus, Grid, List, Trash2, SlidersHorizontal, ChevronDown } from 'lucide-react';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
 import { UnifiedCVDataStructure, DEFAULT_UNIFIED_CV_DATA } from '@/types/unified-cv-schema';
 import { sanitizeErrorMessage } from '@/lib/api/error-handler';
-import { InfoTooltip } from '@/components/ui/tooltip';
 import JDInputPanel from '@/components/resume-enhancer/JDInputPanel';
 import { useUnifiedAuth } from '@/lib/hooks/useUnifiedAuth';
 import { authenticatedFetchWithUserId } from '@/lib/utils/apiUtils';
 import CVPreviewThumbnail from '@/components/dashboard/CVPreviewThumbnail';
-import { useInView } from 'framer-motion';
 import { getAllTemplates } from '@/lib/templates/template-utils';
-import { ThumbnailGenerator } from '@/components/resume-enhancer/ThumbnailGenerator';
 import SmartJDModal from '@/components/resume-enhancer/SmartJDModal';
 import toast from 'react-hot-toast';
-import { StaticLayoutRenderer, EditableField } from '@/components/cv-builder-pro/components/CoreUI';
 import { CANVAS_TEMPLATES } from '@/components/cv-builder-pro/registry';
-import { normalizeCvDataForCanvas } from '@/lib/utils/cv-canvas-normalizer';
 
 // Global cache to prevent refetching when navigating between steps
 let cachedExistingCVs: ExistingCV[] | null = null;
@@ -56,81 +50,42 @@ interface ExistingCV {
 }
 
 const LazyThumbnail = ({ item, isCoverLetter = false }: { item: any, isCoverLetter?: boolean }) => {
-  const ref = React.useRef(null);
-  const isInView = useInView(ref, { once: true, margin: "200px" });
-  
   const templateObj = React.useMemo(() => {
     if (item.template && (item.template.zones || item.template.type)) return item.template;
     
-    let idToFind = '';
-    if (typeof item.templateId === 'string') {
+    let idToFind = item.template?.id || item.template?._id || '';
+    if (!idToFind && typeof item.templateId === 'string') {
       idToFind = item.templateId;
-    } else if (item.templateId && typeof item.templateId === 'object') {
+    } else if (!idToFind && item.templateId && typeof item.templateId === 'object') {
       if (item.templateId.zones || item.templateId.type) {
         return item.templateId;
       }
       idToFind = item.templateId.id || item.templateId._id || '';
-    } else if (item.metadata?.templateId) {
+    } else if (!idToFind && item.metadata?.templateId) {
       idToFind = item.metadata.templateId;
     }
 
     if (idToFind) {
-      const foundTemplate = getAllTemplates().find(t => t.id === idToFind || t._id === idToFind);
+      const foundTemplate = CANVAS_TEMPLATES.find(t => t.id === idToFind)
+        || getAllTemplates().find(t => t.id === idToFind || t._id === idToFind);
       if (foundTemplate) return foundTemplate;
     }
 
-    // Default template fallback if no template ID is set
-    const defaultTemplate = getAllTemplates().find(t => t.id === '1-col' || t.id === 'tpl-1') || getAllTemplates()[0];
-    return defaultTemplate || null;
+    return CANVAS_TEMPLATES.find(t => t.id === '1-col') || CANVAS_TEMPLATES[0] || null;
   }, [item.template, item.templateId, item.metadata?.templateId]);
 
-  const cvDataForRenderer = React.useMemo(() => {
-    return normalizeCvDataForCanvas(item.cvData || DEFAULT_UNIFIED_CV_DATA);
-  }, [item.cvData]);
-
-  const ReadOnlyWrapper = React.useMemo(() => function Editable(props: any) {
-    return <EditableField {...props} data={cvDataForRenderer} readOnly={true} />;
-  }, [cvDataForRenderer]);
+  if (!isCoverLetter && templateObj) {
+    return (
+      <CVPreviewThumbnail
+        cvData={item.cvData || DEFAULT_UNIFIED_CV_DATA}
+        template={templateObj}
+        className="bg-white pointer-events-none"
+      />
+    );
+  }
 
   return (
-    <div 
-      ref={ref}
-      className="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-[#1a1a1a] p-4 pointer-events-none"
-    >
-      {/* Required CSS for CV Preview */}
-      <style dangerouslySetInnerHTML={{
-        __html: `
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap');
-        :root {
-          --cv-font: 'Inter';
-          --cv-base-size: 12px;
-          --cv-spacing: 1.0;
-          --cv-accent: #22c55e;
-        }
-        .cv-document { font-family: var(--cv-font), sans-serif; color: #1f2937; font-size: var(--cv-base-size); }
-        .cv-name { font-size: calc(var(--cv-base-size) * 2.5); line-height: 1.1; }
-        .cv-name-narrow { font-size: calc(var(--cv-base-size) * 2.0); line-height: 1.1; }
-        .cv-role { font-size: calc(var(--cv-base-size) * 1.15); }
-        .cv-heading { font-size: calc(var(--cv-base-size) * 1.1); }
-        .cv-title { font-size: calc(var(--cv-base-size) * 1.05); }
-        .cv-subtitle { font-size: calc(var(--cv-base-size) * 0.95); }
-        .cv-date { font-size: calc(var(--cv-base-size) * 0.85); }
-        .cv-contact { font-size: calc(var(--cv-base-size) * 0.85); }
-        .cv-body { font-size: inherit; line-height: calc(1.6 * var(--cv-spacing)); }
-        .cv-document p, .cv-document ul, .cv-document li { font-size: inherit !important; line-height: inherit !important; margin: 0; padding: 0; }
-        .cv-prose p { margin-bottom: calc(0.3em * var(--cv-spacing)) !important; }
-        .cv-prose ul { list-style-type: disc; padding-left: 1.2em; margin-top: calc(0.25em * var(--cv-spacing)) !important; margin-bottom: calc(0.25em * var(--cv-spacing)) !important; }
-      `}} />
-
-      {isInView ? (
-        <div className="relative w-full h-full max-w-[200px] max-h-[283px] aspect-[1/1.414] bg-white shadow-md overflow-hidden rounded-sm ring-1 ring-gray-300 @container">
-          {!isCoverLetter && templateObj ? (
-            <div className="absolute top-0 left-0 w-[794px] h-[1123px] origin-top-left" style={{ transform: 'scale(calc(100cqw / 794))' }}>
-              <StaticLayoutRenderer template={templateObj} cvData={cvDataForRenderer} ReadOnlyWrapper={ReadOnlyWrapper} />
-            </div>
-          ) : (
-            // Cover Letter or Fallback: Standard white A4 preview skeleton
-            <div className="w-full h-full p-6 flex flex-col gap-4 bg-white relative">
+    <div className="w-full h-full p-6 flex flex-col gap-4 bg-white relative overflow-hidden pointer-events-none">
               {/* Header placeholder */}
               <div className="space-y-2 border-b border-gray-100 pb-4">
                 <div className="h-4 w-1/3 bg-gray-200 rounded animate-pulse" />
@@ -153,14 +108,6 @@ const LazyThumbnail = ({ item, isCoverLetter = false }: { item: any, isCoverLett
                 <div className="h-2.5 w-1/4 bg-gray-200 rounded animate-pulse" />
                 <div className="h-2 w-1/5 bg-gray-100 rounded animate-pulse" />
               </div>
-            </div>
-          )}
-        </div>
-      ) : (
-        <div className="relative w-full h-full max-w-[200px] max-h-[283px] aspect-[1/1.414] bg-white shadow-md overflow-hidden rounded-sm ring-1 ring-gray-300">
-          <div className="w-full h-full bg-gray-100 dark:bg-white/5 animate-pulse" />
-        </div>
-      )}
     </div>
   );
 };
@@ -175,9 +122,20 @@ interface Step1ParserProps {
   cvType?: 'master' | 'standalone' | 'journey';
   /** Whether the user is in guest mode */
   isGuestMode?: boolean;
+  /** Controlled document mode shown in the editor header. */
+  activeDocumentTab?: 'cvs' | 'cover-letters';
+  onDocumentTabChange?: (tab: 'cvs' | 'cover-letters') => void;
 }
 
-export default function Step1Parser({ onComplete, userHasMasterCV = false, mode = 'create', cvType, isGuestMode = false }: Step1ParserProps) {
+export default function Step1Parser({
+  onComplete,
+  userHasMasterCV = false,
+  mode = 'create',
+  cvType,
+  isGuestMode = false,
+  activeDocumentTab,
+  onDocumentTabChange,
+}: Step1ParserProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { state, dispatch, setFresherMode, detectFresherMode, determineCVType, setJdText, goToStep, setTemplateOverlayOpen } = useResumeEnhancer();
@@ -200,19 +158,9 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
   const [forcedCvType, setForcedCvType] = useState<'master' | 'journey' | 'standalone' | null>(null);
   const [isCreatingBlank, setIsCreatingBlank] = useState(false);
   const [viewLayout, setViewLayout] = useState<'grid' | 'list'>('grid');
-  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
 
   const firstName = user?.name ? user.name.split(' ')[0] : 'Guest';
-
-  // Close dropdown on click outside
-  useEffect(() => {
-    const handleClickOutside = () => {
-      setActiveMenuId(null);
-    };
-    window.addEventListener('click', handleClickOutside);
-    return () => window.removeEventListener('click', handleClickOutside);
-  }, []);
 
   const handleDeleteCV = async (cvId: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -337,7 +285,12 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
   
   const [existingCoverLetters, setExistingCoverLetters] = useState<any[]>([]);
   const [isLoadingCoverLetters, setIsLoadingCoverLetters] = useState(false);
-  const [activeTab, setActiveTab] = useState<'cvs' | 'cover-letters'>(searchParams.get('tab') === 'cover-letters' ? 'cover-letters' : 'cvs');
+  const [internalActiveTab, setInternalActiveTab] = useState<'cvs' | 'cover-letters'>(searchParams.get('tab') === 'cover-letters' ? 'cover-letters' : 'cvs');
+  const activeTab = activeDocumentTab ?? internalActiveTab;
+  const setActiveTab = useCallback((tab: 'cvs' | 'cover-letters') => {
+    setInternalActiveTab(tab);
+    onDocumentTabChange?.(tab);
+  }, [onDocumentTabChange]);
   const [filterType, setFilterType] = useState<'all' | 'master' | 'standalone' | 'journey' | 'archived'>('all');
   const [parsingSteps] = useState([
     { label: 'Extracting text...', progress: 20 },
@@ -811,7 +764,7 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: 20 }}
           ref={scrollContainerRef}
-          className="flex flex-col h-full min-h-[calc(100vh-100px)] overflow-y-auto custom-scrollbar bg-[var(--bg-primary)] scroll-smooth"
+          className="step-one-shell flex flex-col h-full min-h-[calc(100vh-100px)] overflow-y-auto custom-scrollbar bg-[var(--bg-primary)] scroll-smooth"
           onScroll={handleScroll}
         >
         {/* Sticky Small Header on Scroll */}
@@ -822,7 +775,7 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: -100, opacity: 0 }}
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              className="fixed top-16 left-0 right-0 z-[110] bg-white dark:bg-[#141810] border-b border-gray-200 dark:border-white/5 py-3 px-4 sm:px-8 flex items-center justify-between shadow-xl"
+              className="step-one-compact-header fixed top-16 left-0 right-0 z-[110] bg-white dark:bg-[#141810] border-b border-gray-200 dark:border-white/5 py-3 px-4 sm:px-8 flex items-center justify-between shadow-xl"
             >
               <div className="flex items-center gap-3 sm:gap-4">
                 <Logo size="sm" />
@@ -857,7 +810,7 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
         </AnimatePresence>
 
         {/* Top Section */}
-        <div ref={topSectionRef} className="w-full flex flex-col pt-6 pb-2">
+        <div ref={topSectionRef} className="step-one-hero w-full flex flex-col pt-6 sm:pt-8 pb-2">
           <div className="w-full max-w-7xl mx-auto px-4 sm:px-8">
             <motion.div
               style={{ 
@@ -865,45 +818,58 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
                 opacity: headerOpacity,
                 y: headerY
               }}
-              className="flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-6 mb-4 sm:mb-6 origin-bottom"
+              className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 sm:gap-6 mb-5 sm:mb-7 origin-bottom max-w-6xl mx-auto w-full"
             >
               {/* Welcome text */}
               <div className="text-left max-w-2xl">
                 <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900 dark:text-white tracking-tight leading-tight">
                   {getGreeting()}, <span className="text-lime-500">{firstName}</span> 👋
                 </h2>
-                <p className="text-base sm:text-lg text-gray-500 dark:text-gray-400 font-semibold mt-2">
-                  Let's create your next winning resume.
+                <p className="text-sm sm:text-base text-[color:var(--text-secondary)] font-medium mt-1.5 sm:mt-2">
+                  {activeTab === 'cvs' ? "Let's create your next winning resume." : "Let's create a cover letter that gets noticed."}
                 </p>
               </div>
 
               {/* Stats Widgets */}
-              <div className="flex flex-wrap items-center gap-3 sm:gap-4 shrink-0">
-                <div className="flex items-center gap-3 bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/5 px-5 py-3.5 rounded-2xl shadow-lg hover:scale-105 transition-all">
-                  <div className="w-10 h-10 bg-lime-500/10 rounded-xl flex items-center justify-center text-lime-500">
+              <div className="grid grid-cols-3 items-stretch gap-2 sm:gap-3 shrink-0 w-full lg:w-auto lg:min-w-[530px]">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('cvs')}
+                  aria-label={`Show ${existingCVs.length} resumes`}
+                  className="step-one-stat group relative overflow-hidden flex items-center gap-2 sm:gap-3 px-3 sm:px-5 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-lime-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  <div className="step-one-stat-icon relative w-10 h-10 bg-lime-500/10 border border-lime-500/15 rounded-xl flex items-center justify-center text-lime-500 shadow-inner group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-300">
                     <FileText className="w-5 h-5" />
                   </div>
-                  <div className="text-left">
+                  <div className="step-one-stat-copy relative text-left">
                     <div className="text-xl font-black text-gray-900 dark:text-white">{existingCVs.length}</div>
                     <div className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider">Resumes</div>
                   </div>
-                </div>
+                </button>
 
-                <div className="flex items-center gap-3 bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/5 px-5 py-3.5 rounded-2xl shadow-lg hover:scale-105 transition-all">
-                  <div className="w-10 h-10 bg-purple-500/10 rounded-xl flex items-center justify-center text-purple-500">
-                    <FolderOpen className="w-5 h-5" />
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('cover-letters')}
+                  aria-label={`Show ${existingCoverLetters.length} cover letters`}
+                  className="step-one-stat group relative overflow-hidden flex items-center gap-2 sm:gap-3 px-3 sm:px-5 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  <div className="step-one-stat-icon relative w-10 h-10 bg-purple-500/10 border border-purple-500/15 rounded-xl flex items-center justify-center text-purple-500 shadow-inner group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300">
+                    <Files className="w-5 h-5" />
                   </div>
-                  <div className="text-left">
+                  <div className="step-one-stat-copy relative text-left">
                     <div className="text-xl font-black text-gray-900 dark:text-white">{existingCoverLetters.length}</div>
                     <div className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider">Cover Letters</div>
                   </div>
-                </div>
+                </button>
 
-                <div className="flex items-center gap-3 bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/5 px-5 py-3.5 rounded-2xl shadow-lg hover:scale-105 transition-all">
-                  <div className="w-10 h-10 bg-lime-500/10 rounded-xl flex items-center justify-center text-lime-500 dark:text-[#80FF00]">
-                    <Sparkles className="w-5 h-5" />
+                <div className="step-one-stat group relative overflow-hidden flex items-center gap-2 sm:gap-3 px-3 sm:px-5 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl cursor-default">
+                  <div className="absolute inset-0 bg-gradient-to-r from-lime-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  <div className="step-one-stat-icon relative w-10 h-10 bg-lime-500/10 border border-lime-500/15 rounded-xl flex items-center justify-center text-lime-500 dark:text-[#80FF00] shadow-inner group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-300">
+                    <Gauge className="w-5 h-5" />
                   </div>
-                  <div className="text-left">
+                  <div className="step-one-stat-copy relative text-left">
                     <div className="text-xl font-black text-gray-900 dark:text-white">
                       {averageATSScore}%
                     </div>
@@ -920,17 +886,17 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
                y: cardsY,
                opacity: cardsOpacity
              }}
-             className="grid gap-3 sm:gap-4 origin-top grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 max-w-6xl mx-auto"
+             className="grid gap-3 sm:gap-4 origin-top grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 max-w-6xl mx-auto w-full"
            >
             {activeTab === 'cvs' ? (
               <>
                 {/* Resume Cards */}
                 <motion.button
-                  whileHover={{ y: -8, scale: 1.01 }}
+                  whileHover={{ y: -5, scale: 1.01 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => handleManualEntry()}
                   disabled={isCreatingBlank || isDuplicating || isLoadingCVs}
-                  className={`group relative bg-white dark:bg-[#141810] rounded-xl sm:rounded-2xl p-5 sm:p-6 shadow-2xl border-2 border-dashed border-gray-200 dark:border-white/10 hover:border-lime-500 dark:hover:border-[#80FF00]/50 overflow-hidden text-left flex flex-col items-center justify-center text-center ${(isCreatingBlank || isDuplicating || isLoadingCVs) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  className={`step-one-action step-one-action-primary group relative rounded-xl sm:rounded-2xl p-5 sm:p-6 min-h-[132px] sm:min-h-[148px] border border-dashed overflow-hidden text-left flex flex-col items-center justify-center text-center ${(isCreatingBlank || isDuplicating || isLoadingCVs) ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-lime-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                   <div className="relative flex flex-col items-center space-y-3 sm:space-y-4">
@@ -947,11 +913,11 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
                 </motion.button>
 
                 <motion.button
-                  whileHover={{ y: -8, scale: 1.01 }}
+                  whileHover={{ y: -5, scale: 1.01 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={handleDuplicatePrimary}
                   disabled={!userHasMasterCV || isDuplicating || isLoadingCVs}
-                  className={`group relative bg-white dark:bg-[#141810] rounded-xl sm:rounded-2xl p-5 sm:p-6 shadow-2xl border border-gray-250 dark:border-white/5 overflow-hidden text-left flex flex-col items-center justify-center text-center ${(!userHasMasterCV || isDuplicating || isLoadingCVs) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  className={`step-one-action group relative rounded-xl sm:rounded-2xl p-5 sm:p-6 min-h-[132px] sm:min-h-[148px] overflow-hidden text-left flex flex-col items-center justify-center text-center ${(!userHasMasterCV || isDuplicating || isLoadingCVs) ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-lime-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                   <div className="relative flex flex-col items-center space-y-3 sm:space-y-4">
@@ -974,14 +940,14 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
                 </motion.button>
 
                 <motion.button
-                  whileHover={{ y: -8, scale: 1.01 }}
+                  whileHover={{ y: -5, scale: 1.01 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => {
                     setForcedCvType('standalone');
                     setParseMethod('upload');
                   }}
                   disabled={isCreatingBlank || isDuplicating || isLoadingCVs}
-                  className={`group relative bg-white dark:bg-[#141810] rounded-xl sm:rounded-2xl p-5 sm:p-6 shadow-2xl border border-gray-250 dark:border-white/5 overflow-hidden text-left flex flex-col items-center justify-center text-center ${(isCreatingBlank || isDuplicating || isLoadingCVs) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  className={`step-one-action group relative rounded-xl sm:rounded-2xl p-5 sm:p-6 min-h-[132px] sm:min-h-[148px] overflow-hidden text-left flex flex-col items-center justify-center text-center ${(isCreatingBlank || isDuplicating || isLoadingCVs) ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                   <div className="relative flex flex-col items-center space-y-3 sm:space-y-4">
@@ -1002,43 +968,35 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
               <>
                 {/* Cover Letter Cards */}
                 <motion.button
-                  whileHover={{ y: -8, scale: 1.01 }}
+                  whileHover={{ y: -5, scale: 1.01 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={handleStartWithJob}
-                  className="group relative bg-white dark:bg-[#141810] rounded-xl sm:rounded-2xl p-5 sm:p-6 shadow-2xl border border-lime-500/30 overflow-hidden text-left flex flex-col items-center justify-center text-center"
+                  className="step-one-action step-one-action-primary group relative rounded-xl sm:rounded-2xl p-5 sm:p-6 min-h-[132px] sm:min-h-[148px] border border-dashed overflow-hidden text-left flex flex-col items-center justify-center text-center"
                 >
-                  <div className="absolute inset-0 bg-gradient-to-br from-lime-500/20 via-transparent to-transparent opacity-30 group-hover:opacity-100 transition-opacity duration-500" />
+                  <div className="absolute inset-0 bg-gradient-to-br from-lime-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                   <div className="relative flex flex-col items-center space-y-3 sm:space-y-4">
-                    <div className="px-3 sm:px-4 py-1 sm:py-1.5 bg-lime-500 text-black text-[9px] sm:text-[10px] font-black rounded-full shadow-2xl shadow-lime-500/20">
-                      AI POWERED
-                    </div>
-                    <div className="w-12 h-12 sm:w-14 sm:h-14 bg-lime-500/20 border border-lime-500/40 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-inner group-hover:scale-110 transition-all duration-500">
-                      <Sparkles className="w-6 h-6 sm:w-7 sm:h-7 text-lime-500" />
+                    <div className="w-12 h-12 sm:w-14 sm:h-14 bg-lime-500/10 border border-lime-500/30 text-lime-550 dark:bg-[#80FF00]/10 dark:border-[#80FF00]/20 dark:text-[#80FF00] rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-all duration-500">
+                      <Sparkles className="w-6 h-6 sm:w-7 sm:h-7 stroke-[2.5]" />
                     </div>
                     <div>
                       <h3 className="text-lg sm:text-xl font-black text-gray-900 dark:text-white mb-1 tracking-tight">Write with AI</h3>
-                      <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 font-medium leading-relaxed">
+                      <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 font-medium leading-relaxed">
                         Generate a tailored letter <br className="hidden xs:block" />
                         from a job description.
                       </p>
-                    </div>
-                    <div className="flex gap-2">
-                      <span className="text-[9px] sm:text-[10px] font-black px-3 sm:px-4 py-1 sm:py-1.5 bg-lime-500/10 text-lime-500 border border-lime-500/20 rounded-full group-hover:bg-lime-500 group-hover:text-black transition-all">
-                        RECOMMENDED
-                      </span>
                     </div>
                   </div>
                 </motion.button>
 
                 <motion.button
-                  whileHover={{ y: -8, scale: 1.01 }}
+                  whileHover={{ y: -5, scale: 1.01 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => router.push('/editor?mode=create-cover-letter&step=2')}
-                  className="group relative bg-white dark:bg-[#141810] rounded-xl sm:rounded-2xl p-5 sm:p-6 shadow-2xl border border-white/5 overflow-hidden text-left flex flex-col items-center justify-center text-center"
+                  className="step-one-action group relative rounded-xl sm:rounded-2xl p-5 sm:p-6 min-h-[132px] sm:min-h-[148px] overflow-hidden text-left flex flex-col items-center justify-center text-center"
                 >
-                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  <div className="absolute inset-0 bg-gradient-to-br from-lime-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                   <div className="relative flex flex-col items-center space-y-3 sm:space-y-4">
-                    <div className="w-12 h-12 sm:w-14 sm:h-14 bg-blue-500 text-white rounded-xl sm:rounded-2xl flex items-center justify-center shadow-2xl shadow-blue-500/30 group-hover:-rotate-6 group-hover:scale-110 transition-all duration-500">
+                    <div className="w-12 h-12 sm:w-14 sm:h-14 bg-lime-500/10 border border-lime-500/30 text-lime-550 dark:bg-[#80FF00]/10 dark:border-[#80FF00]/20 dark:text-[#80FF00] rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-all duration-500">
                       <Edit3 className="w-6 h-6 sm:w-7 sm:h-7 stroke-[2.5]" />
                     </div>
                     <div>
@@ -1048,21 +1006,18 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
                         write your own story.
                       </p>
                     </div>
-                    <span className="text-[9px] sm:text-[10px] font-black px-3 sm:px-4 py-1 sm:py-1.5 bg-blue-500/10 text-blue-500 rounded-full group-hover:bg-blue-500 group-hover:text-white transition-all">
-                      BLANK TEMPLATE
-                    </span>
                   </div>
                 </motion.button>
 
                 <motion.button
-                  whileHover={{ y: -8, scale: 1.01 }}
+                  whileHover={{ y: -5, scale: 1.01 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => setParseMethod('upload')}
-                  className="group relative bg-white dark:bg-[#141810] rounded-xl sm:rounded-2xl p-5 sm:p-6 shadow-2xl border border-white/5 overflow-hidden text-left flex flex-col items-center justify-center text-center"
+                  className="step-one-action group relative rounded-xl sm:rounded-2xl p-5 sm:p-6 min-h-[132px] sm:min-h-[148px] overflow-hidden text-left flex flex-col items-center justify-center text-center"
                 >
-                  <div className="absolute inset-0 bg-gradient-to-br from-orange-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                   <div className="relative flex flex-col items-center space-y-3 sm:space-y-4">
-                    <div className="w-12 h-12 sm:w-14 sm:h-14 bg-orange-500 text-white rounded-xl sm:rounded-2xl flex items-center justify-center shadow-2xl shadow-orange-500/30 group-hover:rotate-6 group-hover:scale-110 transition-all duration-500">
+                    <div className="w-12 h-12 sm:w-14 sm:h-14 bg-purple-500/10 border border-purple-500/30 text-purple-500 dark:bg-[#c084fc]/10 dark:border-[#c084fc]/20 dark:text-[#c084fc] rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-all duration-500">
                       <FolderOpen className="w-6 h-6 sm:w-7 sm:h-7 stroke-[2.5]" />
                     </div>
                     <div>
@@ -1071,11 +1026,6 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
                         Import an existing letter <br className="hidden xs:block" />
                         to redesign it.
                       </p>
-                    </div>
-                    <div className="flex gap-2">
-                      <span className="text-[9px] sm:text-[10px] font-black px-3 sm:px-4 py-1 sm:py-1.5 bg-orange-500/10 text-orange-500 rounded-full">
-                        PDF / DOCX
-                      </span>
                     </div>
                   </div>
                 </motion.button>
@@ -1103,7 +1053,7 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
 
         {/* Continue Editing Section */}
         {!isGuestMode && (
-          <div className="snap-start w-full min-h-[80vh] pt-4 sm:pt-6 bg-[var(--bg-primary)] relative">
+          <div className="step-one-documents snap-start w-full min-h-[80vh] pt-4 sm:pt-6 bg-[var(--bg-primary)] relative">
             <div className="w-full max-w-7xl mx-auto px-4 sm:px-8 pb-32">
               <motion.div
                 initial={{ opacity: 0, y: 40 }}
@@ -1111,42 +1061,32 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
                 viewport={{ once: true, margin: "-100px" }}
                 transition={{ type: 'spring', bounce: 0.4, duration: 0.8 }}
               >
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-6 border-b border-gray-200/50 dark:border-white/5 sticky top-16 pt-6 z-40 bg-[var(--bg-primary)]/95 backdrop-blur-md">
-                  <h3 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white tracking-tight text-left">
-                    {activeTab === 'cvs' ? 'Your Resumes' : 'Your Cover Letters'}
-                  </h3>
+                <div className="step-one-documents-header flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-5 pb-5 border-b border-[color:var(--border-primary)] sticky top-16 pt-5 z-40 bg-[var(--bg-primary)]/95 backdrop-blur-md">
+                  <div>
+                    <h3 className="text-xl sm:text-2xl font-black text-[color:var(--text-primary)] tracking-tight text-left">Your Documents</h3>
+                    <p className="mt-1 text-xs sm:text-sm text-[color:var(--text-secondary)]">All your resumes and cover letters in one place.</p>
+                  </div>
 
-                  {/* Toggles: Resume/Cover Letter + Grid/List */}
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    {/* Resumes / Cover Letters Tab Switcher */}
-                    <div className="flex items-center gap-1 bg-gray-100 dark:bg-[#141810] p-1 rounded-full border border-gray-200 dark:border-white/5 w-fit">
-                      <button
-                        onClick={() => {
-                          setActiveTab('cvs');
-                          setFilterType('all');
-                        }}
-                        className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap ${
-                          activeTab === 'cvs'
-                            ? 'bg-lime-500 text-black dark:bg-[#0d100a] dark:text-[#80FF00] dark:border dark:border-[#80FF00]/25 shadow-md'
-                            : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
-                        }`}
-                      >
-                        Resumes
-                      </button>
-                      <button
-                        onClick={() => {
-                          setActiveTab('cover-letters');
-                          setFilterType('all');
-                        }}
-                        className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap ${
-                          activeTab === 'cover-letters'
-                            ? 'bg-lime-500 text-black dark:bg-[#0d100a] dark:text-[#80FF00] dark:border dark:border-[#80FF00]/25 shadow-md'
-                            : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
-                        }`}
-                      >
-                        Cover Letters
-                      </button>
-                    </div>
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                    {activeTab === 'cvs' && (
+                      <label className="relative flex items-center h-10 min-w-[142px] rounded-full border border-gray-200 dark:border-white/5 bg-gray-100 dark:bg-[#141810] text-[color:var(--text-primary)] focus-within:ring-2 focus-within:ring-[var(--accent-primary)]/50 transition-all">
+                        <SlidersHorizontal className="absolute left-3.5 w-3.5 h-3.5 text-[color:var(--text-secondary)] pointer-events-none" />
+                        <span className="sr-only">Filter resumes</span>
+                        <select
+                          value={filterType}
+                          onChange={(event) => setFilterType(event.target.value as typeof filterType)}
+                          className="w-full h-full appearance-none bg-transparent pl-9 pr-8 text-xs font-bold outline-none cursor-pointer"
+                          aria-label="Filter resumes"
+                        >
+                          <option value="all">Recent</option>
+                          <option value="master">Master</option>
+                          <option value="journey">Journey</option>
+                          <option value="standalone">Standalone</option>
+                          <option value="archived">Archived</option>
+                        </select>
+                        <ChevronDown className="absolute right-3 w-3.5 h-3.5 text-[color:var(--text-secondary)] pointer-events-none" />
+                      </label>
+                    )}
 
                     {/* Grid / List Layout Switcher */}
                     <div className="flex items-center bg-gray-100 dark:bg-[#141810] p-1 rounded-full border border-gray-200 dark:border-white/5 w-fit">
@@ -1176,83 +1116,11 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
                   </div>
                 </div>
 
-                {/* Enhanced Filters */}
-              {existingCVs.length > 0 && activeTab === 'cvs' && (
-                <div className="flex flex-wrap items-center gap-1.5 mb-6 sm:mb-8 px-1">
-                    <button 
-                      onClick={() => setFilterType('all')}
-                      className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all border ${
-                        filterType === 'all'
-                          ? 'bg-lime-500/10 border-lime-500/30 text-lime-600 dark:bg-[#80FF00]/10 dark:border-[#80FF00]/30 dark:text-[#80FF00]'
-                          : 'bg-transparent border-transparent text-gray-500 hover:text-gray-900 dark:hover:text-white'
-                      }`}
-                    >
-                      Recent
-                    </button>
-                    
-                    <InfoTooltip content="Your primary resume - the source of truth for all tailored versions.">
-                      <button 
-                        onClick={() => setFilterType('master')}
-                        className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all flex items-center gap-2 border ${
-                          filterType === 'master'
-                            ? 'bg-lime-500/10 border-lime-500/30 text-lime-600 dark:bg-[#80FF00]/10 dark:border-[#80FF00]/30 dark:text-[#80FF00]'
-                            : 'bg-transparent border-transparent text-gray-500 hover:text-gray-900 dark:hover:text-white'
-                        }`}
-                      >
-                        <div className={`w-1.5 h-1.5 rounded-full ${filterType === 'master' ? 'bg-lime-500 dark:bg-[#80FF00]' : 'bg-gray-400 dark:bg-gray-650'}`} />
-                        Master
-                      </button>
-                    </InfoTooltip>
-    
-                    <InfoTooltip content="Resumes tailored for specific job applications with ATS optimization.">
-                      <button 
-                        onClick={() => setFilterType('journey')}
-                        className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all flex items-center gap-2 border ${
-                          filterType === 'journey'
-                            ? 'bg-lime-500/10 border-lime-500/30 text-lime-600 dark:bg-[#80FF00]/10 dark:border-[#80FF00]/30 dark:text-[#80FF00]'
-                            : 'bg-transparent border-transparent text-gray-500 hover:text-gray-900 dark:hover:text-white'
-                        }`}
-                      >
-                        <div className={`w-1.5 h-1.5 rounded-full ${filterType === 'journey' ? 'bg-lime-500 dark:bg-[#80FF00]' : 'bg-gray-400 dark:bg-gray-650'}`} />
-                        Journey
-                      </button>
-                    </InfoTooltip>
-    
-                    <InfoTooltip content="Standalone resumes for various purposes.">
-                      <button 
-                        onClick={() => setFilterType('standalone')}
-                        className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all flex items-center gap-2 border ${
-                          filterType === 'standalone'
-                            ? 'bg-lime-500/10 border-lime-500/30 text-lime-600 dark:bg-[#80FF00]/10 dark:border-[#80FF00]/30 dark:text-[#80FF00]'
-                            : 'bg-transparent border-transparent text-gray-500 hover:text-gray-900 dark:hover:text-white'
-                        }`}
-                      >
-                        <div className={`w-1.5 h-1.5 rounded-full ${filterType === 'standalone' ? 'bg-lime-500 dark:bg-[#80FF00]' : 'bg-gray-400 dark:bg-gray-650'}`} />
-                        Standalone
-                      </button>
-                    </InfoTooltip>
-    
-                    <InfoTooltip content="Archived resumes.">
-                      <button 
-                        onClick={() => setFilterType('archived')}
-                        className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all flex items-center gap-2 border ${
-                          filterType === 'archived'
-                            ? 'bg-lime-500/10 border-lime-500/30 text-lime-600 dark:bg-[#80FF00]/10 dark:border-[#80FF00]/30 dark:text-[#80FF00]'
-                            : 'bg-transparent border-transparent text-gray-500 hover:text-gray-900 dark:hover:text-white'
-                        }`}
-                      >
-                        <div className={`w-1.5 h-1.5 rounded-full ${filterType === 'archived' ? 'bg-lime-500 dark:bg-[#80FF00]' : 'bg-gray-400 dark:bg-gray-650'}`} />
-                        Archived
-                      </button>
-                    </InfoTooltip>
-                </div>
-                )}
-
               {isLoadingCVs ? (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
                   {[1, 2, 3, 4, 5].map(i => (
                     <div key={i} className="flex flex-col gap-2 sm:gap-3">
-                      <div className="w-full aspect-[1/1.414] bg-gray-100 dark:bg-white/5 rounded-2xl sm:rounded-[2rem] animate-pulse border border-gray-200 dark:border-white/5" />
+                      <div className="w-full aspect-[1/1.414] bg-gray-100 dark:bg-white/5 rounded-none animate-pulse border border-gray-200 dark:border-white/5" />
                       <div className="h-4 sm:h-5 w-3/4 bg-gray-100 dark:bg-white/5 rounded animate-pulse" />
                       <div className="h-2.5 sm:h-3 w-1/2 bg-gray-100 dark:bg-white/5 rounded animate-pulse" />
                     </div>
@@ -1260,7 +1128,7 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
                 </div>
               ) : activeTab === 'cvs' && (filteredCVs.length > 0 || draftCV) ? (
                 viewLayout === 'grid' ? (
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6 px-1">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5 px-1">
                   
                   {/* Render Draft CV if it exists */}
                   {draftCV && filterType === 'all' && (
@@ -1350,9 +1218,9 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
                       viewport={{ once: true }}
                       transition={{ delay: index * 0.05 }}
                       onClick={() => handleEditExistingCV(cv)}
-                      className="group cursor-pointer flex flex-col justify-between bg-white dark:bg-[#141810] border border-gray-250 dark:border-white/5 rounded-[2rem] p-4 sm:p-5 shadow-lg hover:shadow-2xl hover:border-lime-500/30 hover:scale-[1.01] transition-all duration-300 relative overflow-visible"
+                      className="step-one-document-card group cursor-pointer bg-white dark:bg-[#141810] border border-gray-250 dark:border-white/5 rounded-xl p-2 sm:p-3 shadow-lg hover:shadow-2xl hover:border-lime-500/30 hover:scale-[1.01] transition-all duration-300 relative overflow-hidden"
                     >
-                      <div className="relative aspect-[1/1.414] w-full rounded-[1.5rem] overflow-hidden">
+                      <div className="step-one-document-preview relative aspect-[1/1.414] w-full rounded-none overflow-hidden bg-white">
                         <LazyThumbnail item={cv} />
                         
                         <div className="absolute top-2 sm:top-4 left-2 sm:left-4 z-30">
@@ -1368,87 +1236,27 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
                         <div className="absolute top-2 sm:top-4 right-2 sm:right-4 z-30 w-8 h-8 sm:w-10 sm:h-10 bg-black/50 backdrop-blur-md rounded-lg sm:rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 shadow-2xl hover:bg-black/75">
                           <Edit2 className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                         </div>
-                      </div>
-  
-                      <div className="mt-4 flex flex-col justify-between flex-grow">
-                        <div>
+
+                        <div className="step-one-thumbnail-overlay absolute inset-x-0 bottom-0 z-20 px-4 sm:px-5 pt-16 sm:pt-20 pb-4 sm:pb-5 text-white">
                           <div className="flex items-start justify-between gap-2 mb-1">
-                            <h4 className="text-base sm:text-lg font-black text-gray-900 dark:text-white truncate group-hover:text-lime-600 dark:group-hover:text-lime-500 transition-colors tracking-tight flex-grow">
+                            <h4 className="text-base sm:text-lg font-black text-white truncate tracking-tight flex-grow drop-shadow-sm">
                               {cv.title || 'Untitled Resume'}
                             </h4>
                             {/* ATS Score in layout */}
                             {(typeof cv.atsScore === 'number' || (cv as any).metadata?.atsScore !== undefined) && (
                               <div className="flex flex-col items-end shrink-0 leading-none">
-                                <span className="text-xs font-black text-lime-500 dark:text-[#80FF00] flex items-center gap-0.5">
-                                  <span className="w-1 h-1 rounded-full bg-lime-500 dark:bg-[#80FF00] animate-pulse" />
+                                <span className="text-xs font-black text-[#80FF00] flex items-center gap-0.5">
+                                  <span className="w-1 h-1 rounded-full bg-[#80FF00] animate-pulse" />
                                   {cv.atsScore ?? (cv as any).metadata?.atsScore}%
                                 </span>
-                                <span className="text-[7px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">ATS</span>
+                                <span className="text-[7px] text-white/60 font-bold uppercase tracking-widest mt-0.5">ATS</span>
                               </div>
                             )}
                           </div>
-                          <p className="text-[10px] sm:text-xs text-gray-550 dark:text-gray-400 font-bold flex items-center gap-1.5 sm:gap-2 mt-0.5">
-                            <span className="w-1.5 h-1.5 bg-lime-500 rounded-full shadow-[0_0_8px_rgba(132,204,22,0.5)]" />
+                          <p className="text-[10px] sm:text-xs text-white/70 font-bold flex items-center gap-1.5 sm:gap-2 mt-0.5">
+                            <span className="w-1.5 h-1.5 bg-[#80FF00] rounded-full shadow-[0_0_8px_rgba(128,255,0,0.7)]" />
                             Edited {getRelativeTime(cv.updatedAt || cv.createdAt)}
                           </p>
-                        </div>
-  
-                        {/* Bottom row with avatars and three-dots menu */}
-                        <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-100 dark:border-white/5 relative">
-                          <div className="flex items-center -space-x-1.5 overflow-hidden">
-                            <div className="inline-block h-6 w-6 rounded-full ring-2 ring-white dark:ring-[#141810] bg-blue-500 flex items-center justify-center text-[9px] font-bold text-white shadow-sm">
-                              {cv.title ? cv.title.substring(0, 2).toUpperCase() : 'CV'}
-                            </div>
-                            <div className="inline-block h-6 w-6 rounded-full ring-2 ring-white dark:ring-[#141810] bg-[#80FF00] flex items-center justify-center text-[9px] font-black text-black shadow-sm">
-                              JD
-                            </div>
-                            <div className="inline-block h-6 w-6 rounded-full ring-2 ring-white dark:ring-[#141810] bg-purple-500 flex items-center justify-center text-[9px] font-bold text-white shadow-sm">
-                              AI
-                            </div>
-                          </div>
-  
-                          <div className="relative">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setActiveMenuId(prev => prev === (cv.id || cv._id) ? null : (cv.id || cv._id || null));
-                              }}
-                              className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-gray-100 dark:hover:bg-white/10 text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
-                            >
-                              <MoreVertical className="w-4 h-4" />
-                            </button>
-  
-                            {/* Dropdown Menu */}
-                            {activeMenuId === (cv.id || cv._id) && (
-                              <div 
-                                className="absolute bottom-9 right-0 z-50 bg-white dark:bg-[#1f2917] border border-gray-200 dark:border-white/10 rounded-xl shadow-2xl py-1.5 w-32 text-left"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <button
-                                  onClick={() => handleEditExistingCV(cv)}
-                                  className="w-full px-3.5 py-1.5 text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/5 flex items-center gap-2"
-                                >
-                                  <Edit2 className="w-3.5 h-3.5" />
-                                  Edit
-                                </button>
-                                <button
-                                  onClick={(e) => handleDuplicateCV(cv.id || cv._id || '', cv.title, e)}
-                                  className="w-full px-3.5 py-1.5 text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/5 flex items-center gap-2"
-                                >
-                                  <Copy className="w-3.5 h-3.5" />
-                                  Duplicate
-                                </button>
-                                <div className="my-1 border-t border-gray-100 dark:border-white/5" />
-                                <button
-                                  onClick={(e) => handleDeleteCV(cv.id || cv._id || '', e)}
-                                  className="w-full px-3.5 py-1.5 text-xs font-bold text-red-650 hover:bg-red-50 dark:hover:bg-red-500/10 flex items-center gap-2"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                  Delete
-                                </button>
-                              </div>
-                            )}
-                          </div>
                         </div>
                       </div>
                     </motion.div>
@@ -1631,10 +1439,10 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
               {/* Cover Letters Grid */}
               {activeTab === 'cover-letters' && (
                 isLoadingCoverLetters ? (
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6 px-1">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5 px-1">
                     {[1, 2, 3, 4, 5].map(i => (
                       <div key={i} className="flex flex-col gap-2 sm:gap-3">
-                        <div className="w-full aspect-[1/1.414] bg-gray-100 dark:bg-white/5 rounded-2xl sm:rounded-[2rem] animate-pulse border border-gray-200 dark:border-white/5" />
+                        <div className="w-full aspect-[1/1.414] bg-gray-100 dark:bg-white/5 rounded-none animate-pulse border border-gray-200 dark:border-white/5" />
                         <div className="h-4 sm:h-5 w-3/4 bg-gray-100 dark:bg-white/5 rounded animate-pulse" />
                         <div className="h-2.5 sm:h-3 w-1/2 bg-gray-100 dark:bg-white/5 rounded animate-pulse" />
                       </div>
@@ -1642,14 +1450,18 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
                   </div>
                 ) : existingCoverLetters && existingCoverLetters.length > 0 ? (
                   viewLayout === 'grid' ? (
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6 px-1">
-                      {existingCoverLetters.map((cl) => (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5 px-1">
+                      {existingCoverLetters.map((cl, index) => (
                         <motion.div
                           key={cl.id || cl._id}
+                          initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                          whileInView={{ opacity: 1, scale: 1, y: 0 }}
+                          viewport={{ once: true }}
+                          transition={{ delay: index * 0.05 }}
                           onClick={() => router.push(`/editor?mode=edit-cover-letter&coverLetterId=${cl.id || cl._id}`)}
-                          className="group cursor-pointer flex flex-col justify-between bg-white dark:bg-[#141810] border border-gray-250 dark:border-white/5 rounded-[2rem] p-4 sm:p-5 shadow-lg hover:shadow-2xl hover:border-lime-500/30 hover:scale-[1.01] transition-all duration-300 relative overflow-visible animate-fadeIn"
+                          className="step-one-document-card group cursor-pointer bg-white dark:bg-[#141810] border border-gray-250 dark:border-white/5 rounded-xl p-2 sm:p-3 shadow-lg hover:shadow-2xl hover:border-lime-500/30 hover:scale-[1.01] transition-all duration-300 relative overflow-hidden"
                         >
-                          <div className="relative aspect-[1/1.414] w-full rounded-[1.5rem] overflow-hidden">
+                          <div className="step-one-document-preview relative aspect-[1/1.414] w-full rounded-none overflow-hidden bg-white">
                             <LazyThumbnail item={cl} isCoverLetter={true} />
                             
                             <div className="absolute top-2 sm:top-4 left-2 sm:left-4 z-30">
@@ -1661,63 +1473,15 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
                             <div className="absolute top-2 sm:top-4 right-2 sm:right-4 z-30 w-8 h-8 sm:w-10 sm:h-10 bg-black/55 backdrop-blur-md rounded-lg sm:rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 shadow-2xl hover:bg-black/75">
                               <Edit2 className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                             </div>
-                          </div>
-  
-                          <div className="mt-4 flex flex-col justify-between flex-grow">
-                            <div>
-                              <h4 className="text-base sm:text-lg font-black text-gray-900 dark:text-white truncate group-hover:text-lime-650 dark:group-hover:text-lime-550 transition-colors tracking-tight">
+
+                            <div className="step-one-thumbnail-overlay absolute inset-x-0 bottom-0 z-20 px-4 sm:px-5 pt-16 sm:pt-20 pb-4 sm:pb-5 text-white">
+                              <h4 className="text-base sm:text-lg font-black text-white truncate tracking-tight drop-shadow-sm">
                                 {cl.title || 'Untitled Cover Letter'}
                               </h4>
-                              <p className="text-[10px] sm:text-xs text-gray-550 dark:text-gray-400 font-bold flex items-center gap-1.5 sm:gap-2 mt-1">
-                                <span className="w-1.5 h-1.5 bg-lime-500 rounded-full shadow-[0_0_8px_rgba(132,204,22,0.5)]" />
+                              <p className="text-[10px] sm:text-xs text-white/70 font-bold flex items-center gap-1.5 sm:gap-2 mt-1">
+                                <span className="w-1.5 h-1.5 bg-[#80FF00] rounded-full shadow-[0_0_8px_rgba(128,255,0,0.7)]" />
                                 Edited {getRelativeTime(cl.updatedAt || cl.createdAt)}
                               </p>
-                            </div>
-                            
-                            <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-100 dark:border-white/5 relative">
-                              <div className="flex items-center -space-x-1.5 overflow-hidden">
-                                <div className="inline-block h-6 w-6 rounded-full ring-2 ring-white dark:ring-[#141810] bg-emerald-600 flex items-center justify-center text-[9px] font-bold text-white shadow-sm">
-                                  CL
-                                </div>
-                                <div className="inline-block h-6 w-6 rounded-full ring-2 ring-white dark:ring-[#141810] bg-purple-500 flex items-center justify-center text-[9px] font-bold text-white shadow-sm">
-                                  AI
-                                </div>
-                              </div>
-                              
-                              <div className="relative">
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setActiveMenuId(prev => prev === (cl.id || cl._id) ? null : (cl.id || cl._id || null));
-                                  }}
-                                  className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-gray-100 dark:hover:bg-white/10 text-gray-405 hover:text-gray-900 dark:hover:text-white transition-colors"
-                                >
-                                  <MoreVertical className="w-4 h-4" />
-                                </button>
-                                
-                                {activeMenuId === (cl.id || cl._id) && (
-                                  <div 
-                                    className="absolute bottom-9 right-0 z-50 bg-white dark:bg-[#1f2917] border border-gray-200 dark:border-white/10 rounded-xl shadow-2xl py-1.5 w-32 text-left"
-                                    onClick={(e) => e.stopPropagation()}
-                                  >
-                                    <button
-                                      onClick={() => router.push(`/editor?mode=edit-cover-letter&coverLetterId=${cl.id || cl._id}`)}
-                                      className="w-full px-3.5 py-1.5 text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/5 flex items-center gap-2"
-                                    >
-                                      <Edit2 className="w-3.5 h-3.5" />
-                                      Edit
-                                    </button>
-                                    <div className="my-1 border-t border-gray-100 dark:border-white/5" />
-                                    <button
-                                      onClick={(e) => handleDeleteCoverLetter(cl.id || cl._id || '', e)}
-                                      className="w-full px-3.5 py-1.5 text-xs font-bold text-red-650 hover:bg-red-50 dark:hover:bg-red-500/10 flex items-center gap-2"
-                                    >
-                                      <Trash2 className="w-3.5 h-3.5" />
-                                      Delete
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
                             </div>
                           </div>
                         </motion.div>
@@ -1780,7 +1544,7 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
                 ) : (
                   <div className="text-center py-16 sm:py-32 bg-black/5 dark:bg-white/[0.02] rounded-2xl sm:rounded-[3rem] border-2 border-dashed border-gray-200 dark:border-white/10 mx-1">
                     <FolderOpen className="w-12 h-12 sm:w-20 sm:h-20 text-gray-400 dark:text-gray-600 mx-auto mb-6 sm:mb-8 animate-bounce transition-all duration-1000" />
-                    <h4 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white mb-2 sm:mb-3 tracking-tight">No Letters</h4>
+                    <h4 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white mb-2 sm:mb-3 tracking-tight">No Cover Letters</h4>
                     <p className="text-base sm:text-lg text-gray-600 dark:text-gray-400 font-medium max-w-xs mx-auto px-4">
                       Create your first cover letter from the dashboard or job application journey.
                     </p>
