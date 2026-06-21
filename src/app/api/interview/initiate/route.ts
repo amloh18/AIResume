@@ -6,6 +6,7 @@ import { JobApplication, User } from '@/models';
 import CV from '@/models/CV';
 import { InterviewCoachService } from '@/lib/services/interviewCoachService';
 import { setCorsHeaders } from '@/lib/utils/cors-helpers';
+import { getPlanLimits } from '@/lib/utils/subscription-helpers';
 import mongoose from 'mongoose';
 
 // Force dynamic to ensure route is always available
@@ -121,23 +122,25 @@ export async function POST(request: NextRequest) {
             console.log(`⏰ Plan stale (${Math.round(hoursOld)}h old), regenerating...`);
         }
         
-        if (planKey === 'free') {
+        // --- Gating: Interview Coach requires Focused plan or higher ---
+        const planLimits = getPlanLimits(planKey);
+        if (!planLimits.interviewCoach) {
             // Count how many jobs already have a generated interview plan
             const generatedCount = await JobApplication.countDocuments({
                 userId: userIdObj,
                 'interviewCoach.status': 'ready'
             });
             
-            // If they already generated 1 plan and this is for a DIFFERENT job, block it.
-            // If it's the SAME job (regenerating), allow it.
+            // Allow regenerating an existing plan for the same job (no new generation)
             const isSameJob = job.interviewCoach?.status === 'ready';
             
             if (generatedCount >= 1 && !isSameJob) {
                 return setCorsHeaders(
                     NextResponse.json({
                         success: false,
-                        error: 'Free users can only generate an interview plan for 1 job. Upgrade to Pro for unlimited interview coaching.',
-                        requiresUpgrade: true
+                        error: 'Interview Coach requires a Focused plan or higher. Upgrade to unlock unlimited interview coaching.',
+                        requiresUpgrade: true,
+                        requiredPlan: 'focused_monthly'
                     }, { status: 403 }),
                     request
                 );

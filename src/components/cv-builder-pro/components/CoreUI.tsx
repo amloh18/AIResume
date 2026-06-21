@@ -470,7 +470,7 @@ export const CanvasZone = ({ readOnly = false, zoneId, blocks, cvData, EditableW
           : 'border-transparent';
 
   return (
-    <div className="relative group/zone flex flex-col h-full">
+    <div data-zone-id={zoneId} className="relative group/zone flex flex-col h-full">
       <div className={`${dragHighlightClass} ${dropStateClass} transition-all duration-300 pb-0 ${className}`} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}>
         {blocks.length === 0 && !readOnly && <div className="absolute inset-0 flex flex-col gap-2 items-center justify-center text-sm text-gray-400 pointer-events-none border-2 border-dashed border-gray-200 rounded-2xl m-2 no-print"><span className="font-semibold text-gray-500">Empty Zone</span><span className="text-xs uppercase tracking-[0.22em]">{dropIntent === 'invalid' ? 'Not Allowed Here' : 'Drop A Section Here'}</span></div>}
         <div className="flex flex-col gap-0">
@@ -535,7 +535,7 @@ export const StaticLayoutRenderer = ({ template, cvData, ReadOnlyWrapper, design
   const renderZone = (zoneId: string, className: string, isDark = false) => {
     const snippets = template.zones[zoneId] || [];
     return (
-      <div className={`flex flex-col ${className}`}>
+      <div data-zone-id={zoneId} className={`flex flex-col ${className}`}>
         {snippets.map((type: string, index: number) => {
           const SnippetComponent = SNIPPETS[type] || SNIPPETS['summary-clean'];
           if (!SnippetComponent) return null;

@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getConnection } from '@/lib/database';
 import MoriChat from '@/models/MoriChat';
+import { isFreeTierPlan } from '@/lib/utils/subscription-helpers';
 
 export async function GET(req: NextRequest) {
   try {
@@ -36,7 +37,8 @@ export async function GET(req: NextRequest) {
 
     if (user) {
       planKey = user.currentPlanKey || 'free';
-      if (planKey === 'starter_monthly') {
+      // Apply message limit for free-tier users (free + starter_monthly are the same plan)
+      if (isFreeTierPlan(planKey)) {
         const lastResetDate = user.credits?.lastResetDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
         
         // Count messages since lastResetDate

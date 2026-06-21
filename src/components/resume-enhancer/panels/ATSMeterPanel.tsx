@@ -68,12 +68,12 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = () => {
   const score = hasJobDesc ? (atsScore || offlineScore?.cvScore.total || 0) : (offlineScore?.cvScore.total || 0);
   const scoreLabel = hasJobDesc ? 'ATS MATCH' : 'CV SCORE';
 
-  // Score ring geometry
-  const radius = 44;
-  const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference - (score / 100) * circumference;
-  const strokeColor = score >= 75 ? '#22c55e' : score >= 50 ? '#eab308' : '#ef4444';
-  const glowColor = score >= 75 ? '#22c55e40' : score >= 50 ? '#eab30840' : '#ef444440';
+  // Segmented arc geometry
+  const arcRadius = 44;
+  const totalCircumference = 2 * Math.PI * arcRadius;
+  const arcSpanDegrees = 210;
+  const arcSpanLength = totalCircumference * (arcSpanDegrees / 360);
+  const segmentGap = 5;
 
   // Grade
   const grade = score >= 90 ? 'A' : score >= 80 ? 'B' : score >= 70 ? 'C' : score >= 60 ? 'D' : 'F';
@@ -107,6 +107,27 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = () => {
       { label: 'Readability', value: 0 },
     ];
   }, [atsAnalysis, hasJobDesc, offlineScore]);
+
+  // Segmented arc segment calculations (depends on metrics)
+  const segmentCount = metrics.length;
+  const totalSegmentGaps = (segmentCount - 1) * segmentGap;
+  const availableLength = arcSpanLength - totalSegmentGaps;
+  const totalMetricScore = metrics.reduce((sum, m) => sum + m.value, 0);
+
+  const arcSegments = metrics.map((metric) => {
+    const color = metric.value >= 75 ? '#22c55e' : metric.value >= 50 ? '#eab308' : '#ef4444';
+    const length = totalMetricScore > 0
+      ? (metric.value / totalMetricScore) * availableLength
+      : availableLength / segmentCount;
+    return { label: metric.label, value: metric.value, color, length };
+  });
+
+  let cumulativeOffset = 0;
+  const arcSegmentsWithOffset = arcSegments.map((seg) => {
+    const offset = cumulativeOffset;
+    cumulativeOffset += seg.length + segmentGap;
+    return { ...seg, offset };
+  });
 
   // Skills
   const extractedSkills = useMemo(() => {
@@ -230,19 +251,86 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = () => {
       </div>
 
       <div className="flex-1 p-4 space-y-3">
-          {/* ── Score Hero — side-by-side ring + details ── */}
+          {/* ── Target Role Context ── */}
+          <div className="bg-emerald-50 dark:bg-emerald-500/[0.04] border border-emerald-200 dark:border-emerald-500/20 rounded-xl p-3 relative overflow-hidden">
+            <div className="absolute -right-6 -top-6 w-16 h-16 bg-emerald-400/10 rounded-full blur-xl pointer-events-none" />
+            <div className="relative z-10">
+              <h4 className="text-[10px] font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 mb-2">
+                <Target className="w-3 h-3" /> Target Role Context
+              </h4>
+
+              {hasJobDesc ? (
+                <div className="space-y-2">
+                  <div
+                    className="cursor-pointer hover:bg-white/60 dark:hover:bg-white/5 p-2 -mx-1 rounded-lg transition-colors"
+                    onClick={() => setJobSidebarOpen(true)}
+                  >
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <Briefcase className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                      <span className="text-xs font-semibold text-emerald-800 dark:text-white/80 truncate">
+                        {state.jobData?.title || state.jobData?.jobTitle || 'Target Role'}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-emerald-700 dark:text-white/50 line-clamp-2 pl-5">
+                      {state.jobData?.jobDescription || state.jobData?.description || 'Job description provided.'}
+                    </p>
+                  </div>
+                  <div className="flex gap-1.5">
+                    <button
+                      onClick={() => setJobSidebarOpen(true)}
+                      className="flex-1 py-1.5 text-[11px] font-bold text-white bg-emerald-500 hover:bg-emerald-600 dark:bg-lime-500/20 dark:text-lime-300 dark:hover:bg-lime-500/30 rounded-lg transition-colors border border-emerald-600/20 dark:border-lime-500/20"
+                    >
+                      Update Target
+                    </button>
+                    <button
+                      onClick={() => setJobSidebarOpen(true)}
+                      className="flex-1 py-1.5 text-[11px] font-bold text-emerald-700 bg-emerald-100 hover:bg-emerald-200 dark:bg-white/5 dark:text-white/70 dark:hover:bg-white/10 rounded-lg transition-colors border border-emerald-200 dark:border-white/10"
+                    >
+                      Job Details
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <p className="text-[11px] text-emerald-700 dark:text-white/50 mb-2.5">
+                    Add a job description to get specific ATS feedback and keyword matches.
+                  </p>
+                  <button
+                    onClick={() => setJobSidebarOpen(true)}
+                    className="w-full py-2 text-[11px] font-bold text-white bg-emerald-500 hover:bg-emerald-600 dark:bg-lime-500/20 dark:text-lime-300 dark:hover:bg-lime-500/30 rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm border border-emerald-600/20 dark:border-lime-500/20"
+                  >
+                    <FileText className="w-3.5 h-3.5" /> Paste Job Description
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* ── Score Hero — side-by-side segmented arc + details ── */}
           <div className="flex items-center gap-4 bg-gray-50 dark:bg-white/[0.03] border border-gray-100 dark:border-white/[0.05] rounded-xl p-4">
-            {/* Ring */}
+            {/* Segmented Arc */}
             <div className="relative w-[88px] h-[88px] shrink-0 flex items-center justify-center">
               <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r={radius} fill="none" stroke="currentColor" strokeWidth="8" className="text-gray-100 dark:text-white/5" />
                 <circle
-                  cx="50" cy="50" r={radius} fill="none"
-                  stroke={strokeColor} strokeWidth="8"
-                  strokeDasharray={circumference} strokeDashoffset={strokeDashoffset}
-                  strokeLinecap="round"
-                  style={{ filter: `drop-shadow(0 0 6px ${strokeColor}80)`, transition: 'stroke-dashoffset 1s ease-out' }}
+                  cx="50" cy="50" r={arcRadius}
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="8"
+                  className="text-gray-100 dark:text-white/5"
                 />
+                {arcSegmentsWithOffset.map((seg) => (
+                  <circle
+                    key={seg.label}
+                    cx="50" cy="50" r={arcRadius}
+                    fill="none"
+                    stroke={seg.color}
+                    strokeWidth="8"
+                    strokeDasharray={`${seg.length} ${totalCircumference - seg.length}`}
+                    strokeDashoffset={seg.offset}
+                    strokeLinecap="butt"
+                    style={{ filter: `drop-shadow(0 0 4px ${seg.color}60)` }}
+                  />
+                ))}
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <AnimatedScore value={score} size="sm" className="text-2xl font-black tracking-tighter text-gray-900 dark:text-white leading-none" />
@@ -261,17 +349,19 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = () => {
                   : score >= 50 ? 'Good base. A few targeted improvements will boost your score.'
                   : 'Your CV needs improvement in key areas to pass ATS filters.'}
               </p>
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-50 dark:bg-sky-500/10 text-sky-600 dark:text-sky-300 border border-sky-100 dark:border-sky-500/20">
-                  {purposeCard.modeLabel}
-                </span>
-                {state.cvTitle && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-white/5 truncate max-w-[120px]">
-                    <FileText className="w-2.5 h-2.5 shrink-0" />
-                    <span className="truncate">{state.cvTitle}</span>
+              {hasJobDesc && (
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-50 dark:bg-sky-500/10 text-sky-600 dark:text-sky-300 border border-sky-100 dark:border-sky-500/20">
+                    {purposeCard.modeLabel}
                   </span>
-                )}
-              </div>
+                  {state.cvTitle && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-white/5 truncate max-w-[120px]">
+                      <FileText className="w-2.5 h-2.5 shrink-0" />
+                      <span className="truncate">{state.cvTitle}</span>
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
@@ -403,61 +493,6 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = () => {
               </div>
             </div>
           )}
-
-          {/* ── Target Role Context ── */}
-          <div className="bg-emerald-50 dark:bg-emerald-500/[0.04] border border-emerald-200 dark:border-emerald-500/20 rounded-xl p-3 relative overflow-hidden">
-            <div className="absolute -right-6 -top-6 w-16 h-16 bg-emerald-400/10 rounded-full blur-xl pointer-events-none" />
-            <div className="relative z-10">
-              <h4 className="text-[10px] font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 mb-2">
-                <Target className="w-3 h-3" /> Target Role Context
-              </h4>
-
-              {hasJobDesc ? (
-                <div className="space-y-2">
-                  <div
-                    className="cursor-pointer hover:bg-white/60 dark:hover:bg-white/5 p-2 -mx-1 rounded-lg transition-colors"
-                    onClick={() => setJobSidebarOpen(true)}
-                  >
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <Briefcase className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                      <span className="text-xs font-semibold text-emerald-800 dark:text-white/80 truncate">
-                        {state.jobData?.title || state.jobData?.jobTitle || 'Target Role'}
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-emerald-700 dark:text-white/50 line-clamp-2 pl-5">
-                      {state.jobData?.jobDescription || state.jobData?.description || 'Job description provided.'}
-                    </p>
-                  </div>
-                  <div className="flex gap-1.5">
-                    <button
-                      onClick={() => setJobSidebarOpen(true)}
-                      className="flex-1 py-1.5 text-[11px] font-bold text-white bg-emerald-500 hover:bg-emerald-600 dark:bg-lime-500/20 dark:text-lime-300 dark:hover:bg-lime-500/30 rounded-lg transition-colors border border-emerald-600/20 dark:border-lime-500/20"
-                    >
-                      Update Target
-                    </button>
-                    <button
-                      onClick={() => setJobSidebarOpen(true)}
-                      className="flex-1 py-1.5 text-[11px] font-bold text-emerald-700 bg-emerald-100 hover:bg-emerald-200 dark:bg-white/5 dark:text-white/70 dark:hover:bg-white/10 rounded-lg transition-colors border border-emerald-200 dark:border-white/10"
-                    >
-                      Job Details
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div>
-                  <p className="text-[11px] text-emerald-700 dark:text-white/50 mb-2.5">
-                    Add a job description to get specific ATS feedback and keyword matches.
-                  </p>
-                  <button
-                    onClick={() => setJobSidebarOpen(true)}
-                    className="w-full py-2 text-[11px] font-bold text-white bg-emerald-500 hover:bg-emerald-600 dark:bg-lime-500/20 dark:text-lime-300 dark:hover:bg-lime-500/30 rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm border border-emerald-600/20 dark:border-lime-500/20"
-                  >
-                    <FileText className="w-3.5 h-3.5" /> Paste Job Description
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
 
           {/* ── Cover Letter CTA ── */}
           {!isMasterCV && hasJobDesc && (state.journeyId || state.jobData?._id || state.jobData?.id) && (

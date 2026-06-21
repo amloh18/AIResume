@@ -292,8 +292,10 @@ View your dashboard: ${process.env.NEXT_PUBLIC_APP_URL || 'https://cvcircle.io'}
         return { success: true, error: 'No activity to summarize' };
       }
 
-      // Check if user is on free plan
-      const isFreePlan = !user.subscription?.planId || user.subscription.planId === 'free';
+      // Check if user is on free plan (starter_monthly is the renamed free plan)
+      const isFreePlan = !user.subscription?.planId ||
+        user.subscription.planId === 'free' ||
+        user.subscription.planId === 'starter_monthly';
 
       const userSummary: UserSummary = {
         userId,

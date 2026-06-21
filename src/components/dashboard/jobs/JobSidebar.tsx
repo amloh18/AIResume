@@ -1747,7 +1747,7 @@ ${userName}`
                   <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
                     <div className="space-y-4">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/80 text-emerald-600 shadow-sm dark:bg-[#2a3326] dark:text-emerald-400">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white dark:bg-[var(--bg-tertiary)] text-emerald-600 shadow-sm dark:text-emerald-400">
                           {job.status === 'draft' ? <Target className="h-6 w-6" /> : <Sparkles className="h-6 w-6" />}
                         </div>
                         <div>
@@ -1769,7 +1769,7 @@ ${userName}`
                         <motion.button
                           onClick={() => void runSidebarAction(journeyCardData.primaryActionId)}
                           disabled={isMovingToCreated || isCreatingJourney}
-                          className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#80FF00] px-5 py-3 text-sm font-semibold text-black shadow-sm transition hover:brightness-95 disabled:opacity-60"
+                          className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#80FF00] px-5 py-3 text-sm font-semibold text-black shadow-sm transition hover:brightness-95 dark:bg-[#99FF00] dark:hover:brightness-95 disabled:opacity-60"
                           whileHover={{ scale: 1.01 }}
                           whileTap={{ scale: 0.98 }}
                         >
@@ -1779,7 +1779,7 @@ ${userName}`
                         {journeyCardData.secondaryAction && journeyCardData.secondaryLabel && (
                           <motion.button
                             onClick={() => journeyCardData.secondaryActionId && void runSidebarAction(journeyCardData.secondaryActionId)}
-                            className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-5 py-3 text-sm font-semibold text-gray-800 transition hover:bg-gray-50 dark:border-white/10 dark:bg-[#20281d] dark:text-white dark:hover:bg-[#273021]"
+                            className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-5 py-3 text-sm font-semibold text-gray-800 transition hover:bg-gray-50 dark:border-white/10 dark:bg-[var(--bg-secondary)] dark:text-[var(--text-primary)] dark:hover:bg-[var(--bg-tertiary)]"
                             whileHover={{ scale: 1.01 }}
                             whileTap={{ scale: 0.98 }}
                           >
@@ -1791,11 +1791,11 @@ ${userName}`
 
                     <div className="space-y-4">
                       {sidebarConfig.sections.showJourneySnapshot && (
-                        <div className="rounded-2xl border border-white/70 bg-white/80 p-4 shadow-sm dark:border-emerald-500/10 dark:bg-[#1b2218]">
+                        <div className="rounded-2xl border border-white/70 bg-white/80 p-4 shadow-sm dark:border-white/10 dark:bg-[var(--bg-secondary)]">
                           <p className="mb-3 text-sm font-semibold text-gray-900 dark:text-white">Journey Snapshot</p>
                           <div className="grid gap-3 sm:grid-cols-2">
                             {journeyCardData.stats.map((stat) => (
-                              <div key={stat.label} className="rounded-xl bg-gray-50 px-3 py-3 dark:bg-[#181f16]">
+                              <div key={stat.label} className="rounded-xl bg-gray-50 px-3 py-3 dark:bg-[var(--bg-tertiary)]">
                                 <p className="text-xs uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">{stat.label}</p>
                                 <p className="mt-1 text-sm font-semibold text-gray-900 dark:text-white">{stat.value}</p>
                               </div>
@@ -1805,7 +1805,7 @@ ${userName}`
                       )}
 
                       {sidebarConfig.sections.showTrackerJourneySummary && (
-                        <div className="rounded-2xl border border-white/70 bg-white/80 p-4 shadow-sm dark:border-emerald-500/10 dark:bg-[#1b2218]">
+                        <div className="rounded-2xl border border-white/70 bg-white/80 p-4 shadow-sm dark:border-white/10 dark:bg-[var(--bg-secondary)]">
                           <div className="flex items-center justify-between">
                             <p className="text-sm font-semibold text-gray-900 dark:text-white">Tracker Journey</p>
                             <span className="text-xs text-gray-500 dark:text-gray-400">
@@ -1846,7 +1846,7 @@ ${userName}`
                                       <button
                                         onClick={() => void handleOpenDocumentPreview('cv')}
                                         disabled={!primaryJourney.cvId || previewLoading === 'cv'}
-                                        className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:text-gray-200 dark:hover:bg-[#273021]"
+                                        className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:text-[var(--text-secondary)] dark:hover:bg-[var(--bg-tertiary)]"
                                       >
                                         {previewLoading === 'cv' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Eye className="h-3.5 w-3.5" />}
                                         Preview CV
@@ -1854,7 +1854,7 @@ ${userName}`
                                       <button
                                         onClick={() => void handleOpenDocumentPreview('coverLetter')}
                                         disabled={!primaryJourney.coverLetterId || previewLoading === 'coverLetter'}
-                                        className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:text-gray-200 dark:hover:bg-[#273021]"
+                                        className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:text-[var(--text-secondary)] dark:hover:bg-[var(--bg-tertiary)]"
                                       >
                                         {previewLoading === 'coverLetter' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Eye className="h-3.5 w-3.5" />}
                                         Preview Cover Letter

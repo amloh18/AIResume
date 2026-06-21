@@ -2148,7 +2148,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
     <motion.div
       className={`journey-card ${liveProgress.status === 'completed'
         ? 'bg-blue-100 dark:bg-blue-900/20 border border-blue-300 dark:border-blue-500/50'
-        : 'bg-[#24320f] border border-lime-500/30'
+        : 'bg-lime-50 dark:bg-[#24320f] border border-lime-200 dark:border-lime-500/30'
         } rounded-xl overflow-hidden hover:shadow-lg dark:hover:shadow-gray-900/20 transition-all duration-300 group`}
       whileHover={{ y: -2 }}
       initial={{ opacity: 0, y: 20 }}
@@ -2165,14 +2165,14 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                 <Building className={`h-4 w-4 flex-shrink-0 ${liveProgress.status === 'completed' ? 'text-blue-400' : 'text-lime-400'}`} />
                 <h3 className={`text-sm font-medium truncate ${liveProgress.status === 'completed'
                   ? 'text-gray-900 dark:text-white'
-                  : 'text-white'
+                  : 'text-gray-900 dark:text-white'
                   }`}>
                   {journey.jobTitle}
                 </h3>
-                <span className={`text-xs flex-shrink-0 ${liveProgress.status === 'completed'
-                  ? 'text-gray-600 dark:text-white/60'
-                  : 'text-white/60'
-                  }`}>
+                  <span className={`text-xs flex-shrink-0 ${liveProgress.status === 'completed'
+                    ? 'text-gray-600 dark:text-white/60'
+                    : 'text-gray-600 dark:text-white/60'
+                    }`}>
                   {journey.company}
                 </span>
               </div>
@@ -2241,15 +2241,15 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
               {atsScore !== null && atsScore !== -1 && atsScore !== undefined && journey.cvId ? (
                 <div className={`flex items-center gap-1 px-2 py-1 rounded-full ${liveProgress.status === 'completed'
                   ? 'bg-blue-200 dark:bg-white/10'
-                  : 'bg-white/10'
+                  : 'bg-lime-100 dark:bg-lime-500/10'
                   }`}>
                   <Target className={`h-3 w-3 ${liveProgress.status === 'completed'
                     ? 'text-blue-700 dark:text-white/60'
-                    : 'text-white/60'
+                    : 'text-lime-700 dark:text-lime-300'
                     }`} />
                   <span className={`text-xs font-medium ${liveProgress.status === 'completed'
                     ? 'text-blue-900 dark:text-white/80'
-                    : 'text-white/80'
+                    : 'text-lime-900 dark:text-lime-100'
                     }`}>
                     {atsScore}%
                   </span>
@@ -2261,7 +2261,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                 onClick={() => setIsExpanded(!isExpanded)}
                 className={`p-1 rounded transition-colors ${liveProgress.status === 'completed'
                   ? 'text-gray-600 dark:text-white/60 hover:text-gray-900 dark:hover:text-white hover:bg-blue-200 dark:hover:bg-white/10'
-                  : 'text-white/60 hover:text-white hover:bg-white/10'
+                  : 'text-gray-700 dark:text-lime-200 hover:text-gray-900 dark:hover:text-lime-100 hover:bg-lime-100 dark:hover:bg-lime-500/10'
                   }`}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
@@ -2482,13 +2482,13 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                 {/* Step 1: Job */}
                 <div className={`p-3 rounded-lg border ${liveProgress.status === 'completed'
                   ? 'bg-blue-100 dark:bg-blue-800/20 border-blue-300 dark:border-blue-500/30 text-gray-900 dark:text-white'
-                  : 'bg-[#24320f] border-white/20 text-white'
+                  : 'bg-lime-50 dark:bg-[#24320f] border-gray-200 dark:border-white/20 text-gray-900 dark:text-white'
                   }`}>
                   <div className="flex items-center gap-2 mb-2">
                     <Briefcase className="h-4 w-4 text-blue-400" />
                     <span className={`text-xs font-medium ${liveProgress.status === 'completed'
                       ? 'text-gray-900 dark:text-white'
-                      : 'text-white'
+                      : 'text-gray-900 dark:text-white'
                       }`}>Job</span>
                     {getStepStatus(1) === 'completed' && (
                       <CheckCircle className={`h-3 w-3 ${liveProgress.status === 'completed' ? 'text-blue-400' : 'text-lime-400'}`} />
@@ -2517,13 +2517,13 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                 {/* Step 2: CV */}
                 <div className={`p-3 rounded-lg border ${liveProgress.status === 'completed'
                   ? 'bg-blue-100 dark:bg-blue-800/20 border-blue-300 dark:border-blue-500/30 text-gray-900 dark:text-white'
-                  : 'bg-[#24320f] border-white/20 text-white'
+                  : 'bg-lime-50 dark:bg-[#24320f] border-gray-200 dark:border-white/20 text-gray-900 dark:text-white'
                   }`}>
                   <div className="flex items-center gap-2 mb-2">
                     <FileText className="h-4 w-4 text-green-400" />
                     <span className={`text-xs font-medium ${liveProgress.status === 'completed'
                       ? 'text-gray-900 dark:text-white'
-                      : 'text-white'
+                      : 'text-gray-900 dark:text-white'
                       }`}>CV</span>
                     {getStepStatus(2) === 'completed' && (
                       <CheckCircle className={`h-3 w-3 ${liveProgress.status === 'completed' ? 'text-blue-400' : 'text-lime-400'}`} />
@@ -2538,12 +2538,12 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                             <RefreshCw className="h-3 w-3 animate-spin text-blue-400" />
                             <p className="text-xs text-blue-400 font-medium">Recreating CV from master...</p>
                           </div>
-                          <p className="text-xs text-white/60">Please wait while we recreate your CV</p>
+                          <p className="text-xs text-gray-600 dark:text-gray-400">Please wait while we recreate your CV</p>
                         </div>
                       ) : cvNotFound && !hasMasterCV ? (
                         <div className="space-y-2">
                           <p className="text-xs text-yellow-400 font-medium">No Master CV Available</p>
-                          <p className="text-xs text-white/60">
+                          <p className="text-xs text-gray-600 dark:text-gray-400">
                             You need to create a master CV first before creating job-specific CVs.
                           </p>
                           <motion.button
@@ -2558,14 +2558,20 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                         </div>
                       ) : cvNotFound ? (
                         <div className="space-y-1">
-                          <p className="text-xs text-white/60">Recreating CV from master...</p>
+                          <p className="text-xs text-gray-600 dark:text-gray-400">Recreating CV from master...</p>
                         </div>
                       ) : (
                         <div>
-                          <p className="text-xs text-white font-medium truncate">
+                          <p className={`text-xs font-medium truncate ${liveProgress.status === 'completed'
+                            ? 'text-gray-900 dark:text-white'
+                            : 'text-gray-900 dark:text-white'
+                            }`}>
                             {linkedCV?.title || `CV ${journey.cvId.slice(-6)}`}
                           </p>
-                          <p className="text-xs text-white/60">
+                          <p className={`text-xs ${liveProgress.status === 'completed'
+                            ? 'text-gray-600 dark:text-gray-400'
+                            : 'text-gray-600 dark:text-gray-400'
+                            }`}>
                             {generationState?.mode === 'fallback'
                               ? 'Non-tailored fallback draft ready'
                               : linkedCV
@@ -2618,7 +2624,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                           {generationState?.mode === 'fallback' ? 'Creating fallback CV...' : 'Creating tailored CV...'}
                         </p>
                       </div>
-                      <p className="text-xs text-white/60">
+                      <p className="text-xs text-gray-600 dark:text-gray-400">
                         {generationState?.summary || 'Please wait while we create your CV'}
                       </p>
                     </div>
@@ -2644,7 +2650,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                   ) : !hasMasterCV ? (
                     <div className="space-y-2">
                       <p className="text-xs text-yellow-400 font-medium">No Master CV Available</p>
-                      <p className="text-xs text-white/60">
+                      <p className="text-xs text-gray-600 dark:text-gray-400">
                         You need to create a master CV first before creating job-specific CVs.
                       </p>
                       <motion.button
@@ -2659,7 +2665,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                     </div>
                   ) : (
                     <div className="space-y-1">
-                      <p className="text-xs text-white/60">
+                      <p className="text-xs text-gray-600 dark:text-gray-400">
                         {generationState?.summary || 'Creating CV...'}
                       </p>
                     </div>
@@ -2669,11 +2675,14 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                 {/* Step 3: ATS Analysis */}
                 <div className={`p-3 rounded-lg border ${liveProgress.status === 'completed'
                   ? 'bg-blue-100 dark:bg-blue-800/20 border-blue-300 dark:border-blue-500/30 text-gray-900 dark:text-white'
-                  : 'bg-[#24320f] border-white/20 text-white'
+                  : 'bg-lime-50 dark:bg-[#24320f] border-gray-200 dark:border-white/20 text-gray-900 dark:text-white'
                   }`}>
                   <div className="flex items-center gap-2 mb-2">
                     <Settings className="h-4 w-4 text-purple-400" />
-                    <span className="text-xs font-medium text-white">ATS Analysis</span>
+                    <span className={`text-xs font-medium ${liveProgress.status === 'completed'
+                      ? 'text-gray-900 dark:text-white'
+                      : 'text-gray-900 dark:text-white'
+                      }`}>ATS Analysis</span>
                     {getStepStatus(3) === 'completed' && (
                       <CheckCircle className={`h-3 w-3 ${liveProgress.status === 'completed' ? 'text-blue-400' : 'text-lime-400'}`} />
                     )}
@@ -2769,11 +2778,14 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                 {/* Step 4: Cover Letter */}
                 <div className={`p-3 rounded-lg border ${liveProgress.status === 'completed'
                   ? 'bg-blue-100 dark:bg-blue-800/20 border-blue-300 dark:border-blue-500/30 text-gray-900 dark:text-white'
-                  : 'bg-[#24320f] border-white/20 text-white'
+                  : 'bg-lime-50 dark:bg-[#24320f] border-gray-200 dark:border-white/20 text-gray-900 dark:text-white'
                   }`}>
                   <div className="flex items-center gap-2 mb-2">
                     <Mail className="h-4 w-4 text-orange-400" />
-                    <span className="text-xs font-medium text-white">Cover Letter</span>
+                    <span className={`text-xs font-medium ${liveProgress.status === 'completed'
+                      ? 'text-gray-900 dark:text-white'
+                      : 'text-gray-900 dark:text-white'
+                      }`}>Cover Letter</span>
                     {getStepStatus(4) === 'completed' && (
                       <CheckCircle className={`h-3 w-3 ${liveProgress.status === 'completed' ? 'text-blue-400' : 'text-lime-400'}`} />
                     )}
@@ -2791,11 +2803,17 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                           </p>
                         </div>
                       ) : (
-                        <div>
-                          <p className="text-xs text-white font-medium truncate">
-                            {linkedCoverLetter?.title || `Cover Letter ${journey.coverLetterId.slice(-6)}`}
-                          </p>
-                          <p className="text-xs text-white/60">
+                      <div>
+                        <p className={`text-xs font-medium truncate ${liveProgress.status === 'completed'
+                          ? 'text-gray-900 dark:text-white'
+                          : 'text-gray-900 dark:text-white'
+                          }`}>
+                          {linkedCoverLetter?.title || `Cover Letter ${journey.coverLetterId.slice(-6)}`}
+                        </p>
+                        <p className={`text-xs ${liveProgress.status === 'completed'
+                          ? 'text-gray-600 dark:text-gray-400'
+                          : 'text-gray-600 dark:text-gray-400'
+                          }`}>
                             {generationState?.mode === 'fallback'
                               ? 'Fallback draft ready for review'
                               : linkedCoverLetter
@@ -3002,7 +3020,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                     </div>
                   ) : (
                     <div className="space-y-1">
-                      <p className="text-xs text-white/60">Complete Step 2 first</p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400">Complete Step 2 first</p>
                     </div>
                   )}
                 </div>
@@ -3010,11 +3028,14 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                 {/* Step 5: Ready to Apply */}
                 <div className={`p-3 rounded-lg border ${liveProgress.status === 'completed'
                   ? 'bg-blue-100 dark:bg-blue-800/20 border-blue-300 dark:border-blue-500/30 text-gray-900 dark:text-white'
-                  : 'bg-[#24320f] border-white/20 text-white'
+                  : 'bg-lime-50 dark:bg-[#24320f] border-gray-200 dark:border-white/20 text-gray-900 dark:text-white'
                   }`}>
                   <div className="flex items-center gap-2 mb-2">
                     <Download className={`h-4 w-4 ${getStepStatus(5) === 'completed' ? 'text-blue-400' : 'text-lime-400'}`} />
-                    <span className="text-xs font-medium text-white">Ready</span>
+                    <span className={`text-xs font-medium ${liveProgress.status === 'completed'
+                      ? 'text-gray-900 dark:text-white'
+                      : 'text-gray-900 dark:text-white'
+                      }`}>Ready</span>
                     {getStepStatus(5) === 'completed' && (
                       <CheckCircle className="h-3 w-3 text-blue-400" />
                     )}

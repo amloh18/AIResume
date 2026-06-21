@@ -869,7 +869,7 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
             >
               {/* Welcome text */}
               <div className="text-left max-w-2xl">
-                <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-gray-900 dark:text-white tracking-tight leading-tight">
+                <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900 dark:text-white tracking-tight leading-tight">
                   {getGreeting()}, <span className="text-lime-500">{firstName}</span> 👋
                 </h2>
                 <p className="text-base sm:text-lg text-gray-500 dark:text-gray-400 font-semibold mt-2">

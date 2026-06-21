@@ -348,7 +348,7 @@ const nextConfig: NextConfig = {
   // Vercel deployment optimizations
   trailingSlash: false,
   
-  transpilePackages: ['next-auth'],
+  transpilePackages: ['next-auth', 'pdfjs-dist'],
 
   async redirects() {
     return [
@@ -371,7 +371,6 @@ const nextConfig: NextConfig = {
     'openid-client',
     'pdf2pic',
     'pdf-parse',
-    'pdfjs-dist',
     'stripe',
     // Exclude Sentry from Edge Runtime
     '@sentry/nextjs',

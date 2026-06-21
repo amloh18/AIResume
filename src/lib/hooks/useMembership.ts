@@ -60,10 +60,17 @@ export interface UseMembershipReturn {
  */
 const PLAN_NAMES: Record<string, string> = {
     free: 'Free',
+    starter_monthly: 'Starter Monthly',
+    starter_yearly: 'Starter Yearly',
+    focused_monthly: 'Focused Monthly',
+    focused_yearly: 'Focused Yearly',
+    smart_quarterly: 'Smart Quarterly',
+    smart_yearly: 'Smart Yearly',
     pro_monthly: 'Pro Monthly',
     pro_quarterly: 'Pro Quarterly',
     pro_yearly: 'Pro Yearly',
     pro_lifetime: 'Pro Lifetime',
+    pro: 'Pro',
 };
 
 /**
@@ -123,11 +130,16 @@ export function useMembership(): UseMembershipReturn {
                 setMembership({
                     planKey,
                     planName: PLAN_NAMES[planKey] || planKey,
-                    isFreePlan: planKey === 'free',
-                    isProMember: ['pro_monthly', 'pro_quarterly', 'pro_yearly', 'pro_lifetime'].includes(planKey) && isActive,
+                    isFreePlan: planKey === 'free' || planKey === 'starter_monthly',
+                    isProMember: [
+                        'focused_monthly', 'focused_yearly',
+                        'smart_quarterly', 'smart_yearly',
+                        'pro_monthly', 'pro_quarterly', 'pro_yearly', 'pro_lifetime', 'pro'
+                    ].includes(planKey) && isActive,
                     isLifetimeMember: planKey === 'pro_lifetime' && isActive,
                     limits,
-                    isSubscriptionActive: isActive,
+                    // Free tier (free + starter_monthly) is always active — no subscription expiry
+                    isSubscriptionActive: (planKey === 'free' || planKey === 'starter_monthly') ? true : isActive,
                     expiresAt: data.subscription?.endDate
                             ? new Date(data.subscription.endDate)
                             : null,
@@ -278,7 +290,11 @@ export function useMembership(): UseMembershipReturn {
  * Helper to check if a subscription plan is a pro plan
  */
 export function isProPlan(planKey: string): boolean {
-    return ['pro_monthly', 'pro_quarterly', 'pro_yearly', 'pro_lifetime'].includes(planKey);
+    return [
+        'focused_monthly', 'focused_yearly',
+        'smart_quarterly', 'smart_yearly',
+        'pro_monthly', 'pro_quarterly', 'pro_yearly', 'pro_lifetime', 'pro'
+    ].includes(planKey);
 }
 
 /**
