@@ -1,20 +1,26 @@
 'use client';
 
-import React, { Suspense } from 'react';
-import dynamic from 'next/dynamic';
+import { useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 
-// Dynamically import Canvas component for code splitting
-// Removed loading skeleton - dashboard loads without animation
-const Canvas = dynamic(() => import('@/components/dashboard/Canvas'), {
-  ssr: false,
-});
+function CanvasRedirect() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
-const CanvasPage: React.FC = () => {
+  useEffect(() => {
+    // Redirect all canvas traffic to the editor (Step 1)
+    const queryString = searchParams.toString();
+    const destination = `/editor${queryString ? `?${queryString}` : ''}`;
+    router.replace(destination);
+  }, [router, searchParams]);
+
+  return null;
+}
+
+export default function CanvasPage() {
   return (
     <Suspense fallback={null}>
-      <Canvas />
+      <CanvasRedirect />
     </Suspense>
   );
-};
-
-export default CanvasPage;
+}

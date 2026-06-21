@@ -5,6 +5,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import { ImageIcon, Plus, RefreshCw, ChevronUp, ChevronDown, Trash2, GripVertical, PlusCircle, Wand2, Bold, Italic, Underline, List, AlignLeft, AlignCenter, AlignRight, AlignJustify } from 'lucide-react';
 import { SNIPPETS, TITLE_STYLES } from '../registry';
 import { getNestedValue, escapeRegExp, formatCVDate } from '../helpers';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // CORE UI COMPONENTS
 // ==========================================
@@ -356,12 +357,37 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
   const moriHoverClass = ctx?.moriChatMode ? 'hover:bg-emerald-500/10 hover:shadow-[0_0_0_2px_rgba(16,185,129,0.4)] cursor-pointer rounded-lg transition-all' : '';
   
   return (
-      <div draggable={!isHeader && !readOnly && !ctx?.moriChatMode} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragOver={handleDragOver} className={`relative group/snippet transition-all duration-300 ease-in-out ${!isHeader && !readOnly && !ctx?.moriChatMode ? 'cursor-move' : ''} snippet-anim ${isBeingDragged ? 'opacity-0 pointer-events-none' : 'opacity-100 scale-100'} ${showDropLine ? 'mt-10' : 'mt-0'} ${moriHoverClass}`} style={isHeader ? {} : { marginBottom: isLastSnippetInZone ? 0 : 'var(--cv-section-gap, 16px)', visibility: isBeingDragged ? 'hidden' : 'visible' }} onClick={handleMoriClick}>
-      {showDropLine && <div className="absolute -top-8 left-0 w-full min-h-[30px] rounded-xl border-2 border-dashed border-emerald-400 bg-emerald-50/95 shadow-[0_0_0_1px_rgba(16,185,129,0.1),0_10px_30px_rgba(16,185,129,0.12)] flex items-center justify-center pointer-events-none z-30 animate-pulse"><span className="px-3 py-1 rounded-full bg-white text-[10px] font-bold uppercase tracking-[0.22em] text-emerald-700">Drop Section Here</span></div>}
-        <div className={`relative hover:z-30 group/inner w-full`}>
+    <motion.div
+      layout="position"
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: isBeingDragged ? 0 : 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.96, y: -10 }}
+      transition={{ 
+        type: 'spring', 
+        stiffness: 400, 
+        damping: 35, 
+        opacity: { duration: 0.25 },
+        y: { type: 'spring', stiffness: 350, damping: 30 }
+      }}
+      draggable={!isHeader && !readOnly && !ctx?.moriChatMode}
+      onDragStart={handleDragStart as any}
+      onDragEnd={handleDragEnd as any}
+      onDragOver={handleDragOver as any}
+      className={`relative group/snippet ${!isHeader && !readOnly && !ctx?.moriChatMode ? 'cursor-move' : ''} ${showDropLine ? 'mt-10' : 'mt-0'} ${moriHoverClass}`}
+      style={isHeader ? {} : { marginBottom: isLastSnippetInZone ? 0 : 'var(--cv-section-gap, 16px)', visibility: isBeingDragged ? 'hidden' : 'visible' }}
+      onClick={handleMoriClick}
+    >
+      {showDropLine && (
+        <div className="absolute -top-8 left-0 w-full min-h-[30px] rounded-xl border-2 border-dashed border-emerald-400 bg-emerald-50/95 shadow-[0_0_0_1px_rgba(16,185,129,0.1),0_10px_30px_rgba(16,185,129,0.12)] flex items-center justify-center pointer-events-none z-30 animate-pulse">
+          <span className="px-3 py-1 rounded-full bg-white text-[10px] font-bold uppercase tracking-[0.22em] text-emerald-700">Drop Section Here</span>
+        </div>
+      )}
+      <div className={`relative hover:z-30 group/inner w-full`}>
         {controls}
         <div className={`px-2 py-1 pointer-events-auto snippet-content relative z-10 w-full ${!content && !readOnly ? 'min-h-[60px] flex flex-col justify-center' : ''}`}>
-            {!readOnly && <div className="absolute left-[-1px] right-[-1px] top-[-1px] bottom-[-1px] bg-emerald-50/10 opacity-0 group-hover/inner:opacity-100 pointer-events-none transition-all duration-200 z-[-1] border border-transparent group-hover/inner:border-emerald-400 group-hover/inner:border-dashed shadow-none group-hover/inner:shadow-sm rounded-md group-hover/inner:rounded-tr-none group-hover/inner:rounded-tl-none transition-shadow"></div>}
+          {!readOnly && (
+            <div className="absolute left-[-1px] right-[-1px] top-[-1px] bottom-[-1px] bg-emerald-50/10 opacity-0 group-hover/inner:opacity-100 pointer-events-none transition-all duration-200 z-[-1] border border-transparent group-hover/inner:border-emerald-400 group-hover/inner:border-dashed shadow-none group-hover/inner:shadow-sm rounded-md group-hover/inner:rounded-tr-none group-hover/inner:rounded-tl-none transition-shadow"></div>
+          )}
           {content || (!readOnly && (
             <div className="text-center opacity-40 select-none cursor-pointer hover:opacity-80 transition-opacity p-4 border border-dashed border-gray-300 rounded-lg mt-2" onClick={() => onAddListEntry(SnippetComponent.category)}>
               <Title titleKey={SnippetComponent.category.toLowerCase()} />
@@ -370,7 +396,21 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
           ))}
         </div>
       </div>
-      {/* Remove the redundant appendLine since we have the button now */}
+    </motion.div>
+  );
+};
+
+const InsertSnippetHandle = ({ onAddSnippet, zoneId, index }: any) => {
+  return (
+    <div className="group/insert relative w-full h-[6px] my-[-3px] flex items-center justify-center z-40 transition-all no-print">
+      <div className="absolute inset-0 cursor-pointer" />
+      <div className="w-full h-[2px] bg-emerald-400 opacity-0 group-hover/insert:opacity-100 transition-opacity pointer-events-none absolute left-0 right-0" />
+      <button
+        onClick={() => onAddSnippet(zoneId, index)}
+        className="opacity-0 scale-90 group-hover/insert:opacity-100 group-hover/insert:scale-100 transition-all flex items-center gap-1 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-2.5 py-1 rounded-full text-[10px] shadow-md hover:shadow-lg font-sans absolute left-1/2 -translate-x-1/2 cursor-pointer pointer-events-auto"
+      >
+        <Plus size={11} /> Add Section
+      </button>
     </div>
   );
 };
@@ -434,13 +474,46 @@ export const CanvasZone = ({ readOnly = false, zoneId, blocks, cvData, EditableW
       <div className={`${dragHighlightClass} ${dropStateClass} transition-all duration-300 pb-0 ${className}`} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}>
         {blocks.length === 0 && !readOnly && <div className="absolute inset-0 flex flex-col gap-2 items-center justify-center text-sm text-gray-400 pointer-events-none border-2 border-dashed border-gray-200 rounded-2xl m-2 no-print"><span className="font-semibold text-gray-500">Empty Zone</span><span className="text-xs uppercase tracking-[0.22em]">{dropIntent === 'invalid' ? 'Not Allowed Here' : 'Drop A Section Here'}</span></div>}
         <div className="flex flex-col gap-0">
-          {blocks.map((instance: any, index: number) => <CanvasSnippet readOnly={readOnly} key={instance?.id || `snippet-${index}`} instance={instance} index={index} zoneId={zoneId} cvData={cvData} EditableWrapper={EditableWrapper} moveSnippet={moveSnippet} removeSnippet={removeSnippet} onReplace={onReplace} onTogglePhoto={onTogglePhoto} onAddListEntry={onAddListEntry} moveEntry={moveEntry} deleteEntry={deleteEntry} dragState={dragState} activeTemplate={activeTemplate} layoutZones={layoutZones} isDark={isDark} onOpenSkillsSuggestions={onOpenSkillsSuggestions} isDropAllowed={isDropAllowed} />)}
+          <AnimatePresence mode="popLayout">
+            {blocks.map((instance: any, index: number) => (
+              <React.Fragment key={instance?.id || `snippet-${index}`}>
+                {index > 0 && (
+                  <InsertSnippetHandle
+                    onAddSnippet={onAddSnippet}
+                    zoneId={zoneId}
+                    index={index}
+                  />
+                )}
+                <CanvasSnippet
+                  readOnly={readOnly}
+                  instance={instance}
+                  index={index}
+                  zoneId={zoneId}
+                  cvData={cvData}
+                  EditableWrapper={EditableWrapper}
+                  moveSnippet={moveSnippet}
+                  removeSnippet={removeSnippet}
+                  onReplace={onReplace}
+                  onTogglePhoto={onTogglePhoto}
+                  onAddListEntry={onAddListEntry}
+                  moveEntry={moveEntry}
+                  deleteEntry={deleteEntry}
+                  dragState={dragState}
+                  activeTemplate={activeTemplate}
+                  layoutZones={layoutZones}
+                  isDark={isDark}
+                  onOpenSkillsSuggestions={onOpenSkillsSuggestions}
+                  isDropAllowed={isDropAllowed}
+                />
+              </React.Fragment>
+            ))}
+          </AnimatePresence>
         </div>
         {showAppendLine && <div className="w-full min-h-[34px] bg-emerald-50/95 border-2 border-dashed border-emerald-400 rounded-xl mt-4 pointer-events-none shadow-[0_10px_30px_rgba(16,185,129,0.12)] flex items-center justify-center"><span className="px-3 py-1 rounded-full bg-white text-[10px] font-bold uppercase tracking-[0.22em] text-emerald-700">Insert Here</span></div>}
       </div>
       {!readOnly && (
-        <div className="opacity-0 group-hover/zone:opacity-100 transition-opacity flex justify-center py-2 relative z-10 no-print">
-          <button onClick={() => onAddSnippet(zoneId)} className="flex items-center gap-2 bg-white border border-gray-200 shadow-sm text-gray-700 hover:text-black font-bold px-5 py-2.5 rounded-full text-[13px] transition-all transform hover:shadow-md font-sans"><PlusCircle size={16} className="text-gray-500" /> Add Section</button>
+        <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 opacity-0 group-hover/zone:opacity-100 transition-opacity flex justify-center z-50 no-print pointer-events-none">
+          <button onClick={() => onAddSnippet(zoneId)} className="pointer-events-auto flex items-center gap-1.5 bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-4 py-2 rounded-full text-[11px] shadow-md hover:shadow-lg transition-all transform hover:scale-105 font-sans"><PlusCircle size={14} /> Add Section</button>
         </div>
       )}
     </div>

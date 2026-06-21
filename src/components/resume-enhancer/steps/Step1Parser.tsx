@@ -19,6 +19,9 @@ import { getAllTemplates } from '@/lib/templates/template-utils';
 import { ThumbnailGenerator } from '@/components/resume-enhancer/ThumbnailGenerator';
 import SmartJDModal from '@/components/resume-enhancer/SmartJDModal';
 import toast from 'react-hot-toast';
+import { StaticLayoutRenderer, EditableField } from '@/components/cv-builder-pro/components/CoreUI';
+import { CANVAS_TEMPLATES } from '@/components/cv-builder-pro/registry';
+import { normalizeCvDataForCanvas } from '@/lib/utils/cv-canvas-normalizer';
 
 // Global cache to prevent refetching when navigating between steps
 let cachedExistingCVs: ExistingCV[] | null = null;
@@ -55,110 +58,108 @@ interface ExistingCV {
 const LazyThumbnail = ({ item, isCoverLetter = false }: { item: any, isCoverLetter?: boolean }) => {
   const ref = React.useRef(null);
   const isInView = useInView(ref, { once: true, margin: "200px" });
-
-  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(item.metadata?.thumbnailUrl || item.thumbnailUrl || null);
-  const [showGenerator, setShowGenerator] = useState(false);
   
   const templateObj = React.useMemo(() => {
-    if (item.template) return item.template;
-    if (typeof item.templateId === 'object' && item.templateId) return item.templateId;
+    if (item.template && (item.template.zones || item.template.type)) return item.template;
+    
+    let idToFind = '';
     if (typeof item.templateId === 'string') {
-      const foundTemplate = getAllTemplates().find(t => t.id === item.templateId);
+      idToFind = item.templateId;
+    } else if (item.templateId && typeof item.templateId === 'object') {
+      if (item.templateId.zones || item.templateId.type) {
+        return item.templateId;
+      }
+      idToFind = item.templateId.id || item.templateId._id || '';
+    } else if (item.metadata?.templateId) {
+      idToFind = item.metadata.templateId;
+    }
+
+    if (idToFind) {
+      const foundTemplate = getAllTemplates().find(t => t.id === idToFind || t._id === idToFind);
       if (foundTemplate) return foundTemplate;
     }
-    return null;
-  }, [item.template, item.templateId]);
 
-  const handleThumbnailGenerated = (url: string) => {
-    setThumbnailUrl(url);
-    setShowGenerator(false);
-  };
+    // Default template fallback if no template ID is set
+    const defaultTemplate = getAllTemplates().find(t => t.id === '1-col' || t.id === 'tpl-1') || getAllTemplates()[0];
+    return defaultTemplate || null;
+  }, [item.template, item.templateId, item.metadata?.templateId]);
+
+  const cvDataForRenderer = React.useMemo(() => {
+    return normalizeCvDataForCanvas(item.cvData || DEFAULT_UNIFIED_CV_DATA);
+  }, [item.cvData]);
+
+  const ReadOnlyWrapper = React.useMemo(() => function Editable(props: any) {
+    return <EditableField {...props} data={cvDataForRenderer} readOnly={true} />;
+  }, [cvDataForRenderer]);
 
   return (
     <div 
       ref={ref}
-      className="w-full aspect-[1/1.414] bg-gray-50 dark:bg-black/40 rounded-[2rem] border border-gray-200 dark:border-white/10 transition-all duration-500 shadow-md flex flex-col relative overflow-hidden group-hover:shadow-xl group-hover:border-lime-500/40 group-hover:scale-[1.02]"
+      className="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-[#1a1a1a] p-4 pointer-events-none"
     >
+      {/* Required CSS for CV Preview */}
+      <style dangerouslySetInnerHTML={{
+        __html: `
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap');
+        :root {
+          --cv-font: 'Inter';
+          --cv-base-size: 12px;
+          --cv-spacing: 1.0;
+          --cv-accent: #22c55e;
+        }
+        .cv-document { font-family: var(--cv-font), sans-serif; color: #1f2937; font-size: var(--cv-base-size); }
+        .cv-name { font-size: calc(var(--cv-base-size) * 2.5); line-height: 1.1; }
+        .cv-name-narrow { font-size: calc(var(--cv-base-size) * 2.0); line-height: 1.1; }
+        .cv-role { font-size: calc(var(--cv-base-size) * 1.15); }
+        .cv-heading { font-size: calc(var(--cv-base-size) * 1.1); }
+        .cv-title { font-size: calc(var(--cv-base-size) * 1.05); }
+        .cv-subtitle { font-size: calc(var(--cv-base-size) * 0.95); }
+        .cv-date { font-size: calc(var(--cv-base-size) * 0.85); }
+        .cv-contact { font-size: calc(var(--cv-base-size) * 0.85); }
+        .cv-body { font-size: inherit; line-height: calc(1.6 * var(--cv-spacing)); }
+        .cv-document p, .cv-document ul, .cv-document li { font-size: inherit !important; line-height: inherit !important; margin: 0; padding: 0; }
+        .cv-prose p { margin-bottom: calc(0.3em * var(--cv-spacing)) !important; }
+        .cv-prose ul { list-style-type: disc; padding-left: 1.2em; margin-top: calc(0.25em * var(--cv-spacing)) !important; margin-bottom: calc(0.25em * var(--cv-spacing)) !important; }
+      `}} />
+
       {isInView ? (
-        thumbnailUrl && !showGenerator ? (
-          <img 
-            src={thumbnailUrl} 
-            alt={item.title} 
-            className="w-full h-full object-cover bg-white" 
-            onError={(e) => {
-              const target = e.target as HTMLImageElement;
-              const currentSrc = target.src;
-              if (currentSrc.includes('s3.amazonaws.com') || currentSrc.includes('s3.')) {
-                // Extract key and fetch presigned URL
-                fetch(`/api/files/${encodeURIComponent(currentSrc.split('.amazonaws.com/')[1] || '')}`)
-                  .then(res => res.json())
-                  .then(data => {
-                    if (data.url && data.url !== currentSrc) {
-                      setThumbnailUrl(data.url);
-                    } else {
-                      setThumbnailUrl(null);
-                      setShowGenerator(true);
-                    }
-                  })
-                  .catch(() => {
-                    setThumbnailUrl(null);
-                    setShowGenerator(true);
-                  });
-              } else {
-                setThumbnailUrl(null);
-                setShowGenerator(true);
-              }
-            }}
-          />
-        ) : !isCoverLetter && item.cvData && templateObj ? (
-          <div className="w-full h-full relative">
-            {showGenerator ? (
-              <div className="absolute inset-0 p-4">
-                <ThumbnailGenerator
-                  cvData={item.cvData}
-                  template={templateObj}
-                  onThumbnailGenerated={handleThumbnailGenerated}
-                  className="h-full"
-                />
-              </div>
-            ) : (
-              <div className="w-full h-full opacity-90 bg-white relative">
-                <div className="absolute inset-0 pointer-events-none z-10" />
-                <CVPreviewThumbnail cvData={item.cvData} template={templateObj} />
-              </div>
-            )}
-            {/* Regenerate button */}
-            {!showGenerator && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowGenerator(true);
-                }}
-                className="absolute top-2 right-2 w-8 h-8 bg-black/50 backdrop-blur-md rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-black/70 z-20"
-                title="Regenerate thumbnail"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white">
-                  <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/>
-                  <path d="M21 3v5h-5"/>
-                </svg>
-              </button>
-            )}
-          </div>
-        ) : (
-          // Generic fallback
-          <div className="w-full h-full p-6 flex flex-col gap-3 bg-white/5">
-            <div className="absolute inset-0 bg-gradient-to-br from-lime-500/5 to-transparent" />
-            <div className="h-3 w-3/4 bg-gray-300 dark:bg-white/20 rounded-full" />
-            <div className="h-2 w-1/2 bg-gray-200 dark:bg-white/10 rounded-full" />
-            <div className="mt-auto space-y-2">
-              <div className="h-1.5 w-full bg-gray-100 dark:bg-white/5 rounded-full" />
-              <div className="h-1.5 w-5/6 bg-gray-100 dark:bg-white/5 rounded-full" />
-              <div className="h-1.5 w-4/6 bg-gray-100 dark:bg-white/5 rounded-full" />
+        <div className="relative w-full h-full max-w-[200px] max-h-[283px] aspect-[1/1.414] bg-white shadow-md overflow-hidden rounded-sm ring-1 ring-gray-300 @container">
+          {!isCoverLetter && templateObj ? (
+            <div className="absolute top-0 left-0 w-[794px] h-[1123px] origin-top-left" style={{ transform: 'scale(calc(100cqw / 794))' }}>
+              <StaticLayoutRenderer template={templateObj} cvData={cvDataForRenderer} ReadOnlyWrapper={ReadOnlyWrapper} />
             </div>
-          </div>
-        )
+          ) : (
+            // Cover Letter or Fallback: Standard white A4 preview skeleton
+            <div className="w-full h-full p-6 flex flex-col gap-4 bg-white relative">
+              {/* Header placeholder */}
+              <div className="space-y-2 border-b border-gray-100 pb-4">
+                <div className="h-4 w-1/3 bg-gray-200 rounded animate-pulse" />
+                <div className="h-3 w-1/4 bg-gray-100 rounded animate-pulse" />
+              </div>
+              {/* Body paragraph placeholders */}
+              <div className="space-y-3 pt-2">
+                <div className="h-2 w-full bg-gray-100 rounded animate-pulse" />
+                <div className="h-2 w-[95%] bg-gray-100 rounded animate-pulse" />
+                <div className="h-2 w-[90%] bg-gray-100 rounded animate-pulse" />
+                <div className="h-2 w-[85%] bg-gray-100 rounded animate-pulse" />
+              </div>
+              <div className="space-y-3 pt-2">
+                <div className="h-2 w-full bg-gray-100 rounded animate-pulse" />
+                <div className="h-2 w-[95%] bg-gray-100 rounded animate-pulse" />
+                <div className="h-2 w-[40%] bg-gray-100 rounded animate-pulse" />
+              </div>
+              {/* Signature placeholder */}
+              <div className="mt-auto pt-4 space-y-2">
+                <div className="h-2.5 w-1/4 bg-gray-200 rounded animate-pulse" />
+                <div className="h-2 w-1/5 bg-gray-100 rounded animate-pulse" />
+              </div>
+            </div>
+          )}
+        </div>
       ) : (
-        <div className="w-full h-full bg-gray-100 dark:bg-white/5 animate-pulse" />
+        <div className="relative w-full h-full max-w-[200px] max-h-[283px] aspect-[1/1.414] bg-white shadow-md overflow-hidden rounded-sm ring-1 ring-gray-300">
+          <div className="w-full h-full bg-gray-100 dark:bg-white/5 animate-pulse" />
+        </div>
       )}
     </div>
   );
@@ -423,10 +424,10 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
   useEffect(() => {
     fetchExistingCVs();
     fetchDraftCV();
-    if (user) {
+    if (user?.id) {
       fetchExistingCoverLetters();
     }
-  }, [fetchExistingCVs, fetchExistingCoverLetters, fetchDraftCV, user]);
+  }, [fetchExistingCVs, fetchExistingCoverLetters, fetchDraftCV, user?.id]);
 
   useEffect(() => {
     if (existingCVs.length === 0) return;
@@ -1542,13 +1543,7 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
                         <div className="flex items-center gap-4 flex-grow min-w-0">
                           {/* Mini Thumbnail */}
                           <div className="w-10 h-14 bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 rounded-lg overflow-hidden flex-shrink-0 relative">
-                            {cv.metadata?.thumbnailUrl ? (
-                              <img src={cv.metadata.thumbnailUrl} className="w-full h-full object-cover" alt="" />
-                            ) : (
-                              <div className="w-full h-full bg-gradient-to-br from-lime-500/10 to-transparent flex items-center justify-center">
-                                <FileText className="w-5 h-5 text-lime-500/40" />
-                              </div>
-                            )}
+                            <LazyThumbnail item={cv} />
                           </div>
                           <div className="min-w-0">
                             <h4 className="text-base font-black text-gray-900 dark:text-white truncate group-hover:text-lime-600 dark:group-hover:text-lime-500">
@@ -1742,13 +1737,7 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
                           <div className="flex items-center gap-4 flex-grow min-w-0">
                             {/* Mini Thumbnail */}
                             <div className="w-10 h-14 bg-gray-55 dark:bg-black/30 border border-gray-200 dark:border-white/10 rounded-lg overflow-hidden flex-shrink-0 relative">
-                              {cl.metadata?.thumbnailUrl ? (
-                                <img src={cl.metadata.thumbnailUrl} className="w-full h-full object-cover" alt="" />
-                              ) : (
-                                <div className="w-full h-full bg-gradient-to-br from-emerald-500/10 to-transparent flex items-center justify-center">
-                                  <FileText className="w-5 h-5 text-emerald-500/40" />
-                                </div>
-                              )}
+                              <LazyThumbnail item={cl} isCoverLetter={true} />
                             </div>
                             <div className="min-w-0">
                               <h4 className="text-base font-black text-gray-900 dark:text-white truncate group-hover:text-lime-600 dark:group-hover:text-lime-500">

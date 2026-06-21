@@ -39,6 +39,7 @@ import toast from 'react-hot-toast';
 import FloatingFormEditor from '@/components/resume-enhancer/FloatingFormEditor';
 import FloatingPulsePill, { type FloatingPulsePillHandle } from '@/components/resume-enhancer/FloatingPulsePill';
 import ATSMeterPanel from '@/components/resume-enhancer/panels/ATSMeterPanel';
+import MoriChatInterface from '@/components/resume-enhancer/panels/MoriChatInterface';
 import { usePillEngine } from '@/hooks/usePillEngine';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ITemplate } from '@/types/template';
@@ -1265,8 +1266,8 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
             </div>
           </div>
           
-          {/* Right rail: onboarding setup checklist and AI analysis */}
-          <div className={`hidden lg:flex flex-col shrink-0 h-full relative z-10 gap-3 min-h-0 transition-all duration-300 ${state.moriChatMode ? 'w-[484px]' : 'w-[387px]'}`}>
+          {/* Right rail: onboarding setup checklist and AI analysis (always open) */}
+          <div className="hidden lg:flex flex-col shrink-0 h-full relative z-10 gap-3 min-h-0 w-[387px]">
             {isImproveMode && (() => {
               const isPersonalInfoVerified = !!(state.cvData?.basics?.name?.trim() && state.cvData?.basics?.email?.trim());
               const isQualityScoreReviewed = !!(state.surgeonAnalysis || atsScore);
@@ -1386,6 +1387,31 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
               <ATSMeterPanel />
             </div>
           </div>
+
+          {/* Mori Chat Panel (open/close next to it) */}
+          {state.moriChatMode && (
+            <div className="hidden lg:flex flex-col shrink-0 h-full relative z-10 gap-3 min-h-0 w-[387px] bg-white dark:bg-[var(--bg-secondary)] rounded-xl border border-gray-200 dark:border-white/[0.06] overflow-hidden shadow-sm shadow-black/10 dark:shadow-black/30">
+              {/* Mori Chat Header */}
+              <div className="sticky top-0 z-20 flex items-center justify-between px-4 py-3 bg-white/95 dark:bg-[var(--bg-secondary)] backdrop-blur-sm border-b border-gray-100 dark:border-white/[0.04]">
+                <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <h3 className="text-xs font-extrabold uppercase tracking-wider">Mori Chat</h3>
+                </div>
+                <button
+                  onClick={() => dispatch({ type: 'SET_MORI_CHAT_MODE', payload: false })}
+                  className="p-1 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-white hover:bg-gray-150 dark:hover:bg-white/5 transition-colors"
+                  title="Close Mori Chat"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              
+              {/* Mori Chat Interface */}
+              <div className="flex-1 min-h-0 overflow-hidden">
+                <MoriChatInterface />
+              </div>
+            </div>
+          )}
 
         </div >
         {/* AI Analysis Chatbot Card - Bottom Right - Only in builder mode */}

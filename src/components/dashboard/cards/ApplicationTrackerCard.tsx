@@ -29,7 +29,7 @@ export default function ApplicationTrackerCard({ className }: ApplicationTracker
   const total = docTypes.reduce((sum, d) => sum + d.count, 0);
 
   return (
-    <Link href="/dashboard/canvas">
+    <Link href="/editor">
       <motion.div
         whileHover={{ y: -4, transition: { duration: 0.2 } }}
         className={cn(
