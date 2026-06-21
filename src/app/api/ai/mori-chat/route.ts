@@ -6,6 +6,7 @@ import { authOptions } from '@/lib/auth';
 import { getConnection } from '@/lib/database';
 import MoriChat from '@/models/MoriChat';
 import CV from '@/models/CV';
+import { isFreeTierPlan } from '@/lib/utils/subscription-helpers';
 
 function injectItemIds(obj: any): any {
   if (!obj || typeof obj !== 'object') return obj;
@@ -49,7 +50,8 @@ export async function POST(req: NextRequest) {
 
     const User = (await import('@/models/User')).default;
     const user = await User.findById(session.user.id).select('currentPlanKey credits.lastResetDate').lean() as any;
-    if (user && user.currentPlanKey === 'starter_monthly') {
+    // Apply 5-message limit for free-tier users (free + starter_monthly are the same plan)
+    if (user && isFreeTierPlan(user.currentPlanKey || 'free')) {
       const lastResetDate = user.credits?.lastResetDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
       
       const userChats = await MoriChat.find({

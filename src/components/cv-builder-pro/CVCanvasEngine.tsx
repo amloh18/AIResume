@@ -312,7 +312,19 @@ const mergeSkillSuggestionsIntoCV = (sourceCvData: any, categories: Array<{ cate
   };
 };
 
+const templateLayoutFlows: Record<string, { global: string[]; columns: string[][] }> = {
+  '1-col': { global: ['main'], columns: [] },
+  '2-col': { global: ['header'], columns: [['left'], ['right']] },
+  'sidebar-left': { global: [], columns: [['sidebar'], ['main']] },
+  'sidebar-left-dark': { global: [], columns: [['sidebar'], ['main']] },
+  'sidebar-right': { global: [], columns: [['main'], ['sidebar']] },
+  'top-sidebar-left': { global: ['header'], columns: [['sidebar'], ['main']] },
+  'top-sidebar-right': { global: ['header'], columns: [['main'], ['sidebar']] },
+  'hybrid-split': { global: ['header', 'main'], columns: [['left'], ['right']] },
+};
+
 const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ cvData, onDataChange, theme = 'dark', template, onTemplateChange, readOnly = false, cvId, jobId, role, moriChatMode = false }, ref) => {
+  const isInternalLayoutChange = React.useRef(false);
   const [activeTemplate, setActiveTemplate] = useState(cvData?.metadata?.canvasTemplate || template || CANVAS_TEMPLATES[0]);
   const [focusedNode, setFocusedNode] = useState<HTMLElement | null>(null);
   const [zones, setZones] = useState<Record<string, any[]>>(cvData?.metadata?.canvasZones || {});
@@ -501,7 +513,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
       const EFFECTIVE_HEIGHT = layoutMetrics.slotHeightPx;
       const PAGE_TOP_PADDING = layoutMetrics.pageTopPaddingPx;
       const PAGE_BOTTOM_PADDING = layoutMetrics.pageBottomPaddingPx;
-      const MIN_PUSH_HEIGHT = 20;
+      const MIN_PUSH_HEIGHT = 4;
 
       const rawBreakables = Array.from(
         doc.querySelectorAll('.cv-page-breakable, .cv-keep-with-next')
@@ -519,6 +531,9 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
       });
 
       requestAnimationFrame(() => {
+        // Set internal layout change flag to avoid triggering ResizeObserver recursively
+        isInternalLayoutChange.current = true;
+
         // Reset margins to natural state first
         allBreakables.forEach(item => { item.style.marginTop = ''; });
         doc.style.height = '';
@@ -531,6 +546,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
             scale,
             effectiveHeight: EFFECTIVE_HEIGHT,
           });
+          isInternalLayoutChange.current = false;
           return;
         }
 
@@ -544,18 +560,28 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
           const bottom = top + height;
           const style = window.getComputedStyle(item);
           const naturalMargin = parseFloat(style.marginTop) || 0;
+
+          // Find zoneId using dataset
+          const zoneEl = item.closest('[data-zone-id]');
+          const zoneId = zoneEl ? zoneEl.getAttribute('data-zone-id') || 'main' : 'main';
+
           return {
             element: item,
             naturalTop: top,
             height,
             naturalBottom: bottom,
             naturalMargin,
-            isKeepWithNext: item.classList.contains('cv-keep-with-next')
+            isKeepWithNext: item.classList.contains('cv-keep-with-next'),
+            zoneId
           };
         });
 
-        // CALCULATION PHASE (Single-pass simulator)
-        let cumulativeShift = 0;
+        // Resolve layout flow definitions
+        const flow = templateLayoutFlows[activeTemplate.type] || { global: [], columns: [] };
+
+        // CALCULATION PHASE (Zone-aware multi-column simulator)
+        let globalShift = 0;
+        const columnShifts = new Map<number, number>();
         const pushes = new Map<HTMLElement, number>();
         const pushedElements = new Set<HTMLElement>();
 
@@ -574,7 +600,19 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
 
           if (isAncestorPushed) return;
 
-          const shiftedTop = data.naturalTop + cumulativeShift;
+          const zoneId = data.zoneId;
+          const isGlobal = flow.global.includes(zoneId) || flow.columns.length === 0;
+
+          let colGroupIdx = -1;
+          if (!isGlobal) {
+            colGroupIdx = flow.columns.findIndex(cols => cols.includes(zoneId));
+          }
+
+          // Calculate applied shift
+          const activeColShift = colGroupIdx !== -1 ? (columnShifts.get(colGroupIdx) || 0) : 0;
+          const appliedShift = globalShift + activeColShift;
+
+          const shiftedTop = data.naturalTop + appliedShift;
           const shiftedBottom = shiftedTop + data.height;
 
           const pageIndex = Math.max(0, Math.floor(shiftedTop / EFFECTIVE_HEIGHT));
@@ -597,14 +635,22 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
           } else if (data.isKeepWithNext) {
             const nextData = naturalData[index + 1];
             if (nextData && !pushedElements.has(nextData.element)) {
-              const nextShiftedTop = nextData.naturalTop + cumulativeShift;
-              const nextShiftedBottom = nextShiftedTop + nextData.height;
-              if (
-                nextShiftedBottom > pageContentBottom &&
-                nextData.height < printableHeight &&
-                nextData.height > MIN_PUSH_HEIGHT
-              ) {
-                requiredPush = Math.max(requiredPush, nextPageContentTop - shiftedTop);
+              // Only keep with next if it's in the same zone or column group
+              const isSameFlow = nextData.zoneId === zoneId || 
+                (!isGlobal && flow.columns.some(cols => cols.includes(zoneId) && cols.includes(nextData.zoneId)));
+
+              if (isSameFlow) {
+                const nextActiveColShift = colGroupIdx !== -1 ? (columnShifts.get(colGroupIdx) || 0) : 0;
+                const nextAppliedShift = globalShift + nextActiveColShift;
+                const nextShiftedTop = nextData.naturalTop + nextAppliedShift;
+                const nextShiftedBottom = nextShiftedTop + nextData.height;
+                if (
+                  nextShiftedBottom > pageContentBottom &&
+                  nextData.height < printableHeight &&
+                  nextData.height > MIN_PUSH_HEIGHT
+                ) {
+                  requiredPush = Math.max(requiredPush, nextPageContentTop - shiftedTop);
+                }
               }
             }
           }
@@ -612,8 +658,12 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
           const normalizedPush = Math.min(requiredPush, EFFECTIVE_HEIGHT);
           if (Number.isFinite(normalizedPush) && normalizedPush > 0) {
             pushes.set(item, normalizedPush);
-            cumulativeShift += normalizedPush;
             pushedElements.add(item);
+            if (isGlobal) {
+              globalShift += normalizedPush;
+            } else if (colGroupIdx !== -1) {
+              columnShifts.set(colGroupIdx, (columnShifts.get(colGroupIdx) || 0) + normalizedPush);
+            }
           }
         });
 
@@ -641,6 +691,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
         const measuredBottom = Math.max(maxBottom, naturalScrollHeight);
         if (!Number.isFinite(measuredBottom) || measuredBottom <= 0) {
           console.warn('CVCanvasEngine pagination aborted due to invalid measured bottom', { measuredBottom });
+          isInternalLayoutChange.current = false;
           return;
         }
 
@@ -662,6 +713,11 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
         if (doc.style.height !== newHeight) {
           doc.style.height = newHeight;
         }
+
+        // Reset the flag after style changes have settled in the DOM (150ms)
+        setTimeout(() => {
+          isInternalLayoutChange.current = false;
+        }, 150);
       });
     };
 
@@ -669,6 +725,9 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     const settleTimer = setTimeout(paginate, 450);
 
     const ro = new ResizeObserver(() => {
+      if (isInternalLayoutChange.current) {
+        return;
+      }
       clearTimeout(debounceTimer);
       clearTimeout(settleDebounce);
       debounceTimer = setTimeout(paginate, 60);

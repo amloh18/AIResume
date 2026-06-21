@@ -84,8 +84,8 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     coverLetterAI: false,
     docxExport: false,
     interviewCoach: false,
-    jobTracker: false,
-    jobParsing: false,
+    jobTracker: true,    // same as free — starter_monthly IS the free plan
+    jobParsing: true,    // same as free — starter_monthly IS the free plan
     prioritySupport: false,
     advancedAnalytics: false,
     linkedinToneChange: false,
@@ -311,6 +311,14 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
 
 export function getPlanLimits(planKey: string): PlanLimits {
   return PLAN_LIMITS[planKey] || PLAN_LIMITS.free;
+}
+
+/**
+ * Check if a plan key belongs to the free tier.
+ * Both 'free' and 'starter_monthly' are the free plan (starter_monthly is just the renamed free).
+ */
+export function isFreeTierPlan(planKey: string): boolean {
+  return planKey === 'free' || planKey === 'starter_monthly';
 }
 
 export function isUnlimited(limit: number): boolean {

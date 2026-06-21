@@ -9,6 +9,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { authenticatedFetch, authenticatedFetchWithUserId } from '@/lib/utils/apiUtils';
 import { useUserData, getUserDisplayName, getUserEmail, getUserAvatar } from '@/lib/hooks/useUserData';
 import { useUnifiedAuth, getUserIdForAPI } from '@/lib/hooks/useUnifiedAuth';
+import { useMembership } from '@/lib/hooks/useMembership';
 import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
 import toast from 'react-hot-toast';
 import { ApplicationTrackerSkeleton } from '@/components/ui/OptimizedSkeletons';
@@ -86,6 +87,7 @@ const JobsTracker: React.FC = () => {
   const { user, loading: authLoading, isAuthenticated } = useUnifiedAuth();
   const { isOpen: isMobileMenuOpen, toggleSidebar } = useMobileSidebar();
   const { userData, loading: userLoading, error: userError } = useUserData();
+  const { membership, canAccess } = useMembership();
   const router = useRouter();
   const searchParams = useSearchParams();
   const cvId = searchParams.get('cvId');
@@ -117,8 +119,32 @@ const JobsTracker: React.FC = () => {
   // Credit exhaustion handler
   const { showExhaustionModal } = useCreditExhaustionHandler();
 
-  // Job limit info (will be fetched from API or passed as prop)
-  const [limitInfo, setLimitInfo] = useState<any>(null);
+  // Job limit info – derived from useMembership (plan limits) + live job count from API
+  const [jobCount, setJobCount] = useState<number>(0);
+
+  // Derived limitInfo from membership data + live job count
+  const limitInfo = React.useMemo(() => {
+    if (!membership) return null;
+    const maxJobs = membership.limits.maxJobs;
+    const isUnlimited = maxJobs === -1;
+    const hasTrackerAccess = membership.limits.jobTracker;
+
+    if (isUnlimited) {
+      // Unlimited plan: no badge needed
+      return null;
+    }
+
+    // Limited plan (free = 3 jobs, starter_monthly = 3, starter_yearly = 0)
+    const remaining = Math.max(0, maxJobs - jobCount);
+    return {
+      currentCount: jobCount,
+      limit: maxJobs,
+      remaining,
+      isUnlimited: false,
+      allowed: remaining > 0,
+      hasTrackerAccess,
+    };
+  }, [membership, jobCount]);
 
   // Initialize from persisted preferences
   useEffect(() => {
@@ -353,6 +379,10 @@ const JobsTracker: React.FC = () => {
             updatedAt: job.updatedAt
           };
         });
+
+        // Update live job count: only count non-archived jobs (matches backend checkJobLimit logic)
+        const activeJobCount = transformedJobs.filter(j => !j.isArchived).length;
+        setJobCount(activeJobCount);
       }
 
       // Load CV journeys and populate ATS scores
@@ -590,7 +620,17 @@ const JobsTracker: React.FC = () => {
 
   // Handlers
   const handleAddJob = () => {
-    // EDGE CASE 4: Block "Add Job" button when limit reached
+    // Block if plan has no tracker access at all (e.g. starter_yearly: maxJobs=0, jobTracker=false)
+    if (limitInfo && !limitInfo.hasTrackerAccess) {
+      openPaymentModal({
+        preselectedPlanKey: 'focused_monthly',
+        triggerContext: 'job-tracker',
+        returnUrl: window.location.href
+      });
+      toast.error('Job Tracker requires a Focused or higher plan. Upgrade to unlock.');
+      return;
+    }
+    // EDGE CASE 4: Block "Add Job" button when count limit reached (free plan: 3 jobs)
     if (limitInfo && !limitInfo.isUnlimited && limitInfo.remaining === 0) {
       setShowPaywall(true);
       setPaywallInfo({
@@ -605,7 +645,17 @@ const JobsTracker: React.FC = () => {
   };
 
   const handleQuickAdd = () => {
-    // EDGE CASE 4: Block "Quick Add" when limit reached
+    // Block if plan has no tracker access at all
+    if (limitInfo && !limitInfo.hasTrackerAccess) {
+      openPaymentModal({
+        preselectedPlanKey: 'focused_monthly',
+        triggerContext: 'job-tracker',
+        returnUrl: window.location.href
+      });
+      toast.error('Job Tracker requires a Focused or higher plan. Upgrade to unlock.');
+      return;
+    }
+    // EDGE CASE 4: Block "Quick Add" when count limit reached
     if (limitInfo && !limitInfo.isUnlimited && limitInfo.remaining === 0) {
       setShowPaywall(true);
       setPaywallInfo({
@@ -1606,6 +1656,7 @@ const JobsTracker: React.FC = () => {
           onClose={() => setShowPaywall(false)}
           currentCount={paywallInfo.currentCount}
           limit={paywallInfo.limit}
+          preselectedPlanKey="focused_monthly"
         />
       )}
 

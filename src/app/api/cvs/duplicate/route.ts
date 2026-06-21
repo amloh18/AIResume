@@ -162,8 +162,9 @@ export async function POST(request: NextRequest) {
     if (duplicatedCvType === 'standalone') {
       const { default: User } = await import('@/models/User');
       const user = await User.findById(userId);
+      const { isFreeTierPlan } = await import('@/lib/utils/subscription-helpers');
 
-      if (user && user.currentPlanKey === 'free') {
+      if (user && isFreeTierPlan(user.currentPlanKey || 'free')) {
         const standaloneCount = await CV.countDocuments({
           userId: toObjectId(userId),
           cvType: 'standalone'
