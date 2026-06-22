@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import Logo from '@/components/ui/Logo';
-import { Upload, FileText, Files, Gauge, Edit3, CheckCircle2, Loader2, Briefcase, Sparkles, AlertTriangle, FolderOpen, Edit2, Copy, Plus, Grid, List, Trash2, SlidersHorizontal, ChevronDown } from 'lucide-react';
+import { Upload, FileText, Files, Gauge, Edit3, CheckCircle2, Loader2, Briefcase, Sparkles, AlertTriangle, FolderOpen, Edit2, Copy, Plus, Grid, List, Trash2, SlidersHorizontal, ChevronDown, ChevronRight } from 'lucide-react';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
 import { UnifiedCVDataStructure, DEFAULT_UNIFIED_CV_DATA } from '@/types/unified-cv-schema';
 import { sanitizeErrorMessage } from '@/lib/api/error-handler';
@@ -272,16 +272,7 @@ export default function Step1Parser({
     : 0;
   const topSectionRef = React.useRef<HTMLDivElement>(null);
   
-  const { scrollY } = useScroll({ container: scrollContainerRef });
-  
-  // Smooth scroll transforms
-  const headerScale = useTransform(scrollY, [0, 300], [1, 0.85]);
-  const headerOpacity = useTransform(scrollY, [0, 300], [1, 0.4]);
-  const headerY = useTransform(scrollY, [0, 300], [0, -30]);
 
-  const cardsScale = useTransform(scrollY, [0, 400], [1, 0.75]);
-  const cardsY = useTransform(scrollY, [0, 400], [0, -60]);
-  const cardsOpacity = useTransform(scrollY, [0, 400], [1, 0.7]);
   
   const [existingCoverLetters, setExistingCoverLetters] = useState<any[]>([]);
   const [isLoadingCoverLetters, setIsLoadingCoverLetters] = useState(false);
@@ -765,70 +756,29 @@ export default function Step1Parser({
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: 20 }}
           ref={scrollContainerRef}
-          className="step-one-shell flex flex-col h-full min-h-[calc(100vh-100px)] overflow-y-auto custom-scrollbar bg-[var(--bg-primary)] scroll-smooth"
+          className="step-one-shell flex flex-col h-full overflow-y-auto custom-scrollbar bg-[var(--bg-primary)] scroll-smooth"
           onScroll={handleScroll}
         >
-        {/* Sticky Small Header on Scroll */}
-        <AnimatePresence>
-          {isScrolled && (
-            <motion.div
-              initial={{ y: -100, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: -100, opacity: 0 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              className="step-one-compact-header fixed top-16 left-0 right-0 z-[110] bg-white dark:bg-[#141810] border-b border-gray-200 dark:border-white/5 py-3 px-4 sm:px-8 flex items-center justify-between shadow-xl"
-            >
-              <div className="flex items-center gap-3 sm:gap-4">
-                <Logo size="sm" />
-                <div className="hidden xs:block">
-                  <h4 className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white">
-                    {activeTab === 'cvs' ? 'Build Your Resume' : 'Let\'s Build Your Cover Letter'}
-                  </h4>
-                  <p className="text-[9px] sm:text-[10px] text-gray-500 dark:text-gray-400 font-medium">Quick actions</p>
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-2 sm:gap-3">
-                <button 
-                   onClick={() => setParseMethod('upload')}
-                   className="flex items-center gap-2 px-3 sm:px-5 py-2 bg-lime-500 dark:bg-[#80FF00] hover:bg-lime-600 dark:hover:bg-[#70e600] text-black rounded-full text-[10px] sm:text-xs font-bold transition-all shadow-lg hover:shadow-lime-500/20"
-                >
-                  <Upload className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                  <span className="hidden xxs:inline">{activeTab === 'cvs' ? 'Upload' : 'Import'}</span>
-                  <span className="xxs:hidden">UP</span>
-                </button>
-                <button 
-                   onClick={() => activeTab === 'cvs' ? handleManualEntry() : router.push('/editor?mode=create-cover-letter&step=4')}
-                   className="flex items-center gap-2 px-3 sm:px-5 py-2 bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 text-gray-900 dark:text-white border border-gray-200 dark:border-white/10 rounded-full text-[10px] sm:text-xs font-bold transition-all shadow-sm"
-                >
-                  <Edit3 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                  <span className="hidden xxs:inline">Start Fresh</span>
-                  <span className="xxs:hidden">New</span>
-                </button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+
 
         {/* Top Section */}
-        <div ref={topSectionRef} className="step-one-hero w-full flex flex-col pt-6 sm:pt-8 pb-2">
+        <div ref={topSectionRef} className="step-one-hero w-full flex flex-col min-h-[calc(100vh-64px)] pt-6 sm:pt-8 pb-12">
           <div className="w-full max-w-7xl mx-auto px-4 sm:px-8">
-            <motion.div
-              style={{ 
-                scale: headerScale,
-                opacity: headerOpacity,
-                y: headerY
-              }}
+            <div
               className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 sm:gap-6 mb-5 sm:mb-7 origin-bottom max-w-6xl mx-auto w-full"
             >
-              {/* Welcome text */}
-              <div className="text-left max-w-2xl">
-                <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900 dark:text-white tracking-tight leading-tight">
-                  {getGreeting()}, <span className="text-lime-500">{firstName}</span> 👋
-                </h2>
-                <p className="text-sm sm:text-base text-[color:var(--text-secondary)] font-medium mt-1.5 sm:mt-2">
-                  {activeTab === 'cvs' ? "Let's create your next winning resume." : "Let's create a cover letter that gets noticed."}
-                </p>
+              {/* Breadcrumb instead of welcome text */}
+              <div className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 font-medium py-2">
+                <span 
+                  onClick={() => router.push('/dashboard')}
+                  className="hover:text-lime-600 dark:hover:text-lime-400 cursor-pointer transition-colors"
+                >
+                  Dashboard
+                </span>
+                <ChevronRight className="h-3 w-3 text-gray-300 dark:text-gray-600" />
+                <span className="text-gray-800 dark:text-gray-200 font-bold">
+                  {activeTab === 'cvs' ? 'Editor' : 'Cover Letters'}
+                </span>
               </div>
 
               {/* Stats Widgets */}
@@ -878,16 +828,11 @@ export default function Step1Parser({
                   </div>
                 </div>
               </div>
-            </motion.div>
+            </div>
 
            {/* Action Cards Grid - Optimized for all screens */}
-           <motion.div 
-             style={{
-               scale: cardsScale,
-               y: cardsY,
-               opacity: cardsOpacity
-             }}
-             className="grid gap-3 sm:gap-4 origin-top grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 max-w-6xl mx-auto w-full"
+           <div 
+             className="grid gap-3 sm:gap-4 origin-top grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 max-w-6xl mx-auto w-full min-h-[420px] sm:min-h-[310px] lg:min-h-[150px]"
            >
             {activeTab === 'cvs' ? (
               <>
@@ -1032,7 +977,7 @@ export default function Step1Parser({
                 </motion.button>
               </>
             )}
-          </motion.div>
+          </div>
 
           {/* Pro Tip - Minimalist Inline Section */}
           <motion.div
@@ -1054,7 +999,7 @@ export default function Step1Parser({
 
         {/* Continue Editing Section */}
         {!isGuestMode && (
-          <div className="step-one-documents snap-start w-full min-h-[80vh] pt-4 sm:pt-6 bg-[var(--bg-primary)] relative">
+          <div className="step-one-documents w-full min-h-[80vh] pt-4 sm:pt-6 bg-[var(--bg-primary)] relative">
             <div className="w-full max-w-7xl mx-auto px-4 sm:px-8 pb-32">
               <motion.div
                 initial={{ opacity: 0, y: 40 }}
@@ -1062,7 +1007,7 @@ export default function Step1Parser({
                 viewport={{ once: true, margin: "-100px" }}
                 transition={{ type: 'spring', bounce: 0.4, duration: 0.8 }}
               >
-                <div className="step-one-documents-header flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-5 pb-5 border-b border-[color:var(--border-primary)] sticky top-16 pt-5 z-40 bg-[var(--bg-primary)]/95 backdrop-blur-md">
+                <div className="step-one-documents-header flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-5 pb-5 border-b border-[color:var(--border-primary)] pt-5">
                   <div>
                     <h3 className="text-xl sm:text-2xl font-black text-[color:var(--text-primary)] tracking-tight text-left">Your Documents</h3>
                     <p className="mt-1 text-xs sm:text-sm text-[color:var(--text-secondary)]">All your resumes and cover letters in one place.</p>

@@ -8,9 +8,11 @@ import { DashboardDataContext } from '@/contexts/DashboardDataContext';
 import { formatDistanceToNow } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 
-type TabType = 'notifications' | 'activities';
+interface NotificationCenterProps {
+  variant?: 'default' | 'pill';
+}
 
-export default function NotificationCenter() {
+export default function NotificationCenter({ variant = 'default' }: NotificationCenterProps) {
   const {
     notifications,
     activities: liveActivities,
@@ -79,7 +81,10 @@ export default function NotificationCenter() {
     <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-white/10 transition-all group active:scale-95"
+        className={variant === 'pill' 
+          ? "relative w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white dark:bg-white/10 border border-gray-200 dark:border-white/20 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-white/15 transition-all group active:scale-95 shadow-md"
+          : "relative w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-white/10 transition-all group active:scale-95"
+        }
       >
         <Bell size={16} className={`transition-colors ${isOpen ? 'text-[#80FF00]' : 'text-gray-500 dark:text-gray-400 group-hover:text-[#80FF00]'}`} />
         {unreadCount > 0 && (

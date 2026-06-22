@@ -11,6 +11,7 @@ import ResumeEnhancerContainer from '@/components/resume-enhancer/ResumeEnhancer
 import RouteGuard from '@/components/auth/RouteGuard';
 import LoadingOverlay from '@/components/ui/LoadingOverlay';
 import guestCVService from '@/lib/services/guestCVService';
+import { MobileSidebarProvider } from '@/contexts/MobileSidebarContext';
 
 function ResumeEnhancerPageContent() {
   const router = useRouter();
@@ -208,8 +209,10 @@ if (isGuestMode) {
 
 export default function ResumeEnhancerPage() {
   return (
-    <Suspense fallback={<LoadingOverlay message="Loading Editor" />}>
-      <ResumeEnhancerPageContent />
-    </Suspense>
+    <MobileSidebarProvider>
+      <Suspense fallback={<LoadingOverlay message="Loading Editor" />}>
+        <ResumeEnhancerPageContent />
+      </Suspense>
+    </MobileSidebarProvider>
   );
 }

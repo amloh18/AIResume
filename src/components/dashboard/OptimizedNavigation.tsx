@@ -8,7 +8,7 @@ import Image from 'next/image';
 import Logo from '@/components/ui/Logo';
 import {
   BarChart3, Target, FileText,
-  Bell, Sun, Moon, Menu, X, Shield, Settings, LogOut, User, ChevronDown, ChevronRight, ChevronLeft, Clock, Zap, AlertCircle, Briefcase, ExternalLink, Star, PenTool, Wand2, Mic, Linkedin, Lock
+  Bell, Sun, Moon, Menu, X, Shield, Settings, LogOut, User, ChevronDown, ChevronRight, ChevronLeft, Clock, Zap, AlertCircle, Briefcase, ExternalLink, Star, PenTool, Wand2, Mic, Linkedin, Lock, PanelLeft
 } from 'lucide-react';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
@@ -389,7 +389,7 @@ const OptimizedNavigation: React.FC = () => {
         className="hidden lg:flex absolute -right-[13px] top-6 bg-white dark:bg-[#141810] border border-gray-200 dark:border-gray-700 rounded-full p-1 z-50 hover:bg-gray-50 dark:hover:bg-gray-800 shadow-sm transition-transform hover:scale-110"
         aria-label={isDesktopExpanded ? "Collapse sidebar" : "Expand sidebar"}
       >
-        {isDesktopExpanded ? <ChevronLeft className="w-4 h-4 text-gray-500" /> : <ChevronRight className="w-4 h-4 text-gray-500" />}
+        <PanelLeft className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${isDesktopExpanded ? '' : 'rotate-180'}`} />
       </button>
 
        {/* Header */}

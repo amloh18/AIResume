@@ -1,5 +1,8 @@
+'use client';
+
 import React from 'react';
-import GreetingHeader from '@/components/dashboard/GreetingHeader';
+import { usePathname, useRouter } from 'next/navigation';
+import { ChevronRight } from 'lucide-react';
 
 interface PageHeaderProps {
   title?: string;
@@ -17,14 +20,50 @@ interface PageHeaderProps {
   onMobileMenuToggle?: () => void;
   isMobileMenuOpen?: boolean;
   rightContent?: React.ReactNode;
+  actions?: React.ReactNode; // Optional Row 2 action buttons
 }
 
 export default function PageHeader(props: PageHeaderProps) {
+  const pathname = usePathname();
+  const router = useRouter();
+
+  // Helper to determine the current page title based on the URL path segment
+  const getPageName = () => {
+    if (!pathname || pathname === '/dashboard') return 'Overview';
+    
+    // Check nested routes
+    if (pathname.includes('/dashboard/tracker')) return 'Tracker';
+    if (pathname.includes('/dashboard/vault')) return 'Vault';
+    if (pathname.includes('/dashboard/settings')) return 'Settings';
+    if (pathname.includes('/dashboard/canvas')) return 'Canvas';
+    if (pathname.includes('/dashboard/interview')) return 'Interview Coach';
+
+    const segment = pathname.split('/').pop() || '';
+    return segment.charAt(0).toUpperCase() + segment.slice(1);
+  };
+
   return (
-    <div className="flex flex-col gap-0">
-      <div className="flex items-center justify-between">
-        <GreetingHeader />
+    <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 mb-4">
+      {/* Left: Breadcrumbs */}
+      <div className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 font-medium">
+        <span 
+          onClick={() => router.push('/dashboard')}
+          className="hover:text-lime-600 dark:hover:text-lime-400 cursor-pointer transition-colors"
+        >
+          Dashboard
+        </span>
+        <ChevronRight className="h-3 w-3 text-gray-300 dark:text-gray-600" />
+        <span className="text-gray-800 dark:text-gray-200 font-bold">
+          {getPageName()}
+        </span>
       </div>
+
+      {/* Right: Actions */}
+      {props.actions && (
+        <div className="flex items-center gap-2 sm:gap-3 ml-auto sm:ml-0">
+          {props.actions}
+        </div>
+      )}
     </div>
   );
 }

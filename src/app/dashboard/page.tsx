@@ -23,14 +23,10 @@ import {
   TrendingUp,
   Brain,
   Info,
-  Menu,
-  Settings,
-  Search
+  Settings
 } from 'lucide-react';
 import RouteGuard from '@/components/auth/RouteGuard';
 import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
-import GlobalSearchBar from '@/components/layout/GlobalSearchBar';
-import NotificationCenter from '@/components/notifications/NotificationCenter';
 import LoadingOverlay from '@/components/ui/LoadingOverlay';
 import RedesignedDashboardView from '@/components/dashboard/redesigned/RedesignedDashboardView';
 import { UserTier } from '@/types/dashboard-widgets';
@@ -225,30 +221,7 @@ function DashboardContent() {
         )}
       </AnimatePresence>
 
-      {/* Transparent Header */}
-      <header className="w-full bg-transparent sticky top-0 z-40 transition-colors">
-        <div className="max-w-[1440px] mx-auto px-4 md:px-8 py-6 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <button onClick={toggleSidebar} className="lg:hidden p-2 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 shadow-sm">
-              <Menu className="w-5 h-5 text-gray-700 dark:text-gray-200" />
-            </button>
-          </div>
-          
-          <div className="flex items-center gap-2 md:gap-6">
-            <div className="hidden lg:block lg:w-[400px]">
-              <GlobalSearchBar />
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="lg:hidden">
-                <button className="p-2 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 shadow-sm">
-                  <Search className="w-5 h-5 text-gray-700 dark:text-gray-200" />
-                </button>
-              </div>
-              <NotificationCenter />
-            </div>
-          </div>
-        </div>
-      </header>
+
 
       <motion.div 
         layout

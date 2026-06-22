@@ -123,18 +123,26 @@ async function verifyUK(companyName: string): Promise<VerificationResult | null>
       };
     }
 
-    // Try fuzzy matching on all active sponsors
-    const allActiveSponsors = await UKSponsor.find({ status: 'Active' }).lean();
-    for (const sponsor of allActiveSponsors) {
-      if (matchCompany(companyName, sponsor.companyName, 0.85)) {
-        return {
-          country: 'UK',
-          isVerified: true,
-          verifiedDate: new Date().toISOString(),
-          source: 'uk-gov-register',
-          companyName: sponsor.companyName,
-          licenceNumber: sponsor.licenceNumber
-        };
+    // Try fuzzy matching on active sponsors starting with the same prefix
+    if (normalized.length >= 2) {
+      const prefix = normalized.substring(0, 2);
+      const escapedPrefix = prefix.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+      const activeSponsors = await UKSponsor.find({
+        normalizedName: { $regex: '^' + escapedPrefix, $options: 'i' },
+        status: 'Active'
+      }).limit(500).lean();
+
+      for (const sponsor of activeSponsors) {
+        if (matchCompany(companyName, sponsor.companyName, 0.85)) {
+          return {
+            country: 'UK',
+            isVerified: true,
+            verifiedDate: new Date().toISOString(),
+            source: 'uk-gov-register',
+            companyName: sponsor.companyName,
+            licenceNumber: sponsor.licenceNumber
+          };
+        }
       }
     }
 
@@ -200,20 +208,25 @@ async function verifyUS(companyName: string): Promise<VerificationResult | null>
       };
     }
 
-    // Try fuzzy matching
-    const recentEmployers = await USH1BEmployer.find({
-      lastFiledYear: { $gte: minYear }
-    }).lean();
+    // Try fuzzy matching on recent employers starting with the same prefix
+    if (normalized.length >= 2) {
+      const prefix = normalized.substring(0, 2);
+      const escapedPrefix = prefix.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+      const recentEmployers = await USH1BEmployer.find({
+        normalizedName: { $regex: '^' + escapedPrefix, $options: 'i' },
+        lastFiledYear: { $gte: minYear }
+      }).limit(500).lean();
 
-    for (const employer of recentEmployers) {
-      if (matchCompany(companyName, employer.employerName, 0.85)) {
-        return {
-          country: 'US',
-          isVerified: true,
-          verifiedDate: new Date().toISOString(),
-          source: 'us-dol-h1b',
-          companyName: employer.employerName
-        };
+      for (const employer of recentEmployers) {
+        if (matchCompany(companyName, employer.employerName, 0.85)) {
+          return {
+            country: 'US',
+            isVerified: true,
+            verifiedDate: new Date().toISOString(),
+            source: 'us-dol-h1b',
+            companyName: employer.employerName
+          };
+        }
       }
     }
 

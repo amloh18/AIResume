@@ -5,11 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useUserData } from '@/lib/hooks/useUserData';
 import { DashboardDataContext } from '@/contexts/DashboardDataContext';
 import { useTheme } from '@/lib/contexts/ThemeContext';
-import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
-import GlobalSearchBar from '@/components/layout/GlobalSearchBar';
-import NotificationCenter from '@/components/notifications/NotificationCenter';
 import { cn } from '@/lib/utils';
-import { Search } from 'lucide-react';
 
 // Subtitles that rotate based on user context
 const CONTEXT_SUBTITLES = [
@@ -28,7 +24,7 @@ export default function GreetingHeader() {
   const cvs = dashboardContext?.cvs || [];
   const jobs = dashboardContext?.jobs || [];
   const { isDark } = useTheme();
-  const { toggleSidebar } = useMobileSidebar();
+
   const [currentSubtitleIndex, setCurrentSubtitleIndex] = useState(0);
   const [profileStrength, setProfileStrength] = useState(0);
 
@@ -158,33 +154,8 @@ export default function GreetingHeader() {
   );
 
   return (
-    <div className="w-full pt-4 sm:pt-10 pb-3 md:pb-4 flex flex-col gap-5 sm:gap-8">
-      {/* 1. TOP BAR (Mobile): Menu Button (Left) | Search & Notif (Right) */}
-      <div className="lg:hidden flex items-center justify-between px-1">
-        <button
-          onClick={toggleSidebar}
-          className="p-2 -ml-2 rounded-xl bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 shadow-sm"
-          aria-label="Toggle menu"
-        >
-          <svg className="w-6 h-6 text-gray-700 dark:text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </button>
-
-        <div className="flex items-center gap-2 shrink-0">
-           <div className="md:hidden">
-              <button className="p-2 rounded-xl bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 shadow-sm">
-                <Search size={20} className="text-gray-700 dark:text-gray-200" />
-              </button>
-           </div>
-           <div className="hidden md:block w-36 xxs:w-44 xs:w-52">
-              <GlobalSearchBar />
-           </div>
-           <NotificationCenter />
-        </div>
-      </div>
-
-      {/* 2. GREETING ROW: Text (Left) | Score Ring (Right - Inline) */}
+    <div className="w-full pt-4 sm:pt-6 pb-3 md:pb-4">
+      {/* GREETING ROW: Text (Left) | Score Ring (Right - Inline) */}
       <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4 md:gap-6">
         {/* Left Section: Branding & Profile Strength (Inline on Mobile) */}
         <div className="flex items-center lg:items-start justify-between lg:justify-start lg:gap-8 flex-1 min-w-0">
@@ -220,14 +191,6 @@ export default function GreetingHeader() {
 
         {/* Right Section: Controls & Ring (Desktop Only) */}
         <div className="hidden lg:flex flex-row items-center gap-8 shrink-0">
-          {/* Desktop Search & Notif */}
-          <div className="flex items-center gap-0">
-            <div className="w-64">
-              <GlobalSearchBar />
-            </div>
-            <NotificationCenter />
-          </div>
-
           {/* Desktop Profile Strength */}
           <div className="flex items-center gap-4 shrink-0">
             <div className="flex flex-col items-end text-right">

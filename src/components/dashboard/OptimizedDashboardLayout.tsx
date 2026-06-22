@@ -10,6 +10,8 @@ import OptimizedNavigation from './OptimizedNavigation';
 // DashboardRouter removed - using children prop directly
 import CVCheckRedirect from './CVCheckRedirect';
 import { motion, AnimatePresence } from 'framer-motion';
+import GlobalSearchBar from '@/components/layout/GlobalSearchBar';
+import NotificationCenter from '@/components/notifications/NotificationCenter';
 
 interface OptimizedDashboardLayoutProps {
   children?: React.ReactNode;
@@ -55,9 +57,38 @@ const DashboardContent: React.FC<{ children?: React.ReactNode }> = ({ children }
         {/* Main Content - Always render shell to prevent CLS */}
         {/* Removed padding-left hacks since the sticky sidebar naturally pushes this flex-1 container */}
         <div className="flex flex-col flex-1 layout-stable relative z-0 transition-all duration-300 min-w-0">
+          {/* Global Header */}
+          <header className="w-full h-16 bg-white dark:bg-[#141810] flex items-center justify-between px-6 z-30 flex-shrink-0">
+            {/* Left: Mobile hamburger menu toggle */}
+            <div className="flex items-center w-[20%] sm:w-[25%] lg:hidden">
+              <button
+                onClick={toggleSidebar}
+                className="p-2 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                aria-label="Toggle menu"
+              >
+                <svg className="w-5 h-5 text-gray-700 dark:text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Desktop Left Spacer */}
+            <div className="hidden lg:block lg:w-[25%]" />
+
+            {/* Center: Search Bar */}
+            <div className="flex justify-center flex-1">
+              <GlobalSearchBar />
+            </div>
+
+            {/* Right: Notifications */}
+            <div className="flex justify-end w-[20%] sm:w-[25%]">
+              <NotificationCenter />
+            </div>
+          </header>
+
           {/* Page Content */}
           <main className="flex-1 overflow-auto relative z-0">
-            <div className="px-6 pb-5 h-full flex flex-col">
+            <div className="px-6 py-5 h-full flex flex-col">
               <CVCheckRedirect>
                 {children}
               </CVCheckRedirect>

@@ -367,7 +367,7 @@ export function buildTrackerSidebarConfig({
         trackerGenerationPreview?.mode === 'fallback'
           ? handlers.preview_free_output
           : handlers.edit_job,
-      toneClasses: 'border-blue-200 bg-[linear-gradient(180deg,_#ffffff,_#f7fbff)] dark:border-blue-500/30 dark:bg-[#131c2e]',
+      toneClasses: 'border-blue-200 bg-[linear-gradient(180deg,_#ffffff,_#f7fbff)] dark:bg-none dark:border-blue-500/30 dark:bg-[#131c2e]',
       accentClasses: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
       stats: compact<TrackerSidebarMetric>([
         {
@@ -419,8 +419,8 @@ export function buildTrackerSidebarConfig({
       secondaryAction: primaryJourney ? handlers.open_details : handlers.edit_job,
       toneClasses:
         generationState?.mode === 'fallback'
-          ? 'border-amber-200 bg-[linear-gradient(180deg,_#fffdf7,_#fffaf0)] dark:border-amber-500/30 dark:bg-[#1e1a10]'
-          : 'border-emerald-200 bg-[linear-gradient(180deg,_#ffffff,_#f6fff8)] dark:border-emerald-500/30 dark:bg-[#111e14]',
+          ? 'border-amber-200 bg-[linear-gradient(180deg,_#fffdf7,_#fffaf0)] dark:bg-none dark:border-amber-500/30 dark:bg-[#1e1a10]'
+          : 'border-emerald-200 bg-[linear-gradient(180deg,_#ffffff,_#f6fff8)] dark:bg-none dark:border-emerald-500/30 dark:bg-[#111e14]',
       accentClasses:
         generationState?.mode === 'fallback'
           ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
@@ -463,7 +463,7 @@ export function buildTrackerSidebarConfig({
       secondaryLabel: 'Application Insights',
       secondaryActionId: 'open_insights',
       secondaryAction: handlers.open_insights,
-      toneClasses: 'border-indigo-200 bg-[linear-gradient(180deg,_#ffffff,_#f8f9ff)] dark:border-indigo-500/30 dark:bg-[#13142a]',
+      toneClasses: 'border-indigo-200 bg-[linear-gradient(180deg,_#ffffff,_#f8f9ff)] dark:bg-none dark:border-indigo-500/30 dark:bg-[#13142a]',
       accentClasses: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300',
       stats: compact<TrackerSidebarMetric>([
         { label: 'Success Probability', value: `${successProb}%` },
@@ -491,7 +491,7 @@ export function buildTrackerSidebarConfig({
       secondaryLabel: primaryJourney ? 'Resume Journey' : 'View Full Details',
       secondaryActionId: primaryJourney ? 'continue_journey' : 'open_details',
       secondaryAction: primaryJourney ? handlers.continue_journey : handlers.open_details,
-      toneClasses: 'border-violet-200 bg-[linear-gradient(180deg,_#ffffff,_#faf7ff)] dark:border-violet-500/30 dark:bg-[#18112a]',
+      toneClasses: 'border-violet-200 bg-[linear-gradient(180deg,_#ffffff,_#faf7ff)] dark:bg-none dark:border-violet-500/30 dark:bg-[#18112a]',
       accentClasses: 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300',
       stats: compact<TrackerSidebarMetric>([
         { label: 'Success Probability', value: `${successProb}%` },
@@ -519,7 +519,7 @@ export function buildTrackerSidebarConfig({
       secondaryLabel: primaryJourney ? 'Open Journey' : 'Application Insights',
       secondaryActionId: primaryJourney ? 'continue_journey' : 'open_insights',
       secondaryAction: primaryJourney ? handlers.continue_journey : handlers.open_insights,
-      toneClasses: 'border-amber-200 bg-[linear-gradient(180deg,_#ffffff,_#fffaf1)] dark:border-amber-500/30 dark:bg-[#1e1a10]',
+      toneClasses: 'border-amber-200 bg-[linear-gradient(180deg,_#ffffff,_#fffaf1)] dark:bg-none dark:border-amber-500/30 dark:bg-[#1e1a10]',
       accentClasses: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
       stats: compact<TrackerSidebarMetric>([
         job.priority ? { label: 'Priority', value: capitalize(job.priority) } : null,
@@ -549,7 +549,7 @@ export function buildTrackerSidebarConfig({
       secondaryLabel: 'View Full Details',
       secondaryActionId: 'open_details',
       secondaryAction: handlers.open_details,
-      toneClasses: 'border-emerald-200 bg-[linear-gradient(180deg,_#ffffff,_#f5fff7)] dark:border-emerald-500/30 dark:bg-[#111e14]',
+      toneClasses: 'border-emerald-200 bg-[linear-gradient(180deg,_#ffffff,_#f5fff7)] dark:bg-none dark:border-emerald-500/30 dark:bg-[#111e14]',
       accentClasses: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
       stats: [{ label: 'Outcome', value: 'Accepted' }],
     };
@@ -573,7 +573,7 @@ export function buildTrackerSidebarConfig({
       secondaryLabel: 'View Full Details',
       secondaryActionId: 'open_details',
       secondaryAction: handlers.open_details,
-      toneClasses: 'border-slate-200 bg-[linear-gradient(180deg,_#ffffff,_#f8fafc)] dark:border-white/10 dark:bg-[#181d16]',
+      toneClasses: 'border-slate-200 bg-[linear-gradient(180deg,_#ffffff,_#f8fafc)] dark:bg-none dark:border-white/10 dark:bg-[#181d16]',
       accentClasses: 'bg-slate-100 text-slate-700 dark:bg-white/10 dark:text-slate-300',
       stats: compact<TrackerSidebarMetric>([
         { label: 'Outcome', value: outcomeLabel },
