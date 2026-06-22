@@ -96,6 +96,14 @@ export function normalizeCvDataForCanvas(cvData: UnifiedCVDataStructure | null |
     }));
   }
 
+  if (Array.isArray(cvData.projects)) {
+    translated.projects = cvData.projects.map((p: any, index: number) => ({
+      ...p,
+      id: p.id || `proj-${index}`,
+      description: buildRichTextDescription(p.description, p.highlights),
+    }));
+  }
+
   if (Array.isArray(cvData.skills)) {
     translated.skills = cvData.skills.map((skillGrp: any, index: number) => {
       if (typeof skillGrp === 'string') {
