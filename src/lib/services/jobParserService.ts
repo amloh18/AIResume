@@ -404,7 +404,6 @@ export class JobParserService {
 - company: Company name
 - location: Location (city, state, country, or remote)
 - salary: Object with min, max (numbers), currency (string), period ("yearly"|"monthly"|"hourly")
-- description: Full job description text
 - requirements: Array of required skills/qualifications
 - benefits: Array of benefits mentioned
 - jobType: "full-time"|"part-time"|"contract"|"internship"
@@ -415,6 +414,8 @@ export class JobParserService {
 - applicationDeadline: Application deadline (if mentioned)
 - sourceUrl: The URL or source (use provided URL if available, otherwise "manual")
 
+Note: Do NOT extract or repeat the full description text in the response (we already have it).
+
 Job Description:
 ${jobText}
 
@@ -424,7 +425,6 @@ Return JSON matching this structure:
   "company": "...",
   "location": "...",
   "salary": {"min": 0, "max": 0, "currency": "USD", "period": "yearly"},
-  "description": "...",
   "requirements": [],
   "benefits": [],
   "jobType": "...",
@@ -441,7 +441,8 @@ Return JSON matching this structure:
         systemPrompt,
         temperature: 0.3, // Lower temperature for more consistent extraction
         maxTokens: 2048,
-        model: 'gemini-2.5-flash-lite'
+        model: 'gemini-2.5-flash-lite',
+        responseMimeType: 'application/json'
       });
 
       // Validate result
@@ -459,13 +460,21 @@ Return JSON matching this structure:
         .replace(/```/g, '')
         .trim();
       
-      // Extract JSON object
-      const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error('Could not parse LLM response as JSON');
+      let parsed: any;
+      try {
+        const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) {
+          throw new Error('No JSON object boundaries found in response');
+        }
+        parsed = JSON.parse(jsonMatch[0]);
+      } catch (parseErr) {
+        console.error('❌ Failed to parse Gemini response as JSON. Raw content was:', jsonText);
+        try {
+          parsed = JSON.parse(jsonText);
+        } catch {
+          throw new Error(`Could not parse LLM response as JSON: ${parseErr instanceof Error ? parseErr.message : 'Unknown error'}`);
+        }
       }
-
-      const parsed = JSON.parse(jsonMatch[0]);
       
       // Map to JobDetails interface
       return {
@@ -480,7 +489,7 @@ Return JSON matching this structure:
             ? parsed.salary.period
             : 'yearly'
         } : undefined,
-        description: parsed.description || jobText, // Fallback to original text
+        description: jobText, // Map directly to full original job description text
         requirements: parsed.requirements || [],
         benefits: parsed.benefits || [],
         jobType: parsed.jobType,

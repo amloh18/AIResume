@@ -231,6 +231,8 @@ const JobParserDialog: React.FC<JobParserDialogProps> = ({
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-5xl w-full max-h-[90vh] h-[800px] flex p-0 overflow-hidden bg-gray-50 dark:bg-[#0a0a0a] border-gray-200 dark:border-white/10 rounded-2xl [&>button]:text-gray-500 dark:[&>button]:text-gray-400 dark:[&>button]:hover:text-white">
+        <DialogTitle className="sr-only">Smart Job Tracker</DialogTitle>
+        <DialogDescription className="sr-only">Parse and analyze job descriptions using AI</DialogDescription>
         <div className="flex w-full h-full">
           {/* Left Panel: Form */}
           <div className="w-1/2 p-8 border-r border-gray-200 dark:border-white/10 flex flex-col bg-white dark:bg-[#141810]">

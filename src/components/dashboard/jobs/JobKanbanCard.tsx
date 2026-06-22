@@ -94,6 +94,7 @@ interface JobKanbanCardProps {
   onDragStart: (e: React.DragEvent, jobId: string) => void;
   onDragEnd: (e: React.DragEvent) => void;
   onDragOver: (e: React.DragEvent) => void;
+  onRefresh?: () => void;
   onAction?: (action: string, job: JobApplication, e: React.MouseEvent) => void;
 }
 
@@ -114,6 +115,7 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
   onDragStart,
   onDragEnd,
   onDragOver,
+  onRefresh,
   onAction,
 }) => {
   const router = useRouter();
@@ -121,6 +123,69 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   // Prevent infinite loops by tracking attempts locally
   const hasAnalyzedRef = React.useRef(false);
+
+  // States & Hooks for document generation progress tracking
+  const [progress, setProgress] = useState(15);
+  const primaryJourney = jobJourneys[0];
+  const isGenerating = stage === "created" && primaryJourney && (
+    primaryJourney.status === "processing_documents" ||
+    (primaryJourney.status !== "creation_failed" && primaryJourney.status !== "ready" && (!primaryJourney.cvId || !primaryJourney.coverLetterId))
+  );
+
+  // Progress simulation timer
+  React.useEffect(() => {
+    if (!isGenerating) {
+      setProgress(15);
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setProgress((prev) => {
+        if (prev >= 95) return 95;
+        const inc = Math.floor(Math.random() * 5) + 3; // 3% to 7%
+        return Math.min(95, prev + inc);
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [isGenerating]);
+
+  // Polling database for updates on journey status
+  React.useEffect(() => {
+    if (!isGenerating || !primaryJourney?.id) return;
+
+    let isMounted = true;
+    const pollTimer = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/application-journey?jobId=${job.id || job._id}`);
+        if (res.ok && isMounted) {
+          const result = await res.json();
+          if (result.success && result.data?.journeys) {
+            const updatedJourney = result.data.journeys.find(
+              (j: any) => j.id === primaryJourney.id || j._id === primaryJourney.id
+            );
+            if (updatedJourney) {
+              const hasBoth = updatedJourney.cvId && updatedJourney.coverLetterId;
+              const notProcessing = updatedJourney.status !== "processing_documents";
+              if (hasBoth || notProcessing || updatedJourney.status === "ready" || updatedJourney.status === "creation_failed") {
+                clearInterval(pollTimer);
+                if (isMounted) {
+                  onRefresh?.();
+                }
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Error polling journey status in Kanban card:", err);
+      }
+    }, 2500);
+
+    return () => {
+      isMounted = false;
+      clearInterval(pollTimer);
+    };
+  }, [isGenerating, primaryJourney?.id, job.id, job._id, onRefresh]);
 
   // Auto-trigger analysis if score is missing
   React.useEffect(() => {
@@ -305,6 +370,66 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
     const atsScore = primaryJourney?.atsScore;
     const hasCV = !!primaryJourney?.cvId;
     const hasCL = !!primaryJourney?.coverLetterId;
+
+    if (isGenerating) {
+      return (
+        <>
+          {/* Compact View */}
+          <div className="flex justify-between items-center mt-2">
+            <div className="flex-1 mr-3">
+              <div className="flex items-center justify-between text-xs mb-1">
+                <span className="font-medium text-gray-600 dark:text-gray-300 animate-pulse">
+                  Generating Documents...
+                </span>
+                <span className="text-blue-600 dark:text-blue-400 font-bold">
+                  {progress}%
+                </span>
+              </div>
+              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 overflow-hidden">
+                <div
+                  className="h-1.5 rounded-full bg-blue-500 transition-all duration-500 ease-out"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+            </div>
+            <div className="flex gap-1.5">
+              <div
+                className="p-1 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-400 animate-pulse"
+                title="CV in progress"
+              >
+                <FileText size={12} />
+              </div>
+              <div
+                className="p-1 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-400 animate-pulse"
+                title="Cover Letter in progress"
+              >
+                <FileText size={12} />
+              </div>
+            </div>
+          </div>
+
+          {renderExpiryIndicator()}
+
+          {/* Hover View */}
+          <AnimatePresence>
+            {isHovered && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="overflow-hidden"
+              >
+                <div className="pt-3 mt-2 border-t border-gray-100 dark:border-white/10">
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 italic">
+                    Tailoring your CV and cover letter to match this job description...
+                  </p>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </>
+      );
+    }
 
     return (
       <>

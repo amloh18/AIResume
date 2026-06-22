@@ -20,10 +20,10 @@ import Step4Review from './steps/Step4Review';
 import ErrorBoundary from './ErrorBoundary';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { ITemplate } from '@/types/template';
-import UserAvatar from '@/components/ui/UserAvatar';
 import NotificationCenter from '@/components/notifications/NotificationCenter';
 import ThemeToggle from '@/components/ui/ThemeToggle';
-import UserAvatarDropdown from '@/components/ui/UserAvatarDropdown';
+import OptimizedNavigation from '@/components/dashboard/OptimizedNavigation';
+import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
 import { useUserData, getUserDisplayName, getUserAvatar } from '@/lib/hooks/useUserData';
 import { useSession } from 'next-auth/react';
 import SidebarMembershipCard from '@/components/resume-enhancer/SidebarMembershipCard';
@@ -91,6 +91,7 @@ export default function ResumeEnhancerContainer({
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const { state, dispatch, goToStep, loadCV, setRoleContext, resetState, setJobSidebarOpen, setTemplateOverlayOpen } = useResumeEnhancer();
+  const { isOpen: isMobileMenuOpen, toggleSidebar, isDesktopExpanded } = useMobileSidebar();
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const [stepOneDocumentTab, setStepOneDocumentTab] = useState<'cvs' | 'cover-letters'>(
     searchParams.get('tab') === 'cover-letters' ? 'cover-letters' : 'cvs'
@@ -977,15 +978,21 @@ export default function ResumeEnhancerContainer({
   }, [state.cvType, state.targetRole, state.seniorityLevel, jdText, state.jobData, dispatch]);
 
   // Intercept browser back button for graceful internal navigation
+  const currentStepRef = useRef(state.currentStep);
+  currentStepRef.current = state.currentStep;
+
+  const openEditorDashboardRef = useRef(openEditorDashboard);
+  openEditorDashboardRef.current = openEditorDashboard;
+
   useEffect(() => {
     const handlePopState = (e: PopStateEvent) => {
-      if (state.currentStep > 1) {
+      if (currentStepRef.current > 1) {
         // Prevent default back behavior
         e.preventDefault();
         // Force the URL back to what it was to keep them on the page
         window.history.pushState(null, '', window.location.href);
         // Navigate internally
-        openEditorDashboard();
+        openEditorDashboardRef.current();
       }
     };
 
@@ -993,7 +1000,7 @@ export default function ResumeEnhancerContainer({
     window.history.replaceState(null, '', window.location.href);
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [openEditorDashboard, state.currentStep]);
+  }, []);
 
   // Initialize based on mode
   useEffect(() => {
@@ -2721,46 +2728,63 @@ export default function ResumeEnhancerContainer({
   }
 
   return (
-    <div className="dashboard-page resume-enhancer-page min-h-screen bg-[var(--bg-primary)] text-[color:var(--text-primary)] flex flex-col">
-      {/* HEADER - Top Bar */}
-      <header className={`editor-header relative min-h-16 flex items-center justify-between gap-2 px-3 sm:px-6 border-b border-[color:var(--border-primary)] bg-[var(--header-bg)] sticky top-0 z-[100] shadow-sm ${state.currentStep === 1 ? 'flex-wrap py-2 sm:py-0' : ''}`}>
-        <div className="flex items-center gap-12 flex-1 min-w-0">
-          {/* Logo or Back to Dashboard if in deep editing */}
-          <div className="flex items-center gap-4">
-            <button
-              onClick={handleHomeClick}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-              title="Return to Dashboard"
+    <div className="min-h-screen bg-[#f3f2ee] dark:bg-[#1a230f] flex overflow-hidden w-full">
+      {/* Desktop Sidebar - Hidden on sm/md, visible on lg and up */}
+      {state.currentStep === 1 && (
+        <div
+          data-dashboard-sidebar
+          className={`hidden lg:flex lg:flex-col lg:sticky lg:top-0 lg:h-screen lg:z-40 lg:py-0 lg:px-0 ${
+            isDesktopExpanded ? 'lg:w-[280px]' : 'lg:w-[84px]'
+          } overflow-visible pointer-events-auto transition-all duration-300 flex-shrink-0 border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-[#141810]`}
+        >
+          <OptimizedNavigation />
+        </div>
+      )}
+
+      {/* Mobile/Small Screen Full-Screen Menu - Hidden on lg and up */}
+      {state.currentStep === 1 && (
+        <AnimatePresence>
+          {isMobileMenuOpen && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 z-[150] bg-white dark:bg-[#141810] lg:hidden"
             >
-              <Home className="w-5 h-5" />
-            </button>
-            <div className="w-px h-6 bg-gray-200 dark:bg-white/10" />
-            <button
-              onClick={handleExit}
-              className="group hidden sm:flex items-center sm:pr-12 hover:opacity-80 transition-all duration-300"
-            >
-              <div className="flex items-center gap-3">
-                <Logo size="sm" />
-                
-                <div className="flex items-center gap-1.5 sm:gap-3">
-                  {state.currentStep === 1 && (
-                    <span className="text-[8px] uppercase tracking-[0.2em] font-bold text-lime-500/60 leading-none mt-1 hidden sm:block">
-                      Editor
-                    </span>
-                  )}
-                  {/* Breadcrumb - Logo > Chevron > Builder */}
-                  {state.currentStep !== 1 && (
-                    <div className="flex items-center gap-1.5 sm:gap-3">
-                      <ChevronRight className="w-3.5 h-3.5 sm:w-4 h-4 text-gray-600" />
-                      <span className="text-[10px] sm:text-sm font-black text-lime-500 uppercase tracking-tighter italic whitespace-nowrap">
-                        {state.currentStep === 3 ? 'Editor' : state.currentStep === 4 ? 'Cover Letter Editor' : 'Review'}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </button>
-          </div>
+              <OptimizedNavigation />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      )}
+
+      {/* Main Content Area */}
+      <div className="dashboard-page resume-enhancer-page flex flex-col flex-1 min-w-0 h-screen overflow-hidden text-[color:var(--text-primary)]">
+        {/* HEADER - Top Bar */}
+        <header className={`editor-header relative min-h-16 flex items-center justify-between gap-2 px-3 sm:px-6 border-b border-[color:var(--border-primary)] bg-[var(--header-bg)] sticky top-0 z-[100] shadow-sm ${state.currentStep === 1 ? 'flex-wrap py-2 sm:py-0' : ''}`}>
+          <div className="flex items-center gap-12 flex-1 min-w-0">
+            {/* Logo or Back to Dashboard if in deep editing */}
+            <div className="flex items-center gap-4">
+              {state.currentStep !== 1 ? (
+                <button
+                  onClick={handleHomeClick}
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                  title="Return to Dashboard"
+                >
+                  <Home className="w-5 h-5" />
+                </button>
+              ) : (
+                <button
+                  onClick={toggleSidebar}
+                  className="p-2 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors cursor-pointer lg:hidden"
+                  aria-label="Toggle menu"
+                >
+                  <svg className="w-5 h-5 text-gray-700 dark:text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                </button>
+              )}
+            </div>
 
           <div className="hidden lg:flex flex-1 justify-center">
             {state.currentStep !== 1 && (
@@ -2918,18 +2942,13 @@ export default function ResumeEnhancerContainer({
 
           {/* Theme Toggle */}
           <div className="hidden sm:block">
-            <ThemeToggle variant="compact" />
+            <ThemeToggle variant="pill" />
           </div>
 
           {/* Notification Center */}
-          <NotificationCenter />
+          <NotificationCenter variant="pill" />
 
-          {/* User Profile Menu */}
-          {!isGuestMode && userData && (
-            <div className="ml-2 border-l border-gray-200 dark:border-gray-800 pl-4">
-              <UserAvatarDropdown user={userData} />
-            </div>
-          )}
+
         </div>
 
         {/* Save Error (lightweight inline) */}
@@ -3181,6 +3200,7 @@ export default function ResumeEnhancerContainer({
       )}
 
       {/* Mode Transition Panel moved to ATSMeterPanel */}
+      </div>
     </div>
   );
 }

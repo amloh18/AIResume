@@ -148,6 +148,7 @@ const ExpiredJobsAccordion: React.FC<{
   onImproveATS?: (job: JobApplication) => void;
   onDownload?: (job: JobApplication) => void;
   onJobStatusUpdate?: (jobId: string, newStatus: string) => Promise<void>;
+  onRefresh?: () => void;
 }> = ({
   jobs,
   stage,
@@ -163,6 +164,7 @@ const ExpiredJobsAccordion: React.FC<{
   onImproveATS,
   onDownload,
   onJobStatusUpdate,
+  onRefresh,
 }) => {
   const [isOpen, setIsOpen] = React.useState(false);
 
@@ -202,6 +204,7 @@ const ExpiredJobsAccordion: React.FC<{
                 onDragStart={onDragStart}
                 onDragEnd={onDragEnd}
                 onDragOver={onDragOver}
+                onRefresh={onRefresh}
                 onAction={(action, job) => {
                   routeTrackerCardAction({
                     action: action as any,
@@ -588,6 +591,7 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
                                       onDragStart={onDragStart}
                                       onDragEnd={onDragEnd}
                                       onDragOver={onDragOver}
+                                      onRefresh={onRefresh}
                                       onAction={(action, job) => {
                                         routeTrackerCardAction({
                                           action: action as any,
@@ -618,6 +622,7 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
                                   onImproveATS={onImproveATS as any}
                                   onDownload={onDownload as any}
                                   onJobStatusUpdate={onJobStatusUpdate as any}
+                                  onRefresh={onRefresh}
                                 />
                               </>
                             );

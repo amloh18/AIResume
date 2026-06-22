@@ -158,7 +158,7 @@ interface Invoice {
 // Skeleton components for better loading UX (no full-page spinners)
 
 const AccountProfileSkeleton = () => (
-  <div className="p-8 h-full overflow-y-auto">
+  <div className="p-8">
     <div className="space-y-8 animate-pulse">
       <div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded"></div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -174,7 +174,7 @@ const AccountProfileSkeleton = () => (
 );
 
 const SecuritySkeleton = () => (
-  <div className="p-8 h-full overflow-y-auto">
+  <div className="p-8">
     <div className="space-y-8 animate-pulse">
       <div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded"></div>
       <div className="space-y-4">
@@ -187,7 +187,7 @@ const SecuritySkeleton = () => (
 );
 
 const MembershipSkeleton = () => (
-  <div className="p-8 h-full overflow-y-auto">
+  <div className="p-8">
     <div className="space-y-8 animate-pulse">
       <div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded"></div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -405,7 +405,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
   };
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 h-full min-w-0 max-w-full overflow-x-hidden">
+    <div className="p-4 sm:p-6 lg:p-8 min-w-0 max-w-full overflow-x-hidden">
       <div className="space-y-8 min-w-0 max-w-full">
         {/* Avatar Section */}
         <div className="py-4 sm:py-6 border-b border-gray-200 dark:border-gray-700">
@@ -1192,7 +1192,7 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
   };
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 h-full min-w-0 max-w-full overflow-x-hidden">
+    <div className="p-4 sm:p-6 lg:p-8 min-w-0 max-w-full overflow-x-hidden">
       <div className="space-y-8 min-w-0 max-w-full">
         {/* Security Section */}
         <div className="space-y-6">
@@ -1582,7 +1582,7 @@ const MembershipBilling = ({ user }: { user: User }) => {
   };
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 h-full overflow-y-auto overflow-x-hidden min-w-0 max-w-full bg-[#f3f2ee] dark:bg-transparent">
+    <div className="p-4 sm:p-6 lg:p-8 min-w-0 max-w-full bg-[#f3f2ee] dark:bg-transparent">
       <div className="space-y-8 min-w-0 max-w-full">
 
         {/* Plan Cards Section */}
@@ -2056,7 +2056,7 @@ const SettingsContent = () => {
 
   return (
     <RouteGuard requireAuth={true}>
-      <div className="min-h-screen w-full min-w-0 overflow-x-hidden pb-20">
+      <div className="w-full min-w-0 overflow-x-hidden pb-20">
         <div className="max-w-6xl mx-auto px-4 md:px-6 w-full min-w-0">
           {/* Page Header - Same style as other dashboard pages */}
           <PageHeader
@@ -2087,7 +2087,7 @@ const SettingsContent = () => {
                       <TabsTrigger
                         key={tab.id}
                         value={tab.id}
-                        className="data-[state=active]:text-lime-700 dark:data-[state=active]:text-lime-400 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white flex-shrink-0 rounded-none px-4 py-3 border-b-2 data-[state=active]:border-lime-500 dark:data-[state=active]:border-lime-400 border-transparent"
+                        className="data-[state=active]:text-lime-700 dark:data-[state=active]:text-lime-400 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white flex-shrink-0 rounded-none px-4 py-3 border-b-2 border-b-transparent data-[state=active]:border-b-lime-500 dark:data-[state=active]:border-b-lime-400 hover:border-b-lime-500 dark:hover:border-b-lime-400 data-[state=active]:bg-transparent dark:data-[state=active]:bg-transparent data-[state=active]:shadow-none dark:data-[state=active]:shadow-none"
                       >
                         <IconComponent className="h-4 w-4 mr-2" />
                         <span className="hidden sm:inline">{tab.name}</span>

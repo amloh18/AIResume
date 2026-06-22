@@ -30,9 +30,9 @@ const FocusModeToggle: React.FC<FocusModeToggleProps> = ({ className, active, on
       type="button"
       onClick={handleClick}
       disabled={false}
-      className={`p-2 tablet:px-3 tablet:py-2 rounded-lg text-sm font-medium border transition-all duration-200 flex items-center gap-2 flex-shrink-0 h-[36px] cursor-pointer ${isFocusMode
+      className={`h-[36px] flex items-center justify-center gap-2 px-3 sm:px-4 text-sm font-medium rounded-xl border transition-all duration-200 flex-shrink-0 cursor-pointer ${isFocusMode
           ? 'bg-blue-100 dark:bg-blue-900/30 border-blue-400 dark:border-blue-500 text-blue-900 dark:text-blue-100'
-          : 'bg-gray-100 dark:bg-[#232f1c] border-gray-300 dark:border-lime-500/20 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-[#2a3a1f]'
+          : 'bg-white dark:bg-black/20 border-gray-300 dark:border-white/10 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5'
         } ${className || ''}`}
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
@@ -41,12 +41,12 @@ const FocusModeToggle: React.FC<FocusModeToggleProps> = ({ className, active, on
       {isFocusMode ? (
         <>
           <EyeOff size={16} className="flex-shrink-0" />
-          <span className="hidden tablet:inline">Focus Mode</span>
+          <span className="hidden xs:inline">Focus Mode</span>
         </>
       ) : (
         <>
           <Eye size={16} className="flex-shrink-0" />
-          <span className="hidden tablet:inline">Focus Mode</span>
+          <span className="hidden xs:inline">Focus Mode</span>
         </>
       )}
     </motion.button>

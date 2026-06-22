@@ -16,6 +16,7 @@ interface GeminiCallOptions {
   userId?: string;
   action?: string;
   endpoint?: string;
+  responseMimeType?: string;
 }
 
 interface GeminiResponse {
@@ -79,6 +80,7 @@ async function callGemini(options: GeminiCallOptions, apiKey: string): Promise<s
         config: {
           temperature: options.temperature || 0.7,
           maxOutputTokens: options.maxTokens || 2048,
+          responseMimeType: options.responseMimeType,
         }
       });
     } catch (primaryError) {
@@ -90,6 +92,7 @@ async function callGemini(options: GeminiCallOptions, apiKey: string): Promise<s
         config: {
           temperature: options.temperature || 0.7,
           maxOutputTokens: options.maxTokens || 2048,
+          responseMimeType: options.responseMimeType,
         }
       });
     }
