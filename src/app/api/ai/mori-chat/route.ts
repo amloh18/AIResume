@@ -139,6 +139,7 @@ Seniority: ${seniorityLevel || 'Not specified'}
 
 User Selection Context:
 ${selection ? `Path: ${selection.path}\nContent: "${selection.text}"` : 'No specific section selected.'}
+(Note: The selection context shows what the user currently has selected/focused on the screen. However, they are NOT restricted to editing only this selection. If the user asks for changes across other sections or the entire CV, you MUST apply updates to all appropriate sections.)
 
 Your task is to analyze the user's request, their current CV, their master CV, and the job description, and return a structured JSON response.
 
@@ -159,7 +160,8 @@ Strict Rules for CV updates:
   ],
   "updatedCV": <Full CV object structure, or null/omitted if no updates>
 }
-10. Ensure the response conforms strictly to this JSON format and is valid JSON.`;
+10. Ensure the response conforms strictly to this JSON format and is valid JSON.
+11. Selection Boundary Rule: Do NOT restrict your modifications only to the 'User Selection Context' if the user's request asks to update other sections, multiple sections, or the entire CV. The selection context is merely a focus guide. If they ask to update the whole CV or sections different from the selection, execute the requested broader updates.`;
 
     const formattedMessages = messages.map((m: any) => `${m.role.toUpperCase()}: ${m.content}`).join('\n\n');
     const prompt = `Chat History:\n${formattedMessages}`;

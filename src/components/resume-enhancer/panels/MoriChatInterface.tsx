@@ -33,6 +33,13 @@ interface ChatHistoryItem {
   cvId?: string;
 }
 
+const SUGGESTIONS = [
+  { label: '🎯 Tailor CV to JD', prompt: 'Tailor my CV to the target job description' },
+  { label: '✍️ Improve Summary', prompt: 'Improve my CV summary/profile section to make it more impactful' },
+  { label: '🚀 Enhance Bullet Points', prompt: 'Enhance the bullet points in my work experience section with stronger action verbs and metrics' },
+  { label: '🛠️ Optimize Skills for ATS', prompt: 'Optimize my skills section for ATS screening based on the target job' }
+];
+
 const MoriChatInterface: React.FC = () => {
   const { state, updateCVData } = useResumeEnhancer();
   const { openPaymentModal } = usePaymentModal();
@@ -331,7 +338,7 @@ const MoriChatInterface: React.FC = () => {
     setMessages([{
       id: 'welcome',
       role: 'assistant',
-      content: "Hi! I'm Mori. How can I help you with your CV today?",
+      content: "Hi! I'm Mori. I can help you edit your CV using natural language. You can also select any part of the CV on the left to focus our conversation.",
       timestamp: Date.now()
     }]);
     setShowHistory(false);
@@ -487,6 +494,22 @@ const MoriChatInterface: React.FC = () => {
                   ))}
                 </div>
               )}
+
+              {/* Predefined Suggestions Chips for the Welcome message */}
+              {m.id === 'welcome' && messages.length === 1 && (
+                <div className="ml-9 mt-3 flex flex-wrap gap-2 max-w-[90%] pointer-events-auto">
+                  {SUGGESTIONS.map((sug, i) => (
+                    <button
+                      key={i}
+                      onClick={() => handleSend(sug.prompt)}
+                      disabled={isLoading}
+                      className="px-3.5 py-1.5 bg-emerald-50/50 hover:bg-emerald-50 dark:bg-emerald-500/5 dark:hover:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 rounded-xl text-[11px] font-semibold text-emerald-800 dark:text-emerald-300 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-sm flex items-center gap-1.5"
+                    >
+                      {sug.label}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
           {isLoading && (
@@ -574,7 +597,7 @@ const MoriChatInterface: React.FC = () => {
                   handleSend();
                 }
               }}
-              placeholder={currentSelection ? "Instruct Mori to update this selection..." : "Ask Mori to edit your CV..."}
+              placeholder={currentSelection ? "Instruct Mori to update selection or whole CV..." : "Ask Mori to edit your CV..."}
               rows={1}
               className="w-full bg-transparent px-4 py-3.5 pr-12 text-[13px] focus:outline-none resize-none dark:text-white dark:placeholder-slate-500"
               style={{ minHeight: '48px', maxHeight: '120px' }}
