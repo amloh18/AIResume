@@ -198,21 +198,97 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
   
     if (!targetNode) return null;
     return (
-      <div className="fixed z-50 bg-white shadow-2xl border border-gray-200 rounded-lg flex items-center p-1.5 gap-1 transform -translate-x-1/2 transition-all duration-200 animate-fade-in-up font-sans" style={{ top: pos.top, left: pos.left }} onMouseDown={(e) => e.preventDefault()}>
-        {canSuggestSkills && (<><button onClick={(e) => { e.preventDefault(); onSuggestPoint('skills'); }} className="py-1.5 px-2 hover:bg-emerald-50 rounded text-emerald-700 flex items-center gap-1.5 font-bold text-xs border border-emerald-200 transition-colors" title="Get AI skill suggestions"><Wand2 size={14}/> AI Skills</button><div className="w-px h-5 bg-gray-200 mx-1"></div></>)}
-        {canSuggest && !canSuggestSkills && (<><button onClick={(e) => { e.preventDefault(); onSuggestPoint(); }} className="py-1.5 px-2 hover:bg-emerald-50 rounded text-emerald-600 flex items-center gap-1.5 font-bold text-xs border border-emerald-200 transition-colors" title="Suggest Contextual Point"><Wand2 size={14}/> ✨ Suggest</button><div className="w-px h-5 bg-gray-200 mx-1"></div></>)}
-      <button onClick={(e) => execCmd(e, 'bold')} className="p-1.5 hover:bg-gray-100 rounded text-gray-700 transition-colors" title="Bold"><Bold size={16}/></button>
-      <button onClick={(e) => execCmd(e, 'italic')} className="p-1.5 hover:bg-gray-100 rounded text-gray-700 transition-colors" title="Italic"><Italic size={16}/></button>
-      <button onClick={(e) => execCmd(e, 'underline')} className="p-1.5 hover:bg-gray-100 rounded text-gray-700 transition-colors" title="Underline"><Underline size={16}/></button>
-      <div className="w-px h-5 bg-gray-200 mx-1"></div>
-      <button onClick={(e) => execCmd(e, 'insertUnorderedList')} className="p-1.5 hover:bg-gray-100 rounded text-gray-700 transition-colors" title="Bullet List"><List size={16}/></button>
-      <div className="w-px h-5 bg-gray-200 mx-1"></div>
-      <button onClick={(e) => execCmd(e, 'justifyLeft')} className="p-1.5 hover:bg-gray-100 rounded text-gray-700 transition-colors" title="Align Left"><AlignLeft size={16}/></button>
-      <button onClick={(e) => execCmd(e, 'justifyCenter')} className="p-1.5 hover:bg-gray-100 rounded text-gray-700 transition-colors" title="Align Center"><AlignCenter size={16}/></button>
-      <button onClick={(e) => execCmd(e, 'justifyRight')} className="p-1.5 hover:bg-gray-100 rounded text-gray-700 transition-colors" title="Align Right"><AlignRight size={16}/></button>
-      <button onClick={(e) => execCmd(e, 'justifyFull')} className="p-1.5 hover:bg-gray-100 rounded text-gray-700 transition-colors" title="Justify"><AlignJustify size={16}/></button>
-    </div>
-  );
+      <div 
+        className="fixed z-50 bg-white/60 dark:bg-[#12161a]/60 backdrop-blur-md shadow-xl border border-gray-200/40 dark:border-white/10 rounded-xl flex items-center p-1 gap-0.5 transform -translate-x-1/2 transition-all duration-300 animate-fade-in-up font-sans" 
+        style={{ top: pos.top, left: pos.left }} 
+        onMouseDown={(e) => e.preventDefault()}
+      >
+        {canSuggestSkills && (
+          <>
+            <button 
+              onClick={(e) => { e.preventDefault(); onSuggestPoint('skills'); }} 
+              className="h-7 px-2.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-bold text-[11px] border border-emerald-500/20 transition-all duration-200 hover:scale-105 active:scale-95 shadow-sm rounded-lg" 
+              title="Get AI skill suggestions"
+            >
+              <Wand2 size={12} className="animate-pulse" />
+              AI Skills
+            </button>
+            <div className="w-px h-4 bg-gray-200/40 dark:bg-white/10 mx-1"></div>
+          </>
+        )}
+        {canSuggest && !canSuggestSkills && (
+          <>
+            <button 
+              onClick={(e) => { e.preventDefault(); onSuggestPoint(); }} 
+              className="h-7 px-2.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-bold text-[11px] border border-emerald-500/20 transition-all duration-200 hover:scale-105 active:scale-95 shadow-sm rounded-lg" 
+              title="Suggest Contextual Point"
+            >
+              <Wand2 size={12} className="animate-pulse" />
+              ✨ Suggest
+            </button>
+            <div className="w-px h-4 bg-gray-200/40 dark:bg-white/10 mx-1"></div>
+          </>
+        )}
+        <button 
+          onClick={(e) => execCmd(e, 'bold')} 
+          className="w-7 h-7 flex items-center justify-center hover:bg-emerald-500/10 dark:hover:bg-emerald-500/15 rounded-lg text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all duration-200 hover:scale-115 active:scale-90" 
+          title="Bold"
+        >
+          <Bold size={13} />
+        </button>
+        <button 
+          onClick={(e) => execCmd(e, 'italic')} 
+          className="w-7 h-7 flex items-center justify-center hover:bg-emerald-500/10 dark:hover:bg-emerald-500/15 rounded-lg text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all duration-200 hover:scale-115 active:scale-90" 
+          title="Italic"
+        >
+          <Italic size={13} />
+        </button>
+        <button 
+          onClick={(e) => execCmd(e, 'underline')} 
+          className="w-7 h-7 flex items-center justify-center hover:bg-emerald-500/10 dark:hover:bg-emerald-500/15 rounded-lg text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all duration-200 hover:scale-115 active:scale-90" 
+          title="Underline"
+        >
+          <Underline size={13} />
+        </button>
+        <div className="w-px h-4 bg-gray-250 dark:bg-white/10 mx-1"></div>
+        <button 
+          onClick={(e) => execCmd(e, 'insertUnorderedList')} 
+          className="w-7 h-7 flex items-center justify-center hover:bg-emerald-500/10 dark:hover:bg-emerald-500/15 rounded-lg text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all duration-200 hover:scale-115 active:scale-90" 
+          title="Bullet List"
+        >
+          <List size={13} />
+        </button>
+        <div className="w-px h-4 bg-gray-250 dark:bg-white/10 mx-1"></div>
+        <button 
+          onClick={(e) => execCmd(e, 'justifyLeft')} 
+          className="w-7 h-7 flex items-center justify-center hover:bg-emerald-500/10 dark:hover:bg-emerald-500/15 rounded-lg text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all duration-200 hover:scale-115 active:scale-90" 
+          title="Align Left"
+        >
+          <AlignLeft size={13} />
+        </button>
+        <button 
+          onClick={(e) => execCmd(e, 'justifyCenter')} 
+          className="w-7 h-7 flex items-center justify-center hover:bg-emerald-500/10 dark:hover:bg-emerald-500/15 rounded-lg text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all duration-200 hover:scale-115 active:scale-90" 
+          title="Align Center"
+        >
+          <AlignCenter size={13} />
+        </button>
+        <button 
+          onClick={(e) => execCmd(e, 'justifyRight')} 
+          className="w-7 h-7 flex items-center justify-center hover:bg-emerald-500/10 dark:hover:bg-emerald-500/15 rounded-lg text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all duration-200 hover:scale-115 active:scale-90" 
+          title="Align Right"
+        >
+          <AlignRight size={13} />
+        </button>
+        <button 
+          onClick={(e) => execCmd(e, 'justifyFull')} 
+          className="w-7 h-7 flex items-center justify-center hover:bg-emerald-500/10 dark:hover:bg-emerald-500/15 rounded-lg text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all duration-200 hover:scale-115 active:scale-90" 
+          title="Justify"
+        >
+          <AlignJustify size={13} />
+        </button>
+      </div>
+    );
 };
 
 let transparentDragImage: HTMLImageElement | null = null;
@@ -324,17 +400,77 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
   const showInlineControls = !readOnly && !ctx?.moriChatMode && primaryTitleKey;
   const canAddListEntry = SnippetComponent && ['Experience', 'Education', 'Projects', 'Certifications', 'Awards', 'Publications', 'Volunteer', 'References'].includes(SnippetComponent.category);
   const controls = showInlineControls ? (
-    <div className="absolute -top-4 right-0 opacity-0 group-hover/inner:opacity-100 transition-opacity flex items-center bg-white border border-gray-200 shadow-sm rounded-md overflow-hidden z-[50] no-print font-sans">
-      {isHeader && <button onClick={onTogglePhoto} className="flex items-center gap-1.5 px-2 md:px-3 py-2 hover:bg-[#eff6ff] text-[#3b82f6] font-medium text-[12px] md:text-[13px] transition-colors bg-white" title="Toggle Photo"><ImageIcon size={14}/> {!isNarrow && 'Photo'}</button>}
-      {canAddListEntry && <button onClick={() => onAddListEntry(SnippetComponent.category)} className="flex items-center gap-1.5 px-2 md:px-3 py-2 hover:bg-[#f0fdf4] text-emerald-600 font-medium text-[12px] md:text-[13px] border-l border-[#3b82f6]/20 transition-colors bg-white"><Plus size={14}/> {!isNarrow && 'Add'}</button>}
-      {isSkillsSnippet && <button onClick={onOpenSkillsSuggestions} className="flex items-center gap-1.5 px-2 md:px-3 py-2 hover:bg-emerald-50 text-emerald-700 font-medium text-[12px] md:text-[13px] border-l border-emerald-100 transition-colors bg-white" title="Get AI skill suggestions"><Wand2 size={14}/> {!isNarrow && 'AI Skills'}</button>}
-      <button onClick={() => onReplace(zoneId, index, instance.type)} className="flex items-center gap-1.5 px-2 md:px-3 py-2 hover:bg-[#eff6ff] text-[#3b82f6] font-medium text-[12px] md:text-[13px] border-l border-[#3b82f6]/20 transition-colors bg-white"><RefreshCw size={14}/> {!isNarrow && 'Replace'}</button>
+    <div className="absolute -top-4 right-0 opacity-0 group-hover/inner:opacity-100 transition-all duration-200 flex items-center bg-white/60 dark:bg-[#12161a]/60 backdrop-blur-md border border-gray-200/40 dark:border-white/10 shadow-lg rounded-xl p-1 gap-0.5 z-[50] no-print font-sans">
+      {isHeader && (
+        <button 
+          onClick={onTogglePhoto} 
+          className="flex items-center gap-1 h-7 px-2 hover:bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold text-[11px] transition-all duration-200 rounded-lg hover:scale-105 active:scale-95 bg-transparent" 
+          title="Toggle Photo"
+        >
+          <ImageIcon size={12}/> 
+          {!isNarrow && 'Photo'}
+        </button>
+      )}
+      {canAddListEntry && (
+        <button 
+          onClick={() => onAddListEntry(SnippetComponent.category)} 
+          className={`flex items-center gap-1 h-7 px-2 hover:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold text-[11px] transition-all duration-200 rounded-lg hover:scale-105 active:scale-95 bg-transparent ${isHeader ? 'border-l border-gray-200/30' : ''}`}
+        >
+          <Plus size={12}/> 
+          {!isNarrow && 'Add'}
+        </button>
+      )}
+      {isSkillsSnippet && (
+        <button 
+          onClick={onOpenSkillsSuggestions} 
+          className="flex items-center gap-1 h-7 px-2 hover:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold text-[11px] border-l border-gray-200/30 transition-all duration-200 rounded-lg hover:scale-105 active:scale-95 bg-transparent" 
+          title="Get AI skill suggestions"
+        >
+          <Wand2 size={12}/> 
+          {!isNarrow && 'AI Skills'}
+        </button>
+      )}
+      <button 
+        onClick={() => onReplace(zoneId, index, instance.type)} 
+        className="flex items-center gap-1 h-7 px-2 hover:bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold text-[11px] border-l border-gray-200/30 transition-all duration-200 rounded-lg hover:scale-105 active:scale-95 bg-transparent"
+      >
+        <RefreshCw size={12}/> 
+        {!isNarrow && 'Replace'}
+      </button>
       {!isHeader && (
         <>
-          <button onClick={() => moveSnippet(zoneId, index, -1)} className="px-1.5 md:px-2.5 py-1 hover:bg-[#eff6ff] text-[#3b82f6] border-l border-[#3b82f6]/20 transition-colors h-full bg-white" title="Move Section Up"><ChevronUp size={16}/></button>
-          <button onClick={() => moveSnippet(zoneId, index, 1)} className="px-1.5 md:px-2.5 py-1 hover:bg-[#eff6ff] text-[#3b82f6] border-l border-[#3b82f6]/20 transition-colors h-full bg-white" title="Move Section Down"><ChevronDown size={16}/></button>
-          <button onClick={handleRemoveSnippet} className={`px-1.5 md:px-2.5 py-1 border-l transition-colors h-full ${confirmingRemove ? 'bg-red-600 text-white border-red-700 hover:bg-red-700' : 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100 hover:text-red-800'}`} title={confirmingRemove ? 'Click again to delete section' : 'Delete Section'} aria-label={confirmingRemove ? 'Confirm delete section' : 'Delete section'}><Trash2 size={16}/></button>
-          <div className="px-1.5 md:px-2.5 py-1 cursor-grab text-[#3b82f6] hover:bg-[#eff6ff] transition-colors h-full flex items-center bg-white border-l border-[#3b82f6]/20" title="Drag to reorder"><GripVertical size={16}/></div>
+          <button 
+            onClick={() => moveSnippet(zoneId, index, -1)} 
+            className="w-7 h-7 flex items-center justify-center hover:bg-blue-500/10 text-blue-600 dark:text-blue-400 border-l border-gray-200/30 transition-all duration-200 rounded-lg hover:scale-115 active:scale-90 bg-transparent" 
+            title="Move Section Up"
+          >
+            <ChevronUp size={13}/>
+          </button>
+          <button 
+            onClick={() => moveSnippet(zoneId, index, 1)} 
+            className="w-7 h-7 flex items-center justify-center hover:bg-blue-500/10 text-blue-600 dark:text-blue-400 border-l border-gray-200/30 transition-all duration-200 rounded-lg hover:scale-115 active:scale-90 bg-transparent" 
+            title="Move Section Down"
+          >
+            <ChevronDown size={13}/>
+          </button>
+          <button 
+            onClick={handleRemoveSnippet} 
+            className={`w-7 h-7 flex items-center justify-center border-l border-gray-200/30 transition-all duration-200 rounded-lg hover:scale-115 active:scale-90 ${
+              confirmingRemove 
+                ? 'bg-red-500 text-white hover:bg-red-600 shadow-md shadow-red-500/20' 
+                : 'bg-transparent text-red-500 hover:bg-red-500/10'
+            }`} 
+            title={confirmingRemove ? 'Click again to delete section' : 'Delete Section'} 
+            aria-label={confirmingRemove ? 'Confirm delete section' : 'Delete section'}
+          >
+            <Trash2 size={13}/>
+          </button>
+          <div 
+            className="w-7 h-7 flex items-center justify-center cursor-grab text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 transition-all duration-200 rounded-lg hover:scale-115 border-l border-gray-200/30 bg-transparent" 
+            title="Drag to reorder"
+          >
+            <GripVertical size={13}/>
+          </div>
         </>
       )}
     </div>
@@ -530,6 +666,8 @@ export const StaticLayoutRenderer = ({ template, cvData, ReadOnlyWrapper, design
     ...savedDesign,  // overlay with user's saved design (fixes dashboard card thumbnails)
     ...design,       // overlay with explicit prop (fixes template-modal thumbnails)
   };
+  const formatOption = defaultDesign.formatOption || 'hybrid';
+  const formatClass = formatOption === 'bullets_only' ? 'cv-format-bullets-only' : (formatOption === 'paragraph_only' ? 'cv-format-paragraph-only' : 'cv-format-hybrid');
   const wrapperStyle = { '--cv-font': defaultDesign.font, '--cv-base-size': `${defaultDesign.fontSize}px`, '--cv-spacing': defaultDesign.spacing, '--cv-accent': defaultDesign.accentColor, '--cv-page-margin': `${defaultDesign.pageMargin}px`, '--cv-sidebar-bg': defaultDesign.sidebarBgColor, '--cv-section-gap': `${defaultDesign.sectionGap}px` } as React.CSSProperties;
 
   const renderZone = (zoneId: string, className: string, isDark = false) => {
@@ -550,14 +688,14 @@ export const StaticLayoutRenderer = ({ template, cvData, ReadOnlyWrapper, design
     );
   };
   switch (template.type) {
-    case '1-col': return <div className="w-full h-full cv-document" style={{ ...wrapperStyle, padding: '57px 76px', backgroundColor: '#ffffff' }}>{renderZone('main', 'w-full min-w-0')}</div>;
-    case '2-col': return <div className="w-full h-full flex flex-col cv-document" style={{ ...wrapperStyle, backgroundColor: '#ffffff' }}>{template.zones['header'] && <div className="pt-[57px] px-[76px] pb-0">{renderZone('header', 'w-full min-w-0')}</div>}<div className="flex flex-1 items-start px-[76px] pb-[57px] pt-0 gap-8"><div className="flex-1 min-w-0">{renderZone('left', 'h-full')}</div><div className="flex-1 min-w-0">{renderZone('right', 'h-full')}</div></div></div>;
-    case 'sidebar-left': return <div className="w-full h-full flex cv-document" style={{ ...wrapperStyle, backgroundColor: '#ffffff' }}><div className="w-[32%] min-w-0 border-r border-slate-200 pl-[76px] pr-[19px] py-[57px]" style={{ backgroundColor: 'var(--cv-sidebar-bg)' }}>{renderZone('sidebar', 'h-full', false)}</div><div className="w-[68%] min-w-0 pl-[19px] pr-[76px] py-[57px]">{renderZone('main', 'h-full')}</div></div>;
-    case 'sidebar-left-dark': return <div className="w-full h-full flex cv-document" style={{ ...wrapperStyle, backgroundColor: '#ffffff' }}><div className="w-[32%] min-w-0 pl-[76px] pr-[19px] py-[57px]" style={{ backgroundColor: 'var(--cv-sidebar-bg)' }}>{renderZone('sidebar', 'h-full', true)}</div><div className="w-[68%] min-w-0 pl-[19px] pr-[76px] py-[57px]">{renderZone('main', 'h-full')}</div></div>;
-    case 'sidebar-right': return <div className="w-full h-full flex cv-document" style={{ ...wrapperStyle, backgroundColor: '#ffffff' }}><div className="w-[68%] min-w-0 pl-[76px] pr-[19px] py-[57px]">{renderZone('main', 'h-full')}</div><div className="w-[32%] min-w-0 border-l border-slate-200 pl-[19px] pr-[76px] py-[57px]" style={{ backgroundColor: 'var(--cv-sidebar-bg)' }}>{renderZone('sidebar', 'h-full', false)}</div></div>;
-    case 'top-sidebar-right': return <div className="w-full h-full flex flex-col cv-document" style={{ ...wrapperStyle, backgroundColor: '#ffffff' }}>{template.zones['header'] && <div className="pt-[57px] px-[76px] pb-0">{renderZone('header', 'w-full min-w-0')}</div>}<div className="flex flex-1 items-start px-[76px] pb-[57px] pt-0 gap-8"><div className="w-[68%] min-w-0">{renderZone('main', 'h-full')}</div><div className="w-[32%] min-w-0 border-l border-slate-200 pl-[19px] py-4 -my-4 rounded-lg" style={{ backgroundColor: 'var(--cv-sidebar-bg)' }}>{renderZone('sidebar', 'h-full', false)}</div></div></div>;
-    case 'top-sidebar-left': return <div className="w-full h-full flex flex-col cv-document" style={{ ...wrapperStyle, backgroundColor: '#ffffff' }}>{template.zones['header'] && <div className="pt-[57px] px-[76px] pb-0">{renderZone('header', 'w-full min-w-0')}</div>}<div className="flex flex-1 items-start px-[76px] pb-[57px] pt-0 gap-8"><div className="w-[32%] min-w-0 border-r border-slate-200 pr-[19px] py-4 -my-4 rounded-lg" style={{ backgroundColor: 'var(--cv-sidebar-bg)' }}>{renderZone('sidebar', 'h-full', false)}</div><div className="w-[68%] min-w-0">{renderZone('main', 'h-full')}</div></div></div>;
-    case 'hybrid-split': return <div className="w-full h-full flex flex-col cv-document" style={{ ...wrapperStyle, backgroundColor: '#ffffff' }}>{template.zones['header'] && <div className="pt-[57px] px-[76px] pb-0">{renderZone('header', 'w-full min-w-0')}</div>}<div className="px-[76px] pt-0 pb-0">{renderZone('main', 'w-full min-w-0')}</div><div className="flex flex-1 items-start px-[76px] pb-[57px] pt-0 gap-8"><div className="flex-1 min-w-0">{renderZone('left', 'h-full')}</div><div className="flex-1 min-w-0">{renderZone('right', 'h-full')}</div></div></div>;
+    case '1-col': return <div className={`w-full h-full cv-document ${formatClass}`} style={{ ...wrapperStyle, padding: '57px 76px', backgroundColor: '#ffffff' }}>{renderZone('main', 'w-full min-w-0')}</div>;
+    case '2-col': return <div className={`w-full h-full flex flex-col cv-document ${formatClass}`} style={{ ...wrapperStyle, backgroundColor: '#ffffff' }}>{template.zones['header'] && <div className="pt-[57px] px-[76px] pb-0">{renderZone('header', 'w-full min-w-0')}</div>}<div className="flex flex-1 items-start px-[76px] pb-[57px] pt-0 gap-8"><div className="flex-1 min-w-0">{renderZone('left', 'h-full')}</div><div className="flex-1 min-w-0">{renderZone('right', 'h-full')}</div></div></div>;
+    case 'sidebar-left': return <div className={`w-full h-full flex cv-document ${formatClass}`} style={{ ...wrapperStyle, backgroundColor: '#ffffff' }}><div className="w-[32%] min-w-0 border-r border-slate-200 pl-[76px] pr-[19px] py-[57px]" style={{ backgroundColor: 'var(--cv-sidebar-bg)' }}>{renderZone('sidebar', 'h-full', false)}</div><div className="w-[68%] min-w-0 pl-[19px] pr-[76px] py-[57px]">{renderZone('main', 'h-full')}</div></div>;
+    case 'sidebar-left-dark': return <div className={`w-full h-full flex cv-document ${formatClass}`} style={{ ...wrapperStyle, backgroundColor: '#ffffff' }}><div className="w-[32%] min-w-0 pl-[76px] pr-[19px] py-[57px]" style={{ backgroundColor: 'var(--cv-sidebar-bg)' }}>{renderZone('sidebar', 'h-full', true)}</div><div className="w-[68%] min-w-0 pl-[19px] pr-[76px] py-[57px]">{renderZone('main', 'h-full')}</div></div>;
+    case 'sidebar-right': return <div className={`w-full h-full flex cv-document ${formatClass}`} style={{ ...wrapperStyle, backgroundColor: '#ffffff' }}><div className="w-[68%] min-w-0 pl-[76px] pr-[19px] py-[57px]">{renderZone('main', 'h-full')}</div><div className="w-[32%] min-w-0 border-l border-slate-200 pl-[19px] pr-[76px] py-[57px]" style={{ backgroundColor: 'var(--cv-sidebar-bg)' }}>{renderZone('sidebar', 'h-full', false)}</div></div>;
+    case 'top-sidebar-right': return <div className={`w-full h-full flex flex-col cv-document ${formatClass}`} style={{ ...wrapperStyle, backgroundColor: '#ffffff' }}>{template.zones['header'] && <div className="pt-[57px] px-[76px] pb-0">{renderZone('header', 'w-full min-w-0')}</div>}<div className="flex flex-1 items-start px-[76px] pb-[57px] pt-0 gap-8"><div className="w-[68%] min-w-0">{renderZone('main', 'h-full')}</div><div className="w-[32%] min-w-0 border-l border-slate-200 pl-[19px] py-4 -my-4 rounded-lg" style={{ backgroundColor: 'var(--cv-sidebar-bg)' }}>{renderZone('sidebar', 'h-full', false)}</div></div></div>;
+    case 'top-sidebar-left': return <div className={`w-full h-full flex flex-col cv-document ${formatClass}`} style={{ ...wrapperStyle, backgroundColor: '#ffffff' }}>{template.zones['header'] && <div className="pt-[57px] px-[76px] pb-0">{renderZone('header', 'w-full min-w-0')}</div>}<div className="flex flex-1 items-start px-[76px] pb-[57px] pt-0 gap-8"><div className="w-[32%] min-w-0 border-r border-slate-200 pr-[19px] py-4 -my-4 rounded-lg" style={{ backgroundColor: 'var(--cv-sidebar-bg)' }}>{renderZone('sidebar', 'h-full', false)}</div><div className="w-[68%] min-w-0">{renderZone('main', 'h-full')}</div></div></div>;
+    case 'hybrid-split': return <div className={`w-full h-full flex flex-col cv-document ${formatClass}`} style={{ ...wrapperStyle, backgroundColor: '#ffffff' }}>{template.zones['header'] && <div className="pt-[57px] px-[76px] pb-0">{renderZone('header', 'w-full min-w-0')}</div>}<div className="px-[76px] pt-0 pb-0">{renderZone('main', 'w-full min-w-0')}</div><div className="flex flex-1 items-start px-[76px] pb-[57px] pt-0 gap-8"><div className="flex-1 min-w-0">{renderZone('left', 'h-full')}</div><div className="flex-1 min-w-0">{renderZone('right', 'h-full')}</div></div></div>;
     default: return <div>Layout not found</div>;
   }
 };

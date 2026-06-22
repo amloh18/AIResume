@@ -61,6 +61,24 @@ const SNAPSHOT_STYLES = `
   .cv-snapshot-wrapper .cv-document .cv-gap-sm { gap: calc(0.5rem * var(--cv-spacing)) !important; }
   .cv-snapshot-wrapper .cv-document .cv-gap-md { gap: calc(0.75rem * var(--cv-spacing)) !important; }
   .cv-snapshot-wrapper .cv-document .cv-gap-lg { gap: calc(1rem * var(--cv-spacing)) !important; }
+  
+  /* Layout formats */
+  .cv-format-bullets-only .cv-prose p {
+    display: none !important;
+    margin-bottom: 0 !important;
+  }
+  .cv-format-paragraph-only .cv-prose ul {
+    display: none !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+  }
+  .cv-document p:empty,
+  .cv-document p:has(> br:only-child),
+  .cv-document ul:empty {
+    display: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
 `;
 
 interface CVSnapshotDocumentProps {

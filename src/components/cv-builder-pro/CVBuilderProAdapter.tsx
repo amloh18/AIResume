@@ -90,12 +90,38 @@ const CVBuilderProAdapter = forwardRef<CVCanvasBuilderRef, CVBuilderProAdapterPr
       };
     }
 
-    const copyDirectly = ['projects', 'certifications', 'awards', 'publications', 'references'];
+    const copyDirectly = ['certifications', 'awards', 'publications', 'references'];
     copyDirectly.forEach(key => {
       if (updatedCanvasData[key]) {
         newCvData[key] = updatedCanvasData[key];
       }
     });
+
+    if (Array.isArray(updatedCanvasData?.projects)) {
+      newCvData.projects = updatedCanvasData.projects.map((proj: any) => {
+        let description = '';
+        let highlights: string[] = [];
+        
+        if (proj.description) {
+          const liMatches = proj.description.match(/<li[^>]*>(.*?)<\/li>/g);
+          if (liMatches) {
+            highlights = liMatches.map((li: string) => li.replace(/<li[^>]*>/, '').replace(/<\/li>/, '').trim());
+          }
+          const pMatch = proj.description.match(/<p>(.*?)<\/p>/);
+          if (pMatch) {
+            description = pMatch[1].replace(/<[^>]+>/g, '').trim();
+          } else {
+            description = proj.description.replace(/<ul>[\s\S]*?<\/ul>/, '').replace(/<[^>]+>/g, '').trim();
+          }
+        }
+
+        return {
+          ...proj,
+          description,
+          highlights
+        };
+      });
+    }
 
     if (Array.isArray(updatedCanvasData?.experience)) {
       newCvData.work = updatedCanvasData.experience.map((exp: any) => {
