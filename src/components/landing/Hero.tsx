@@ -79,8 +79,8 @@ const Hero = () => {
           >
             <span className="relative inline-block">
               <span className="relative z-10 block py-4 px-8 whitespace-nowrap">
-                Free ATS Templates. Unlimited Downloads.<br />
-                No Paywalls, Advanced Customisation.
+                Get Job ready with one platform,<br />
+                Unlimited Resume, Cover Letters for free
               </span>
               
               {/* Realistic Single Brush Shape */}

@@ -30,6 +30,23 @@ export interface ActionContext {
   ipAddress?: string;
 }
 
+/**
+ * Plan keys that are never subject to usage limits.
+ * We calculate/track their usage for analytics but never block them.
+ */
+const UNLIMITED_PLAN_KEYS = [
+  'focused_monthly',
+  'focused_yearly',
+  'smart_quarterly',
+  'smart_yearly',
+  'pro_monthly',
+  'pro_quarterly',
+  'pro_yearly',
+  'pro_lifetime',
+  'pro',
+  'starter_yearly',
+];
+
 class UsageLimitsService {
   /**
    * Check time-based access for a user's subscription
@@ -190,22 +207,32 @@ class UsageLimitsService {
     try {
       await connectToDatabase();
 
-      // First check time-based access
-      const timeCheck = await this.checkTimeBasedAccess(context.userId);
-      if (!timeCheck.hasAccess) {
-        return {
-          allowed: false,
-          reason: timeCheck.reason || 'Subscription access expired',
-          currentUsage: 0,
-          limit: 0
-        };
-      }
-
       const user = await User.findById(context.userId);
       if (!user) {
         return {
           allowed: false,
           reason: 'User not found',
+          currentUsage: 0,
+          limit: 0
+        };
+      }
+
+      // Focused / Smart / Pro / Starter-Yearly plans are NEVER usage-limited.
+      // Subscription expiry is a separate concern handled by checkTimeBasedAccess.
+      if (UNLIMITED_PLAN_KEYS.includes(user.currentPlanKey)) {
+        return {
+          allowed: true,
+          currentUsage: -1,
+          limit: -1
+        };
+      }
+
+      // For free / starter_monthly: check time-based access first
+      const timeCheck = await this.checkTimeBasedAccess(context.userId);
+      if (!timeCheck.hasAccess) {
+        return {
+          allowed: false,
+          reason: timeCheck.reason || 'Subscription access expired',
           currentUsage: 0,
           limit: 0
         };

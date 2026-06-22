@@ -6,6 +6,19 @@ import { connectToDatabase } from '@/lib/database';
 import User from '@/models/User';
 import { getPlanLimits } from '@/lib/utils/subscription-helpers';
 
+// Allow up to 60 seconds for LLM parsing on Vercel
+export const maxDuration = 60;
+
+// Check if puppeteer is available (it's an optional dependency — unavailable on Vercel)
+function isPuppeteerAvailable(): boolean {
+  try {
+    require.resolve('puppeteer');
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     console.log('🔍 Job Parse API - Request received');
@@ -34,7 +47,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Check membership for job parsing access
-    // Only Pro users (monthly, quarterly, lifetime) can parse job descriptions
     const planKey = user.currentPlanKey || 'free';
     const planLimits = getPlanLimits(planKey);
 
@@ -68,17 +80,27 @@ export async function POST(request: NextRequest) {
 
     try {
       console.log('🔍 Job Parse API - Starting parsing...');
+      const puppeteerAvailable = isPuppeteerAvailable();
+      console.log('🔍 Job Parse API - Puppeteer available:', puppeteerAvailable);
+
       if (url) {
-        // Try URL parsing first (uses puppeteer)
-        try {
-          console.log('🔍 Job Parse API - Attempting URL parsing:', url);
-          parsedData = await parserService.parseJobFromUrl(url);
-          console.log('✅ Job Parse API - URL parsing successful');
-        } catch (error) {
-          // Fallback to LLM parsing if URL fetch fails
-          console.log('⚠️ Job Parse API - URL parsing failed, falling back to LLM:', error);
-          parsedData = await parserService.parseJobDescription(url, true);
-          console.log('✅ Job Parse API - LLM fallback parsing successful');
+        if (puppeteerAvailable) {
+          // Try full URL parsing with puppeteer
+          try {
+            console.log('🔍 Job Parse API - Attempting URL parsing with puppeteer:', url);
+            parsedData = await parserService.parseJobFromUrl(url);
+            console.log('✅ Job Parse API - URL parsing successful');
+          } catch (error) {
+            // Fallback to LLM-only (text mode — pass url as context hint only)
+            console.log('⚠️ Job Parse API - Puppeteer URL parsing failed, falling back to LLM text mode:', error);
+            parsedData = await parserService.parseJobDescription(url, false);
+            console.log('✅ Job Parse API - LLM fallback parsing successful');
+          }
+        } else {
+          // Puppeteer not available (e.g., Vercel serverless) — go straight to LLM
+          console.log('🔍 Job Parse API - Puppeteer not available, using LLM directly for URL');
+          parsedData = await parserService.parseJobDescription(url, false);
+          console.log('✅ Job Parse API - LLM-only URL parsing successful');
         }
       } else {
         // Use LLM to parse text
@@ -208,4 +230,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

@@ -77,22 +77,11 @@ export async function GET(request: NextRequest) {
     const planKey = user?.currentPlanKey || 'free';
     const creditStatus = await creditService.getCreditStatus(userId);
     if (creditStatus) {
-      let remaining: number | undefined = creditStatus.jobCredits;
-      let limit: number | undefined = creditStatus.jobCredits;
-
-      if (planKey === 'free') {
-        const creditCheck = await creditService.checkCreditAvailability(userId, 'job_create');
-        remaining = creditCheck.creditsRemaining;
-        limit = creditCheck.limit;
-      }
-
-      // Fallbacks
-      if (remaining === undefined || remaining === null) {
-        remaining = limit === -1 ? -1 : 0;
-      }
-      if (limit === undefined || limit === null) {
-        limit = -1;
-      }
+      // Always call checkCreditAvailability for accurate limit info
+      // For unlimited plans this returns { limit: -1, creditsRemaining: -1 }
+      const creditCheck = await creditService.checkCreditAvailability(userId, 'job_create');
+      const remaining = creditCheck.creditsRemaining;
+      const limit = creditCheck.limit;
 
       // Use actual job count from DB instead of historical counter
       const totalCreatedJobs = actualJobCount;
@@ -101,18 +90,9 @@ export async function GET(request: NextRequest) {
         : Math.max(0, limit - (remaining === -1 ? 0 : remaining));
 
       // Get AI credits availability
-      let aiCreditsRemaining: number | undefined = creditStatus.aiCredits;
-      let aiCreditsLimit: number | undefined = creditStatus.aiCredits;
-      
-      if (planKey === 'free') {
-        const aiCreditCheck = await creditService.checkCreditAvailability(userId, 'ai_generation');
-        aiCreditsRemaining = aiCreditCheck.creditsRemaining;
-        aiCreditsLimit = aiCreditCheck.limit;
-      }
-      
-      if (aiCreditsRemaining === undefined || aiCreditsRemaining === null) {
-        aiCreditsRemaining = aiCreditsLimit === -1 ? -1 : 0;
-      }
+      const aiCreditCheck = await creditService.checkCreditAvailability(userId, 'ai_generation');
+      const aiCreditsRemaining = aiCreditCheck.creditsRemaining;
+      const aiCreditsLimit = aiCreditCheck.limit;
 
       creditInfo = {
         remaining,

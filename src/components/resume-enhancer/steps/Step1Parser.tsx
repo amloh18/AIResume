@@ -601,8 +601,9 @@ export default function Step1Parser({
 
       dispatch({ type: 'SET_CV_DATA', payload: freshCvData });
       
-      // Navigate to step 2 (template selection)
-      router.push('/editor?step=2');
+      // Navigate to step 2 (template selection) — include fresher=true so the
+      // re-mounted container knows to set fresherMode before the step-2 data guard runs
+      router.push('/editor?mode=create&step=2&fresher=true');
     } else {
       setIsCreatingBlank(true);
       try {
@@ -797,7 +798,7 @@ export default function Step1Parser({
                   <span className="xxs:hidden">UP</span>
                 </button>
                 <button 
-                   onClick={() => activeTab === 'cvs' ? handleManualEntry() : router.push('/editor?mode=create-cover-letter&step=2')}
+                   onClick={() => activeTab === 'cvs' ? handleManualEntry() : router.push('/editor?mode=create-cover-letter&step=4')}
                    className="flex items-center gap-2 px-3 sm:px-5 py-2 bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 text-gray-900 dark:text-white border border-gray-200 dark:border-white/10 rounded-full text-[10px] sm:text-xs font-bold transition-all shadow-sm"
                 >
                   <Edit3 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
@@ -991,7 +992,7 @@ export default function Step1Parser({
                 <motion.button
                   whileHover={{ y: -5, scale: 1.01 }}
                   whileTap={{ scale: 0.98 }}
-                  onClick={() => router.push('/editor?mode=create-cover-letter&step=2')}
+                  onClick={() => router.push('/editor?mode=create-cover-letter&step=4')}
                   className="step-one-action group relative rounded-xl sm:rounded-2xl p-5 sm:p-6 min-h-[132px] sm:min-h-[148px] overflow-hidden text-left flex flex-col items-center justify-center text-center"
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-lime-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
@@ -1160,9 +1161,9 @@ export default function Step1Parser({
                           }
                         }
                       }}
-                      className="group cursor-pointer flex flex-col justify-between bg-white dark:bg-[#141810] border border-gray-250 dark:border-white/5 rounded-[2rem] p-4 sm:p-5 shadow-lg hover:shadow-2xl hover:border-orange-500/30 hover:scale-[1.01] transition-all duration-300 relative overflow-visible"
+                      className="group cursor-pointer flex flex-col justify-between hover:scale-[1.01] transition-all duration-300 relative overflow-visible"
                     >
-                      <div className="relative aspect-[1/1.414] w-full rounded-[1.5rem] overflow-hidden bg-orange-50 dark:bg-orange-950/20 border border-dashed border-orange-350 dark:border-orange-500/30 flex flex-col items-center justify-center">
+                      <div className="relative aspect-[1/1.414] w-full rounded-2xl overflow-hidden bg-orange-50 dark:bg-orange-950/20 border border-dashed border-orange-350 dark:border-orange-500/30 flex flex-col items-center justify-center shadow-md hover:shadow-xl transition-shadow duration-300">
                         <FileText className="w-8 h-8 sm:w-12 sm:h-12 text-orange-400/50 dark:text-orange-500/30 mb-2 sm:mb-4 animate-pulse" />
                         <span className="text-orange-600 dark:text-orange-400 font-bold text-xs sm:text-sm">Draft Resume</span>
                         
@@ -1198,8 +1199,8 @@ export default function Step1Parser({
                         </div>
                       </div>
   
-                      <div className="mt-4 flex flex-col justify-between flex-grow">
-                         <h4 className="text-base sm:text-lg font-black text-gray-900 dark:text-white truncate group-hover:text-orange-600 dark:group-hover:text-orange-500 transition-colors tracking-tight">
+                      <div className="mt-2.5 flex flex-col justify-between flex-grow">
+                         <h4 className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white truncate group-hover:text-orange-650 dark:group-hover:text-orange-550 transition-colors tracking-tight" title={draftCV.cvTitle || 'Unfinished Resume'}>
                            {draftCV.cvTitle || 'Unfinished Resume'}
                          </h4>
                          <p className="text-[10px] sm:text-xs text-gray-550 dark:text-gray-400 font-bold flex items-center gap-1.5 sm:gap-2 mt-1">
@@ -1218,28 +1219,40 @@ export default function Step1Parser({
                       viewport={{ once: true }}
                       transition={{ delay: index * 0.05 }}
                       onClick={() => handleEditExistingCV(cv)}
-                      className="step-one-document-card group cursor-pointer bg-white dark:bg-[#141810] border border-gray-250 dark:border-white/5 rounded-xl p-2 sm:p-3 shadow-lg hover:shadow-2xl hover:border-lime-500/30 hover:scale-[1.01] transition-all duration-300 relative overflow-hidden"
+                      className="step-one-document-card group cursor-pointer hover:scale-[1.01] transition-all duration-300 relative overflow-hidden"
                     >
-                      <div className="step-one-document-preview relative aspect-[1/1.414] w-full rounded-none overflow-hidden bg-white">
+                      <div className="step-one-document-preview relative aspect-[1/1.414] w-full rounded-xl overflow-hidden bg-white shadow-md hover:shadow-xl transition-shadow duration-300">
                         <LazyThumbnail item={cv} />
                         
                         <div className="absolute top-2 sm:top-4 left-2 sm:left-4 z-30">
-                          <span className={`px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-full text-[8px] sm:text-[10px] font-black uppercase tracking-wider shadow-lg ${
-                            cv.cvType === 'master' ? 'bg-[#0D2C54] text-blue-200 border border-blue-500/30 shadow-blue-500/10' :
-                            cv.cvType === 'journey' ? 'bg-[#5C3A21] text-amber-200 border border-amber-500/30 shadow-amber-500/10' :
-                            'bg-[#134074] text-cyan-200 border border-cyan-500/30 shadow-cyan-500/10'
+                          <span className={`px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[7px] sm:text-[9px] font-black uppercase tracking-wider shadow-md ${
+                            cv.cvType === 'master' ? 'bg-[#0D2C54]/90 text-blue-200 border border-blue-500/20 shadow-blue-500/10' :
+                            cv.cvType === 'journey' ? 'bg-[#5C3A21]/90 text-amber-200 border border-amber-500/20 shadow-amber-500/10' :
+                            'bg-[#134074]/90 text-cyan-200 border border-cyan-500/20 shadow-cyan-500/10'
                           }`}>
                             {cv.cvType}
                           </span>
                         </div>
                         
-                        <div className="absolute top-2 sm:top-4 right-2 sm:right-4 z-30 w-8 h-8 sm:w-10 sm:h-10 bg-black/50 backdrop-blur-md rounded-lg sm:rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 shadow-2xl hover:bg-black/75">
-                          <Edit2 className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                        <div className="absolute top-2 sm:top-4 right-2 sm:right-4 z-30 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
+                          <div className="w-7 h-7 sm:w-9 sm:h-9 bg-black/60 backdrop-blur-md rounded-lg flex items-center justify-center shadow-lg hover:bg-lime-500 hover:text-black text-white transition-colors duration-200">
+                            <Edit2 className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5" />
+                          </div>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteCV(cv.id || cv._id || '', e);
+                            }}
+                            className="w-7 h-7 sm:w-9 sm:h-9 bg-black/60 backdrop-blur-md rounded-lg flex items-center justify-center shadow-lg hover:bg-red-500 text-red-400 hover:text-white transition-colors duration-200"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5" />
+                          </button>
                         </div>
 
-                        <div className="step-one-thumbnail-overlay absolute inset-x-0 bottom-0 z-20 px-4 sm:px-5 pt-16 sm:pt-20 pb-4 sm:pb-5 text-white">
-                          <div className="flex items-start justify-between gap-2 mb-1">
-                            <h4 className="text-base sm:text-lg font-black text-white truncate tracking-tight flex-grow drop-shadow-sm">
+                        <div className="step-one-thumbnail-overlay absolute inset-x-0 bottom-0 z-20 px-3 sm:px-4 pt-12 sm:pt-16 pb-3 sm:pb-4 text-white">
+                          <div className="flex items-start justify-between gap-2 mb-0.5">
+                            <h4 className="text-xs sm:text-sm font-bold text-white truncate tracking-tight flex-grow drop-shadow-sm" title={cv.title || 'Untitled Resume'}>
                               {cv.title || 'Untitled Resume'}
                             </h4>
                             {/* ATS Score in layout */}
@@ -1459,23 +1472,35 @@ export default function Step1Parser({
                           viewport={{ once: true }}
                           transition={{ delay: index * 0.05 }}
                           onClick={() => router.push(`/editor?mode=edit-cover-letter&coverLetterId=${cl.id || cl._id}`)}
-                          className="step-one-document-card group cursor-pointer bg-white dark:bg-[#141810] border border-gray-250 dark:border-white/5 rounded-xl p-2 sm:p-3 shadow-lg hover:shadow-2xl hover:border-lime-500/30 hover:scale-[1.01] transition-all duration-300 relative overflow-hidden"
+                          className="step-one-document-card group cursor-pointer hover:scale-[1.01] transition-all duration-300 relative overflow-hidden"
                         >
-                          <div className="step-one-document-preview relative aspect-[1/1.414] w-full rounded-none overflow-hidden bg-white">
+                          <div className="step-one-document-preview relative aspect-[1/1.414] w-full rounded-xl overflow-hidden bg-white shadow-md hover:shadow-xl transition-shadow duration-300">
                             <LazyThumbnail item={cl} isCoverLetter={true} />
                             
                             <div className="absolute top-2 sm:top-4 left-2 sm:left-4 z-30">
-                              <span className="px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-full text-[8px] sm:text-[10px] font-black uppercase tracking-wider shadow-lg bg-emerald-600 text-white shadow-emerald-500/20">
+                              <span className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[7px] sm:text-[9px] font-black uppercase tracking-wider shadow-md bg-emerald-600 text-white shadow-emerald-500/20">
                                 Cover Letter
                               </span>
                             </div>
                             
-                            <div className="absolute top-2 sm:top-4 right-2 sm:right-4 z-30 w-8 h-8 sm:w-10 sm:h-10 bg-black/55 backdrop-blur-md rounded-lg sm:rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 shadow-2xl hover:bg-black/75">
-                              <Edit2 className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                            <div className="absolute top-2 sm:top-4 right-2 sm:right-4 z-30 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
+                              <div className="w-7 h-7 sm:w-9 sm:h-9 bg-black/60 backdrop-blur-md rounded-lg flex items-center justify-center shadow-lg hover:bg-lime-500 hover:text-black text-white transition-colors duration-200">
+                                <Edit2 className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5" />
+                              </div>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteCoverLetter(cl.id || cl._id || '', e);
+                                }}
+                                className="w-7 h-7 sm:w-9 sm:h-9 bg-black/60 backdrop-blur-md rounded-lg flex items-center justify-center shadow-lg hover:bg-red-500 text-red-400 hover:text-white transition-colors duration-200"
+                                title="Delete"
+                              >
+                                <Trash2 className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5" />
+                              </button>
                             </div>
 
-                            <div className="step-one-thumbnail-overlay absolute inset-x-0 bottom-0 z-20 px-4 sm:px-5 pt-16 sm:pt-20 pb-4 sm:pb-5 text-white">
-                              <h4 className="text-base sm:text-lg font-black text-white truncate tracking-tight drop-shadow-sm">
+                            <div className="step-one-thumbnail-overlay absolute inset-x-0 bottom-0 z-20 px-3 sm:px-4 pt-12 sm:pt-16 pb-3 sm:pb-4 text-white">
+                              <h4 className="text-xs sm:text-sm font-bold text-white truncate tracking-tight drop-shadow-sm" title={cl.title || 'Untitled Cover Letter'}>
                                 {cl.title || 'Untitled Cover Letter'}
                               </h4>
                               <p className="text-[10px] sm:text-xs text-white/70 font-bold flex items-center gap-1.5 sm:gap-2 mt-1">
