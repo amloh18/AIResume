@@ -13,6 +13,7 @@ import { checkSyntaxAndGrammar } from '@/lib/utils/offline-grammar-check';
 import { CentralScoreManager } from '@/lib/pill-engine/CentralScoreManager';
 import { getAnalysisModeDescription, getAnalysisModeLabel } from '@/lib/utils/analysis-mode';
 import MoriChatInterface from './MoriChatInterface';
+import type { KeywordGapAnalysisResult } from '@/types/keyword-gap';
 
 interface ATSMeterPanelProps {}
 
@@ -60,12 +61,92 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = () => {
   const [showAllIssues, setShowAllIssues] = useState(false);
 
   const offlineScore = useMemo(() => {
-    if (state.cvData) return CentralScoreManager.getInstance().getScoreSync(state.cvData);
+    if (state.cvData) {
+      const baseAnalysis = state.keywordGapAnalysis || atsAnalysis?.keywordAnalysis || null;
+      let keywordAnalysis = baseAnalysis;
+      
+      if (baseAnalysis) {
+        // Deep copy to avoid mutating the original state
+        const liveAnalysis = JSON.parse(JSON.stringify(baseAnalysis)) as KeywordGapAnalysisResult;
+        
+        // Extract all current CV skills/keywords to check
+        const cvSkills = new Set<string>();
+        try {
+          if (Array.isArray(state.cvData?.skills)) {
+            state.cvData.skills.forEach((c: any) => {
+              const list = c.keywords || c.skills || [];
+              list.forEach((s: string) => {
+                if (s) cvSkills.add(s.toLowerCase().trim());
+              });
+            });
+          }
+        } catch {}
+        
+        const cvTextLower = JSON.stringify(state.cvData).toLowerCase();
+        
+        // Find which gaps have been resolved (are now in the CV)
+        const resolvedGaps: string[] = [];
+        const remainingGaps = liveAnalysis.gaps.filter(gap => {
+          if (!gap || !gap.keyword) return false;
+          const kLower = gap.keyword.toLowerCase().trim();
+          
+          const isMatched = cvSkills.has(kLower) || cvTextLower.includes(kLower);
+          if (isMatched) {
+            resolvedGaps.push(gap.keyword);
+            return false; // remove from gaps
+          }
+          return true;
+        });
+        
+        if (resolvedGaps.length > 0) {
+          liveAnalysis.gaps = remainingGaps;
+          
+          // Add to matchedKeywords
+          const matchedSet = new Set(liveAnalysis.matchedKeywords || []);
+          resolvedGaps.forEach(g => matchedSet.add(g));
+          liveAnalysis.matchedKeywords = Array.from(matchedSet);
+          
+          // Recompute stats
+          liveAnalysis.stats.matchedCount = liveAnalysis.matchedKeywords.length;
+          liveAnalysis.stats.gapCount = remainingGaps.length;
+          
+          // Update counts based on importance of resolved gaps
+          let criticalGaps = 0;
+          let preferredGaps = 0;
+          let niceToHaveGaps = 0;
+          
+          remainingGaps.forEach(g => {
+            if (g.importance === 'critical') criticalGaps++;
+            else if (g.importance === 'preferred') preferredGaps++;
+            else niceToHaveGaps++;
+          });
+          
+          liveAnalysis.stats.criticalGaps = criticalGaps;
+          liveAnalysis.stats.preferredGaps = preferredGaps;
+          liveAnalysis.stats.niceToHaveGaps = niceToHaveGaps;
+        }
+        
+        keywordAnalysis = liveAnalysis;
+      }
+      
+      return CentralScoreManager.getInstance().getScoreSync(state.cvData, keywordAnalysis);
+    }
     return null;
-  }, [state.cvData]);
+  }, [state.cvData, state.keywordGapAnalysis, atsAnalysis]);
 
   const hasJobDesc = !!(state.jobData?.jobDescription || state.jobData?.description || state.jobData?.jd);
-  const score = hasJobDesc ? (atsScore || offlineScore?.cvScore.total || 0) : (offlineScore?.cvScore.total || 0);
+
+  const score = useMemo(() => {
+    if (hasJobDesc) {
+      const hasJDAnalysis = !!(state.keywordGapAnalysis || atsAnalysis?.keywordAnalysis);
+      if (hasJDAnalysis && offlineScore?.atsScore) {
+        return offlineScore.atsScore.total;
+      }
+      return atsScore || offlineScore?.atsScore?.total || 0;
+    }
+    return offlineScore?.cvScore?.total || 0;
+  }, [hasJobDesc, state.keywordGapAnalysis, atsAnalysis, offlineScore, atsScore]);
+
   const scoreLabel = hasJobDesc ? 'ATS MATCH' : 'CV SCORE';
 
   // Segmented arc geometry
@@ -81,7 +162,11 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = () => {
 
   // Metrics
   const metrics = useMemo(() => {
-    const scoreResult = atsAnalysis?.scoreResult || offlineScore;
+    const hasJDAnalysis = !!(state.keywordGapAnalysis || atsAnalysis?.keywordAnalysis);
+    const scoreResult = (hasJDAnalysis && offlineScore) 
+      ? offlineScore 
+      : (atsAnalysis?.scoreResult || offlineScore);
+      
     const cvB = scoreResult?.cvScore;
     const atsB = scoreResult?.atsScore;
     if (hasJobDesc && atsB) {
@@ -106,7 +191,7 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = () => {
       { label: hasJobDesc ? 'ATS Format' : 'Formatting', value: 0 },
       { label: 'Readability', value: 0 },
     ];
-  }, [atsAnalysis, hasJobDesc, offlineScore]);
+  }, [atsAnalysis, hasJobDesc, offlineScore, state.keywordGapAnalysis]);
 
   // Segmented arc segment calculations (depends on metrics)
   const segmentCount = metrics.length;
@@ -131,20 +216,59 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = () => {
 
   // Skills
   const extractedSkills = useMemo(() => {
-    if (atsAnalysis && atsAnalysis.extractedKeywords && atsAnalysis.extractedKeywords.length > 0) return atsAnalysis.extractedKeywords.slice(0, 12) as string[];
+    const cvSkills: string[] = [];
     try {
       if (Array.isArray(state.cvData?.skills)) {
-        const s = state.cvData.skills.flatMap((c: any) => c.keywords || c.skills || []);
-        if (s?.length > 0) return s.filter(Boolean).slice(0, 12) as string[];
+        state.cvData.skills.forEach((c: any) => {
+          const list = c.keywords || c.skills || [];
+          list.forEach((s: string) => {
+            if (s && !cvSkills.includes(s)) cvSkills.push(s);
+          });
+        });
       }
     } catch {}
+    
+    if (cvSkills.length > 0) return cvSkills.slice(0, 12);
+    
+    if (atsAnalysis && atsAnalysis.extractedKeywords && atsAnalysis.extractedKeywords.length > 0) return atsAnalysis.extractedKeywords.slice(0, 12) as string[];
     return [];
   }, [atsAnalysis, state.cvData]);
 
   const missingSkills = useMemo(() => {
-    if (atsAnalysis && atsAnalysis.missingKeywords && atsAnalysis.missingKeywords.length > 0) return atsAnalysis.missingKeywords.slice(0, 8) as string[];
-    return [];
-  }, [atsAnalysis]);
+    const baseAnalysis = state.keywordGapAnalysis || atsAnalysis?.keywordAnalysis;
+    if (!baseAnalysis || !baseAnalysis.gaps) {
+      if (atsAnalysis && atsAnalysis.missingKeywords) {
+        const cvTextLower = JSON.stringify(state.cvData || {}).toLowerCase();
+        return atsAnalysis.missingKeywords
+          .filter((skill: string) => skill && !cvTextLower.includes(skill.toLowerCase().trim()))
+          .slice(0, 8) as string[];
+      }
+      return [];
+    }
+    
+    const cvSkills = new Set<string>();
+    try {
+      if (Array.isArray(state.cvData?.skills)) {
+        state.cvData.skills.forEach((c: any) => {
+          const list = c.keywords || c.skills || [];
+          list.forEach((s: string) => {
+            if (s) cvSkills.add(s.toLowerCase().trim());
+          });
+        });
+      }
+    } catch {}
+    
+    const cvTextLower = JSON.stringify(state.cvData || {}).toLowerCase();
+    
+    return baseAnalysis.gaps
+      .filter((gap: any) => {
+        if (!gap || !gap.keyword) return false;
+        const kLower = gap.keyword.toLowerCase().trim();
+        return !cvSkills.has(kLower) && !cvTextLower.includes(kLower);
+      })
+      .map((gap: any) => gap.keyword)
+      .slice(0, 8) as string[];
+  }, [atsAnalysis, state.keywordGapAnalysis, state.cvData]);
 
   // Formatting issues
   const formattingIssues = useMemo(() => checkSyntaxAndGrammar(state.cvData), [state.cvData]);
