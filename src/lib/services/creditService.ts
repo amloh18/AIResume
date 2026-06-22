@@ -94,6 +94,22 @@ class CreditService {
   }
 
   /**
+   * Plans that are never subject to usage/credit limits.
+   * We still track their usage for analytics, but we never block them.
+   */
+  private readonly UNLIMITED_PLAN_KEYS = [
+    'focused_monthly',
+    'focused_yearly',
+    'smart_quarterly',
+    'smart_yearly',
+    'pro_monthly',
+    'pro_quarterly',
+    'pro_yearly',
+    'pro_lifetime',
+    'pro',
+  ];
+
+  /**
    * Check if user has credits available for job creation
    */
   async checkCreditAvailability(
@@ -108,40 +124,14 @@ class CreditService {
         return { available: false, creditsRemaining: 0, limit: 0 };
       }
 
-      // For paid plans (monthly/quarterly/yearly/lifetime), check subscription status
-      if (['starter_yearly', 'focused_monthly', 'focused_yearly', 'smart_quarterly', 'smart_yearly', 'pro_monthly', 'pro_quarterly', 'pro_yearly', 'pro_lifetime'].includes(user.currentPlanKey)) {
-        // Check if user actually has an active subscription
-        const subscription = user.subscription;
-        const hasActiveSubscription = subscription &&
-          subscription.status === 'active' &&
-          (subscription.currentPeriodEnd || subscription.accessExpiresAt);
+      // Focused / Smart / Pro plans are NEVER credit-limited.
+      // We track usage for analytics only — subscription expiry is checked separately.
+      if (this.UNLIMITED_PLAN_KEYS.includes(user.currentPlanKey)) {
+        return { available: true, creditsRemaining: -1, limit: -1 };
+      }
 
-        if (!hasActiveSubscription) {
-          // User has paid plan key but no active subscription - treat as free tier
-          const currentCredits = user.credits?.jobCredits ?? 0;
-          const freeLimit = (await this.getPlanCredits('free')).jobCredits;
-          return {
-            available: currentCredits > 0,
-            creditsRemaining: currentCredits,
-            limit: freeLimit
-          };
-        }
-
-        // Verify subscription hasn't expired by checking time-based access
-        const { default: usageLimitsService } = await import('./usageLimitsService');
-        const timeCheck = await usageLimitsService.checkTimeBasedAccess(userId);
-        if (!timeCheck.hasAccess) {
-          // Subscription expired - treat as free tier
-          const currentCredits = user.credits?.jobCredits ?? 0;
-          const freeLimit = (await this.getPlanCredits('free')).jobCredits;
-          return {
-            available: currentCredits > 0,
-            creditsRemaining: currentCredits,
-            limit: freeLimit
-          };
-        }
-
-        // Unlimited for active paid plans with valid subscription
+      // starter_yearly also gets unlimited credits (no job-tracker access but unlimited CV/AI)
+      if (user.currentPlanKey === 'starter_yearly') {
         return { available: true, creditsRemaining: -1, limit: -1 };
       }
 

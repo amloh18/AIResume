@@ -1024,6 +1024,16 @@ export default function ResumeEnhancerContainer({
         return;
       }
 
+      if (mode === 'create-cover-letter') {
+        // Cover letter creation — no CV loading needed, go straight to step 4.
+        dispatch({ type: 'SET_MODE', payload: 'create' });
+        dispatch({ type: 'SET_CV_TYPE', payload: 'standalone' });
+        goToStepSafely(4, { silent: true });
+        setCompletedSteps([1, 2, 3]);
+        initializedRef.current = { mode, cvId };
+        return;
+      }
+
       if (mode === 'edit' || mode === 'edit-master' || mode === 'edit-cover-letter') {
         let actualCvId = cvId;
         let coverLetterData: any = null;
@@ -1041,8 +1051,24 @@ export default function ResumeEnhancerContainer({
              }
           }
           
+          // If this is a standalone cover letter (no cvId), load it directly into step 4
+          if (!actualCvId && coverLetterData) {
+            dispatch({
+              type: 'SET_AUTO_COVER_LETTER',
+              payload: { draft: coverLetterData.content || coverLetterData.body || '', coverLetterId: clId }
+            });
+            dispatch({ type: 'SET_CV_TYPE', payload: 'standalone' });
+            goToStepSafely(4, { silent: true });
+            setCompletedSteps([1, 2, 3]);
+            initializedRef.current = { mode, cvId };
+            setIsLoading(false);
+            return;
+          }
+
           if (!actualCvId) {
-             console.error("Failed to determine CV ID for editing.");
+             console.error('Failed to determine CV ID for editing.');
+             toast.error('Could not find the CV associated with this cover letter.');
+             router.push('/editor');
              setIsLoading(false);
              return;
           }
@@ -1429,10 +1455,17 @@ export default function ResumeEnhancerContainer({
             // Default to standalone for create mode
             dispatch({ type: 'SET_CV_TYPE', payload: 'standalone' });
           }
+
+          // fresher=true in URL means the user chose "Start Blank" — activate fresher mode
+          // so the goToStepSafely(2) data guard (checks state.fresherMode) passes correctly
+          if (searchParams.get('fresher') === 'true') {
+            dispatch({ type: 'SET_FRESHER_MODE', payload: true });
+          }
         }
 
+
         // Only go to requested step (or default to 1) if we are starting fresh (create mode, no ID) and not restoring draft
-        if (mode === 'create' && !cvId && !journeyId && !restoreDraft) {
+        if ((mode === 'create' || mode === 'create-cover-letter') && !cvId && !journeyId && !restoreDraft) {
           const targetStep = requestedStep || 1;
           if (targetStep === 2) {
             goToStepSafely(1, { silent: true });
