@@ -1199,6 +1199,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
 
                         // Filter plans based on selected billing cycle
                         const subscriptionPlans = availablePlans.filter(plan => {
+                          if (adminMode) return true;
                           const key = plan.key.toLowerCase();
                           if (billingCycle === 'yearly') {
                             return key.includes('yearly') || key.includes('lifetime');
