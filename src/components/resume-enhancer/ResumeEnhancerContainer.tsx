@@ -2733,7 +2733,7 @@ export default function ResumeEnhancerContainer({
       {state.currentStep === 1 && (
         <div
           data-dashboard-sidebar
-          className={`hidden lg:flex lg:flex-col lg:sticky lg:top-0 lg:h-screen lg:z-40 lg:py-0 lg:px-0 ${
+          className={`hidden lg:flex lg:flex-col lg:sticky lg:top-0 lg:h-screen lg:z-[120] lg:py-0 lg:px-0 ${
             isDesktopExpanded ? 'lg:w-[280px]' : 'lg:w-[84px]'
           } overflow-visible pointer-events-auto transition-all duration-300 flex-shrink-0 border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-[#141810]`}
         >
@@ -2761,7 +2761,7 @@ export default function ResumeEnhancerContainer({
       {/* Main Content Area */}
       <div className="dashboard-page resume-enhancer-page flex flex-col flex-1 min-w-0 h-screen overflow-hidden text-[color:var(--text-primary)]">
         {/* HEADER - Top Bar */}
-        <header className={`editor-header relative min-h-16 flex items-center justify-between gap-2 px-3 sm:px-6 border-b border-[color:var(--border-primary)] bg-[var(--header-bg)] sticky top-0 z-[100] shadow-sm ${state.currentStep === 1 ? 'flex-wrap py-2 sm:py-0' : ''}`}>
+        <header className={`editor-header relative min-h-16 flex items-center justify-between gap-2 px-3 sm:px-6 border-b border-[color:var(--border-primary)] bg-[var(--header-bg)] sticky top-0 z-[60] shadow-sm ${state.currentStep === 1 ? 'flex-wrap py-2 sm:py-0' : ''}`}>
           <div className="flex items-center gap-12 flex-1 min-w-0">
             {/* Logo or Back to Dashboard if in deep editing */}
             <div className="flex items-center gap-4">

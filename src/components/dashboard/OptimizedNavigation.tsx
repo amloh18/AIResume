@@ -386,7 +386,7 @@ const OptimizedNavigation: React.FC = () => {
       {/* Desktop Toggle Button - Positioned exactly on the right border */}
       <button
         onClick={toggleDesktopSidebar}
-        className="hidden lg:flex absolute -right-[13px] top-6 bg-white dark:bg-[#141810] border border-gray-200 dark:border-gray-700 rounded-full p-1 z-50 hover:bg-gray-50 dark:hover:bg-gray-800 shadow-sm transition-transform hover:scale-110"
+        className="hidden lg:flex absolute -right-[13px] top-6 bg-white dark:bg-[#141810] border border-gray-200 dark:border-gray-700 rounded-full p-1 z-[130] hover:bg-gray-50 dark:hover:bg-gray-800 shadow-sm transition-transform hover:scale-110"
         aria-label={isDesktopExpanded ? "Collapse sidebar" : "Expand sidebar"}
       >
         <PanelLeft className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${isDesktopExpanded ? '' : 'rotate-180'}`} />

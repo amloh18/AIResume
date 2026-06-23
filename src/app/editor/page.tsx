@@ -12,6 +12,7 @@ import RouteGuard from '@/components/auth/RouteGuard';
 import LoadingOverlay from '@/components/ui/LoadingOverlay';
 import guestCVService from '@/lib/services/guestCVService';
 import { MobileSidebarProvider } from '@/contexts/MobileSidebarContext';
+import { geistFont } from '@/lib/fonts';
 
 function ResumeEnhancerPageContent() {
   const router = useRouter();
@@ -209,10 +210,12 @@ if (isGuestMode) {
 
 export default function ResumeEnhancerPage() {
   return (
-    <MobileSidebarProvider>
-      <Suspense fallback={<LoadingOverlay message="Loading Editor" />}>
-        <ResumeEnhancerPageContent />
-      </Suspense>
-    </MobileSidebarProvider>
+    <div className={`${geistFont.variable} geist-ui`}>
+      <MobileSidebarProvider>
+        <Suspense fallback={<LoadingOverlay message="Loading Editor" />}>
+          <ResumeEnhancerPageContent />
+        </Suspense>
+      </MobileSidebarProvider>
+    </div>
   );
 }

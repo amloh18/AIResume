@@ -154,7 +154,7 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
   const editHoverClass = isEditable ? 'hover:bg-emerald-50/30 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-emerald-500/50 focus:shadow-md border-b border-transparent hover:border-gray-300 focus:border-emerald-400 focus:text-gray-900 dark:focus:text-white rounded-sm px-1.5 py-0.5 -mx-1.5 -my-0.5' : '';
 
   return (
-      <span ref={contentRef} data-path={path} data-empty-text={emptyText} contentEditable={isEditable} suppressContentEditableWarning onPaste={handlePaste} onInput={handleInput} onKeyDown={handleKeyDown} onFocus={handleFocus} onBlur={handleBlur} onClick={handleClick} className={`outline-none transition-all duration-200 inline-block max-w-full ${wrapClass} ${moriHoverClass} ${editHoverClass} z-40 relative empty:min-w-[60px] empty:inline-block empty:border-dashed empty:border-gray-300 empty:after:content-[attr(data-empty-text)] empty:after:text-gray-400 empty:after:text-xs empty:after:italic`} style={{ minHeight: '1.2em' }} />
+      <span ref={contentRef} data-path={path} data-empty-text={emptyText} contentEditable={isEditable} suppressContentEditableWarning onPaste={handlePaste} onInput={handleInput} onKeyDown={handleKeyDown} onFocus={handleFocus} onBlur={handleBlur} onClick={handleClick} className={`outline-none transition-all duration-200 ${multiline ? 'block w-full' : 'inline-block max-w-full'} ${wrapClass} ${moriHoverClass} ${editHoverClass} z-40 relative empty:min-w-[60px] ${multiline ? 'empty:block' : 'empty:inline-block'} empty:border-dashed empty:border-gray-300 empty:after:content-[attr(data-empty-text)] empty:after:text-gray-400 empty:after:text-xs empty:after:italic`} style={{ minHeight: '1.2em' }} />
     );
   };
   
@@ -199,7 +199,7 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
     if (!targetNode) return null;
     return (
       <div 
-        className="fixed z-50 bg-white/60 dark:bg-[#12161a]/60 backdrop-blur-md shadow-xl border border-gray-200/40 dark:border-white/10 rounded-xl flex items-center p-1 gap-0.5 transform -translate-x-1/2 transition-all duration-300 animate-fade-in-up font-sans" 
+        className="fixed z-50 bg-transparent backdrop-blur-md shadow-xl border border-gray-200/40 dark:border-white/10 rounded-xl flex items-center p-1 gap-0.5 transform -translate-x-1/2 transition-all duration-300 animate-fade-in-up font-sans" 
         style={{ top: pos.top, left: pos.left }} 
         onMouseDown={(e) => e.preventDefault()}
       >
@@ -207,7 +207,7 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
           <>
             <button 
               onClick={(e) => { e.preventDefault(); onSuggestPoint('skills'); }} 
-              className="h-7 px-2.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-bold text-[11px] border border-emerald-500/20 transition-all duration-200 hover:scale-105 active:scale-95 shadow-sm rounded-lg" 
+              className="h-7 px-2.5 bg-transparent hover:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-bold text-[11px] border border-emerald-500/20 transition-all duration-200 hover:scale-105 active:scale-95 shadow-sm rounded-lg" 
               title="Get AI skill suggestions"
             >
               <Wand2 size={12} className="animate-pulse" />
@@ -220,7 +220,7 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
           <>
             <button 
               onClick={(e) => { e.preventDefault(); onSuggestPoint(); }} 
-              className="h-7 px-2.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-bold text-[11px] border border-emerald-500/20 transition-all duration-200 hover:scale-105 active:scale-95 shadow-sm rounded-lg" 
+              className="h-7 px-2.5 bg-transparent hover:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-bold text-[11px] border border-emerald-500/20 transition-all duration-200 hover:scale-105 active:scale-95 shadow-sm rounded-lg" 
               title="Suggest Contextual Point"
             >
               <Wand2 size={12} className="animate-pulse" />
@@ -231,21 +231,21 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
         )}
         <button 
           onClick={(e) => execCmd(e, 'bold')} 
-          className="w-7 h-7 flex items-center justify-center hover:bg-emerald-500/10 dark:hover:bg-emerald-500/15 rounded-lg text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all duration-200 hover:scale-115 active:scale-90" 
+          className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all duration-200 hover:scale-125 active:scale-90 bg-transparent" 
           title="Bold"
         >
           <Bold size={13} />
         </button>
         <button 
           onClick={(e) => execCmd(e, 'italic')} 
-          className="w-7 h-7 flex items-center justify-center hover:bg-emerald-500/10 dark:hover:bg-emerald-500/15 rounded-lg text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all duration-200 hover:scale-115 active:scale-90" 
+          className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all duration-200 hover:scale-125 active:scale-90 bg-transparent" 
           title="Italic"
         >
           <Italic size={13} />
         </button>
         <button 
           onClick={(e) => execCmd(e, 'underline')} 
-          className="w-7 h-7 flex items-center justify-center hover:bg-emerald-500/10 dark:hover:bg-emerald-500/15 rounded-lg text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all duration-200 hover:scale-115 active:scale-90" 
+          className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all duration-200 hover:scale-125 active:scale-90 bg-transparent" 
           title="Underline"
         >
           <Underline size={13} />
@@ -253,7 +253,7 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
         <div className="w-px h-4 bg-gray-250 dark:bg-white/10 mx-1"></div>
         <button 
           onClick={(e) => execCmd(e, 'insertUnorderedList')} 
-          className="w-7 h-7 flex items-center justify-center hover:bg-emerald-500/10 dark:hover:bg-emerald-500/15 rounded-lg text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all duration-200 hover:scale-115 active:scale-90" 
+          className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all duration-200 hover:scale-125 active:scale-90 bg-transparent" 
           title="Bullet List"
         >
           <List size={13} />
@@ -261,28 +261,28 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
         <div className="w-px h-4 bg-gray-250 dark:bg-white/10 mx-1"></div>
         <button 
           onClick={(e) => execCmd(e, 'justifyLeft')} 
-          className="w-7 h-7 flex items-center justify-center hover:bg-emerald-500/10 dark:hover:bg-emerald-500/15 rounded-lg text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all duration-200 hover:scale-115 active:scale-90" 
+          className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all duration-200 hover:scale-125 active:scale-90 bg-transparent" 
           title="Align Left"
         >
           <AlignLeft size={13} />
         </button>
         <button 
           onClick={(e) => execCmd(e, 'justifyCenter')} 
-          className="w-7 h-7 flex items-center justify-center hover:bg-emerald-500/10 dark:hover:bg-emerald-500/15 rounded-lg text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all duration-200 hover:scale-115 active:scale-90" 
+          className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all duration-200 hover:scale-125 active:scale-90 bg-transparent" 
           title="Align Center"
         >
           <AlignCenter size={13} />
         </button>
         <button 
           onClick={(e) => execCmd(e, 'justifyRight')} 
-          className="w-7 h-7 flex items-center justify-center hover:bg-emerald-500/10 dark:hover:bg-emerald-500/15 rounded-lg text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all duration-200 hover:scale-115 active:scale-90" 
+          className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all duration-200 hover:scale-125 active:scale-90 bg-transparent" 
           title="Align Right"
         >
           <AlignRight size={13} />
         </button>
         <button 
           onClick={(e) => execCmd(e, 'justifyFull')} 
-          className="w-7 h-7 flex items-center justify-center hover:bg-emerald-500/10 dark:hover:bg-emerald-500/15 rounded-lg text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all duration-200 hover:scale-115 active:scale-90" 
+          className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all duration-200 hover:scale-125 active:scale-90 bg-transparent" 
           title="Justify"
         >
           <AlignJustify size={13} />
@@ -400,11 +400,11 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
   const showInlineControls = !readOnly && !ctx?.moriChatMode && primaryTitleKey;
   const canAddListEntry = SnippetComponent && ['Experience', 'Education', 'Projects', 'Certifications', 'Awards', 'Publications', 'Volunteer', 'References'].includes(SnippetComponent.category);
   const controls = showInlineControls ? (
-    <div className="absolute -top-4 right-0 opacity-0 group-hover/inner:opacity-100 transition-all duration-200 flex items-center bg-white/60 dark:bg-[#12161a]/60 backdrop-blur-md border border-gray-200/40 dark:border-white/10 shadow-lg rounded-xl p-1 gap-0.5 z-[50] no-print font-sans">
+    <div className="absolute -top-4 right-0 opacity-0 group-hover/inner:opacity-100 transition-all duration-200 flex items-center bg-transparent backdrop-blur-md border border-gray-200/40 dark:border-white/10 shadow-lg rounded-xl p-1 gap-0.5 z-[50] no-print font-sans">
       {isHeader && (
         <button 
           onClick={onTogglePhoto} 
-          className="flex items-center gap-1 h-7 px-2 hover:bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold text-[11px] transition-all duration-200 rounded-lg hover:scale-105 active:scale-95 bg-transparent" 
+          className="flex items-center gap-1 h-7 px-2 text-blue-600 dark:text-blue-400 font-bold text-[11px] transition-all duration-200 rounded-lg hover:scale-110 active:scale-95 bg-transparent" 
           title="Toggle Photo"
         >
           <ImageIcon size={12}/> 
@@ -414,7 +414,7 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
       {canAddListEntry && (
         <button 
           onClick={() => onAddListEntry(SnippetComponent.category)} 
-          className={`flex items-center gap-1 h-7 px-2 hover:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold text-[11px] transition-all duration-200 rounded-lg hover:scale-105 active:scale-95 bg-transparent ${isHeader ? 'border-l border-gray-200/30' : ''}`}
+          className={`flex items-center gap-1 h-7 px-2 text-emerald-600 dark:text-emerald-400 font-bold text-[11px] transition-all duration-200 rounded-lg hover:scale-110 active:scale-95 bg-transparent ${isHeader ? 'border-l border-gray-200/30' : ''}`}
         >
           <Plus size={12}/> 
           {!isNarrow && 'Add'}
@@ -423,7 +423,7 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
       {isSkillsSnippet && (
         <button 
           onClick={onOpenSkillsSuggestions} 
-          className="flex items-center gap-1 h-7 px-2 hover:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold text-[11px] border-l border-gray-200/30 transition-all duration-200 rounded-lg hover:scale-105 active:scale-95 bg-transparent" 
+          className="flex items-center gap-1 h-7 px-2 text-emerald-600 dark:text-emerald-400 font-bold text-[11px] border-l border-gray-200/30 transition-all duration-200 rounded-lg hover:scale-110 active:scale-95 bg-transparent" 
           title="Get AI skill suggestions"
         >
           <Wand2 size={12}/> 
@@ -432,7 +432,7 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
       )}
       <button 
         onClick={() => onReplace(zoneId, index, instance.type)} 
-        className="flex items-center gap-1 h-7 px-2 hover:bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold text-[11px] border-l border-gray-200/30 transition-all duration-200 rounded-lg hover:scale-105 active:scale-95 bg-transparent"
+        className="flex items-center gap-1 h-7 px-2 text-blue-600 dark:text-blue-400 font-bold text-[11px] border-l border-gray-200/30 transition-all duration-200 rounded-lg hover:scale-110 active:scale-95 bg-transparent"
       >
         <RefreshCw size={12}/> 
         {!isNarrow && 'Replace'}
@@ -441,24 +441,24 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
         <>
           <button 
             onClick={() => moveSnippet(zoneId, index, -1)} 
-            className="w-7 h-7 flex items-center justify-center hover:bg-blue-500/10 text-blue-600 dark:text-blue-400 border-l border-gray-200/30 transition-all duration-200 rounded-lg hover:scale-115 active:scale-90 bg-transparent" 
+            className="w-7 h-7 flex items-center justify-center text-blue-600 dark:text-blue-400 border-l border-gray-200/30 transition-all duration-200 rounded-lg hover:scale-125 active:scale-90 bg-transparent" 
             title="Move Section Up"
           >
             <ChevronUp size={13}/>
           </button>
           <button 
             onClick={() => moveSnippet(zoneId, index, 1)} 
-            className="w-7 h-7 flex items-center justify-center hover:bg-blue-500/10 text-blue-600 dark:text-blue-400 border-l border-gray-200/30 transition-all duration-200 rounded-lg hover:scale-115 active:scale-90 bg-transparent" 
+            className="w-7 h-7 flex items-center justify-center text-blue-600 dark:text-blue-400 border-l border-gray-200/30 transition-all duration-200 rounded-lg hover:scale-125 active:scale-90 bg-transparent" 
             title="Move Section Down"
           >
             <ChevronDown size={13}/>
           </button>
           <button 
             onClick={handleRemoveSnippet} 
-            className={`w-7 h-7 flex items-center justify-center border-l border-gray-200/30 transition-all duration-200 rounded-lg hover:scale-115 active:scale-90 ${
+            className={`w-7 h-7 flex items-center justify-center border-l border-gray-200/30 transition-all duration-200 rounded-lg hover:scale-125 active:scale-90 ${
               confirmingRemove 
                 ? 'bg-red-500 text-white hover:bg-red-600 shadow-md shadow-red-500/20' 
-                : 'bg-transparent text-red-500 hover:bg-red-500/10'
+                : 'bg-transparent text-red-500'
             }`} 
             title={confirmingRemove ? 'Click again to delete section' : 'Delete Section'} 
             aria-label={confirmingRemove ? 'Confirm delete section' : 'Delete section'}
@@ -466,7 +466,7 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
             <Trash2 size={13}/>
           </button>
           <div 
-            className="w-7 h-7 flex items-center justify-center cursor-grab text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 transition-all duration-200 rounded-lg hover:scale-115 border-l border-gray-200/30 bg-transparent" 
+            className="w-7 h-7 flex items-center justify-center cursor-grab text-blue-600 dark:text-blue-400 transition-all duration-200 rounded-lg hover:scale-125 border-l border-gray-200/30 bg-transparent" 
             title="Drag to reorder"
           >
             <GripVertical size={13}/>
