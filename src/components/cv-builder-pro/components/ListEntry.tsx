@@ -90,10 +90,10 @@ const ListEntry = ({ collection, index, moveEntry, deleteEntry, children }: any)
       data-index={index}
     >
       <div className={`absolute -left-[36px] top-0 bottom-0 flex flex-col items-center justify-center opacity-0 group-hover/entry:opacity-100 group-focus-within/entry:opacity-100 pointer-events-none group-hover/entry:pointer-events-auto group-focus-within/entry:pointer-events-auto transition-opacity duration-200 no-print z-50 ${moriChatMode ? 'hidden' : ''}`}>
-        <div className="flex flex-col gap-0.5 bg-white/60 dark:bg-[#12161a]/60 backdrop-blur-md shadow-md border border-gray-200/40 dark:border-white/5 rounded-xl p-1 pointer-events-auto relative">
+        <div className="flex flex-col gap-0.5 bg-transparent backdrop-blur-md shadow-md border border-gray-200/40 dark:border-white/5 rounded-xl p-1 pointer-events-auto relative">
           <button
             onClick={(e: any) => { e.stopPropagation(); moveEntry(collection, index, -1); }}
-            className="text-gray-500 dark:text-gray-400 hover:bg-emerald-500/10 hover:text-emerald-500 w-7 h-7 flex items-center justify-center rounded-lg transition-all duration-200 hover:scale-110 active:scale-90 bg-transparent"
+            className="text-gray-500 dark:text-gray-400 hover:text-emerald-500 w-7 h-7 flex items-center justify-center rounded-lg transition-all duration-200 hover:scale-125 active:scale-90 bg-transparent"
             title="Move entry up"
             aria-label="Move entry up"
             type="button"
@@ -102,7 +102,7 @@ const ListEntry = ({ collection, index, moveEntry, deleteEntry, children }: any)
           </button>
           <button
             onClick={(e: any) => { e.stopPropagation(); moveEntry(collection, index, 1); }}
-            className="text-gray-500 dark:text-gray-400 hover:bg-emerald-500/10 hover:text-emerald-500 w-7 h-7 flex items-center justify-center rounded-lg transition-all duration-200 hover:scale-110 active:scale-90 bg-transparent"
+            className="text-gray-500 dark:text-gray-400 hover:text-emerald-500 w-7 h-7 flex items-center justify-center rounded-lg transition-all duration-200 hover:scale-125 active:scale-90 bg-transparent"
             title="Move entry down"
             aria-label="Move entry down"
             type="button"
@@ -112,10 +112,10 @@ const ListEntry = ({ collection, index, moveEntry, deleteEntry, children }: any)
           <div className="w-full h-px bg-gray-200/30 dark:bg-white/10 my-0.5"></div>
           <button
             onClick={handleDelete}
-            className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all duration-200 hover:scale-110 active:scale-90 ${
+            className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all duration-200 hover:scale-125 active:scale-90 ${
               confirmingDelete
                 ? 'bg-red-500 text-white hover:bg-red-650 shadow-md shadow-red-500/20'
-                : 'text-red-500 hover:bg-red-500/10 bg-transparent'
+                : 'text-red-500 bg-transparent'
             }`}
             title={confirmingDelete ? 'Click again to permanently delete this entry' : 'Delete entry'}
             aria-label={confirmingDelete ? 'Confirm delete entry' : 'Delete entry'}

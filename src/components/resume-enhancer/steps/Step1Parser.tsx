@@ -762,20 +762,20 @@ export default function Step1Parser({
 
 
         {/* Top Section */}
-        <div ref={topSectionRef} className="step-one-hero w-full flex flex-col min-h-[calc(100vh-64px)] pt-6 sm:pt-8 pb-12">
+        <div ref={topSectionRef} className="step-one-hero w-full flex flex-col min-h-[30vh] pt-6 sm:pt-8 pb-4 sm:pb-6">
           <div className="w-full max-w-7xl mx-auto px-4 sm:px-8">
             <div
               className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 sm:gap-6 mb-5 sm:mb-7 origin-bottom max-w-6xl mx-auto w-full"
             >
               {/* Breadcrumb instead of welcome text */}
-              <div className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 font-medium py-2">
+              <div className="flex items-center gap-1.5 text-base text-gray-500 dark:text-gray-400 font-medium py-2">
                 <span 
                   onClick={() => router.push('/dashboard')}
                   className="hover:text-lime-600 dark:hover:text-lime-400 cursor-pointer transition-colors"
                 >
                   Dashboard
                 </span>
-                <ChevronRight className="h-3 w-3 text-gray-300 dark:text-gray-600" />
+                <ChevronRight className="h-4 w-4 text-gray-450 dark:text-gray-500" />
                 <span className="text-gray-800 dark:text-gray-200 font-bold">
                   {activeTab === 'cvs' ? 'Editor' : 'Cover Letters'}
                 </span>
@@ -830,9 +830,10 @@ export default function Step1Parser({
               </div>
             </div>
 
-           {/* Action Cards Grid - Optimized for all screens */}
+           {/* Action Cards Grid - horizontal scroll on mobile, grid on sm+ */}
            <div 
-             className="grid gap-3 sm:gap-4 origin-top grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 max-w-6xl mx-auto w-full min-h-[420px] sm:min-h-[310px] lg:min-h-[150px]"
+             className="flex sm:grid gap-3 sm:gap-4 origin-top sm:grid-cols-2 lg:grid-cols-3 max-w-6xl mx-auto w-full overflow-x-auto sm:overflow-x-visible pb-2 sm:pb-0 snap-x snap-mandatory sm:snap-none scroll-pl-4 -mx-4 px-4 sm:mx-0 sm:px-0"
+             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
            >
             {activeTab === 'cvs' ? (
               <>
@@ -842,7 +843,7 @@ export default function Step1Parser({
                   whileTap={{ scale: 0.98 }}
                   onClick={() => handleManualEntry()}
                   disabled={isCreatingBlank || isDuplicating || isLoadingCVs}
-                  className={`step-one-action step-one-action-primary group relative rounded-xl sm:rounded-2xl p-5 sm:p-6 min-h-[132px] sm:min-h-[148px] border border-dashed overflow-hidden text-left flex flex-col items-center justify-center text-center ${(isCreatingBlank || isDuplicating || isLoadingCVs) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  className={`step-one-action step-one-action-primary snap-start shrink-0 w-[72vw] sm:w-auto group relative rounded-xl sm:rounded-2xl p-5 sm:p-6 min-h-[148px] border border-dashed overflow-hidden text-left flex flex-col items-center justify-center text-center ${(isCreatingBlank || isDuplicating || isLoadingCVs) ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-lime-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                   <div className="relative flex flex-col items-center space-y-3 sm:space-y-4">
@@ -863,7 +864,7 @@ export default function Step1Parser({
                   whileTap={{ scale: 0.98 }}
                   onClick={handleDuplicatePrimary}
                   disabled={!userHasMasterCV || isDuplicating || isLoadingCVs}
-                  className={`step-one-action group relative rounded-xl sm:rounded-2xl p-5 sm:p-6 min-h-[132px] sm:min-h-[148px] overflow-hidden text-left flex flex-col items-center justify-center text-center ${(!userHasMasterCV || isDuplicating || isLoadingCVs) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  className={`step-one-action snap-start shrink-0 w-[72vw] sm:w-auto group relative rounded-xl sm:rounded-2xl p-5 sm:p-6 min-h-[148px] overflow-hidden text-left flex flex-col items-center justify-center text-center ${(!userHasMasterCV || isDuplicating || isLoadingCVs) ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-lime-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                   <div className="relative flex flex-col items-center space-y-3 sm:space-y-4">
@@ -893,7 +894,7 @@ export default function Step1Parser({
                     setParseMethod('upload');
                   }}
                   disabled={isCreatingBlank || isDuplicating || isLoadingCVs}
-                  className={`step-one-action group relative rounded-xl sm:rounded-2xl p-5 sm:p-6 min-h-[132px] sm:min-h-[148px] overflow-hidden text-left flex flex-col items-center justify-center text-center ${(isCreatingBlank || isDuplicating || isLoadingCVs) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  className={`step-one-action snap-start shrink-0 w-[72vw] sm:w-auto group relative rounded-xl sm:rounded-2xl p-5 sm:p-6 min-h-[148px] overflow-hidden text-left flex flex-col items-center justify-center text-center ${(isCreatingBlank || isDuplicating || isLoadingCVs) ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                   <div className="relative flex flex-col items-center space-y-3 sm:space-y-4">
@@ -917,7 +918,7 @@ export default function Step1Parser({
                   whileHover={{ y: -5, scale: 1.01 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={handleStartWithJob}
-                  className="step-one-action step-one-action-primary group relative rounded-xl sm:rounded-2xl p-5 sm:p-6 min-h-[132px] sm:min-h-[148px] border border-dashed overflow-hidden text-left flex flex-col items-center justify-center text-center"
+                  className="step-one-action step-one-action-primary snap-start shrink-0 w-[72vw] sm:w-auto group relative rounded-xl sm:rounded-2xl p-5 sm:p-6 min-h-[148px] border border-dashed overflow-hidden text-left flex flex-col items-center justify-center text-center"
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-lime-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                   <div className="relative flex flex-col items-center space-y-3 sm:space-y-4">
@@ -938,7 +939,7 @@ export default function Step1Parser({
                   whileHover={{ y: -5, scale: 1.01 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => router.push('/editor?mode=create-cover-letter&step=4')}
-                  className="step-one-action group relative rounded-xl sm:rounded-2xl p-5 sm:p-6 min-h-[132px] sm:min-h-[148px] overflow-hidden text-left flex flex-col items-center justify-center text-center"
+                  className="step-one-action snap-start shrink-0 w-[72vw] sm:w-auto group relative rounded-xl sm:rounded-2xl p-5 sm:p-6 min-h-[148px] overflow-hidden text-left flex flex-col items-center justify-center text-center"
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-lime-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                   <div className="relative flex flex-col items-center space-y-3 sm:space-y-4">
@@ -959,7 +960,7 @@ export default function Step1Parser({
                   whileHover={{ y: -5, scale: 1.01 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => setParseMethod('upload')}
-                  className="step-one-action group relative rounded-xl sm:rounded-2xl p-5 sm:p-6 min-h-[132px] sm:min-h-[148px] overflow-hidden text-left flex flex-col items-center justify-center text-center"
+                  className="step-one-action snap-start shrink-0 w-[72vw] sm:w-auto group relative rounded-xl sm:rounded-2xl p-5 sm:p-6 min-h-[148px] overflow-hidden text-left flex flex-col items-center justify-center text-center"
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                   <div className="relative flex flex-col items-center space-y-3 sm:space-y-4">
@@ -1025,9 +1026,9 @@ export default function Step1Parser({
                           aria-label="Filter resumes"
                         >
                           <option value="all">Recent</option>
-                          <option value="master">Master</option>
-                          <option value="journey">Journey</option>
-                          <option value="standalone">Standalone</option>
+                          <option value="master">Primary</option>
+                          <option value="journey">Job Based</option>
+                          <option value="standalone">Custom</option>
                           <option value="archived">Archived</option>
                         </select>
                         <ChevronDown className="absolute right-3 w-3.5 h-3.5 text-[color:var(--text-secondary)] pointer-events-none" />
@@ -1063,7 +1064,7 @@ export default function Step1Parser({
                 </div>
 
               {isLoadingCVs ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
+                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5">
                   {[1, 2, 3, 4, 5].map(i => (
                     <div key={i} className="flex flex-col gap-2 sm:gap-3">
                       <div className="w-full aspect-[1/1.414] bg-gray-100 dark:bg-white/5 rounded-none animate-pulse border border-gray-200 dark:border-white/5" />
@@ -1074,7 +1075,7 @@ export default function Step1Parser({
                 </div>
               ) : activeTab === 'cvs' && (filteredCVs.length > 0 || draftCV) ? (
                 viewLayout === 'grid' ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5 px-1">
+                  <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5 px-1">
                   
                   {/* Render Draft CV if it exists */}
                   {draftCV && filterType === 'all' && (
@@ -1108,7 +1109,7 @@ export default function Step1Parser({
                       }}
                       className="group cursor-pointer flex flex-col justify-between hover:scale-[1.01] transition-all duration-300 relative overflow-visible"
                     >
-                      <div className="relative aspect-[1/1.414] w-full rounded-2xl overflow-hidden bg-orange-50 dark:bg-orange-950/20 border border-dashed border-orange-350 dark:border-orange-500/30 flex flex-col items-center justify-center shadow-md hover:shadow-xl transition-shadow duration-300">
+                      <div className="relative aspect-[1/1.414] w-full rounded-none overflow-hidden bg-orange-50 dark:bg-orange-950/20 border border-dashed border-orange-350 dark:border-orange-500/30 flex flex-col items-center justify-center shadow-md hover:shadow-xl transition-shadow duration-300">
                         <FileText className="w-8 h-8 sm:w-12 sm:h-12 text-orange-400/50 dark:text-orange-500/30 mb-2 sm:mb-4 animate-pulse" />
                         <span className="text-orange-600 dark:text-orange-400 font-bold text-xs sm:text-sm">Draft Resume</span>
                         
@@ -1166,16 +1167,16 @@ export default function Step1Parser({
                       onClick={() => handleEditExistingCV(cv)}
                       className="step-one-document-card group cursor-pointer hover:scale-[1.01] transition-all duration-300 relative overflow-hidden"
                     >
-                      <div className="step-one-document-preview relative aspect-[1/1.414] w-full rounded-xl overflow-hidden bg-white shadow-md hover:shadow-xl transition-shadow duration-300">
+                      <div className="step-one-document-preview relative aspect-[1/1.414] w-full rounded-none overflow-hidden bg-white shadow-md hover:shadow-xl transition-shadow duration-300">
                         <LazyThumbnail item={cv} />
                         
                         <div className="absolute top-2 sm:top-4 left-2 sm:left-4 z-30">
-                          <span className={`px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[7px] sm:text-[9px] font-black uppercase tracking-wider shadow-md ${
-                            cv.cvType === 'master' ? 'bg-[#0D2C54]/90 text-blue-200 border border-blue-500/20 shadow-blue-500/10' :
-                            cv.cvType === 'journey' ? 'bg-[#5C3A21]/90 text-amber-200 border border-amber-500/20 shadow-amber-500/10' :
-                            'bg-[#134074]/90 text-cyan-200 border border-cyan-500/20 shadow-cyan-500/10'
+                          <span className={`px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[6px] sm:text-[7px] font-black uppercase tracking-wider shadow-md ${
+                            cv.cvType === 'master' ? 'bg-[#0D2C54]/90 text-blue-200' :
+                            cv.cvType === 'journey' ? 'bg-[#5C3A21]/90 text-amber-200' :
+                            'bg-[#134074]/90 text-cyan-200'
                           }`}>
-                            {cv.cvType}
+                            {cv.cvType === 'master' ? 'Primary' : cv.cvType === 'journey' ? 'Job Based' : 'Custom'}
                           </span>
                         </div>
                         
@@ -1183,38 +1184,37 @@ export default function Step1Parser({
                           <div className="w-7 h-7 sm:w-9 sm:h-9 bg-black/60 backdrop-blur-md rounded-lg flex items-center justify-center shadow-lg hover:bg-lime-500 hover:text-black text-white transition-colors duration-200">
                             <Edit2 className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5" />
                           </div>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteCV(cv.id || cv._id || '', e);
-                            }}
-                            className="w-7 h-7 sm:w-9 sm:h-9 bg-black/60 backdrop-blur-md rounded-lg flex items-center justify-center shadow-lg hover:bg-red-500 text-red-400 hover:text-white transition-colors duration-200"
-                            title="Delete"
-                          >
-                            <Trash2 className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5" />
-                          </button>
+                          {cv.cvType !== 'master' && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteCV(cv.id || cv._id || '', e);
+                              }}
+                              className="w-7 h-7 sm:w-9 sm:h-9 bg-black/60 backdrop-blur-md rounded-lg flex items-center justify-center shadow-lg hover:bg-red-500 text-red-400 hover:text-white transition-colors duration-200"
+                              title="Delete"
+                            >
+                              <Trash2 className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5" />
+                            </button>
+                          )}
                         </div>
 
-                        <div className="step-one-thumbnail-overlay absolute inset-x-0 bottom-0 z-20 px-3 sm:px-4 pt-12 sm:pt-16 pb-3 sm:pb-4 text-white">
-                          <div className="flex items-start justify-between gap-2 mb-0.5">
-                            <h4 className="text-xs sm:text-sm font-bold text-white truncate tracking-tight flex-grow drop-shadow-sm" title={cv.title || 'Untitled Resume'}>
-                              {cv.title || 'Untitled Resume'}
-                            </h4>
-                            {/* ATS Score in layout */}
+                        <div className="step-one-thumbnail-overlay absolute inset-x-0 bottom-0 z-20 px-3 sm:px-4 pt-10 sm:pt-14 pb-3 sm:pb-3.5 text-white">
+                          {/* Title */}
+                          <h4 className="text-[11px] sm:text-xs font-semibold text-white truncate tracking-tight drop-shadow-sm leading-snug" title={cv.title || 'Untitled Resume'}>
+                            {cv.title || 'Untitled Resume'}
+                          </h4>
+                          {/* Inline meta row: time + ATS score */}
+                          <div className="flex items-center justify-between gap-2 mt-1">
+                            <p className="text-[9px] sm:text-[10px] text-white/60 font-medium flex items-center gap-1">
+                              <span className="w-1 h-1 bg-[#80FF00] rounded-full shadow-[0_0_6px_rgba(128,255,0,0.6)]" />
+                              {getRelativeTime(cv.updatedAt || cv.createdAt)}
+                            </p>
                             {(typeof cv.atsScore === 'number' || (cv as any).metadata?.atsScore !== undefined) && (
-                              <div className="flex flex-col items-end shrink-0 leading-none">
-                                <span className="text-xs font-black text-[#80FF00] flex items-center gap-0.5">
-                                  <span className="w-1 h-1 rounded-full bg-[#80FF00] animate-pulse" />
-                                  {cv.atsScore ?? (cv as any).metadata?.atsScore}%
-                                </span>
-                                <span className="text-[7px] text-white/60 font-bold uppercase tracking-widest mt-0.5">ATS</span>
-                              </div>
+                              <span className="text-[9px] sm:text-[10px] font-semibold text-[#80FF00] flex items-center gap-0.5 shrink-0">
+                                {cv.atsScore ?? (cv as any).metadata?.atsScore}% ATS
+                              </span>
                             )}
                           </div>
-                          <p className="text-[10px] sm:text-xs text-white/70 font-bold flex items-center gap-1.5 sm:gap-2 mt-0.5">
-                            <span className="w-1.5 h-1.5 bg-[#80FF00] rounded-full shadow-[0_0_8px_rgba(128,255,0,0.7)]" />
-                            Edited {getRelativeTime(cv.updatedAt || cv.createdAt)}
-                          </p>
                         </div>
                       </div>
                     </motion.div>
@@ -1254,7 +1254,7 @@ export default function Step1Parser({
                       >
                         <div className="flex items-center gap-4 flex-grow min-w-0">
                           {/* Mini Thumbnail */}
-                          <div className="w-10 h-14 bg-orange-55/40 dark:bg-orange-950/20 border border-dashed border-orange-300 dark:border-orange-500/30 rounded-lg flex items-center justify-center flex-shrink-0 relative overflow-hidden">
+                          <div className="w-10 h-14 bg-orange-55/40 dark:bg-orange-950/20 border border-dashed border-orange-350 dark:border-orange-500/30 rounded-none flex items-center justify-center flex-shrink-0 relative overflow-hidden">
                             <FileText className="w-5 h-5 text-orange-500" />
                           </div>
                           <div className="min-w-0">
@@ -1308,7 +1308,7 @@ export default function Step1Parser({
                       >
                         <div className="flex items-center gap-4 flex-grow min-w-0">
                           {/* Mini Thumbnail */}
-                          <div className="w-10 h-14 bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 rounded-lg overflow-hidden flex-shrink-0 relative">
+                          <div className="w-10 h-14 bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 rounded-none overflow-hidden flex-shrink-0 relative">
                             <LazyThumbnail item={cv} />
                           </div>
                           <div className="min-w-0">
@@ -1316,12 +1316,12 @@ export default function Step1Parser({
                               {cv.title || 'Untitled Resume'}
                             </h4>
                             <div className="flex flex-wrap items-center gap-2 mt-1">
-                              <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider ${
+                              <span className={`px-2 py-0.5 rounded-full text-[7px] font-black uppercase tracking-wider ${
                                 cv.cvType === 'master' ? 'bg-[#0D2C54] text-blue-200' :
                                 cv.cvType === 'journey' ? 'bg-[#5C3A21] text-amber-200' :
                                 'bg-[#134074] text-cyan-200'
                               }`}>
-                                {cv.cvType}
+                                {cv.cvType === 'master' ? 'Primary' : cv.cvType === 'journey' ? 'Job Based' : 'Custom'}
                               </span>
                               <span className="text-[10px] text-gray-500 dark:text-gray-400 font-bold">
                                 Edited {getRelativeTime(cv.updatedAt || cv.createdAt)}
@@ -1371,13 +1371,15 @@ export default function Step1Parser({
                             >
                               <Copy className="w-4 h-4" />
                             </button>
-                            <button
-                              onClick={(e) => handleDeleteCV(cv.id || cv._id || '', e)}
-                              className="p-2 bg-gray-100 hover:bg-red-500 hover:text-white dark:bg-[#1a230f]/60 dark:hover:bg-red-650 dark:hover:text-white text-red-500 dark:text-red-400 rounded-lg transition-all"
-                              title="Delete"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                            {cv.cvType !== 'master' && (
+                              <button
+                                onClick={(e) => handleDeleteCV(cv.id || cv._id || '', e)}
+                                className="p-2 bg-gray-100 hover:bg-red-500 hover:text-white dark:bg-[#1a230f]/60 dark:hover:bg-red-650 dark:hover:text-white text-red-500 dark:text-red-400 rounded-lg transition-all"
+                                title="Delete"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
                           </div>
                         </div>
                       </motion.div>
@@ -1397,7 +1399,7 @@ export default function Step1Parser({
               {/* Cover Letters Grid */}
               {activeTab === 'cover-letters' && (
                 isLoadingCoverLetters ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5 px-1">
+                  <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5 px-1">
                     {[1, 2, 3, 4, 5].map(i => (
                       <div key={i} className="flex flex-col gap-2 sm:gap-3">
                         <div className="w-full aspect-[1/1.414] bg-gray-100 dark:bg-white/5 rounded-none animate-pulse border border-gray-200 dark:border-white/5" />
@@ -1408,7 +1410,7 @@ export default function Step1Parser({
                   </div>
                 ) : existingCoverLetters && existingCoverLetters.length > 0 ? (
                   viewLayout === 'grid' ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5 px-1">
+                    <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5 px-1">
                       {existingCoverLetters.map((cl, index) => (
                         <motion.div
                           key={cl.id || cl._id}
@@ -1419,7 +1421,7 @@ export default function Step1Parser({
                           onClick={() => router.push(`/editor?mode=edit-cover-letter&coverLetterId=${cl.id || cl._id}`)}
                           className="step-one-document-card group cursor-pointer hover:scale-[1.01] transition-all duration-300 relative overflow-hidden"
                         >
-                          <div className="step-one-document-preview relative aspect-[1/1.414] w-full rounded-xl overflow-hidden bg-white shadow-md hover:shadow-xl transition-shadow duration-300">
+                          <div className="step-one-document-preview relative aspect-[1/1.414] w-full rounded-none overflow-hidden bg-white shadow-md hover:shadow-xl transition-shadow duration-300">
                             <LazyThumbnail item={cl} isCoverLetter={true} />
                             
                             <div className="absolute top-2 sm:top-4 left-2 sm:left-4 z-30">
@@ -1444,13 +1446,15 @@ export default function Step1Parser({
                               </button>
                             </div>
 
-                            <div className="step-one-thumbnail-overlay absolute inset-x-0 bottom-0 z-20 px-3 sm:px-4 pt-12 sm:pt-16 pb-3 sm:pb-4 text-white">
-                              <h4 className="text-xs sm:text-sm font-bold text-white truncate tracking-tight drop-shadow-sm" title={cl.title || 'Untitled Cover Letter'}>
+                            <div className="step-one-thumbnail-overlay absolute inset-x-0 bottom-0 z-20 px-3 sm:px-4 pt-10 sm:pt-14 pb-3 sm:pb-3.5 text-white">
+                              {/* Title */}
+                              <h4 className="text-[11px] sm:text-xs font-semibold text-white truncate tracking-tight drop-shadow-sm leading-snug" title={cl.title || 'Untitled Cover Letter'}>
                                 {cl.title || 'Untitled Cover Letter'}
                               </h4>
-                              <p className="text-[10px] sm:text-xs text-white/70 font-bold flex items-center gap-1.5 sm:gap-2 mt-1">
-                                <span className="w-1.5 h-1.5 bg-[#80FF00] rounded-full shadow-[0_0_8px_rgba(128,255,0,0.7)]" />
-                                Edited {getRelativeTime(cl.updatedAt || cl.createdAt)}
+                              {/* Inline time row */}
+                              <p className="text-[9px] sm:text-[10px] text-white/60 font-medium flex items-center gap-1 mt-1">
+                                <span className="w-1 h-1 bg-[#80FF00] rounded-full shadow-[0_0_6px_rgba(128,255,0,0.6)]" />
+                                {getRelativeTime(cl.updatedAt || cl.createdAt)}
                               </p>
                             </div>
                           </div>
@@ -1470,7 +1474,7 @@ export default function Step1Parser({
                         >
                           <div className="flex items-center gap-4 flex-grow min-w-0">
                             {/* Mini Thumbnail */}
-                            <div className="w-10 h-14 bg-gray-55 dark:bg-black/30 border border-gray-200 dark:border-white/10 rounded-lg overflow-hidden flex-shrink-0 relative">
+                            <div className="w-10 h-14 bg-gray-55 dark:bg-black/30 border border-gray-200 dark:border-white/10 rounded-none overflow-hidden flex-shrink-0 relative">
                               <LazyThumbnail item={cl} isCoverLetter={true} />
                             </div>
                             <div className="min-w-0">

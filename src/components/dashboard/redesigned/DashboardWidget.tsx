@@ -39,12 +39,12 @@ export default function DashboardWidget({
       {/* Header */}
       <div className="px-6 pt-6 pb-2 flex items-center justify-between">
         <div>
-          <h3 className="text-base font-black text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
+          <h3 className="dashboard-widget-title text-[13px] font-semibold text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
             {type === 'hero' && <Sparkles size={16} className="text-[#83d60d]" />}
             {title}
           </h3>
           {subtitle && (
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">
+            <p className="text-[10px] font-medium text-gray-400 uppercase tracking-widest mt-0.5">
               {subtitle}
             </p>
           )}
@@ -117,7 +117,7 @@ export default function DashboardWidget({
                 <button
                   onClick={emptyState.action.onClick}
                   className={cn(
-                    "px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all",
+                    "px-4 py-2 rounded-xl text-xs font-medium uppercase tracking-wide transition-all",
                     emptyState.action.primary 
                       ? "bg-[#83d60d] text-slate-900 shadow-lg shadow-[#83d60d]/20" 
                       : "bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300 hover:bg-gray-200"
@@ -154,7 +154,7 @@ export default function DashboardWidget({
                 key={i}
                 onClick={action.onClick}
                 className={cn(
-                  "px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all",
+                  "px-3 py-1.5 rounded-lg text-[9px] font-medium uppercase tracking-wide transition-all",
                   action.primary 
                     ? "bg-[#83d60d] text-slate-900" 
                     : "bg-white dark:bg-white/10 text-gray-500 border border-gray-200 dark:border-white/5 hover:bg-gray-100"

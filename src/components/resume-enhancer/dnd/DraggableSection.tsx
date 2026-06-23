@@ -130,7 +130,7 @@ export const DraggableSection: React.FC<DraggableSectionProps> = ({
                             {...listeners}
                             type="button"
                             title="Drag to reorder section"
-                            className="cv-drag-handle flex items-center gap-1 px-1.5 py-1 rounded-md bg-white/90 dark:bg-gray-800/90 border border-gray-200 dark:border-white/10 text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 hover:border-gray-400 dark:hover:border-white/30 shadow-sm cursor-grab active:cursor-grabbing touch-none select-none"
+                            className="cv-drag-handle flex items-center gap-1 px-1.5 py-1 rounded-md bg-transparent border border-transparent hover:border-gray-200 dark:hover:border-white/10 text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 shadow-sm cursor-grab active:cursor-grabbing touch-none select-none transition-all duration-250 hover:scale-110"
                             style={{ backdropFilter: 'blur(4px)' }}
                         >
                             <GripVertical size={13} />
@@ -146,7 +146,7 @@ export const DraggableSection: React.FC<DraggableSectionProps> = ({
                             type="button"
                             onClick={handleDelete}
                             title="Remove section"
-                            className="flex items-center justify-center w-6 h-6 rounded-md bg-white/90 dark:bg-gray-800/90 border border-gray-200 dark:border-white/10 text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 hover:border-red-300 dark:hover:border-red-500/40 shadow-sm"
+                            className="flex items-center justify-center w-6 h-6 rounded-md bg-transparent border border-transparent text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 hover:border-red-300 dark:hover:border-red-500/40 shadow-sm transition-all duration-250 hover:scale-110"
                             style={{ backdropFilter: 'blur(4px)' }}
                         >
                             <Trash2 size={11} />

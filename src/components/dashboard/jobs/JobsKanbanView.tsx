@@ -394,7 +394,7 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
                     }}
                   >
                     <div className="flex items-center justify-between w-full">
-                      <h3 className="text-base font-bold text-black dark:text-white">
+                      <h3 className="text-xs font-medium text-black dark:text-white tracking-tight">
                         {stage.title}
                       </h3>
                       <span className="text-sm">{stageJobs.length}</span>
@@ -490,7 +490,7 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
                   }}
                 >
                   <div className="flex items-center justify-between w-full">
-                    <h3 className="text-base font-bold text-black dark:text-white">
+                    <h3 className="text-xs font-medium text-black dark:text-white tracking-tight">
                       {stage.title}
                     </h3>
                     <span className="text-sm">{stageJobs.length}</span>

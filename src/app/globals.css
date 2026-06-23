@@ -5,6 +5,200 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ==========================================================================
+   GEIST TYPOGRAPHY SYSTEM
+   Scoped to .geist-ui — applied only on dashboard, editor & auth pages.
+   Public/marketing pages keep Cabinet Grotesk.
+   ========================================================================== */
+
+.geist-ui {
+  /* Font stack — Geist variable loaded via next/font, falls back gracefully */
+  --font-sans: var(--font-geist, 'Geist', 'Inter', system-ui, -apple-system, sans-serif);
+
+  /* Modern type scale (px values match the spec) */
+  --text-xs:   0.75rem;   /* 12px */
+  --text-sm:   0.875rem;  /* 14px */
+  --text-md:   1rem;      /* 16px */
+  --text-lg:   1.125rem;  /* 18px */
+  --text-xl:   1.25rem;   /* 20px */
+  --text-2xl:  1.5rem;    /* 24px */
+  --text-3xl:  2rem;      /* 32px */
+  --text-4xl:  2.5rem;    /* 40px */
+  --text-5xl:  3.5rem;    /* 56px */
+
+  /* Weights: 400 / 500 / 600 only */
+  --weight-regular:   400;
+  --weight-medium:    500;
+  --weight-semibold:  600;
+
+  /* Apply font globally within this scope */
+  font-family: var(--font-sans);
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11'; /* Geist stylistic sets */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* -- Headings & Page Titles ------------------------------------------------ */
+.geist-ui h1:not([class*="cv-document"] *, [class*="cv-page"] *, [class*="builder-preview"] *, [class*="cv-container"] *, [class*="live-preview-container"] *, [class*="cover-letter-document"] *, [data-cv-canvas] *, [class*="cv-preview"] *, [class*="cv-thumbnail"] *, [class*="aspect-\[1\/1\.414\]"] *, [class*="step-one-document-preview"] *) {
+  font-size: var(--text-5xl);
+  font-weight: var(--weight-semibold);
+  letter-spacing: -0.05em;
+  line-height: 1.05;
+}
+
+.geist-ui h2:not([class*="cv-document"] *, [class*="cv-page"] *, [class*="builder-preview"] *, [class*="cv-container"] *, [class*="live-preview-container"] *, [class*="cover-letter-document"] *, [data-cv-canvas] *, [class*="cv-preview"] *, [class*="cv-thumbnail"] *, [class*="aspect-\[1\/1\.414\]"] *, [class*="step-one-document-preview"] *) {
+  font-size: var(--text-4xl);
+  font-weight: var(--weight-semibold);
+  letter-spacing: -0.04em;
+  line-height: 1.1;
+}
+
+.geist-ui h3:not([class*="cv-document"] *, [class*="cv-page"] *, [class*="builder-preview"] *, [class*="cv-container"] *, [class*="live-preview-container"] *, [class*="cover-letter-document"] *, [data-cv-canvas] *, [class*="cv-preview"] *, [class*="cv-thumbnail"] *, [class*="aspect-\[1\/1\.414\]"] *, [class*="step-one-document-preview"] *) {
+  font-size: var(--text-3xl);
+  font-weight: var(--weight-semibold);
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+
+/* Card / section headings */
+.geist-ui h4:not([class*="cv-document"] *, [class*="cv-page"] *, [class*="builder-preview"] *, [class*="cv-container"] *, [class*="live-preview-container"] *, [class*="cover-letter-document"] *, [data-cv-canvas] *, [class*="cv-preview"] *, [class*="cv-thumbnail"] *, [class*="aspect-\[1\/1\.414\]"] *, [class*="step-one-document-preview"] *),
+.geist-ui h5:not([class*="cv-document"] *, [class*="cv-page"] *, [class*="builder-preview"] *, [class*="cv-container"] *, [class*="live-preview-container"] *, [class*="cover-letter-document"] *, [data-cv-canvas] *, [class*="cv-preview"] *, [class*="cv-thumbnail"] *, [class*="aspect-\[1\/1\.414\]"] *, [class*="step-one-document-preview"] *),
+.geist-ui h6:not([class*="cv-document"] *, [class*="cv-page"] *, [class*="builder-preview"] *, [class*="cv-container"] *, [class*="live-preview-container"] *, [class*="cover-letter-document"] *, [data-cv-canvas] *, [class*="cv-preview"] *, [class*="cv-thumbnail"] *, [class*="aspect-\[1\/1\.414\]"] *, [class*="step-one-document-preview"] *) {
+  font-weight: var(--weight-medium);
+  letter-spacing: -0.02em;
+}
+
+/* -- Body text ------------------------------------------------------------- */
+.geist-ui p:not([class*="cv-document"] *, [class*="cv-page"] *, [class*="builder-preview"] *, [class*="cv-container"] *, [class*="live-preview-container"] *, [class*="cover-letter-document"] *, [data-cv-canvas] *, [class*="cv-preview"] *, [class*="cv-thumbnail"] *, [class*="aspect-\[1\/1\.414\]"] *, [class*="step-one-document-preview"] *),
+.geist-ui li:not([class*="cv-document"] *, [class*="cv-page"] *, [class*="builder-preview"] *, [class*="cv-container"] *, [class*="live-preview-container"] *, [class*="cover-letter-document"] *, [data-cv-canvas] *, [class*="cv-preview"] *, [class*="cv-thumbnail"] *, [class*="aspect-\[1\/1\.414\]"] *, [class*="step-one-document-preview"] *),
+.geist-ui label:not([class*="cv-document"] *, [class*="cv-page"] *, [class*="builder-preview"] *, [class*="cv-container"] *, [class*="live-preview-container"] *, [class*="cover-letter-document"] *, [data-cv-canvas] *, [class*="cv-preview"] *, [class*="cv-thumbnail"] *, [class*="aspect-\[1\/1\.414\]"] *, [class*="step-one-document-preview"] *) {
+  font-size: var(--text-md);
+  font-weight: var(--weight-regular);
+  line-height: 1.6;
+  letter-spacing: -0.01em;
+}
+
+/* -- Sidebar navigation ---------------------------------------------------- */
+.geist-ui .sidebar-nav-item,
+.geist-ui [class*="nav-item"],
+.geist-ui [class*="sidebar"] a,
+.geist-ui [class*="OptimizedNavigation"] a {
+  font-size: 0.9375rem; /* 15px */
+  font-weight: var(--weight-medium);
+  letter-spacing: -0.02em;
+  line-height: 1.4;
+}
+
+/* -- Breadcrumbs ----------------------------------------------------------- */
+.geist-ui [class*="breadcrumb"] {
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
+  letter-spacing: -0.01em;
+}
+
+/* -- Section tab labels ----------------------------------------------------- */
+.geist-ui [role="tab"]:not([class*="cv-document"] *, [class*="cv-page"] *, [class*="builder-preview"] *, [class*="cv-container"] *, [class*="live-preview-container"] *, [class*="cover-letter-document"] *, [data-cv-canvas] *, [class*="cv-preview"] *, [class*="cv-thumbnail"] *, [class*="aspect-\[1\/1\.414\]"] *, [class*="step-one-document-preview"] *),
+.geist-ui [class*="tab"]:not([class*="cv-document"] *, [class*="cv-page"] *, [class*="builder-preview"] *, [class*="cv-container"] *, [class*="live-preview-container"] *, [class*="cover-letter-document"] *, [data-cv-canvas] *, [class*="cv-preview"] *, [class*="cv-thumbnail"] *, [class*="aspect-\[1\/1\.414\]"] *, [class*="step-one-document-preview"] *) {
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
+  letter-spacing: -0.02em;
+}
+.geist-ui [aria-selected="true"]:not([class*="cv-document"] *, [class*="cv-page"] *, [class*="builder-preview"] *, [class*="cv-container"] *, [class*="live-preview-container"] *, [class*="cover-letter-document"] *, [data-cv-canvas] *, [class*="cv-preview"] *, [class*="cv-thumbnail"] *, [class*="aspect-\[1\/1\.414\]"] *, [class*="step-one-document-preview"] *),
+.geist-ui [data-state="active"]:not([class*="cv-document"] *, [class*="cv-page"] *, [class*="builder-preview"] *, [class*="cv-container"] *, [class*="live-preview-container"] *, [class*="cover-letter-document"] *, [data-cv-canvas] *, [class*="cv-preview"] *, [class*="cv-thumbnail"] *, [class*="aspect-\[1\/1\.414\]"] *, [class*="step-one-document-preview"] *) {
+  font-weight: var(--weight-semibold);
+}
+
+/* -- Inputs / Search ------------------------------------------------------- */
+.geist-ui input:not([class*="cv-document"] *, [class*="cv-page"] *, [class*="builder-preview"] *, [class*="cv-container"] *, [class*="live-preview-container"] *, [class*="cover-letter-document"] *, [data-cv-canvas] *, [class*="cv-preview"] *, [class*="cv-thumbnail"] *, [class*="aspect-\[1\/1\.414\]"] *, [class*="step-one-document-preview"] *),
+.geist-ui textarea:not([class*="cv-document"] *, [class*="cv-page"] *, [class*="builder-preview"] *, [class*="cv-container"] *, [class*="live-preview-container"] *, [class*="cover-letter-document"] *, [data-cv-canvas] *, [class*="cv-preview"] *, [class*="cv-thumbnail"] *, [class*="aspect-\[1\/1\.414\]"] *, [class*="step-one-document-preview"] *),
+.geist-ui select:not([class*="cv-document"] *, [class*="cv-page"] *, [class*="builder-preview"] *, [class*="cv-container"] *, [class*="live-preview-container"] *, [class*="cover-letter-document"] *, [data-cv-canvas] *, [class*="cv-preview"] *, [class*="cv-thumbnail"] *, [class*="aspect-\[1\/1\.414\]"] *, [class*="step-one-document-preview"] *) {
+  font-family: var(--font-sans);
+  font-size: var(--text-md);
+  font-weight: var(--weight-regular);
+  letter-spacing: -0.01em;
+}
+
+/* -- Buttons --------------------------------------------------------------- */
+.geist-ui button:not([class*="cv-document"] *, [class*="cv-page"] *, [class*="builder-preview"] *, [class*="cv-container"] *, [class*="live-preview-container"] *, [class*="cover-letter-document"] *, [data-cv-canvas] *, [class*="cv-preview"] *, [class*="cv-thumbnail"] *, [class*="aspect-\[1\/1\.414\]"] *, [class*="step-one-document-preview"] *) {
+  font-family: var(--font-sans);
+  letter-spacing: -0.01em;
+}
+
+/* -- Stat numbers in hero (stay bold for impact but use semibold) ---------- */
+.geist-ui .step-one-stat .text-xl {
+  font-weight: var(--weight-semibold);
+  letter-spacing: -0.03em;
+}
+
+/* -- Card titles in action cards ------------------------------------------ */
+.geist-ui .step-one-action h3 {
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+}
+
+/* -- "Your Documents" panel heading --------------------------------------- */
+.geist-ui .step-one-documents h3 {
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-semibold);
+  letter-spacing: -0.03em;
+}
+
+/* -- Editor header CV title ----------------------------------------------- */
+.geist-ui .editor-header [class*="font-black"] {
+  font-weight: var(--weight-semibold) !important;
+  letter-spacing: -0.03em;
+}
+
+/* ==========================================================================
+   GLOBAL TYPOGRAPHY OVERRIDES — dashboard & editor scope
+   ========================================================================== */
+
+/* -- Widget / Section titles (e.g. "CV Strength Radar", card headers) ------- */
+/* text-base font-black → text-sm (13px) font-semibold                        */
+.geist-ui .dashboard-widget-title,
+.geist-ui [class*="DashboardWidget"] h3,
+.geist-ui [class*="rounded-\[32px\]"] > div > div > h3,
+.geist-ui h3.font-black:not([class*="cv-document"] *, [class*="cv-page"] *, [class*="builder-preview"] *, [class*="cv-container"] *, [class*="live-preview-container"] *, [class*="cover-letter-document"] *, [data-cv-canvas] *, [class*="cv-preview"] *, [class*="cv-thumbnail"] *, [class*="aspect-\[1\/1\.414\]"] *, [class*="step-one-document-preview"] *) {
+  font-size: 0.8125rem !important; /* 13px */
+  font-weight: var(--weight-semibold) !important;
+  letter-spacing: -0.02em;
+}
+
+/* Catch all font-black headings in dashboard scope and tone them down        */
+.geist-ui h3[class*="font-black"]:not([class*="cv-document"] *, [class*="cv-page"] *, [class*="builder-preview"] *, [class*="cv-container"] *, [class*="live-preview-container"] *, [class*="cover-letter-document"] *, [data-cv-canvas] *, [class*="cv-preview"] *, [class*="cv-thumbnail"] *, [class*="aspect-\[1\/1\.414\]"] *, [class*="step-one-document-preview"] *),
+.geist-ui h4[class*="font-black"]:not([class*="cv-document"] *, [class*="cv-page"] *, [class*="builder-preview"] *, [class*="cv-container"] *, [class*="live-preview-container"] *, [class*="cover-letter-document"] *, [data-cv-canvas] *, [class*="cv-preview"] *, [class*="cv-thumbnail"] *, [class*="aspect-\[1\/1\.414\]"] *, [class*="step-one-document-preview"] *) {
+  font-weight: var(--weight-semibold) !important;
+  font-size: 0.8125rem !important;
+}
+
+/* Small uppercase labels (text-[10px] font-black uppercase) → font-medium   */
+.geist-ui [class*="uppercase"][class*="font-black"]:not([class*="cv-document"] *, [class*="cv-page"] *, [class*="builder-preview"] *, [class*="cv-container"] *, [class*="live-preview-container"] *, [class*="cover-letter-document"] *, [data-cv-canvas] *, [class*="cv-preview"] *, [class*="cv-thumbnail"] *, [class*="aspect-\[1\/1\.414\]"] *, [class*="step-one-document-preview"] *),
+.geist-ui [class*="tracking-widest"][class*="font-black"]:not([class*="cv-document"] *, [class*="cv-page"] *, [class*="builder-preview"] *, [class*="cv-container"] *, [class*="live-preview-container"] *, [class*="cover-letter-document"] *, [data-cv-canvas] *, [class*="cv-preview"] *, [class*="cv-thumbnail"] *, [class*="aspect-\[1\/1\.414\]"] *, [class*="step-one-document-preview"] *) {
+  font-weight: var(--weight-medium) !important;
+}
+
+/* -- CTA Buttons — remove all bold/black anywhere in dashboard & editor --   */
+/* Matches primary and secondary action buttons                                */
+.geist-ui button[class*="font-black"]:not([class*="cv-document"] *, [class*="cv-page"] *, [class*="builder-preview"] *, [class*="cv-container"] *, [class*="live-preview-container"] *, [class*="cover-letter-document"] *, [data-cv-canvas] *, [class*="cv-preview"] *, [class*="cv-thumbnail"] *, [class*="aspect-\[1\/1\.414\]"] *, [class*="step-one-document-preview"] *),
+.geist-ui button[class*="font-bold"]:not([class*="cv-document"] *, [class*="cv-page"] *, [class*="builder-preview"] *, [class*="cv-container"] *, [class*="live-preview-container"] *, [class*="cover-letter-document"] *, [data-cv-canvas] *, [class*="cv-preview"] *, [class*="cv-thumbnail"] *, [class*="aspect-\[1\/1\.414\]"] *, [class*="step-one-document-preview"] *),
+.geist-ui button[class*="font-extrabold"]:not([class*="cv-document"] *, [class*="cv-page"] *, [class*="builder-preview"] *, [class*="cv-container"] *, [class*="live-preview-container"] *, [class*="cover-letter-document"] *, [data-cv-canvas] *, [class*="cv-preview"] *, [class*="cv-thumbnail"] *, [class*="aspect-\[1\/1\.414\]"] *, [class*="step-one-document-preview"] *),
+.geist-ui a[class*="font-black"]:not([class*="cv-document"] *, [class*="cv-page"] *, [class*="builder-preview"] *, [class*="cv-container"] *, [class*="live-preview-container"] *, [class*="cover-letter-document"] *, [data-cv-canvas] *, [class*="cv-preview"] *, [class*="cv-thumbnail"] *, [class*="aspect-\[1\/1\.414\]"] *, [class*="step-one-document-preview"] *),
+.geist-ui a[class*="font-bold"]:not([class*="cv-document"] *, [class*="cv-page"] *, [class*="builder-preview"] *, [class*="cv-container"] *, [class*="live-preview-container"] *, [class*="cover-letter-document"] *, [data-cv-canvas] *, [class*="cv-preview"] *, [class*="cv-thumbnail"] *, [class*="aspect-\[1\/1\.414\]"] *, [class*="step-one-document-preview"] *) {
+  font-weight: var(--weight-medium) !important;
+  letter-spacing: -0.01em;
+}
+
+/* ==========================================================================
+   CV CANVAS / THUMBNAIL / PREVIEW — PRESERVATION
+   Explicitly restore font family and prevent overrides from leaking
+   ========================================================================== */
+.geist-ui [class*="cv-document"],
+.geist-ui [class*="cv-document"] * {
+  font-family: var(--cv-font, inherit);
+}
+
 
 
 
@@ -209,11 +403,18 @@
   position: absolute;
   inset: 0;
   z-index: -1;
-  background: linear-gradient(to top, rgba(5, 8, 3, 0.94) 0%, rgba(5, 8, 3, 0.72) 46%, transparent 100%);
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
-  -webkit-mask-image: linear-gradient(to top, #000 0%, #000 58%, transparent 100%);
-  mask-image: linear-gradient(to top, #000 0%, #000 58%, transparent 100%);
+  /* Frosted glass: dark-green tinted, very translucent at top, solid-ish at base */
+  background: linear-gradient(
+    to top,
+    rgba(10, 18, 6, 0.88) 0%,
+    rgba(12, 20, 8, 0.55) 40%,
+    rgba(15, 24, 10, 0.18) 72%,
+    transparent 100%
+  );
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  backdrop-filter: blur(14px) saturate(1.4);
+  -webkit-mask-image: linear-gradient(to top, #000 0%, #000 45%, transparent 100%);
+  mask-image: linear-gradient(to top, #000 0%, #000 45%, transparent 100%);
 }
 
 .step-one-documents {

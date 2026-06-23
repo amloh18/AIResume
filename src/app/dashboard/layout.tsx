@@ -5,6 +5,7 @@ import authConfig from '@/lib/auth-config';
 import { getConnection } from '@/lib/database/connection-manager';
 import { userRepository } from '@/lib/repositories/user-repository';
 import ClientLayout from './ClientLayout';
+import { geistFont } from '@/lib/fonts';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -31,5 +32,9 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
     }
   }
 
-  return <ClientLayout>{children}</ClientLayout>;
+  return (
+    <div className={`${geistFont.variable} geist-ui`}>
+      <ClientLayout>{children}</ClientLayout>
+    </div>
+  );
 }
