@@ -179,11 +179,7 @@ coverLetterSchema.pre('save', function (next) {
   // Update lastModified
   this.metadata.lastModified = new Date();
 
-  // DO NOT merge header+body+footer into content here
-  // Content will be generated on-the-fly in preview only
-  // Store header, body, and footer separately in database
-
-  // Calculate word and character count from merged content for metadata purposes only
+  // Merge header + body + footer into content so search/previews are always in sync
   if (this.header || this.body || this.footer) {
     const { mergeCoverLetterContent } = require('@/lib/utils/coverLetterUtils');
     const mergedContent = mergeCoverLetterContent(
@@ -193,6 +189,7 @@ coverLetterSchema.pre('save', function (next) {
     );
 
     if (mergedContent) {
+      this.content = mergedContent;
       this.metadata.characterCount = mergedContent.length;
       this.metadata.wordCount = mergedContent.trim().split(/\s+/).filter((word: string) => word.length > 0).length;
       this.metadata.estimatedReadingTime = Math.ceil(this.metadata.wordCount / 200);

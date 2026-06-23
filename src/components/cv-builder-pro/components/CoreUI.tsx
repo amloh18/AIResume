@@ -46,26 +46,36 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
       }
 
       const relevantIssues = aiIssues.filter((i: any) => i.path === path);
-      if (isEditing && relevantIssues.length === 0) return;
+      if (isEditing) return; // Prevent cursor jumping/caret reset while actively editing
       if (relevantIssues.length > 0) {
         relevantIssues.forEach((issue: any) => {
-          if (issue.targetText) {
-            const regex = new RegExp(`(${escapeRegExp(issue.targetText)})`, 'g');
-            const typeColors: Record<string, string> = {
-              complex_word: 'rgba(168, 85, 247, 0.4)',
-              weakening: 'rgba(59, 130, 246, 0.4)',
-              passive_voice: 'rgba(34, 197, 94, 0.4)',
-              lengthy_sentence: 'rgba(234, 179, 8, 0.4)',
-              complex_sentence: 'rgba(239, 68, 68, 0.4)',
-              spelling_variant: 'rgba(239, 68, 68, 0.4)'
-            };
-            const bg = typeColors[issue.type] || 'rgba(234, 179, 8, 0.35)';
-            const highlightClass = issue.id === activeIssueId ? 'text-black shadow-sm' : 'border-b-2 border-white/30 cursor-pointer text-gray-900';
-            const title = issue.suggestion ? `${issue.message || ''} Fix: ${issue.suggestion}` : (issue.message || 'Suggestion');
-            displayValue = displayValue.replace(
-              regex,
-              `<mark class="${highlightClass} rounded-sm px-0.5 transition-all" style="background-color:${bg}" data-issue="${issue.id}" data-suggestion="${(issue.suggestion || '').replace(/"/g, '&quot;')}" title="${title.replace(/"/g, '&quot;')}">$1</mark>`
-            );
+          if (issue.targetText && typeof issue.targetText === 'string' && issue.targetText.trim() !== '') {
+            const escaped = escapeRegExp(issue.targetText);
+            if (escaped) {
+              // Tag-safe replacement: match any HTML tag OR the word. If we match a tag, return it unchanged.
+              const regex = new RegExp(`(<[^>]+>)|(${escaped})`, 'g');
+              if (regex.test('')) return;
+
+              const typeColors: Record<string, string> = {
+                complex_word: 'rgba(168, 85, 247, 0.4)',
+                weakening: 'rgba(59, 130, 246, 0.4)',
+                passive_voice: 'rgba(34, 197, 94, 0.4)',
+                lengthy_sentence: 'rgba(234, 179, 8, 0.4)',
+                complex_sentence: 'rgba(239, 68, 68, 0.4)',
+                spelling_variant: 'rgba(239, 68, 68, 0.4)'
+              };
+              const bg = typeColors[issue.type] || 'rgba(234, 179, 8, 0.35)';
+              const highlightClass = issue.id === activeIssueId ? 'text-black shadow-sm' : 'border-b-2 border-white/30 cursor-pointer text-gray-900';
+              const title = issue.suggestion ? `${issue.message || ''} Fix: ${issue.suggestion}` : (issue.message || 'Suggestion');
+              
+              const safeSuggestion = (issue.suggestion || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+              const safeTitle = title.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+              
+              displayValue = displayValue.replace(regex, (match, tag, word) => {
+                if (tag) return tag; // Return HTML tag unchanged
+                return `<mark class="${highlightClass} rounded-sm px-0.5 transition-all" style="background-color:${bg}" data-issue="${issue.id}" data-suggestion="${safeSuggestion}" title="${safeTitle}">${word}</mark>`;
+              });
+            }
           }
         });
       }
@@ -73,7 +83,32 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
     }
   }, [value, isEditing, aiIssues, activeIssueId, path]);
 
-  const handleInput = () => isEditable && contentRef.current && onChange(path, contentRef.current.innerHTML);
+  const handleInput = () => {
+    if (!isEditable || !contentRef.current) return;
+    
+    // Use the DOM parser to robustly remove mark tags and avoid string parsing errors
+    const temp = document.createElement('div');
+    temp.innerHTML = contentRef.current.innerHTML;
+    
+    const marks = Array.from(temp.getElementsByTagName('mark'));
+    for (const mark of marks) {
+      const parent = mark.parentNode;
+      if (parent) {
+        while (mark.firstChild) {
+          parent.insertBefore(mark.firstChild, mark);
+        }
+        parent.removeChild(mark);
+      }
+    }
+    
+    let cleanHtml = temp.innerHTML;
+    // Fallback regex cleanup to ensure absolute safety
+    cleanHtml = cleanHtml
+      .replace(/<mark[^>]*>/gi, '')
+      .replace(/<\/mark>/gi, '');
+      
+    onChange(path, cleanHtml);
+  };
   const handleKeyDown = (e: React.KeyboardEvent) => { if (!multiline && e.key === 'Enter') e.preventDefault(); };
   const handleFocus = () => { if (!isEditable) return; setIsEditing(true); if (setFocusedRef) setFocusedRef(contentRef.current); };
   const handleBlur = () => { if (!isEditable) return; setIsEditing(false); if (setFocusedRef) setTimeout(() => setFocusedRef(null), 200); };
