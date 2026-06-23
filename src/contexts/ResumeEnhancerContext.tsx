@@ -202,6 +202,69 @@ type ResumeEnhancerAction =
   | { type: 'SET_TEMPLATE_OVERLAY_OPEN'; payload: boolean }
   | { type: 'SET_MORI_CHAT_MODE'; payload: boolean };
 
+function cleanCorruptText(text: any): any {
+  if (typeof text !== 'string') return text;
+  
+  let cleaned = text;
+
+  // 1. Clean up potential recursive corruption patterns like:
+  // Seeking to leverage" with "use" for clarity. Fix: use">leverage" with "use" for clarity. Fix: use">leverage...
+  let prevCleaned = '';
+  // Limit iterations to prevent any infinite loops
+  let iterations = 0;
+  while (cleaned !== prevCleaned && iterations < 15) {
+    prevCleaned = cleaned;
+    // Match the corrupt pattern where the closing HTML residue remains after partial mark-tag removal:
+    // original_word" with "suggestion" for clarity. Fix: suggestion">original_word
+    cleaned = cleaned.replace(/([^">]+)"\s*with\s*["']([^"']+)["']\s*for\s*clarity\.\s*Fix:\s*([^">]+)">\1/gi, '$1');
+  }
+
+  // 2. Clean up standard patterns like: "WORD" with "SUGGESTION" for clarity. Fix: SUGGESTION
+  cleaned = cleaned.replace(/"([^"]+)"\s*with\s*["']([^"']+)["']\s*for\s*clarity\.\s*Fix:\s*\S+/gi, '$1');
+  
+  // 3. Strip injected mark tags
+  cleaned = cleaned.replace(/<mark[^>]*>/gi, '').replace(/<\/mark>/gi, '');
+  return cleaned;
+}
+
+export function cleanAllCvData(cvData: any): any {
+  if (!cvData) return cvData;
+  const copy = JSON.parse(JSON.stringify(cvData));
+  
+  if (copy.basics) {
+    if (copy.basics.summary) copy.basics.summary = cleanCorruptText(copy.basics.summary);
+  }
+  
+  if (Array.isArray(copy.work)) {
+    copy.work.forEach((w: any) => {
+      if (w.summary) w.summary = cleanCorruptText(w.summary);
+      if (Array.isArray(w.highlights)) {
+        w.highlights = w.highlights.map(cleanCorruptText);
+      }
+    });
+  }
+  
+  if (Array.isArray(copy.volunteer)) {
+    copy.volunteer.forEach((v: any) => {
+      if (v.summary) v.summary = cleanCorruptText(v.summary);
+      if (Array.isArray(v.highlights)) {
+        v.highlights = v.highlights.map(cleanCorruptText);
+      }
+    });
+  }
+  
+  if (Array.isArray(copy.projects)) {
+    copy.projects.forEach((p: any) => {
+      if (p.description) p.description = cleanCorruptText(p.description);
+      if (Array.isArray(p.highlights)) {
+        p.highlights = p.highlights.map(cleanCorruptText);
+      }
+    });
+  }
+  
+  return copy;
+}
+
 // Initial State
 const initialState: ResumeEnhancerState = {
   mode: 'create',
@@ -319,14 +382,14 @@ function resumeEnhancerReducer(
     case 'UPDATE_CV_DATA':
       return {
         ...state,
-        cvData: {
+        cvData: cleanAllCvData({
           ...state.cvData,
           ...action.payload
-        }
+        })
       };
 
     case 'SET_CV_DATA':
-      return { ...state, cvData: action.payload };
+      return { ...state, cvData: cleanAllCvData(action.payload) };
 
     case 'SET_TEMPLATE':
       return { ...state, selectedTemplate: action.payload };
@@ -484,9 +547,10 @@ function resumeEnhancerReducer(
       return { ...state, saveError: action.payload };
 
     case 'LOAD_CV':
-      const hasWorkExperience = action.payload.cvData?.work && 
-        Array.isArray(action.payload.cvData.work) && 
-        action.payload.cvData.work.some((w: any) => w && (w.name || w.company || w.position));
+      const cleanedData = cleanAllCvData(action.payload.cvData);
+      const hasWorkExperience = cleanedData?.work && 
+        Array.isArray(cleanedData.work) && 
+        cleanedData.work.some((w: any) => w && (w.name || w.company || w.position));
       return {
         ...state,
         mode: 'edit',
@@ -494,7 +558,7 @@ function resumeEnhancerReducer(
         cvId: action.payload.cvId,
         cvType: action.payload.cvType,
         cvTitle: action.payload.cvTitle,
-        cvData: action.payload.cvData,
+        cvData: cleanedData,
         fresherMode: !hasWorkExperience,
         selectedTemplate: action.payload.template || state.selectedTemplate,
         journeyId: action.payload.journeyId,

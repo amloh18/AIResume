@@ -74,43 +74,44 @@ export async function PUT(
     const body = await request.json();
     const { jobId, userId, title, content, header, body: bodyContent, footer, status, metadata, targetCompany, targetPosition, keywords, cvId } = body;
 
-    // Build update object dynamically based on provided fields
-    const updateData: any = {
-      'metadata.lastModified': new Date()
-    };
+    // Fetch the cover letter document
+    const coverLetter = await CoverLetter.findById(id);
+
+    if (!coverLetter) {
+      return NextResponse.json(
+        { success: false, error: 'Cover letter not found' },
+        { status: 404 }
+      );
+    }
 
     // Update core fields if provided
-    if (title !== undefined) updateData.title = title;
-    if (header !== undefined) updateData.header = header;
-    if (bodyContent !== undefined) updateData.body = bodyContent;
-    if (footer !== undefined) updateData.footer = footer;
-    if (status !== undefined) updateData.status = status;
-    if (jobId !== undefined) updateData.jobId = jobId;
-    if (cvId !== undefined) updateData.cvId = cvId;
-    
-    // DO NOT merge into content - leave content empty or undefined
-    // Content will be generated on-the-fly in preview only
+    if (title !== undefined) coverLetter.title = title;
+    if (header !== undefined) coverLetter.header = header;
+    if (bodyContent !== undefined) coverLetter.body = bodyContent;
+    if (footer !== undefined) coverLetter.footer = footer;
+    if (status !== undefined) coverLetter.status = status;
+    if (jobId !== undefined) coverLetter.jobId = jobId;
+    if (cvId !== undefined) coverLetter.cvId = cvId;
     
     // Update metadata fields if provided
-    if (targetCompany !== undefined) updateData['metadata.targetCompany'] = targetCompany;
-    if (targetPosition !== undefined) updateData['metadata.targetPosition'] = targetPosition;
-    if (keywords !== undefined) updateData['metadata.keywords'] = keywords;
+    if (!coverLetter.metadata) {
+      coverLetter.metadata = { lastModified: new Date(), wordCount: 0, characterCount: 0, estimatedReadingTime: 0, tags: [], isPublic: false, viewCount: 0, downloadCount: 0 };
+    }
+    if (targetCompany !== undefined) coverLetter.metadata.targetCompany = targetCompany;
+    if (targetPosition !== undefined) coverLetter.metadata.targetPosition = targetPosition;
+    if (keywords !== undefined) coverLetter.metadata.keywords = keywords;
     
     // If metadata object is provided, merge it
     if (metadata) {
       Object.keys(metadata).forEach(key => {
         if (key !== 'lastModified') { // Don't override lastModified
-          updateData[`metadata.${key}`] = metadata[key];
+          coverLetter.set(`metadata.${key}`, metadata[key]);
         }
       });
     }
 
-    // Update the cover letter
-    const updatedCoverLetter = await CoverLetter.findByIdAndUpdate(
-      id,
-      updateData,
-      { new: true, runValidators: true }
-    );
+    // Save the cover letter document (runs pre-save hook to merge content)
+    const updatedCoverLetter = await coverLetter.save();
 
     if (!updatedCoverLetter) {
       return NextResponse.json(

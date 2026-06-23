@@ -21,6 +21,8 @@ interface WYSIWYGEditorProps {
   hasAnnotation?: boolean;
   reviewMode?: boolean;
   grammarLocale?: 'us' | 'uk';
+  textColor?: string;
+  autoExpand?: boolean;
 }
 
 // Hook to get toolbar props for external rendering
@@ -130,7 +132,9 @@ const WYSIWYGEditor: React.FC<WYSIWYGEditorProps> = ({
   showToolbar = false,
   hasAnnotation = false,
   reviewMode = false,
-  grammarLocale
+  grammarLocale,
+  textColor = 'white',
+  autoExpand = false
 }) => {
   // Use the WYSIWYG hook directly - hooks must be called unconditionally
   const {
@@ -280,20 +284,24 @@ const WYSIWYGEditor: React.FC<WYSIWYGEditorProps> = ({
   const minHeight = `${rows * 1.5}rem`;
 
   return (
-    <div className={`relative ${className}`} ref={editorWrapperRef}>
+    <div 
+      className={`relative ${className}`} 
+      ref={editorWrapperRef}
+      style={{ '--editor-text-color': textColor } as React.CSSProperties}
+    >
       <div
-        className={`relative border border-white/20 rounded-none transition-all ${
+        className={`relative border rounded-lg transition-all ${
           hasAnnotation 
             ? 'bg-red-500/20 border-red-500/40' 
             : isFocused 
-              ? 'border-[#80FF00] bg-white/15' 
-              : 'bg-white/10'
+              ? textColor === 'black' ? 'border-emerald-500 bg-emerald-500/5' : 'border-[#80FF00] bg-white/15' 
+              : textColor === 'black' ? 'border-transparent bg-transparent' : 'border-white/20 bg-white/10'
         }`}
       >
-        {/* Toolbar - Now conditionally opacity */}
+        {/* Toolbar - Now absolute floating */}
         {showToolbar && (
           <div 
-            className={`transition-all duration-300 overflow-hidden ${isFocused ? 'opacity-100 max-h-[100px] mb-2' : 'opacity-0 max-h-0 pointer-events-none'}`}
+            className={`absolute -top-16 left-1/2 -translate-x-1/2 z-50 bg-white/95 dark:bg-[#141810]/95 backdrop-blur-md border border-slate-200 dark:border-white/10 shadow-xl rounded-xl p-1.5 flex items-center w-max max-w-[calc(100vw-32px)] transition-all duration-200 ${isFocused ? 'opacity-100 translate-y-0 visible scale-100' : 'opacity-0 translate-y-2 invisible scale-95 pointer-events-none'}`}
             onMouseDown={(e) => e.preventDefault()}
           >
             <WYSIWYGToolbar
@@ -420,8 +428,8 @@ const WYSIWYGEditor: React.FC<WYSIWYGEditorProps> = ({
               handleContentChange();
             }
           }}
-          className={`w-full px-4 py-3 text-white focus:outline-none custom-scrollbar editor-content ${className} resize-none overflow-y-auto`}
-          style={{ minHeight: rows ? `${Math.max(rows * 1.5, 6)}rem` : '150px', maxHeight: `${rows * 2}rem` }}
+          className={`w-full px-4 py-3 text-white focus:outline-none custom-scrollbar editor-content ${className} resize-none ${autoExpand ? '' : 'overflow-y-auto'}`}
+          style={{ minHeight: rows ? `${Math.max(rows * 1.5, 6)}rem` : '150px', ...(autoExpand ? {} : { maxHeight: `${rows * 2}rem` }) }}
           data-placeholder={placeholder}
           spellCheck="false"
           suppressContentEditableWarning
@@ -440,8 +448,12 @@ const WYSIWYGEditor: React.FC<WYSIWYGEditorProps> = ({
         {/* Placeholder */}
         {(!value || value === '<br>' || value === '' || value === '<p></p>' || value === '<p><br></p>' || value === '<div><br></div>') && (
           <div 
-            className="absolute top-3 left-4 text-white/50 pointer-events-none"
-            style={{ top: '0.75rem', left: '1rem' }}
+            className="absolute top-3 left-4 pointer-events-none opacity-50"
+            style={{ 
+              top: '0.75rem', 
+              left: '1rem',
+              color: textColor === 'black' ? '#6B7280' : 'rgba(255, 255, 255, 0.5)'
+            }}
           >
             {placeholder}
           </div>
@@ -452,13 +464,13 @@ const WYSIWYGEditor: React.FC<WYSIWYGEditorProps> = ({
       <style jsx>{`
         [contenteditable] {
           outline: none;
-          color: white !important;
+          color: var(--editor-text-color, white) !important;
         }
         [contenteditable]:focus {
           outline: none;
         }
         [contenteditable] * {
-          color: white !important;
+          color: var(--editor-text-color, white) !important;
         }
         [contenteditable] ul {
           list-style-type: disc;
@@ -467,34 +479,34 @@ const WYSIWYGEditor: React.FC<WYSIWYGEditorProps> = ({
         }
         [contenteditable] li {
           margin: 0.25rem 0;
-          color: white !important;
+          color: var(--editor-text-color, white) !important;
         }
         /* Ensure bold shows actual bold text, not markdown */
         [contenteditable] strong,
         [contenteditable] b {
           font-weight: bold !important;
-          color: white !important;
+          color: var(--editor-text-color, white) !important;
         }
         /* Ensure italic shows actual italic text, not markdown */
         [contenteditable] em,
         [contenteditable] i {
           font-style: italic !important;
-          color: white !important;
+          color: var(--editor-text-color, white) !important;
         }
         /* Ensure underline shows actual underline */
         [contenteditable] u {
           text-decoration: underline !important;
-          color: white !important;
+          color: var(--editor-text-color, white) !important;
         }
         /* Ensure formatting is visible and not stripped */
         [contenteditable] p {
           margin: 0.5rem 0;
-          color: white !important;
+          color: var(--editor-text-color, white) !important;
         }
         /* Ensure all text content is visible */
         [contenteditable] {
-          -webkit-text-fill-color: white !important;
-          text-fill-color: white !important;
+          -webkit-text-fill-color: var(--editor-text-color, white) !important;
+          text-fill-color: var(--editor-text-color, white) !important;
         }
       `}</style>
     </div>

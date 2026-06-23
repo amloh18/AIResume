@@ -1080,16 +1080,22 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
         onIssueClick: (id: string) => {
           const all = [...aiIssues, ...grammarIssues];
           const issue = all.find((i: any) => i.id === id);
-          if (issue?.category === 'grammar' && issue.suggestion) {
-            const currentValue = getNestedValue(cvData, issue.path);
-            const fixedValue =
-              typeof currentValue === 'string'
-                ? currentValue.replace(new RegExp(escapeRegExp(issue.targetText), 'g'), issue.suggestion)
-                : currentValue;
-            handleDataChange(issue.path, fixedValue);
-            setGrammarIssues(prev => prev.filter((i: any) => i.id !== issue.id));
-            if (activeIssueId === issue.id) setActiveIssueId(null);
-            return;
+          if (issue?.category === 'grammar' && issue.suggestion && issue.targetText && typeof issue.targetText === 'string' && issue.targetText.trim() !== '') {
+            const escaped = escapeRegExp(issue.targetText);
+            if (escaped) {
+              const regex = new RegExp(escaped, 'g');
+              if (!regex.test('')) {
+                const currentValue = getNestedValue(cvData, issue.path);
+                const fixedValue =
+                  typeof currentValue === 'string'
+                    ? currentValue.replace(regex, issue.suggestion)
+                    : currentValue;
+                handleDataChange(issue.path, fixedValue);
+                setGrammarIssues(prev => prev.filter((i: any) => i.id !== issue.id));
+                if (activeIssueId === issue.id) setActiveIssueId(null);
+                return;
+              }
+            }
           }
           setActiveIssueId(id);
           setActiveSidebar('ai');

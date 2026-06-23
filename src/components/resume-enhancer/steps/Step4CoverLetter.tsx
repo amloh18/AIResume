@@ -12,15 +12,34 @@ import {
 } from 'lucide-react';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
 import CoverLetterLayoutEngine, { CoverLetterDesignProps } from '../../cover-letter-engine/CoverLetterLayoutEngine';
+import { 
+  ClassicHeader, 
+  ModernHeader, 
+  MinimalHeader,
+  TypographicHeader,
+  ColumnSplitHeader,
+  AccentBannerHeader 
+} from '../../cover-letter-engine/snippets/headers/HeaderSnippets';
 import { useUnifiedAuth } from '@/lib/hooks/useUnifiedAuth';
 import guestCVService from '@/lib/services/guestCVService';
 import { checkSyntaxAndGrammar } from '@/lib/utils/offline-grammar-check';
 import { Button } from '@/components/ui/button';
 import toast from 'react-hot-toast';
+import LetterGuidePanel from '@/components/resume-enhancer/panels/LetterGuidePanel';
+import MoriCoverLetterChat from '@/components/resume-enhancer/panels/MoriCoverLetterChat';
 
 interface Step4CoverLetterProps {
   onComplete: () => void;
 }
+
+const TEMPLATES = [
+  { id: 'modern', name: 'Modern', icon: Sparkles, desc: 'Professional, lime accents' },
+  { id: 'classic', name: 'Classic', icon: Type, desc: 'Traditional serif style' },
+  { id: 'minimal', name: 'Minimal', icon: Layout, desc: 'Clean and simple' },
+  { id: 'typographic', name: 'Typographic', icon: Baseline, desc: 'Bold display' },
+  { id: 'column-split', name: 'Column Split', icon: MoveHorizontal, desc: 'Side-by-side header' },
+  { id: 'accent-banner', name: 'Accent Banner', icon: LayoutTemplate, desc: 'High-impact banner' }
+] as const;
 
 export default function Step4CoverLetter({ onComplete }: Step4CoverLetterProps) {
   const { state, dispatch, setJobSidebarOpen } = useResumeEnhancer();
@@ -45,6 +64,8 @@ export default function Step4CoverLetter({ onComplete }: Step4CoverLetterProps) 
   const [activeLeftSidebar, setActiveLeftSidebar] = useState<string | null>(null);
   const [grammarIssues, setGrammarIssues] = useState<any[]>([]);
   const [matchScore, setMatchScore] = useState(82);
+  const [showMoriChat, setShowMoriChat] = useState(false);
+  const [showTemplateSelector, setShowTemplateSelector] = useState(false);
 
   // Design State
   const [design, setDesign] = useState<CoverLetterDesignProps>({
@@ -167,509 +188,212 @@ export default function Step4CoverLetter({ onComplete }: Step4CoverLetterProps) 
   const recipientName = state.jobData?.contactPerson || 'Hiring Manager';
   const companyName = state.jobData?.company || 'Company Name';
 
-  const templates = [
-    { id: 'modern', name: 'Modern', icon: Sparkles, desc: 'Professional with lime accents' },
-    { id: 'classic', name: 'Classic', icon: Type, desc: 'Traditional serif style' },
-    { id: 'minimal', name: 'Minimal', icon: Layout, desc: 'Clean and simple' },
-    { id: 'typographic', name: 'Typographic', icon: Baseline, desc: 'Bold, modern display' },
-    { id: 'column-split', name: 'Column Split', icon: MoveHorizontal, desc: 'Side-by-side header' },
-    { id: 'accent-banner', name: 'Accent Banner', icon: LayoutTemplate, desc: 'High-impact banner' },
-  ];
-
-  const colors = [
-    { name: 'Lime', value: '#80FF00' },
-    { name: 'Sky', value: '#0EA5E9' },
-    { name: 'Rose', value: '#F43F5E' },
-    { name: 'Violet', value: '#8B5CF6' },
-    { name: 'Amber', value: '#F59E0B' },
-    { name: 'Slate', value: '#475569' },
-  ];
-
   return (
     <div className="flex flex-col h-[calc(100vh-64px)] min-h-0 relative overflow-hidden bg-gray-50 dark:bg-[var(--bg-primary)]">
       <div className="flex-1 h-full flex overflow-hidden relative px-3 pb-3 pt-3 gap-3">
         
-        {/* Left Mini Sidebar */}
-        <div className="w-14 shrink-0 flex flex-col items-center py-4 gap-4 bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/5 rounded-xl shadow-sm z-30 transition-colors">
-          <div className="p-2 rounded-xl mb-2 bg-[#80FF00] text-black shadow-lg">
-            <FileText size={20} />
-          </div>
-          
-          <button 
-            onClick={() => setActiveLeftSidebar(activeLeftSidebar === 'design' ? null : 'design')}
-            className={`p-3 rounded-2xl transition-all ${activeLeftSidebar === 'design' ? 'bg-emerald-500/20 text-[#80FF00]' : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5'}`}
-            title="Design & Templates"
-          >
-            <Palette size={20} />
-          </button>
-
-          <button 
-            onClick={() => setActiveLeftSidebar(activeLeftSidebar === 'formatting' ? null : 'formatting')}
-            className={`p-3 rounded-2xl transition-all ${activeLeftSidebar === 'formatting' ? 'bg-emerald-500/20 text-[#80FF00]' : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5'}`}
-            title="Formatting"
-          >
-            <AlignLeft size={20} />
-          </button>
-          
-          <div className="flex-1"></div>
-          
-          <button 
-            onClick={onComplete}
-            className="p-3 rounded-2xl transition-all bg-[#80FF00] text-black hover:scale-110 shadow-lg"
-            title="Review & Download"
-          >
-            <Download size={20} />
-          </button>
-        </div>
-
-        {/* Content Area */}
-        <div className="flex-1 min-h-0 relative flex gap-3 overflow-hidden">
-          
-          {/* Collapsible Panels */}
-          <AnimatePresence>
-            {activeLeftSidebar === 'design' && (
-              <motion.div
-                initial={{ opacity: 0, x: -20, width: 0 }}
-                animate={{ opacity: 1, x: 0, width: 320 }}
-                exit={{ opacity: 0, x: -20, width: 0 }}
-                className="h-full border border-gray-200 dark:border-white/5 bg-white dark:bg-[#141810] rounded-xl shadow-xl z-20 flex flex-col overflow-hidden"
-              >
-                <div className="p-5 border-b border-gray-200 dark:border-white/5 flex items-center justify-between">
-                  <h3 className="font-bold flex items-center gap-2 text-gray-900 dark:text-white uppercase tracking-tighter italic">
-                    <Palette size={18} className="text-[#80FF00]" /> Layout & Style
-                  </h3>
-                  <button onClick={() => setActiveLeftSidebar(null)} className="text-gray-400 hover:text-white">
-                    <X size={18} />
-                  </button>
-                </div>
-                
-                <div className="p-5 flex flex-col gap-6 overflow-y-auto custom-scrollbar">
-                  <div>
-                    <label className="text-[10px] font-black uppercase tracking-widest mb-4 block text-gray-400">Template Engine</label>
-                    <div className="grid grid-cols-1 gap-2">
-                      {templates.map((t) => (
-                        <button
-                          key={t.id}
-                          onClick={() => setTemplateType(t.id as any)}
-                          className={`flex items-center gap-3 p-2.5 rounded-xl border-2 transition-all text-left group ${templateType === t.id ? 'border-[#80FF00] bg-emerald-500/5' : 'border-gray-200 dark:border-white/5 hover:border-gray-300'}`}
-                        >
-                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${templateType === t.id ? 'bg-[#80FF00] text-black' : 'bg-gray-100 dark:bg-white/5 text-gray-500'}`}>
-                            <t.icon size={16} />
-                          </div>
-                          <div className="min-w-0">
-                            <div className="font-bold text-xs dark:text-white truncate">{t.name}</div>
-                            <div className="text-[9px] text-gray-500 truncate">{t.desc}</div>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="border-t border-gray-200 dark:border-white/5 pt-6">
-                    <label className="text-[10px] font-black uppercase tracking-widest mb-4 block text-gray-400">Accent Color</label>
-                    <div className="flex flex-wrap gap-2">
-                      {colors.map((c) => (
-                        <button
-                          key={c.value}
-                          onClick={() => setDesign({ ...design, accentColor: c.value })}
-                          className={`w-8 h-8 rounded-full border-2 transition-all ${design.accentColor === c.value ? 'border-[#80FF00] scale-110 shadow-lg' : 'border-transparent hover:scale-105'}`}
-                          style={{ backgroundColor: c.value }}
-                          title={c.name}
-                        />
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="border-t border-gray-200 dark:border-white/5 pt-6">
-                    <label className="text-[10px] font-black uppercase tracking-widest mb-4 block text-gray-400">Typography</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button 
-                        onClick={() => setDesign({ ...design, fontFamily: 'font-sans' })}
-                        className={`p-3 rounded-xl border-2 text-xs font-bold transition-all ${design.fontFamily === 'font-sans' ? 'border-[#80FF00] bg-emerald-500/5 text-[#80FF00]' : 'border-gray-200 dark:border-white/5 text-gray-500'}`}
-                      >
-                        Sans Serif
-                      </button>
-                      <button 
-                        onClick={() => setDesign({ ...design, fontFamily: 'font-serif' })}
-                        className={`p-3 rounded-xl border-2 text-xs font-serif font-bold transition-all ${design.fontFamily === 'font-serif' ? 'border-[#80FF00] bg-emerald-500/5 text-[#80FF00]' : 'border-gray-200 dark:border-white/5 text-gray-500'}`}
-                      >
-                        Serif
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-
-            {activeLeftSidebar === 'formatting' && (
-              <motion.div
-                initial={{ opacity: 0, x: -20, width: 0 }}
-                animate={{ opacity: 1, x: 0, width: 320 }}
-                exit={{ opacity: 0, x: -20, width: 0 }}
-                className="h-full border border-gray-200 dark:border-white/5 bg-white dark:bg-[#141810] rounded-xl shadow-xl z-20 flex flex-col overflow-hidden"
-              >
-                <div className="p-5 border-b border-gray-200 dark:border-white/5 flex items-center justify-between">
-                  <h3 className="font-bold flex items-center gap-2 text-gray-900 dark:text-white uppercase tracking-tighter italic">
-                    <AlignLeft size={18} className="text-[#80FF00]" /> Formatting
-                  </h3>
-                  <button onClick={() => setActiveLeftSidebar(null)} className="text-gray-400 hover:text-white">
-                    <X size={18} />
-                  </button>
-                </div>
-                
-                <div className="p-5 flex flex-col gap-8 overflow-y-auto custom-scrollbar">
-                  <div>
-                    <label className="text-[10px] font-black uppercase tracking-widest mb-4 flex justify-between text-gray-400">
-                      <span>Font Size</span>
-                      <span className="text-[#80FF00]">{design.fontSize}px</span>
-                    </label>
-                    <input 
-                      type="range" min="12" max="18" step="0.5" value={design.fontSize} 
-                      onChange={(e) => setDesign({ ...design, fontSize: parseFloat(e.target.value) })}
-                      className="w-full accent-[#80FF00]" 
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] font-black uppercase tracking-widest mb-4 flex justify-between text-gray-400">
-                      <span>Line Spacing</span>
-                      <span className="text-[#80FF00]">{design.lineHeight}</span>
-                    </label>
-                    <input 
-                      type="range" min="1.2" max="2.0" step="0.1" value={design.lineHeight} 
-                      onChange={(e) => setDesign({ ...design, lineHeight: parseFloat(e.target.value) })}
-                      className="w-full accent-[#80FF00]" 
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] font-black uppercase tracking-widest mb-4 flex justify-between text-gray-400">
-                      <span>Page Margins</span>
-                      <span className="text-[#80FF00]">{design.pageMargin}</span>
-                    </label>
-                    <input 
-                      type="range" min="2" max="12" step="1" value={design.pageMargin} 
-                      onChange={(e) => setDesign({ ...design, pageMargin: parseInt(e.target.value) })}
-                      className="w-full accent-[#80FF00]" 
-                    />
-                  </div>
-
-                  <div className="border-t border-gray-200 dark:border-white/5 pt-6">
-                    <div className="flex items-center justify-between cursor-pointer group" onClick={() => setIsEditing(!isEditing)}>
-                      <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Enable Review Mode</span>
-                      <div className={`relative inline-flex items-center h-5 rounded-full w-9 transition-colors ${isEditing ? 'bg-[#80FF00]' : 'bg-gray-300 dark:bg-white/10'}`}>
-                        <span className={`inline-block w-3 h-3 transform bg-white dark:bg-[#111] rounded-full transition-transform ${isEditing ? 'translate-x-5' : 'translate-x-1'}`} />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Canvas Wrapper */}
-          <div className="flex-1 min-h-0 relative flex flex-col rounded-xl overflow-hidden shadow-sm shadow-black/10 dark:shadow-black/30 border border-gray-200 dark:border-white/5 text-gray-900">
-            <div className="flex-1 min-h-0 overflow-y-auto bg-gray-100/50 dark:bg-[#141810] p-4 lg:p-8 flex justify-center custom-scrollbar">
-              <div className="transition-transform duration-300 transform origin-top pb-20" style={{ transform: `scale(${zoom / 100})` }}>
-                <CoverLetterLayoutEngine 
-                  templateType={templateType}
-                  pageFormat={pageFormat}
-                  headerProps={{
-                    name,
-                    email,
-                    phone,
-                    location,
-                    date: today,
-                    recipientName,
-                    companyName
-                  }}
-                  bodyContent={state.autoGeneratedCoverLetter || ''}
-                  isEditing={isEditing}
-                  onBodyChange={handleBodyChange}
-                  design={design}
-                />
-              </div>
-            </div>
-
-            {/* Floating Zoom & Page Controls */}
-            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[40] flex items-center gap-2 pointer-events-none">
-              <div className="px-3 py-1.5 rounded-xl border shadow-xl backdrop-blur-md flex items-center gap-3 text-[10px] font-bold uppercase tracking-wider bg-white/90 dark:bg-[#111]/90 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-[#2a2a2a] opacity-90 hover:opacity-100 transition-opacity pointer-events-auto">
-                <button 
-                  onClick={() => setPageFormat(pageFormat === 'a4' ? 'letter' : 'a4')}
-                  className="flex items-center gap-1.5 px-1.5 py-0.5 rounded-md transition-all hover:bg-emerald-500/10 text-emerald-600 dark:text-[#7EE787]"
-                >
-                  <Layout size={10} />
-                  {pageFormat === 'a4' ? 'A4' : 'Letter'}
-                </button>
-              </div>
-
-              <div className="px-2 py-1.5 rounded-xl border shadow-xl backdrop-blur-md flex items-center gap-2 bg-white/90 dark:bg-[#111]/90 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-[#2a2a2a] opacity-90 hover:opacity-100 transition-opacity pointer-events-auto">
-                <div className="flex items-center gap-0.5">
-                  <button 
-                    onClick={() => setZoom(Math.max(50, zoom - 10))}
-                    className={`p-1.5 rounded-lg hover:bg-emerald-500/20 transition-all ${zoom <= 50 ? 'opacity-30 cursor-not-allowed' : 'text-gray-500 dark:text-gray-400'}`}
-                  >
-                    <Search size={14} className="rotate-90" />
-                  </button>
-                  <input 
-                    type="range" min="50" max="200" step="5" value={zoom} 
-                    onChange={(e) => setZoom(parseInt(e.target.value))}
-                    className="w-20 accent-[#80FF00] h-1 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer"
-                  />
-                  <button 
-                    onClick={() => setZoom(Math.min(200, zoom + 10))}
-                    className={`p-1.5 rounded-lg hover:bg-emerald-500/20 transition-all ${zoom >= 200 ? 'opacity-30 cursor-not-allowed' : 'text-gray-500 dark:text-gray-400'}`}
-                  >
-                    <Search size={14} />
-                  </button>
-                </div>
-                
-                <button 
-                  onClick={() => setZoom(100)}
-                  className={`min-w-[42px] px-1.5 py-1 text-[9px] font-black rounded-md transition-all border ${zoom === 100 ? 'bg-[#80FF00]/20 border-[#80FF00]/50 text-[#80FF00]' : 'bg-transparent border-gray-500/20 hover:border-[#80FF00]/50 text-gray-500 dark:text-gray-400'}`}
-                >
-                  {zoom}%
-                </button>
-              </div>
+        {/* Canvas Wrapper */}
+        <div className="flex-1 min-h-0 relative flex flex-col rounded-xl overflow-hidden shadow-sm shadow-black/10 dark:shadow-black/30 border border-gray-200 dark:border-white/5 text-gray-900">
+          <div className="flex-1 min-h-0 overflow-y-auto bg-gray-100/50 dark:bg-[#141810] p-4 lg:p-8 flex justify-center custom-scrollbar">
+            <div className="transition-transform duration-300 transform origin-top pb-20" style={{ transform: `scale(${zoom / 100})` }}>
+              <CoverLetterLayoutEngine 
+                templateType={templateType}
+                onTemplateTypeChange={setTemplateType}
+                pageFormat={pageFormat}
+                headerProps={{
+                  name,
+                  email,
+                  phone,
+                  location,
+                  date: today,
+                  recipientName,
+                  companyName
+                }}
+                bodyContent={state.autoGeneratedCoverLetter || ''}
+                isEditing={isEditing}
+                onBodyChange={handleBodyChange}
+                design={design}
+                showMoriChat={showMoriChat}
+                onToggleMoriChat={() => setShowMoriChat(!showMoriChat)}
+                onChangeHeaderStyle={() => setShowTemplateSelector(true)}
+              />
             </div>
           </div>
-        </div>
-        
-        {/* RIGHT SIDEBAR - AI COPILOT COCKPIT */}
-        <div className="hidden lg:flex flex-col w-[380px] shrink-0 h-full relative z-10 gap-3 overflow-y-auto custom-scrollbar pb-2">
-          
-          {/* 1. AI FEATURE GATE */}
-          <div className="bg-white dark:bg-[#1a230f] rounded-2xl shadow-sm border border-gray-100 dark:border-white/5 p-5 flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-              <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                <Brain className="w-3.5 h-3.5 text-[#80FF00]" />
-                AI Writing Mode
-              </h4>
-              <Zap className="w-3.5 h-3.5 text-[#80FF00] animate-pulse" />
-            </div>
-            
-            <div className="grid grid-cols-3 gap-2">
-              {[
-                { id: 'manual', label: 'Manual', icon: MousePointer2 },
-                { id: 'assist', label: 'Assist', icon: Sparkles },
-                { id: 'full', label: 'Full AI', icon: Flame },
-              ].map((mode) => (
-                <button
-                  key={mode.id}
-                  onClick={() => setAiMode(mode.id as any)}
-                  className={`flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all ${aiMode === mode.id ? 'border-[#80FF00] bg-[#80FF00]/5 text-[#80FF00]' : 'border-gray-100 dark:border-white/5 text-gray-400 hover:border-gray-200'}`}
-                >
-                  <mode.icon size={16} />
-                  <span className="text-[10px] font-bold uppercase tracking-tight">{mode.label}</span>
-                </button>
-              ))}
-            </div>
-            {aiMode === 'full' && (
-              <p className="text-[9px] font-medium text-orange-500 bg-orange-500/5 p-2 rounded-lg border border-orange-500/10 italic text-center">
-                Warning: Full AI mode may rewrite large portions of your letter.
-              </p>
-            )}
-          </div>
 
-          {/* 2. TARGET ROLE CONTEXT */}
-          <div className="bg-white dark:bg-[#1a230f] rounded-2xl shadow-sm border border-gray-100 dark:border-white/5 p-5 flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-              <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                <Target className="w-3.5 h-3.5 text-[#80FF00]" />
-                Target Role
-              </h4>
-              <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#80FF00]/10 border border-[#80FF00]/20 text-[9px] font-black text-[#80FF00] uppercase italic">
-                {matchScore}% Match
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <div className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tighter italic truncate">
-                {state.targetRole || 'Not Set'}
-              </div>
-              <div className="text-[10px] font-bold text-gray-500 flex items-center gap-1.5">
-                {state.jobData?.company || 'Unknown Company'}
-                {hasJD && <CheckCircle size={10} className="text-[#80FF00]" />}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
+          {/* Floating Zoom & Page Controls */}
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[40] flex items-center gap-2 pointer-events-none">
+            <div className="px-3 py-1.5 rounded-xl border shadow-xl backdrop-blur-md flex items-center gap-3 text-[10px] font-bold uppercase tracking-wider bg-white/90 dark:bg-[#111]/90 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-[#2a2a2a] opacity-90 hover:opacity-100 transition-opacity pointer-events-auto">
               <button 
-                onClick={() => setJobSidebarOpen(true)}
-                className="py-2 text-[10px] font-black uppercase tracking-tighter italic text-white bg-gray-900 dark:bg-white/10 hover:bg-gray-800 rounded-lg transition-all"
+                onClick={() => setPageFormat(pageFormat === 'a4' ? 'letter' : 'a4')}
+                className="flex items-center gap-1.5 px-1.5 py-0.5 rounded-md transition-all hover:bg-emerald-500/10 text-emerald-600 dark:text-[#7EE787]"
               >
-                View JD
-              </button>
-              <button className="py-2 text-[10px] font-black uppercase tracking-tighter italic text-gray-500 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 rounded-lg transition-all flex items-center justify-center gap-1.5">
-                <RefreshCcw size={10} /> Refresh
+                <Layout size={10} />
+                {pageFormat === 'a4' ? 'A4' : 'Letter'}
               </button>
             </div>
 
-            <div className="pt-2 border-t border-gray-100 dark:border-white/5">
-              <div className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2">Detected Tone</div>
-              <div className="flex flex-wrap gap-1.5">
-                <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-500 text-[9px] font-bold uppercase tracking-wider">Professional</span>
-                <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-500 text-[9px] font-bold uppercase tracking-wider">Analytical</span>
+            <div className="px-2 py-1.5 rounded-xl border shadow-xl backdrop-blur-md flex items-center gap-2 bg-white/90 dark:bg-[#111]/90 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-[#2a2a2a] opacity-90 hover:opacity-100 transition-opacity pointer-events-auto">
+              <div className="flex items-center gap-0.5">
+                <button 
+                  onClick={() => setZoom(Math.max(50, zoom - 10))}
+                  className={`p-1.5 rounded-lg hover:bg-emerald-500/20 transition-all ${zoom <= 50 ? 'opacity-30 cursor-not-allowed' : 'text-gray-500 dark:text-gray-400'}`}
+                >
+                  <Search size={14} className="rotate-90" />
+                </button>
+                <input 
+                  type="range" min="50" max="200" step="5" value={zoom} 
+                  onChange={(e) => setZoom(parseInt(e.target.value))}
+                  className="w-20 accent-[#80FF00] h-1 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                />
+                <button 
+                  onClick={() => setZoom(Math.min(200, zoom + 10))}
+                  className={`p-1.5 rounded-lg hover:bg-emerald-500/20 transition-all ${zoom >= 200 ? 'opacity-30 cursor-not-allowed' : 'text-gray-500 dark:text-gray-400'}`}
+                >
+                  <Search size={14} />
+                </button>
+              </div>
+              
+              <button 
+                onClick={() => setZoom(100)}
+                className={`min-w-[42px] px-1.5 py-1 text-[9px] font-black rounded-md transition-all border ${zoom === 100 ? 'bg-[#80FF00]/20 border-[#80FF00]/50 text-[#80FF00]' : 'bg-transparent border-gray-500/20 hover:border-[#80FF00]/50 text-gray-500 dark:text-gray-400'}`}
+              >
+                {zoom}%
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* MIDDLE COLUMN - LETTER GUIDE (radial progress, metrics, context) */}
+        <div className="flex flex-col w-[320px] shrink-0 h-full relative z-10">
+          <LetterGuidePanel 
+            matchScore={matchScore}
+            templateType={templateType}
+            setTemplateType={setTemplateType}
+            design={design}
+            setDesign={setDesign}
+            isEditing={isEditing}
+            setIsEditing={setIsEditing}
+            onComplete={onComplete}
+            onUpdateTarget={() => setJobSidebarOpen(true)}
+            showMoriChat={showMoriChat}
+            onToggleMoriChat={() => setShowMoriChat(!showMoriChat)}
+          />
+        </div>
+
+        {/* RIGHT COLUMN - MORI AI ASSISTANT CHAT */}
+        <AnimatePresence>
+          {showMoriChat && (
+            <motion.div 
+              initial={{ opacity: 0, x: 20, width: 0 }}
+              animate={{ opacity: 1, x: 0, width: 360 }}
+              exit={{ opacity: 0, x: 20, width: 0 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="hidden lg:flex flex-col shrink-0 h-full relative z-10 min-h-0 overflow-hidden"
+            >
+              <MoriCoverLetterChat 
+                onBodyChange={handleBodyChange} 
+                onClose={() => setShowMoriChat(false)}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {showTemplateSelector && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] no-print">
+          <div className="bg-white dark:bg-[#141810] border border-slate-200 dark:border-white/10 rounded-2xl shadow-2xl w-[95vw] md:w-[90vw] max-w-5xl max-h-[85vh] flex flex-col overflow-hidden animate-fade-in-up animate-in duration-200">
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-slate-100 dark:border-white/5 flex items-center justify-between bg-slate-50 dark:bg-transparent">
+              <div>
+                <h3 className="font-extrabold text-sm uppercase tracking-wider text-slate-800 dark:text-white flex items-center gap-2">
+                  <LayoutTemplate className="w-4 h-4 text-emerald-500" />
+                  Choose Header Style
+                </h3>
+                <p className="text-[10px] text-slate-400 uppercase tracking-widest mt-0.5">Select a layout template for your cover letter header</p>
+              </div>
+              <button 
+                type="button"
+                onClick={() => setShowTemplateSelector(false)} 
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-all"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            {/* Modal Grid Content */}
+            <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {TEMPLATES.map((t) => {
+                  const isSelected = templateType === t.id;
+                  const PreviewHeaderComponent = (() => {
+                    switch (t.id) {
+                      case 'classic': return ClassicHeader;
+                      case 'minimal': return MinimalHeader;
+                      case 'typographic': return TypographicHeader;
+                      case 'column-split': return ColumnSplitHeader;
+                      case 'accent-banner': return AccentBannerHeader;
+                      case 'modern':
+                      default: return ModernHeader;
+                    }
+                  })();
+                  
+                  return (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => {
+                        setTemplateType(t.id);
+                        setShowTemplateSelector(false);
+                      }}
+                      className={`group flex flex-col rounded-xl border-2 text-left overflow-hidden transition-all ${
+                        isSelected 
+                          ? 'border-emerald-500 bg-emerald-500/[0.02]' 
+                          : 'border-slate-200 dark:border-white/5 hover:border-emerald-400 bg-transparent'
+                      }`}
+                    >
+                      {/* Live Scaled Down Preview */}
+                      <div className="w-full h-[140px] bg-white border-b border-slate-150 dark:border-white/5 flex justify-center items-start p-3 relative overflow-hidden select-none [container-type:inline-size]">
+                        <div 
+                          className="w-[800px] shrink-0 origin-top transform" 
+                          style={{ 
+                            width: '800px',
+                            transform: 'scale(min(0.55, calc((100cqw - 24px) / 800)))'
+                          }}
+                        >
+                          <PreviewHeaderComponent {...{
+                            name,
+                            email,
+                            phone,
+                            location,
+                            date: today,
+                            recipientName,
+                            companyName
+                          }} />
+                        </div>
+                        {isSelected && (
+                          <div className="absolute top-2 right-2 bg-emerald-500 text-white rounded-full p-1 shadow">
+                            <Check className="w-3.5 h-3.5 stroke-[3]" />
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Metadata */}
+                      <div className="p-3 bg-slate-50/50 dark:bg-white/[0.01] flex-1 flex flex-col justify-center">
+                        <div className="font-extrabold text-xs text-slate-800 dark:text-slate-200 group-hover:text-emerald-600 transition-colors uppercase tracking-tight">
+                          {t.name}
+                        </div>
+                        <div className="text-[10px] text-slate-400 font-medium mt-0.5">
+                          {t.desc}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>
-
-          {/* 3. WRITING CONTROLS */}
-          <div className="bg-white dark:bg-[#1a230f] rounded-2xl shadow-sm border border-gray-100 dark:border-white/5 p-5 flex flex-col gap-6">
-            <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-              <Settings className="w-3.5 h-3.5 text-[#80FF00]" />
-              Writing Controls
-            </h4>
-
-            <div className="flex flex-col gap-2">
-              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex justify-between">
-                <span>Creativity</span>
-                <span className="text-[#80FF00]">{aiCreativity < 30 ? 'Precise' : aiCreativity > 70 ? 'Expressive' : 'Balanced'}</span>
-              </label>
-              <input 
-                type="range" min="0" max="100" value={aiCreativity} 
-                onChange={(e) => setAiCreativity(parseInt(e.target.value))}
-                className="w-full accent-[#80FF00]" 
-              />
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex justify-between">
-                <span>Personalization</span>
-                <span className="text-[#80FF00]">{aiPersonalization < 30 ? 'Generic' : aiPersonalization > 70 ? 'Deep' : 'Standard'}</span>
-              </label>
-              <input 
-                type="range" min="0" max="100" value={aiPersonalization} 
-                onChange={(e) => setAiPersonalization(parseInt(e.target.value))}
-                className="w-full accent-[#80FF00]" 
-              />
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Tone</label>
-              <select 
-                value={aiTone}
-                onChange={(e) => setAiTone(e.target.value)}
-                className="text-xs bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl p-3 text-gray-900 dark:text-white outline-none focus:border-[#80FF00] transition-colors"
-              >
-                {['Professional', 'Confident', 'Executive', 'Friendly', 'Technical', 'Concise', 'Storytelling', 'Persuasive'].map(t => (
-                  <option key={t} value={t}>{t}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* 4. AI ENHANCEMENT TOOLS */}
-          <div className="bg-white dark:bg-[#1a230f] rounded-2xl shadow-sm border border-gray-100 dark:border-white/5 p-5 flex flex-col gap-4">
-            <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-              <Zap className="w-3.5 h-3.5 text-[#80FF00]" />
-              Enhancement Tools
-            </h4>
-            <div className="grid grid-cols-2 gap-2">
-              {[
-                { label: 'Rewrite', icon: RefreshCcw, desc: 'Keep intent' },
-                { label: 'Impact', icon: TrendingUp, desc: 'Add power' },
-                { label: 'Quantify', icon: Baseline, desc: 'Add metrics' },
-                { label: 'Humanize', icon: UserCheck, desc: 'Less robotic' },
-                { label: 'Skills', icon: Target, desc: 'Add keywords' },
-                { label: 'Shorten', icon: MoveHorizontal, desc: 'Stay concise' },
-              ].map((tool) => (
-                <button
-                  key={tool.label}
-                  className="flex flex-col items-start gap-1 p-3 rounded-xl bg-gray-100 dark:bg-white/5 border border-transparent hover:border-[#80FF00]/30 hover:bg-[#80FF00]/5 transition-all text-left group"
-                >
-                  <tool.icon size={14} className="text-gray-400 group-hover:text-[#80FF00]" />
-                  <span className="text-[10px] font-black uppercase text-gray-900 dark:text-white mt-1">{tool.label}</span>
-                  <span className="text-[8px] text-gray-500 font-medium uppercase tracking-tight">{tool.desc}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* 5. ATS + MATCH INSIGHTS */}
-          <div className="bg-emerald-500/5 rounded-2xl p-5 border border-[#80FF00]/20 flex flex-col gap-5">
-            <div className="flex items-center justify-between">
-              <h4 className="text-xs font-black text-[#80FF00] uppercase tracking-widest flex items-center gap-2">
-                <ShieldCheck className="w-3.5 h-3.5" />
-                ATS Compatibility
-              </h4>
-              <span className="text-[9px] font-black text-emerald-500 uppercase">Excellent</span>
-            </div>
-            
-            <div className="flex items-center gap-6">
-               <div className="relative w-16 h-16 shrink-0">
-                  <svg className="w-full h-full" viewBox="0 0 36 36">
-                    <path className="text-white/5 stroke-current" strokeWidth="3" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                    <path className="text-[#80FF00] stroke-current" strokeDasharray="87, 100" strokeWidth="3" strokeLinecap="round" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                  </svg>
-                  <div className="absolute inset-0 flex items-center justify-center text-sm font-black text-[#80FF00]">{matchScore}%</div>
-               </div>
-               <div className="flex flex-col gap-1.5">
-                  <div className="flex items-center gap-2 text-[10px] font-bold text-gray-600 dark:text-emerald-500/80">
-                    <div className="w-1 h-1 rounded-full bg-[#80FF00]" /> High Role Relevance
-                  </div>
-                  <div className="flex items-center gap-2 text-[10px] font-bold text-gray-600 dark:text-emerald-500/80">
-                    <div className="w-1 h-1 rounded-full bg-[#80FF00]" /> Clear Flow
-                  </div>
-                  <div className="text-[9px] font-bold text-blue-400 flex items-center gap-1.5 mt-1">
-                    <Clock size={10} /> 52s Read Time
-                  </div>
-               </div>
-            </div>
-          </div>
-
-          {/* 6. HISTORY */}
-          <div className="bg-white dark:bg-[#1a230f] rounded-2xl shadow-sm border border-gray-100 dark:border-white/5 p-5 flex flex-col gap-4">
-            <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-              <History className="w-3.5 h-3.5 text-[#80FF00]" />
-              Draft History
-            </h4>
-            <div className="flex flex-col gap-2">
-              {[
-                { label: 'Current Version', time: 'Active now', icon: CheckCircle, active: true },
-                { label: 'ATS Optimized', time: '12 mins ago', icon: ShieldCheck, active: false },
-                { label: 'Humanized Draft', time: '1 hour ago', icon: Eye, active: false },
-              ].map((v) => (
-                <button
-                  key={v.label}
-                  className={`flex items-center justify-between p-3 rounded-xl border transition-all ${v.active ? 'border-[#80FF00] bg-[#80FF00]/5 text-[#80FF00]' : 'border-transparent bg-gray-50 dark:bg-white/5 text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10'}`}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <v.icon size={12} />
-                    <div className="text-left">
-                      <div className="text-[10px] font-black uppercase tracking-tight">{v.label}</div>
-                      <div className="text-[8px] opacity-60 uppercase font-bold">{v.time}</div>
-                    </div>
-                  </div>
-                  <ChevronRight size={12} />
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* 7. ACTIONS FOOTER */}
-          <div className="sticky bottom-0 mt-auto pt-4 bg-gray-50 dark:bg-[var(--bg-primary)] z-20 flex flex-col gap-2">
-             <Button
-                onClick={handleGenerate}
-                disabled={isGenerating || isOffline || aiMode === 'manual'}
-                className="w-full h-12 bg-[#80FF00] hover:bg-[#99ff33] text-black font-black uppercase tracking-tighter italic rounded-xl transition-all shadow-[0_0_20px_rgba(128,255,0,0.2)]"
-             >
-                {isGenerating ? <Loader2 size={16} className="animate-spin mr-2" /> : <Sparkles size={16} className="mr-2" />}
-                {aiMode === 'full' ? 'Regenerate Letter' : 'Optimize Current Section'}
-             </Button>
-             
-             <div className="grid grid-cols-2 gap-2">
-               <button className="h-11 rounded-xl bg-gray-900 dark:bg-white/5 border border-transparent hover:border-white/10 text-white text-[10px] font-black uppercase tracking-tighter italic transition-all flex items-center justify-center gap-2">
-                 <Eye size={14} /> Preview
-               </button>
-               <button className="h-11 rounded-xl bg-gray-900 dark:bg-white text-white dark:text-black font-black uppercase tracking-tighter italic transition-all flex items-center justify-center gap-2">
-                 <Download size={14} /> Export
-               </button>
-             </div>
-          </div>
-
         </div>
-      </div>
+      )}
     </div>
   );
 }
