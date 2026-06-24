@@ -259,92 +259,83 @@ const CoverLetterPreview: React.FC<CoverLetterPreviewProps> = ({
     const paddingRight = layout.spacing?.margins?.right ? parseInt(layout.spacing.margins.right) : 40;
 
     return (
-      <div className="w-full flex justify-center bg-gray-100/50 p-4 md:p-8 overflow-hidden">
-        {/* Scale Wrapper */}
-        <div style={{
-          width: '100%',
-          maxWidth: `${width}px`,
-          position: 'relative'
-        }}>
-          <div
-            className="bg-white shadow-lg mx-auto origin-top"
-            style={{
-              width: `${width}px`,
-              minHeight: `${height}px`,
-              height: 'auto',
-              // Use CSS variable or JS for responsive scaling if parent is smaller than width
-              // For simplicity in this preview component, we let it be its natural size
-              // and the user can scroll X or we use max-width 100% with aspect ratio
-              // But to "zoom to fit width", we usually need a JS resize observer or container query.
-              // A simpler hacks is:
-              maxWidth: '100%',
-              aspectRatio: `${width}/${height}`,
-              // If we use maxWidth: 100%, content inside might squash if not scaled.
-              // So for true "Zoom", we leave width fixed and use transform in parent.
-              // Reverting to fixed width for print fidelity, but allowing parent to scale it.
-              // Actually, the user wants "zoom ... to fit width".
-              // Let's try CSS zoom for simple browser support (works well in Chrome/Edge, limited in Firefox)
-              // Or just use box-sizing border-box with 100% width?
-              // Let's try width: 100% and let font-size reflow (responsive) OR keep fixed.
-              // Documents usually prefer fixed layout scaled down.
-              transform: 'scale(1)', // Placeholder - real scaling should happen in parent or via resize observer
-              boxSizing: 'border-box',
-              overflow: 'visible',
-              backgroundColor: 'white',
-              color: 'black'
-            }}
-          >
-            <div
-              className={`cl-container ${template.className} text-black`}
-              style={{
-                height: '100%',
-                paddingTop: `${paddingTop}px`,
-                paddingBottom: `${paddingBottom}px`,
-                paddingLeft: `${paddingLeft}px`,
-                paddingRight: `${paddingRight}px`,
-              }}
-            >
-              <header className="cl-header" style={{ marginBottom: '20px' }}>
-                <div className="candidate-info">
-                  <h1 className="candidate-name" style={{ color: 'black' }}>{senderName}</h1>
-                  <p className="candidate-contact">{contactInfo}</p>
-                </div>
-
-                <hr className="header-divider" style={{ margin: '15px 0' }} />
-
-                <div className="recipient-info">
-                  <p className="to-label">To:</p>
-                  <p className="recipient-name">{recipientName}</p>
-                  <p className="company-name">{companyName}</p>
-                  <p className="company-location">{jobData?.location || ''}</p>
-                  <p className="cl-date">{headerDate}</p>
-                </div>
-              </header>
-
-              <section className="cl-body" style={{ marginTop: '0px' }}>
-                {/* Greeting removed as per request */}
-
-                {bodyContent ? (
-                  bodyContent.split('\n\n').map((paragraph, index) => (
-                    <div key={index} className={`cl-module ${index === 0 ? 'introduction' : 'bridge'}`} style={{ marginBottom: '12px' }}>
-                      {paragraph.trim().split('\n').map((line, lineIndex) => (
-                        <span key={lineIndex} dangerouslySetInnerHTML={{ __html: line }} style={{ display: 'block' }} />
-                      ))}
-                    </div>
-                  ))
-                ) : (
-                  <div style={{ color: '#666', fontStyle: 'italic', padding: '20px 0' }}>
-                    No body content found. Start writing...
-                  </div>
-                )}
-
-                <div className="cl-signoff" style={{ marginTop: '20px' }}>
-                  <div style={{ marginBottom: '20px' }} dangerouslySetInnerHTML={{ __html: sincerelyText }} />
-                  <div className="signature-name" dangerouslySetInnerHTML={{ __html: signatureName }} />
-                </div>
-              </section>
+      <div
+        className="bg-white shadow-lg mx-auto origin-top"
+        style={{
+          width: `${width}px`,
+          minHeight: `${height}px`,
+          height: 'auto',
+          // Use CSS variable or JS for responsive scaling if parent is smaller than width
+          // For simplicity in this preview component, we let it be its natural size
+          // and the user can scroll X or we use max-width 100% with aspect ratio
+          // But to "zoom to fit width", we usually need a JS resize observer or container query.
+          // A simpler hacks is:
+          maxWidth: '100%',
+          aspectRatio: `${width}/${height}`,
+          // If we use maxWidth: 100%, content inside might squash if not scaled.
+          // So for true "Zoom", we leave width fixed and use transform in parent.
+          // Reverting to fixed width for print fidelity, but allowing parent to scale it.
+          // Actually, the user wants "zoom ... to fit width".
+          // Let's try CSS zoom for simple browser support (works well in Chrome/Edge, limited in Firefox)
+          // Or just use box-sizing border-box with 100% width?
+          // Let's try width: 100% and let font-size reflow (responsive) OR keep fixed.
+          // Documents usually prefer fixed layout scaled down.
+          transform: 'scale(1)', // Placeholder - real scaling should happen in parent or via resize observer
+          boxSizing: 'border-box',
+          overflow: 'visible',
+          backgroundColor: 'white',
+          color: 'black'
+        }}
+      >
+        <div
+          className={`cl-container ${template.className} text-black`}
+          style={{
+            height: '100%',
+            paddingTop: `${paddingTop}px`,
+            paddingBottom: `${paddingBottom}px`,
+            paddingLeft: `${paddingLeft}px`,
+            paddingRight: `${paddingRight}px`,
+          }}
+        >
+          <header className="cl-header" style={{ marginBottom: '20px' }}>
+            <div className="candidate-info">
+              <h1 className="candidate-name" style={{ color: 'black' }}>{senderName}</h1>
+              <p className="candidate-contact">{contactInfo}</p>
             </div>
-          </div>
+
+            <hr className="header-divider" style={{ margin: '15px 0' }} />
+
+            <div className="recipient-info">
+              <p className="to-label">To:</p>
+              <p className="recipient-name">{recipientName}</p>
+              <p className="company-name">{companyName}</p>
+              <p className="company-location">{jobData?.location || ''}</p>
+              <p className="cl-date">{headerDate}</p>
+            </div>
+          </header>
+
+          <section className="cl-body" style={{ marginTop: '0px' }}>
+            {/* Greeting removed as per request */}
+
+            {bodyContent ? (
+              bodyContent.split('\n\n').map((paragraph, index) => (
+                <div key={index} className={`cl-module ${index === 0 ? 'introduction' : 'bridge'}`} style={{ marginBottom: '12px' }}>
+                  {paragraph.trim().split('\n').map((line, lineIndex) => (
+                    <span key={lineIndex} dangerouslySetInnerHTML={{ __html: line }} style={{ display: 'block' }} />
+                  ))}
+                </div>
+              ))
+            ) : (
+              <div style={{ color: '#666', fontStyle: 'italic', padding: '20px 0' }}>
+                No body content found. Start writing...
+              </div>
+            )}
+
+            <div className="cl-signoff" style={{ marginTop: '20px' }}>
+              <div style={{ marginBottom: '20px' }} dangerouslySetInnerHTML={{ __html: sincerelyText }} />
+              <div className="signature-name" dangerouslySetInnerHTML={{ __html: signatureName }} />
+            </div>
+          </section>
         </div>
       </div>
     );

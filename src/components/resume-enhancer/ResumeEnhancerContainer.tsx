@@ -8,7 +8,7 @@ import Image from 'next/image';
 import Logo from '@/components/ui/Logo';
 import { motion, AnimatePresence } from 'framer-motion';
 import { gsap } from 'gsap';
-import { X, Save, Eye, Loader2, Sparkles, User, Settings, LogOut, Sun, Moon, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Minimize2, Maximize2, Home, Plus, Palette, FileText } from 'lucide-react';
+import { X, Save, Eye, Loader2, Sparkles, User, Settings, LogOut, Sun, Moon, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Minimize2, Maximize2, Home, Plus, Palette, FileText, PenTool, Edit2, Check } from 'lucide-react';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
 import StepIndicator from './StepIndicator';
 import Step1Parser from './steps/Step1Parser';
@@ -99,6 +99,8 @@ export default function ResumeEnhancerContainer({
   );
   const showTemplateOverlay = state.isTemplateOverlayOpen;
   const [showRoleModal, setShowRoleModal] = useState(false);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [tempTitle, setTempTitle] = useState('');
 
   // Map internal steps (1-5) to display steps (1-5) for the step indicator
   const displayStep = state.currentStep;
@@ -2654,6 +2656,241 @@ export default function ResumeEnhancerContainer({
   await executeSave();
 };
 
+  const startEditingTitle = () => {
+    setTempTitle(state.cvTitle || '');
+    setIsEditingTitle(true);
+  };
+
+  const saveTitle = async () => {
+    setIsEditingTitle(false);
+    const trimmed = tempTitle.trim();
+    if (trimmed && trimmed !== state.cvTitle) {
+      dispatch({ type: 'SET_CV_TITLE', payload: trimmed });
+      setTimeout(() => {
+        handleSmartSave();
+      }, 50);
+    }
+  };
+
+  const handleHomeStepClick = async () => {
+    await handleSmartSave();
+    setTemplateOverlayOpen(false);
+    goToStep(1);
+  };
+
+  const handleStepNavigation = async (targetStep: number, openOverlay: boolean) => {
+    // Save CV first
+    await handleSmartSave();
+    
+    // Perform navigation
+    setTemplateOverlayOpen(openOverlay);
+    if (targetStep === 3) {
+      goToStepSafely(3);
+    } else if (targetStep === 4) {
+      goToStepSafely(4);
+    } else if (targetStep === 5) {
+      goToStepSafely(5);
+    }
+  };
+
+  // Auto save CV on step transition for authenticated users
+  const prevStepRef = useRef({ step: state.currentStep, overlay: state.isTemplateOverlayOpen });
+  useEffect(() => {
+    const stepChanged = prevStepRef.current.step !== state.currentStep;
+    const overlayChanged = prevStepRef.current.overlay !== state.isTemplateOverlayOpen;
+    
+    if (stepChanged || overlayChanged) {
+      if (!isGuestMode && state.cvData && state.cvId) {
+        console.log('Auto-saving on step transition');
+        handleSmartSave().catch(err => console.error('Auto-save on step transition failed:', err));
+      }
+      prevStepRef.current = { step: state.currentStep, overlay: state.isTemplateOverlayOpen };
+    }
+  }, [state.currentStep, state.isTemplateOverlayOpen, isGuestMode, state.cvData, state.cvId]);
+
+  // Stepper steps configuration
+  interface HeaderStep {
+    id: 'layout' | 'edit' | 'cover' | 'review';
+    label: string;
+    isActive: boolean;
+    isCompleted: boolean;
+    targetStep: number;
+    openTemplateOverlay?: boolean;
+  }
+
+  const getHeaderSteps = (): HeaderStep[] => {
+    const steps: HeaderStep[] = [];
+    const isCreateMode = mode === 'create' || mode === 'create-cover-letter';
+    const isCoverLetterMode = mode === 'edit-cover-letter' || mode === 'create-cover-letter';
+    
+    // 1. Determine if we show Layout Selection (only for new Master or new Journey CVs, or when editing/creating cover letter)
+    const showLayoutStep = (isCreateMode && (state.cvType === 'master' || state.cvType === 'journey')) || isCoverLetterMode;
+    
+    // 2. Determine if we show Cover Letter (only for Journey CVs, and Standalone CVs when creating, or when editing/creating cover letter)
+    const showCoverStep = state.cvType === 'journey' || (state.cvType === 'standalone' && isCreateMode) || isCoverLetterMode;
+
+    if (showLayoutStep) {
+      steps.push({
+        id: 'layout',
+        label: 'Layout Selection',
+        isActive: state.isTemplateOverlayOpen,
+        isCompleted: !state.isTemplateOverlayOpen && !!state.selectedTemplate,
+        targetStep: 3,
+        openTemplateOverlay: true
+      });
+    }
+
+    steps.push({
+      id: 'edit',
+      label: 'Edit Resume',
+      isActive: state.currentStep === 3 && !state.isTemplateOverlayOpen,
+      isCompleted: state.currentStep > 3 && !state.isTemplateOverlayOpen,
+      targetStep: 3,
+      openTemplateOverlay: false
+    });
+
+    if (showCoverStep) {
+      steps.push({
+        id: 'cover',
+        label: 'Cover Letter',
+        isActive: state.currentStep === 4,
+        isCompleted: state.currentStep > 4,
+        targetStep: 4,
+        openTemplateOverlay: false
+      });
+    }
+
+    steps.push({
+      id: 'review',
+      label: 'Review & Export',
+      isActive: state.currentStep === 5,
+      isCompleted: false,
+      targetStep: 5,
+      openTemplateOverlay: false
+    });
+
+    return steps;
+  };
+
+  const renderHeaderStepper = () => {
+    const steps = getHeaderSteps();
+    
+    // Determine flow type
+    const showLayoutStep = steps.some(s => s.id === 'layout');
+    const showCoverStep = steps.some(s => s.id === 'cover');
+    
+    let flowType: 'A' | 'B' | 'C' | 'D' = 'D';
+    if (showLayoutStep && showCoverStep) flowType = 'A';
+    else if (showLayoutStep && !showCoverStep) flowType = 'B';
+    else if (!showLayoutStep && showCoverStep) flowType = 'C';
+    else flowType = 'D';
+
+    // Subtitle helper
+    const showSubtitle = (step: HeaderStep) => {
+      if (step.isActive) return true;
+      if (flowType === 'C') {
+        return step.id === 'cover' || step.id === 'edit';
+      }
+      if (flowType === 'D') {
+        return step.id === 'edit' || step.id === 'review';
+      }
+      return false;
+    };
+
+    const isHorizontalLayout = flowType === 'C' || flowType === 'D';
+
+    return (
+      <div className="hidden lg:flex items-center gap-3 sm:gap-5 flex-1 justify-center max-w-4xl px-4 h-14 select-none">
+        {steps.map((step, index) => {
+          let IconComponent = Edit2;
+          if (step.id === 'layout') IconComponent = Palette;
+          else if (step.id === 'edit') IconComponent = PenTool;
+          else if (step.id === 'cover') IconComponent = step.isActive ? PenTool : FileText;
+          else if (step.id === 'review') IconComponent = FileText;
+
+          const activePill = (
+            <div className="flex items-center bg-[#f1f9ec] dark:bg-[#1a2312] border border-[#dcedd9] dark:border-[#2a3c1d] rounded-2xl px-4 py-1.5 shadow-sm transition-all duration-300">
+              <div className="w-8 h-8 rounded-full bg-lime-600 dark:bg-[#72e000] flex items-center justify-center text-white dark:text-black flex-shrink-0">
+                <IconComponent className="w-4 h-4 stroke-[2.5]" />
+              </div>
+              <div className="flex flex-col ml-3 text-left">
+                <span className="text-xs sm:text-sm font-black text-lime-800 dark:text-lime-400 tracking-tight leading-tight">
+                  {step.label}
+                </span>
+                <span className="text-[10px] sm:text-[11px] font-bold text-lime-600 dark:text-lime-500 truncate max-w-[150px] leading-tight mt-0.5">
+                  {state.cvTitle || 'Untitled CV'}
+                </span>
+              </div>
+            </div>
+          );
+
+          const standardNode = (
+            <button
+              onClick={() => handleStepNavigation(step.targetStep, !!step.openTemplateOverlay)}
+              className={`flex bg-transparent hover:bg-transparent border-none shadow-none focus:outline-none focus:ring-0 transition-all duration-200 hover:opacity-90 active:scale-95 group relative ${
+                isHorizontalLayout 
+                  ? 'items-center gap-3 text-left' 
+                  : 'flex-col items-center text-center justify-center min-w-[80px]'
+              }`}
+            >
+              {/* Circle */}
+              {step.isCompleted ? (
+                <div className="w-6 h-6 rounded-full bg-lime-500 dark:bg-[#80FF00] flex items-center justify-center text-black flex-shrink-0 shadow-sm shadow-lime-500/20 transition-transform group-hover:scale-105">
+                  <Check className="w-3.5 h-3.5 stroke-[3] text-black" />
+                </div>
+              ) : (
+                <div className="w-7 h-7 rounded-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 flex items-center justify-center text-gray-400 dark:text-gray-500 flex-shrink-0 transition-colors group-hover:border-lime-500 dark:group-hover:border-[#80FF00] group-hover:text-lime-600 dark:group-hover:text-lime-400">
+                  <IconComponent className="w-3.5 h-3.5 stroke-[2]" />
+                </div>
+              )}
+
+              {/* Text placement */}
+              {isHorizontalLayout ? (
+                <div className="flex flex-col">
+                  <span className={`text-xs sm:text-sm font-black leading-tight ${
+                    step.isCompleted 
+                      ? 'text-gray-800 dark:text-gray-200 group-hover:text-lime-600 dark:group-hover:text-lime-400' 
+                      : 'text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300'
+                  }`}>
+                    {step.label}
+                  </span>
+                  {showSubtitle(step) && (
+                    <span className={`text-[10px] sm:text-[11px] font-bold truncate max-w-[140px] leading-tight mt-0.5 ${
+                      step.isCompleted
+                        ? 'text-gray-500 dark:text-gray-400'
+                        : 'text-gray-400 dark:text-gray-500'
+                    }`}>
+                      {state.cvTitle || 'Untitled CV'}
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <span className={`absolute top-8 whitespace-nowrap text-xs font-bold transition-colors ${
+                  step.isCompleted 
+                    ? 'text-gray-800 dark:text-gray-200 group-hover:text-lime-600 dark:group-hover:text-lime-400' 
+                    : 'text-gray-400 dark:text-gray-500 group-hover:text-gray-600'
+                }`}>
+                  {step.label}
+                </span>
+              )}
+            </button>
+          );
+
+          return (
+            <React.Fragment key={step.id}>
+              {step.isActive ? activePill : standardNode}
+
+              {/* Connector line */}
+              {index < steps.length - 1 && (
+                <div className="h-[1px] w-6 sm:w-10 bg-gray-200 dark:bg-white/10 flex-shrink-0" />
+              )}
+            </React.Fragment>
+          );
+        })}
+      </div>
+    );
+  };
+
   // LAYER 3: Recovery mechanism - Check localStorage on mount and attempt to restore
   useEffect(() => {
     if (typeof window === 'undefined' || isGuestMode || mode !== 'create') return;
@@ -2764,18 +3001,77 @@ export default function ResumeEnhancerContainer({
       <div className="dashboard-page resume-enhancer-page flex flex-col flex-1 min-w-0 h-screen overflow-hidden text-[color:var(--text-primary)]">
         {/* HEADER - Top Bar */}
         <header className={`editor-header relative min-h-16 flex items-center justify-between gap-2 px-3 sm:px-6 border-b border-[color:var(--border-primary)] bg-[var(--header-bg)] sticky top-0 z-[60] shadow-sm ${state.currentStep === 1 ? 'flex-wrap py-2 sm:py-0' : ''}`}>
-          <div className="flex items-center gap-12 flex-1 min-w-0">
-            {/* Logo or Back to Dashboard if in deep editing */}
-            <div className="flex items-center gap-4">
-              {state.currentStep !== 1 ? (
+          {(state.currentStep > 1 || state.isTemplateOverlayOpen) ? (
+            <>
+              {/* Left Column: Home Button & CV Title Inline Editor & Save Status */}
+              <div className="flex items-center gap-3 min-w-0 lg:w-[280px] flex-shrink-0">
                 <button
-                  onClick={handleHomeClick}
-                  className="p-2 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-                  title="Return to Dashboard"
+                  onClick={handleHomeStepClick}
+                  className="w-10 h-10 rounded-xl bg-white dark:bg-[#1a2312] border border-lime-200 dark:border-lime-900/30 flex items-center justify-center text-lime-600 dark:text-lime-400 hover:bg-lime-50 dark:hover:bg-lime-950/20 active:scale-95 transition-all duration-200 flex-shrink-0 shadow-sm"
+                  title="Back to Step 1"
                 >
-                  <Home className="w-5 h-5" />
+                  <Home className="w-5 h-5 text-lime-600 dark:text-lime-400" />
                 </button>
-              ) : (
+                
+                <div className="flex flex-col min-w-0">
+                  <div className="flex items-center gap-1.5 group">
+                    {isEditingTitle ? (
+                      <input
+                        type="text"
+                        value={tempTitle}
+                        onChange={(e) => setTempTitle(e.target.value)}
+                        onBlur={saveTitle}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') saveTitle();
+                          if (e.key === 'Escape') setIsEditingTitle(false);
+                        }}
+                        className="text-sm font-bold text-gray-900 dark:text-white bg-transparent border-b border-lime-500 focus:outline-none px-1 py-0.5 max-w-[200px]"
+                        autoFocus
+                      />
+                    ) : (
+                      <>
+                        <span 
+                          onClick={startEditingTitle}
+                          className="text-sm font-bold text-gray-900 dark:text-white cursor-pointer hover:text-lime-500 dark:hover:text-lime-400 transition-colors truncate max-w-[200px]"
+                          title="Click to edit"
+                        >
+                          {state.cvTitle || 'Untitled CV'}
+                        </span>
+                        <button
+                          onClick={startEditingTitle}
+                          className="p-1 text-lime-600/70 dark:text-lime-400/70 hover:text-lime-600 dark:hover:text-lime-400 hover:scale-110 transition-all"
+                          aria-label="Edit title"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                  
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <span className={`w-1.5 h-1.5 rounded-full ${
+                      saveStatus === 'error' ? 'bg-red-500' :
+                      saveStatus === 'saving' ? 'bg-amber-500 animate-pulse' :
+                      'bg-lime-500 dark:bg-[#80FF00]'
+                    }`} />
+                    <span className="text-[10px] text-gray-500 dark:text-gray-400">
+                      {saveStatus === 'saving' ? 'Saving...' :
+                       saveStatus === 'success' ? 'Last saved just now' :
+                       saveStatus === 'offline' ? 'Saved offline' :
+                       saveStatus === 'error' ? 'Failed to save' :
+                       'Last saved just now'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Center Column: Dynamic Stepper */}
+              {renderHeaderStepper()}
+            </>
+          ) : (
+            <div className="flex items-center gap-12 flex-1 min-w-0">
+              {/* Logo or Back to Dashboard if in deep editing */}
+              <div className="flex items-center gap-4">
                 <button
                   onClick={toggleSidebar}
                   className="p-2 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors cursor-pointer lg:hidden"
@@ -2785,23 +3081,9 @@ export default function ResumeEnhancerContainer({
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 6h16M4 12h16M4 18h16" />
                   </svg>
                 </button>
-              )}
-            </div>
-
-          <div className="hidden lg:flex flex-1 justify-center">
-            {state.currentStep !== 1 && (
-              <div className="flex items-center gap-3">
-                <div className="h-px w-8 bg-gradient-to-r from-transparent to-lime-500/30" />
-                <span className="text-sm font-black text-gray-900 dark:text-white bg-lime-500/10 px-3 py-1 rounded-full border border-lime-500/20 shadow-sm shadow-lime-500/5 uppercase tracking-tighter italic truncate max-w-[300px]">
-                  {state.cvTitle || (typeof state.cvData?.basics?.name === 'string' && state.cvData.basics.name 
-                    ? `${state.cvData.basics.name.replace(/\s+/g, '_')}_CV` 
-                    : 'My_Resume')}.pdf
-                </span>
-                <div className="h-px w-8 bg-gradient-to-l from-transparent to-lime-500/30" />
               </div>
-            )}
-          </div>
-        </div>
+            </div>
+          )}
 
         {state.currentStep === 1 && (
           <div
@@ -2836,103 +3118,109 @@ export default function ResumeEnhancerContainer({
         )}
 
         {/* Actions - Right side */}
-        <div className="flex items-center space-x-1 sm:space-x-2 shrink-0">
-          {state.currentStep > 1 && (
-            <button
-              onClick={handleBackStep}
-              className="flex items-center gap-1.5 p-1.5 sm:px-3 sm:py-1.5 bg-[var(--bg-tertiary)] hover:bg-[var(--hover-bg)] text-[color:var(--text-primary)] rounded-full text-xs font-medium transition-all duration-200"
-              title="Back"
-            >
-              <ChevronLeft className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
-              <span className="hidden sm:inline">Back</span>
-            </button>
-          )}
+        <div className={`flex items-center space-x-1 sm:space-x-2 shrink-0 ${
+          (state.currentStep > 1 || state.isTemplateOverlayOpen) ? 'lg:w-[280px] justify-end' : ''
+        }`}>
+          {(state.currentStep > 1 || state.isTemplateOverlayOpen) && (
+            <>
+              {state.currentStep > 1 && (
+                <button
+                  onClick={handleBackStep}
+                  className="flex lg:hidden items-center gap-1.5 p-1.5 sm:px-3 sm:py-1.5 bg-[var(--bg-tertiary)] hover:bg-[var(--hover-bg)] text-[color:var(--text-primary)] rounded-full text-xs font-medium transition-all duration-200"
+                  title="Back"
+                >
+                  <ChevronLeft className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+                  <span className="hidden sm:inline">Back</span>
+                </button>
+              )}
 
-          {/* Save button - only show on step 3, 4, and 5 */}
-          {(state.currentStep === 3 || state.currentStep === 4 || state.currentStep === 5) && (
-            <motion.button
-              onClick={() => handleSmartSave(true)}
-              disabled={saveStatus === 'saving'}
-              className="p-1.5 sm:px-4 sm:py-1.5 bg-lime-500 dark:bg-[#80FF00] hover:bg-lime-600 dark:hover:bg-[#70e600] disabled:bg-gray-300 dark:disabled:bg-[var(--bg-tertiary)] disabled:cursor-not-allowed text-black disabled:text-gray-500 dark:disabled:text-[color:var(--text-tertiary)] rounded-full text-xs font-semibold transition-colors flex items-center space-x-1.5 shadow-md hover:shadow-lg overflow-hidden min-w-[36px] sm:min-w-[85px] justify-center"
-              title="Save"
-              whileHover={{ scale: saveStatus === 'saving' ? 1 : 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <AnimatePresence mode="wait" initial={false}>
-                {saveStatus === 'saving' ? (
-                  <motion.div
-                    key="saving"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.2 }}
-                    className="flex items-center space-x-1.5"
-                  >
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    <span className="hidden sm:inline">Saving...</span>
-                  </motion.div>
-                ) : saveStatus === 'success' ? (
-                  <motion.div
-                    key="success"
-                    initial={{ opacity: 1, scale: 1 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.5 }}
-                    transition={{ duration: 0.3, type: "spring", stiffness: 300 }}
-                    className="flex items-center space-x-1.5"
-                  >
-                    <CheckCircle2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
-                    <span className="hidden sm:inline">Saved!</span>
-                  </motion.div>
-                ) : saveStatus === 'offline' ? (
-                  <motion.div
-                    key="offline"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="flex items-center space-x-1.5"
-                  >
-                    <Save className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
-                    <span className="hidden sm:inline">Saved Offline</span>
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    key="idle"
-                    initial={{ opacity: 1, y: 0 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 10 }}
-                    transition={{ duration: 0.2 }}
-                    className="flex items-center space-x-1.5"
-                  >
-                    <Save className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
-                    <span className="hidden sm:inline">Save</span>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.button>
-          )}
+              {/* Save button - only show on step 3, 4, and 5 */}
+              {(state.currentStep === 3 || state.currentStep === 4 || state.currentStep === 5) && (
+                <motion.button
+                  onClick={() => handleSmartSave(true)}
+                  disabled={saveStatus === 'saving'}
+                  className="lg:hidden p-1.5 sm:px-4 sm:py-1.5 bg-lime-500 dark:bg-[#80FF00] hover:bg-lime-600 dark:hover:bg-[#70e600] disabled:bg-gray-300 dark:disabled:bg-[var(--bg-tertiary)] disabled:cursor-not-allowed text-black disabled:text-gray-500 dark:disabled:text-[color:var(--text-tertiary)] rounded-full text-xs font-semibold transition-colors flex items-center space-x-1.5 shadow-md hover:shadow-lg overflow-hidden min-w-[36px] sm:min-w-[85px] justify-center"
+                  title="Save"
+                  whileHover={{ scale: saveStatus === 'saving' ? 1 : 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <AnimatePresence mode="wait" initial={false}>
+                    {saveStatus === 'saving' ? (
+                      <motion.div
+                        key="saving"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{ duration: 0.2 }}
+                        className="flex items-center space-x-1.5"
+                      >
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span className="hidden sm:inline">Saving...</span>
+                      </motion.div>
+                    ) : saveStatus === 'success' ? (
+                      <motion.div
+                        key="success"
+                        initial={{ opacity: 1, scale: 1 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.5 }}
+                        transition={{ duration: 0.3, type: "spring", stiffness: 300 }}
+                        className="flex items-center space-x-1.5"
+                      >
+                        <CheckCircle2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+                        <span className="hidden sm:inline">Saved!</span>
+                      </motion.div>
+                    ) : saveStatus === 'offline' ? (
+                      <motion.div
+                        key="offline"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="flex items-center space-x-1.5"
+                      >
+                        <Save className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+                        <span className="hidden sm:inline">Saved Offline</span>
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        key="idle"
+                        initial={{ opacity: 1, y: 0 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 10 }}
+                        transition={{ duration: 0.2 }}
+                        className="flex items-center space-x-1.5"
+                      >
+                        <Save className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+                        <span className="hidden sm:inline">Save</span>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.button>
+              )}
 
-          {/* Continue to Cover Letter button - only show on Step 3 for non-master CVs */}
-          {state.currentStep === 3 && !isMasterCV && (
-            <button
-              onClick={handleStep3Complete}
-              className="p-1.5 sm:px-4 sm:py-1.5 bg-white text-black dark:bg-white/10 dark:text-white hover:bg-gray-100 dark:hover:bg-white/15 border border-gray-200 dark:border-white/20 rounded-full text-xs font-semibold transition-all flex items-center space-x-1.5 shadow-md hover:shadow-lg hover:scale-105"
-              title="Cover Letter"
-            >
-              <FileText className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
-              <span className="hidden sm:inline">Cover Letter</span>
-            </button>
-          )}
-          
-          {/* Continue to Review button - only show on Step 4 */}
-          {state.currentStep === 4 && (
-            <button
-              onClick={handleStep4Complete}
-              className="p-1.5 sm:px-4 sm:py-1.5 bg-white text-black dark:bg-white/10 dark:text-white hover:bg-gray-100 dark:hover:bg-white/15 border border-gray-200 dark:border-white/20 rounded-full text-xs font-semibold transition-all flex items-center space-x-1.5 shadow-md hover:shadow-lg hover:scale-105"
-              title="Review"
-            >
-              <Eye className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
-              <span className="hidden sm:inline">Review</span>
-            </button>
+              {/* Continue to Cover Letter button - only show on Step 3 for non-master CVs */}
+              {state.currentStep === 3 && !isMasterCV && (
+                <button
+                  onClick={handleStep3Complete}
+                  className="lg:hidden p-1.5 sm:px-4 sm:py-1.5 bg-white text-black dark:bg-white/10 dark:text-white hover:bg-gray-100 dark:hover:bg-white/15 border border-gray-200 dark:border-white/20 rounded-full text-xs font-semibold transition-all flex items-center space-x-1.5 shadow-md hover:shadow-lg hover:scale-105"
+                  title="Cover Letter"
+                >
+                  <FileText className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+                  <span className="hidden sm:inline">Cover Letter</span>
+                </button>
+              )}
+              
+              {/* Continue to Review button - only show on Step 4 */}
+              {state.currentStep === 4 && (
+                <button
+                  onClick={handleStep4Complete}
+                  className="lg:hidden p-1.5 sm:px-4 sm:py-1.5 bg-white text-black dark:bg-white/10 dark:text-white hover:bg-gray-100 dark:hover:bg-white/15 border border-gray-200 dark:border-white/20 rounded-full text-xs font-semibold transition-all flex items-center space-x-1.5 shadow-md hover:shadow-lg hover:scale-105"
+                  title="Review"
+                >
+                  <Eye className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+                  <span className="hidden sm:inline">Review</span>
+                </button>
+              )}
+            </>
           )}
 
           {/* Guest Mode Tag */}
@@ -2949,8 +3237,6 @@ export default function ResumeEnhancerContainer({
 
           {/* Notification Center */}
           <NotificationCenter variant="pill" />
-
-
         </div>
 
         {/* Save Error (lightweight inline) */}
