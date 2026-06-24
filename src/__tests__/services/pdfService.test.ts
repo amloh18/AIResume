@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+vi.mock('server-only', () => ({}));
 import type { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 
 // Mock puppeteer

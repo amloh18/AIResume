@@ -6,7 +6,6 @@
 
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { ITemplate } from '@/types/template';
-import { templateRendererService } from './templateRendererService';
 import { stripHtmlTags } from '@/lib/utils/textFormatting';
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, WidthType, Table, TableRow, TableCell, BorderStyle } from 'docx';
 import { BaseService } from './baseService';

@@ -191,6 +191,13 @@ export class PDFService extends BaseService {
           waitUntil: ['load', 'domcontentloaded', 'networkidle0']
         });
 
+        // Wait for fonts to be fully loaded to prevent spacing/metric mismatches
+        try {
+          await page.evaluateHandle('document.fonts.ready');
+        } catch (fontError) {
+          logger.warn('Failed to wait for fonts to load:', fontError instanceof Error ? fontError : new Error(String(fontError)));
+        }
+
         // Wait for document to be fully laid out and calculate body height
         const bodyHeight = await page.evaluate(() => {
           // Force layout recalculation

@@ -70,7 +70,7 @@ class ConfigService {
         },
         puppeteer: {
           headless: process.env.PUPPETEER_HEADLESS !== 'false',
-          args: (process.env.PUPPETEER_ARGS || '--no-sandbox,--disable-setuid-sandbox').split(','),
+          args: (process.env.PUPPETEER_ARGS || '--no-sandbox,--disable-setuid-sandbox,--font-render-hinting=none,--force-color-profile=srgb').split(','),
           timeout: parseInt(process.env.PUPPETEER_TIMEOUT || '30000', 10), // 30 seconds
           poolSize: parseInt(process.env.PUPPETEER_POOL_SIZE || '3', 10),
           idleTimeout: parseInt(process.env.PUPPETEER_IDLE_TIMEOUT || '300000', 10) // 5 minutes

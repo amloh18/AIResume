@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
       filename
     } = await request.json();
 
-    if (userId !== session.user.id) {
+    if (userId && userId !== session.user.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

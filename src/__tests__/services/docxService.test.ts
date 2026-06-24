@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+vi.mock('server-only', () => ({}));
 import type { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 
 // Helper to create valid CV data
@@ -149,6 +150,37 @@ describe('DOCXService', () => {
     it('should have generateDOCX method', async () => {
       const { DOCXService } = await import('@/lib/services/docxService');
       expect(typeof DOCXService.generateDOCX).toBe('function');
+    });
+
+    it('should generate a DOCX blob', async () => {
+      const { DOCXService } = await import('@/lib/services/docxService');
+      const cvData = createMockCVData();
+      const template: any = {
+        id: 'default',
+        name: 'Default',
+        globalStyles: {
+          fontFamily: 'Arial, sans-serif',
+          fontSize: '11pt',
+          primaryColor: '#000000',
+          backgroundColor: '#ffffff'
+        },
+        sections: [],
+        isActive: true,
+        isPremium: false,
+        thumbnail: '',
+        description: '',
+        category: 'professional'
+      };
+      
+      const blob = await DOCXService.generateDOCX(cvData, template, {
+        format: 'docx',
+        paperSize: 'A4',
+        orientation: 'portrait'
+      });
+      
+      expect(blob).toBeDefined();
+      expect(blob.size).toBeGreaterThan(0);
+      expect(blob.type).toBe('application/vnd.openxmlformats-officedocument.wordprocessingml.document');
     });
   });
 
