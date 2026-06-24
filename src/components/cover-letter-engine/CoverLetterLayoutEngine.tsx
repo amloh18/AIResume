@@ -6,10 +6,12 @@ import {
   TypographicHeader,
   ColumnSplitHeader,
   AccentBannerHeader,
+  CreativeEdgeHeader,
+  ExecutiveSlateHeader,
   HeaderSnippetProps 
 } from './snippets/headers/HeaderSnippets';
 import WYSIWYGEditor from '@/components/ui/WYSIWYGEditor';
-import { Sparkles, Type, Layout, Baseline, MoveHorizontal, LayoutTemplate, X, ChevronDown, Check } from 'lucide-react';
+import { Sparkles, Type, Layout, Baseline, MoveHorizontal, LayoutTemplate, X, ChevronDown, Check, ShieldCheck } from 'lucide-react';
 
 const TEMPLATES = [
   { id: 'modern', name: 'Modern', icon: Sparkles, desc: 'Professional, lime accents' },
@@ -17,7 +19,9 @@ const TEMPLATES = [
   { id: 'minimal', name: 'Minimal', icon: Layout, desc: 'Clean and simple' },
   { id: 'typographic', name: 'Typographic', icon: Baseline, desc: 'Bold display' },
   { id: 'column-split', name: 'Column Split', icon: MoveHorizontal, desc: 'Side-by-side header' },
-  { id: 'accent-banner', name: 'Accent Banner', icon: LayoutTemplate, desc: 'High-impact banner' }
+  { id: 'accent-banner', name: 'Accent Banner', icon: LayoutTemplate, desc: 'High-impact banner' },
+  { id: 'creative-edge', name: 'Creative Edge', icon: Sparkles, desc: 'Chic accent style' },
+  { id: 'executive-slate', name: 'Executive Slate', icon: ShieldCheck, desc: 'Sleek executive layout' }
 ] as const;
 
 export interface CoverLetterDesignProps {
@@ -73,12 +77,12 @@ interface CoverLetterLayoutEngineProps {
   headerProps: HeaderSnippetProps;
   bodyContent: string;
   footerContent?: string;
-  templateType?: 'classic' | 'modern' | 'minimal' | 'typographic' | 'column-split' | 'accent-banner';
+  templateType?: 'classic' | 'modern' | 'minimal' | 'typographic' | 'column-split' | 'accent-banner' | 'creative-edge' | 'executive-slate';
   isEditing?: boolean;
   onBodyChange?: (content: string) => void;
   pageFormat?: 'a4' | 'letter';
   design?: Partial<CoverLetterDesignProps>;
-  onTemplateTypeChange?: (type: 'classic' | 'modern' | 'minimal' | 'typographic' | 'column-split' | 'accent-banner') => void;
+  onTemplateTypeChange?: (type: 'classic' | 'modern' | 'minimal' | 'typographic' | 'column-split' | 'accent-banner' | 'creative-edge' | 'executive-slate') => void;
   showMoriChat?: boolean;
   onToggleMoriChat?: () => void;
   onChangeHeaderStyle?: () => void;
@@ -111,6 +115,10 @@ export default function CoverLetterLayoutEngine({
         return ColumnSplitHeader;
       case 'accent-banner':
         return AccentBannerHeader;
+      case 'creative-edge':
+        return CreativeEdgeHeader;
+      case 'executive-slate':
+        return ExecutiveSlateHeader;
       case 'modern':
       default:
         return ModernHeader;
@@ -222,6 +230,7 @@ export default function CoverLetterLayoutEngine({
                 grammarLocale="us"
                 textColor="black"
                 autoExpand
+                noPadding={true}
               />
             ) : (
               <>

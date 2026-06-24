@@ -15,6 +15,9 @@ export async function GET(request: NextRequest) {
     const limit = searchParams.get('limit');
     const search = searchParams.get('search');
 
+    const cvId = searchParams.get('cvId');
+    const journeyId = searchParams.get('journeyId');
+
     if (!userId) {
       return NextResponse.json(
         { success: false, message: 'User ID is required' },
@@ -27,6 +30,16 @@ export async function GET(request: NextRequest) {
       ? new mongoose.Types.ObjectId(userId)
       : userId;
     let query = CoverLetter.find({ userId: normalizedUserId });
+
+    // Add cvId filter
+    if (cvId) {
+      query = query.find({ cvId: mongoose.Types.ObjectId.isValid(cvId) ? new mongoose.Types.ObjectId(cvId) : cvId });
+    }
+
+    // Add journeyId filter
+    if (journeyId) {
+      query = query.find({ journeyId: mongoose.Types.ObjectId.isValid(journeyId) ? new mongoose.Types.ObjectId(journeyId) : journeyId });
+    }
 
     // Add status filter
     if (status && status !== 'all') {
@@ -76,6 +89,12 @@ export async function GET(request: NextRequest) {
       id: cl._id,
       title: cl.title,
       content: cl.content,
+      header: cl.header,
+      body: cl.body,
+      footer: cl.footer,
+      cvId: cl.cvId,
+      journeyId: cl.journeyId,
+      jobId: cl.jobId,
       status: cl.status,
       lastModified: cl.metadata?.lastModified || cl.updatedAt,
       createdAt: cl.createdAt,

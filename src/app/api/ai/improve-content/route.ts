@@ -32,6 +32,7 @@ Guidelines for improvement:
 5. Ensure ATS-friendly formatting and keywords
 6. Tailor content to the job context when available
 7. Keep suggestions practical and implementable
+8. If the text is a cover letter body, make sure it is comprehensive and meets the industry standard length of at least 1000 characters (approx. 200-300 words), covering introduction, alignment of key qualifications, company motivation, and a professional closing statement. Do not use placeholders or shorthand.
 
 Please provide the improved content only, without explanations or markdown formatting.
 `;

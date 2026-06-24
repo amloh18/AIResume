@@ -303,6 +303,12 @@ export async function GET(request: NextRequest) {
           // For summary, include cvData fields needed for completion percentage calculation
           // Include basics (for personal info), work (for experience), education, skills, and projects
           cvData: cv.cvData ? {
+            design: cv.cvData.design,
+            metadata: cv.cvData.metadata ? {
+              canvasDesign: cv.cvData.metadata.canvasDesign,
+              canvasTemplate: cv.cvData.metadata.canvasTemplate,
+              canvasZones: cv.cvData.metadata.canvasZones
+            } : undefined,
             basics: cv.cvData.basics ? {
               name: cv.cvData.basics.name,
               label: cv.cvData.basics.label,

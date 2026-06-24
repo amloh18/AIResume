@@ -287,6 +287,18 @@ const CoverLetterPreview: React.FC<CoverLetterPreviewProps> = ({
           color: 'black'
         }}
       >
+        <style dangerouslySetInnerHTML={{ __html: `
+          .cl-container .cl-header,
+          .cl-container .cl-body,
+          .cl-container .cl-signoff,
+          .cl-container .candidate-info,
+          .cl-container .recipient-info {
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+            padding-top: 0 !important;
+            padding-bottom: 0 !important;
+          }
+        `}} />
         <div
           className={`cl-container ${template.className} text-black`}
           style={{
