@@ -100,7 +100,7 @@ export default function CVSnapshotDocument({
     return CANVAS_TEMPLATES.find((item) => item.id === template._id || item.id === template.id) || template;
   }, [template]);
 
-  const design = (normalizedCvData as any)?.design || cvData?.design || (initialData as any).design;
+  const design = cvData?.metadata?.canvasDesign || (normalizedCvData as any)?.metadata?.canvasDesign || (normalizedCvData as any)?.design || cvData?.design || (initialData as any).design;
 
   const ReadOnlyWrapper = function Editable(props: any) {
     return <EditableField {...props} data={normalizedCvData || initialData} readOnly={true} />;

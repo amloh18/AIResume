@@ -1065,7 +1065,7 @@ export default function ResumeEnhancerContainer({
           if (!actualCvId && coverLetterData) {
             dispatch({
               type: 'SET_AUTO_COVER_LETTER',
-              payload: { draft: coverLetterData.body || extractBodyFromContent(coverLetterData.content || ''), coverLetterId: clId }
+              payload: { draft: coverLetterData.body || extractBodyFromContent(coverLetterData.content || ''), coverLetterId: coverLetterData.id || coverLetterData._id || clId }
             });
             dispatch({ type: 'SET_CV_TYPE', payload: 'standalone' });
             goToStepSafely(4, { silent: true });
@@ -1088,6 +1088,22 @@ export default function ResumeEnhancerContainer({
 
           const result = await response.json();
           const cv = result.data.cv;
+
+          // Fetch associated cover letter if we don't have it yet (e.g. loading CV directly in edit mode)
+          if (!coverLetterData && actualCvId && userId !== 'guest') {
+             try {
+                const clListResponse = await fetch(`/api/cover-letters?userId=${userId}&cvId=${actualCvId}`);
+                if (clListResponse.ok) {
+                    const clListResult = await clListResponse.json();
+                    const matchingCl = clListResult.data?.coverLetters?.[0];
+                    if (matchingCl) {
+                        coverLetterData = matchingCl;
+                    }
+                }
+             } catch (clFetchErr) {
+                console.warn('Failed to pre-fetch cover letter for CV:', clFetchErr);
+             }
+          }
 
           // Resolve CV type: 
           // 1. If mode is 'journey', force journey type
@@ -1147,27 +1163,28 @@ export default function ResumeEnhancerContainer({
             initialTemplateRef.current = cv.template || null;
           }
           
+          // Always load CV with resolved type and jobData (for journey CVs)
+          loadCV({
+            cvId: cv.id,
+            cvType: resolvedCvType,
+            cvTitle: cv.title,
+            cvData: cv.cvData,
+            template: cv.template,
+            journeyId: cv.journeyId,
+            jobData: cv.jobData,
+            coverLetterId: coverLetterData ? (coverLetterData.id || coverLetterData._id) : undefined
+          });
+
+          // Store initial data for unsaved changes detection
+          initialCVDataRef.current = JSON.parse(JSON.stringify(cv.cvData));
+          initialCVTitleRef.current = cv.title;
+          initialTemplateRef.current = cv.template || null;
+
           if (coverLetterData) {
             dispatch({
               type: 'SET_AUTO_COVER_LETTER',
-              payload: { draft: coverLetterData.body || extractBodyFromContent(coverLetterData.content || ''), coverLetterId: clId }
+              payload: { draft: coverLetterData.body || extractBodyFromContent(coverLetterData.content || ''), coverLetterId: coverLetterData.id || coverLetterData._id || clId }
             });
-          } else {
-            // Load CV with resolved type and jobData (for journey CVs)
-            loadCV({
-              cvId: cv.id,
-              cvType: resolvedCvType,
-              cvTitle: cv.title,
-              cvData: cv.cvData,
-              template: cv.template,
-              journeyId: cv.journeyId,
-              jobData: cv.jobData
-            });
-
-            // Store initial data for unsaved changes detection
-            initialCVDataRef.current = JSON.parse(JSON.stringify(cv.cvData));
-            initialCVTitleRef.current = cv.title;
-            initialTemplateRef.current = cv.template || null;
           }
 
           // Master and Standalone CVs are role-based: auto-derive role + seniority so Step 3 analysis is ready.

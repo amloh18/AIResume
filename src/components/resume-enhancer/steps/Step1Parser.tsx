@@ -54,6 +54,13 @@ const LazyThumbnail = ({ item, isCoverLetter = false }: { item: any, isCoverLett
     if (item.template && (item.template.zones || item.template.type)) return item.template;
     
     let idToFind = item.template?.id || item.template?._id || '';
+    if (!idToFind && item.cvData?.metadata?.canvasTemplate) {
+      const canvasTpl = item.cvData.metadata.canvasTemplate;
+      if (canvasTpl.zones || canvasTpl.type) {
+        return canvasTpl;
+      }
+      idToFind = canvasTpl.id || canvasTpl._id || '';
+    }
     if (!idToFind && typeof item.templateId === 'string') {
       idToFind = item.templateId;
     } else if (!idToFind && item.templateId && typeof item.templateId === 'object') {
@@ -72,7 +79,7 @@ const LazyThumbnail = ({ item, isCoverLetter = false }: { item: any, isCoverLett
     }
 
     return CANVAS_TEMPLATES.find(t => t.id === '1-col') || CANVAS_TEMPLATES[0] || null;
-  }, [item.template, item.templateId, item.metadata?.templateId]);
+  }, [item.template, item.templateId, item.metadata?.templateId, item.cvData]);
 
   if (!isCoverLetter && templateObj) {
     return (

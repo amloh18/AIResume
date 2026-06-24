@@ -156,3 +156,61 @@ export function AccentBannerHeader({
     </div>
   );
 }
+
+export function CreativeEdgeHeader({
+  name, email, phone, location, linkedin, date, recipientName, companyName
+}: HeaderSnippetProps) {
+  return (
+    <div className="mb-6 text-gray-850 font-sans">
+      <div className="text-center mb-4">
+        <h1 className="text-3xl font-light uppercase tracking-[0.25em] text-gray-900 mb-2">{name}</h1>
+        <div className="h-[1px] w-24 bg-[var(--cv-accent,#80FF00)] mx-auto mb-3" />
+        <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs text-gray-500">
+          {email && <span>{email}</span>}
+          {phone && <><span className="text-gray-300">|</span><span>{phone}</span></>}
+          {location && <><span className="text-gray-300">|</span><span>{location}</span></>}
+        </div>
+      </div>
+      
+      <div className="bg-slate-50 dark:bg-white/[0.02] border-l-4 border-[var(--cv-accent,#80FF00)] p-4 rounded-r-lg mt-6">
+        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">{date}</p>
+        {recipientName && <p className="font-extrabold text-gray-900 dark:text-slate-200">{recipientName}</p>}
+        {companyName && <p className="text-sm text-gray-600 dark:text-gray-400">{companyName}</p>}
+      </div>
+    </div>
+  );
+}
+
+export function ExecutiveSlateHeader({
+  name, email, phone, location, linkedin, date, recipientName, companyName
+}: HeaderSnippetProps) {
+  return (
+    <div className="mb-8 text-gray-850 font-sans">
+      <div className="border-b-4 border-slate-700 pb-3 mb-4">
+        <h1 className="text-4xl font-extrabold tracking-tight text-slate-800 dark:text-slate-100 uppercase">{name}</h1>
+        <div className="text-xs uppercase tracking-widest text-slate-500 mt-1 font-bold">Official Candidacy</div>
+      </div>
+      
+      <div className="grid grid-cols-2 gap-4 text-xs">
+        <div className="text-gray-600 dark:text-gray-400 space-y-1">
+          <p className="font-bold text-slate-900 dark:text-slate-300">Application Date:</p>
+          <p>{date}</p>
+          {recipientName && (
+            <div className="mt-2">
+              <p className="font-bold text-slate-900 dark:text-slate-300">Attention:</p>
+              <p className="font-semibold">{recipientName}</p>
+              {companyName && <p>{companyName}</p>}
+            </div>
+          )}
+        </div>
+        <div className="text-right space-y-1 text-gray-600 dark:text-gray-400 border-l border-slate-200 pl-4">
+          <p className="font-bold text-slate-900 dark:text-slate-300">Contact Details:</p>
+          {email && <p>{email}</p>}
+          {phone && <p>{phone}</p>}
+          {location && <p>{location}</p>}
+          {linkedin && <p className="truncate">{linkedin}</p>}
+        </div>
+      </div>
+    </div>
+  );
+}

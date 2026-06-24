@@ -23,6 +23,7 @@ interface WYSIWYGEditorProps {
   grammarLocale?: 'us' | 'uk';
   textColor?: string;
   autoExpand?: boolean;
+  noPadding?: boolean;
 }
 
 // Hook to get toolbar props for external rendering
@@ -134,7 +135,8 @@ const WYSIWYGEditor: React.FC<WYSIWYGEditorProps> = ({
   reviewMode = false,
   grammarLocale,
   textColor = 'white',
-  autoExpand = false
+  autoExpand = false,
+  noPadding = false
 }) => {
   // Use the WYSIWYG hook directly - hooks must be called unconditionally
   const {
@@ -428,7 +430,7 @@ const WYSIWYGEditor: React.FC<WYSIWYGEditorProps> = ({
               handleContentChange();
             }
           }}
-          className={`w-full px-4 py-3 text-white focus:outline-none custom-scrollbar editor-content ${className} resize-none ${autoExpand ? '' : 'overflow-y-auto'}`}
+          className={`w-full ${noPadding ? 'p-0' : 'px-4 py-3'} text-white focus:outline-none custom-scrollbar editor-content ${className} resize-none ${autoExpand ? '' : 'overflow-y-auto'}`}
           style={{ minHeight: rows ? `${Math.max(rows * 1.5, 6)}rem` : '150px', ...(autoExpand ? {} : { maxHeight: `${rows * 2}rem` }) }}
           data-placeholder={placeholder}
           spellCheck="false"
@@ -448,10 +450,10 @@ const WYSIWYGEditor: React.FC<WYSIWYGEditorProps> = ({
         {/* Placeholder */}
         {(!value || value === '<br>' || value === '' || value === '<p></p>' || value === '<p><br></p>' || value === '<div><br></div>') && (
           <div 
-            className="absolute top-3 left-4 pointer-events-none opacity-50"
+            className="absolute pointer-events-none opacity-50"
             style={{ 
-              top: '0.75rem', 
-              left: '1rem',
+              top: noPadding ? '0px' : '0.75rem', 
+              left: noPadding ? '0px' : '1rem',
               color: textColor === 'black' ? '#6B7280' : 'rgba(255, 255, 255, 0.5)'
             }}
           >

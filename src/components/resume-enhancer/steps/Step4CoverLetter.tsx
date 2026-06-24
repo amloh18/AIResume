@@ -18,7 +18,9 @@ import {
   MinimalHeader,
   TypographicHeader,
   ColumnSplitHeader,
-  AccentBannerHeader 
+  AccentBannerHeader,
+  CreativeEdgeHeader,
+  ExecutiveSlateHeader
 } from '../../cover-letter-engine/snippets/headers/HeaderSnippets';
 import { useUnifiedAuth } from '@/lib/hooks/useUnifiedAuth';
 import guestCVService from '@/lib/services/guestCVService';
@@ -38,7 +40,9 @@ const TEMPLATES = [
   { id: 'minimal', name: 'Minimal', icon: Layout, desc: 'Clean and simple' },
   { id: 'typographic', name: 'Typographic', icon: Baseline, desc: 'Bold display' },
   { id: 'column-split', name: 'Column Split', icon: MoveHorizontal, desc: 'Side-by-side header' },
-  { id: 'accent-banner', name: 'Accent Banner', icon: LayoutTemplate, desc: 'High-impact banner' }
+  { id: 'accent-banner', name: 'Accent Banner', icon: LayoutTemplate, desc: 'High-impact banner' },
+  { id: 'creative-edge', name: 'Creative Edge', icon: Sparkles, desc: 'Chic accent style' },
+  { id: 'executive-slate', name: 'Executive Slate', icon: ShieldCheck, desc: 'Sleek executive layout' }
 ] as const;
 
 export default function Step4CoverLetter({ onComplete }: Step4CoverLetterProps) {
@@ -264,7 +268,7 @@ export default function Step4CoverLetter({ onComplete }: Step4CoverLetterProps) 
         </div>
 
         {/* MIDDLE COLUMN - LETTER GUIDE (radial progress, metrics, context) */}
-        <div className="flex flex-col w-[320px] shrink-0 h-full relative z-10">
+        <div className="flex flex-col w-[400px] shrink-0 h-full relative z-10">
           <LetterGuidePanel 
             matchScore={matchScore}
             templateType={templateType}
@@ -332,6 +336,8 @@ export default function Step4CoverLetter({ onComplete }: Step4CoverLetterProps) 
                       case 'typographic': return TypographicHeader;
                       case 'column-split': return ColumnSplitHeader;
                       case 'accent-banner': return AccentBannerHeader;
+                      case 'creative-edge': return CreativeEdgeHeader;
+                      case 'executive-slate': return ExecutiveSlateHeader;
                       case 'modern':
                       default: return ModernHeader;
                     }
@@ -352,7 +358,7 @@ export default function Step4CoverLetter({ onComplete }: Step4CoverLetterProps) 
                       }`}
                     >
                       {/* Live Scaled Down Preview */}
-                      <div className="w-full h-[140px] bg-white border-b border-slate-150 dark:border-white/5 flex justify-center items-start p-3 relative overflow-hidden select-none [container-type:inline-size]">
+                      <div className="@container w-full h-[140px] bg-white border-b border-slate-150 dark:border-white/5 flex justify-center items-start p-3 relative overflow-hidden select-none">
                         <div 
                           className="w-[800px] shrink-0 origin-top transform" 
                           style={{ 

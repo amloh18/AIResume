@@ -112,6 +112,7 @@ You must return only valid JSON matching this schema:
 2. **The Match:** Identify the strongest quantified achievements in the CV that solve specific JD requirements.
 3. **Motivation:** Address cultural alignment and why the candidate is specifically excited about ${targetCompany}.
 4. **Closing:** A bold Call to Action (CTA).
+5. **Length Constraint:** The overall generated body text (the sum of the sections: introduction, experience_bridge_1, experience_bridge_2, motivation, closing) MUST be at least 1000 characters long, adhering to industry standards for thoroughness, detail, and professionalism. Do not write short placeholders or single-sentence paragraphs.
 
 ### Output JSON Format
 You must return only valid JSON matching this schema:
