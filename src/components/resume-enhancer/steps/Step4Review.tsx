@@ -3,7 +3,7 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
-import { AlertCircle, Eye, Palette, X, FileText, Download, Target, Award, TrendingUp, AlertTriangle, CheckCircle2, Shield, Sparkles, BookOpen, ChevronRight, Zap, Briefcase, Edit2, LayoutTemplate, Calendar } from 'lucide-react';
+import { AlertCircle, Eye, Palette, X, FileText, Download, Target, Award, TrendingUp, AlertTriangle, CheckCircle2, Shield, Sparkles, BookOpen, ChevronRight, Zap, Briefcase, Edit2, LayoutTemplate, Calendar, PenTool, ZoomIn, ZoomOut } from 'lucide-react';
 import CVBuilderProAdapter from '@/components/cv-builder-pro/CVBuilderProAdapter';
 import { ITemplate } from '@/types/template';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -23,6 +23,245 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useSession } from 'next-auth/react';
 import { downloadCanvasAsPDF } from '@/lib/utils/downloadCanvas';
 import AuthPromptModal from '../AuthPromptModal';
+import toast from 'react-hot-toast';
+import { COVER_LETTER_TEMPLATES } from '@/lib/templates/cover-letter-templates';
+
+function getAtsScannedText(cvData: any): string {
+  if (!cvData) return 'No resume data found.';
+  const lines: string[] = [];
+
+  // System status header
+  lines.push('>> INITIALIZING PARSER ENGINE...');
+  lines.push('>> EXTRACTING PLAIN TEXT STRINGS (IMAGES/STYLES RETRENCHED)...');
+  lines.push(`>> SYSTEM TIME: ${new Date().toISOString()}`);
+  lines.push('================================================================');
+  lines.push('');
+
+  // Basics
+  if (cvData.basics) {
+    lines.push('[BASICS]');
+    if (cvData.basics.name) lines.push(`NAME: ${cvData.basics.name}`);
+    if (cvData.basics.label) lines.push(`ROLE_TITLE: ${cvData.basics.label}`);
+    if (cvData.basics.email) lines.push(`EMAIL: ${cvData.basics.email}`);
+    if (cvData.basics.phone) lines.push(`PHONE: ${cvData.basics.phone}`);
+    if (cvData.basics.url) lines.push(`URL: ${cvData.basics.url}`);
+    if (cvData.basics.location) {
+      const loc = cvData.basics.location;
+      const locStr = typeof loc === 'string' ? loc : [loc.city, loc.region, loc.countryCode].filter(Boolean).join(', ');
+      if (locStr) lines.push(`LOCATION: ${locStr}`);
+    }
+    lines.push('');
+    if (cvData.basics.summary) {
+      lines.push('[SUMMARY]');
+      lines.push(cvData.basics.summary);
+      lines.push('');
+    }
+  }
+
+  // Work
+  if (cvData.work && Array.isArray(cvData.work) && cvData.work.length > 0) {
+    lines.push('[WORK_EXPERIENCE]');
+    cvData.work.forEach((w: any, idx: number) => {
+      lines.push(`ENTRY #${idx + 1}`);
+      if (w.company || w.name) lines.push(`COMPANY: ${w.company || w.name}`);
+      if (w.position) lines.push(`POSITION: ${w.position}`);
+      if (w.location) lines.push(`LOCATION: ${w.location}`);
+      const dates = [w.startDate, w.endDate || 'Present'].filter(Boolean).join(' TO ');
+      if (dates) lines.push(`DURATION: ${dates}`);
+      if (w.summary) lines.push(`DESCRIPTION: ${w.summary}`);
+      if (w.highlights && Array.isArray(w.highlights) && w.highlights.length > 0) {
+        lines.push('HIGHLIGHTS:');
+        w.highlights.forEach((h: string) => {
+          if (h) lines.push(`  - ${h}`);
+        });
+      }
+      lines.push('----------------------------------------------------------------');
+    });
+    lines.push('');
+  }
+
+  // Education
+  if (cvData.education && Array.isArray(cvData.education) && cvData.education.length > 0) {
+    lines.push('[EDUCATION]');
+    cvData.education.forEach((edu: any, idx: number) => {
+      lines.push(`ENTRY #${idx + 1}`);
+      if (edu.institution) lines.push(`INSTITUTION: ${edu.institution}`);
+      if (edu.studyType || edu.degree) lines.push(`DEGREE: ${edu.studyType || edu.degree}`);
+      if (edu.area) lines.push(`FIELD_OF_STUDY: ${edu.area}`);
+      const dates = [edu.startDate, edu.endDate].filter(Boolean).join(' TO ');
+      if (dates) lines.push(`DURATION: ${dates}`);
+      if (edu.description) lines.push(`DESCRIPTION: ${edu.description}`);
+      lines.push('----------------------------------------------------------------');
+    });
+    lines.push('');
+  }
+
+  // Skills
+  if (cvData.skills && Array.isArray(cvData.skills) && cvData.skills.length > 0) {
+    lines.push('[SKILLS]');
+    cvData.skills.forEach((s: any) => {
+      const category = s.category || s.name || 'General';
+      const keywords = s.skills || s.keywords || [];
+      if (keywords.length > 0) {
+        lines.push(`${category.toUpperCase()}: ${keywords.join(', ')}`);
+      }
+    });
+    lines.push('');
+  }
+
+  // Projects
+  if (cvData.projects && Array.isArray(cvData.projects) && cvData.projects.length > 0) {
+    lines.push('[PROJECTS]');
+    cvData.projects.forEach((proj: any, idx: number) => {
+      lines.push(`PROJECT #${idx + 1}`);
+      if (proj.name) lines.push(`TITLE: ${proj.name}`);
+      if (proj.description) lines.push(`DESCRIPTION: ${proj.description}`);
+      if (proj.highlights && Array.isArray(proj.highlights) && proj.highlights.length > 0) {
+        lines.push('HIGHLIGHTS:');
+        proj.highlights.forEach((h: string) => {
+          if (h) lines.push(`  - ${h}`);
+        });
+      }
+      lines.push('----------------------------------------------------------------');
+    });
+    lines.push('');
+  }
+
+  // Certifications
+  if (cvData.certificates && Array.isArray(cvData.certificates) && cvData.certificates.length > 0) {
+    lines.push('[CERTIFICATIONS]');
+    cvData.certificates.forEach((cert: any) => {
+      const certLine = [cert.name, cert.issuer, cert.date].filter(Boolean).join(' | ');
+      lines.push(`- ${certLine}`);
+    });
+    lines.push('');
+  }
+
+  // Languages
+  if (cvData.languages && Array.isArray(cvData.languages) && cvData.languages.length > 0) {
+    lines.push('[LANGUAGES]');
+    cvData.languages.forEach((lang: any) => {
+      const langLine = [lang.language, lang.fluency].filter(Boolean).join(' | ');
+      lines.push(`- ${langLine}`);
+    });
+    lines.push('');
+  }
+
+  lines.push('>> PARSING COMPLETE. ZERO ENCODING ERRORS.');
+  return lines.join('\n');
+}
+
+interface JobDescriptionSegmentedProps {
+  jobData: any;
+  keywordGaps: any[];
+}
+
+const JobDescriptionSegmented = ({ jobData, keywordGaps }: JobDescriptionSegmentedProps) => {
+  if (!jobData) {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 text-center h-full text-gray-400">
+        <Briefcase className="w-12 h-12 mb-3" />
+        <p className="font-bold text-gray-900 dark:text-white">No Job Description Available</p>
+        <p className="text-sm">Link this CV to a job opportunity to view the details here.</p>
+      </div>
+    );
+  }
+
+  const jdText = jobData.description || jobData.jobDescription || jobData.jd || '';
+  const paragraphs = jdText.split('\n\n').filter(Boolean);
+
+  return (
+    <div className="p-8 max-w-3xl mx-auto bg-white dark:bg-[#141810] min-h-[800px] shadow-sm rounded-xl border border-gray-100 dark:border-gray-800 text-left">
+      <div className="border-b border-gray-100 dark:border-gray-800 pb-6 mb-6">
+        <div className="flex items-start gap-4">
+          <div className="w-12 h-12 rounded-xl bg-lime-500/10 dark:bg-lime-500/20 flex items-center justify-center text-lime-600 dark:text-lime-400 shrink-0">
+            <Briefcase className="w-6 h-6" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-black text-gray-900 dark:text-white leading-tight">
+              {jobData.title || jobData.jobTitle || 'Target Role'}
+            </h1>
+            <p className="text-lg font-bold text-lime-600 dark:text-lime-400 mt-1">
+              {jobData.company || jobData.companyName || 'Company'}
+            </p>
+            <div className="flex flex-wrap gap-4 mt-3 text-sm text-gray-500 dark:text-gray-400">
+              {jobData.location && (
+                <span className="flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+                  {jobData.location}
+                </span>
+              )}
+              {jobData.type && (
+                <span className="flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+                  {jobData.type}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Target Skills Segment */}
+      {keywordGaps && keywordGaps.length > 0 && (
+        <div className="mb-8">
+          <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
+            Target Job Skills
+          </h3>
+          <div className="flex flex-wrap gap-2">
+            {keywordGaps.map((gap, i) => (
+              <span
+                key={i}
+                className="text-xs px-3 py-1.5 bg-gray-50 dark:bg-white/5 border border-gray-250/50 dark:border-white/10 rounded-lg text-gray-700 dark:text-gray-300 font-semibold"
+              >
+                {gap.keyword}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Segments of Job Description */}
+      <div className="space-y-6">
+        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
+          Role Details
+        </h3>
+        {paragraphs.map((p: string, index: number) => {
+          const isHeader = p.trim().startsWith('#') || (p.length < 50 && p.toUpperCase() === p && p.trim().endsWith(':'));
+          if (isHeader) {
+            return (
+              <h4 key={index} className="text-base font-bold text-gray-900 dark:text-white mt-6 mb-2">
+                {p.replace(/^#+\s*/, '')}
+              </h4>
+            );
+          }
+
+          if (p.includes('\n*') || p.includes('\n-')) {
+            const listItems = p.split(/\n[-*]/).filter(Boolean);
+            const firstItem = listItems[0];
+            const bulletItems = listItems.slice(1);
+            return (
+              <div key={index} className="space-y-2">
+                {firstItem && <p className="text-gray-750 dark:text-gray-300 leading-relaxed text-sm">{firstItem}</p>}
+                <ul className="list-disc pl-5 space-y-1.5 text-gray-750 dark:text-gray-300 text-sm">
+                  {bulletItems.map((item, idx) => (
+                    <li key={idx} className="leading-relaxed">{item.trim()}</li>
+                  ))}
+                </ul>
+              </div>
+            );
+          }
+
+          return (
+            <p key={index} className="text-gray-750 dark:text-gray-300 leading-relaxed text-sm whitespace-pre-line">
+              {p}
+            </p>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
 
 export default function Step4Review({ onSave }: { onSave?: () => Promise<void> }) {
   const { state, setTemplate, dispatch, goToStep } = useResumeEnhancer();
@@ -34,11 +273,45 @@ export default function Step4Review({ onSave }: { onSave?: () => Promise<void> }
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [showDownloadModal, setShowDownloadModal] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
-  const [showCoverLetterPreview, setShowCoverLetterPreview] = useState(false);
+  const [activeTab, setActiveTab] = useState<'resume' | 'cover' | 'jd'>('resume');
+  const [isHeatmapActive, setIsHeatmapActive] = useState(false);
+  const [isAtsViewActive, setIsAtsViewActive] = useState(false);
   const [coverLetterData, setCoverLetterData] = useState<any>(null);
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const missingSkills = useMemo(() => {
+    if (state.keywordGaps) {
+      return state.keywordGaps.slice(0, 4).map((g: any) => g.keyword);
+    }
+    return [];
+  }, [state.keywordGaps]);
+
+  // Derived lists for dynamic Left Panel metrics
+  const matchedSkills = useMemo(() => {
+    if (state.cvData?.skills && Array.isArray(state.cvData.skills)) {
+      // Flatten all skills inside each category
+      const allSkills = state.cvData.skills.flatMap((s: any) => {
+        if (typeof s === 'string') return s;
+        if (s && Array.isArray(s.skills)) return s.skills;
+        if (s && Array.isArray(s.keywords)) return s.keywords;
+        return [];
+      }).filter(Boolean);
+      
+      const missingSet = new Set(missingSkills.map(m => m.toLowerCase()));
+      const matched = allSkills.filter(skill => !missingSet.has(skill.toLowerCase()));
+      
+      return matched.length > 0 ? matched.slice(0, 5) : allSkills.slice(0, 5);
+    }
+    return [];
+  }, [state.cvData?.skills, missingSkills]);
+
+  const handleShareLink = () => {
+    const shareUrl = `${window.location.origin}/share/${state.cvId || 'draft'}`;
+    navigator.clipboard.writeText(shareUrl);
+    toast.success('Share link copied to clipboard!');
+  };
 
   useEffect(() => {
     const handleDownloadEvent = () => setShowDownloadModal(true);
@@ -80,7 +353,7 @@ export default function Step4Review({ onSave }: { onSave?: () => Promise<void> }
 
   useEffect(() => {
     const fetchCoverLetterData = async () => {
-      if (showCoverLetterPreview && state.coverLetterId && !coverLetterData) {
+      if (activeTab === 'cover' && state.coverLetterId && !coverLetterData) {
         try {
           const clResponse = await fetch(`/api/cover-letters/${state.coverLetterId}`);
           if (!clResponse.ok) return;
@@ -94,13 +367,13 @@ export default function Step4Review({ onSave }: { onSave?: () => Promise<void> }
       }
     };
     fetchCoverLetterData();
-  }, [showCoverLetterPreview, state.coverLetterId, coverLetterData]);
+  }, [activeTab, state.coverLetterId, coverLetterData]);
 
   useEffect(() => {
-    if (!hasLinkedCoverLetter && showCoverLetterPreview) {
-      setShowCoverLetterPreview(false);
+    if (!hasLinkedCoverLetter && activeTab === 'cover') {
+      setActiveTab('resume');
     }
-  }, [hasLinkedCoverLetter, showCoverLetterPreview]);
+  }, [hasLinkedCoverLetter, activeTab]);
 
   // Fetch cover letter status for journey CVs if not already loaded
   useEffect(() => {
@@ -234,13 +507,13 @@ export default function Step4Review({ onSave }: { onSave?: () => Promise<void> }
     goToStep(4);
   };
 
-  const handleDownload = async (format: 'pdf' | 'docx' = 'pdf') => {
+  const handleDownload = async (docType: 'cv' | 'coverLetter' | 'all' = 'cv', format: 'pdf' | 'docx' = 'pdf') => {
     if (!session || !session.user) {
       setShowAuthPrompt(true);
       return;
     }
 
-    if (!state.selectedTemplate) {
+    if (docType === 'cv' && !state.selectedTemplate) {
       alert('Please select a template before downloading');
       return;
     }
@@ -253,52 +526,98 @@ export default function Step4Review({ onSave }: { onSave?: () => Promise<void> }
         }
         const baseName = state.cvTitle || state.jobData?.title || state.targetRole || 'CV';
 
-        if (format === 'pdf') {
-          // ── WYSIWYG PDF: capture the live canvas preview from the right panel ───
-          // The server-side export uses the old TemplateRenderer which doesn’t
-          // know about canvas templates, snippets, or CSS custom properties.
-          // Capturing the DOM gives a pixel-perfect match of the preview.
-          await downloadCanvasAsPDF(`${baseName}.pdf`, {
-            paperSize: (state.paperSize as 'A4' | 'Letter') || 'A4',
-          });
-        } else {
-          // DOCX: server-side export generates a content-faithful Word doc
-          // (all sections, correct data; visual canvas styling not replicated).
-          const userId = session?.user?.id;
-          if (!userId) throw new Error('You must be signed in to download this CV.');
+        if (docType === 'cv') {
+          if (format === 'pdf') {
+            // ── WYSIWYG PDF: capture the live canvas preview from the right panel ───
+            await downloadCanvasAsPDF(`${baseName}.pdf`, {
+              paperSize: (state.paperSize as 'A4' | 'Letter') || 'A4',
+            });
+          } else {
+            // DOCX: server-side export generates a content-faithful Word doc
+            const userId = session?.user?.id;
+            if (!userId) throw new Error('You must be signed in to download this CV.');
 
-          const response = await fetch('/api/cv/export', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              cvData: state.cvData,
-              template: state.selectedTemplate,
-              format: 'docx',
-              userId,
-              cvId: state.cvId,
-              jobId: state.jobData?._id || state.jobData?.id || state.journeyId,
-              paperSize: state.paperSize === 'Letter' ? 'Letter' : 'A4',
-              orientation: 'portrait',
-              filename: baseName,
-            }),
-          });
-          if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.error || `Download failed with status ${response.status}`);
+            const response = await fetch('/api/cv/export', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                cvData: state.cvData,
+                template: state.selectedTemplate,
+                format: 'docx',
+                userId,
+                cvId: state.cvId,
+                jobId: state.jobData?._id || state.jobData?.id || state.journeyId,
+                paperSize: state.paperSize === 'Letter' ? 'Letter' : 'A4',
+                orientation: 'portrait',
+                filename: baseName,
+              }),
+            });
+            if (!response.ok) {
+              const errorData = await response.json().catch(() => ({}));
+              throw new Error(errorData.error || `Download failed with status ${response.status}`);
+            }
+            const blob = await response.blob();
+            const downloadUrl = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = downloadUrl;
+            link.download = `${baseName}.docx`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(downloadUrl);
           }
-          const blob = await response.blob();
-          const downloadUrl = window.URL.createObjectURL(blob);
+        } else if (docType === 'coverLetter') {
+          const clId = state.coverLetterId || (coverLetterData?.id || coverLetterData?._id);
+          if (!clId) throw new Error('No cover letter ID available.');
+
+          const queryParams = new URLSearchParams({
+            format,
+            paperSize: state.paperSize === 'Letter' ? 'Letter' : 'A4',
+            orientation: 'portrait',
+            jobTitle: state.jobData?.title || state.targetRole || ''
+          });
+
+          const downloadUrl = `/api/cover-letters/${clId}/download?${queryParams.toString()}`;
+          
           const link = document.createElement('a');
           link.href = downloadUrl;
-          link.download = `${baseName}.docx`;
+          link.download = `${baseName}_CoverLetter.${format}`;
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
-          window.URL.revokeObjectURL(downloadUrl);
+        } else if (docType === 'all') {
+          toast.loading('Preparing CV...', { id: 'package-download' });
+          
+          await downloadCanvasAsPDF(`${baseName}.pdf`, {
+            paperSize: (state.paperSize as 'A4' | 'Letter') || 'A4',
+          });
+
+          if (hasLinkedCoverLetter) {
+            toast.loading('Preparing Cover Letter...', { id: 'package-download' });
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            const clId = state.coverLetterId || (coverLetterData?.id || coverLetterData?._id);
+            if (clId) {
+              const queryParams = new URLSearchParams({
+                format: 'pdf',
+                paperSize: state.paperSize === 'Letter' ? 'Letter' : 'A4',
+                orientation: 'portrait',
+                jobTitle: state.jobData?.title || state.targetRole || ''
+              });
+              const link = document.createElement('a');
+              link.href = `/api/cover-letters/${clId}/download?${queryParams.toString()}`;
+              link.download = `${baseName}_CoverLetter.pdf`;
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+            }
+          }
+
+          toast.success('All downloads triggered!', { id: 'package-download' });
         }
       } catch (error) {
         console.error('Download failed:', error);
-        alert(error instanceof Error ? error.message : 'Failed to download CV. Please try again.');
+        toast.error(error instanceof Error ? error.message : 'Failed to download document.', { id: 'package-download' });
       } finally {
         setIsDownloading(false);
       }
@@ -377,348 +696,220 @@ export default function Step4Review({ onSave }: { onSave?: () => Promise<void> }
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-64px)] min-h-0 overflow-hidden bg-[#f3f2ee] dark:bg-[#1a230f]">
-      {/* Split View: Info Left, Preview Right */}
-      <div className="flex-1 flex flex-col md:flex-row gap-6 min-h-0 overflow-hidden p-6 max-w-[1600px] mx-auto w-full">
-        {/* Left Panel - Info */}
-        <div className="w-full md:w-1/2 lg:w-[45%] flex flex-col min-h-0">
-          <div className="mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
-              Review Your Resume
-            </h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Take a final look before saving to your dashboard
+    <div className="flex flex-col h-[calc(100vh-64px)] min-h-0 overflow-hidden bg-[#f3f2ee] dark:bg-[#0f140a]">
+      {/* 3 Panels Layout: Left (Metrics/Recruiter), Center (Preview Canvas), Right (Actions/Next Steps) */}
+      <div className="flex-1 flex flex-col lg:flex-row gap-6 min-h-0 overflow-hidden p-6 max-w-[1700px] mx-auto w-full">
+        
+        {/* LEFT PANEL - Scorecard & Recruiter Preview */}
+        <div className="w-full lg:w-[280px] xl:w-[320px] flex flex-col gap-5 overflow-y-auto custom-scrollbar shrink-0">
+          
+          {/* Target Match Card */}
+          <div className="bg-white dark:bg-[#141810] rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-800 text-left flex flex-col items-center">
+            <div className="flex items-center gap-2 self-start mb-2">
+              <Target className="w-5 h-5 text-lime-500" />
+              <h3 className="font-black text-sm text-gray-900 dark:text-white">Target Match</h3>
+            </div>
+            <p className="text-xs text-gray-500 dark:text-gray-400 self-start mb-4 truncate w-full">
+              {state.jobData?.title || state.jobData?.jobTitle || state.targetRole || 'Target Role'} 
+              {state.jobData?.company && ` at ${state.jobData.company}`}
             </p>
+            
+            {/* Radial Score Gauge */}
+            <div className="relative w-32 h-32 mb-3">
+              <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="44" stroke="currentColor" strokeWidth="8" fill="none" className="text-gray-100 dark:text-gray-800" />
+                <circle cx="50" cy="50" r="44" stroke="currentColor" strokeWidth="8" fill="none"
+                  strokeDasharray={276.46} strokeDashoffset={276.46 - (276.46 * ((primaryScore || 0) / 100))}
+                  className={`${getScoreColor(primaryScore)} transition-all duration-1000 ease-out`} strokeWidth="8" strokeLinecap="round" />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center mt-2">
+                <span className="text-4xl font-black text-gray-900 dark:text-white">{primaryScore || 0}%</span>
+              </div>
+            </div>
+            
+            <span className={`text-xs font-black uppercase tracking-wider mb-5 ${getScoreColor(primaryScore)}`}>
+              {primaryScore >= 80 ? 'Strong Match' : primaryScore >= 60 ? 'Good Match' : 'Review Needed'}
+            </span>
+
+            {/* Matched Skills */}
+            {matchedSkills.length > 0 && (
+              <div className="w-full border-t border-gray-100 dark:border-gray-800 pt-4 mb-4 text-left">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Top Matched Skills</p>
+                <div className="space-y-1.5">
+                  {matchedSkills.map((skill, i) => (
+                    <div key={i} className="flex items-center gap-2 text-xs text-gray-700 dark:text-gray-300">
+                      <CheckCircle2 className="w-4 h-4 text-lime-500 shrink-0" />
+                      <span className="truncate">{skill}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Missing Opportunities */}
+            {missingSkills.length > 0 && (
+              <div className="w-full border-t border-gray-100 dark:border-gray-800 pt-4 text-left">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Missing Opportunities</p>
+                <div className="space-y-1.5">
+                  {missingSkills.map((skill, i) => (
+                    <div key={i} className="flex items-center gap-2 text-xs text-gray-700 dark:text-gray-300">
+                      <AlertCircle className="w-4 h-4 text-yellow-500 shrink-0" />
+                      <span className="truncate">{skill}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
-          <div className="flex-1 overflow-y-auto custom-scrollbar space-y-6 pb-20 pr-2">
-            {/* Scorecard Panel */}
-            <div className="bg-white dark:bg-[#141810] rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-800">
-              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-8">
-                {/* Left side: ATS Score Ring */}
-                <div className="flex flex-col items-center shrink-0">
-                  <div className="relative w-32 h-32 mb-3">
-                    <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                      <circle cx="50" cy="50" r="44" stroke="currentColor" strokeWidth="8" fill="none" className="text-gray-100 dark:text-gray-800" />
-                      <circle cx="50" cy="50" r="44" stroke="currentColor" strokeWidth="8" fill="none"
-                        strokeDasharray={276.46} strokeDashoffset={276.46 - (276.46 * ((primaryScore || 0) / 100))}
-                        className="text-red-500 transition-all duration-1000 ease-out" strokeLinecap="round" />
-                    </svg>
-                    <div className="absolute inset-0 flex flex-col items-center justify-center mt-2">
-                      <span className="text-4xl font-black text-red-500">{primaryScore || 0}</span>
-                    </div>
-                  </div>
-                  <span className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">ATS SCORE</span>
-                </div>
-
-                {/* Right side: Total Score Breakdown */}
-                <div className="flex-1 w-full">
-                  <h3 className="text-sm font-bold text-green-500 mb-4">Score Breakdown</h3>
-                  {isJourneyCV ? (
-                    <div className="space-y-3">
-                      <ScoreBreakdown label="Keyword Match" value={scoreResult?.atsScore?.keywordMatch || 0} max={40} />
-                      <ScoreBreakdown label="Formatting" value={scoreResult?.atsScore?.formatting || 0} max={20} />
-                      <ScoreBreakdown label="Alignment" value={scoreResult?.atsScore?.sectionAlignment || 0} max={15} />
-                      <ScoreBreakdown label="Recency" value={scoreResult?.atsScore?.recency || 0} max={15} />
-                      <ScoreBreakdown label="Contact Info" value={scoreResult?.atsScore?.contactability || 0} max={10} />
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      <ScoreBreakdown label="Completeness" value={scoreResult?.cvScore?.completeness || 0} max={25} />
-                      <ScoreBreakdown label="Impact Verbs" value={scoreResult?.cvScore?.impactVerbs || 0} max={20} />
-                      <ScoreBreakdown label="Quantification" value={scoreResult?.cvScore?.quantification || 0} max={20} />
-                      <ScoreBreakdown label="Formatting" value={scoreResult?.cvScore?.formatting || 0} max={15} />
-                      <ScoreBreakdown label="Readability" value={scoreResult?.cvScore?.readability || 0} max={20} />
-                    </div>
-                  )}
-                </div>
+          {/* Recruiter Preview & Heatmap Toggle */}
+          <div className="bg-white dark:bg-[#141810] rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-800 text-left">
+            <div className="flex items-center gap-2 mb-2">
+              <Eye className="w-5 h-5 text-lime-500" />
+              <h3 className="font-black text-sm text-gray-900 dark:text-white">Recruiter Preview</h3>
+            </div>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-4">See how recruiters scan your resume</p>
+            
+            {/* Miniature Heatmap Thumbnail */}
+            <div className="relative w-[130px] h-[175px] border border-gray-200 dark:border-gray-800 rounded bg-white dark:bg-[#141810]/50 overflow-hidden shadow-sm mx-auto mb-4 flex flex-col gap-2 p-2.5 select-none">
+              {/* Mock text lines inside mini preview */}
+              <div className="w-3/4 h-2 bg-gray-200 dark:bg-gray-800 rounded-full" />
+              <div className="w-1/2 h-1.5 bg-gray-100 dark:bg-gray-900 rounded-full" />
+              <div className="w-full h-1.5 bg-gray-100 dark:bg-gray-900 rounded-full mt-2" />
+              <div className="w-5/6 h-1.5 bg-gray-100 dark:bg-gray-900 rounded-full" />
+              <div className="w-4/5 h-1.5 bg-gray-100 dark:bg-gray-900 rounded-full" />
+              <div className="w-3/4 h-1.5 bg-gray-100 dark:bg-gray-900 rounded-full mt-2" />
+              <div className="w-5/6 h-1.5 bg-gray-100 dark:bg-gray-900 rounded-full" />
+              
+              {/* Heatmap blur colors */}
+              <div className="absolute inset-0 z-10 pointer-events-none opacity-85 blur-[12px] mix-blend-multiply flex flex-col items-center justify-around p-4">
+                <div className="w-12 h-12 rounded-full bg-red-500/80" />
+                <div className="w-16 h-8 rounded-full bg-yellow-400/70" />
+                <div className="w-14 h-10 rounded-full bg-green-400/50" />
               </div>
             </div>
 
-            {/* Keyword Gaps for Journey CVs */}
-            {isJourneyCV && state.keywordGaps && state.keywordGaps.length > 0 && (
-              <div className="bg-white dark:bg-[#141810] rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-800">
-                <div className="flex items-center gap-2 mb-3">
-                  <Target className="w-5 h-5 text-yellow-500" />
-                  <p className="text-sm font-bold text-gray-900 dark:text-white">
-                    Missing Keywords ({state.keywordGaps.filter(g => g.importance === 'critical').length} critical)
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {state.keywordGaps.slice(0, 8).map((gap, i) => (
-                    <span
-                      key={i}
-                      className={`text-xs px-3 py-1 rounded-full font-medium ${gap.importance === 'critical'
-                        ? 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400'
-                        : gap.importance === 'preferred'
-                          ? 'bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400'
-                          : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
-                        }`}
-                    >
-                      {gap.keyword}
-                    </span>
-                  ))}
-                  {state.keywordGaps.length > 8 && (
-                    <span className="text-xs text-gray-500 font-medium px-2 py-1">
-                      +{state.keywordGaps.length - 8} more
-                    </span>
-                  )}
-                </div>
-              </div>
-            )}
+            <button
+              onClick={() => {
+                if (activeTab !== 'resume') {
+                  setActiveTab('resume');
+                }
+                setIsHeatmapActive(!isHeatmapActive);
+                setIsAtsViewActive(false);
+              }}
+              className={`w-full py-2.5 rounded-xl font-bold transition-all flex items-center justify-center gap-2 text-xs border shadow-sm ${
+                isHeatmapActive
+                  ? 'bg-red-500/10 border-red-500/20 text-red-600 dark:text-red-400'
+                  : 'bg-gray-50 border-gray-200 dark:bg-white/5 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300'
+              }`}
+            >
+              <Eye className="w-4 h-4" />
+              {isHeatmapActive ? 'Hide Heatmap' : 'View Heatmap'}
+            </button>
+          </div>
 
-            {/* Settings Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* CV Type */}
-              <div className="bg-white dark:bg-[#141810] rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-800 flex items-center justify-between">
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center shrink-0">
-                    <Briefcase className="w-5 h-5 text-blue-500" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">CV Type</p>
-                    <p className="font-bold text-gray-900 dark:text-white text-sm capitalize">{state.cvType}</p>
-                    {state.cvType === 'journey' && (
-                      <p className="text-xs text-gray-500 mt-0.5 truncate max-w-[140px]">
-                        For: {state.jobData?.title || state.jobData?.jobTitle || state.targetRole || 'Linked opportunity'}
-                      </p>
-                    )}
-                  </div>
-                </div>
-                <button className="px-3 py-1.5 border border-gray-200 dark:border-gray-700 rounded-lg text-xs font-bold text-gray-600 dark:text-gray-300 flex items-center gap-1.5 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                  <Edit2 className="w-3 h-3" /> Change
-                </button>
-              </div>
-
-              {/* Template */}
-              <div className="bg-white dark:bg-[#141810] rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-800 flex items-center justify-between">
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center shrink-0">
-                    <LayoutTemplate className="w-5 h-5 text-purple-500" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Template</p>
-                    <p className="font-bold text-gray-900 dark:text-white text-sm truncate max-w-[120px]">
-                      {state.selectedTemplate?.name || 'Select a template'}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-0.5">
-                      {state.selectedTemplate ? 'Applied to preview and downloads' : 'Required for final preview'}
-                    </p>
-                  </div>
-                </div>
-                <button 
-                  onClick={() => setShowTemplateModal(true)}
-                  className="px-3 py-1.5 border border-gray-200 dark:border-gray-700 rounded-lg text-xs font-bold text-gray-600 dark:text-gray-300 flex items-center gap-1.5 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                >
-                  <Edit2 className="w-3 h-3" /> Change
-                </button>
-              </div>
-
-              {/* Date Format */}
-              <div className="bg-white dark:bg-[#141810] rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-800 flex items-center justify-between">
-                <div className="flex items-start gap-3 w-full">
-                  <div className="w-10 h-10 rounded-lg bg-green-50 dark:bg-green-900/20 flex items-center justify-center shrink-0">
-                    <Calendar className="w-5 h-5 text-green-500" />
-                  </div>
-                  <div className="flex-1 w-full">
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1.5">Date Format</p>
-                    <DateFormatSelector
-                      value={state.dateFormat}
-                      onChange={(format) => dispatch({ type: 'SET_DATE_FORMAT', payload: format })}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Cover Letter */}
-              <div className="bg-white dark:bg-[#141810] rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-800 flex items-center justify-between">
-                <div className="flex items-start gap-3 w-full">
-                  <div className="w-10 h-10 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center shrink-0">
-                    <FileText className="w-5 h-5 text-emerald-500" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <p className="text-xs text-gray-500 dark:text-gray-400">Cover Letter</p>
-                      {hasLinkedCoverLetter ? (
-                        <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
-                      ) : (
-                        <span className="text-[11px] font-semibold text-gray-400">Not linked</span>
-                      )}
-                    </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                      {hasLinkedCoverLetter
-                        ? 'Linked and ready for review.'
-                        : 'No linked cover letter yet. You can create one from the cover letter step.'}
-                    </p>
-                    <button
-                      onClick={handleEditCoverLetter}
-                      className={`w-full px-3 py-2 rounded-lg font-bold transition-all flex items-center justify-center gap-1.5 text-sm shadow-sm ${
-                        hasLinkedCoverLetter
-                          ? 'bg-[#8bc34a] hover:bg-[#7cb342] text-white'
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
-                      }`}
-                    >
-                      <Edit2 className="w-3.5 h-3.5" />
-                      {hasLinkedCoverLetter ? 'Edit' : state.cvType === 'journey' ? 'Create' : 'Add'}
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Export */}
-              <div className="bg-white dark:bg-[#141810] rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-800 flex items-center justify-between sm:col-span-2">
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center shrink-0">
-                    <Download className="w-5 h-5 text-orange-500" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Export</p>
-                    <p className="font-bold text-gray-900 dark:text-white text-sm">Download your resume</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 max-w-[320px]">
-                      {exportInfo}
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setShowDownloadModal(true)}
-                  disabled={!state.selectedTemplate}
-                  className="px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm font-bold text-gray-700 dark:text-gray-300 flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
-                >
-                  <Download className="w-4 h-4" /> Download Options
-                </button>
-              </div>
+          {/* ATS View Card */}
+          <div className="bg-white dark:bg-[#141810] rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-800 text-left">
+            <div className="flex items-center gap-2 mb-2">
+              <Shield className="w-5 h-5 text-emerald-500" />
+              <h3 className="font-black text-sm text-gray-900 dark:text-white">ATS Scanned Text</h3>
             </div>
-
-            {/* Bottom Actions */}
-            {isJourneyCV && (
-              <div className="flex flex-col sm:flex-row gap-4 pt-4">
-                <button
-                  onClick={() => router.push('/dashboard/tracker')}
-                  className="flex-1 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold transition-all flex flex-col items-center justify-center shadow-md shadow-blue-500/20 active:scale-95"
-                >
-                  <div className="flex items-center gap-2 text-lg mb-1">
-                    <Target className="w-5 h-5" />
-                    <span>View in Tracker</span>
-                  </div>
-                  <span className="text-xs text-blue-200 font-medium">See how your resume performs</span>
-                </button>
-                
-                <button
-                  onClick={handleStartCoaching}
-                  className="flex-1 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold transition-all flex flex-col items-center justify-center shadow-md shadow-indigo-500/20 active:scale-95"
-                >
-                  <div className="flex items-center gap-2 text-lg mb-1">
-                    <Zap className="w-5 h-5 text-yellow-300" />
-                    <span>Interview Coach</span>
-                  </div>
-                  <span className="text-xs text-indigo-200 font-medium">Get AI-powered interview prep</span>
-                </button>
-              </div>
-            )}
-
-            {!isJourneyCV && (
-              <div className="flex flex-col sm:flex-row gap-4 pt-4">
-                <button
-                  onClick={async () => {
-                    setIsDownloading(true);
-                    try {
-                      if (onSave) {
-                        await onSave();
-                      }
-                      if (typeof window !== 'undefined') {
-                        sessionStorage.setItem('masterCVCreated', 'true');
-                      }
-                      router.push('/dashboard');
-                    } catch (err) {
-                      console.error('Failed to save CV:', err);
-                      alert('Failed to save CV. Please try again.');
-                    } finally {
-                      setIsDownloading(false);
-                    }
-                  }}
-                  disabled={isDownloading}
-                  className="flex-1 py-4 bg-[#80FF00] hover:bg-[#70e600] text-black rounded-2xl font-extrabold transition-all flex flex-col items-center justify-center shadow-md shadow-lime-500/20 active:scale-95 disabled:opacity-50"
-                >
-                  <div className="flex items-center gap-2 text-lg mb-0.5">
-                    <CheckCircle2 className="w-5 h-5 text-black" />
-                    <span>Finish & Go to Dashboard</span>
-                  </div>
-                  <span className="text-xs text-black/60 font-semibold">Save your Master CV and exit</span>
-                </button>
-              </div>
-            )}
+            <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-4">View raw plain text parsed by ATS scanners</p>
+            
+            <button
+              onClick={() => {
+                if (activeTab !== 'resume') {
+                  setActiveTab('resume');
+                }
+                setIsAtsViewActive(!isAtsViewActive);
+                setIsHeatmapActive(false);
+              }}
+              className={`w-full py-2.5 rounded-xl font-bold transition-all flex items-center justify-center gap-2 text-xs border shadow-sm ${
+                isAtsViewActive
+                  ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-extrabold'
+                  : 'bg-gray-50 border-gray-200 dark:bg-white/5 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300'
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              {isAtsViewActive ? 'Hide ATS Text' : 'View ATS Text'}
+            </button>
           </div>
         </div>
 
-        {/* Right Panel - Preview */}
-        <div ref={containerRef} className="w-full md:w-1/2 lg:w-[55%] flex flex-col min-h-0 bg-white dark:bg-[#141810] rounded-3xl overflow-hidden shadow-sm border border-gray-100 dark:border-gray-800">
-          {/* Preview Header */}
-          <div className="px-6 py-4 flex items-center justify-between border-b border-gray-100 dark:border-gray-800">
+        {/* CENTER PANEL - Dynamic Preview Canvas */}
+        <div ref={containerRef} className="flex-1 flex flex-col min-h-0 bg-white dark:bg-[#141810] rounded-3xl overflow-hidden shadow-sm border border-gray-100 dark:border-gray-800 relative">
+          
+          {/* Tab Selector Header */}
+          <div className="px-6 py-4 flex items-center justify-between border-b border-gray-100 dark:border-gray-800 shrink-0">
             <div className="flex items-center bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
               <button
-                onClick={() => setShowCoverLetterPreview(false)}
-                className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${
-                  !showCoverLetterPreview 
-                    ? 'bg-[#8bc34a] text-white shadow-sm' 
+                onClick={() => {
+                  setActiveTab('resume');
+                }}
+                className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all flex items-center gap-1.5 ${
+                  activeTab === 'resume'
+                    ? 'bg-[#8bc34a] text-white shadow-sm'
                     : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
                 }`}
               >
+                <FileText className="w-4 h-4" />
                 Resume
               </button>
-              <TooltipProvider delayDuration={150}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span>
-                      <button
-                        onClick={() => {
-                          if (hasLinkedCoverLetter) setShowCoverLetterPreview(true);
-                        }}
-                        disabled={!hasLinkedCoverLetter}
-                        className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${
-                          showCoverLetterPreview && hasLinkedCoverLetter
-                            ? 'bg-[#8bc34a] text-white shadow-sm'
-                            : hasLinkedCoverLetter
-                              ? 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
-                              : 'text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-70'
-                        }`}
-                      >
-                        Cover Letter
-                      </button>
-                    </span>
-                  </TooltipTrigger>
-                  {!hasLinkedCoverLetter && (
-                    <TooltipContent side="bottom" className="max-w-[260px]">
-                      {coverLetterTooltip}
-                    </TooltipContent>
-                  )}
-                </Tooltip>
-              </TooltipProvider>
+              
+              <button
+                onClick={() => {
+                  if (hasLinkedCoverLetter) {
+                    setActiveTab('cover');
+                    setIsHeatmapActive(false);
+                  }
+                }}
+                disabled={!hasLinkedCoverLetter}
+                className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all flex items-center gap-1.5 ${
+                  activeTab === 'cover' && hasLinkedCoverLetter
+                    ? 'bg-[#8bc34a] text-white shadow-sm'
+                    : hasLinkedCoverLetter
+                      ? 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                      : 'text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-70'
+                }`}
+              >
+                <PenTool className="w-4 h-4" />
+                Cover Letter
+              </button>
+
+              <button
+                onClick={() => {
+                  setActiveTab('jd');
+                  setIsHeatmapActive(false);
+                }}
+                className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all flex items-center gap-1.5 ${
+                  activeTab === 'jd'
+                    ? 'bg-[#8bc34a] text-white shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                }`}
+              >
+                <Briefcase className="w-4 h-4" />
+                JD
+              </button>
             </div>
             
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 text-sm font-bold text-gray-500">
-                <Eye className="w-4 h-4" />
-                <span>Zoom: {Math.round(zoom * 100)}%</span>
-              </div>
-              <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
-                <button
-                  onClick={() => setZoom(Math.max(0.5, zoom - 0.1))}
-                  className="w-7 h-7 flex items-center justify-center bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded shadow-sm font-medium transition-colors"
-                >
-                  -
-                </button>
-                <button
-                  onClick={() => setZoom(Math.min(2, zoom + 0.1))}
-                  className="w-7 h-7 flex items-center justify-center bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded shadow-sm font-medium transition-colors text-lg leading-none"
-                >
-                  +
-                </button>
-              </div>
+            <div className="hidden sm:flex items-center gap-2 text-xs font-semibold text-gray-400">
+              {activeTab === 'resume' && (
+                <span>Visual Style: {state.selectedTemplate?.name || 'A4 Traditional'}</span>
+              )}
+              {activeTab === 'cover' && (
+                <span>Standard Cover Letter</span>
+              )}
+              {activeTab === 'jd' && (
+                <span>Job Description Text</span>
+              )}
             </div>
           </div>
           
-          <div className="flex-1 overflow-auto custom-scrollbar bg-[#f9fafb] dark:bg-[#0a0c08]" ref={previewRef}>
-            {showCoverLetterPreview && hasLinkedCoverLetter ? (
+          {/* Main Preview Container */}
+          <div className="flex-1 overflow-auto custom-scrollbar bg-[#f9fafb] dark:bg-[#0a0c08] relative" ref={previewRef}>
+            {activeTab === 'cover' && hasLinkedCoverLetter ? (
               <div
                 className="w-full flex justify-center py-12"
                 style={{ zoom }}
@@ -737,7 +928,7 @@ export default function Step4Review({ onSave }: { onSave?: () => Promise<void> }
                   />
                 </div>
               </div>
-            ) : showCoverLetterPreview ? (
+            ) : activeTab === 'cover' ? (
               <div className="flex items-center justify-center min-h-full p-10">
                 <div className="max-w-md rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 bg-white/80 dark:bg-[#141810] px-6 py-8 text-center shadow-sm">
                   <FileText className="w-10 h-10 text-gray-400 mx-auto mb-3" />
@@ -756,11 +947,41 @@ export default function Step4Review({ onSave }: { onSave?: () => Promise<void> }
                   </button>
                 </div>
               </div>
+            ) : activeTab === 'jd' ? (
+              <div className="w-full py-8 px-4 overflow-y-auto">
+                <JobDescriptionSegmented jobData={state.jobData} keywordGaps={state.keywordGaps} />
+              </div>
+            ) : isAtsViewActive ? (
+              <div className="w-full min-h-full p-8 flex justify-center bg-[#070905]">
+                <div 
+                  className="w-full bg-[#0a0f0d] border border-emerald-500/30 rounded-2xl shadow-[0_0_50px_rgba(16,185,129,0.1)] p-6 font-mono text-[#10b981] text-left text-xs leading-relaxed relative overflow-hidden max-w-4xl"
+                  style={{ minHeight: '800px' }}
+                >
+                  {/* Cyberpunk matrix scanner grids */}
+                  <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,_rgba(0,0,0,0.25)_50%),_linear-gradient(90deg,_rgba(255,0,0,0.06),_rgba(0,255,0,0.02),_rgba(0,0,255,0.06))] bg-[size:100%_4px,_6px_100%] pointer-events-none z-10" />
+                  
+                  {/* Top bar window header */}
+                  <div className="flex items-center justify-between border-b border-emerald-500/20 pb-4 mb-6">
+                    <div className="flex items-center gap-2">
+                      <span className="w-3 h-3 rounded-full bg-red-500/70" />
+                      <span className="w-3 h-3 rounded-full bg-yellow-500/70" />
+                      <span className="w-3 h-3 rounded-full bg-green-500/70" />
+                      <span className="text-[10px] text-emerald-500/60 font-bold uppercase tracking-widest ml-2">ATS-SCANNER-V4.2.0_READ_ONLY</span>
+                    </div>
+                    <span className="text-[10px] text-emerald-500/40 font-bold">RAW_ASCII_STREAM</span>
+                  </div>
+
+                  {/* Green glowing code text */}
+                  <pre className="whitespace-pre-wrap selection:bg-emerald-500 selection:text-black">
+                    {getAtsScannedText(state.cvData)}
+                  </pre>
+                </div>
+              </div>
             ) : state.selectedTemplate ? (
               <div className="relative w-full overflow-hidden">
                 <div className="w-full flex justify-center py-12" style={{ zoom }}>
                   <div
-                    className="bg-white shadow-[0_0_40px_rgba(0,0,0,0.1)] dark:shadow-[0_0_40px_rgba(0,0,0,0.3)]"
+                    className="bg-white shadow-[0_0_40px_rgba(0,0,0,0.1)] dark:shadow-[0_0_40px_rgba(0,0,0,0.3)] relative"
                     style={{ width: paperWidth, minHeight: paperHeight }}
                   >
                     <CVBuilderProAdapter
@@ -772,6 +993,48 @@ export default function Step4Review({ onSave }: { onSave?: () => Promise<void> }
                       jobId={state.jobData?._id || state.jobData?.id || state.journeyId}
                       role={state.targetRole}
                     />
+
+                    {/* Heatmap Overlay inside the zoomable container */}
+                    {isHeatmapActive && (
+                      <div className="absolute inset-0 z-30 pointer-events-none mix-blend-multiply opacity-80 select-none overflow-hidden rounded-sm">
+                        {/* F-shape reading pattern heatmap spots */}
+                        {/* Top Header - red/hot spot */}
+                        <div 
+                          className="absolute top-[8%] left-[10%] w-[80%] h-[8%] rounded-full bg-red-500 blur-[40px] opacity-80" 
+                          style={{ mixBlendMode: 'multiply' }}
+                        />
+                        {/* Summary - yellow spot */}
+                        <div 
+                          className="absolute top-[16%] left-[12%] w-[70%] h-[6%] rounded-full bg-yellow-500 blur-[35px] opacity-70" 
+                          style={{ mixBlendMode: 'multiply' }}
+                        />
+                        {/* First Job Title - red/hot spot */}
+                        <div 
+                          className="absolute top-[24%] left-[10%] w-[65%] h-[7%] rounded-full bg-red-500 blur-[38px] opacity-75" 
+                          style={{ mixBlendMode: 'multiply' }}
+                        />
+                        {/* First Job Bullets - yellow spot */}
+                        <div 
+                          className="absolute top-[31%] left-[15%] w-[50%] h-[10%] rounded-full bg-yellow-400 blur-[35px] opacity-65" 
+                          style={{ mixBlendMode: 'multiply' }}
+                        />
+                        {/* Education Header - green spot */}
+                        <div 
+                          className="absolute top-[48%] left-[10%] w-[75%] h-[6%] rounded-full bg-green-500 blur-[40px] opacity-60" 
+                          style={{ mixBlendMode: 'multiply' }}
+                        />
+                        {/* Second Job - green/yellow spot */}
+                        <div 
+                          className="absolute top-[60%] left-[12%] w-[60%] h-[8%] rounded-full bg-yellow-500/60 blur-[35px] opacity-55" 
+                          style={{ mixBlendMode: 'multiply' }}
+                        />
+                        {/* Skills Section - green spot */}
+                        <div 
+                          className="absolute top-[75%] left-[10%] w-[80%] h-[8%] rounded-full bg-green-400 blur-[40px] opacity-50" 
+                          style={{ mixBlendMode: 'multiply' }}
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -786,6 +1049,218 @@ export default function Step4Review({ onSave }: { onSave?: () => Promise<void> }
               </div>
             )}
           </div>
+
+          {/* Floating Zoom Controls bottom-right */}
+          <div className="absolute bottom-6 right-6 z-40 bg-white/95 dark:bg-gray-900/95 backdrop-blur border border-gray-200 dark:border-gray-800 shadow-xl rounded-xl p-1.5 flex items-center gap-2 select-none pointer-events-auto">
+            <div className="flex items-center gap-0.5">
+              <button 
+                onClick={() => setZoom(Math.max(0.4, zoom - 0.1))}
+                disabled={zoom <= 0.4}
+                className={`p-1.5 rounded-lg hover:bg-lime-500/20 transition-all ${zoom <= 0.4 ? 'opacity-30 cursor-not-allowed' : 'text-gray-500 dark:text-gray-400'}`}
+              >
+                <ZoomOut size={14} />
+              </button>
+              <input 
+                type="range" 
+                min="40" 
+                max="150" 
+                step="5"
+                value={Math.round(zoom * 100)} 
+                onChange={(e) => setZoom(parseInt(e.target.value) / 100)}
+                className="w-20 accent-lime-500 h-1 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer"
+              />
+              <button 
+                onClick={() => setZoom(Math.min(1.5, zoom + 0.1))}
+                disabled={zoom >= 1.5}
+                className={`p-1.5 rounded-lg hover:bg-lime-500/20 transition-all ${zoom >= 1.5 ? 'opacity-30 cursor-not-allowed' : 'text-gray-500 dark:text-gray-400'}`}
+              >
+                <ZoomIn size={14} />
+              </button>
+            </div>
+            
+            <button 
+              onClick={() => setZoom(1.0)}
+              className={`min-w-[42px] px-1.5 py-1 text-[9px] font-black rounded-md transition-all border ${Math.round(zoom * 100) === 100 ? 'bg-lime-500/20 border-lime-500/50 text-lime-600 dark:text-lime-400' : 'bg-transparent border-gray-200 dark:border-gray-700 hover:border-lime-500/50 text-gray-500 dark:text-gray-400'}`}
+            >
+              {Math.round(zoom * 100)}%
+            </button>
+          </div>
+        </div>
+
+        {/* RIGHT PANEL - Next Steps & Finish */}
+        <div className="w-full lg:w-[280px] xl:w-[340px] flex flex-col gap-4 overflow-y-auto custom-scrollbar shrink-0">
+          
+          {/* View in Tracker */}
+          {isJourneyCV && (
+            <button
+              onClick={() => router.push('/dashboard/tracker')}
+              className="w-full p-5 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white rounded-2xl text-left font-bold transition-all shadow-md shadow-blue-500/10 active:scale-[0.98] group flex items-center justify-between"
+            >
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
+                  <Target className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <p className="font-black text-sm tracking-wide text-white">View in Tracker</p>
+                  <p className="text-[11px] font-semibold text-blue-100 mt-0.5">See how your resume fits your target jobs</p>
+                </div>
+              </div>
+              <ChevronRight className="w-5 h-5 text-blue-200 group-hover:translate-x-1 transition-transform" />
+            </button>
+          )}
+
+          {/* Interview Coach */}
+          {isJourneyCV && (
+            <button
+              onClick={handleStartCoaching}
+              className="w-full p-5 bg-gradient-to-r from-purple-600 to-indigo-500 hover:from-purple-700 hover:to-indigo-600 text-white rounded-2xl text-left font-bold transition-all shadow-md shadow-purple-500/10 active:scale-[0.98] group flex items-center justify-between"
+            >
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
+                  <Zap className="w-5 h-5 text-yellow-300" />
+                </div>
+                <div>
+                  <p className="font-black text-sm tracking-wide text-white">Interview Coach</p>
+                  <p className="text-[11px] font-semibold text-purple-100 mt-0.5">Practice & get interview ready with AI</p>
+                </div>
+              </div>
+              <ChevronRight className="w-5 h-5 text-purple-200 group-hover:translate-x-1 transition-transform" />
+            </button>
+          )}
+
+          {/* Download Card */}
+          <div className="bg-white dark:bg-[#141810] rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-800 text-left">
+            <div className="flex items-start gap-3.5 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center shrink-0">
+                <Download className="w-5 h-5 text-orange-500" />
+              </div>
+              <div>
+                <h4 className="font-black text-sm text-gray-900 dark:text-white">Download</h4>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">Export your documents individually or as a package</p>
+              </div>
+            </div>
+            
+            <div className="space-y-4">
+              {/* CV Tiles */}
+              <div>
+                <h5 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Resume / CV</h5>
+                <div className="grid grid-cols-2 gap-2.5">
+                  <button
+                    onClick={() => handleDownload('cv', 'pdf')}
+                    disabled={isDownloading || !state.selectedTemplate}
+                    className="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl hover:bg-gray-100 dark:hover:bg-white/10 transition-all font-bold text-xs text-gray-850 dark:text-gray-200 active:scale-95 disabled:opacity-50"
+                  >
+                    <span className="flex items-center gap-1.5 font-bold">
+                      <span className="w-2 h-2 rounded-full bg-red-500" />
+                      PDF
+                    </span>
+                    <ChevronRight className="w-3.5 h-3.5 text-gray-400" />
+                  </button>
+                  
+                  <button
+                    onClick={() => handleDownload('cv', 'docx')}
+                    disabled={isDownloading}
+                    className="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl hover:bg-gray-100 dark:hover:bg-white/10 transition-all font-bold text-xs text-gray-855 dark:text-gray-200 active:scale-95 disabled:opacity-50"
+                  >
+                    <span className="flex items-center gap-1.5 font-bold">
+                      <span className="w-2 h-2 rounded-full bg-blue-500" />
+                      DOCX
+                    </span>
+                    <ChevronRight className="w-3.5 h-3.5 text-gray-400" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Cover Letter Tiles (only if linked) */}
+              {hasLinkedCoverLetter && (
+                <div>
+                  <h5 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Cover Letter</h5>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <button
+                      onClick={() => handleDownload('coverLetter', 'pdf')}
+                      disabled={isDownloading}
+                      className="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl hover:bg-gray-100 dark:hover:bg-white/10 transition-all font-bold text-xs text-gray-850 dark:text-gray-200 active:scale-95 disabled:opacity-50"
+                    >
+                      <span className="flex items-center gap-1.5 font-bold">
+                        <span className="w-2 h-2 rounded-full bg-red-500" />
+                        PDF
+                      </span>
+                      <ChevronRight className="w-3.5 h-3.5 text-gray-400" />
+                    </button>
+                    
+                    <button
+                      onClick={() => handleDownload('coverLetter', 'docx')}
+                      disabled={isDownloading}
+                      className="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl hover:bg-gray-100 dark:hover:bg-white/10 transition-all font-bold text-xs text-gray-850 dark:text-gray-200 active:scale-95 disabled:opacity-50"
+                    >
+                      <span className="flex items-center gap-1.5 font-bold">
+                        <span className="w-2 h-2 rounded-full bg-blue-500" />
+                        DOCX
+                      </span>
+                      <ChevronRight className="w-3.5 h-3.5 text-gray-400" />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Complete Package Button */}
+              <button
+                onClick={() => handleDownload('all', 'pdf')}
+                disabled={isDownloading}
+                className="w-full mt-2 py-3 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-xl font-black text-center shadow-md shadow-orange-500/10 hover:shadow-lg active:scale-95 transition-all text-xs flex items-center justify-center gap-2 select-none disabled:opacity-50"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+                <span>Download Complete Package</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Share Link Card */}
+          <button
+            onClick={handleShareLink}
+            className="w-full p-5 bg-white dark:bg-[#141810] border border-gray-150 dark:border-gray-800 rounded-2xl text-left font-bold transition-all shadow-sm hover:bg-gray-50 dark:hover:bg-white/5 active:scale-[0.98] group flex items-center justify-between"
+          >
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-xl bg-lime-50 dark:bg-lime-900/20 flex items-center justify-center shrink-0">
+                <svg className="w-5 h-5 text-lime-600 dark:text-lime-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                </svg>
+              </div>
+              <div>
+                <p className="font-black text-sm tracking-wide text-gray-900 dark:text-white">Share Link</p>
+                <p className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 mt-0.5">Get a shareable link to your resume</p>
+              </div>
+            </div>
+            <ChevronRight className="w-5 h-5 text-gray-400 group-hover:translate-x-1 transition-transform" />
+          </button>
+
+          {/* Finish & Exit button */}
+          <button
+            onClick={async () => {
+              setIsDownloading(true);
+              try {
+                if (onSave) {
+                  await onSave();
+                }
+                if (typeof window !== 'undefined') {
+                  sessionStorage.setItem('masterCVCreated', 'true');
+                }
+                router.push('/dashboard');
+              } catch (err) {
+                console.error('Failed to save CV:', err);
+                alert('Failed to save CV. Please try again.');
+              } finally {
+                setIsDownloading(false);
+              }
+            }}
+            disabled={isDownloading}
+            className="w-full py-4 bg-[#80FF00] hover:bg-[#70e600] text-black rounded-2xl font-black text-center shadow-md shadow-lime-500/10 hover:shadow-lg active:scale-95 transition-all disabled:opacity-50 mt-2 flex items-center justify-center gap-2 select-none"
+          >
+            <CheckCircle2 className="w-5 h-5 text-black" />
+            <span>Finish & Exit</span>
+          </button>
         </div>
       </div>
 
@@ -828,9 +1303,12 @@ export default function Step4Review({ onSave }: { onSave?: () => Promise<void> }
         isOpen={showDownloadModal}
         onClose={() => setShowDownloadModal(false)}
         onDownload={async (documentType: DocumentType, format: FormatType) => {
-          if (documentType === 'cv') {
-            await handleDownload(format);
-          }
+          const docTypeMap: Record<DocumentType, 'cv' | 'coverLetter' | 'all'> = {
+            'cv': 'cv',
+            'coverLetter': 'coverLetter',
+            'all': 'all'
+          };
+          await handleDownload(docTypeMap[documentType] || 'cv', format);
           setShowDownloadModal(false);
         }}
         onPaywallRequired={() => {
