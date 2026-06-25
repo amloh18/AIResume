@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { StaticLayoutRenderer, EditableField } from '@/components/cv-builder-pro/components/CoreUI';
 import { CANVAS_TEMPLATES } from '@/components/cv-builder-pro/registry';
 import { initialData } from '@/lib/templates/canvas-initial-data';
@@ -9,8 +9,27 @@ import { normalizeCvDataForCanvas } from '@/lib/utils/cv-canvas-normalizer';
 export const CV_SNAPSHOT_A4_WIDTH = 794;
 export const CV_SNAPSHOT_A4_HEIGHT = 1123;
 
+// Inject Google Fonts link once per document lifetime so thumbnail renders use preloaded fonts
+const GOOGLE_FONTS_URL = 'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=Merriweather:ital,wght@0,300;0,400;0,700;1,300;1,400&family=Roboto+Mono:wght@300;400;500;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Lora:ital,wght@0,400;0,600;0,700;1,400&family=Outfit:wght@300;400;500;600;700&display=swap';
+let fontsInjected = false;
+function ensureFontsLoaded() {
+  if (fontsInjected || typeof document === 'undefined') return;
+  fontsInjected = true;
+  // preconnect
+  const preconnect = document.createElement('link');
+  preconnect.rel = 'preconnect';
+  preconnect.href = 'https://fonts.gstatic.com';
+  preconnect.crossOrigin = 'anonymous';
+  document.head.appendChild(preconnect);
+  // font stylesheet
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = GOOGLE_FONTS_URL;
+  document.head.appendChild(link);
+}
+
 const SNAPSHOT_STYLES = `
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=Merriweather:ital,wght@0,300;0,400;0,700;1,300;1,400&family=Roboto+Mono:wght@300;400;500;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Lora:ital,wght@0,400;0,600;0,700;1,400&display=swap');
+  @import url('${GOOGLE_FONTS_URL}');
   .cv-snapshot-wrapper .cv-document {
     font-family: var(--cv-font), sans-serif;
     color: #111827;
@@ -99,6 +118,9 @@ export default function CVSnapshotDocument({
     if (!template) return null;
     return CANVAS_TEMPLATES.find((item) => item.id === template._id || item.id === template.id) || template;
   }, [template]);
+
+  // Ensure Google Fonts are loaded once (module-level flag prevents duplicates)
+  useEffect(() => { ensureFontsLoaded(); }, []);
 
   const design = cvData?.metadata?.canvasDesign || (normalizedCvData as any)?.metadata?.canvasDesign || (normalizedCvData as any)?.design || cvData?.design || (initialData as any).design;
 

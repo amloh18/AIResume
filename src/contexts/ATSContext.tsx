@@ -55,6 +55,7 @@ export interface SurgeonAnalysis {
   contentHash?: string;
   jobDataHash?: string;
   isRestricted?: boolean;
+  scoreReport?: any;
 }
 
 interface ATSContextState {
@@ -254,6 +255,7 @@ export function ATSProvider({ children }: { children: ReactNode }) {
           targetRole: analysis.targetRole,
           seniorityLevel: analysis.seniorityLevel,
           jobData: null, // Can be passed if needed
+          scoreReport: analysis.scoreReport,
         }),
       });
 
@@ -298,6 +300,7 @@ export function ATSProvider({ children }: { children: ReactNode }) {
             analyzedAt: new Date(result.data.analyzedAt),
             contentHash: result.data.contentHash,
             jobDataHash: result.data.jobDataHash,
+            scoreReport: result.data.scoreReport || null,
           };
 
           setState(prev => ({

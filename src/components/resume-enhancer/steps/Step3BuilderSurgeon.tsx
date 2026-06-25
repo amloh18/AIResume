@@ -654,7 +654,7 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
           state.cvType // Pass cvType for mode-specific analysis
         );
 
-        dispatch({ type: 'SET_SURGEON_ANALYSIS', payload: { score: result.score, fixes: result.fixes } });
+        dispatch({ type: 'SET_SURGEON_ANALYSIS', payload: { score: result.score, fixes: result.fixes, scoreReport: result.scoreReport } });
         dispatch({ type: 'SET_FIX_ANNOTATIONS', payload: result.annotations });
 
         // Store keyword gap analysis result for ATS scoring (journey CVs)
@@ -1267,7 +1267,7 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
           </div>
           
           {/* Right rail: onboarding setup checklist and AI analysis (always open) */}
-          <div className="hidden lg:flex flex-col shrink-0 h-full relative z-10 gap-3 min-h-0 w-[387px]">
+          <div className="hidden lg:flex flex-col shrink-0 h-full relative z-10 gap-3 min-h-0 w-[426px]">
             {isImproveMode && (() => {
               const isPersonalInfoVerified = !!(state.cvData?.basics?.name?.trim() && state.cvData?.basics?.email?.trim());
               const isQualityScoreReviewed = !!(state.surgeonAnalysis || atsScore);
@@ -1390,7 +1390,7 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
 
           {/* Mori Chat Panel (open/close next to it) */}
           {state.moriChatMode && (
-            <div className="hidden lg:flex flex-col shrink-0 h-full relative z-10 gap-3 min-h-0 w-[387px] bg-white dark:bg-[var(--bg-secondary)] rounded-xl border border-gray-200 dark:border-white/[0.06] overflow-hidden shadow-sm shadow-black/10 dark:shadow-black/30">
+            <div className="hidden lg:flex flex-col shrink-0 h-full relative z-10 gap-3 min-h-0 w-[426px] bg-white dark:bg-[var(--bg-secondary)] rounded-xl border border-gray-200 dark:border-white/[0.06] overflow-hidden shadow-sm shadow-black/10 dark:shadow-black/30">
               {/* Mori Chat Header */}
               <div className="sticky top-0 z-20 flex items-center justify-between px-4 py-3 bg-white/95 dark:bg-[var(--bg-secondary)] backdrop-blur-sm border-b border-gray-100 dark:border-white/[0.04]">
                 <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">

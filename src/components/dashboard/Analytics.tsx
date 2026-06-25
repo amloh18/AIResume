@@ -103,6 +103,19 @@ const calculateProjectsScore = (projects: any[]): number => {
 
 // Helper function to calculate CV completion percentage
 const calculateCompletionPercentage = (cv: any): number => {
+  // Prioritize overall score from analysis report or metadata score syncs
+  const reportScore = 
+    cv.metadata?.surgeonAnalysis?.scoreReport?.overall_score ??
+    cv.scoreReport?.overall_score ??
+    cv.metadata?.cvScore ??
+    cv.metadata?.atsScore ??
+    cv.atsScore ??
+    cv.cvScore;
+
+  if (reportScore !== undefined && reportScore !== null) {
+    return reportScore;
+  }
+
   if (cv.status === 'published') return 100;
   if (cv.status === 'archived') return 0;
 
@@ -1649,6 +1662,19 @@ const Analytics: React.FC = () => {
   };
 
   const calculateCompletionPercentage = (cv: any): number => {
+    // Prioritize overall score from analysis report or metadata score syncs
+    const reportScore = 
+      cv.metadata?.surgeonAnalysis?.scoreReport?.overall_score ??
+      cv.scoreReport?.overall_score ??
+      cv.metadata?.cvScore ??
+      cv.metadata?.atsScore ??
+      cv.atsScore ??
+      cv.cvScore;
+
+    if (reportScore !== undefined && reportScore !== null) {
+      return reportScore;
+    }
+
     if (cv.status === 'published') return 100;
     if (cv.status === 'archived') return 0;
 

@@ -347,7 +347,7 @@ export default function Step4Review({ onSave }: { onSave?: () => Promise<void> }
   const coverLetterTooltip = state.cvType === 'journey'
     ? 'Link or generate a cover letter before opening this preview.'
     : 'This CV does not have a linked cover letter yet.';
-  const exportInfo = state.selectedTemplate
+  const exportInfo = (state.selectedTemplate || state.cvData?.metadata?.canvasTemplate)
     ? 'Downloads use the current review content, selected template, and paper size.'
     : 'Select a template first so the preview and exported file stay aligned.';
 
@@ -483,9 +483,11 @@ export default function Step4Review({ onSave }: { onSave?: () => Promise<void> }
 
   // Determine which score to show prominently
   const isJourneyCV = state.cvType === 'journey';
-  const primaryScore = isJourneyCV && scoreResult.atsScore
-    ? scoreResult.atsScore.total
-    : scoreResult.cvScore.total;
+  const primaryScore = state.scoreReport?.overall_score !== undefined
+    ? state.scoreReport.overall_score
+    : (isJourneyCV && scoreResult.atsScore
+      ? scoreResult.atsScore.total
+      : scoreResult.cvScore.total);
   const primaryScoreLabel = isJourneyCV ? 'ATS Match' : 'Profile Strength';
 
   /**
@@ -513,7 +515,7 @@ export default function Step4Review({ onSave }: { onSave?: () => Promise<void> }
       return;
     }
 
-    if (docType === 'cv' && !state.selectedTemplate) {
+    if (docType === 'cv' && !state.selectedTemplate && !state.cvData?.metadata?.canvasTemplate) {
       alert('Please select a template before downloading');
       return;
     }
@@ -542,7 +544,7 @@ export default function Step4Review({ onSave }: { onSave?: () => Promise<void> }
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 cvData: state.cvData,
-                template: state.selectedTemplate,
+                template: state.selectedTemplate || state.cvData?.metadata?.canvasTemplate,
                 format: 'docx',
                 userId,
                 cvId: state.cvId,
@@ -701,7 +703,7 @@ export default function Step4Review({ onSave }: { onSave?: () => Promise<void> }
       <div className="flex-1 flex flex-col lg:flex-row gap-6 min-h-0 overflow-hidden p-6 max-w-[1700px] mx-auto w-full">
         
         {/* LEFT PANEL - Scorecard & Recruiter Preview */}
-        <div className="w-full lg:w-[280px] xl:w-[320px] flex flex-col gap-5 overflow-y-auto custom-scrollbar shrink-0">
+        <div className="w-full lg:w-[280px] xl:w-[320px] flex flex-col gap-5 overflow-y-auto scrollbar-hide shrink-0">
           
           {/* Target Match Card */}
           <div className="bg-white dark:bg-[#141810] rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-800 text-left flex flex-col items-center">
@@ -814,7 +816,7 @@ export default function Step4Review({ onSave }: { onSave?: () => Promise<void> }
               <Shield className="w-5 h-5 text-emerald-500" />
               <h3 className="font-black text-sm text-gray-900 dark:text-white">ATS Scanned Text</h3>
             </div>
-            <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-4">View raw plain text parsed by ATS scanners</p>
+            <p className="text-[9px] text-gray-500 dark:text-gray-400 mb-4">View raw plain text parsed by ATS scanners</p>
             
             <button
               onClick={() => {
@@ -896,7 +898,7 @@ export default function Step4Review({ onSave }: { onSave?: () => Promise<void> }
             
             <div className="hidden sm:flex items-center gap-2 text-xs font-semibold text-gray-400">
               {activeTab === 'resume' && (
-                <span>Visual Style: {state.selectedTemplate?.name || 'A4 Traditional'}</span>
+                <span>Visual Style: {state.selectedTemplate?.name || state.cvData?.metadata?.canvasTemplate?.name || 'A4 Traditional'}</span>
               )}
               {activeTab === 'cover' && (
                 <span>Standard Cover Letter</span>
@@ -908,7 +910,7 @@ export default function Step4Review({ onSave }: { onSave?: () => Promise<void> }
           </div>
           
           {/* Main Preview Container */}
-          <div className="flex-1 overflow-auto custom-scrollbar bg-[#f9fafb] dark:bg-[#0a0c08] relative" ref={previewRef}>
+          <div className="flex-1 overflow-auto scrollbar-hide bg-[#f9fafb] dark:bg-[#0a0c08] relative" ref={previewRef}>
             {activeTab === 'cover' && hasLinkedCoverLetter ? (
               <div
                 className="w-full flex justify-center py-12"
@@ -977,16 +979,16 @@ export default function Step4Review({ onSave }: { onSave?: () => Promise<void> }
                   </pre>
                 </div>
               </div>
-            ) : state.selectedTemplate ? (
-              <div className="relative w-full overflow-hidden">
+            ) : (state.selectedTemplate || state.cvData?.metadata?.canvasTemplate || true) ? (
+              <div className="relative w-full h-full overflow-y-auto scrollbar-hide">
                 <div className="w-full flex justify-center py-12" style={{ zoom }}>
                   <div
-                    className="bg-white shadow-[0_0_40px_rgba(0,0,0,0.1)] dark:shadow-[0_0_40px_rgba(0,0,0,0.3)] relative"
-                    style={{ width: paperWidth, minHeight: paperHeight }}
+                    className="relative"
+                    style={{ width: paperWidth }}
                   >
                     <CVBuilderProAdapter
                       cvData={state.cvData}
-                      template={state.selectedTemplate}
+                      template={state.selectedTemplate || state.cvData?.metadata?.canvasTemplate}
                       theme="light"
                       readOnly={true}
                       cvId={state.cvId}
@@ -1088,7 +1090,7 @@ export default function Step4Review({ onSave }: { onSave?: () => Promise<void> }
         </div>
 
         {/* RIGHT PANEL - Next Steps & Finish */}
-        <div className="w-full lg:w-[280px] xl:w-[340px] flex flex-col gap-4 overflow-y-auto custom-scrollbar shrink-0">
+        <div className="w-full lg:w-[280px] xl:w-[340px] flex flex-col gap-4 overflow-y-auto scrollbar-hide shrink-0">
           
           {/* View in Tracker */}
           {isJourneyCV && (
@@ -1147,7 +1149,7 @@ export default function Step4Review({ onSave }: { onSave?: () => Promise<void> }
                 <div className="grid grid-cols-2 gap-2.5">
                   <button
                     onClick={() => handleDownload('cv', 'pdf')}
-                    disabled={isDownloading || !state.selectedTemplate}
+                    disabled={isDownloading || (!state.selectedTemplate && !state.cvData?.metadata?.canvasTemplate)}
                     className="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl hover:bg-gray-100 dark:hover:bg-white/10 transition-all font-bold text-xs text-gray-850 dark:text-gray-200 active:scale-95 disabled:opacity-50"
                   >
                     <span className="flex items-center gap-1.5 font-bold">
@@ -1247,7 +1249,7 @@ export default function Step4Review({ onSave }: { onSave?: () => Promise<void> }
                 if (typeof window !== 'undefined') {
                   sessionStorage.setItem('masterCVCreated', 'true');
                 }
-                router.push('/dashboard');
+                router.push('/editor');
               } catch (err) {
                 console.error('Failed to save CV:', err);
                 alert('Failed to save CV. Please try again.');

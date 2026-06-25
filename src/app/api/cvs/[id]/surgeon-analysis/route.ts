@@ -164,7 +164,8 @@ export async function GET(
         fixes: cachedAnalysis.fixes || [],
         annotations: cachedAnalysis.annotations || [],
         analyzedAt: cachedAnalysis.analyzedAt,
-        isRestricted: cachedAnalysis.isRestricted
+        isRestricted: cachedAnalysis.isRestricted,
+        scoreReport: cachedAnalysis.scoreReport || null
       }
     });
 
@@ -195,7 +196,8 @@ export async function POST(
       targetRole,
       seniorityLevel,
       jobData,
-      isRestricted
+      isRestricted,
+      scoreReport
     } = body;
 
     if (!userId) {
@@ -236,14 +238,50 @@ export async function POST(
       analyzedAt: new Date(),
       contentHash,
       jobDataHash,
-      isRestricted
+      isRestricted,
+      scoreReport: scoreReport || null
     };
+
+    const finalScore = scoreReport?.overall_score !== undefined
+      ? scoreReport.overall_score
+      : score;
 
     cv.metadata = cv.metadata || {} as any;
     (cv.metadata as any).surgeonAnalysis = surgeonAnalysis;
+    
+    // Propagate score to root level and metadata for other views in the ecosystem
+    if (cv.cvType === 'journey') {
+      cv.cv_score_ats = finalScore;
+      (cv.metadata as any).atsScore = finalScore;
+      (cv.metadata as any).atsScoreDate = new Date();
+      console.log(`📊 Surgeon Analysis cache - Propagating journey ATS score to cv_score_ats and metadata:`, finalScore);
+    } else {
+      cv.cv_score_master = finalScore;
+      (cv.metadata as any).cvScore = finalScore;
+      console.log(`📊 Surgeon Analysis cache - Propagating profile score to cv_score_master and metadata:`, finalScore);
+    }
+
     cv.markModified('metadata.surgeonAnalysis');
+    cv.markModified('metadata');
     
     await cv.save();
+
+    // JOURNEY SCORE SYNC: Propagate updated cv_score_ats into ApplicationJourney.atsScore
+    if (cv.cvType === 'journey' && cv.journeyId) {
+      try {
+        const { ApplicationJourneyRelationshipService } = await import('@/lib/services/cvJourneyRelationshipService');
+        await ApplicationJourneyRelationshipService.updateJourneyATSScore(
+          cv.journeyId.toString(),
+          finalScore,
+          jobData?.id || jobData?._id || cv.jobData?.id || cv.jobData?._id || undefined,
+          scoreReport?.score_breakdown || scoreReport?.category_scores || undefined,
+          cv._id.toString()
+        );
+        console.log(`✅ Surgeon Analysis cache - Synced ATS score to journey ${cv.journeyId}:`, finalScore);
+      } catch (journeyErr) {
+        console.error(`❌ Surgeon Analysis cache - Error syncing journey ATS score:`, journeyErr);
+      }
+    }
 
     console.log('✅ Saved surgeon analysis to CV:', id, { score, fixCount: fixes.length });
 

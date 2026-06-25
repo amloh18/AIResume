@@ -63,7 +63,13 @@ export default function RedesignedDashboardView({ tier, isExpanded = false }: Re
 
   // Aggregate data for widgets
   const masterCV = cvs.find(cv => cv.metadata?.isMaster || cv.cvType === 'master');
-  const cvScore = masterCV?.metadata?.atsScore || 0;
+  const cvScore = masterCV?.metadata?.surgeonAnalysis?.scoreReport?.overall_score ||
+                  masterCV?.scoreReport?.overall_score ||
+                  masterCV?.metadata?.cvScore ||
+                  masterCV?.cv_score_master ||
+                  masterCV?.metadata?.atsScore ||
+                  masterCV?.cv_score_ats ||
+                  0;
   
   const getKPIs = () => {
     const handleKPIClick = (title: string) => {

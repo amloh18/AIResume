@@ -22,6 +22,7 @@ import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { ITemplate } from '@/types/template';
 import NotificationCenter from '@/components/notifications/NotificationCenter';
 import ThemeToggle from '@/components/ui/ThemeToggle';
+import GlobalSearchBar from '@/components/layout/GlobalSearchBar';
 import OptimizedNavigation from '@/components/dashboard/OptimizedNavigation';
 import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
 import { useUserData, getUserDisplayName, getUserAvatar } from '@/lib/hooks/useUserData';
@@ -129,6 +130,8 @@ export default function ResumeEnhancerContainer({
   const roleExplicitlySetRef = useRef<boolean>(false);
   // Track if we just saved to prevent re-initialization from resetting state
   const justSavedRef = useRef<boolean>(false);
+  // Track if we are navigating back to clean editor page (home button)
+  const isNavigatingHomeRef = useRef<boolean>(false);
   const [activeSection, setActiveSection] = useState<string>('personal');
   const [isScoreAnalysisCompact, setIsScoreAnalysisCompact] = useState(false);
   const showJobSidebar = state.isJobSidebarOpen;
@@ -175,13 +178,16 @@ export default function ResumeEnhancerContainer({
 
   // Use ATS score from context if available (more accurate for journey CVs), otherwise fall back to surgeon score
   const analysisScore = useMemo(() => {
+    if (state.scoreReport?.overall_score !== undefined) {
+      return Math.max(0, Math.min(100, state.scoreReport.overall_score));
+    }
     // Compute isJDReferenced inside useMemo to avoid initialization order issues
     const hasJD = jdText.trim().length > 0;
     if (atsScore !== null && hasJD) {
       return Math.max(0, Math.min(100, atsScore));
     }
     return Math.max(0, Math.min(100, state.surgeonAnalysis?.score ?? 0));
-  }, [atsScore, jdText, state.surgeonAnalysis?.score]);
+  }, [state.scoreReport?.overall_score, atsScore, jdText, state.surgeonAnalysis?.score]);
 
   // Calculate score breakdown using CentralScoreManager - same as Step4Review
   const scoreResult = useMemo(() => {
@@ -538,14 +544,15 @@ export default function ResumeEnhancerContainer({
 
   const queueCurrentThumbnailSnapshot = useCallback((targetCvId?: string | null) => {
     const snapshotCvId = targetCvId || state.cvId || cvId || null;
-    if (isGuestMode || !snapshotCvId || !state.cvData || !state.selectedTemplate) {
+    const currentTemplate = state.selectedTemplate || state.cvData?.metadata?.canvasTemplate;
+    if (isGuestMode || !snapshotCvId || !state.cvData || !currentTemplate) {
       return;
     }
 
     queueCvThumbnailSnapshotUpload({
       cvId: snapshotCvId,
       cvData: state.cvData,
-      template: state.selectedTemplate,
+      template: currentTemplate,
       forceRegenerate: true,
     });
   }, [cvId, isGuestMode, state.cvData, state.cvId, state.selectedTemplate]);
@@ -1005,8 +1012,37 @@ export default function ResumeEnhancerContainer({
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
+  // Synchronize state.currentStep to URL query parameters
+  useEffect(() => {
+    if (isNavigatingHomeRef.current) return;
+    if (typeof window !== 'undefined' && state.currentStep) {
+      const currentSearchParams = new URLSearchParams(window.location.search);
+      const existingStep = currentSearchParams.get('step');
+      
+      if (state.currentStep > 1) {
+        if (existingStep !== String(state.currentStep)) {
+          currentSearchParams.set('step', String(state.currentStep));
+          router.replace(`${pathname}?${currentSearchParams.toString()}`);
+          console.log('🔄 Synced current step to URL query parameter:', state.currentStep);
+        }
+      } else if (existingStep) {
+        // If we transitioned back to step 1, clear the step query parameter
+        currentSearchParams.delete('step');
+        router.replace(`${pathname}?${currentSearchParams.toString()}`);
+      }
+    }
+  }, [state.currentStep, pathname, router]);
+
   // Initialize based on mode
   useEffect(() => {
+    if (isNavigatingHomeRef.current) {
+      if (mode === 'create' && !cvId) {
+        isNavigatingHomeRef.current = false;
+      } else {
+        return;
+      }
+    }
+
     // CRITICAL FIX: Skip re-initialization if we just saved and got a new cvId
     // This prevents losing parsed data and surgeon analysis when saving in create mode
     if (justSavedRef.current) {
@@ -1145,6 +1181,7 @@ export default function ResumeEnhancerContainer({
           }
 
           // Edge case: Master CV with JD - don't treat as journey
+          const loadedReport = cv.metadata?.surgeonAnalysis?.scoreReport || cv.scoreReport || null;
           if (resolvedCvType === 'master' && cv.jobData) {
             // Don't set jobData for master CVs
             loadCV({
@@ -1154,7 +1191,26 @@ export default function ResumeEnhancerContainer({
               cvData: cv.cvData,
               template: cv.template,
               journeyId: undefined,
-              jobData: undefined
+              jobData: undefined,
+              scoreReport: loadedReport
+            });
+
+            // Store initial data for unsaved changes detection
+            initialCVDataRef.current = JSON.parse(JSON.stringify(cv.cvData));
+            initialCVTitleRef.current = cv.title;
+            initialTemplateRef.current = cv.template || null;
+          } else {
+            // Always load CV with resolved type and jobData (for journey CVs)
+            loadCV({
+              cvId: cv.id,
+              cvType: resolvedCvType,
+              cvTitle: cv.title,
+              cvData: cv.cvData,
+              template: cv.template,
+              journeyId: cv.journeyId,
+              jobData: cv.jobData,
+              coverLetterId: coverLetterData ? (coverLetterData.id || coverLetterData._id) : undefined,
+              scoreReport: loadedReport
             });
 
             // Store initial data for unsaved changes detection
@@ -1162,23 +1218,6 @@ export default function ResumeEnhancerContainer({
             initialCVTitleRef.current = cv.title;
             initialTemplateRef.current = cv.template || null;
           }
-          
-          // Always load CV with resolved type and jobData (for journey CVs)
-          loadCV({
-            cvId: cv.id,
-            cvType: resolvedCvType,
-            cvTitle: cv.title,
-            cvData: cv.cvData,
-            template: cv.template,
-            journeyId: cv.journeyId,
-            jobData: cv.jobData,
-            coverLetterId: coverLetterData ? (coverLetterData.id || coverLetterData._id) : undefined
-          });
-
-          // Store initial data for unsaved changes detection
-          initialCVDataRef.current = JSON.parse(JSON.stringify(cv.cvData));
-          initialCVTitleRef.current = cv.title;
-          initialTemplateRef.current = cv.template || null;
 
           if (coverLetterData) {
             dispatch({
@@ -1291,6 +1330,7 @@ export default function ResumeEnhancerContainer({
               }
             }
 
+            const loadedReport = cv.metadata?.surgeonAnalysis?.scoreReport || cv.scoreReport || null;
             loadCV({
               cvId: cv.id,
               cvType: resolvedCvType,
@@ -1298,7 +1338,8 @@ export default function ResumeEnhancerContainer({
               cvData: cv.cvData,
               template: cv.template,
               journeyId: cv.journeyId || journeyId,
-              jobData: cv.jobData
+              jobData: cv.jobData,
+              scoreReport: loadedReport
             });
 
             initialCVDataRef.current = JSON.parse(JSON.stringify(cv.cvData));
@@ -2401,6 +2442,14 @@ export default function ResumeEnhancerContainer({
     const isContinuing = state.currentStep === 3 || state.currentStep === 4;
     const completionPercentage = calculateCompletionPercentage();
 
+    let scoreVal = state.scoreReport?.overall_score !== undefined
+      ? state.scoreReport.overall_score
+      : (state.surgeonAnalysis?.score ?? 0);
+
+    if (state.cvType === 'journey') {
+      scoreVal = Math.min(scoreVal, state.atsScoreCap || 100);
+    }
+
     const payload = {
       title: state.cvTitle,
       cvData: state.cvData,
@@ -2408,10 +2457,14 @@ export default function ResumeEnhancerContainer({
       cvType: state.cvType,
       status: isFinishing ? 'published' : 'draft',
       journeyId: state.journeyId,
+      cv_score_master: state.cvType !== 'journey' ? scoreVal : undefined,
+      cv_score_ats: state.cvType === 'journey' ? scoreVal : undefined,
       metadata: {
         isMaster: state.cvType === 'master',
         completionPercentage,
-        createdVia: 'resume-enhancer'
+        createdVia: 'resume-enhancer',
+        cvScore: state.cvType !== 'journey' ? scoreVal : undefined,
+        atsScore: state.cvType === 'journey' ? scoreVal : undefined
       }
     };
 
@@ -2595,12 +2648,13 @@ export default function ResumeEnhancerContainer({
       }
       
       const thumbnailCvId = savedCvId || effectiveCvId;
-      if (thumbnailCvId && state.selectedTemplate) {
+      const currentTemplate = state.selectedTemplate || state.cvData?.metadata?.canvasTemplate;
+      if (thumbnailCvId && currentTemplate) {
         try {
           await saveCvThumbnailSnapshot({
             cvId: thumbnailCvId,
             cvData: state.cvData,
-            template: state.selectedTemplate,
+            template: currentTemplate,
             forceRegenerate: true,
           });
         } catch (thumbnailError) {
@@ -2613,12 +2667,7 @@ export default function ResumeEnhancerContainer({
 
       setSaveStatus('success');
 
-      // CRITICAL FIX: Don't auto-navigate from step 3 - stay on current step
-      // This preserves parsed data and surgeon analysis
-      if (isFinishing && savedCvId) {
-        router.push(`/editor?highlight=${savedCvId}`);
-      }
-      // Removed: isContinuing navigation that was moving to step 4
+      // CRITICAL FIX: Removed legacy step 5 redirect to prevent resetting the session back to Step 1 in standalone mode.
 
       // Reset success state after a short delay (if we didn't navigate away)
       setTimeout(() => setSaveStatus('idle'), 1200);
@@ -2690,9 +2739,12 @@ export default function ResumeEnhancerContainer({
   };
 
   const handleHomeStepClick = async () => {
+    isNavigatingHomeRef.current = true;
     await handleSmartSave();
     setTemplateOverlayOpen(false);
-    goToStep(1);
+    resetState();
+    initializedRef.current = null;
+    router.push('/editor');
   };
 
   const handleStepNavigation = async (targetStep: number, openOverlay: boolean) => {
@@ -3065,18 +3117,28 @@ export default function ResumeEnhancerContainer({
                     )}
                   </div>
                   
+                  {/* Row 2: CV type chip + save status inline */}
                   <div className="flex items-center gap-1.5 mt-0.5">
-                    <span className={`w-1.5 h-1.5 rounded-full ${
+                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider shrink-0 ${
+                      state.cvType === 'master'
+                        ? 'bg-blue-500/15 text-blue-500 dark:text-blue-400 border border-blue-500/30'
+                        : state.cvType === 'journey'
+                        ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
+                        : 'bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border border-cyan-500/30'
+                    }`}>
+                      {state.cvType === 'master' ? '⭐ Primary CV' : state.cvType === 'journey' ? '🎯 Job-Tailored' : '✦ Custom CV'}
+                    </span>
+                    <span className={`w-1 h-1 rounded-full shrink-0 ${
                       saveStatus === 'error' ? 'bg-red-500' :
                       saveStatus === 'saving' ? 'bg-amber-500 animate-pulse' :
                       'bg-lime-500 dark:bg-[#80FF00]'
                     }`} />
-                    <span className="text-[10px] text-gray-500 dark:text-gray-400">
+                    <span className="text-[9px] text-gray-500 dark:text-gray-400 truncate">
                       {saveStatus === 'saving' ? 'Saving...' :
-                       saveStatus === 'success' ? 'Last saved just now' :
+                       saveStatus === 'success' ? 'Saved' :
                        saveStatus === 'offline' ? 'Saved offline' :
                        saveStatus === 'error' ? 'Failed to save' :
-                       'Last saved just now'}
+                       'Saved'}
                     </span>
                   </div>
                 </div>
@@ -3086,8 +3148,7 @@ export default function ResumeEnhancerContainer({
               {renderHeaderStepper()}
             </>
           ) : (
-            <div className="flex items-center gap-12 flex-1 min-w-0">
-              {/* Logo or Back to Dashboard if in deep editing */}
+            <div className="flex items-center flex-1 min-w-0 gap-4">
               <div className="flex items-center gap-4">
                 <button
                   onClick={toggleSidebar}
@@ -3099,40 +3160,11 @@ export default function ResumeEnhancerContainer({
                   </svg>
                 </button>
               </div>
+              <div className="flex-1 flex justify-center">
+                <GlobalSearchBar />
+              </div>
             </div>
           )}
-
-        {state.currentStep === 1 && (
-          <div
-            className="step-one-header-tabs order-3 sm:order-none w-full sm:w-auto sm:absolute sm:left-1/2 sm:-translate-x-1/2 flex justify-center"
-            role="tablist"
-            aria-label="Document type"
-          >
-            <div className="relative grid grid-cols-2 w-full max-w-[330px] sm:w-[310px] rounded-full p-1 bg-[var(--bg-tertiary)] border border-[color:var(--border-primary)] shadow-inner">
-              <motion.div
-                className="absolute inset-y-1 w-[calc(50%-4px)] rounded-full bg-[var(--accent-primary)] shadow-[0_5px_18px_rgba(132,204,22,0.22)]"
-                animate={{ x: stepOneDocumentTab === 'cvs' ? 0 : '100%' }}
-                transition={{ type: 'spring', stiffness: 420, damping: 34 }}
-              />
-              {([
-                ['cvs', 'RESUME'],
-                ['cover-letters', 'COVER LETTER'],
-              ] as const).map(([tab, label]) => (
-                <button
-                  key={tab}
-                  role="tab"
-                  aria-selected={stepOneDocumentTab === tab}
-                  onClick={() => setStepOneDocumentTab(tab)}
-                  className={`relative z-10 min-h-9 px-3 rounded-full text-[10px] sm:text-[11px] font-black tracking-[0.13em] transition-colors duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--header-bg)] ${
-                    stepOneDocumentTab === tab ? 'text-black' : 'text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)]'
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* Actions - Right side */}
         <div className={`flex items-center space-x-1 sm:space-x-2 shrink-0 ${

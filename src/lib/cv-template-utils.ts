@@ -8,7 +8,7 @@
 import mongoose from 'mongoose';
 import { CV, Template } from '@/models';
 import { TEMPLATE_REGISTRY } from '@/lib/templates/template-registry';
-import { migrateLegacyTemplateId } from '@/lib/templates/template-utils';
+import { migrateLegacyTemplateId, getTemplateById as getTemplateByIdUtil } from '@/lib/templates/template-utils';
 
 export interface CVWithTemplate {
   _id: string;
@@ -64,21 +64,21 @@ export async function getCVWithTemplate(cvId: string): Promise<CVWithTemplate | 
     }
 
     // First check if it's a hardcoded template
-    const hardcodedTemplate = TEMPLATE_REGISTRY.find(
-      t => t.id === templateIdString
-    );
+    const hardcodedTemplate: any = TEMPLATE_REGISTRY.find(
+      (t: any) => t.id === templateIdString
+    ) || getTemplateByIdUtil(templateIdString);
 
     let templateData;
 
     if (hardcodedTemplate) {
       // Use hardcoded template data
       templateData = {
-        _id: hardcodedTemplate.id,
+        _id: hardcodedTemplate.id || hardcodedTemplate._id,
         name: hardcodedTemplate.name,
-        globalStyles: hardcodedTemplate.theme,
-        availableSections: hardcodedTemplate.layout.sections.map(s => s.id)
+        globalStyles: hardcodedTemplate.globalStyles || hardcodedTemplate.theme,
+        availableSections: hardcodedTemplate.availableSections || (hardcodedTemplate.layout?.sections?.map((s: any) => s.id) || [])
       };
-      console.log('✅ getCVWithTemplate - Using hardcoded template:', hardcodedTemplate.name);
+      console.log('getCVWithTemplate - Using hardcoded template:', hardcodedTemplate.name);
     } else {
       // Try to populate from database only if templateId is a valid ObjectId
       // String templateIds (hardcoded templates) should have been caught above
@@ -188,18 +188,18 @@ export async function getCVsWithTemplates(
       const templateIdString = (cvDoc as any).templateId?.toString() || '';
 
       // Check hardcoded templates first
-      const hardcodedTemplate = TEMPLATE_REGISTRY.find(
-        t => t.id === templateIdString
-      );
+      const hardcodedTemplate: any = TEMPLATE_REGISTRY.find(
+        (t: any) => t.id === templateIdString
+      ) || getTemplateByIdUtil(templateIdString);
 
       let templateData;
 
       if (hardcodedTemplate) {
         templateData = {
-          _id: hardcodedTemplate.id,
+          _id: hardcodedTemplate.id || hardcodedTemplate._id,
           name: hardcodedTemplate.name,
-          globalStyles: hardcodedTemplate.theme,
-          availableSections: hardcodedTemplate.layout.sections.map(s => s.id)
+          globalStyles: hardcodedTemplate.globalStyles || hardcodedTemplate.theme,
+          availableSections: hardcodedTemplate.availableSections || (hardcodedTemplate.layout?.sections?.map((s: any) => s.id) || [])
         };
       } else if ((cvDoc as any).templateId && typeof (cvDoc as any).templateId === 'object') {
         // Populated from database

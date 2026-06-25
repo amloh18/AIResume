@@ -7,6 +7,27 @@ import { getConnection } from '@/lib/database';
 import MoriChat from '@/models/MoriChat';
 import CV from '@/models/CV';
 import { isFreeTierPlan } from '@/lib/utils/subscription-helpers';
+import crypto from 'crypto';
+import { ANALYSIS_AGENT_PROMPT, CV_TAILOR_AGENT_PROMPT } from '@/lib/prompts/promptTemplates';
+
+function cleanAndParseJSON(content: string): any {
+  let cleaned = content.trim();
+  const codeBlockRegex = /```(?:json)?\s*([\s\S]*?)```/;
+  const codeBlockMatch = cleaned.match(codeBlockRegex);
+  if (codeBlockMatch) {
+    cleaned = codeBlockMatch[1].trim();
+  }
+
+  let jsonStart = cleaned.indexOf('{');
+  let jsonEnd = cleaned.lastIndexOf('}');
+  if (jsonStart === -1 || jsonEnd === -1 || jsonEnd < jsonStart) {
+    throw new Error('No JSON object found in response');
+  }
+
+  let jsonString = cleaned.substring(jsonStart, jsonEnd + 1);
+  jsonString = jsonString.replace(/,(\s*[}\]])/g, '$1'); // trailing commas fix
+  return JSON.parse(jsonString);
+}
 
 function injectItemIds(obj: any): any {
   if (!obj || typeof obj !== 'object') return obj;
@@ -35,7 +56,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { chatId, messages, cvData, selection, jobData, targetRole, seniorityLevel, cvId } = await req.json();
+    const { chatId, messages, cvData, selection, jobData, targetRole, seniorityLevel, cvId, cvType } = await req.json();
 
     const incomingLatest = messages[messages.length - 1];
     const latestMessage = {
@@ -113,6 +134,213 @@ export async function POST(req: NextRequest) {
           jobData.description || jobData.jd || jobData.jobDescription || (typeof jobData.text === 'string' ? jobData.text : '')
         ].filter(Boolean).join('\n');
       }
+    }
+
+    // Intercept "Optimize my CV" suggestion chip trigger
+    if (latestMessage && latestMessage.content && latestMessage.content.toLowerCase().trim() === 'optimize my cv') {
+      console.log('⚡ Intercepted "Optimize my CV" command. Executing chained AI flow...');
+
+      const currentCvType = cvType || (jdText ? 'journey' : 'standalone');
+
+      // 1. Run Analysis Prompt
+      let analysisPrompt = ANALYSIS_AGENT_PROMPT
+        .replace('{{CV_DATA}}', typeof cvData === 'string' ? cvData : JSON.stringify(cvData, null, 2))
+        .replace('{{CV_TYPE}}', currentCvType)
+        .replace('{{JD_DATA}}', jdText || 'N/A')
+        .replace('{{TARGET_ROLE}}', targetRole || 'N/A')
+        .replace('{{MASTER_CV_DATA}}', masterCVData ? JSON.stringify(masterCVData, null, 2) : 'N/A');
+
+      const analysisResponse = await callAIWithFallback({
+        prompt: analysisPrompt,
+        systemPrompt: 'You are a JSON-only recruiter analysis API. Return ONLY valid JSON.',
+        temperature: 0.2,
+        maxTokens: 8000,
+        action: 'analyze_cv'
+      });
+
+      let scoreReport: any;
+      try {
+        scoreReport = cleanAndParseJSON(analysisResponse.content);
+      } catch (err: any) {
+        console.error('Failed to parse score report in Mori intercept:', err);
+        return NextResponse.json({ error: 'Failed to generate score report: ' + err.message }, { status: 500 });
+      }
+
+      // 2. Run CV Tailor Prompt
+      const primaryRole = targetRole || 'N/A';
+      const seniority = seniorityLevel || 'professional';
+
+      let tailorPrompt = CV_TAILOR_AGENT_PROMPT
+        .replace('{{CV_DATA}}', typeof cvData === 'string' ? cvData : JSON.stringify(cvData, null, 2))
+        .replace('{{CV_TYPE}}', currentCvType)
+        .replace('{{SCORE_REPORT}}', JSON.stringify(scoreReport, null, 2))
+        .replace('{{MASTER_CV_DATA}}', masterCVData ? JSON.stringify(masterCVData, null, 2) : JSON.stringify(cvData, null, 2))
+        .replace('{{JD_DATA}}', jdText || 'N/A')
+        .replace('{{TARGET_ROLE}}', targetRole || 'N/A')
+        .replace('{{PRIMARY_ROLE}}', primaryRole)
+        .replace('{{INFERRED_OR_TARGET_SENIORITY}}', seniority);
+
+      const tailorResponse = await callAIWithFallback({
+        prompt: tailorPrompt,
+        systemPrompt: 'You are a JSON-only CV rewrite engine. Return ONLY valid JSON matching the return shape.',
+        temperature: 0.3,
+        maxTokens: 8000,
+        action: 'tailor_cv'
+      });
+
+      let tailorResultObj: any;
+      try {
+        tailorResultObj = cleanAndParseJSON(tailorResponse.content);
+      } catch (err: any) {
+        console.error('Failed to parse tailor response in Mori intercept:', err);
+        return NextResponse.json({ error: 'Failed to rewrite CV: ' + err.message }, { status: 500 });
+      }
+
+      const optimised_cv = tailorResultObj.optimised_cv || {};
+      const changes_log = tailorResultObj.changes_log || {};
+
+      // Map back to UnifiedCVDataStructure
+      const mappedCV: any = { ...cvData };
+
+      if (optimised_cv.personal_details || optimised_cv.professional_summary) {
+        mappedCV.basics = {
+          ...mappedCV.basics,
+          name: optimised_cv.personal_details?.name || mappedCV.basics?.name,
+          label: optimised_cv.personal_details?.title || mappedCV.basics?.label,
+          email: optimised_cv.personal_details?.email || mappedCV.basics?.email,
+          phone: optimised_cv.personal_details?.phone || mappedCV.basics?.phone,
+          url: optimised_cv.personal_details?.portfolio || mappedCV.basics?.url,
+          summary: optimised_cv.professional_summary || mappedCV.basics?.summary
+        };
+        const profiles = [];
+        if (optimised_cv.personal_details?.linkedin) {
+          profiles.push({ network: 'LinkedIn', url: optimised_cv.personal_details.linkedin });
+        }
+        if (optimised_cv.personal_details?.github) {
+          profiles.push({ network: 'GitHub', url: optimised_cv.personal_details.github });
+        }
+        if (profiles.length > 0) {
+          mappedCV.basics.profiles = profiles;
+        }
+      }
+
+      if (optimised_cv.work_experience) {
+        mappedCV.work = optimised_cv.work_experience.map((w: any) => ({
+          company: w.company,
+          position: w.title,
+          startDate: w.start_date,
+          endDate: w.end_date,
+          location: w.location,
+          highlights: w.bullets
+        }));
+      }
+
+      if (optimised_cv.projects) {
+        mappedCV.projects = optimised_cv.projects.map((p: any) => ({
+          name: p.name,
+          description: p.bullets ? p.bullets.join('\n') : '',
+          highlights: p.bullets || [],
+          startDate: p.start_date,
+          endDate: p.end_date
+        }));
+      }
+
+      if (optimised_cv.education) {
+        mappedCV.education = optimised_cv.education.map((e: any) => ({
+          institution: e.institution,
+          area: e.area,
+          studyType: e.degree,
+          startDate: e.start_date,
+          endDate: e.end_date,
+          description: e.description
+        }));
+      }
+
+      if (optimised_cv.skills) {
+        if (Array.isArray(optimised_cv.skills) && optimised_cv.skills[0]?.category) {
+          mappedCV.skills = optimised_cv.skills.map((s: any) => ({
+            category: s.category,
+            skills: s.items || []
+          }));
+        } else if (Array.isArray(optimised_cv.skills)) {
+          mappedCV.skills = [{ category: 'Skills', skills: optimised_cv.skills }];
+        }
+      }
+
+      // Save analysis report to database cache to prevent redundant re-generation when editor loads
+      if (cvId) {
+        try {
+          const contentHash = crypto.createHash('md5').update(JSON.stringify(cvData) + (jdText || '')).digest('hex');
+          await CV.findOneAndUpdate(
+            { _id: cvId, userId: session.user.id },
+            {
+              $set: {
+                'metadata.surgeonAnalysis': {
+                  score: scoreReport.overall_score || 0,
+                  fixes: [],
+                  annotations: [],
+                  targetRole: targetRole || '',
+                  seniorityLevel: seniorityLevel || '',
+                  analyzedAt: new Date(),
+                  contentHash,
+                  scoreReport
+                }
+              }
+            }
+          );
+        } catch (dbErr) {
+          console.warn('Failed to save surgeonAnalysis cache to DB in Mori intercept:', dbErr);
+        }
+      }
+
+      const cleanMessage = `I've analyzed your CV and applied all recommended optimizations to align it with your goals. Here is the optimized version!\n\n**Summary of changes:**\n- **Strategy**: ${changes_log.strategy_used || 'Tailored to job requirements'}\n- **Action**: ${changes_log.summary?.action || 'Improved bullets and keyword alignment'}\n- **Keywords Added**: ${changes_log.summary?.keywords_added?.join(', ') || 'N/A'}`;
+
+      const assistantMessage = {
+        id: Date.now().toString(),
+        role: 'assistant',
+        content: cleanMessage,
+        timestamp: Date.now()
+      };
+
+      let chatRecord;
+      if (chatId) {
+        chatRecord = await MoriChat.findOneAndUpdate(
+          { _id: chatId, userId: session.user.id },
+          {
+            $push: { messages: { $each: [latestMessage, assistantMessage] } },
+            $set: { updatedAt: new Date() }
+          },
+          { new: true }
+        ).lean();
+      } else {
+        chatRecord = await MoriChat.create({
+          userId: session.user.id,
+          cvId: cvId || null,
+          title: 'CV Optimization Flow',
+          messages: [
+            {
+              id: 'welcome',
+              role: 'assistant',
+              content: "Hi! I'm Mori. I can help you edit your CV using natural language. You can also select any part of the CV on the left to focus our conversation.",
+              timestamp: Date.now() - 1000
+            },
+            latestMessage,
+            assistantMessage
+          ]
+        });
+      }
+
+      if (!chatRecord) {
+        return NextResponse.json({ error: 'Failed to create or update chat session' }, { status: 500 });
+      }
+
+      return NextResponse.json({
+        chatId: chatRecord._id,
+        title: chatRecord.title,
+        message: cleanMessage,
+        updatedCV: mappedCV,
+        limitExhausted: false
+      });
     }
 
     // Construct the system prompt

@@ -126,7 +126,7 @@ export class CVSurgeonService {
         jobData?: any,
         suppressedFixHashes?: string[],
         cvType?: SurgeonMode
-    ): Promise<{ score: number; fixes: SurgicalFix[]; annotations: FixAnnotation[]; audit_report?: any; cached: boolean; suppressedCount: number; isRestricted?: boolean }> {
+    ): Promise<{ score: number; fixes: SurgicalFix[]; annotations: FixAnnotation[]; audit_report?: any; cached: boolean; suppressedCount: number; isRestricted?: boolean; scoreReport?: any }> {
         // Load suppressed fixes from API if not provided
         let suppressedHashes = suppressedFixHashes || [];
         if (cvId && userId && !suppressedFixHashes) {
@@ -172,7 +172,8 @@ export class CVSurgeonService {
                         annotations,
                         cached: true,
                         suppressedCount: (cacheResult.analysis.fixes || []).length - fixes.length,
-                        isRestricted: cacheResult.analysis.isRestricted
+                        isRestricted: cacheResult.analysis.isRestricted,
+                        scoreReport: cacheResult.analysis.scoreReport || null
                     };
                 }
                 console.log('🔄 CVSurgeonService - Cache miss or invalid, running new analysis');
@@ -192,7 +193,8 @@ export class CVSurgeonService {
             fixes: analysisResult.fixes,
             annotations: analysisResult.annotations,
             audit_report: (analysisResult as any).audit_report, // Pass through audit_report
-            isRestricted: analysisResult.isRestricted
+            isRestricted: analysisResult.isRestricted,
+            scoreReport: (analysisResult as any).scoreReport || null
         };
 
         // Filter suppressed fixes
@@ -221,7 +223,8 @@ export class CVSurgeonService {
                         targetRole,
                         seniorityLevel,
                         jobData,
-                        isRestricted: result.isRestricted
+                        isRestricted: result.isRestricted,
+                        scoreReport: result.scoreReport || null
                     })
                 });
                 console.log('✅ CVSurgeonService - Analysis saved to database cache (saves AI tokens on next run)');
@@ -237,7 +240,8 @@ export class CVSurgeonService {
             audit_report: result.audit_report,
             cached: false,
             suppressedCount,
-            isRestricted: result.isRestricted
+            isRestricted: result.isRestricted,
+            scoreReport: result.scoreReport || null
         };
     }
 

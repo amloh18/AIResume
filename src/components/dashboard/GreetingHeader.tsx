@@ -215,6 +215,19 @@ export default function GreetingHeader() {
 // Helper function to calculate CV health score
 function calculateCVHealthScore(cv: any): number {
   if (!cv) return 0;
+
+  // Prioritize V3 analysis score report
+  const analysisScore = cv.metadata?.surgeonAnalysis?.scoreReport?.overall_score || 
+                        cv.scoreReport?.overall_score || 
+                        cv.metadata?.cvScore || 
+                        cv.cv_score_master || 
+                        cv.metadata?.atsScore || 
+                        cv.cv_score_ats;
+                        
+  if (analysisScore !== undefined && analysisScore !== null && analysisScore > 0) {
+    return analysisScore;
+  }
+
   if (cv.status === 'published') return 100;
   if (cv.status === 'archived') return 0;
 
