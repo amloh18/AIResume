@@ -966,7 +966,7 @@ export default function Step1Parser({
         <div ref={topSectionRef} className="step-one-hero w-full flex flex-col min-h-[30vh] pt-6 sm:pt-8 pb-4 sm:pb-6">
           <div className="w-full max-w-7xl mx-auto px-4 sm:px-8">
             <div
-              className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 sm:gap-6 mb-5 sm:mb-7 origin-bottom w-full px-1"
+              className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 sm:gap-6 mb-5 sm:mb-7 origin-bottom w-full px-1 lg:relative"
             >
               {/* Breadcrumb instead of welcome text */}
               <div className="flex items-center gap-1.5 text-base text-gray-500 dark:text-gray-400 font-medium py-2">
@@ -980,14 +980,14 @@ export default function Step1Parser({
                 <span className="text-gray-800 dark:text-gray-200 font-bold">
                   {activeTab === 'cvs' ? 'Editor' : 'Cover Letters'}
                  </span>
-               </div>
+</div>
 
-               {activeDocumentTab && onDocumentTabChange && (
-                 <div
-                   className="flex justify-center self-center"
-                   role="tablist"
-                   aria-label="Document type"
-                 >
+                {activeDocumentTab && onDocumentTabChange && (
+                  <div
+                    className="flex justify-center lg:absolute lg:left-1/2 lg:-translate-x-1/2"
+                    role="tablist"
+                    aria-label="Document type"
+                  >
                    <div className="relative grid grid-cols-2 w-full max-w-[330px] sm:w-[310px] rounded-full p-1 bg-[var(--bg-tertiary)] border border-[color:var(--border-primary)] shadow-inner">
                      <motion.div
                        className="absolute inset-y-1 w-[calc(50%-4px)] rounded-full bg-[var(--accent-primary)] shadow-[0_5px_18px_rgba(132,204,22,0.22)]"
@@ -1014,8 +1014,8 @@ export default function Step1Parser({
                  </div>
                )}
 
-                {/* Stats Widgets */}
-               <div className="flex items-center gap-6 sm:gap-8 shrink-0 w-full lg:w-auto lg:min-w-[400px]">
+{/* Stats Widgets */}
+                <div className="flex items-center gap-6 sm:gap-8 shrink-0 lg:ml-auto lg:min-w-[400px] w-full lg:w-auto">
                  <button
                    type="button"
                    onClick={() => setActiveTab('cvs')}
