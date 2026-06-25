@@ -989,7 +989,7 @@ export default function Step4Review({ onSave }: { onSave?: () => Promise<void> }
                     <CVBuilderProAdapter
                       cvData={state.cvData}
                       template={state.selectedTemplate || state.cvData?.metadata?.canvasTemplate}
-                      theme="light"
+                      theme={typeof window !== 'undefined' && document.documentElement.classList.contains('dark') ? 'dark' : 'light'}
                       readOnly={true}
                       cvId={state.cvId}
                       jobId={state.jobData?._id || state.jobData?.id || state.journeyId}

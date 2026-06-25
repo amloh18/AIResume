@@ -82,6 +82,14 @@ class GuestCVService {
         return { success: false, error: 'No session ID available' };
       }
 
+      // If data doesn't have aiAnalysis, check if we have one in local storage and merge it!
+      if (!data.aiAnalysis) {
+        const existing = this.loadFromLocalStorage();
+        if (existing && existing.aiAnalysis) {
+          data.aiAnalysis = existing.aiAnalysis;
+        }
+      }
+
       // Also save to localStorage as backup
       this.saveToLocalStorage(data);
 

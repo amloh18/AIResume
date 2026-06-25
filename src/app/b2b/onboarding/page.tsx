@@ -228,7 +228,7 @@ const B2BOnboardingPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#0d1209] text-white selection:bg-[#80FF00] selection:text-black">
+    <div className="h-screen flex flex-col bg-[#0d1209] text-white selection:bg-[#80FF00] selection:text-black overflow-hidden">
       {/* Background Ambient Glow */}
       <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#80FF00]/5 rounded-full blur-[120px]" />
@@ -290,7 +290,7 @@ const B2BOnboardingPage = () => {
       </div>
 
       {/* Main Content */}
-      <main className="relative z-10 max-w-5xl mx-auto px-8 py-20">
+      <main className="relative z-10 max-w-5xl mx-auto w-full px-8 py-8 flex-1 overflow-hidden flex flex-col justify-center">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentStep}
@@ -298,73 +298,75 @@ const B2BOnboardingPage = () => {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-            className="bg-white/5 backdrop-blur-3xl rounded-[40px] border border-white/10 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.8)] p-12 md:p-20"
+            className="bg-white/5 backdrop-blur-3xl rounded-[40px] border border-white/10 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.8)] p-8 md:p-12 max-h-full flex flex-col overflow-hidden"
           >
-            {/* Step Header */}
-            <div className="text-center mb-16">
-              <div className="w-20 h-20 rounded-[30px] bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-8 shadow-2xl">
-                {currentStepData.icon}
+            <div className="flex-1 overflow-y-auto pr-2 space-y-8 pb-6">
+              {/* Step Header */}
+              <div className="text-center mb-8">
+                <div className="w-20 h-20 rounded-[30px] bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-6 shadow-2xl">
+                  {currentStepData.icon}
+                </div>
+                <h2 className="text-4xl md:text-5xl font-black tracking-tighter uppercase mb-4">
+                  {currentStepData.title}
+                </h2>
+                <p className="text-lg text-gray-500 font-medium max-w-2xl mx-auto leading-relaxed">
+                  {currentStepData.description}
+                </p>
               </div>
-              <h2 className="text-4xl md:text-6xl font-black tracking-tighter uppercase mb-4">
-                {currentStepData.title}
-              </h2>
-              <p className="text-xl text-gray-500 font-medium max-w-2xl mx-auto leading-relaxed">
-                {currentStepData.description}
-              </p>
-            </div>
 
-            {/* Form Fields */}
-            {currentStepData.fields && (
-              <div className="grid md:grid-cols-2 gap-8 mb-16">
-                {currentStepData.fields.map((field) => (
-                  <div key={field.name} className={field.name === 'atsSystem' ? 'md:col-span-2' : ''}>
-                    <label className="block text-[10px] font-black tracking-[0.2em] text-gray-500 uppercase mb-3 ml-2">
-                      {field.label}
-                      {field.required && <span className="text-[#80FF00]"> *</span>}
-                    </label>
-                    {field.type === 'select' ? (
-                      <div className="relative group">
-                         <select
+              {/* Form Fields */}
+              {currentStepData.fields && (
+                <div className="grid md:grid-cols-2 gap-8">
+                  {currentStepData.fields.map((field) => (
+                    <div key={field.name} className={field.name === 'atsSystem' ? 'md:col-span-2' : ''}>
+                      <label className="block text-[10px] font-black tracking-[0.2em] text-gray-500 uppercase mb-3 ml-2">
+                        {field.label}
+                        {field.required && <span className="text-[#80FF00]"> *</span>}
+                      </label>
+                      {field.type === 'select' ? (
+                        <div className="relative group">
+                           <select
+                            value={formData[field.name as keyof typeof formData] || ''}
+                            onChange={(e) => handleInputChange(field.name, e.target.value)}
+                            className="w-full px-6 py-5 rounded-3xl bg-white/5 border border-white/10 text-white font-bold focus:border-[#80FF00] focus:outline-none transition-all appearance-none cursor-pointer hover:bg-white/[0.08]"
+                            disabled={isLoading}
+                          >
+                            <option value="" className="bg-[#0d1209]">{field.placeholder}</option>
+                            {field.name === 'companySize' && sizeOptions.map((option) => (
+                              <option key={option.value} value={option.value} className="bg-[#0d1209]">{option.label}</option>
+                            ))}
+                            {field.name === 'industry' && industryOptions.map((option) => (
+                              <option key={option.value} value={option.value} className="bg-[#0d1209]">{option.label}</option>
+                            ))}
+                            {field.name === 'useCase' && useCaseOptions.map((option) => (
+                              <option key={option.value} value={option.value} className="bg-[#0d1209]">{option.label}</option>
+                            ))}
+                            {field.name === 'atsSystem' && atsOptions.map((option) => (
+                              <option key={option.value} value={option.value} className="bg-[#0d1209]">{option.label}</option>
+                            ))}
+                          </select>
+                          <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500">
+                            <ChevronDown className="w-5 h-5" />
+                          </div>
+                        </div>
+                      ) : (
+                        <input
+                          type={field.type}
                           value={formData[field.name as keyof typeof formData] || ''}
                           onChange={(e) => handleInputChange(field.name, e.target.value)}
-                          className="w-full px-6 py-5 rounded-3xl bg-white/5 border border-white/10 text-white font-bold focus:border-[#80FF00] focus:outline-none transition-all appearance-none cursor-pointer hover:bg-white/[0.08]"
+                          placeholder={field.placeholder}
+                          className="w-full px-8 py-5 rounded-3xl bg-white/5 border border-white/10 text-white font-bold placeholder:text-gray-600 focus:border-[#80FF00] focus:outline-none transition-all hover:bg-white/[0.08]"
                           disabled={isLoading}
-                        >
-                          <option value="" className="bg-[#0d1209]">{field.placeholder}</option>
-                          {field.name === 'companySize' && sizeOptions.map((option) => (
-                            <option key={option.value} value={option.value} className="bg-[#0d1209]">{option.label}</option>
-                          ))}
-                          {field.name === 'industry' && industryOptions.map((option) => (
-                            <option key={option.value} value={option.value} className="bg-[#0d1209]">{option.label}</option>
-                          ))}
-                          {field.name === 'useCase' && useCaseOptions.map((option) => (
-                            <option key={option.value} value={option.value} className="bg-[#0d1209]">{option.label}</option>
-                          ))}
-                          {field.name === 'atsSystem' && atsOptions.map((option) => (
-                            <option key={option.value} value={option.value} className="bg-[#0d1209]">{option.label}</option>
-                          ))}
-                        </select>
-                        <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500">
-                          <ChevronDown className="w-5 h-5" />
-                        </div>
-                      </div>
-                    ) : (
-                      <input
-                        type={field.type}
-                        value={formData[field.name as keyof typeof formData] || ''}
-                        onChange={(e) => handleInputChange(field.name, e.target.value)}
-                        placeholder={field.placeholder}
-                        className="w-full px-8 py-5 rounded-3xl bg-white/5 border border-white/10 text-white font-bold placeholder:text-gray-600 focus:border-[#80FF00] focus:outline-none transition-all hover:bg-white/[0.08]"
-                        disabled={isLoading}
-                      />
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
             {/* Navigation Buttons */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pt-12 border-t border-white/5">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pt-6 border-t border-white/5">
               <button
                 onClick={handleBack}
                 disabled={currentStep === 0 || isLoading}

@@ -247,6 +247,12 @@ export default function ResumeEnhancerContainer({
   }, [coverLetterBlockedMessage, goToStep, isMasterCV, state.cvData, state.isTemplateOverlayOpen, setTemplateOverlayOpen, state.fresherMode]);
 
   useEffect(() => {
+    if (state.isJobSidebarOpen && !selectedJob && state.jobData) {
+      setSelectedJob(state.jobData);
+    }
+  }, [state.isJobSidebarOpen, selectedJob, state.jobData]);
+
+  useEffect(() => {
     const handleOpenJobSidebar = () => {
       const currentJob = state.jobData;
       if (currentJob && (currentJob.id || currentJob._id)) {
@@ -736,6 +742,18 @@ export default function ResumeEnhancerContainer({
               setActiveSection(draft.activeSection);
             }
 
+            // Restore AI analysis report
+            if (draft.aiAnalysis) {
+              dispatch({
+                type: 'SET_SURGEON_ANALYSIS',
+                payload: {
+                  score: draft.aiAnalysis.score || 0,
+                  fixes: [],
+                  scoreReport: draft.aiAnalysis.scoreReport || null
+                }
+              });
+            }
+
             console.log(`✅ ${isGuestMode ? 'Guest' : 'Authenticated'} draft restored successfully (step: ${targetStep})`);
           }
         } catch (error) {
@@ -750,6 +768,11 @@ export default function ResumeEnhancerContainer({
   // Guest mode: Auto-save draft
   useEffect(() => {
     if (isGuestMode && state.cvData) {
+      const aiAnalysisObj = state.surgeonAnalysis ? {
+        score: state.surgeonAnalysis.score,
+        scoreReport: state.scoreReport
+      } : undefined;
+
       // Start auto-save
       guestCVService.startAutoSave(() => ({
         cvData: state.cvData,
@@ -760,7 +783,8 @@ export default function ResumeEnhancerContainer({
         seniorityLevel: state.seniorityLevel,
         templateId: state.selectedTemplate?.id || state.selectedTemplate?._id,
         template: state.selectedTemplate,
-        cvTitle: state.cvTitle
+        cvTitle: state.cvTitle,
+        aiAnalysis: aiAnalysisObj
       }));
 
       // Save on step completion
@@ -775,7 +799,8 @@ export default function ResumeEnhancerContainer({
             seniorityLevel: state.seniorityLevel,
             templateId: state.selectedTemplate?.id || state.selectedTemplate?._id,
             template: state.selectedTemplate,
-            cvTitle: state.cvTitle
+            cvTitle: state.cvTitle,
+            aiAnalysis: aiAnalysisObj
           });
         } catch (error) {
           console.error('Failed to auto-save draft:', error);
@@ -789,7 +814,7 @@ export default function ResumeEnhancerContainer({
         guestCVService.stopAutoSave();
       };
     }
-  }, [isGuestMode, state.cvData, state.currentStep, completedSteps, activeSection, state.targetRole, state.seniorityLevel, state.selectedTemplate, state.cvTitle]);
+  }, [isGuestMode, state.cvData, state.currentStep, completedSteps, activeSection, state.targetRole, state.seniorityLevel, state.selectedTemplate, state.cvTitle, state.surgeonAnalysis, state.scoreReport]);
 
   // Track transfer attempts to prevent loops
   const transferAttemptedRef = useRef<boolean>(false);
@@ -3119,15 +3144,55 @@ export default function ResumeEnhancerContainer({
                   
                   {/* Row 2: CV type chip + save status inline */}
                   <div className="flex items-center gap-1.5 mt-0.5">
-                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider shrink-0 ${
-                      state.cvType === 'master'
-                        ? 'bg-blue-500/15 text-blue-500 dark:text-blue-400 border border-blue-500/30'
-                        : state.cvType === 'journey'
-                        ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
-                        : 'bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border border-cyan-500/30'
-                    }`}>
-                      {state.cvType === 'master' ? '⭐ Primary CV' : state.cvType === 'journey' ? '🎯 Job-Tailored' : '✦ Custom CV'}
-                    </span>
+                    <div className="relative group/chip cursor-help z-50">
+                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider shrink-0 ${
+                        state.cvType === 'master'
+                          ? 'bg-blue-500/15 text-blue-500 dark:text-blue-400 border border-blue-500/30'
+                          : state.cvType === 'journey'
+                          ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
+                          : 'bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border border-cyan-500/30'
+                      }`}>
+                        {state.cvType === 'master' ? '⭐ Primary CV' : state.cvType === 'journey' ? '🎯 Job-Tailored' : '✦ Custom CV'}
+                      </span>
+
+                      {/* Detail Popup Card */}
+                      <div className="absolute left-0 top-full mt-2 w-80 p-4 rounded-xl bg-white dark:bg-[#11160d] border border-gray-200 dark:border-lime-500/20 shadow-2xl backdrop-blur-md opacity-0 pointer-events-none group-hover/chip:opacity-100 group-hover/chip:pointer-events-auto transition-all duration-200 transform translate-y-1 group-hover/chip:translate-y-0 text-left">
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-lime-500/10">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-lime-400">CV Classification Guide</span>
+                          </div>
+                          
+                          <div className="space-y-2.5 text-[11px] leading-relaxed">
+                            {/* Primary */}
+                            <div className={`p-2 rounded-lg transition-colors ${state.cvType === 'master' ? 'bg-blue-500/5 dark:bg-blue-500/10 border border-blue-500/20' : 'opacity-60'}`}>
+                              <div className="font-black text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
+                                <span>⭐ Primary CV</span>
+                                {state.cvType === 'master' && <span className="text-[8px] px-1 bg-blue-500/15 rounded text-blue-600 dark:text-blue-400 font-bold uppercase">Active</span>}
+                              </div>
+                              <p className="text-gray-600 dark:text-gray-300 mt-1">Your main CV and master source of truth. Contains your complete history. All tailored versions are derived from this.</p>
+                            </div>
+
+                            {/* Journey */}
+                            <div className={`p-2 rounded-lg transition-colors ${state.cvType === 'journey' ? 'bg-amber-500/5 dark:bg-amber-500/10 border border-amber-500/20' : 'opacity-60'}`}>
+                              <div className="font-black text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                                <span>🎯 Job-Tailored</span>
+                                {state.cvType === 'journey' && <span className="text-[8px] px-1 bg-amber-500/15 rounded text-amber-600 dark:text-amber-400 font-bold uppercase">Active</span>}
+                              </div>
+                              <p className="text-gray-600 dark:text-gray-300 mt-1">A version customized for a specific job tracking journey. Optimized for a specific Job Description (JD) to maximize ATS score.</p>
+                            </div>
+
+                            {/* Standalone */}
+                            <div className={`p-2 rounded-lg transition-colors ${state.cvType === 'standalone' ? 'bg-cyan-500/5 dark:bg-cyan-500/10 border border-cyan-500/20' : 'opacity-60'}`}>
+                              <div className="font-black text-cyan-600 dark:text-cyan-400 flex items-center gap-1.5">
+                                <span>✦ Custom CV</span>
+                                {state.cvType === 'standalone' && <span className="text-[8px] px-1 bg-cyan-500/15 rounded text-cyan-600 dark:text-cyan-400 font-bold uppercase">Active</span>}
+                              </div>
+                              <p className="text-gray-600 dark:text-gray-300 mt-1">A standalone clone or custom draft. Perfect for general editing, experimentation, or targeting a new niche without tracking a job.</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                     <span className={`w-1 h-1 rounded-full shrink-0 ${
                       saveStatus === 'error' ? 'bg-red-500' :
                       saveStatus === 'saving' ? 'bg-amber-500 animate-pulse' :

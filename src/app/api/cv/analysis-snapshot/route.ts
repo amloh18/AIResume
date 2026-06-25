@@ -111,8 +111,61 @@ export async function POST(request: NextRequest) {
     // For now using the defaults if the manager doesn't export them easily
     
     if (cvId && cv) {
+      const scoreReport = {
+        overall_score: snapshot.healthIndex || 0,
+        category_scores: [
+          { name: 'Structure & Formatting', score: Math.round((snapshot.breakdown?.structure || 0) * 5) },
+          { name: 'ATS Readability', score: Math.round((snapshot.breakdown?.readability || 0) * 5) },
+          { name: 'Content Strength', score: Math.round((snapshot.breakdown?.contentStrength || 0) * 5) },
+          { name: 'Skills & Keywords', score: Math.round((snapshot.breakdown?.skillsKeywords || 0) * 5) },
+          { name: 'Impact & Achievements', score: Math.round((snapshot.breakdown?.impactAchievements || 0) * 5) }
+        ],
+        jd_keyword_match: {
+          keywords_hit: snapshot.stats?.skillsFound || 0,
+          keywords_missed: snapshot.missingKeywords?.length || 0,
+          keywords_partial: 0,
+          keywords: [
+            ...(snapshot.missingKeywords || []).map((k: string) => ({ label: k, status: 'miss' }))
+          ]
+        },
+        strengths: (snapshot.strengths || []).map((s: string) => ({ title: s, detail: 'Identified as a core strength in onboarding analysis.' })),
+        gaps: (snapshot.weaknesses || []).map((w: string) => ({ title: w, detail: 'Improvement suggested during onboarding scan.' })),
+        actions: (snapshot.weaknesses || []).map((w: string, i: number) => ({ step: i + 1, title: w, detail: 'Add related achievements or correct formatting.' })),
+        verdict: 'Onboarding Analysis Completed',
+        verdict_sub: snapshot.healthIndex >= 80 ? 'Competitive CV' : 'Optimization Recommended'
+      };
+
+      const finalScore = snapshot.healthIndex || 0;
+
+      const surgeonAnalysis = {
+        score: finalScore,
+        fixes: [],
+        annotations: [],
+        targetRole: '',
+        seniorityLevel: '',
+        analyzedAt: new Date(),
+        contentHash: '',
+        jobDataHash: null,
+        isRestricted: false,
+        scoreReport
+      };
+
+      const updateData: any = {
+        'metadata.analysisSnapshot': snapshot,
+        'metadata.surgeonAnalysis': surgeonAnalysis,
+        'metadata.cvScore': finalScore
+      };
+
+      if (cv.cvType === 'journey') {
+        updateData.cv_score_ats = finalScore;
+        updateData['metadata.atsScore'] = finalScore;
+        updateData['metadata.atsScoreDate'] = new Date();
+      } else {
+        updateData.cv_score_master = finalScore;
+      }
+
       await CV.findByIdAndUpdate(cvId, {
-        $set: { 'metadata.analysisSnapshot': snapshot }
+        $set: updateData
       });
     }
 

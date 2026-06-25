@@ -3,9 +3,10 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
 import {
-  Sparkles, Loader2, RefreshCw, AlertTriangle, CheckCircle2, Award, Zap, FileText, ShieldAlert, ChevronDown, ChevronUp, Check, X, HelpCircle
+  Sparkles, Loader2, RefreshCw, AlertTriangle, CheckCircle2, Award, Zap, FileText, ShieldAlert, ChevronDown, ChevronUp, Check, X, HelpCircle, Briefcase
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import guestCVService from '@/lib/services/guestCVService';
 
 const AnalysisSkeleton: React.FC = () => {
   return (
@@ -150,19 +151,32 @@ export const ATSMeterPanel: React.FC = () => {
           }
         });
 
-        // Save to DB cache
-        await fetch(`/api/cvs/${state.cvId}/surgeon-analysis`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            score: report.overall_score || 0,
-            fixes: [],
-            annotations: [],
-            targetRole: state.targetRole || '',
-            seniorityLevel: state.seniorityLevel || '',
-            scoreReport: report
-          })
-        });
+        // Save to cache (database for authenticated user, guest draft for guest user)
+        if (state.cvId !== 'guest-draft') {
+          await fetch(`/api/cvs/${state.cvId}/surgeon-analysis`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              score: report.overall_score || 0,
+              fixes: [],
+              annotations: [],
+              targetRole: state.targetRole || '',
+              seniorityLevel: state.seniorityLevel || '',
+              scoreReport: report
+            })
+          });
+        } else {
+          const currentDraft = await guestCVService.loadGuestDraft();
+          if (currentDraft.success && currentDraft.data) {
+            await guestCVService.saveGuestDraft({
+              ...currentDraft.data,
+              aiAnalysis: {
+                score: report.overall_score || 0,
+                scoreReport: report
+              }
+            });
+          }
+        }
 
         toast.success('Analysis completed successfully!');
       } else {
@@ -440,26 +454,43 @@ export const ATSMeterPanel: React.FC = () => {
           <h3 className="text-xs font-extrabold uppercase tracking-wider text-gray-700 dark:text-gray-200">Analysis</h3>
         </div>
         
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-full p-1.5">
+          {/* Briefcase Job Icon */}
+          <button 
+            onClick={() => {
+              if (state.journeyId || state.cvType === 'journey') {
+                window.dispatchEvent(new CustomEvent('open-job-sidebar'));
+              } else {
+                dispatch({ type: 'SET_SHOW_PROFILER_MODAL', payload: true });
+              }
+            }}
+            className="p-1.5 rounded-full text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-200/50 dark:hover:bg-white/10 transition-all cursor-pointer shrink-0 hover:scale-110 active:scale-95 duration-150"
+            title={state.journeyId || state.cvType === 'journey' ? "Open Job Journey Sidebar" : "Configure Target Role"}
+          >
+            <Briefcase className="w-4 h-4" />
+          </button>
+
+          {/* Mori AI (Sparkles only, no name) */}
           <button 
              onClick={() => dispatch({ type: 'SET_MORI_CHAT_MODE', payload: !state.moriChatMode })}
-             className={`px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-md border transition-all flex items-center gap-1.5 ${
+             className={`p-1.5 rounded-full transition-all flex items-center justify-center hover:scale-110 active:scale-95 duration-150 ${
                state.moriChatMode 
-                 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' 
-                 : 'bg-gray-50 hover:bg-gray-100 dark:bg-white/5 border-gray-200 dark:border-white/10 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                 ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' 
+                 : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-200/50 dark:hover:bg-white/10'
              }`}
+             title={state.moriChatMode ? 'Close Mori Chat' : 'Ask Mori AI'}
           >
-             <Sparkles className="w-3.5 h-3.5" />
-             {state.moriChatMode ? 'Close Mori' : 'Ask Mori'}
+             <Sparkles className="w-4 h-4" />
           </button>
           
+          {/* Refresh Analysis */}
           <button
             onClick={runAnalysis}
             disabled={isAnalyzing}
-            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5 transition-colors disabled:opacity-40"
+            className="p-1.5 rounded-full text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-200/50 dark:hover:bg-white/10 transition-all disabled:opacity-40 hover:scale-110 active:scale-95 duration-150"
             title="Refresh Analysis"
           >
-            {isAnalyzing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+            {isAnalyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
           </button>
         </div>
       </div>
@@ -558,27 +589,6 @@ export const ATSMeterPanel: React.FC = () => {
                   )}
                 </div>
               </div>
-            </div>
-
-            {/* Quick Action Optimization Buttons */}
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={handleOptimizeCV}
-                disabled={isOptimizing || isMasterCV}
-                className="py-2.5 px-3 bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold text-[11px] uppercase tracking-wider rounded-xl transition-all border border-emerald-600/20 flex items-center justify-center gap-1.5 shadow-sm disabled:opacity-40"
-              >
-                {isOptimizing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
-                Optimize CV
-              </button>
-
-              <button
-                onClick={handleCreateCoverLetter}
-                disabled={isGeneratingLetter || isMasterCV}
-                className="py-2.5 px-3 bg-orange-500 hover:bg-orange-600 text-white font-extrabold text-[11px] uppercase tracking-wider rounded-xl transition-all border border-orange-650/20 flex items-center justify-center gap-1.5 shadow-sm disabled:opacity-40"
-              >
-                {isGeneratingLetter ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileText className="w-3.5 h-3.5" />}
-                Cover Letter
-              </button>
             </div>
 
             {/* ── 2. CATEGORY SCORES PANEL ── */}
