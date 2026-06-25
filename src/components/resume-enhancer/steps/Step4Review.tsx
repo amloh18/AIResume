@@ -1241,6 +1241,11 @@ export default function Step4Review({ onSave }: { onSave?: () => Promise<void> }
           {/* Finish & Exit button */}
           <button
             onClick={async () => {
+              // Guests must sign up before finishing — open auth modal instead
+              if (!session) {
+                setShowAuthPrompt(true);
+                return;
+              }
               setIsDownloading(true);
               try {
                 if (onSave) {
@@ -1261,7 +1266,7 @@ export default function Step4Review({ onSave }: { onSave?: () => Promise<void> }
             className="w-full py-4 bg-[#80FF00] hover:bg-[#70e600] text-black rounded-2xl font-black text-center shadow-md shadow-lime-500/10 hover:shadow-lg active:scale-95 transition-all disabled:opacity-50 mt-2 flex items-center justify-center gap-2 select-none"
           >
             <CheckCircle2 className="w-5 h-5 text-black" />
-            <span>Finish & Exit</span>
+            <span>Finish &amp; Exit</span>
           </button>
         </div>
       </div>

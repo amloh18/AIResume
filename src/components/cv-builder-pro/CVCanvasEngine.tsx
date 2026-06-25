@@ -327,7 +327,20 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
   const isInternalLayoutChange = React.useRef(false);
   const [activeTemplate, setActiveTemplate] = useState(cvData?.metadata?.canvasTemplate || template || CANVAS_TEMPLATES[0]);
   const [focusedNode, setFocusedNode] = useState<HTMLElement | null>(null);
-  const [zones, setZones] = useState<Record<string, any[]>>(cvData?.metadata?.canvasZones || {});
+  const [zones, setZones] = useState<Record<string, any[]>>(() => {
+    const raw: Record<string, any[]> = cvData?.metadata?.canvasZones || {};
+    // Deduplicate blocks within each zone to prevent React duplicate-key warnings
+    const deduped: Record<string, any[]> = {};
+    Object.keys(raw).forEach(zoneId => {
+      const seen = new Set<string>();
+      deduped[zoneId] = (raw[zoneId] || []).filter((block: any) => {
+        if (!block?.id || seen.has(block.id)) return false;
+        seen.add(block.id);
+        return true;
+      });
+    });
+    return deduped;
+  });
   const [templateAnimKey, setTemplateAnimKey] = useState(0);
   const [design, setDesign] = useState(cvData?.metadata?.canvasDesign || { font: 'Inter', fontSize: 12, spacing: 1.0, accentColor: '#22c55e', pageMargin: 40, showContactIcons: true, showHeaderIcons: true, headerLinks: {} as Record<string, boolean>, sidebarBgColor: '#f8fafc', sectionGap: 16, pageSize: 'A4' as 'A4' | 'Letter', dateFormat: 'MMM YYYY' });
   const [activeSidebar, setActiveSidebar] = useState<string | null>(null);
