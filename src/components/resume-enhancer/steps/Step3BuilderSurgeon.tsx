@@ -1446,14 +1446,18 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
 
         {/* Role Profiler Modal (used when editing existing CVs or when role context is missing) */}
         <RoleProfilerModal
-          isOpen={showRoleProfiler}
-          onClose={() => setShowRoleProfiler(false)}
+          isOpen={state.showProfilerModal || showRoleProfiler}
+          onClose={() => {
+            setShowRoleProfiler(false);
+            dispatch({ type: 'SET_SHOW_PROFILER_MODAL', payload: false });
+          }}
           onComplete={(role, seniority) => {
             dispatch({
               type: 'SET_ROLE_CONTEXT',
               payload: { targetRole: role, seniorityLevel: seniority as any }
             });
             setShowRoleProfiler(false);
+            dispatch({ type: 'SET_SHOW_PROFILER_MODAL', payload: false });
           }}
         />
 

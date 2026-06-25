@@ -1015,7 +1015,7 @@ export default function Step1Parser({
                )}
 
 {/* Stats Widgets */}
-                <div className="flex items-center gap-6 sm:gap-8 shrink-0 lg:ml-auto lg:min-w-[400px] w-full lg:w-auto">
+                <div className="flex items-center justify-start lg:justify-end gap-6 sm:gap-8 shrink-0 lg:ml-auto w-full lg:w-auto">
                  <button
                    type="button"
                    onClick={() => setActiveTab('cvs')}
@@ -1171,26 +1171,6 @@ export default function Step1Parser({
                   </div>
                 </motion.button>
 
-                <motion.button
-                  whileHover={{ y: -5, scale: 1.01 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => setParseMethod('upload')}
-                  className="step-one-action snap-start shrink-0 w-[72vw] sm:w-auto group relative rounded-xl sm:rounded-2xl p-5 sm:p-6 min-h-[148px] overflow-hidden text-left flex flex-col items-center justify-center text-center"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                  <div className="relative flex flex-col items-center space-y-3 sm:space-y-4">
-                    <div className="w-12 h-12 sm:w-14 sm:h-14 bg-purple-500/10 border border-purple-500/30 text-purple-500 dark:bg-[#c084fc]/10 dark:border-[#c084fc]/20 dark:text-[#c084fc] rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-all duration-500">
-                      <FolderOpen className="w-6 h-6 sm:w-7 sm:h-7 stroke-[2.5]" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg sm:text-xl font-black text-gray-900 dark:text-white mb-1 tracking-tight">Import</h3>
-                      <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 font-medium leading-relaxed">
-                        Import an existing letter <br className="hidden xs:block" />
-                        to redesign it.
-                      </p>
-                    </div>
-                  </div>
-                </motion.button>
               </>
             )}
           </div>
@@ -1279,10 +1259,15 @@ export default function Step1Parser({
               {isLoadingCVs ? (
                 <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5">
                   {[1, 2, 3, 4, 5].map(i => (
-                    <div key={i} className="flex flex-col gap-2 sm:gap-3">
-                      <div className="w-full aspect-[1/1.414] bg-gray-100 dark:bg-white/5 rounded-none animate-pulse border border-gray-200 dark:border-white/5" />
-                      <div className="h-4 sm:h-5 w-3/4 bg-gray-100 dark:bg-white/5 rounded animate-pulse" />
-                      <div className="h-2.5 sm:h-3 w-1/2 bg-gray-100 dark:bg-white/5 rounded animate-pulse" />
+                    <div key={i} className="relative">
+                      {/* Image block matches aspect ratio of real CVPairThumbnail */}
+                      <div className="w-full aspect-[1/1.414] bg-gray-100 dark:bg-white/5 rounded-none animate-pulse border border-gray-200 dark:border-white/5 overflow-hidden">
+                        {/* Overlay text shimmer inside the image — matching real card structure */}
+                        <div className="absolute inset-x-0 bottom-0 px-3 pt-10 pb-3 bg-gradient-to-t from-gray-300/60 dark:from-white/10 to-transparent">
+                          <div className="h-2.5 w-3/4 bg-gray-300 dark:bg-white/10 rounded animate-pulse mb-1.5" />
+                          <div className="h-2 w-1/2 bg-gray-200 dark:bg-white/5 rounded animate-pulse" />
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>

@@ -263,31 +263,25 @@ const CoverLetterPreview: React.FC<CoverLetterPreviewProps> = ({
         className="bg-white shadow-lg mx-auto origin-top"
         style={{
           width: `${width}px`,
-          minHeight: `${height}px`,
-          height: 'auto',
-          // Use CSS variable or JS for responsive scaling if parent is smaller than width
-          // For simplicity in this preview component, we let it be its natural size
-          // and the user can scroll X or we use max-width 100% with aspect ratio
-          // But to "zoom to fit width", we usually need a JS resize observer or container query.
-          // A simpler hacks is:
+          height: `${height}px`,
           maxWidth: '100%',
           aspectRatio: `${width}/${height}`,
-          // If we use maxWidth: 100%, content inside might squash if not scaled.
-          // So for true "Zoom", we leave width fixed and use transform in parent.
-          // Reverting to fixed width for print fidelity, but allowing parent to scale it.
-          // Actually, the user wants "zoom ... to fit width".
-          // Let's try CSS zoom for simple browser support (works well in Chrome/Edge, limited in Firefox)
-          // Or just use box-sizing border-box with 100% width?
-          // Let's try width: 100% and let font-size reflow (responsive) OR keep fixed.
-          // Documents usually prefer fixed layout scaled down.
-          transform: 'scale(1)', // Placeholder - real scaling should happen in parent or via resize observer
+          transform: 'scale(1)', 
           boxSizing: 'border-box',
-          overflow: 'visible',
+          overflow: 'hidden',
           backgroundColor: 'white',
           color: 'black'
         }}
       >
         <style dangerouslySetInnerHTML={{ __html: `
+          .cl-container.${template.className} {
+            padding: 0 !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            box-shadow: none !important;
+            height: 100% !important;
+            min-height: 100% !important;
+          }
           .cl-container .cl-header,
           .cl-container .cl-body,
           .cl-container .cl-signoff,
@@ -307,6 +301,9 @@ const CoverLetterPreview: React.FC<CoverLetterPreviewProps> = ({
             paddingBottom: `${paddingBottom}px`,
             paddingLeft: `${paddingLeft}px`,
             paddingRight: `${paddingRight}px`,
+            boxSizing: 'border-box',
+            display: 'flex',
+            flexDirection: 'column'
           }}
         >
           <header className="cl-header" style={{ marginBottom: '20px' }}>
@@ -358,8 +355,9 @@ const CoverLetterPreview: React.FC<CoverLetterPreviewProps> = ({
     <div
       className="bg-white mx-auto shadow-lg"
       style={{
-        width: '100%',
-        maxWidth: `${width}px`,
+        width: `${width}px`,
+        height: `${height}px`,
+        maxWidth: '100%',
         aspectRatio: `${width} / ${height}`,
         padding: `${margins.top}px ${margins.right}px ${margins.bottom}px ${margins.left}px`,
         fontFamily: layout.typography.fontFamily,
@@ -368,7 +366,8 @@ const CoverLetterPreview: React.FC<CoverLetterPreviewProps> = ({
         wordWrap: 'break-word',
         overflowWrap: 'break-word',
         display: 'flex',
-        flexDirection: 'column'
+        flexDirection: 'column',
+        overflow: 'hidden'
       }}
     >
       {/* Header - Styled similar to CV template headers */}

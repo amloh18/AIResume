@@ -17,6 +17,8 @@ import {
   Linkedin, 
   ChevronRight, 
   ChevronLeft, 
+  ChevronDown,
+  ChevronUp,
   Loader2, 
   ArrowRight,
   Shield,
@@ -39,7 +41,10 @@ import {
   Trophy,
   TrendingUp,
   Lightbulb,
-  History
+  History,
+  MessageSquare,
+  Bot,
+  Kanban
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Logo from '@/components/ui/Logo';
@@ -77,6 +82,7 @@ const WelcomePage: React.FC = () => {
   const [isResuming, setIsResuming] = useState(false);
   const [isLoadingSession, setIsLoadingSession] = useState(true);
   const [analysisSnapshot, setAnalysisSnapshot] = useState<any>(null);
+  const [trackerAnimStage, setTrackerAnimStage] = useState(0);
   
   // Selections
   const [intent, setIntent] = useState<string>('');
@@ -106,6 +112,19 @@ const WelcomePage: React.FC = () => {
 
   const [showLinkedInModal, setShowLinkedInModal] = useState(false);
   const [linkedinUrl, setLinkedinUrl] = useState('');
+
+  // Step 3 Collapsible Panels state
+  const [expandedSections, setExpandedSections] = useState({
+    categories: true,
+    keywords: true,
+    strengths: true,
+    gaps: true,
+    actions: true
+  });
+
+  const toggleSection = (section: keyof typeof expandedSections) => {
+    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+  };
 
   // Dynamic description mappings for strengths and weaknesses
   const getStrengthDescription = (strength: string) => {
@@ -261,6 +280,42 @@ const WelcomePage: React.FC = () => {
           if (analysisData.success) {
             setAnalysisSnapshot(analysisData.data);
             setCVScore(analysisData.data.healthIndex);
+
+            // Re-save guest draft with the AI analysis snapshot converted to standard score report format!
+            const scoreReport = {
+              overall_score: analysisData.data.healthIndex || 0,
+              category_scores: [
+                { name: 'Structure & Formatting', score: Math.round((analysisData.data.breakdown?.structure || 0) * 5) },
+                { name: 'ATS Readability', score: Math.round((analysisData.data.breakdown?.readability || 0) * 5) },
+                { name: 'Content Strength', score: Math.round((analysisData.data.breakdown?.contentStrength || 0) * 5) },
+                { name: 'Skills & Keywords', score: Math.round((analysisData.data.breakdown?.skillsKeywords || 0) * 5) },
+                { name: 'Impact & Achievements', score: Math.round((analysisData.data.breakdown?.impactAchievements || 0) * 5) }
+              ],
+              jd_keyword_match: {
+                keywords_hit: analysisData.data.stats?.skillsFound || 0,
+                keywords_missed: analysisData.data.missingKeywords?.length || 0,
+                keywords_partial: 0,
+                keywords: [
+                  ...(analysisData.data.missingKeywords || []).map((k: string) => ({ label: k, status: 'miss' }))
+                ]
+              },
+              strengths: (analysisData.data.strengths || []).map((s: string) => ({ title: s, detail: 'Identified as a core strength in onboarding analysis.' })),
+              gaps: (analysisData.data.weaknesses || []).map((w: string) => ({ title: w, detail: 'Improvement suggested during onboarding scan.' })),
+              actions: (analysisData.data.weaknesses || []).map((w: string, i: number) => ({ step: i + 1, title: w, detail: 'Add related achievements or correct formatting.' })),
+              verdict: 'Onboarding Analysis Completed',
+              verdict_sub: analysisData.data.healthIndex >= 80 ? 'Competitive CV' : 'Optimization Recommended'
+            };
+
+            await guestCVService.saveGuestDraft({
+              cvData: cvData,
+              currentStep: 2, // Start at Step 2 (Templates) in the editor
+              completedSteps: [],
+              cvTitle: title || 'Primary CV',
+              aiAnalysis: {
+                score: analysisData.data.healthIndex || 0,
+                scoreReport: scoreReport
+              }
+            });
           }
 
           // Also save onboarding session if an anonymous user exists
@@ -441,10 +496,13 @@ Please find the CV data attached.`;
             if (onboarding.current_stage && userLifecycleState !== 'ONBOARDING_COMPLETE') {
               const stepMatch = onboarding.current_stage.match(/STEP_(\d+)/);
               if (stepMatch) {
-                const step = Math.max(1, parseInt(stepMatch[1]));
+                let step = Math.max(1, parseInt(stepMatch[1]));
+                if (step > 5) {
+                  step = step - 1;
+                }
                 if (step > 1) {
                   setIsResuming(true);
-                  setCurrentStep(step === 4 ? 5 : step);
+                  setCurrentStep(step);
                 }
               }
             }
@@ -543,8 +601,11 @@ Please find the CV data attached.`;
         if (parsed.fastTrackToEditor) {
           completeOnboarding('/editor', parsed);
         } else {
-          const restoredStep = parsed.step || 5;
-          setCurrentStep(restoredStep === 4 ? 5 : restoredStep);
+          let restoredStep = parsed.step || 5;
+          if (restoredStep > 5) {
+            restoredStep = restoredStep - 1;
+          }
+          setCurrentStep(restoredStep);
         }
       } catch (e) {
         console.error('Error restoring onboarding state:', e);
@@ -555,25 +616,25 @@ Please find the CV data attached.`;
   // Handle Next Navigation
   const handleNext = (overrideSeedingMethod?: string) => {
     const activeSeedingMethod = overrideSeedingMethod || seedingMethod;
-    // Skip Step 3 (Analysis) and Step 4 (Auth Wall) for scratch CVs
+    // Skip Step 3 (Analysis) for scratch CVs, go directly to Step 4 (LinkedIn Promo)
     if (currentStep === 2 && (intent === 'cv_scratch' || activeSeedingMethod === 'scratch')) {
-      setCurrentStep(5);
-      return;
-    }
-
-    if (currentStep === 3 && (intent === 'cv' || intent === 'cv_scratch')) {
-      // Type 1 User Fast-Track check: Route directly to editor (supports both auth and guest modes)
-      completeOnboarding('/editor');
+      setCurrentStep(4);
       return;
     }
 
     if (currentStep === 3) {
-      // For all other users continuing onboarding, go to Step 5 (skipping Step 4)
-      setCurrentStep(5);
+      // Go to Step 4 (LinkedIn Promo)
+      setCurrentStep(4);
       return;
     }
 
-    if (currentStep < 10) {
+    if (currentStep === 4 && (intent === 'cv' || intent === 'cv_scratch')) {
+      // Type 1 User Fast-Track check: Route directly to editor after showing LinkedIn Promo
+      completeOnboarding('/editor');
+      return;
+    }
+
+    if (currentStep < 11) {
       setCurrentStep(currentStep + 1);
     } else {
       // Complete Onboarding redirection based on scores
@@ -583,7 +644,7 @@ Please find the CV data attached.`;
   };
 
   const handleBack = () => {
-    if (currentStep === 5) {
+    if (currentStep === 4) {
       if (intent === 'cv_scratch' || seedingMethod === 'scratch') {
         setCurrentStep(2);
       } else {
@@ -1098,57 +1159,69 @@ Please find the CV data attached.`;
     exit: { opacity: 0, y: -15, transition: { duration: 0.3 } }
   };
 
-  // Mini Kanban Animation loop for Step 7
+  // Mini Kanban Animation loop for Step 10
   const [kanbanStage, setKanbanStage] = useState(0);
   useEffect(() => {
-    if (currentStep !== 7) return;
+    if (currentStep !== 10) return;
     const interval = setInterval(() => {
       setKanbanStage(prev => (prev + 1) % 3);
     }, 2800);
     return () => clearInterval(interval);
   }, [currentStep]);
 
-  // Mini Auto-Apply animation for Step 8
+  // Mini Auto-Apply animation for Step 9
   const [autoApplyStep, setAutoApplyStep] = useState(0);
   useEffect(() => {
-    if (currentStep !== 8) return;
+    if (currentStep !== 9) return;
     const interval = setInterval(() => {
       setAutoApplyStep(prev => (prev + 1) % 5);
     }, 2200);
     return () => clearInterval(interval);
   }, [currentStep]);
 
+  // Rich Tracker Animation loop for Step 8
+  useEffect(() => {
+    if (currentStep !== 8) return;
+    const interval = setInterval(() => {
+      setTrackerAnimStage(prev => (prev + 1) % 4);
+    }, 4500);
+    return () => clearInterval(interval);
+  }, [currentStep]);
+
   return (
-    <div className={`min-h-screen font-sans antialiased flex flex-col justify-between selection:bg-lime-200 transition-colors duration-300 ${
-      currentStep === 4 ? 'bg-[#141810] text-white dark' : 'bg-[#f3f2ee] text-[#1A1A1A]'
-    }`}>
+    <div className="h-screen font-sans antialiased flex flex-col selection:bg-lime-200 transition-colors duration-300 overflow-hidden bg-[#f3f2ee] text-[#1A1A1A]">
       
       {/* Top Header */}
-      <header className={`px-6 py-5 max-w-7xl mx-auto w-full flex items-center justify-between border-b transition-colors duration-300 ${
-        currentStep === 4 ? 'border-white/10' : 'border-gray-100'
-      }`}>
+      <header className="px-6 py-5 max-w-7xl mx-auto w-full flex items-center justify-between border-b transition-colors duration-300 border-gray-100">
         <Logo size="sm" />
         
-        {/* Horizontal Progress Bar */}
+        {/* Pagination Dots and Step Text */}
         {!isLoadingSession && (
-          <div className="hidden md:flex items-center gap-2 text-xs font-semibold text-gray-400">
-            <span>Step {currentStep} of 10</span>
-            <div className={`w-32 h-2 rounded-full overflow-hidden transition-colors duration-300 ${
-              currentStep === 4 ? 'bg-white/10' : 'bg-gray-150'
-            }`}>
-              <div 
-                className={`h-full transition-all duration-500 ease-out ${
-                  currentStep === 4 ? 'bg-[#80FF00]' : 'bg-black'
-                }`}
-                style={{ width: `${currentStep * 10}%` }}
-              />
-            </div>
+          <div className="flex items-center gap-6 text-xs font-semibold text-gray-400">
+            {/* Progress Indicators */}
+            {currentStep !== 11 && (
+              <div className="flex items-center gap-1.5">
+                {[...Array(11)].map((_, i) => (
+                  <div 
+                    key={i} 
+                    className={`h-1.5 rounded-full transition-all duration-300 ${
+                      i + 1 === currentStep 
+                        ? 'w-6 bg-black dark:bg-[#80FF00]' 
+                        : i + 1 < currentStep 
+                        ? 'w-1.5 bg-gray-400 dark:bg-white/40' 
+                        : 'w-1.5 bg-gray-200 dark:bg-white/10'
+                    }`}
+                  />
+                ))}
+              </div>
+            )}
+            <span>Step {currentStep} of 11</span>
           </div>
         )}
       </header>
 
       {/* Main Container */}
-      <main className={`${currentStep === 3 ? 'max-w-6xl' : 'max-w-4xl'} mx-auto w-full px-6 py-12 flex-1 flex flex-col justify-center transition-all duration-300`}>
+      <main className={`flex flex-col justify-center ${currentStep === 3 ? 'max-w-6xl' : 'max-w-4xl'} mx-auto w-full px-6 py-3 sm:py-4 flex-1 overflow-y-auto transition-all duration-300`}>
         
         <AnimatePresence mode="wait">
           {isResuming ? (
@@ -1158,12 +1231,12 @@ Please find the CV data attached.`;
               initial="hidden"
               animate="visible"
               exit="exit"
-              className="w-full bg-white border border-gray-150 rounded-[2.5rem] p-8 md:p-12 shadow-[0_20px_50px_rgba(0,0,0,0.05)] max-w-2xl mx-auto relative overflow-hidden"
+              className="w-full bg-white border border-gray-150 rounded-[2.5rem] p-6 md:p-8 shadow-[0_20px_50px_rgba(0,0,0,0.05)] max-w-2xl mx-auto relative overflow-hidden max-h-full flex flex-col"
             >
               {/* Subtle top decoration line */}
               <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-[#80FF00] via-emerald-400 to-[#80FF00]" />
 
-              <div className="space-y-8">
+              <div className="flex-1 overflow-y-auto pr-2 space-y-8 pb-4">
                 <div className="space-y-4 text-center">
                   <div className="relative inline-flex items-center justify-center p-4 rounded-3xl bg-[#80FF00]/10 text-black mb-2 shadow-[0_0_20px_rgba(128,255,0,0.15)]">
                     <div className="absolute inset-0 bg-[#80FF00]/5 rounded-3xl animate-pulse" />
@@ -1180,7 +1253,7 @@ Please find the CV data attached.`;
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-black uppercase tracking-widest text-gray-400">Your Progress</span>
                     <span className="text-xs font-black text-black bg-[#80FF00] px-2.5 py-1 rounded-full shadow-sm">
-                      Step {currentStep} of 10
+                      Step {currentStep} of 11
                     </span>
                   </div>
 
@@ -1190,7 +1263,7 @@ Please find the CV data attached.`;
                       <motion.div 
                         className="bg-gradient-to-r from-[#80FF00] to-emerald-400 h-full rounded-full transition-all duration-500 shadow-[0_0_8px_rgba(128,255,0,0.5)]" 
                         initial={{ width: 0 }}
-                        animate={{ width: `${currentStep * 10}%` }}
+                        animate={{ width: `${(currentStep / 11) * 100}%` }}
                       />
                     </div>
                   </div>
@@ -1205,43 +1278,33 @@ Please find the CV data attached.`;
                       <CheckCircle className="h-5 w-5 text-green-600 fill-green-100" />
                       <span>ATS Analysis Complete</span>
                     </div>
-                    {status === 'authenticated' ? (
-                      <div className="flex items-center gap-3 text-sm font-bold text-green-700">
-                        <CheckCircle className="h-5 w-5 text-green-600 fill-green-100" />
-                        <span>Account Verified</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-3 text-sm font-bold text-amber-700">
-                        <AlertTriangle className="h-5 w-5 text-amber-500" />
-                        <span>Authentication Pending</span>
-                      </div>
-                    )}
+
                     <div className="flex items-center gap-3 text-sm font-bold text-gray-500">
                       <div className="w-5 h-5 rounded-full border-2 border-gray-300 bg-white" />
                       <span>{11 - currentStep} steps remaining to unlock full dashboard</span>
                     </div>
                   </div>
                 </div>
+              </div>
 
-                <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-3 pt-4 border-t border-gray-100">
+                <Button 
+                  onClick={() => {
+                    setIsResuming(false);
+                  }}
+                  className="w-full bg-black text-white hover:bg-slate-900 font-extrabold py-6 rounded-2xl flex items-center justify-center gap-2 shadow-lg hover:shadow-xl hover:scale-[1.01] active:scale-[0.99] transition-all uppercase tracking-tight text-sm"
+                >
+                  Resume Onboarding <ArrowRight className="h-5 w-5" />
+                </Button>
+                {primaryCvId && (
                   <Button 
-                    onClick={() => {
-                      setIsResuming(false);
-                    }}
-                    className="w-full bg-black text-white hover:bg-slate-900 font-extrabold py-6 rounded-2xl flex items-center justify-center gap-2 shadow-lg hover:shadow-xl hover:scale-[1.01] active:scale-[0.99] transition-all uppercase tracking-tight text-sm"
+                    variant="ghost"
+                    onClick={() => router.push(`/editor?cvId=${primaryCvId}`)}
+                    className="w-full text-gray-500 font-bold py-4 hover:bg-slate-100 rounded-2xl transition-colors"
                   >
-                    Resume Onboarding <ArrowRight className="h-5 w-5" />
+                    Open Primary CV
                   </Button>
-                  {primaryCvId && (
-                    <Button 
-                      variant="ghost"
-                      onClick={() => router.push(`/editor?cvId=${primaryCvId}`)}
-                      className="w-full text-gray-500 font-bold py-4 hover:bg-slate-100 rounded-2xl transition-colors"
-                    >
-                      Open Primary CV
-                    </Button>
-                  )}
-                </div>
+                )}
               </div>
             </motion.div>
           ) : (
@@ -1251,12 +1314,9 @@ Please find the CV data attached.`;
               initial="hidden"
               animate="visible"
               exit="exit"
-              className={`w-full transition-all duration-300 ${
-                currentStep === 4 
-                  ? 'max-w-md mx-auto bg-white dark:bg-[#141810] border border-gray-100 dark:border-white/10 rounded-md p-8 shadow-2xl' 
-                  : 'bg-white border border-gray-200 rounded-[2rem] p-8 md:p-12 shadow-sm'
-              }`}
+              className="w-full transition-all duration-300 max-h-full flex flex-col overflow-hidden bg-white border border-gray-200 rounded-[2rem] p-6 md:p-8 shadow-sm"
             >
+              <div className="flex-1 overflow-y-auto pr-2 pb-4 space-y-6">
             
             {/* Step 1: Welcome & Intent */}
             {currentStep === 1 && (
@@ -1735,10 +1795,9 @@ Please find the CV data attached.`;
               </div>
             )}
 
-            {/* Step 3: Completeness Gauge & early exit */}
             {/* Step 3: CV Analysis Dashboard */}
             {currentStep === 3 && (
-              <div className="space-y-6">
+              <div className="space-y-6 max-w-3xl mx-auto animate-fadeIn text-gray-900">
                 <div className="space-y-2 text-center">
                   <h1 className="text-4xl font-extrabold tracking-tight md:text-5xl">
                     Your CV Analysis
@@ -1748,230 +1807,254 @@ Please find the CV data attached.`;
                   </p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {/* Left: Health Index */}
-                  <div className="bg-slate-50 border border-gray-150 rounded-2xl p-6 flex flex-col items-center justify-center text-center space-y-4 shadow-sm">
-                    <h3 className="text-xs font-black uppercase tracking-widest text-gray-400">Initial Health Index</h3>
-                    <div className="relative w-40 h-40 flex items-center justify-center">
-                      <svg className="w-full h-full transform -rotate-90">
-                        <circle 
-                          cx="80" cy="80" r="70" 
-                          stroke="#E2E8F0" strokeWidth="12" 
-                          fill="transparent" 
-                        />
-                        <motion.circle 
-                          cx="80" cy="80" r="70" 
-                          stroke="#80FF00" strokeWidth="12" 
-                          fill="transparent" 
-                          strokeDasharray="439.8"
-                          initial={{ strokeDashoffset: 439.8 }}
-                          animate={{ strokeDashoffset: 439.8 - (439.8 * (activeSnapshot.healthIndex || 0)) / 100 }}
-                          transition={{ duration: 1.5, ease: "easeOut" }}
-                          strokeLinecap="round"
-                        />
-                      </svg>
-                      <div className="absolute flex flex-col items-center">
-                        <span className="text-4xl font-black">{activeSnapshot.healthIndex}%</span>
-                        <span className="text-[10px] text-gray-400 uppercase tracking-widest font-black">Score</span>
-                      </div>
-                    </div>
-                    <div className="space-y-1">
-                      <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#80FF00]/10 text-green-700 rounded-full text-xs font-bold">
-                        <div className="w-2 h-2 rounded-full bg-green-500" />
-                        {activeSnapshot.healthIndex >= 80 ? 'Excellent' : activeSnapshot.healthIndex >= 60 ? 'Fair' : 'Needs Improvement'}
-                      </div>
-                      <p className="text-xs text-gray-500 max-w-[180px] mx-auto mt-2 leading-relaxed">
-                        {activeSnapshot.healthIndex >= 80 
-                          ? 'Your CV is highly competitive and ready for elite roles!' 
-                          : activeSnapshot.healthIndex >= 60 
-                          ? 'Your CV has a solid foundation. Let\'s make it stand out!' 
-                          : 'Your CV needs significant optimization to bypass modern ATS.'}
-                      </p>
+                {/* ── MAIN SCORE HEADER ── */}
+                <div className="bg-white border border-gray-200 rounded-[24px] p-6 flex flex-col md:flex-row items-center gap-6 shadow-sm">
+                  {/* Radial Score Gauge */}
+                  <div className="relative w-28 h-28 shrink-0 flex items-center justify-center">
+                    <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+                      <circle
+                        cx="50" cy="50" r="42"
+                        fill="none"
+                        stroke="#F3F4F6"
+                        strokeWidth="8"
+                      />
+                      <circle
+                        cx="50" cy="50" r="42"
+                        fill="none"
+                        stroke={activeSnapshot.healthIndex >= 80 ? '#80FF00' : '#F59E0B'}
+                        strokeWidth="8"
+                        strokeDasharray={`${2 * Math.PI * 42}`}
+                        strokeDashoffset={`${2 * Math.PI * 42 * (1 - (activeSnapshot.healthIndex || 0) / 100)}`}
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <span className="text-3xl font-black text-gray-900 leading-none">
+                        {activeSnapshot.healthIndex || 0}
+                      </span>
+                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">/100</span>
                     </div>
                   </div>
 
-                  {/* Center: Score Breakdown */}
-                  <div className="bg-white border border-gray-150 rounded-2xl p-6 space-y-5 shadow-sm">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-xs font-black uppercase tracking-widest text-gray-400">Score Breakdown</h3>
-                      <button className="text-gray-300 hover:text-gray-500 transition-colors"><Info size={14} /></button>
-                    </div>
+                  {/* Verdict details */}
+                  <div className="min-w-0 flex-grow text-center md:text-left space-y-2">
+                    <h4 className="text-xl font-black text-gray-900 leading-snug">
+                      CV Health Report
+                    </h4>
+                    <p className="text-sm text-gray-500 font-semibold leading-relaxed">
+                      {activeSnapshot.healthIndex >= 80 ? 'Excellent match' : activeSnapshot.healthIndex >= 60 ? 'Moderate match' : 'Needs Optimization'} · {activeSnapshot.healthIndex >= 80 ? 'strong foundation' : 'foundational setup ready'}
+                    </p>
                     
-                    <div className="space-y-4">
-                      {[
-                        { label: 'Structure & Formatting', score: activeSnapshot.breakdown.structure, color: 'bg-green-500', icon: Palette },
-                        { label: 'ATS Readability', score: activeSnapshot.breakdown.readability, color: 'bg-indigo-500', icon: FileText },
-                        { label: 'Content Strength', score: activeSnapshot.breakdown.contentStrength, color: 'bg-orange-500', icon: Sparkles },
-                        { label: 'Skills & Keywords', score: activeSnapshot.breakdown.skillsKeywords, color: 'bg-blue-500', icon: Target },
-                        { label: 'Impact & Achievements', score: activeSnapshot.breakdown.impactAchievements, color: 'bg-teal-500', icon: Zap },
-                      ].map((item, idx) => {
-                        const Icon = item.icon;
-                        return (
-                          <div key={idx} className="space-y-1.5">
-                            <div className="flex justify-between items-center text-[11px] font-bold">
-                              <div className="flex items-center gap-2 text-gray-600">
-                                <div className={`p-1 rounded ${item.color} bg-opacity-10 text-${item.color.split('-')[1]}-600`}>
-                                  <Icon size={12} />
-                                </div>
-                                <span>{item.label}</span>
-                              </div>
-                              <span className="text-gray-400">{item.score} / 20</span>
-                            </div>
-                            <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
-                              <motion.div 
-                                className={`h-full ${item.color}`}
-                                initial={{ width: 0 }}
-                                animate={{ width: `${(item.score / 20) * 100}%` }}
-                                transition={{ duration: 1, delay: 0.5 + idx * 0.1 }}
-                              />
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Right: At a Glance */}
-                  <div className="bg-white border border-gray-150 rounded-2xl p-6 space-y-5 shadow-sm">
-                    <h3 className="text-xs font-black uppercase tracking-widest text-gray-400">At a Glance</h3>
-                    <div className="space-y-4">
-                      {[
-                        { label: 'Pages Detected', value: activeSnapshot.stats.pagesDetected, icon: FileText },
-                        { label: 'Total Words', value: activeSnapshot.stats.totalWords, icon: Mail },
-                        { label: 'Experience', value: `${activeSnapshot.stats.experienceYears} years`, icon: Briefcase },
-                        { label: 'Top Skills Found', value: activeSnapshot.stats.skillsFound, icon: Zap },
-                        { label: 'Sections Detected', value: `${activeSnapshot.stats.sectionsDetected}/9`, icon: LayoutGrid },
-                      ].map((stat, idx) => {
-                        const Icon = stat.icon;
-                        return (
-                          <div key={idx} className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className="text-gray-300"><Icon size={16} /></div>
-                              <span className="text-xs font-bold text-gray-500">{stat.label}</span>
-                            </div>
-                            <span className="text-xs font-black">{stat.value}</span>
-                          </div>
-                        );
-                      })}
+                    {/* Visual Status Pills */}
+                    <div className="flex flex-wrap justify-center md:justify-start gap-2 pt-1">
+                      <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-green-50 text-green-700 border border-green-200">
+                        {activeSnapshot.stats.skillsFound} skills found
+                      </span>
+                      <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-50 text-rose-700 border border-rose-200">
+                        {activeSnapshot.missingKeywords.length} gaps
+                      </span>
+                      <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200">
+                        {activeSnapshot.stats.experienceYears} Years Exp
+                      </span>
                     </div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {/* Your Strengths */}
-                  <div className="bg-green-50/50 border border-green-100 rounded-2xl p-6 space-y-4">
-                    <div className="flex items-center gap-2 text-green-700">
-                      <CheckCircle size={18} className="fill-green-700 text-white" />
-                      <h3 className="text-sm font-black uppercase tracking-tight">Your Strengths</h3>
-                    </div>
-                    <div className="space-y-4">
-                      {activeSnapshot.strengths.map((s, idx) => (
-                        <div key={idx} className="flex gap-3">
-                          <div className="mt-1 p-1 bg-white rounded shadow-sm text-green-600"><Check size={10} strokeWidth={4} /></div>
-                          <div>
-                            <p className="text-xs font-bold text-gray-800">{s}</p>
-                            <p className="text-[10px] text-gray-500 mt-0.5">{getStrengthDescription(s)}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="pt-4 border-t border-green-100 flex items-center gap-3">
-                      <div className="p-2 bg-white rounded-lg text-green-600 shadow-sm"><Trophy size={16} /></div>
-                      <div>
-                        <p className="text-xs font-black text-green-800">Keep it up!</p>
-                        <p className="text-[10px] text-green-700/70">You're on the right track.</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Areas to Improve */}
-                  <div className="bg-orange-50/50 border border-orange-100 rounded-2xl p-6 space-y-4">
-                    <div className="flex items-center gap-2 text-orange-700">
-                      <Info size={18} className="fill-orange-700 text-white" />
-                      <h3 className="text-sm font-black uppercase tracking-tight">Areas to Improve</h3>
-                    </div>
-                    <div className="space-y-4">
-                      {activeSnapshot.weaknesses.map((w, idx) => (
-                        <div key={idx} className="flex gap-3">
-                          <div className="mt-1 p-1 bg-white rounded shadow-sm text-orange-600"><Zap size={10} fill="currentColor" /></div>
-                          <div>
-                            <p className="text-xs font-bold text-gray-800">{w}</p>
-                            <p className="text-[10px] text-gray-500 mt-0.5">{getWeaknessDescription(w)}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="pt-4 border-t border-orange-100 flex items-center justify-between">
+                {/* Collapsible Panels */}
+                <div className="space-y-4">
+                  {/* Category Scores Panel */}
+                  <div className="bg-white border border-gray-200 rounded-[24px] overflow-hidden shadow-sm">
+                    <button
+                      onClick={() => toggleSection('categories')}
+                      className="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50/50 transition-colors border-b border-gray-100"
+                    >
                       <div className="flex items-center gap-3">
-                        <div className="p-2 bg-white rounded-lg text-orange-600 shadow-sm"><TrendingUp size={16} /></div>
-                        <div>
-                          <p className="text-xs font-black text-orange-800">Potential Score Boost</p>
-                          <p className="text-[10px] text-orange-700/70">+{activeSnapshot.potentialBoost} points</p>
-                        </div>
+                        <span className="text-lg">📊</span>
+                        <span className="text-sm font-black uppercase tracking-wider text-gray-700">Category Scores</span>
                       </div>
-                      <ArrowRight size={14} className="text-orange-300" />
-                    </div>
+                      <div className="flex items-center gap-2.5">
+                        <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded bg-amber-500/10 text-amber-600">
+                          Breakdown
+                        </span>
+                        {expandedSections.categories ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
+                      </div>
+                    </button>
+
+                    {expandedSections.categories && (
+                      <div className="p-6 space-y-4">
+                        {[
+                          { label: 'Structure & Formatting', score: activeSnapshot.breakdown.structure * 5 },
+                          { label: 'ATS Readability', score: activeSnapshot.breakdown.readability * 5 },
+                          { label: 'Content Strength', score: activeSnapshot.breakdown.contentStrength * 5 },
+                          { label: 'Skills & Keywords', score: activeSnapshot.breakdown.skillsKeywords * 5 },
+                          { label: 'Impact & Achievements', score: activeSnapshot.breakdown.impactAchievements * 5 },
+                        ].map((c, i) => {
+                          const barColor = c.score >= 70 ? 'bg-emerald-500' : c.score >= 40 ? 'bg-amber-500' : 'bg-rose-500';
+                          return (
+                            <div key={i} className="space-y-2">
+                              <div className="flex items-center justify-between text-xs font-bold text-gray-600">
+                                <span>{c.label}</span>
+                                <span>{c.score}%</span>
+                              </div>
+                              <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+                                <motion.div 
+                                  className={`h-full rounded-full ${barColor}`} 
+                                  initial={{ width: 0 }}
+                                  animate={{ width: `${c.score}%` }}
+                                  transition={{ duration: 1, delay: 0.1 * i }}
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
 
-                  {/* Top Missing Keywords */}
-                  <div className="bg-blue-50/30 border border-blue-100 rounded-2xl p-6 flex flex-col shadow-sm">
-                    <div className="flex items-center gap-2 text-blue-700 mb-6">
-                      <Search size={18} />
-                      <h3 className="text-sm font-black uppercase tracking-tight">Top Missing Keywords</h3>
-                    </div>
-                    
-                    <div className="flex flex-wrap gap-2 mb-auto">
-                      {activeSnapshot.missingKeywords.map((k, idx) => (
-                        <div key={idx} className="px-3 py-1.5 bg-white border border-blue-100 text-blue-600 text-[10px] font-bold rounded-lg shadow-sm">
-                          {k}
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="mt-8 pt-6 border-t border-blue-100 flex gap-3 items-start">
-                      <Lightbulb size={18} className="text-blue-500 mt-0.5" />
-                      <div className="space-y-1">
-                        <p className="text-[11px] font-black text-blue-900 uppercase tracking-wide">Tip</p>
-                        <p className="text-[10px] text-blue-700/70 leading-relaxed font-medium">
-                          Add these keywords naturally in your experience and skills sections.
-                        </p>
+                  {/* Keyword Audit Panel */}
+                  <div className="bg-white border border-gray-200 rounded-[24px] overflow-hidden shadow-sm">
+                    <button
+                      onClick={() => toggleSection('keywords')}
+                      className="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50/50 transition-colors border-b border-gray-100"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-lg">🏷️</span>
+                        <span className="text-sm font-black uppercase tracking-wider text-gray-700">Keyword Audit</span>
                       </div>
-                    </div>
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
+                          <span className="px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-600">{activeSnapshot.missingKeywords.length} missing</span>
+                        </span>
+                        {expandedSections.keywords ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
+                      </div>
+                    </button>
+
+                    {expandedSections.keywords && (
+                      <div className="p-6 space-y-4">
+                        <div className="flex flex-wrap gap-2">
+                          {activeSnapshot.missingKeywords.map((k: string, i: number) => (
+                            <span key={i} className="px-3 py-1.5 text-xs font-bold rounded-lg bg-rose-55/70 text-rose-600 border border-rose-100">
+                              {k}
+                            </span>
+                          ))}
+                        </div>
+                        <div className="flex items-center gap-4 text-[10px] font-extrabold uppercase text-gray-400 border-t border-gray-100 pt-3">
+                          <span className="flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-rose-500" /> Missing in CV
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* What's Working For You Panel */}
+                  <div className="bg-white border border-gray-200 rounded-[24px] overflow-hidden shadow-sm">
+                    <button
+                      onClick={() => toggleSection('strengths')}
+                      className="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50/50 transition-colors border-b border-gray-100"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-lg">👍</span>
+                        <span className="text-sm font-black uppercase tracking-wider text-gray-700">What's working for you</span>
+                      </div>
+                      <div className="flex items-center gap-2.5">
+                        <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded bg-emerald-500/10 text-emerald-600">
+                          {activeSnapshot.strengths.length} Strengths
+                        </span>
+                        {expandedSections.strengths ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
+                      </div>
+                    </button>
+
+                    {expandedSections.strengths && (
+                      <div className="p-6 divide-y divide-gray-100">
+                        {activeSnapshot.strengths.map((s: string, i: number) => (
+                          <div key={i} className="flex gap-3 py-3 first:pt-0 last:pb-0">
+                            <div className="w-5 h-5 rounded-full bg-emerald-50 flex items-center justify-center shrink-0">
+                              <Check className="w-3.5 h-3.5 text-emerald-600" />
+                            </div>
+                            <div className="space-y-0.5">
+                              <h5 className="text-xs font-black text-gray-900 leading-relaxed">
+                                {s}
+                              </h5>
+                              <p className="text-xs text-gray-500 leading-relaxed">
+                                {getStrengthDescription(s)}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Critical Gaps Panel */}
+                  <div className="bg-white border border-gray-200 rounded-[24px] overflow-hidden shadow-sm">
+                    <button
+                      onClick={() => toggleSection('gaps')}
+                      className="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50/50 transition-colors border-b border-gray-100"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-lg">⚠️</span>
+                        <span className="text-sm font-black uppercase tracking-wider text-gray-700">Critical Gaps</span>
+                      </div>
+                      <div className="flex items-center gap-2.5">
+                        <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded bg-rose-500/10 text-rose-600">
+                          {activeSnapshot.weaknesses.length} Blockers
+                        </span>
+                        {expandedSections.gaps ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
+                      </div>
+                    </button>
+
+                    {expandedSections.gaps && (
+                      <div className="p-6 divide-y divide-gray-100">
+                        {activeSnapshot.weaknesses.map((w: string, i: number) => (
+                          <div key={i} className="flex gap-3 py-3 first:pt-0 last:pb-0">
+                            <div className="w-5 h-5 rounded-full bg-rose-50 flex items-center justify-center shrink-0">
+                              <X className="w-3.5 h-3.5 text-rose-600" />
+                            </div>
+                            <div className="space-y-0.5">
+                              <h5 className="text-xs font-black text-gray-900 leading-relaxed">
+                                {w}
+                              </h5>
+                              <p className="text-xs text-gray-500 leading-relaxed">
+                                {getWeaknessDescription(w)}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
 
                 {/* AI Recommendation Banner */}
-                <div className="bg-indigo-600 rounded-2xl p-5 text-white flex items-center justify-between shadow-xl relative overflow-hidden group">
+                <div className="bg-indigo-600 rounded-[24px] p-6 text-white flex flex-col md:flex-row items-center justify-between shadow-xl relative overflow-hidden group gap-4">
                   <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-white/20 transition-all" />
                   <div className="flex items-center gap-4 relative z-10">
                     <div className="p-3 bg-white/20 backdrop-blur-md rounded-xl shadow-lg">
-                      <Sparkles size={20} className="fill-white" />
+                      <Sparkles size={20} className="fill-white animate-pulse" />
                     </div>
                     <div className="space-y-0.5">
-                      <h4 className="text-sm font-black uppercase tracking-wide">AI Recommendation</h4>
+                      <h4 className="text-sm font-black uppercase tracking-wide">Onboarding Recommendation</h4>
                       <p className="text-xs text-indigo-100 max-w-md font-medium leading-relaxed">
-                        With a few strategic improvements, your CV can rank significantly higher with ATS systems and catch recruiters' attention.
+                        Improve your CV's score index by modifying it in the editor. We've saved these suggestions directly to your CV profile draft.
                       </p>
                     </div>
                   </div>
                   
-                  <div className="flex items-center gap-10 relative z-10">
+                  <div className="flex items-center gap-6 relative z-10 shrink-0">
                     <div className="text-center">
                       <span className="text-3xl font-black">{(activeSnapshot.healthIndex || 0) + (activeSnapshot.potentialBoost || 0)}%</span>
                       <p className="text-[10px] font-black text-indigo-200 uppercase tracking-widest mt-1">Potential Score</p>
                     </div>
                     
-                    <div className="h-10 w-px bg-white/20" />
+                    <div className="h-10 w-px bg-white/20 hidden md:block" />
                     
-                    <button className="flex items-center gap-4 text-left group/btn">
-                      <div>
-                        <p className="text-[10px] font-black text-indigo-200 uppercase tracking-widest mb-1">Top Priority</p>
-                        <p className="text-xs font-bold text-white max-w-[200px] leading-tight group-hover:text-white transition-colors">
-                          {activeSnapshot.topPriority || 'Complete your profile to see tailored recommendations...'}
-                        </p>
-                      </div>
-                      <ChevronRight size={18} className="text-indigo-300 group-hover/btn:translate-x-1 transition-transform" />
-                    </button>
+                    <div className="text-left hidden md:block">
+                      <p className="text-[10px] font-black text-indigo-200 uppercase tracking-widest mb-1">Top Priority</p>
+                      <p className="text-xs font-bold text-white max-w-[200px] leading-tight">
+                        {activeSnapshot.topPriority || 'Address gaps in the editor to boost score.'}
+                      </p>
+                    </div>
                   </div>
                 </div>
 
@@ -1995,129 +2078,193 @@ Please find the CV data attached.`;
               </div>
             )}
 
-            {/* Step 4: Auth Wall */}
+            {/* Step 4: LinkedIn Profile Optimizer Promotion */}
             {currentStep === 4 && (
-              <div className="space-y-6">
-                
-                {/* Title & Subtitle */}
-                <div className="text-center mb-6">
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                    Save Your Progress
-                  </h2>
-                  <p className="text-gray-600 dark:text-white/70 text-sm max-w-sm mx-auto">
-                    Create an account or sign in to save your CV, view your score, and continue your onboarding journey.
+              <div className="space-y-6 flex flex-col justify-between h-full animate-fade-in">
+                <div className="space-y-3 text-center">
+                  <span className="text-xs font-black uppercase tracking-widest text-[#80FF00] bg-black px-3 py-1 rounded-full">Recruiter Magnet</span>
+                  <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl text-gray-900 dark:text-white">
+                    LinkedIn Profile Optimizer
+                  </h1>
+                  <p className="text-gray-500 dark:text-white/60 text-sm max-w-xl mx-auto">
+                    Sync your CV improvements directly to your LinkedIn. Transform passive profiles into recruiter magnets with optimized taglines and impactful summaries.
                   </p>
                 </div>
 
-                {/* Social Buttons */}
-                <div className="space-y-3">
-                  {/* Google */}
-                  <motion.button
-                    type="button"
-                    onClick={() => handleOAuth('google')}
-                    disabled={authLoading}
-                    className="w-full flex items-center justify-center gap-3 bg-blue-500 hover:bg-blue-600 border border-blue-500 hover:border-blue-600 text-white py-3 px-6 rounded-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-semibold"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="white">
-                      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                    </svg>
-                    Continue with Google
-                  </motion.button>
-
-                  {/* LinkedIn */}
-                  <motion.button
-                    type="button"
-                    onClick={() => handleOAuth('linkedin')}
-                    disabled={authLoading}
-                    className="w-full flex items-center justify-center gap-3 bg-[#0a66c2] hover:bg-[#004182] border border-[#0a66c2] hover:border-[#004182] text-white py-3 px-6 rounded-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-semibold"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
-                    </svg>
-                    Continue with LinkedIn
-                  </motion.button>
-
-                  {/* Apple */}
-                  <motion.button
-                    type="button"
-                    onClick={() => handleOAuth('apple')}
-                    disabled={authLoading}
-                    className="w-full flex items-center justify-center gap-3 bg-black hover:bg-gray-900 border border-black hover:border-gray-900 text-white py-3 px-6 rounded-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-semibold"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <svg className="w-5 h-5" viewBox="0 0 384 512" fill="white">
-                      <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/>
-                    </svg>
-                    Continue with Apple
-                  </motion.button>
-                </div>
-
-                {/* Divider */}
-                <div className="relative my-6">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-gray-200 dark:border-white/20"></div>
+                {/* Before/After Showcase */}
+                <div className="bg-slate-50 dark:bg-black/20 p-6 rounded-[2rem] border border-gray-250/60 dark:border-white/5 flex flex-col gap-4 flex-1 justify-center min-h-[220px]">
+                  {/* Before */}
+                  <div className="flex items-center gap-4 bg-white dark:bg-[#1A1A1A]/40 p-4 rounded-2xl border border-gray-200/40 opacity-70">
+                    <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-white/10 flex items-center justify-center font-bold text-gray-400 shrink-0">JD</div>
+                    <div className="space-y-1 flex-1 min-w-0">
+                      <div className="h-3 w-28 bg-gray-200 rounded dark:bg-white/10" />
+                      <div className="text-[11px] text-gray-450 dark:text-gray-400 font-medium font-mono truncate">"Software Developer at ABC Inc | Looking for new opportunities"</div>
+                    </div>
+                    <span className="text-[10px] bg-red-50 text-red-500 px-2 py-0.5 rounded-full font-bold dark:bg-red-500/10 shrink-0">Unoptimized</span>
                   </div>
-                  <div className="relative flex justify-center text-sm">
-                    <span className="px-2 bg-white dark:bg-[#141810] text-gray-500 dark:text-white/60">Or continue with email</span>
+
+                  {/* Arrow connector with animated Sparkle */}
+                  <div className="flex justify-center text-[#80FF00]">
+                    <Sparkles className="w-6 h-6 animate-pulse text-[#80FF00]" />
                   </div>
-                </div>
 
-                {/* Email Sign Up/In Buttons */}
-                <div className="space-y-4">
-                  <motion.button
-                    type="button"
-                    onClick={() => {
-                      saveStateToLocalStorage(5);
-                      router.push('/sign-up?callbackUrl=/welcome');
-                    }}
-                    className="w-full bg-[#80FF00] hover:bg-[#70e600] text-gray-900 font-semibold py-3 px-6 rounded-sm transition-all duration-200 flex items-center justify-center gap-2"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
+                  {/* After */}
+                  <motion.div 
+                    className="flex items-center gap-4 bg-white dark:bg-[#1A1A1A] p-4 rounded-2xl border border-lime-300 dark:border-lime-500/30 shadow-[0_10px_30px_rgba(128,255,0,0.06)]"
+                    initial={{ y: 10, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ duration: 0.5 }}
                   >
-                    Create Account
-                    <ArrowRight className="w-4 h-4" />
-                  </motion.button>
-
-                  <motion.button
-                    type="button"
-                    onClick={() => {
-                      saveStateToLocalStorage(5);
-                      router.push('/sign-in?callbackUrl=/welcome');
-                    }}
-                    className="w-full bg-white dark:bg-[#1A1A1A] hover:bg-gray-50 dark:hover:bg-[#2A2A2A] text-gray-900 dark:text-white border border-gray-300 dark:border-white/10 font-semibold py-3 px-6 rounded-sm transition-all duration-200 flex items-center justify-center gap-2"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    Sign In
-                  </motion.button>
-                </div>
-
-                {/* Footer Links */}
-                <div className="mt-8 pt-4 border-t border-gray-200 dark:border-gray-600/30">
-                  <div className="flex justify-center space-x-4 text-xs text-gray-500 dark:text-gray-400">
-                    <a href="/legal#privacy" target="_blank" className="hover:text-[#88E03F] transition-colors duration-200">
-                      Privacy Policy
-                    </a>
-                    <span className="text-gray-450 dark:text-gray-600">•</span>
-                    <a href="/legal#terms" target="_blank" className="hover:text-[#88E03F] transition-colors duration-200">
-                      Terms of Service
-                    </a>
-                    <span className="text-gray-450 dark:text-gray-600">•</span>
-                    <a href="/legal#support" target="_blank" className="hover:text-[#88E03F] transition-colors duration-200">
-                      Support
-                    </a>
-                  </div>
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#80FF00] to-emerald-400 flex items-center justify-center font-bold text-black shadow-sm shrink-0">JD</div>
+                    <div className="space-y-1 flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <div className="h-3 w-32 bg-gray-300 rounded dark:bg-white/20" />
+                        <span className="text-[9px] bg-blue-500/10 text-blue-500 px-1.5 py-0.2 rounded font-bold shrink-0">5x Index Boost</span>
+                      </div>
+                      <div className="text-[11px] text-gray-800 dark:text-gray-200 font-extrabold font-mono truncate">
+                        "Lead Full-Stack Architect | Building scalable Cloud Infra to support 12M+ active sessions"
+                      </div>
+                    </div>
+                    <span className="text-[10px] bg-emerald-50 text-emerald-500 px-2.5 py-0.5 rounded-full font-black dark:bg-emerald-500/10 shrink-0">Attracts DMs</span>
+                  </motion.div>
                 </div>
               </div>
             )}
+
+            {/* Step 999: Unused Placeholder */}
+            {currentStep === 999 && (
+              <div className="space-y-6 flex flex-col justify-between h-full">
+                <div className="space-y-3 text-center animate-fade-in">
+                  <span className="text-xs font-black uppercase tracking-widest text-[#80FF00] bg-black px-3 py-1 rounded-full">Recruiter Magnet</span>
+                  <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl text-gray-900 dark:text-white">
+                    LinkedIn Profile Optimizer
+                  </h1>
+                  <p className="text-gray-500 dark:text-white/60 text-sm max-w-xl mx-auto">
+                    Sync your CV improvements directly to your LinkedIn. Transform passive profiles into recruiter magnets with optimized taglines and impactful summaries.
+                  </p>
+                </div>
+
+                {/* Before/After Showcase */}
+                <div className="bg-slate-50 dark:bg-black/20 p-6 rounded-[2rem] border border-gray-250/60 dark:border-white/5 flex flex-col gap-4 flex-1 justify-center min-h-[220px]">
+                  {/* Before */}
+                  <div className="flex items-center gap-4 bg-white dark:bg-[#1A1A1A]/40 p-4 rounded-2xl border border-gray-200/40 opacity-70">
+                    <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-white/10 flex items-center justify-center font-bold text-gray-400 shrink-0">JD</div>
+                    <div className="space-y-1 flex-1 min-w-0">
+                      <div className="h-3 w-28 bg-gray-200 rounded dark:bg-white/10" />
+                      <div className="text-[11px] text-gray-450 dark:text-gray-400 font-medium font-mono truncate">"Software Developer at ABC Inc | Looking for new opportunities"</div>
+                    </div>
+                    <span className="text-[10px] bg-red-50 text-red-500 px-2 py-0.5 rounded-full font-bold dark:bg-red-500/10 shrink-0">Unoptimized</span>
+                  </div>
+
+                  {/* Arrow connector with animated Sparkle */}
+                  <div className="flex justify-center text-[#80FF00]">
+                    <Sparkles className="w-6 h-6 animate-pulse text-[#80FF00]" />
+                  </div>
+
+                  {/* After */}
+                  <motion.div 
+                    className="flex items-center gap-4 bg-white dark:bg-[#1A1A1A] p-4 rounded-2xl border border-lime-300 dark:border-lime-500/30 shadow-[0_10px_30px_rgba(128,255,0,0.06)]"
+                    initial={{ y: 10, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ duration: 0.5 }}
+                  >
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#80FF00] to-emerald-400 flex items-center justify-center font-bold text-black shadow-sm shrink-0">JD</div>
+                    <div className="space-y-1 flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <div className="h-3 w-32 bg-gray-300 rounded dark:bg-white/20" />
+                        <span className="text-[9px] bg-blue-500/10 text-blue-500 px-1.5 py-0.2 rounded font-bold shrink-0">5x Index Boost</span>
+                      </div>
+                      <div className="text-[11px] text-gray-800 dark:text-gray-200 font-extrabold font-mono truncate">
+                        "Lead Full-Stack Architect | Building scalable Cloud Infra to support 12M+ active sessions"
+                      </div>
+                    </div>
+                    <span className="text-[10px] bg-emerald-50 text-emerald-500 px-2.5 py-0.5 rounded-full font-black dark:bg-emerald-500/10 shrink-0">Attracts DMs</span>
+                  </motion.div>
+                </div>
+              </div>
+            )}
+
+            {/* Step 7: Promotes AI Interview Coach */}
+            {currentStep === 7 && (
+              <div className="space-y-6 flex flex-col justify-between h-full">
+                <div className="space-y-3 text-center animate-fade-in">
+                  <span className="text-xs font-black uppercase tracking-widest text-[#80FF00] bg-black px-3 py-1 rounded-full">Interview Ready</span>
+                  <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl text-gray-900 dark:text-white">
+                    Real-Time AI Interview Coach
+                  </h1>
+                  <p className="text-gray-500 dark:text-white/60 text-sm max-w-xl mx-auto">
+                    Practice answering questions tailored to your CV and specific target roles. Receive immediate, data-driven audio feedback on structural gaps, tone, and confidence.
+                  </p>
+                </div>
+
+                {/* Conversation Flow Visualizer */}
+                <div className="bg-slate-50 dark:bg-black/20 p-6 rounded-[2rem] border border-gray-250/60 dark:border-white/5 flex flex-col md:flex-row gap-4 flex-1 justify-center min-h-[220px]">
+                  <div className="flex-1 space-y-3">
+                    <div className="bg-white dark:bg-[#1A1A1A] p-3 rounded-2xl rounded-tl-none border border-gray-200/50 dark:border-white/10 shadow-sm">
+                      <span className="text-[9px] font-black uppercase tracking-widest text-indigo-500 flex items-center gap-1 mb-1">
+                        <Bot className="w-3.5 h-3.5" /> AI Coach
+                      </span>
+                      <p className="text-[11px] font-medium leading-relaxed text-gray-800 dark:text-gray-200">
+                        "Tell me about a time you had to optimize performance. What metrics did you use?"
+                      </p>
+                    </div>
+
+                    {/* Waveform loops */}
+                    <div className="flex items-center gap-1 px-4 h-6">
+                      {[...Array(14)].map((_, i) => (
+                        <motion.div
+                          key={i}
+                          className="w-1 bg-[#80FF00] rounded-full"
+                          animate={{
+                            height: [8, Math.floor(Math.random() * 20) + 8, 8]
+                          }}
+                          transition={{
+                            duration: 0.8 + (i % 3) * 0.2,
+                            repeat: Infinity,
+                            ease: "easeInOut"
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Feedback Rating card overlay */}
+                  <motion.div 
+                    className="w-full md:w-48 bg-white dark:bg-[#1A1A1A] p-4 rounded-2xl border border-blue-500/20 shadow-lg space-y-3 shrink-0"
+                    initial={{ scale: 0.9, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ delay: 0.3 }}
+                  >
+                    <span className="text-[9px] font-black uppercase tracking-widest text-emerald-500">Live AI Evaluation</span>
+                    <div className="space-y-2">
+                      <div>
+                        <div className="flex justify-between text-[10px] font-bold mb-0.5">
+                          <span>Delivery Structure</span>
+                          <span>92%</span>
+                        </div>
+                        <div className="w-full bg-gray-150 h-1 rounded-full overflow-hidden dark:bg-white/15">
+                          <div className="bg-emerald-500 h-full rounded-full w-[92%]" />
+                        </div>
+                      </div>
+                      <div>
+                        <div className="flex justify-between text-[10px] font-bold mb-0.5">
+                          <span>Confidence Metrics</span>
+                          <span>86%</span>
+                        </div>
+                        <div className="w-full bg-gray-150 h-1 rounded-full overflow-hidden dark:bg-white/15">
+                          <div className="bg-emerald-500 h-full rounded-full w-[86%]" />
+                        </div>
+                      </div>
+                    </div>
+                    <p className="text-[9px] text-gray-400 dark:text-gray-500 italic">
+                      Tip: Expand on task outcomes using raw numbers.
+                    </p>
+                  </motion.div>
+                </div>
+              </div>
+            )}
+
+
 
             {/* Step 5: Search Status */}
             {currentStep === 5 && (
@@ -2193,76 +2340,122 @@ Please find the CV data attached.`;
               </div>
             )}
 
-            {/* Step 7: Interactive Kanban board demo */}
-            {currentStep === 7 && (
-              <div className="space-y-8">
-                <div className="space-y-3 text-center">
-                  <h1 className="text-4xl font-extrabold tracking-tight md:text-5xl">
-                    Visual Pipeline Tracker
+            {/* Step 8: Integrated Tracker Promotion & Interest */}
+            {currentStep === 8 && (
+              <div className="space-y-6 flex flex-col justify-between h-full animate-fade-in">
+                <div className="space-y-2 text-center">
+                  <span className="text-xs font-black uppercase tracking-widest text-[#80FF00] bg-black px-3 py-1 rounded-full">Automation Suite</span>
+                  <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl text-gray-900 dark:text-white">
+                    Autopilot Application Tracker
                   </h1>
-                  <p className="text-gray-500 text-lg max-w-xl mx-auto">
-                    CVCircle automatically updates and tracks your applications using an integrated Kanban board.
+                  <p className="text-gray-500 dark:text-white/60 text-sm max-w-xl mx-auto">
+                    Let AI scout matching roles, draft cover letters, autofill forms, and sync interview calendar updates automatically.
                   </p>
                 </div>
 
-                {/* Animated Mini Kanban */}
-                <div className="bg-slate-50 border border-gray-150 p-6 rounded-2xl space-y-4">
-                  <div className="grid grid-cols-3 gap-3">
+                {/* Rich Animating Visual Board with Explanatory Overlay */}
+                <div className="grid md:grid-cols-2 gap-6 bg-slate-50 dark:bg-black/20 p-6 rounded-[2rem] border border-gray-250/60 dark:border-white/5 flex-1 min-h-[260px] items-center">
+                  
+                  {/* Kanban Pipeline Board */}
+                  <div className="grid grid-cols-4 gap-2 bg-white dark:bg-[#1A1A1A]/40 p-4 rounded-2xl border border-gray-250/60 dark:border-white/5 h-full min-h-[180px]">
                     {[
-                      { title: 'To Apply', color: 'bg-blue-500' },
-                      { title: 'Applied', color: 'bg-amber-500' },
-                      { title: 'Interviewing', color: 'bg-green-500' }
+                      { name: 'Scout', color: 'bg-indigo-500' },
+                      { name: 'Applied', color: 'bg-amber-500' },
+                      { name: 'Interviews', color: 'bg-blue-500' },
+                      { name: 'Offers', color: 'bg-[#80FF00]' }
                     ].map((col, idx) => (
-                      <div key={idx} className="bg-white p-3 rounded-xl border border-gray-200 min-h-[140px] flex flex-col gap-2 relative overflow-hidden">
-                        <span className="text-[10px] font-black uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
-                          <div className={`w-1.5 h-1.5 rounded-full ${col.color}`} /> {col.title}
+                      <div key={idx} className="bg-slate-50 dark:bg-[#1A1A1A] p-2 rounded-xl border border-gray-200/50 dark:border-white/5 flex flex-col gap-2 relative overflow-hidden h-full min-h-[140px]">
+                        <span className="text-[8px] font-black uppercase tracking-wider text-gray-400 flex items-center gap-1">
+                          <div className={`w-1 h-1 rounded-full ${col.color}`} /> {col.name}
                         </span>
 
-                        {/* Floating Card */}
-                        {idx === 0 && kanbanStage === 0 && (
+                        {/* Animating Card depending on trackerAnimStage */}
+                        {idx === 0 && trackerAnimStage === 0 && (
                           <motion.div 
-                            layoutId="kanban-card"
-                            className="bg-slate-50 p-2.5 rounded-lg border border-gray-200 shadow-sm text-xs space-y-1"
+                            layoutId="tracker-live-card"
+                            className="bg-white dark:bg-[#2A2A2A] p-2 rounded-lg border border-indigo-400 shadow-sm text-[10px] space-y-1"
                           >
-                            <div className="font-bold truncate">Frontend Developer</div>
-                            <div className="text-[10px] text-gray-400">Vercel</div>
-                          </motion.div>
-                        )}
-                        {idx === 1 && kanbanStage === 1 && (
-                          <motion.div 
-                            layoutId="kanban-card"
-                            className="bg-slate-50 p-2.5 rounded-lg border border-gray-200 shadow-sm text-xs space-y-1 border-l-4 border-l-amber-500"
-                          >
-                            <div className="font-bold truncate">Frontend Developer</div>
-                            <div className="text-[10px] text-gray-400">Vercel</div>
-                          </motion.div>
-                        )}
-                        {idx === 2 && kanbanStage === 2 && (
-                          <motion.div 
-                            layoutId="kanban-card"
-                            className="bg-slate-50 p-2.5 rounded-lg border border-gray-200 shadow-sm text-xs space-y-1 border-l-4 border-l-green-500"
-                          >
-                            <div className="font-bold truncate">Frontend Developer</div>
-                            <div className="text-[10px] text-gray-400">Vercel</div>
+                            <div className="font-extrabold truncate text-gray-900 dark:text-white">React Lead</div>
+                            <div className="text-[8px] text-indigo-500 font-bold">Stripe • Matching!</div>
                           </motion.div>
                         )}
 
-                        <div className="text-[9px] text-gray-300 text-center mt-auto">Drop area</div>
+                        {idx === 1 && trackerAnimStage === 1 && (
+                          <motion.div 
+                            layoutId="tracker-live-card"
+                            className="bg-white dark:bg-[#2A2A2A] p-2 rounded-lg border border-amber-400 shadow-sm text-[10px] space-y-1"
+                          >
+                            <div className="font-extrabold truncate text-gray-900 dark:text-white">React Lead</div>
+                            <div className="text-[8px] text-amber-500 font-bold flex items-center gap-1">
+                              <Mail className="w-2.5 h-2.5 animate-bounce" /> Sending Apply...
+                            </div>
+                          </motion.div>
+                        )}
+
+                        {idx === 2 && trackerAnimStage === 2 && (
+                          <motion.div 
+                            layoutId="tracker-live-card"
+                            className="bg-white dark:bg-[#2A2A2A] p-2 rounded-lg border border-blue-400 shadow-sm text-[10px] space-y-1"
+                          >
+                            <div className="font-extrabold truncate text-gray-900 dark:text-white">React Lead</div>
+                            <div className="text-[8px] text-blue-500 font-bold">Round 1 Scheduled</div>
+                          </motion.div>
+                        )}
+
+                        {idx === 3 && trackerAnimStage === 3 && (
+                          <motion.div 
+                            layoutId="tracker-live-card"
+                            className="bg-white dark:bg-[#2A2A2A] p-2 rounded-lg border border-lime-400 shadow-md text-[10px] space-y-1"
+                          >
+                            <div className="font-extrabold truncate text-gray-900 dark:text-white">React Lead</div>
+                            <div className="text-[8px] text-[#80FF00] font-black flex items-center gap-0.5">
+                              <Trophy className="w-2.5 h-2.5 text-[#80FF00]" /> Offer $160K
+                            </div>
+                          </motion.div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Stage Explaining Text column */}
+                  <div className="space-y-3">
+                    {[
+                      { stage: 0, title: '1. Auto-Scouting Match', desc: 'AI scans job boards and matches roles to your CV profile instantly.' },
+                      { stage: 1, title: '2. Smart Email Apply', desc: 'Drafts tailored cover letters and emails, auto-submitting in 1-click.' },
+                      { stage: 2, title: '3. Calendar Auto-Sync', desc: 'Reads incoming interview confirmations and schedules preparation triggers.' },
+                      { stage: 3, title: '4. Offer & Pipeline Win', desc: 'Tracks offers, compares salaries, and saves structural highlights.' }
+                    ].map((step, idx) => (
+                      <div 
+                        key={idx}
+                        className={`p-3 rounded-2xl border transition-all duration-300 text-left ${
+                          trackerAnimStage === step.stage 
+                            ? 'bg-white dark:bg-[#1A1A1A] border-lime-300 dark:border-lime-500/30 shadow-md scale-[1.02]' 
+                            : 'border-transparent opacity-40'
+                        }`}
+                      >
+                        <h4 className="text-xs font-black text-gray-900 dark:text-white flex items-center gap-1.5">
+                          <CheckCircle className={`w-3.5 h-3.5 ${trackerAnimStage === step.stage ? 'text-[#80FF00]' : 'text-gray-300'}`} />
+                          {step.title}
+                        </h4>
+                        <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">{step.desc}</p>
                       </div>
                     ))}
                   </div>
                 </div>
 
+                {/* Yes/No Selection wrapper */}
                 <div className="space-y-3 text-center max-w-sm mx-auto pt-2">
-                  <h3 className="font-bold">Would a visual tracker help organize your search?</h3>
+                  <h3 className="text-xs font-bold text-gray-500 dark:text-gray-450 uppercase tracking-widest">Would a visual tracker help organize your search?</h3>
                   <div className="flex gap-2">
                     <button
                       onClick={() => {
                         setTrackerInterest('yes');
                         handleNext();
                       }}
-                      className={`flex-1 py-3 border-2 rounded-xl font-bold transition-all ${
-                        trackerInterest === 'yes' ? 'border-black bg-slate-50' : 'border-gray-200 hover:border-gray-300'
+                      className={`flex-1 py-3 border-2 rounded-xl font-bold transition-all text-xs ${
+                        trackerInterest === 'yes' 
+                          ? 'border-black bg-slate-50 dark:border-[#80FF00] dark:bg-white/5 dark:text-white' 
+                          : 'border-gray-200 hover:border-gray-300 dark:border-white/10 dark:hover:border-white/20 dark:text-gray-300'
                       }`}
                     >
                       Yes, absolutely
@@ -2272,8 +2465,10 @@ Please find the CV data attached.`;
                         setTrackerInterest('no');
                         handleNext();
                       }}
-                      className={`flex-1 py-3 border-2 rounded-xl font-bold transition-all ${
-                        trackerInterest === 'no' ? 'border-black bg-slate-50' : 'border-gray-200 hover:border-gray-300'
+                      className={`flex-1 py-3 border-2 rounded-xl font-bold transition-all text-xs ${
+                        trackerInterest === 'no' 
+                          ? 'border-black bg-slate-50 dark:border-[#80FF00] dark:bg-white/5 dark:text-white' 
+                          : 'border-gray-200 hover:border-gray-300 dark:border-white/10 dark:hover:border-white/20 dark:text-gray-300'
                       }`}
                     >
                       No, just need CV
@@ -2283,8 +2478,8 @@ Please find the CV data attached.`;
               </div>
             )}
 
-            {/* Step 8: Auto-Apply feature list */}
-            {currentStep === 8 && (
+            {/* Step 9: Auto-Apply feature list */}
+            {currentStep === 9 && (
               <div className="space-y-8">
                 <div className="space-y-3 text-center">
                   <h1 className="text-4xl font-extrabold tracking-tight md:text-5xl">
@@ -2359,8 +2554,8 @@ Please find the CV data attached.`;
               </div>
             )}
 
-            {/* Step 9: Search preferences */}
-            {currentStep === 9 && (
+            {/* Step 10: Search preferences */}
+            {currentStep === 10 && (
               <div className="space-y-8">
                 <div className="space-y-3 text-center">
                   <h1 className="text-4xl font-extrabold tracking-tight md:text-5xl">
@@ -2372,30 +2567,44 @@ Please find the CV data attached.`;
                 </div>
 
                 <div className="grid md:grid-cols-2 gap-6 max-w-2xl mx-auto text-left">
-                  
                   {/* Roles */}
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
-                      <Search className="h-3.5 w-3.5" /> Target Roles
+                  <div className="space-y-2 md:col-span-2">
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-1.5 mb-1">
+                      <Search className="h-3.5 w-3.5 text-gray-400" /> Target Roles (Select one or more)
                     </label>
-                    <div className="flex flex-wrap gap-1.5">
-                      {['Software Engineer', 'Product Manager', 'Data Analyst', 'UX Designer', 'Growth Lead'].map(role => {
-                        const isSel = targetRoles.includes(role);
-                        return (
-                          <button
-                            key={role}
-                            onClick={() => {
-                              if (isSel) setTargetRoles(prev => prev.filter(r => r !== role));
-                              else setTargetRoles(prev => [...prev, role]);
-                            }}
-                            className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all ${
-                              isSel ? 'bg-black text-[#80FF00] border-black' : 'bg-white border-gray-200 text-gray-600'
-                            }`}
-                          >
-                            {role}
-                          </button>
-                        );
-                      })}
+                    <div className="relative">
+                      <div className="flex flex-wrap gap-2 max-h-[120px] overflow-y-auto p-3.5 bg-slate-50/70 dark:bg-black/10 rounded-2xl border border-gray-200/60 dark:border-white/5 shadow-inner pr-6">
+                        {[
+                          'Software Engineer', 'Product Manager', 'Data Analyst', 'UX Designer', 'Growth Lead',
+                          'Teacher', 'Sales Associate', 'Customer Service Representative', 'Administrative Assistant',
+                          'Retail Associate', 'Cashier', 'Receptionist', 'Delivery Driver', 'Operations Manager',
+                          'HR Specialist', 'Technical Recruiter', 'Account Executive', 'Marketing Specialist',
+                          'Financial Analyst', 'Business Analyst', 'Content Strategist', 'Office Manager',
+                          'Warehouse Associate', 'Security Officer', 'Other'
+                        ].map(role => {
+                          const isSel = targetRoles.includes(role);
+                          return (
+                            <motion.button
+                              key={role}
+                              type="button"
+                              onClick={() => {
+                                if (isSel) setTargetRoles(prev => prev.filter(r => r !== role));
+                                else setTargetRoles(prev => [...prev, role]);
+                              }}
+                              className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all duration-200 ${
+                                isSel 
+                                  ? 'bg-black text-[#80FF00] border-black shadow-[0_4px_12px_rgba(0,0,0,0.08)] scale-[1.03]' 
+                                  : 'bg-white hover:bg-gray-100 border-gray-200 text-gray-650 hover:text-black hover:scale-[1.01]'
+                              }`}
+                              whileTap={{ scale: 0.97 }}
+                            >
+                              {role}
+                            </motion.button>
+                          );
+                        })}
+                      </div>
+                      {/* Subtle bottom scroll indicator fade */}
+                      <div className="absolute bottom-0 left-0 right-0 h-4 bg-gradient-to-t from-white/90 to-transparent pointer-events-none rounded-b-2xl" />
                     </div>
                   </div>
 
@@ -2404,7 +2613,7 @@ Please find the CV data attached.`;
                     <label className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
                       <MapPin className="h-3.5 w-3.5" /> Workplace Layout
                     </label>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 h-[38px]">
                       {['Remote', 'Hybrid', 'Onsite'].map(loc => {
                         const isSel = locations.includes(loc);
                         return (
@@ -2414,8 +2623,8 @@ Please find the CV data attached.`;
                               if (isSel) setLocations(prev => prev.filter(l => l !== loc));
                               else setLocations(prev => [...prev, loc]);
                             }}
-                            className={`flex-1 py-2 border rounded-xl text-xs font-bold transition-all ${
-                              isSel ? 'bg-black text-white border-black' : 'bg-white border-gray-200 text-gray-600'
+                            className={`flex-1 border rounded-xl text-xs font-bold transition-all ${
+                              isSel ? 'bg-black text-white border-black' : 'bg-white border-gray-200 text-gray-655 hover:border-gray-300'
                             }`}
                           >
                             {loc}
@@ -2433,7 +2642,7 @@ Please find the CV data attached.`;
                     <select
                       value={experienceLevel}
                       onChange={e => setExperienceLevel(e.target.value)}
-                      className="w-full py-2 px-3 bg-white border border-gray-200 rounded-xl text-sm outline-none focus:border-black"
+                      className="w-full h-[38px] py-2 px-3 bg-white border border-gray-200 rounded-xl text-sm outline-none focus:border-black text-gray-700 font-medium"
                     >
                       <option value="">Select Level...</option>
                       <option value="entry">Entry (0-2 years)</option>
@@ -2446,42 +2655,48 @@ Please find the CV data attached.`;
                   {/* Target Salary */}
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
-                      <DollarSign className="h-3.5 w-3.5" /> Target Annual Salary
+                      <DollarSign className="h-3.5 w-3.5" /> Target Salary Range
                     </label>
-                    <input 
-                      type="text" 
+                    <select
                       value={salary}
                       onChange={e => setSalary(e.target.value)}
-                      placeholder="e.g. $90,000"
-                      className="w-full py-2 px-3 bg-white border border-gray-200 rounded-xl text-sm outline-none focus:border-black"
-                    />
+                      className="w-full h-[38px] py-2 px-3 bg-white border border-gray-200 rounded-xl text-sm outline-none focus:border-black text-gray-700 font-medium"
+                    >
+                      <option value="">Select Range...</option>
+                      <option value="under_60k">Under $60,000</option>
+                      <option value="60k_90k">$60,000 - $90,000</option>
+                      <option value="90k_120k">$90,000 - $120,000</option>
+                      <option value="120k_150k">$120,000 - $150,000</option>
+                      <option value="150k_180k">$150,000 - $180,000</option>
+                      <option value="180k_220k">$180,000 - $220,000</option>
+                      <option value="above_220k">$220,000+</option>
+                    </select>
                   </div>
 
                   {/* Visa sponsorship */}
-                  <div className="space-y-2 md:col-span-2">
+                  <div className="space-y-2">
                     <label className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
-                      <Shield className="h-3.5 w-3.5" /> Do you require visa sponsorship?
+                      <Shield className="h-3.5 w-3.5" /> Visa Sponsorship
                     </label>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 h-[38px]">
                       <button
                         onClick={() => setVisaRequired(true)}
-                        className={`flex-1 py-2 border rounded-xl text-xs font-bold transition-all ${
-                          visaRequired === true ? 'bg-black text-white border-black' : 'bg-white border-gray-200 text-gray-600'
+                        className={`flex-1 border rounded-xl text-xs font-bold transition-all ${
+                          visaRequired === true ? 'bg-black text-white border-black' : 'bg-white border-gray-200 text-gray-655 hover:border-gray-300'
                         }`}
                       >
-                        Yes, I do
+                        Required
                       </button>
                       <button
                         onClick={() => setVisaRequired(false)}
-                        className={`flex-1 py-2 border rounded-xl text-xs font-bold transition-all ${
-                          visaRequired === false ? 'bg-black text-white border-black' : 'bg-white border-gray-200 text-gray-600'
+                        className={`flex-1 border rounded-xl text-xs font-bold transition-all ${
+                          visaRequired === false ? 'bg-black text-white border-black' : 'bg-white border-gray-200 text-gray-655 hover:border-gray-300'
                         }`}
                       >
-                        No sponsorship needed
+                        Not Needed
                       </button>
                     </div>
                   </div>
-
                 </div>
 
                 <div className="text-center pt-2">
@@ -2495,141 +2710,154 @@ Please find the CV data attached.`;
               </div>
             )}
 
-            {/* Step 10: Score calculation & Personalized Recommendation */}
-            {currentStep === 10 && (() => {
-              const rec = getRecommendedTier();
-              const type = rec.type; // 1, 2, or 3
-              
-              // Custom styles based on user type
-              let accentColorClass = "text-teal-600";
-              let bgGlowClass = "from-teal-50/50 to-emerald-50/30";
-              let borderClass = "border-teal-200";
-              let buttonBgClass = "bg-teal-600 hover:bg-teal-700 text-white";
-              let TitleText = "Your workspace is ready. We've set up your Master CV.";
-              let DescText = "Optimize your resume to perfection. We've parsed your experience and created a Master CV profile. Let's refine your sections and use AI recommendations to boost your ATS score.";
-              let CtaText = "Start Optimizing My CV";
-              let PlanLabel = "Free CV Studio";
-              const IconComponent = type === 2 ? Briefcase : type === 3 ? Zap : FileText;
-
-              if (type === 2) {
-                accentColorClass = "text-blue-600";
-                bgGlowClass = "from-blue-50/50 to-green-50/30";
-                borderClass = "border-blue-200";
-                buttonBgClass = "bg-gradient-to-r from-blue-600 to-green-600 text-white hover:opacity-95 shadow-lg shadow-blue-100";
-                TitleText = "Your tracker is ready. Add your first job to start managing applications.";
-                DescText = "Take control of your job search. Visualize your application stages, track target deadlines, and never miss an interview follow-up again.";
-                CtaText = "Go to Job Tracker";
-                PlanLabel = "Career Builder (Job Tracker)";
-              } else if (type === 3) {
-                accentColorClass = "text-violet-650";
-                bgGlowClass = "from-violet-50/50 to-orange-50/30";
-                borderClass = "border-violet-200";
-                buttonBgClass = "bg-gradient-to-r from-violet-600 to-orange-500 text-white hover:opacity-95 shadow-lg shadow-violet-100";
-                TitleText = "Your automation workspace is ready. Complete your auto-apply settings.";
-                DescText = "Your autopilot setup is pre-configured. Complete your auto-apply parameters, review matching filters, and start auto-submitting applications.";
-                CtaText = "Go to Auto-Apply Setup";
-                PlanLabel = "Auto-Apply Autopilot";
-              }
+            {/* Step 11: Score calculation & Personalized Recommendation */}
+            {currentStep === 11 && (() => {
+              // Custom styles
+              const accentColorClass = "text-lime-600 dark:text-[#80FF00]";
+              const bgGlowClass = "from-lime-50/50 to-emerald-50/30";
+              const borderClass = "border-lime-200 dark:border-[#80FF00]/20";
+              const buttonBgClass = "bg-black text-[#80FF00] hover:bg-slate-900 shadow-md";
+              const TitleText = "Congratulations on completing the 1st step of automating your job search experience!";
+              const DescText = "Let's finalise your Primary CV which will be used for referring, auto-submitting applications, and tailored coaching.";
+              const CtaText = "Start Optimizing My CV";
 
               return (
-                <div className="space-y-8 max-w-2xl mx-auto py-4">
-                  <div className="space-y-3 text-center">
-                    <span className={`text-xs font-black uppercase tracking-widest px-3 py-1 rounded-full bg-slate-100 ${accentColorClass}`}>
-                      Personalized Onboarding Exit
+                <div className="space-y-8 max-w-2xl mx-auto py-4 relative">
+                  {/* Confetti Animation Effect */}
+                  <div className="absolute inset-0 pointer-events-none overflow-hidden flex items-center justify-center">
+                    {[...Array(25)].map((_, idx) => {
+                      const color = ['bg-[#80FF00]', 'bg-blue-400', 'bg-pink-400', 'bg-amber-400', 'bg-indigo-400'][idx % 5];
+                      return (
+                        <motion.div
+                          key={idx}
+                          className={`absolute w-2 h-2 rounded-full ${color}`}
+                          initial={{ 
+                            x: 0, 
+                            y: 100, 
+                            opacity: 0, 
+                            scale: Math.random() * 0.8 + 0.4 
+                          }}
+                          animate={{ 
+                            x: (Math.random() - 0.5) * 500, 
+                            y: (Math.random() - 0.7) * 400 - 50, 
+                            opacity: [0, 1, 1, 0],
+                            rotate: Math.random() * 360
+                          }}
+                          transition={{ 
+                            duration: 2.5 + Math.random() * 1.5,
+                            repeat: Infinity,
+                            delay: Math.random() * 0.5,
+                            ease: "easeOut"
+                          }}
+                        />
+                      );
+                    })}
+                  </div>
+
+                  <div className="space-y-3 text-center relative z-10">
+                    <span className="text-xs font-black uppercase tracking-widest px-3 py-1 rounded-full bg-slate-100 text-black">
+                      Onboarding Completed! 🎉
                     </span>
-                    <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl text-[#1a1a1a]">
+                    <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl text-gray-900 leading-tight">
                       {TitleText}
                     </h1>
                   </div>
 
-                  <div className={`bg-gradient-to-b ${bgGlowClass} border ${borderClass} rounded-[2rem] p-8 md:p-10 space-y-6 relative overflow-hidden shadow-sm flex flex-col items-center text-center`}>
-                    <div className={`p-4 rounded-2xl bg-white shadow-sm border ${borderClass} ${accentColorClass}`}>
-                      <IconComponent className="h-8 w-8 stroke-[2.5]" />
+                  {/* Handwritten Note Card */}
+                  <div className="relative bg-[#faf7f2] border border-amber-100 rounded-3xl p-6 md:p-8 shadow-[0_15px_30px_rgba(0,0,0,0.03)] text-left font-serif max-w-lg mx-auto z-10 overflow-hidden transform rotate-[-0.5deg] hover:rotate-0 transition-transform duration-300">
+                    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&display=swap" rel="stylesheet" />
+                    
+                    {/* Decorative paper clip simulation or pen label */}
+                    <div className="absolute top-3 right-4 text-[10px] text-amber-800/40 uppercase tracking-widest font-sans font-black select-none">
+                      CEO's Office
                     </div>
 
-                    <div className="space-y-2">
-                      <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">{PlanLabel}</span>
-                      <p className="text-gray-600 text-base leading-relaxed max-w-lg">
-                        {DescText}
+                    <div className="space-y-4 text-amber-950/90 text-lg leading-relaxed select-text" style={{ fontFamily: "'Caveat', cursive" }}>
+                      <p className="text-xl font-bold">Dear {parsedCVData?.basics?.name ? parsedCVData.basics.name.trim().split(' ')[0] : 'candidate'},</p>
+                      <p>
+                        Welcome to CVCircle. We built this platform to take the tedious manual labor out of your job search so you can focus on landing roles you actually love. You've just mapped your preferences perfectly.
                       </p>
-                    </div>
-
-                    <div className="w-full pt-4">
-                      <Button
-                        onClick={() => completeOnboarding(rec.redirectUrl)}
-                        className={`w-full py-6 rounded-2xl font-extrabold text-base flex items-center justify-center gap-2 transition-all ${buttonBgClass}`}
-                      >
-                        {CtaText} <ChevronRight className="h-5 w-5 stroke-[2.5]" />
-                      </Button>
+                      <p>
+                        Let's finalise your Primary CV. This master profile will fuel our scouting algorithm, auto-submit applications, and power your tailored coaching triggers.
+                      </p>
+                      <div className="pt-2 flex justify-between items-end">
+                        <div className="space-y-0.5">
+                          <p className="font-bold text-xl text-black">Amar Lohia</p>
+                          <p className="text-xs uppercase tracking-wider font-sans font-bold text-gray-400 select-none">CEO, CVCircle</p>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="text-center pt-2">
-                    <button 
-                      onClick={() => completeOnboarding('/dashboard')}
-                      className="text-xs text-gray-400 hover:text-black font-semibold uppercase tracking-wider transition-colors"
+                  <div className="w-full max-w-lg mx-auto pt-2 z-10 relative">
+                    <Button
+                      onClick={() => completeOnboarding('/editor')}
+                      className={`w-full py-6 rounded-2xl font-extrabold text-base flex items-center justify-center gap-2 transition-all ${buttonBgClass}`}
                     >
-                      Go to main dashboard instead ➔
+                      {CtaText} <ChevronRight className="h-5 w-5 stroke-[2.5]" />
+                    </Button>
+                  </div>
+
+                  <div className="text-center pt-2 relative z-10">
+                    <button 
+                      onClick={() => completeOnboarding('/editor')}
+                      className="text-xs text-gray-500 hover:text-black font-bold uppercase tracking-wider transition-colors flex items-center gap-1.5 mx-auto hover:scale-105 duration-200"
+                    >
+                      Review my CV <ArrowRight className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>
               );
             })()}
-
-            {/* Bottom Nav Bar (Steps 1, 2, 3, 5, 6, 9) */}
-            {![4, 10].includes(currentStep) && (
-              <div className="flex items-center justify-between pt-8 mt-8 border-t border-gray-100">
-                <Button
-                  onClick={handleBack}
-                  disabled={currentStep === 1}
-                  variant="ghost"
-                  className="font-bold flex items-center gap-1.5 rounded-xl hover:bg-slate-100 px-4 py-2 text-gray-500 disabled:opacity-30"
-                >
-                  <ChevronLeft className="h-4 w-4" /> Back
-                </Button>
-
-                {/* Progress Indicators */}
-                <div className="flex items-center gap-1.5">
-                  {[...Array(10)].map((_, i) => (
-                    <div 
-                      key={i} 
-                      className={`h-1.5 rounded-full transition-all duration-300 ${
-                        i + 1 === currentStep 
-                          ? 'w-6 bg-black' 
-                          : i + 1 < currentStep 
-                          ? 'w-1.5 bg-gray-400' 
-                          : 'w-1.5 bg-gray-200'
-                      }`}
-                    />
-                  ))}
-                </div>
-
-                <Button
-                  onClick={handleNext}
-                  disabled={
-                    (currentStep === 1 && !intent) ||
-                    (currentStep === 2 && (!seedingMethod || (seedingMethod !== 'scratch' && !parsedCVData))) ||
-                    (currentStep === 5 && !searchStatus) ||
-                    (currentStep === 6 && !monthlyVolume) ||
-                    (currentStep === 7 && !trackerInterest) ||
-                    (currentStep === 8 && !autoapplyInterest)
-                  }
-                  className="bg-black text-white hover:bg-slate-900 font-bold flex items-center gap-1.5 rounded-xl px-5 py-2.5 shadow-sm disabled:opacity-35"
-                >
-                  Next <ChevronRight className="h-4 w-4" />
-                </Button>
               </div>
-            )}
-
-          </motion.div>
+            </motion.div>
         )}
       </AnimatePresence>
 
       </main>
 
-      {/* Footer */}
-      <footer className="px-6 py-6 border-t border-gray-100 text-center text-xs text-gray-400">
-        &copy; {new Date().getFullYear()} CVCircle. All features secured.
+      {/* Footer / Navigation Bar */}
+      <footer className="px-6 py-4 border-t transition-colors duration-300 text-xs text-gray-400 border-gray-150 bg-[#f3f2ee]">
+        <div className="max-w-7xl mx-auto w-full flex items-center justify-between">
+          {/* Back button */}
+          {currentStep !== 11 ? (
+            <Button
+              onClick={handleBack}
+              disabled={currentStep === 1}
+              variant="ghost"
+              className="font-bold flex items-center gap-1.5 rounded-xl hover:bg-slate-200/50 px-4 py-2 text-gray-500 disabled:opacity-30 dark:hover:bg-white/5 dark:text-gray-400"
+            >
+              <ChevronLeft className="h-4.5 w-4.5" /> Back
+            </Button>
+          ) : (
+            <div className="w-[80px]" />
+          )}
+
+          {/* Copyright text */}
+          <div className="text-center font-medium">
+            &copy; {new Date().getFullYear()} CVCircle. All features secured.
+          </div>
+
+          {/* Next button */}
+          {currentStep !== 11 ? (
+            <Button
+              onClick={handleNext}
+              disabled={
+                (currentStep === 1 && !intent) ||
+                (currentStep === 2 && (!seedingMethod || (seedingMethod !== 'scratch' && !parsedCVData))) ||
+                (currentStep === 5 && !searchStatus) ||
+                (currentStep === 6 && !monthlyVolume) ||
+                (currentStep === 8 && !trackerInterest) ||
+                (currentStep === 9 && !autoapplyInterest)
+              }
+              className="bg-black text-white hover:bg-slate-900 font-bold flex items-center gap-1.5 rounded-xl px-5 py-2.5 shadow-sm disabled:opacity-35 dark:bg-[#80FF00] dark:text-black dark:hover:bg-[#70e600]"
+            >
+              Next <ChevronRight className="h-4.5 w-4.5" />
+            </Button>
+          ) : (
+            <div className="w-[80px]" />
+          )}
+        </div>
       </footer>
 
     </div>

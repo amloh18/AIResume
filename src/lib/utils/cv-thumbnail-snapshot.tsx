@@ -69,6 +69,7 @@ export async function captureCvThumbnailSvgDataUrl({
       backgroundColor: '#ffffff',
       width: CV_SNAPSHOT_A4_WIDTH,
       height: CV_SNAPSHOT_A4_HEIGHT,
+      fontEmbedCSS: '', // Bypass scanning stylesheets for web fonts to avoid CORS SecurityError
     });
   } finally {
     root.unmount();
