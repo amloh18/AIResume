@@ -234,7 +234,7 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
     if (!targetNode) return null;
     return (
       <div 
-        className="fixed z-50 bg-transparent backdrop-blur-md shadow-xl border border-gray-200/40 dark:border-white/10 rounded-xl flex items-center p-1 gap-0.5 transform -translate-x-1/2 transition-all duration-300 animate-fade-in-up font-sans" 
+        className="fixed z-[200] bg-white shadow-[0_4px_24px_rgba(0,0,0,0.10)] border border-gray-150 rounded-xl flex items-center px-1.5 py-1 gap-0.5 transform -translate-x-1/2 transition-all duration-300 animate-fade-in-up font-sans" 
         style={{ top: pos.top, left: pos.left }} 
         onMouseDown={(e) => e.preventDefault()}
       >
@@ -242,82 +242,82 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
           <>
             <button 
               onClick={(e) => { e.preventDefault(); onSuggestPoint('skills'); }} 
-              className="h-7 px-2.5 bg-transparent hover:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-bold text-[11px] border border-emerald-500/20 transition-all duration-200 hover:scale-105 active:scale-95 shadow-sm rounded-lg" 
+              className="h-7 px-2.5 text-emerald-600 flex items-center gap-1 font-bold text-[11px] border border-emerald-500/30 bg-emerald-50 hover:bg-emerald-100 transition-colors duration-150 rounded-lg [&>svg]:transition-transform [&>svg]:duration-150 hover:[&>svg]:scale-125" 
               title="Get AI skill suggestions"
             >
               <Wand2 size={12} className="animate-pulse" />
               AI Skills
             </button>
-            <div className="w-px h-4 bg-gray-200/40 dark:bg-white/10 mx-1"></div>
+            <div className="w-px h-4 bg-gray-200 mx-1"></div>
           </>
         )}
         {canSuggest && !canSuggestSkills && (
           <>
             <button 
               onClick={(e) => { e.preventDefault(); onSuggestPoint(); }} 
-              className="h-7 px-2.5 bg-transparent hover:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-bold text-[11px] border border-emerald-500/20 transition-all duration-200 hover:scale-105 active:scale-95 shadow-sm rounded-lg" 
+              className="h-7 px-2.5 text-emerald-600 flex items-center gap-1 font-bold text-[11px] border border-emerald-500/30 bg-emerald-50 hover:bg-emerald-100 transition-colors duration-150 rounded-lg [&>svg]:transition-transform [&>svg]:duration-150 hover:[&>svg]:scale-125" 
               title="Suggest Contextual Point"
             >
               <Wand2 size={12} className="animate-pulse" />
               ✨ Suggest
             </button>
-            <div className="w-px h-4 bg-gray-200/40 dark:bg-white/10 mx-1"></div>
+            <div className="w-px h-4 bg-gray-200 mx-1"></div>
           </>
         )}
         <button 
           onClick={(e) => execCmd(e, 'bold')} 
-          className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all duration-200 hover:scale-125 active:scale-90 bg-transparent" 
+          className="w-7 h-7 flex items-center justify-center text-gray-500 hover:text-emerald-600 transition-colors duration-150 [&>svg]:transition-transform [&>svg]:duration-150 hover:[&>svg]:scale-125 active:[&>svg]:scale-90" 
           title="Bold"
         >
           <Bold size={13} />
         </button>
         <button 
           onClick={(e) => execCmd(e, 'italic')} 
-          className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all duration-200 hover:scale-125 active:scale-90 bg-transparent" 
+          className="w-7 h-7 flex items-center justify-center text-gray-500 hover:text-emerald-600 transition-colors duration-150 [&>svg]:transition-transform [&>svg]:duration-150 hover:[&>svg]:scale-125 active:[&>svg]:scale-90" 
           title="Italic"
         >
           <Italic size={13} />
         </button>
         <button 
           onClick={(e) => execCmd(e, 'underline')} 
-          className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all duration-200 hover:scale-125 active:scale-90 bg-transparent" 
+          className="w-7 h-7 flex items-center justify-center text-gray-500 hover:text-emerald-600 transition-colors duration-150 [&>svg]:transition-transform [&>svg]:duration-150 hover:[&>svg]:scale-125 active:[&>svg]:scale-90" 
           title="Underline"
         >
           <Underline size={13} />
         </button>
-        <div className="w-px h-4 bg-gray-250 dark:bg-white/10 mx-1"></div>
+        <div className="w-px h-4 bg-gray-200 mx-1"></div>
         <button 
           onClick={(e) => execCmd(e, 'insertUnorderedList')} 
-          className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all duration-200 hover:scale-125 active:scale-90 bg-transparent" 
+          className="w-7 h-7 flex items-center justify-center text-gray-500 hover:text-emerald-600 transition-colors duration-150 [&>svg]:transition-transform [&>svg]:duration-150 hover:[&>svg]:scale-125 active:[&>svg]:scale-90" 
           title="Bullet List"
         >
           <List size={13} />
         </button>
-        <div className="w-px h-4 bg-gray-250 dark:bg-white/10 mx-1"></div>
+        <div className="w-px h-4 bg-gray-200 mx-1"></div>
         <button 
           onClick={(e) => execCmd(e, 'justifyLeft')} 
-          className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all duration-200 hover:scale-125 active:scale-90 bg-transparent" 
+          className="w-7 h-7 flex items-center justify-center text-gray-500 hover:text-emerald-600 transition-colors duration-150 [&>svg]:transition-transform [&>svg]:duration-150 hover:[&>svg]:scale-125 active:[&>svg]:scale-90" 
           title="Align Left"
         >
           <AlignLeft size={13} />
         </button>
         <button 
           onClick={(e) => execCmd(e, 'justifyCenter')} 
-          className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all duration-200 hover:scale-125 active:scale-90 bg-transparent" 
+          className="w-7 h-7 flex items-center justify-center text-gray-500 hover:text-emerald-600 transition-colors duration-150 [&>svg]:transition-transform [&>svg]:duration-150 hover:[&>svg]:scale-125 active:[&>svg]:scale-90" 
           title="Align Center"
         >
           <AlignCenter size={13} />
         </button>
         <button 
           onClick={(e) => execCmd(e, 'justifyRight')} 
-          className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all duration-200 hover:scale-125 active:scale-90 bg-transparent" 
+          className="w-7 h-7 flex items-center justify-center text-gray-500 hover:text-emerald-600 transition-colors duration-150 [&>svg]:transition-transform [&>svg]:duration-150 hover:[&>svg]:scale-125 active:[&>svg]:scale-90" 
           title="Align Right"
         >
           <AlignRight size={13} />
         </button>
         <button 
           onClick={(e) => execCmd(e, 'justifyFull')} 
-          className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all duration-200 hover:scale-125 active:scale-90 bg-transparent" 
+          className="w-7 h-7 flex items-center justify-center text-gray-500 hover:text-emerald-600 transition-colors duration-150 [&>svg]:transition-transform [&>svg]:duration-150 hover:[&>svg]:scale-125 active:[&>svg]:scale-90" 
           title="Justify"
         >
           <AlignJustify size={13} />
@@ -435,11 +435,11 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
   const showInlineControls = !readOnly && !ctx?.moriChatMode && primaryTitleKey;
   const canAddListEntry = SnippetComponent && ['Experience', 'Education', 'Projects', 'Certifications', 'Awards', 'Publications', 'Volunteer', 'References'].includes(SnippetComponent.category);
   const controls = showInlineControls ? (
-    <div className="absolute -top-4 right-0 opacity-0 group-hover/inner:opacity-100 transition-all duration-200 flex items-center bg-transparent backdrop-blur-md border border-gray-200/40 dark:border-white/10 shadow-lg rounded-xl p-1 gap-0.5 z-[50] no-print font-sans">
+    <div className="absolute -top-[30px] right-0 opacity-0 group-hover/inner:opacity-100 transition-all duration-200 flex items-center bg-white border border-gray-200 shadow-[0_4px_20px_rgba(0,0,0,0.10)] rounded-xl px-1.5 py-1 gap-0 z-[200] no-print font-sans">
       {isHeader && (
         <button 
           onClick={onTogglePhoto} 
-          className="flex items-center gap-1 h-7 px-2 text-blue-600 dark:text-blue-400 font-bold text-[11px] transition-all duration-200 rounded-lg hover:scale-110 active:scale-95 bg-transparent" 
+          className="flex items-center gap-1 h-7 px-2 text-blue-600 font-bold text-[11px] transition-colors duration-150 rounded-lg [&>svg]:transition-transform [&>svg]:duration-150 hover:[&>svg]:scale-125 hover:text-blue-700" 
           title="Toggle Photo"
         >
           <ImageIcon size={12}/> 
@@ -449,7 +449,7 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
       {canAddListEntry && (
         <button 
           onClick={() => onAddListEntry(SnippetComponent.category)} 
-          className={`flex items-center gap-1 h-7 px-2 text-emerald-600 dark:text-emerald-400 font-bold text-[11px] transition-all duration-200 rounded-lg hover:scale-110 active:scale-95 bg-transparent ${isHeader ? 'border-l border-gray-200/30' : ''}`}
+          className={`flex items-center gap-1 h-7 px-2 text-emerald-600 font-bold text-[11px] transition-colors duration-150 rounded-lg [&>svg]:transition-transform [&>svg]:duration-150 hover:[&>svg]:scale-125 hover:text-emerald-700 ${isHeader ? 'border-l border-gray-200' : ''}`}
         >
           <Plus size={12}/> 
           {!isNarrow && 'Add'}
@@ -458,7 +458,7 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
       {isSkillsSnippet && (
         <button 
           onClick={onOpenSkillsSuggestions} 
-          className="flex items-center gap-1 h-7 px-2 text-emerald-600 dark:text-emerald-400 font-bold text-[11px] border-l border-gray-200/30 transition-all duration-200 rounded-lg hover:scale-110 active:scale-95 bg-transparent" 
+          className="flex items-center gap-1 h-7 px-2 text-emerald-600 font-bold text-[11px] border-l border-gray-200 transition-colors duration-150 rounded-lg [&>svg]:transition-transform [&>svg]:duration-150 hover:[&>svg]:scale-125 hover:text-emerald-700" 
           title="Get AI skill suggestions"
         >
           <Wand2 size={12}/> 
@@ -467,7 +467,7 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
       )}
       <button 
         onClick={() => onReplace(zoneId, index, instance.type)} 
-        className="flex items-center gap-1 h-7 px-2 text-blue-600 dark:text-blue-400 font-bold text-[11px] border-l border-gray-200/30 transition-all duration-200 rounded-lg hover:scale-110 active:scale-95 bg-transparent"
+        className="flex items-center gap-1 h-7 px-2 text-blue-600 font-bold text-[11px] border-l border-gray-200 transition-colors duration-150 rounded-lg [&>svg]:transition-transform [&>svg]:duration-150 hover:[&>svg]:scale-125 hover:text-blue-700"
       >
         <RefreshCw size={12}/> 
         {!isNarrow && 'Replace'}
@@ -476,24 +476,24 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
         <>
           <button 
             onClick={() => moveSnippet(zoneId, index, -1)} 
-            className="w-7 h-7 flex items-center justify-center text-blue-600 dark:text-blue-400 border-l border-gray-200/30 transition-all duration-200 rounded-lg hover:scale-125 active:scale-90 bg-transparent" 
+            className="w-7 h-7 flex items-center justify-center text-gray-500 border-l border-gray-200 transition-colors duration-150 hover:text-emerald-600 [&>svg]:transition-transform [&>svg]:duration-150 hover:[&>svg]:scale-125" 
             title="Move Section Up"
           >
             <ChevronUp size={13}/>
           </button>
           <button 
             onClick={() => moveSnippet(zoneId, index, 1)} 
-            className="w-7 h-7 flex items-center justify-center text-blue-600 dark:text-blue-400 border-l border-gray-200/30 transition-all duration-200 rounded-lg hover:scale-125 active:scale-90 bg-transparent" 
+            className="w-7 h-7 flex items-center justify-center text-gray-500 border-l border-gray-200 transition-colors duration-150 hover:text-emerald-600 [&>svg]:transition-transform [&>svg]:duration-150 hover:[&>svg]:scale-125" 
             title="Move Section Down"
           >
             <ChevronDown size={13}/>
           </button>
           <button 
             onClick={handleRemoveSnippet} 
-            className={`w-7 h-7 flex items-center justify-center border-l border-gray-200/30 transition-all duration-200 rounded-lg hover:scale-125 active:scale-90 ${
+            className={`w-7 h-7 flex items-center justify-center border-l border-gray-200 transition-colors duration-150 [&>svg]:transition-transform [&>svg]:duration-150 hover:[&>svg]:scale-125 ${
               confirmingRemove 
-                ? 'bg-red-500 text-white hover:bg-red-600 shadow-md shadow-red-500/20' 
-                : 'bg-transparent text-red-500'
+                ? 'text-white bg-red-500 rounded-lg' 
+                : 'text-red-400 hover:text-red-600'
             }`} 
             title={confirmingRemove ? 'Click again to delete section' : 'Delete Section'} 
             aria-label={confirmingRemove ? 'Confirm delete section' : 'Delete section'}
@@ -501,7 +501,7 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
             <Trash2 size={13}/>
           </button>
           <div 
-            className="w-7 h-7 flex items-center justify-center cursor-grab text-blue-600 dark:text-blue-400 transition-all duration-200 rounded-lg hover:scale-125 border-l border-gray-200/30 bg-transparent" 
+            className="w-7 h-7 flex items-center justify-center cursor-grab text-gray-400 border-l border-gray-200 transition-colors duration-150 hover:text-blue-500 [&>svg]:transition-transform [&>svg]:duration-150 hover:[&>svg]:scale-125" 
             title="Drag to reorder"
           >
             <GripVertical size={13}/>
@@ -553,7 +553,7 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
           <span className="px-3 py-1 rounded-full bg-white text-[10px] font-bold uppercase tracking-[0.22em] text-emerald-700">Drop Section Here</span>
         </div>
       )}
-      <div className={`relative hover:z-30 group/inner w-full`}>
+      <div className={`relative hover:z-[150] group/inner w-full`}>
         {controls}
         <div className={`px-2 py-1 pointer-events-auto snippet-content relative z-10 w-full ${!content && !readOnly ? 'min-h-[60px] flex flex-col justify-center' : ''}`}>
           {!readOnly && (

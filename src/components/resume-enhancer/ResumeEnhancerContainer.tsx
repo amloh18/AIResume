@@ -2764,6 +2764,11 @@ export default function ResumeEnhancerContainer({
   };
 
   const handleHomeStepClick = async () => {
+    // Guests should sign up before navigating away — show auth prompt instead
+    if (isGuestMode) {
+      setShowAuthPrompt(true);
+      return;
+    }
     isNavigatingHomeRef.current = true;
     await handleSmartSave();
     setTemplateOverlayOpen(false);

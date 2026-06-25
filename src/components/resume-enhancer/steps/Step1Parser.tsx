@@ -1175,20 +1175,7 @@ export default function Step1Parser({
             )}
           </div>
 
-          {/* Pro Tip - Minimalist Inline Section */}
-          <motion.div
-             initial={{ opacity: 0, y: 10 }}
-             whileInView={{ opacity: 1, y: 0 }}
-             viewport={{ once: true }}
-             className="mt-4 sm:mt-6 mb-2 sm:mb-4 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3 max-w-5xl mx-auto text-center px-4 sm:px-8"
-          >
-             <span className="text-[9px] sm:text-[10px] font-black text-blue-500 uppercase tracking-[0.2em] italic flex-shrink-0">PRO TIP:</span>
-             <p className="text-[10px] sm:text-[11px] text-gray-500 font-medium leading-relaxed max-w-lg">
-               {userHasMasterCV 
-                 ? "Use 'Apply to Job' to automatically customize your resume for 90%+ ATS matching in seconds."
-                 : "Create a Master CV first. It will act as your source-of-truth and save you hours of repetitive work."}
-             </p>
-          </motion.div>
+
 
           </div>
         </div>
