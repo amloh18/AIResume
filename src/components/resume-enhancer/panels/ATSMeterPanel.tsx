@@ -1,461 +1,438 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
-import { useATS } from '@/contexts/ATSContext';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
 import {
-  Target, FileText, Briefcase, Plus, RefreshCw, Loader2, Zap,
-  CheckCircle2, AlertTriangle, ChevronRight, X, ChevronDown, TrendingUp, Award, Sparkles,
-  Activity, Flame, History, BarChart3, ArrowRight, BookOpen, Compass, Trophy
+  Sparkles, Loader2, RefreshCw, AlertTriangle, CheckCircle2, Award, Zap, FileText, ShieldAlert, ChevronDown, ChevronUp, Check, X, HelpCircle
 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { AnimatedScore } from '@/components/ui/AnimatedScore';
-import { checkSyntaxAndGrammar } from '@/lib/utils/offline-grammar-check';
-import { CentralScoreManager } from '@/lib/pill-engine/CentralScoreManager';
-import { getAnalysisModeDescription, getAnalysisModeLabel } from '@/lib/utils/analysis-mode';
-import MoriChatInterface from './MoriChatInterface';
-import ATSDiffPreviewModal from '../components/ATSDiffPreviewModal';
 import { toast } from 'react-hot-toast';
-import type { KeywordGapAnalysisResult } from '@/types/keyword-gap';
 
-interface ATSMeterPanelProps {}
-
-/* ─────────────── Tiny helpers ─────────────── */
-function ScoreBar({ label, value, icon }: { label: string; value: number; icon?: React.ReactNode }) {
-  const color =
-    value >= 75 ? '#22c55e' :
-    value >= 50 ? '#eab308' :
-    '#ef4444';
+const AnalysisSkeleton: React.FC = () => {
   return (
-    <div className="flex items-center gap-2.5">
-      {icon && <span className="w-4 h-4 shrink-0 text-gray-400 dark:text-gray-500 flex items-center justify-center">{icon}</span>}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between mb-1">
-          <span className="text-[11px] font-medium text-gray-600 dark:text-gray-400 truncate">{label}</span>
-          <span className="text-[11px] font-bold ml-2 shrink-0" style={{ color }}>{value}%</span>
+    <div className="space-y-5 animate-pulse">
+      {/* 1. Header Skeleton */}
+      <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/[0.05] rounded-2xl p-4 flex items-center gap-4 shadow-sm">
+        <div className="w-16 h-16 rounded-full bg-gray-250 dark:bg-white/10 shrink-0" />
+        <div className="flex-grow space-y-2">
+          <div className="h-4 bg-gray-200 dark:bg-white/10 rounded w-2/3 animate-pulse" />
+          <div className="h-3 bg-gray-150 dark:bg-white/5 rounded w-1/2 animate-pulse" />
         </div>
-        <div className="h-1.5 rounded-full bg-gray-100 dark:bg-white/5 overflow-hidden">
-          <div
-            className="h-full rounded-full transition-all duration-700 ease-out"
-            style={{ width: `${value}%`, backgroundColor: color, boxShadow: `0 0 6px ${color}60` }}
-          />
+      </div>
+
+      {/* 2. Track Indicator Skeleton */}
+      <div className="bg-lime-500/5 border border-lime-500/10 rounded-2xl p-3 flex items-center justify-between">
+        <div className="h-3 bg-gray-200 dark:bg-white/10 rounded w-1/3 animate-pulse" />
+        <div className="h-4 bg-lime-500/20 rounded w-1/4 animate-pulse" />
+      </div>
+
+      {/* 3. Collapsible Panels Mockup Skeletons */}
+      <div className="space-y-3">
+        {/* Panel 1: Category Scores */}
+        <div className="border border-gray-200 dark:border-white/[0.05] rounded-2xl p-4 space-y-3 bg-white dark:bg-[#141810]/50">
+          <div className="flex justify-between items-center">
+            <div className="h-3.5 bg-gray-200 dark:bg-white/10 rounded w-1/4 animate-pulse" />
+            <div className="h-4 bg-gray-150 dark:bg-white/5 rounded w-8 animate-pulse" />
+          </div>
+          <div className="space-y-2.5 pt-2">
+            <div className="space-y-1">
+              <div className="flex justify-between text-[10px]">
+                <div className="h-2 bg-gray-100 dark:bg-white/5 rounded w-1/6 animate-pulse" />
+                <div className="h-2 bg-gray-100 dark:bg-white/5 rounded w-10 animate-pulse" />
+              </div>
+              <div className="h-1.5 bg-gray-100 dark:bg-white/5 rounded-full w-full animate-pulse" />
+            </div>
+            <div className="space-y-1">
+              <div className="flex justify-between text-[10px]">
+                <div className="h-2 bg-gray-100 dark:bg-white/5 rounded w-1/5 animate-pulse" />
+                <div className="h-2 bg-gray-100 dark:bg-white/5 rounded w-8 animate-pulse" />
+              </div>
+              <div className="h-1.5 bg-gray-100 dark:bg-white/5 rounded-full w-full animate-pulse" />
+            </div>
+          </div>
         </div>
+
+        {/* Panel 2: Keyword Audit */}
+        <div className="border border-gray-200 dark:border-white/[0.05] rounded-2xl p-4 space-y-3 bg-white dark:bg-[#141810]/50">
+          <div className="flex justify-between items-center">
+            <div className="h-3.5 bg-gray-200 dark:bg-white/10 rounded w-1/4 animate-pulse" />
+            <div className="h-4 bg-gray-150 dark:bg-white/5 rounded w-8 animate-pulse" />
+          </div>
+          <div className="flex flex-wrap gap-1.5 pt-2">
+            <div className="h-6 bg-gray-100 dark:bg-white/5 rounded-lg w-16 animate-pulse" />
+            <div className="h-6 bg-gray-200 dark:bg-white/10 rounded-lg w-20 animate-pulse" />
+            <div className="h-6 bg-gray-150 dark:bg-white/5 rounded-lg w-14 animate-pulse" />
+            <div className="h-6 bg-gray-100 dark:bg-white/5 rounded-lg w-24 animate-pulse" />
+          </div>
+        </div>
+
+        {/* Panel 3: Suggestions */}
+        <div className="border border-gray-200 dark:border-white/[0.05] rounded-2xl p-4 space-y-3 bg-white dark:bg-[#141810]/50">
+          <div className="flex justify-between items-center">
+            <div className="h-3.5 bg-gray-200 dark:bg-white/10 rounded w-1/3 animate-pulse" />
+            <div className="h-4 bg-gray-150 dark:bg-white/5 rounded w-8 animate-pulse" />
+          </div>
+          <div className="space-y-2 pt-2">
+            <div className="h-3 bg-gray-100 dark:bg-white/5 rounded w-full animate-pulse" />
+            <div className="h-3 bg-gray-100 dark:bg-white/5 rounded w-5/6 animate-pulse" />
+          </div>
+        </div>
+      </div>
+
+      {/* Loading message */}
+      <div className="text-center py-4 flex flex-col items-center justify-center gap-2">
+        <Loader2 className="w-5 h-5 animate-spin text-lime-500" />
+        <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 animate-pulse">Generating AI Analysis Report...</span>
       </div>
     </div>
   );
-}
+};
 
-function SectionHeader({ icon, title }: { icon: React.ReactNode; title: string }) {
-  return (
-    <div className="flex items-center gap-2 mb-3">
-      <span className="text-gray-500 dark:text-gray-400 flex items-center">{icon}</span>
-      <h4 className="text-[11px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">{title}</h4>
-    </div>
-  );
-}
+export const ATSMeterPanel: React.FC = () => {
+  const { state, dispatch, goToStep } = useResumeEnhancer();
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isOptimizing, setIsOptimizing] = useState(false);
+  const [isGeneratingLetter, setIsGeneratingLetter] = useState(false);
 
-/* ─────────────── Main Component ─────────────── */
-export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = () => {
-  const { atsScore, atsAnalysis, isATSLoading, refreshATSScore } = useATS();
-  const { state, dispatch, goToStep, setJobSidebarOpen } = useResumeEnhancer();
-  const router = useRouter();
+  // Collapsible panels states
+  const [expanded, setExpanded] = useState({
+    categories: true,
+    keywords: true,
+    strengths: true,
+    gaps: true,
+    actions: true
+  });
+
+  const togglePanel = (panel: keyof typeof expanded) => {
+    setExpanded(prev => ({ ...prev, [panel]: !prev[panel] }));
+  };
+
+  const report = state.scoreReport;
   const isMasterCV = state.cvType === 'master';
-  const [isPurposeExpanded, setIsPurposeExpanded] = useState(false);
-  const [showAllIssues, setShowAllIssues] = useState(false);
-  const [isScoreExpanded, setIsScoreExpanded] = useState(false);
-  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
 
-  const offlineScore = useMemo(() => {
-    if (state.cvData) {
-      const baseAnalysis = state.keywordGapAnalysis || atsAnalysis?.keywordAnalysis || null;
-      let keywordAnalysis = baseAnalysis;
-      
-      if (baseAnalysis) {
-        // Deep copy to avoid mutating the original state
-        const liveAnalysis = JSON.parse(JSON.stringify(baseAnalysis)) as KeywordGapAnalysisResult;
-        
-        // Extract all current CV skills/keywords to check
-        const cvSkills = new Set<string>();
+  const runAnalysis = async () => {
+    if (!state.cvId) return;
+    setIsAnalyzing(true);
+    try {
+      const response = await fetch('/api/ai/analyze-cv-v3', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          CV_DATA: state.cvData,
+          CV_TYPE: state.cvType,
+          JD_DATA: state.jobData || (state.jdText ? { description: state.jdText } : undefined),
+          TARGET_ROLE: state.targetRole,
+          MASTER_CV_DATA: null
+        })
+      });
+
+      if (!response.ok) {
+        let errMsg = 'Analysis request failed';
         try {
-          if (Array.isArray(state.cvData?.skills)) {
-            state.cvData.skills.forEach((c: any) => {
-              const list = c.keywords || c.skills || [];
-              list.forEach((s: string) => {
-                if (s) cvSkills.add(s.toLowerCase().trim());
-              });
-            });
+          const errData = await response.json();
+          if (errData && errData.error) {
+            errMsg = errData.error;
           }
-        } catch {}
-        
-        const cvTextLower = JSON.stringify(state.cvData).toLowerCase();
-        
-        // Find which gaps have been resolved (are now in the CV)
-        const resolvedGaps: string[] = [];
-        const remainingGaps = liveAnalysis.gaps.filter(gap => {
-          if (!gap || !gap.keyword) return false;
-          const kLower = gap.keyword.toLowerCase().trim();
-          
-          const isMatched = cvSkills.has(kLower) || cvTextLower.includes(kLower);
-          if (isMatched) {
-            resolvedGaps.push(gap.keyword);
-            return false; // remove from gaps
-          }
-          return true;
-        });
-        
-        if (resolvedGaps.length > 0) {
-          liveAnalysis.gaps = remainingGaps;
-          
-          // Add to matchedKeywords
-          const matchedSet = new Set(liveAnalysis.matchedKeywords || []);
-          resolvedGaps.forEach(g => matchedSet.add(g));
-          liveAnalysis.matchedKeywords = Array.from(matchedSet);
-          
-          // Recompute stats
-          liveAnalysis.stats.matchedCount = liveAnalysis.matchedKeywords.length;
-          liveAnalysis.stats.gapCount = remainingGaps.length;
-          
-          // Update counts based on importance of resolved gaps
-          let criticalGaps = 0;
-          let preferredGaps = 0;
-          let niceToHaveGaps = 0;
-          
-          remainingGaps.forEach(g => {
-            if (g.importance === 'critical') criticalGaps++;
-            else if (g.importance === 'preferred') preferredGaps++;
-            else niceToHaveGaps++;
-          });
-          
-          liveAnalysis.stats.criticalGaps = criticalGaps;
-          liveAnalysis.stats.preferredGaps = preferredGaps;
-          liveAnalysis.stats.niceToHaveGaps = niceToHaveGaps;
-        }
-        
-        keywordAnalysis = liveAnalysis;
+        } catch (_) {}
+        throw new Error(errMsg);
       }
-      
-      return CentralScoreManager.getInstance().getScoreSync(state.cvData, keywordAnalysis);
-    }
-    return null;
-  }, [state.cvData, state.keywordGapAnalysis, atsAnalysis]);
 
-  const hasJobDesc = !!(state.jobData?.jobDescription || state.jobData?.description || state.jobData?.jd);
-
-  const score = useMemo(() => {
-    if (hasJobDesc) {
-      const hasJDAnalysis = !!(state.keywordGapAnalysis || atsAnalysis?.keywordAnalysis);
-      if (hasJDAnalysis && offlineScore?.atsScore) {
-        return offlineScore.atsScore.total;
-      }
-      return atsScore || offlineScore?.atsScore?.total || 0;
-    }
-    return offlineScore?.cvScore?.total || 0;
-  }, [hasJobDesc, state.keywordGapAnalysis, atsAnalysis, offlineScore, atsScore]);
-
-  const scoreLabel = hasJobDesc ? 'ATS MATCH' : 'CV SCORE';
-
-  // 1. Define missingSkills early
-  const missingSkills = useMemo(() => {
-    const baseAnalysis = state.keywordGapAnalysis || atsAnalysis?.keywordAnalysis;
-    if (!baseAnalysis || !baseAnalysis.gaps) {
-      if (atsAnalysis && atsAnalysis.missingKeywords) {
-        const cvTextLower = JSON.stringify(state.cvData || {}).toLowerCase();
-        return atsAnalysis.missingKeywords
-          .filter((skill: string) => skill && !cvTextLower.includes(skill.toLowerCase().trim()))
-          .slice(0, 8) as string[];
-      }
-      return [];
-    }
-    
-    const cvSkills = new Set<string>();
-    try {
-      if (Array.isArray(state.cvData?.skills)) {
-        state.cvData.skills.forEach((c: any) => {
-          const list = c.keywords || c.skills || [];
-          list.forEach((s: string) => {
-            if (s) cvSkills.add(s.toLowerCase().trim());
-          });
-        });
-      }
-    } catch {}
-    
-    const cvTextLower = JSON.stringify(state.cvData || {}).toLowerCase();
-    
-    return baseAnalysis.gaps
-      .filter((gap: any) => {
-        if (!gap || !gap.keyword) return false;
-        const kLower = gap.keyword.toLowerCase().trim();
-        return !cvSkills.has(kLower) && !cvTextLower.includes(kLower);
-      })
-      .map((gap: any) => gap.keyword)
-      .slice(0, 8) as string[];
-  }, [atsAnalysis, state.keywordGapAnalysis, state.cvData]);
-
-  // 2. Define formattingIssues early
-  const formattingIssues = useMemo(() => checkSyntaxAndGrammar(state.cvData), [state.cvData]);
-
-  // Calculations for Potential improvements
-  const missingKeywordsDelta = useMemo(() => Math.min(32, missingSkills.length * 4), [missingSkills]);
-  const metricsCount = useMemo(() => {
-    let count = 0;
-    try {
-      if (Array.isArray(state.cvData?.work)) {
-        state.cvData.work.forEach((w: any) => {
-          if (Array.isArray(w.highlights)) {
-            w.highlights.forEach((h: string) => {
-              if (h && /\d+/.test(h)) count++;
-            });
+      const data = await response.json();
+      if (data.success && data.scoreReport) {
+        const report = data.scoreReport;
+        
+        // Dispatch to context
+        dispatch({
+          type: 'SET_SURGEON_ANALYSIS',
+          payload: {
+            score: report.overall_score || 0,
+            fixes: [],
+            scoreReport: report
           }
         });
+
+        // Save to DB cache
+        await fetch(`/api/cvs/${state.cvId}/surgeon-analysis`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            score: report.overall_score || 0,
+            fixes: [],
+            annotations: [],
+            targetRole: state.targetRole || '',
+            seniorityLevel: state.seniorityLevel || '',
+            scoreReport: report
+          })
+        });
+
+        toast.success('Analysis completed successfully!');
+      } else {
+        throw new Error(data.error || 'Failed to parse report');
       }
-    } catch {}
-    return count;
-  }, [state.cvData]);
-  const impactMetricsDelta = useMemo(() => (metricsCount < 2 ? 18 : metricsCount < 4 ? 8 : 0), [metricsCount]);
-
-  const leadershipCount = useMemo(() => {
-    let count = 0;
-    try {
-      const cvText = JSON.stringify(state.cvData || {}).toLowerCase();
-      const verbs = ['led', 'managed', 'steered', 'directed', 'architected', 'championed', 'founded', 'supervised', 'conducted'];
-      verbs.forEach(v => {
-        const regex = new RegExp('\\b' + v + '\\b', 'g');
-        const matches = cvText.match(regex);
-        if (matches) count += matches.length;
-      });
-    } catch {}
-    return count;
-  }, [state.cvData]);
-  const leadershipTermsDelta = useMemo(() => (leadershipCount < 2 ? 6 : 0), [leadershipCount]);
-
-  const formattingDelta = useMemo(() => (formattingIssues.length > 0 ? 5 : 0), [formattingIssues]);
-
-  const potentialImprovements = useMemo(() => (
-    missingKeywordsDelta + impactMetricsDelta + leadershipTermsDelta + formattingDelta
-  ), [missingKeywordsDelta, impactMetricsDelta, leadershipTermsDelta, formattingDelta]);
-
-  const potentialScore = useMemo(() => Math.min(100, score + potentialImprovements), [score, potentialImprovements]);
-
-  const proposedSummary = useMemo(() => {
-    const currentSummary = state.cvData?.basics?.summary || '';
-    if (!currentSummary) return 'Highly motivated and results-oriented professional with a proven track record of software architecture, cross-functional leadership and project strategy. Adept at driving process improvements, exceeding targets, and developing scalable technical solutions. Seeking to use expertise in software engineering to contribute to organizational success.';
-    let improved = currentSummary;
-    if (improved.includes('Seeking to leverage')) {
-      improved = improved.replace('Seeking to leverage', 'Seeking to use');
+    } catch (err: any) {
+      console.error('Analysis error:', err);
+      toast.error('Failed to run analysis: ' + err.message);
+    } finally {
+      setIsAnalyzing(false);
     }
-    if (!improved.toLowerCase().includes('led') && !improved.toLowerCase().includes('managed')) {
-      improved = 'Led software architecture and cross-functional teams to deliver scalable solutions. ' + improved;
-    }
-    return improved;
-  }, [state.cvData]);
-
-  const handleApplyAll = () => {
-    // 1. Add missing skills
-    let newSkills = Array.isArray(state.cvData?.skills) ? [...state.cvData.skills] : [];
-    if (newSkills.length === 0) {
-      newSkills = [{ category: 'Core Skills', skills: [] }];
-    }
-    const catIdx = 0;
-    const cat = { ...newSkills[catIdx] };
-    const currentSkillsList = Array.isArray(cat.skills) ? [...cat.skills] : [];
-    missingSkills.forEach(skill => {
-      if (!currentSkillsList.includes(skill)) {
-        currentSkillsList.push(skill);
-      }
-    });
-    cat.skills = currentSkillsList;
-    newSkills[catIdx] = cat;
-
-    // 2. Improve Summary
-    const basics = {
-      ...state.cvData.basics,
-      summary: proposedSummary
-    };
-
-    // 3. Improve work description metrics (add some metrics to bullets that don't have them)
-    let newWork = Array.isArray(state.cvData?.work) ? [...state.cvData.work] : [];
-    newWork = newWork.map((w: any) => {
-      const highlights = Array.isArray(w.highlights) ? [...w.highlights] : [];
-      const improvedHighlights = highlights.map((h: string) => {
-        if (h && !/\d+/.test(h)) {
-          if (h.toLowerCase().includes('developed') || h.toLowerCase().includes('built') || h.toLowerCase().includes('created')) {
-            return h + ' reducing page load latency by 35% and supporting 10,000+ active users';
-          }
-        }
-        return h;
-      });
-      return { ...w, highlights: improvedHighlights };
-    });
-
-    dispatch({
-      type: 'SET_CV_DATA',
-      payload: {
-        ...state.cvData,
-        basics,
-        skills: newSkills,
-        work: newWork
-      }
-    });
-
-    toast.success('Applied all high impact fixes successfully! ATS Score updated.');
   };
 
-  // Segmented arc geometry
-  const arcRadius = 44;
-  const totalCircumference = 2 * Math.PI * arcRadius;
-  const arcSpanDegrees = 210;
-  const arcSpanLength = totalCircumference * (arcSpanDegrees / 360);
-  const segmentGap = 5;
-
-  // Grade
-  const grade = score >= 90 ? 'A' : score >= 80 ? 'B' : score >= 70 ? 'C' : score >= 60 ? 'D' : 'F';
-  const gradeColor = score >= 75 ? 'text-emerald-500' : score >= 50 ? 'text-yellow-500' : 'text-red-500';
-
-  // Metrics
-  const metrics = useMemo(() => {
-    const hasJDAnalysis = !!(state.keywordGapAnalysis || atsAnalysis?.keywordAnalysis);
-    const scoreResult = (hasJDAnalysis && offlineScore) 
-      ? offlineScore 
-      : (atsAnalysis?.scoreResult || offlineScore);
-      
-    const cvB = scoreResult?.cvScore;
-    const atsB = scoreResult?.atsScore;
-    if (hasJobDesc && atsB) {
-      return [
-        { label: 'Keywords', value: Math.round((atsB.keywordMatch / 40) * 100) },
-        { label: 'Impact Words', value: cvB ? Math.round((cvB.impactVerbs / 20) * 100) : 0 },
-        { label: 'ATS Format', value: Math.round((atsB.formatting / 20) * 100) },
-        { label: 'Readability', value: cvB ? Math.round((cvB.readability / 20) * 100) : 0 },
-      ];
+  useEffect(() => {
+    if (!report && !isAnalyzing && state.cvId) {
+      runAnalysis();
     }
-    if (cvB) {
-      return [
-        { label: 'Completeness', value: Math.round((cvB.completeness / 25) * 100) },
-        { label: 'Impact Words', value: Math.round((cvB.impactVerbs / 20) * 100) },
-        { label: 'Formatting', value: Math.round((cvB.formatting / 15) * 100) },
-        { label: 'Readability', value: Math.round((cvB.readability / 20) * 100) },
-      ];
-    }
-    return [
-      { label: hasJobDesc ? 'Keywords' : 'Completeness', value: 0 },
-      { label: 'Impact Words', value: 0 },
-      { label: hasJobDesc ? 'ATS Format' : 'Formatting', value: 0 },
-      { label: 'Readability', value: 0 },
-    ];
-  }, [atsAnalysis, hasJobDesc, offlineScore, state.keywordGapAnalysis]);
+  }, [report, state.cvId]);
 
-  // Segmented arc segment calculations (depends on metrics)
-  const segmentCount = metrics.length;
-  const totalSegmentGaps = (segmentCount - 1) * segmentGap;
-  const availableLength = arcSpanLength - totalSegmentGaps;
-  const totalMetricScore = metrics.reduce((sum, m) => sum + m.value, 0);
-
-  const arcSegments = metrics.map((metric) => {
-    const color = metric.value >= 75 ? '#22c55e' : metric.value >= 50 ? '#eab308' : '#ef4444';
-    const length = totalMetricScore > 0
-      ? (metric.value / totalMetricScore) * availableLength
-      : availableLength / segmentCount;
-    return { label: metric.label, value: metric.value, color, length };
-  });
-
-  let cumulativeOffset = 0;
-  const arcSegmentsWithOffset = arcSegments.map((seg) => {
-    const offset = cumulativeOffset;
-    cumulativeOffset += seg.length + segmentGap;
-    return { ...seg, offset };
-  });
-
-  // Skills
-  const extractedSkills = useMemo(() => {
-    const cvSkills: string[] = [];
+  const handleOptimizeCV = async () => {
+    if (!state.cvId || !report) return;
+    setIsOptimizing(true);
     try {
-      if (Array.isArray(state.cvData?.skills)) {
-        state.cvData.skills.forEach((c: any) => {
-          const list = c.keywords || c.skills || [];
-          list.forEach((s: string) => {
-            if (s && !cvSkills.includes(s)) cvSkills.push(s);
-          });
-        });
+      const response = await fetch('/api/ai/tailor-cv-v3', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          CV_DATA: state.cvData,
+          CV_TYPE: state.cvType,
+          SCORE_REPORT: report,
+          MASTER_CV_DATA: state.cvData, // Fallback to current CV
+          JD_DATA: state.jobData || (state.jdText ? { description: state.jdText } : undefined),
+          TARGET_ROLE: state.targetRole,
+          OPTIMISATION_TARGET: {
+            primaryRole: state.targetRole,
+            seniority: state.seniorityLevel
+          }
+        })
+      });
+
+      if (!response.ok) {
+        let errMsg = 'Tailoring request failed';
+        try {
+          const errData = await response.json();
+          if (errData && errData.error) {
+            errMsg = errData.error;
+          }
+        } catch (_) {}
+        throw new Error(errMsg);
       }
-    } catch {}
-    
-    if (cvSkills.length > 0) return cvSkills.slice(0, 12);
-    
-    if (atsAnalysis && atsAnalysis.extractedKeywords && atsAnalysis.extractedKeywords.length > 0) return atsAnalysis.extractedKeywords.slice(0, 12) as string[];
+
+      const data = await response.json();
+      if (data.success && data.optimised_cv) {
+        const optimised_cv = data.optimised_cv;
+        const mappedCV: any = { ...state.cvData };
+
+        if (optimised_cv.personal_details || optimised_cv.professional_summary) {
+          mappedCV.basics = {
+            ...mappedCV.basics,
+            name: optimised_cv.personal_details?.name || mappedCV.basics?.name,
+            label: optimised_cv.personal_details?.title || mappedCV.basics?.label,
+            email: optimised_cv.personal_details?.email || mappedCV.basics?.email,
+            phone: optimised_cv.personal_details?.phone || mappedCV.basics?.phone,
+            url: optimised_cv.personal_details?.portfolio || mappedCV.basics?.url,
+            summary: optimised_cv.professional_summary || mappedCV.basics?.summary
+          };
+          const profiles = [];
+          if (optimised_cv.personal_details?.linkedin) {
+            profiles.push({ network: 'LinkedIn', url: optimised_cv.personal_details.linkedin });
+          }
+          if (optimised_cv.personal_details?.github) {
+            profiles.push({ network: 'GitHub', url: optimised_cv.personal_details.github });
+          }
+          if (profiles.length > 0) {
+            mappedCV.basics.profiles = profiles;
+          }
+        }
+
+        if (optimised_cv.work_experience) {
+          mappedCV.work = optimised_cv.work_experience.map((w: any) => ({
+            company: w.company,
+            position: w.title,
+            startDate: w.start_date,
+            endDate: w.end_date,
+            location: w.location,
+            highlights: w.bullets
+          }));
+        }
+
+        if (optimised_cv.projects) {
+          mappedCV.projects = optimised_cv.projects.map((p: any) => ({
+            name: p.name,
+            description: p.bullets ? p.bullets.join('\n') : '',
+            highlights: p.bullets || [],
+            startDate: p.start_date,
+            endDate: p.end_date
+          }));
+        }
+
+        if (optimised_cv.education) {
+          mappedCV.education = optimised_cv.education.map((e: any) => ({
+            institution: e.institution,
+            area: e.area,
+            studyType: e.degree,
+            startDate: e.start_date,
+            endDate: e.end_date,
+            description: e.description
+          }));
+        }
+
+        if (optimised_cv.skills) {
+          if (Array.isArray(optimised_cv.skills) && optimised_cv.skills[0]?.category) {
+            mappedCV.skills = optimised_cv.skills.map((s: any) => ({
+              category: s.category,
+              skills: s.items || []
+            }));
+          } else if (Array.isArray(optimised_cv.skills)) {
+            mappedCV.skills = [{ category: 'Skills', skills: optimised_cv.skills }];
+          }
+        }
+
+        dispatch({ type: 'SET_CV_DATA', payload: mappedCV });
+        toast.success('CV optimized successfully!');
+        
+        // Auto run re-analysis on the new CV
+        setTimeout(() => {
+          runAnalysis();
+        }, 800);
+      } else {
+        throw new Error(data.error || 'Failed to parse optimized CV');
+      }
+    } catch (err: any) {
+      console.error('Optimization error:', err);
+      toast.error('Failed to optimize CV: ' + err.message);
+    } finally {
+      setIsOptimizing(false);
+    }
+  };
+
+  const handleCreateCoverLetter = async () => {
+    if (!state.cvId || !report) return;
+    setIsGeneratingLetter(true);
+    try {
+      const response = await fetch('/api/ai/generate-cover-letter-v3', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          CV_DATA: state.cvData,
+          CV_TYPE: state.cvType,
+          SCORE_REPORT: report,
+          MASTER_CV_DATA: state.cvData,
+          JD_DATA: state.jobData || (state.jdText ? { description: state.jdText } : undefined),
+          TARGET_ROLE: state.targetRole,
+          COMPANY_NAME: state.jobData?.company || state.jobData?.companyName || 'Target Company',
+          CANDIDATE_NAME: state.cvData?.basics?.name || 'Candidate',
+          TONE_PREFERENCE: 'confident and direct'
+        })
+      });
+
+      if (!response.ok) {
+        let errMsg = 'Cover letter generation failed';
+        try {
+          const errData = await response.json();
+          if (errData && errData.error) {
+            errMsg = errData.error;
+          }
+        } catch (_) {}
+        throw new Error(errMsg);
+      }
+
+      const data = await response.json();
+      if (data.success && data.letter_body) {
+        dispatch({
+          type: 'SET_AUTO_COVER_LETTER',
+          payload: {
+            draft: data.letter_body,
+            score: data.letter_metadata?.estimated_score || 85
+          }
+        });
+        toast.success('Cover letter generated successfully! Proceed to Step 4.');
+        goToStep(4);
+      } else {
+        throw new Error(data.error || 'Failed to parse cover letter');
+      }
+    } catch (err: any) {
+      console.error('Cover letter error:', err);
+      toast.error('Failed to generate cover letter: ' + err.message);
+    } finally {
+      setIsGeneratingLetter(false);
+    }
+  };
+
+  // Compute values for UI elements
+  const categoryScores = useMemo(() => {
+    if (!report) return [];
+    if (report.category_scores) return report.category_scores;
+
+    // Fallbacks if Master CV
+    if (report.completeness_audit) {
+      return [
+        { name: 'Content completeness', score: report.completeness_audit.completeness_score || 0 },
+        { name: 'Bullet quality & strength', score: report.bullet_quality_audit?.avg_strength === 'strong' ? 90 : report.bullet_quality_audit?.avg_strength === 'moderate' ? 65 : 40 },
+        { name: 'Quantification rate', score: report.bullet_quality_audit?.quantified_pct || 0 },
+        { name: 'ATS structure & readability', score: 80 },
+        { name: 'Derivation potential', score: report.derivation_potential?.derivation_score || 0 }
+      ];
+    }
     return [];
-  }, [atsAnalysis, state.cvData]);
+  }, [report]);
 
-  const visibleIssues = showAllIssues ? formattingIssues : formattingIssues.slice(0, 3);
+  const categoryAverage = useMemo(() => {
+    if (categoryScores.length === 0) return 0;
+    return Math.round(categoryScores.reduce((sum: number, c: any) => sum + c.score, 0) / categoryScores.length);
+  }, [categoryScores]);
 
-  // Purpose card
-  const purposeCard = useMemo(() => {
-    const modeLabel = getAnalysisModeLabel(state.analysisModeInfo?.mode || state.analysisMode || 'insufficient-data');
-    if (isMasterCV) return {
-      title: 'Master CV', modeLabel,
-      summary: 'Your source document — keep it broad, complete, and aligned to your career direction.',
-      bullets: ['Full experience & transferable skills', 'Quality over job-specific fit', 'Base for all tailored CVs'],
-    };
-    if (state.cvType === 'journey') return {
-      title: 'Job-Tailored CV', modeLabel,
-      summary: 'Optimised for one application. Focus on ATS keyword match.',
-      bullets: ['Mirror JD keywords & requirements', 'Prioritise relevant experience', 'Tight, focused evidence'],
-    };
-    return {
-      title: 'General CV', modeLabel,
-      summary: 'Flexible CV for broad applications. Add a JD for ATS-focused scoring.',
-      bullets: ['Clear story, easy to scan', 'Add role context for richer guidance', 'Paste JD for keyword match'],
-    };
-  }, [isMasterCV, state.analysisMode, state.analysisModeInfo?.mode, state.cvType]);
-
-  const handleAddSkill = (skillName: string) => {
-    if (!skillName) return;
-    const currentSkills: any[] = Array.isArray(state.cvData?.skills) ? [...state.cvData.skills] : [];
-    let idx = currentSkills.findIndex((c: any) =>
-      ['core skills', 'technical skills', 'skills'].includes(c.category?.toLowerCase())
-    );
-    if (idx === -1 && currentSkills.length > 0) idx = 0;
-    if (idx >= 0) {
-      const cat: any = { ...currentSkills[idx] };
-      if (!Array.isArray(cat.skills)) cat.skills = Array.isArray(cat.keywords) ? [...cat.keywords] : [];
-      if (!cat.skills.includes(skillName)) {
-        cat.skills = [...cat.skills, skillName];
-        const newSkills = [...currentSkills];
-        newSkills[idx] = cat;
-        dispatch({ type: 'SET_CV_DATA', payload: { ...state.cvData, skills: newSkills } });
-      }
-    } else {
-      dispatch({ type: 'SET_CV_DATA', payload: { ...state.cvData, skills: [...currentSkills, { id: crypto.randomUUID(), category: 'Core Skills', skills: [skillName] }] } });
+  const matchedKeywordsCount = useMemo(() => {
+    if (!report) return 0;
+    if (report.jd_keyword_match) {
+      return report.jd_keyword_match.keywords_hit || 0;
     }
-  };
+    const kwPreview = report.always_visible?.keyword_preview || [];
+    return kwPreview.filter((k: any) => k.status === 'hit').length;
+  }, [report]);
 
-  const handleStartCoaching = async () => {
-    const jobId = state.journeyId || state.jobData?._id || state.jobData?.id;
-    if (!jobId) return;
-    if (state.jobData?.status === 'draft' || !state.jobData?.status) {
-      try { await fetch(`/api/jobs/${jobId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'created' }) }); } catch {}
+  const gapKeywordsCount = useMemo(() => {
+    if (!report) return 0;
+    if (report.jd_keyword_match) {
+      return report.jd_keyword_match.keywords_missed || 0;
     }
-    router.push(`/dashboard/interview/${jobId}`);
-  };
+    const kwPreview = report.always_visible?.keyword_preview || [];
+    return kwPreview.filter((k: any) => k.status === 'miss').length;
+  }, [report]);
 
-  const handleDismissTransition = () => {
-    if (state.modeTransitionData) {
-      sessionStorage.setItem(`hide_transition_${state.modeTransitionData.transitionType}`, 'true');
-      dispatch({ type: 'SET_MODE_TRANSITION_DATA', payload: null });
-      dispatch({ type: 'CLEAR_MODE_WARNINGS' });
+  const partialKeywordsCount = useMemo(() => {
+    if (!report) return 0;
+    if (report.jd_keyword_match) {
+      return report.jd_keyword_match.keywords_partial || 0;
     }
-  };
+    const kwPreview = report.always_visible?.keyword_preview || [];
+    return kwPreview.filter((k: any) => k.status === 'partial').length;
+  }, [report]);
 
-  const handleAcceptTransition = () => {
-    if (state.modeTransitionData) {
-      sessionStorage.setItem(`hide_transition_${state.modeTransitionData.transitionType}`, 'true');
-      dispatch({ type: 'SET_MODE_TRANSITION_DATA', payload: null });
-      dispatch({ type: 'CLEAR_MODE_WARNINGS' });
-      if (state.cvId && state.targetRole) window.dispatchEvent(new CustomEvent('run-surgeon-analysis'));
-    }
-  };
+  const keywordsList = useMemo(() => {
+    if (!report) return [];
+    if (report.jd_keyword_match?.keywords) return report.jd_keyword_match.keywords;
+    return report.always_visible?.keyword_preview || [];
+  }, [report]);
+
+  const strengthsList = useMemo(() => {
+    if (!report) return [];
+    return report.strengths || [];
+  }, [report]);
+
+  const gapsList = useMemo(() => {
+    if (!report) return [];
+    return report.gaps || [];
+  }, [report]);
+
+  const actionsList = useMemo(() => {
+    if (!report) return [];
+    return report.actions || [];
+  }, [report]);
+
+  const recommendedTrack = useMemo(() => {
+    if (!report) return null;
+    return report.recommended_track || null;
+  }, [report]);
 
   return (
-    <div className="h-full flex flex-col bg-white dark:bg-[var(--bg-secondary)] rounded-xl border border-gray-200 dark:border-white/[0.06] overflow-y-auto hide-scrollbar text-gray-900 dark:text-white">
+    <div className="h-full flex flex-col bg-[#F9FAFB] dark:bg-[var(--bg-secondary)] rounded-xl border border-gray-200 dark:border-white/[0.06] overflow-y-auto hide-scrollbar text-gray-900 dark:text-white">
 
       {/* ── Header ── */}
       <div className="sticky top-0 z-20 flex items-center justify-between px-4 py-3 bg-white/95 dark:bg-[var(--bg-secondary)] backdrop-blur-sm border-b border-gray-100 dark:border-white/[0.04]">
@@ -477,448 +454,424 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = () => {
           </button>
           
           <button
-            onClick={() => refreshATSScore(state.cvId || undefined, state.jobData?._id || state.jobData?.id || undefined)}
-            disabled={isATSLoading}
+            onClick={runAnalysis}
+            disabled={isAnalyzing}
             className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5 transition-colors disabled:opacity-40"
             title="Refresh Analysis"
           >
-            {isATSLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+            {isAnalyzing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
           </button>
         </div>
       </div>
 
-      <div className="flex-1 p-4 space-y-3">
-          {/* ── Target Role Context ── */}
-          <div className="bg-emerald-50 dark:bg-emerald-500/[0.04] border border-emerald-200 dark:border-emerald-500/20 rounded-xl p-3 relative overflow-hidden">
-            <div className="absolute -right-6 -top-6 w-16 h-16 bg-emerald-400/10 rounded-full blur-xl pointer-events-none" />
-            <div className="relative z-10">
-              <h4 className="text-[10px] font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 mb-2">
-                <Target className="w-3 h-3" /> Target Role Context
-              </h4>
+      <div className="flex-1 p-4 space-y-4">
+        {/* ── Main Content Area ── */}
+        {!report ? (
+          isAnalyzing ? (
+            <AnalysisSkeleton />
+          ) : (
+            <div className="flex flex-col items-center justify-center py-12 text-center border-2 border-dashed border-gray-250 dark:border-white/10 rounded-2xl p-6 bg-white dark:bg-black/5">
+              <ShieldAlert className="w-12 h-12 text-amber-500 mb-4 animate-pulse" />
+              <h4 className="text-base font-black text-gray-900 dark:text-white mb-2">No Analysis Report Available</h4>
+              <p className="text-xs text-gray-500 dark:text-gray-400 max-w-xs mb-6 leading-relaxed">
+                Run an AI analysis scan to see your overall score, keywords matches, strengths, and optimized suggestions.
+              </p>
+              <button
+                onClick={runAnalysis}
+                disabled={isAnalyzing}
+                className="w-full py-2.5 px-4 bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {isAnalyzing ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" /> Analyzing CV...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="w-4 h-4" /> Run V3 Analysis Scan
+                  </>
+                )}
+              </button>
+            </div>
+          )
+        ) : (
+          <div className="space-y-4 animate-fadeIn">
+            
+            {/* ── 1. MAIN SCORE HEADER ── */}
+            <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/[0.05] rounded-2xl p-4 flex items-center gap-4 shadow-sm">
+              {/* Radial Score Gauge */}
+              <div className="relative w-16 h-16 shrink-0 flex items-center justify-center">
+                <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+                  <circle
+                    cx="50" cy="50" r="42"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="8"
+                    className="text-gray-100 dark:text-white/5"
+                  />
+                  <circle
+                    cx="50" cy="50" r="42"
+                    fill="none"
+                    stroke="#D97706" // Match orange color theme of score 65
+                    strokeWidth="8"
+                    strokeDasharray={`${2 * Math.PI * 42}`}
+                    strokeDashoffset={`${2 * Math.PI * 42 * (1 - (report.overall_score || 0) / 100)}`}
+                    strokeLinecap="round"
+                  />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-xl font-black text-gray-900 dark:text-white leading-none">
+                    {report.overall_score || 0}
+                  </span>
+                  <span className="text-[8px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mt-0.5">/100</span>
+                </div>
+              </div>
 
-              {hasJobDesc ? (
-                <div className="space-y-2">
-                  <div
-                    className="cursor-pointer hover:bg-white/60 dark:hover:bg-white/5 p-2 -mx-1 rounded-lg transition-colors"
-                    onClick={() => setJobSidebarOpen(true)}
-                  >
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <Briefcase className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                      <span className="text-xs font-semibold text-emerald-800 dark:text-white/80 truncate">
-                        {state.jobData?.title || state.jobData?.jobTitle || 'Target Role'}
+              {/* Verdict text details */}
+              <div className="min-w-0 flex-grow">
+                <h4 className="text-sm font-black text-gray-900 dark:text-white leading-snug">
+                  {state.jobData?.title || state.jobData?.jobTitle || state.targetRole || 'Target Role'}
+                </h4>
+                <p 
+                  className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 leading-relaxed font-semibold truncate"
+                  title={`${report.verdict || 'Moderate match'} · ${report.verdict_sub || 'strong foundation'}`}
+                >
+                  {report.verdict || 'Moderate match'} · {report.verdict_sub || 'strong foundation'}
+                </p>
+                
+                {/* Visual Status Pills below header */}
+                <div className="mt-2.5 flex flex-wrap gap-1.5">
+                  <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                    {matchedKeywordsCount} matched
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                    {gapKeywordsCount} gaps
+                  </span>
+                  {partialKeywordsCount > 0 && (
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                      {partialKeywordsCount} partial
+                    </span>
+                  )}
+                  {recommendedTrack && (
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                      {recommendedTrack.label || 'Early-mid track'}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Action Optimization Buttons */}
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={handleOptimizeCV}
+                disabled={isOptimizing || isMasterCV}
+                className="py-2.5 px-3 bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold text-[11px] uppercase tracking-wider rounded-xl transition-all border border-emerald-600/20 flex items-center justify-center gap-1.5 shadow-sm disabled:opacity-40"
+              >
+                {isOptimizing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
+                Optimize CV
+              </button>
+
+              <button
+                onClick={handleCreateCoverLetter}
+                disabled={isGeneratingLetter || isMasterCV}
+                className="py-2.5 px-3 bg-orange-500 hover:bg-orange-600 text-white font-extrabold text-[11px] uppercase tracking-wider rounded-xl transition-all border border-orange-650/20 flex items-center justify-center gap-1.5 shadow-sm disabled:opacity-40"
+              >
+                {isGeneratingLetter ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileText className="w-3.5 h-3.5" />}
+                Cover Letter
+              </button>
+            </div>
+
+            {/* ── 2. CATEGORY SCORES PANEL ── */}
+            {categoryScores.length > 0 && (
+              <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/[0.05] rounded-2xl overflow-hidden shadow-sm">
+                <button
+                  onClick={() => togglePanel('categories')}
+                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50/50 dark:hover:bg-white/[0.01] transition-colors border-b border-gray-100 dark:border-white/5"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-500 dark:text-gray-400">📊</span>
+                    <span className="text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-200">Category scores</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-wider rounded bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                      Avg {categoryAverage}%
+                    </span>
+                    {expanded.categories ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                  </div>
+                </button>
+                
+                {/* Horizontal row of highest/lowest highlighted score pills */}
+                <div className="px-4 py-2 flex flex-wrap gap-1.5 border-b border-gray-100 dark:border-white/[0.02]">
+                  {categoryScores.slice(0, 4).map((c: any, i: number) => {
+                    const status = c.score >= 70 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : c.score >= 40 ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400';
+                    return (
+                      <span key={i} className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${status}`}>
+                        {c.name} {c.score}%
+                      </span>
+                    );
+                  })}
+                </div>
+
+                {expanded.categories && (
+                  <div className="p-4 space-y-3.5">
+                    {categoryScores.map((c: any, i: number) => {
+                      const color = c.score >= 70 ? 'bg-emerald-500' : c.score >= 40 ? 'bg-amber-500' : 'bg-rose-500';
+                      return (
+                        <div key={i} className="space-y-1.5">
+                          <div className="flex items-center justify-between text-[11px] font-bold text-gray-600 dark:text-gray-300">
+                            <span>{c.name}</span>
+                            <span>{c.score}%</span>
+                          </div>
+                          <div className="h-1.5 w-full bg-gray-100 dark:bg-white/5 rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full ${color}`} style={{ width: `${c.score}%` }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── 3. KEYWORD AUDIT PANEL ── */}
+            {keywordsList.length > 0 && (
+              <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/[0.05] rounded-2xl overflow-hidden shadow-sm">
+                <button
+                  onClick={() => togglePanel('keywords')}
+                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50/50 dark:hover:bg-white/[0.01] transition-colors border-b border-gray-100 dark:border-white/5"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-500 dark:text-gray-400">🏷️</span>
+                    <span className="text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-200">Keyword audit</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-[9px] font-black uppercase tracking-wider flex items-center gap-1.5">
+                      <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">{matchedKeywordsCount} hit</span>
+                      <span className="px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-600 dark:text-rose-400">{gapKeywordsCount} miss</span>
+                    </span>
+                    {expanded.keywords ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                  </div>
+                </button>
+                
+                {/* Horizontal row of highlighted keywords */}
+                <div className="px-4 py-2 flex flex-wrap gap-1.5 border-b border-gray-100 dark:border-white/[0.02]">
+                  {keywordsList.slice(0, 5).map((k: any, i: number) => {
+                    const status = k.status === 'hit' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : k.status === 'partial' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400';
+                    return (
+                      <span key={i} className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${status}`}>
+                        {k.label}
+                      </span>
+                    );
+                  })}
+                </div>
+
+                {expanded.keywords && (
+                  <div className="p-4 space-y-4">
+                    <div className="flex flex-wrap gap-1.5">
+                      {keywordsList.map((k: any, i: number) => {
+                        const statusColors =
+                          k.status === 'hit' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/15' :
+                          k.status === 'partial' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/15' :
+                          'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/15';
+                        return (
+                          <span key={i} className={`px-2.5 py-1 text-[10px] font-bold rounded-md ${statusColors}`}>
+                            {k.label}
+                          </span>
+                        );
+                      })}
+                    </div>
+                    {/* Legend */}
+                    <div className="flex items-center gap-4 text-[10px] font-extrabold uppercase text-gray-400 border-t border-gray-100 dark:border-white/5 pt-3">
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500" /> Matched
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-amber-500" /> Partial
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-rose-500" /> Missing
                       </span>
                     </div>
-                    <p className="text-[11px] text-emerald-700 dark:text-white/50 line-clamp-2 pl-5">
-                      {state.jobData?.jobDescription || state.jobData?.description || 'Job description provided.'}
-                    </p>
                   </div>
-                  <div className="flex gap-1.5">
-                    <button
-                      onClick={() => setJobSidebarOpen(true)}
-                      className="flex-1 py-1.5 text-[11px] font-bold text-white bg-emerald-500 hover:bg-emerald-600 dark:bg-lime-500/20 dark:text-lime-300 dark:hover:bg-lime-500/30 rounded-lg transition-colors border border-emerald-600/20 dark:border-lime-500/20"
-                    >
-                      Update Target
-                    </button>
-                    <button
-                      onClick={() => setJobSidebarOpen(true)}
-                      className="flex-1 py-1.5 text-[11px] font-bold text-emerald-700 bg-emerald-100 hover:bg-emerald-200 dark:bg-white/5 dark:text-white/70 dark:hover:bg-white/10 rounded-lg transition-colors border border-emerald-200 dark:border-white/10"
-                    >
-                      Job Details
-                    </button>
+                )}
+              </div>
+            )}
+
+            {/* ── 4. WHAT'S WORKING FOR YOU PANEL ── */}
+            {strengthsList.length > 0 && (
+              <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/[0.05] rounded-2xl overflow-hidden shadow-sm">
+                <button
+                  onClick={() => togglePanel('strengths')}
+                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50/50 dark:hover:bg-white/[0.01] transition-colors border-b border-gray-100 dark:border-white/5"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-500 dark:text-gray-400">👍</span>
+                    <span className="text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-200">What's working for you</span>
                   </div>
-                </div>
-              ) : (
-                <div>
-                  <p className="text-[11px] text-emerald-700 dark:text-white/50 mb-2.5">
-                    Add a job description to get specific ATS feedback and keyword matches.
-                  </p>
-                  <button
-                    onClick={() => setJobSidebarOpen(true)}
-                    className="w-full py-2 text-[11px] font-bold text-white bg-emerald-500 hover:bg-emerald-600 dark:bg-lime-500/20 dark:text-lime-300 dark:hover:bg-lime-500/30 rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm border border-emerald-600/20 dark:border-lime-500/20"
-                  >
-                    <FileText className="w-3.5 h-3.5" /> Paste Job Description
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* ── Feature 15: Fix All High Impact Issues Banner ── */}
-          {potentialImprovements > 5 && (
-            <div className="bg-gradient-to-br from-emerald-600/90 to-teal-700/90 text-white rounded-xl p-4 shadow-xl border border-emerald-500/30 relative overflow-hidden flex flex-col gap-3 animate-pulse-subtle">
-              <div className="absolute -right-8 -top-8 w-20 h-20 bg-white/10 rounded-full blur-xl pointer-events-none" />
-              <div className="relative z-10">
-                <div className="flex items-center gap-1.5 bg-white/20 text-white text-[9px] font-extrabold uppercase tracking-widest px-2 py-0.5 rounded-full w-max">
-                  <Zap className="w-2.5 h-2.5 fill-white" /> High Impact Suggestion
-                </div>
-                <h4 className="text-sm font-black tracking-tight mt-2 flex items-center gap-2">
-                  <span>🚀 Improve ATS from {score} → {potentialScore}</span>
-                </h4>
-                <p className="text-[10px] text-white/80 mt-1 leading-relaxed">
-                  We found {missingSkills.length > 0 ? missingSkills.length : 3} keywords and metrics to boost your ATS viability instantly.
-                </p>
-              </div>
-              <div className="flex gap-2 relative z-10">
-                <button
-                  onClick={() => setIsPreviewModalOpen(true)}
-                  className="flex-1 py-1.5 text-[11px] font-extrabold text-white bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg transition-all"
-                >
-                  Preview All
+                  <div className="flex items-center gap-2.5">
+                    <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-wider rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                      {strengthsList.length} strengths
+                    </span>
+                    {expanded.strengths ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                  </div>
                 </button>
-                <button
-                  onClick={handleApplyAll}
-                  className="flex-1 py-1.5 text-[11px] font-extrabold text-emerald-950 bg-emerald-300 hover:bg-emerald-200 rounded-lg transition-all shadow-md shadow-emerald-900/20"
-                >
-                  Apply All
-                </button>
-              </div>
-            </div>
-          )}
+                
+                {/* Horizontal row of highlight pills */}
+                <div className="px-4 py-2 flex flex-wrap gap-1.5 border-b border-gray-100 dark:border-white/[0.02]">
+                  {strengthsList.slice(0, 4).map((s: any, i: number) => (
+                    <span key={i} className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                      {s.title}
+                    </span>
+                  ))}
+                </div>
 
-          {/* ── Feature 1: Living Score Card (expandable) ── */}
-          <div 
-            onClick={() => setIsScoreExpanded(!isScoreExpanded)}
-            className="flex flex-col bg-gray-50 dark:bg-white/[0.03] border border-gray-150 dark:border-white/[0.05] rounded-xl p-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-white/5 transition-all select-none group"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                {/* Segmented Arc */}
-                <div className="relative w-[80px] h-[80px] shrink-0 flex items-center justify-center">
-                  <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-                    <circle
-                      cx="50" cy="50" r={arcRadius}
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="8"
-                      className="text-gray-100 dark:text-white/5"
-                    />
-                    {arcSegmentsWithOffset.map((seg) => (
-                      <circle
-                        key={seg.label}
-                        cx="50" cy="50" r={arcRadius}
-                        fill="none"
-                        stroke={seg.color}
-                        strokeWidth="8"
-                        strokeDasharray={`${seg.length} ${totalCircumference - seg.length}`}
-                        strokeDashoffset={seg.offset}
-                        strokeLinecap="butt"
-                        style={{ filter: `drop-shadow(0 0 4px ${seg.color}60)` }}
-                      />
+                {expanded.strengths && (
+                  <div className="p-4 divide-y divide-gray-100 dark:divide-white/5">
+                    {strengthsList.map((s: any, i: number) => (
+                      <div key={i} className="flex gap-3 py-3 first:pt-0 last:pb-0">
+                        <div className="w-5 h-5 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0">
+                          <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                        </div>
+                        <div className="space-y-0.5">
+                          <h5 className="text-[11px] font-black text-gray-900 dark:text-white leading-relaxed">
+                            {s.title}
+                          </h5>
+                          <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
+                            {s.detail}
+                          </p>
+                        </div>
+                      </div>
                     ))}
-                  </svg>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <AnimatedScore value={score} size="sm" className="text-2xl font-black tracking-tighter text-gray-900 dark:text-white leading-none" />
-                    <span className="text-[9px] font-bold uppercase tracking-widest text-gray-400 mt-0.5">/ 100</span>
                   </div>
-                </div>
-
-                {/* Details */}
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <span className={`text-lg font-black ${gradeColor}`}>{grade}</span>
-                    <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{scoreLabel}</span>
-                  </div>
-                  {potentialImprovements > 0 ? (
-                    <div className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                      <span>+{potentialImprovements} potential points</span>
-                      <TrendingUp className="w-3.5 h-3.5" />
-                    </div>
-                  ) : (
-                    <span className="text-[10px] text-gray-400">Profile fully optimized</span>
-                  )}
-                  <p className="text-[10px] text-gray-400 mt-1">Click to view opportunities</p>
-                </div>
-              </div>
-
-              <div>
-                <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isScoreExpanded ? 'rotate-185' : ''}`} />
-              </div>
-            </div>
-
-            {/* Expanded potential improvements breakdown */}
-            {isScoreExpanded && (
-              <div className="mt-4 pt-4 border-t border-gray-200/50 dark:border-white/5 space-y-2.5 animate-slide-down">
-                <div className="flex justify-between text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1">
-                  <span>Potential Improvement Areas</span>
-                  <span>Impact</span>
-                </div>
-                <div className="flex justify-between text-xs font-semibold text-gray-700 dark:text-gray-300">
-                  <span>Missing Keywords</span>
-                  <span className="text-emerald-500">+{missingKeywordsDelta}</span>
-                </div>
-                <div className="flex justify-between text-xs font-semibold text-gray-700 dark:text-gray-300">
-                  <span>Measurable Metrics</span>
-                  <span className="text-emerald-500">+{impactMetricsDelta}</span>
-                </div>
-                <div className="flex justify-between text-xs font-semibold text-gray-700 dark:text-gray-300">
-                  <span>Leadership Phrasing</span>
-                  <span className="text-emerald-500">+{leadershipTermsDelta}</span>
-                </div>
-                <div className="flex justify-between text-xs font-semibold text-gray-700 dark:text-gray-300">
-                  <span>Formatting Issues</span>
-                  <span className="text-emerald-500">+{formattingDelta}</span>
-                </div>
-                <div className="pt-2 border-t border-dashed border-gray-200/50 dark:border-white/5 flex justify-between text-xs font-black text-gray-900 dark:text-white">
-                  <span>Maximum Potential Score</span>
-                  <span className="text-emerald-500">{potentialScore}</span>
-                </div>
+                )}
               </div>
             )}
-          </div>
 
-          {/* ── Feature 6: CV Health Timeline with Sparkline ── */}
-          <div className="bg-white dark:bg-white/[0.02] border border-gray-150 dark:border-white/[0.05] rounded-xl p-3 flex flex-col gap-2 shadow-sm">
-            <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-wider text-gray-400">
-              <span className="flex items-center gap-1.5"><History className="w-3.5 h-3.5 text-sky-500" /> CV Health Timeline</span>
-              <span className="text-emerald-500">+{score > 14 ? 14 : score} pts this week</span>
-            </div>
-            
-            <div className="flex items-center gap-4 py-1">
-              <div className="flex-1 h-8">
-                {/* SVG Sparkline */}
-                <svg className="w-full h-full" viewBox="0 0 120 30">
-                  <path
-                    d={`M 10 25 L 45 ${25 - ((score - 14) / 100) * 20} L 80 ${25 - ((score - 5) / 100) * 20} L 115 ${25 - (score / 100) * 20}`}
-                    fill="none"
-                    stroke="#10b981"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    style={{ filter: 'drop-shadow(0 2px 4px rgba(16, 185, 129, 0.3))' }}
-                  />
-                  <circle cx="10" cy="25" r="2.5" fill="#10b981" />
-                  <circle cx="45" cy={25 - ((score - 14) / 100) * 20} r="2.5" fill="#10b981" />
-                  <circle cx="80" cy={25 - ((score - 5) / 100) * 20} r="2.5" fill="#10b981" />
-                  <circle cx="115" cy={25 - (score / 100) * 20} r="3" fill="#10b981" className="animate-ping" style={{ transformOrigin: `115px ${25 - (score / 100) * 20}px` }} />
-                  <circle cx="115" cy={25 - (score / 100) * 20} r="3" fill="#059669" />
-                </svg>
-              </div>
-              <div className="flex gap-3 text-center shrink-0">
-                <div>
-                  <div className="text-[9px] text-gray-400 font-bold uppercase">1 wk ago</div>
-                  <div className="text-xs font-extrabold text-gray-600 dark:text-gray-300">{Math.max(10, score - 14)}</div>
-                </div>
-                <div>
-                  <div className="text-[9px] text-gray-400 font-bold uppercase">Yesterday</div>
-                  <div className="text-xs font-extrabold text-gray-600 dark:text-gray-300">{Math.max(10, score - 5)}</div>
-                </div>
-                <div>
-                  <div className="text-[9px] text-emerald-500 font-bold uppercase">Today</div>
-                  <div className="text-xs font-black text-emerald-500">{score}</div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* ── Feature 14: Resume Completion Radar (Progress Panel) ── */}
-          <div className="bg-white dark:bg-white/[0.02] border border-gray-150 dark:border-white/[0.05] rounded-xl p-3 flex flex-col gap-2 shadow-sm">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
-              <BarChart3 className="w-3.5 h-3.5 text-emerald-500" /> Resume Strength Index
-            </div>
-            <div className="space-y-2 pt-1.5">
-              <ScoreBar label="Content Quality" value={72} />
-              <ScoreBar label="ATS Readiness" value={score} />
-              <ScoreBar label="Recruiter Appeal" value={score > 60 ? 82 : 63} />
-              <ScoreBar label="Leadership Signal" value={leadershipCount > 2 ? 88 : 24} />
-              <ScoreBar label="Impact Metrics" value={metricsCount > 3 ? 90 : metricsCount > 1 ? 55 : 18} />
-            </div>
-          </div>
-
-          {/* ATS Diff Preview Modal */}
-          {isPreviewModalOpen && (
-            <ATSDiffPreviewModal
-              isOpen={isPreviewModalOpen}
-              onClose={() => setIsPreviewModalOpen(false)}
-              onApply={handleApplyAll}
-              title="Apply High Impact Fixes"
-              currentScore={score}
-              targetScore={potentialScore}
-              oldText={state.cvData?.basics?.summary || ''}
-              newText={proposedSummary}
-            />
-          )}
-
-          {/* ── Mode Transition Panel ── */}
-          {state.modeTransitionData && (
-            <div className="bg-blue-50 dark:bg-blue-500/5 border border-blue-200 dark:border-blue-500/20 rounded-xl p-3 relative">
-              <button onClick={handleDismissTransition} className="absolute top-2 right-2 p-1 text-blue-400 hover:text-blue-600 transition-colors rounded">
-                <X className="w-3.5 h-3.5" />
-              </button>
-              <h4 className="text-xs font-bold text-blue-700 dark:text-blue-400 flex items-center gap-1.5 mb-1.5 pr-6">
-                <RefreshCw className="w-3.5 h-3.5" /> Analysis Mode Change
-              </h4>
-              <p className="text-[11px] text-blue-600 dark:text-blue-300/80 mb-3 leading-relaxed pr-6">
-                Switching from <strong>{state.modeTransitionData.fromMode}</strong> to <strong>{state.modeTransitionData.toMode}</strong>.
-              </p>
-              <div className="flex gap-2">
-                <button onClick={handleDismissTransition} className="flex-1 py-1.5 text-[11px] font-semibold text-blue-700 dark:text-blue-300 bg-white dark:bg-white/5 border border-blue-200 dark:border-white/10 rounded-lg">Cancel</button>
-                <button onClick={handleAcceptTransition} className="flex-1 py-1.5 text-[11px] font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg">Continue</button>
-              </div>
-            </div>
-          )}
-
-          {/* ── CV Purpose Card (compact, collapsible) ── */}
-          <div className="bg-gray-50 dark:bg-white/[0.025] border border-gray-100 dark:border-white/[0.05] rounded-xl overflow-hidden">
-            <button
-              onClick={() => setIsPurposeExpanded(v => !v)}
-              className="w-full flex items-center justify-between px-3 py-2.5 text-left hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
-            >
-              <div className="flex items-center gap-2 min-w-0">
-                <Target className="w-3.5 h-3.5 text-sky-500 shrink-0" />
-                <span className="text-xs font-semibold text-gray-700 dark:text-gray-200 truncate">{purposeCard.title}</span>
-              </div>
-              <ChevronDown className={`w-3.5 h-3.5 text-gray-400 shrink-0 transition-transform duration-200 ${isPurposeExpanded ? 'rotate-180' : ''}`} />
-            </button>
-            {isPurposeExpanded && (
-              <div className="px-3 pb-3">
-                <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed mb-2">{purposeCard.summary}</p>
-                <div className="space-y-1.5">
-                  {purposeCard.bullets.map((b) => (
-                    <div key={b} className="flex items-start gap-2">
-                      <div className="w-1 h-1 rounded-full bg-sky-400 mt-1.5 shrink-0" />
-                      <p className="text-[11px] text-gray-600 dark:text-gray-300 leading-relaxed">{b}</p>
-                    </div>
+            {/* ── 5. CRITICAL GAPS PANEL ── */}
+            {gapsList.length > 0 && (
+              <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/[0.05] rounded-2xl overflow-hidden shadow-sm">
+                <button
+                  onClick={() => togglePanel('gaps')}
+                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50/50 dark:hover:bg-white/[0.01] transition-colors border-b border-gray-100 dark:border-white/5"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-500 dark:text-gray-400">⚠️</span>
+                    <span className="text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-200">Critical gaps</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-wider rounded bg-rose-500/10 text-rose-600 dark:text-rose-400">
+                      {gapsList.length} blockers
+                    </span>
+                    {expanded.gaps ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                  </div>
+                </button>
+                
+                {/* Horizontal row of gap highlight pills */}
+                <div className="px-4 py-2 flex flex-wrap gap-1.5 border-b border-gray-100 dark:border-white/[0.02]">
+                  {gapsList.slice(0, 4).map((g: any, i: number) => (
+                    <span key={i} className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400">
+                      {g.title}
+                    </span>
                   ))}
                 </div>
+
+                {expanded.gaps && (
+                  <div className="p-4 divide-y divide-gray-100 dark:divide-white/5">
+                    {gapsList.map((g: any, i: number) => (
+                      <div key={i} className="flex gap-3 py-3 first:pt-0 last:pb-0">
+                        <div className="w-5 h-5 rounded-full bg-rose-500/10 flex items-center justify-center shrink-0">
+                          <X className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
+                        </div>
+                        <div className="space-y-0.5">
+                          <h5 className="text-[11px] font-black text-gray-900 dark:text-white leading-relaxed">
+                            {g.title}
+                          </h5>
+                          <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
+                            {g.detail}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
-          </div>
 
-          {/* ── CV Quality Breakdown ── */}
-          <div className="bg-white dark:bg-white/[0.02] border border-gray-100 dark:border-white/[0.05] rounded-xl p-3">
-            <SectionHeader icon={<TrendingUp className="w-3.5 h-3.5" />} title="Quality Breakdown" />
-            <div className="space-y-3">
-              {metrics.map(m => <ScoreBar key={m.label} label={m.label} value={m.value} />)}
-            </div>
-            <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-3 flex items-center gap-1">
-              <span className="w-3 h-3 rounded-full border border-gray-300 dark:border-gray-600 inline-flex items-center justify-center text-[8px]">i</span>
-              Improve the areas above to increase your overall score.
+            {/* ── 6. PRIORITY ACTIONS PANEL ── */}
+            {actionsList.length > 0 && (
+              <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/[0.05] rounded-2xl overflow-hidden shadow-sm">
+                <button
+                  onClick={() => togglePanel('actions')}
+                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50/50 dark:hover:bg-white/[0.01] transition-colors border-b border-gray-100 dark:border-white/5"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-500 dark:text-gray-400">🚀</span>
+                    <span className="text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-200">Priority actions</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-wider rounded bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                      {actionsList.length} steps
+                    </span>
+                    {expanded.actions ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                  </div>
+                </button>
+                
+                {/* Horizontal row of actions highlight pills */}
+                <div className="px-4 py-2 flex flex-wrap gap-1.5 border-b border-gray-100 dark:border-white/[0.02]">
+                  {actionsList.slice(0, 4).map((a: any, i: number) => (
+                    <span key={i} className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                      {a.title}
+                    </span>
+                  ))}
+                </div>
+
+                {expanded.actions && (
+                  <div className="p-4 space-y-4">
+                    <div className="divide-y divide-gray-100 dark:divide-white/5">
+                      {actionsList.map((a: any, i: number) => (
+                        <div key={i} className="flex gap-3 py-3 first:pt-0 last:pb-0">
+                          <div className="w-5 h-5 rounded-full bg-blue-500 text-white flex items-center justify-center shrink-0 text-[10px] font-black">
+                            {a.step || (i + 1)}
+                          </div>
+                          <div className="space-y-0.5">
+                            <h5 className="text-[11px] font-black text-gray-900 dark:text-white leading-relaxed">
+                              {a.title}
+                            </h5>
+                            <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
+                              {a.detail}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    {/* Which track to target highlight card */}
+                    {recommendedTrack && (
+                      <div className="bg-gray-50 dark:bg-white/[0.015] border border-gray-150 dark:border-white/5 rounded-xl p-3.5 mt-2 space-y-1 select-text">
+                        <span className="text-[9px] font-black uppercase tracking-wider text-gray-400 block">
+                          Which track to target
+                        </span>
+                        <p className="text-[11px] text-gray-600 dark:text-gray-300 leading-relaxed">
+                          Apply to the <strong className="font-extrabold text-gray-900 dark:text-white">{recommendedTrack.label || 'Early-mid track'}</strong>. {recommendedTrack.rationale}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── Bottom tip ── */}
+            <p className="text-[10px] text-gray-400 dark:text-gray-600 flex items-start gap-1.5 pb-1">
+              <span className="text-yellow-400 shrink-0 mt-0.5">💡</span>
+              Tip: Fix all blockers and priority actions above to increase your overall score!
             </p>
+
           </div>
-
-          {/* ── Live Formatting Checks ── */}
-          <div className="bg-white dark:bg-white/[0.02] border border-gray-100 dark:border-white/[0.05] rounded-xl p-3">
-            <div className="flex items-center justify-between mb-2.5">
-              <SectionHeader icon={<Zap className="w-3.5 h-3.5 text-yellow-500" />} title="Live Formatting Checks" />
-              {formattingIssues.length > 0 && (
-                <span className="text-[10px] font-bold text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-500/10 px-1.5 py-0.5 rounded-full -mt-3">
-                  {formattingIssues.length}
-                </span>
-              )}
-            </div>
-            <div className="space-y-1.5">
-              {formattingIssues.length > 0 ? (
-                <>
-                  {visibleIssues.map((issue, i) => (
-                    <div key={i} className="flex items-start gap-2 bg-yellow-50/70 dark:bg-yellow-500/5 px-2.5 py-2 rounded-lg border border-yellow-100 dark:border-yellow-500/10">
-                      <AlertTriangle className="w-3 h-3 text-yellow-500 mt-0.5 shrink-0" />
-                      <p className="text-[11px] text-yellow-700 dark:text-yellow-400/90 leading-snug">{issue.message}</p>
-                    </div>
-                  ))}
-                  {formattingIssues.length > 3 && (
-                    <button
-                      onClick={() => setShowAllIssues(v => !v)}
-                      className="text-[11px] font-semibold text-sky-600 dark:text-sky-400 hover:underline flex items-center gap-1 mt-1"
-                    >
-                      {showAllIssues ? 'Show less' : `View all checks (${formattingIssues.length})`}
-                      <ChevronRight className={`w-3 h-3 transition-transform ${showAllIssues ? 'rotate-90' : ''}`} />
-                    </button>
-                  )}
-                </>
-              ) : (
-                <div className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-500/5 px-2.5 py-2 rounded-lg border border-emerald-100 dark:border-emerald-500/10">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                  <p className="text-[11px] text-emerald-700 dark:text-emerald-400">No formatting issues detected!</p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* ── Extracted Skills ── */}
-          {extractedSkills.length > 0 && (
-            <div className="bg-white dark:bg-white/[0.02] border border-gray-100 dark:border-white/[0.05] rounded-xl p-3">
-              <SectionHeader icon={<Award className="w-3.5 h-3.5" />} title="Extracted Skills" />
-              <div className="flex flex-wrap gap-1.5">
-                {extractedSkills.map((skill: string, i: number) => (
-                  <span key={i} className="px-2 py-0.5 text-[11px] font-medium bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-300 border border-blue-100 dark:border-blue-500/15 rounded-md">
-                    {skill}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* ── Missing Keywords (journey only) ── */}
-          {hasJobDesc && missingSkills.length > 0 && (
-            <div className="bg-white dark:bg-white/[0.02] border border-gray-100 dark:border-white/[0.05] rounded-xl p-3">
-              <SectionHeader icon={<Plus className="w-3.5 h-3.5 text-yellow-500" />} title="Missing High-Value Keywords" />
-              <div className="flex flex-wrap gap-1.5">
-                {missingSkills.map((skill: string, i: number) => (
-                  <button
-                    key={i}
-                    onClick={() => handleAddSkill(skill)}
-                    className="px-2 py-0.5 text-[11px] font-medium bg-yellow-50 dark:bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border border-yellow-100 dark:border-yellow-500/15 rounded-md hover:bg-yellow-100 dark:hover:bg-yellow-500/20 transition-colors flex items-center gap-1 group"
-                    title={`Add "${skill}" to skills`}
-                  >
-                    <Plus className="w-2.5 h-2.5 group-hover:scale-110 transition-transform" /> {skill}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* ── Cover Letter CTA ── */}
-          {!isMasterCV && hasJobDesc && (state.journeyId || state.jobData?._id || state.jobData?.id) && (
-            <div className="bg-orange-50 dark:bg-orange-500/5 border border-orange-200 dark:border-orange-500/20 rounded-xl p-3 relative overflow-hidden">
-              <div className="absolute -right-4 -top-4 w-14 h-14 bg-orange-400/10 rounded-full blur-lg pointer-events-none" />
-              <div className="relative z-10 flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <h4 className="text-xs font-bold text-orange-700 dark:text-orange-400 flex items-center gap-1.5 mb-0.5">
-                    <FileText className="w-3.5 h-3.5" /> Cover Letter
-                  </h4>
-                  <p className="text-[11px] text-orange-600/70 dark:text-orange-300/60">Generate a tailored cover letter.</p>
-                </div>
-                <button
-                  onClick={() => goToStep(4)}
-                  className="shrink-0 py-1.5 px-3 text-[11px] font-bold text-white bg-orange-500 hover:bg-orange-600 rounded-lg transition-colors flex items-center gap-1 whitespace-nowrap"
-                >
-                  Create <ChevronRight className="w-3 h-3" />
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* ── Interview Coach CTA ── */}
-          {hasJobDesc && (state.journeyId || state.jobData?._id || state.jobData?.id) && (
-            <div className="rounded-xl p-3 relative overflow-hidden bg-indigo-50 dark:bg-indigo-900/40 border border-indigo-200 dark:border-indigo-500/40">
-              <div className="absolute inset-0 bg-gradient-to-r from-indigo-100/50 dark:from-indigo-600/30 to-purple-100/30 dark:to-purple-600/20 blur-xl" />
-              <div className="relative z-10 flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <h4 className="text-xs font-bold text-indigo-800 dark:text-white flex items-center gap-1.5 mb-0.5">
-                    <Zap className="w-3.5 h-3.5 text-yellow-500 dark:text-yellow-300 fill-yellow-400/50 dark:fill-yellow-300" /> Interview Prep
-                  </h4>
-                  <p className="text-[11px] text-indigo-600 dark:text-indigo-200/80">Practice questions tailored to this JD.</p>
-                </div>
-                <button
-                  onClick={handleStartCoaching}
-                  className="shrink-0 py-1.5 px-3 text-[11px] font-bold text-white bg-indigo-600 hover:bg-indigo-700 dark:text-indigo-700 dark:bg-white dark:hover:bg-indigo-50 rounded-lg transition-colors flex items-center gap-1 whitespace-nowrap"
-                >
-                  Start <ChevronRight className="w-3 h-3" />
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* ── Bottom tip ── */}
-          <p className="text-[10px] text-gray-400 dark:text-gray-600 flex items-start gap-1.5 pb-1">
-            <span className="text-yellow-400 shrink-0 mt-0.5">💡</span>
-            Tip: A strong base CV helps generate better tailored versions for specific roles.
-          </p>
-
-        </div>
+        )}
+      </div>
     </div>
   );
 };
 
 export default ATSMeterPanel;
-

@@ -297,20 +297,34 @@ const CVListView: React.FC<CVListViewProps> = ({
                                 <td className="px-6 py-3">
                                     {(cv.isMaster === true || cv.metadata?.isMaster === true) ? (
                                         // Master CV - Show Completion Score
-                                        cv.completionPercentage !== undefined ? (
-                                            <div className="flex items-center gap-1.5 text-[10px]">
-                                                <BarChart3 size={12} className={cv.completionPercentage >= 70 ? 'text-green-500' : cv.completionPercentage >= 50 ? 'text-yellow-500' : 'text-red-500'} />
-                                                <span className={cv.completionPercentage >= 70 ? 'text-green-600 dark:text-green-400' : cv.completionPercentage >= 50 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-600 dark:text-red-400'}>
-                                                    {cv.completionPercentage}%
-                                                </span>
-                                            </div>
-                                        ) : (
-                                            <span className="text-[10px] text-gray-400">-</span>
-                                        )
-                                    ) : (
-                                        // Regular CV - Show ATS Score (check metadata first, then fallback to direct property)
                                         (() => {
-                                            const atsScore = cv.metadata?.atsScore !== undefined ? cv.metadata.atsScore : cv.atsScore;
+                                            const completionScore = cv.metadata?.surgeonAnalysis?.scoreReport?.overall_score ??
+                                                                    cv.scoreReport?.overall_score ??
+                                                                    cv.metadata?.cvScore ??
+                                                                    cv.metadata?.atsScore ??
+                                                                    cv.completionPercentage ??
+                                                                    cv.atsScore ??
+                                                                    cv.cvScore;
+                                            return completionScore !== undefined ? (
+                                                <div className="flex items-center gap-1.5 text-[10px]">
+                                                    <BarChart3 size={12} className={completionScore >= 70 ? 'text-green-500' : completionScore >= 50 ? 'text-yellow-500' : 'text-red-500'} />
+                                                    <span className={completionScore >= 70 ? 'text-green-600 dark:text-green-400' : completionScore >= 50 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-600 dark:text-red-400'}>
+                                                        {completionScore}%
+                                                    </span>
+                                                </div>
+                                            ) : (
+                                                <span className="text-[10px] text-gray-400">-</span>
+                                            );
+                                        })()
+                                    ) : (
+                                        // Regular CV - Show ATS Score
+                                        (() => {
+                                            const atsScore = cv.metadata?.surgeonAnalysis?.scoreReport?.overall_score ??
+                                                             cv.scoreReport?.overall_score ??
+                                                             cv.metadata?.atsScore ??
+                                                             cv.metadata?.cvScore ??
+                                                             cv.atsScore ??
+                                                             cv.cvScore;
                                             return atsScore !== undefined ? (
                                                 <div className="flex items-center gap-1.5 text-[10px]">
                                                     <BarChart3 size={12} className={atsScore >= 70 ? 'text-green-500' : atsScore >= 50 ? 'text-yellow-500' : 'text-red-500'} />

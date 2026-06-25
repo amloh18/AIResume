@@ -255,6 +255,20 @@ export async function GET(
       jobData: jobData
     };
 
+    // Resolve score from scoreReport if it is present
+    const reportScore = responseCv.metadata?.surgeonAnalysis?.scoreReport?.overall_score || 
+                        responseCv.scoreReport?.overall_score;
+
+    if (reportScore !== undefined && reportScore !== null && reportScore > 0) {
+      if (responseCv.metadata) {
+        if (responseCv.cvType === 'journey') {
+          responseCv.metadata.atsScore = reportScore;
+        } else {
+          responseCv.metadata.cvScore = reportScore;
+        }
+      }
+    }
+
     return NextResponse.json({
       success: true,
       data: {

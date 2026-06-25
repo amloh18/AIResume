@@ -805,7 +805,7 @@ export default function SurgeonReportModal({ isOpen, onClose, onReviewAndFix }: 
                               undefined,
                               state.jobData
                             );
-                            dispatch({ type: 'SET_SURGEON_ANALYSIS', payload: { score: result.score, fixes: result.fixes } });
+                            dispatch({ type: 'SET_SURGEON_ANALYSIS', payload: { score: result.score, fixes: result.fixes, scoreReport: result.scoreReport } });
                             dispatch({ type: 'SET_FIX_ANNOTATIONS', payload: result.annotations });
 
                             // Update ATS Context
@@ -817,6 +817,7 @@ export default function SurgeonReportModal({ isOpen, onClose, onReviewAndFix }: 
                                 targetRole: state.targetRole || '',
                                 seniorityLevel: state.seniorityLevel || '',
                                 analyzedAt: new Date(),
+                                scoreReport: result.scoreReport,
                               }, state.cvId).catch(err => {
                                 console.warn('Failed to update surgeon analysis in context:', err);
                               });

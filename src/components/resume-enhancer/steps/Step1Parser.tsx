@@ -119,6 +119,168 @@ const LazyThumbnail = ({ item, isCoverLetter = false }: { item: any, isCoverLett
   );
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// CVPairThumbnail – CV card with spring-physics cover-letter hover reveal
+// ─────────────────────────────────────────────────────────────────────────────
+interface CVPairThumbnailProps {
+  cv: any;
+  coverLetters: any[];
+  index: number;
+  onEditCV: () => void;
+  onDeleteCV: (e: React.MouseEvent) => void;
+  onEditCoverLetter: (cl: any) => void;
+  onDeleteCoverLetter: (cl: any, e: React.MouseEvent) => void;
+  getRelativeTime: (dateStr: string) => string;
+  getScoreForCV: (cv: any) => number | undefined;
+}
+
+const CVPairThumbnail: React.FC<CVPairThumbnailProps> = ({
+  cv, coverLetters, index,
+  onEditCV, onDeleteCV, onEditCoverLetter, onDeleteCoverLetter,
+  getRelativeTime, getScoreForCV,
+}) => {
+  const [isHovered, setIsHovered] = React.useState(false);
+  const hasCoverLetter = coverLetters.length > 0;
+  const firstCL = coverLetters[0];
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9, y: 20 }}
+      whileInView={{ opacity: 1, scale: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ delay: index * 0.05 }}
+      className="step-one-document-card group relative"
+      onHoverStart={() => setIsHovered(true)}
+      onHoverEnd={() => setIsHovered(false)}
+      style={{ isolation: 'isolate' }}
+    >
+      {/* CV Card */}
+      <div
+        className="step-one-document-preview relative aspect-[1/1.414] w-full rounded-none overflow-hidden bg-white shadow-md hover:shadow-xl transition-shadow duration-300 cursor-pointer"
+        onClick={onEditCV}
+      >
+        <LazyThumbnail item={cv} />
+
+        {/* CV type badge */}
+        <div className="absolute top-2 sm:top-4 left-2 sm:left-4 z-30">
+          <span className={`px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[6px] sm:text-[7px] font-black uppercase tracking-wider shadow-md ${
+            cv.cvType === 'master' ? 'bg-[#0D2C54]/90 text-blue-200' :
+            cv.cvType === 'journey' ? 'bg-[#5C3A21]/90 text-amber-200' :
+            'bg-[#134074]/90 text-cyan-200'
+          }`}>
+            {cv.cvType === 'master' ? 'Primary' : cv.cvType === 'journey' ? 'Job Based' : 'Custom'}
+          </span>
+        </div>
+
+        {/* Cover Letter idle indicator badge */}
+        {hasCoverLetter && (
+          <motion.div
+            animate={{ opacity: isHovered ? 0 : 1 }}
+            transition={{ duration: 0.15 }}
+            className="absolute bottom-12 sm:bottom-14 right-2 sm:right-3 z-30"
+          >
+            <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[7px] font-black bg-emerald-500/90 text-white shadow-lg shadow-emerald-500/30 border border-emerald-400/30 backdrop-blur-sm">
+              <svg className="w-2 h-2 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+              CL
+            </span>
+          </motion.div>
+        )}
+
+        {/* Edit/Delete hover buttons */}
+        <div className="absolute top-2 sm:top-4 right-2 sm:right-4 z-30 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
+          <div className="w-7 h-7 sm:w-9 sm:h-9 bg-black/60 backdrop-blur-md rounded-lg flex items-center justify-center shadow-lg hover:bg-lime-500 hover:text-black text-white transition-colors duration-200">
+            <Edit2 className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5" />
+          </div>
+          {cv.cvType !== 'master' && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onDeleteCV(e); }}
+              className="w-7 h-7 sm:w-9 sm:h-9 bg-black/60 backdrop-blur-md rounded-lg flex items-center justify-center shadow-lg hover:bg-red-500 text-red-400 hover:text-white transition-colors duration-200"
+              title="Delete"
+            >
+              <Trash2 className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5" />
+            </button>
+          )}
+        </div>
+
+        {/* Bottom gradient overlay */}
+        <div className="step-one-thumbnail-overlay absolute inset-x-0 bottom-0 z-20 px-3 sm:px-4 pt-10 sm:pt-14 pb-3 sm:pb-3.5 text-white">
+          <h4 className="text-[11px] sm:text-xs font-semibold text-white truncate tracking-tight drop-shadow-sm leading-snug" title={cv.title || 'Untitled Resume'}>
+            {cv.title || 'Untitled Resume'}
+          </h4>
+          <div className="flex items-center justify-between gap-2 mt-1">
+            <p className="text-[9px] sm:text-[10px] text-white/60 font-medium flex items-center gap-1">
+              <span className="w-1 h-1 bg-[#80FF00] rounded-full shadow-[0_0_6px_rgba(128,255,0,0.6)]" />
+              {getRelativeTime(cv.updatedAt || cv.createdAt)}
+            </p>
+            {getScoreForCV(cv) !== undefined && (
+              <span className="text-[9px] sm:text-[10px] font-semibold text-[#80FF00] flex items-center gap-0.5 shrink-0">
+                {getScoreForCV(cv)}% ATS
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Cover Letter spring-reveal overlay — slides in from the right */}
+      {hasCoverLetter && firstCL && (
+        <motion.div
+          initial={false}
+          animate={{
+            x: isHovered ? '-55%' : '15%',
+            opacity: isHovered ? 1 : 0,
+            scale: isHovered ? 0.92 : 0.85,
+          }}
+          transition={{ type: 'spring', stiffness: 300, damping: 28, mass: 0.8 }}
+          className="absolute top-0 right-0 w-[72%] z-40 origin-left cursor-pointer"
+          onClick={(e) => { e.stopPropagation(); onEditCoverLetter(firstCL); }}
+        >
+          <div className="relative aspect-[1/1.414] w-full rounded-lg overflow-hidden bg-white shadow-2xl shadow-black/30 border-2 border-emerald-400/40 ring-1 ring-emerald-400/20">
+            <LazyThumbnail item={firstCL} isCoverLetter={true} />
+
+            {/* CL badge */}
+            <div className="absolute top-2 left-2 z-30">
+              <span className="px-1.5 py-0.5 rounded-full text-[7px] font-black uppercase tracking-wider bg-emerald-600/90 text-white shadow-md">
+                Cover Letter
+              </span>
+            </div>
+
+            {/* Link indicator */}
+            <div className="absolute top-2 right-2 z-30">
+              <div className="w-5 h-5 bg-emerald-500 rounded-full flex items-center justify-center shadow-md shadow-emerald-500/40">
+                <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                </svg>
+              </div>
+            </div>
+
+            {/* Delete CL button */}
+            <button
+              onClick={(e) => { e.stopPropagation(); onDeleteCoverLetter(firstCL, e); }}
+              className="absolute bottom-2 right-2 z-30 w-6 h-6 bg-black/60 backdrop-blur-md rounded-md flex items-center justify-center text-red-400 hover:bg-red-500 hover:text-white transition-colors duration-200 opacity-0 group-hover:opacity-100"
+              title="Delete cover letter"
+            >
+              <Trash2 className="w-3 h-3" />
+            </button>
+
+            {/* CL title bar */}
+            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent px-2 pt-6 pb-2">
+              <p className="text-[9px] text-white/80 font-medium truncate">
+                {firstCL.title || 'Cover Letter'}
+              </p>
+            </div>
+          </div>
+
+          {/* Connector line between CV and CL */}
+          <div className="absolute top-1/2 -left-3 -translate-y-1/2 flex items-center gap-0.5 pointer-events-none">
+            <div className="w-2 h-0.5 bg-emerald-400/60 rounded-full" />
+            <div className="w-1.5 h-1.5 bg-emerald-400/80 rounded-full" />
+          </div>
+        </motion.div>
+      )}
+    </motion.div>
+  );
+};
+
 interface Step1ParserProps {
   onComplete: (cvData: UnifiedCVDataStructure, isExistingCV?: boolean) => void;
   /** Check if user already has a Master CV */
@@ -273,9 +435,15 @@ export default function Step1Parser({
     }
   };
 
-  const cvsWithAts = existingCVs.filter(cv => typeof cv.atsScore === 'number' || (cv as any).metadata?.atsScore !== undefined);
+  const getScoreForCV = (cv: any): number | undefined => {
+    return cv.metadata?.surgeonAnalysis?.scoreReport?.overall_score
+      ?? cv.scoreReport?.overall_score
+      ?? (typeof cv.atsScore === 'number' ? cv.atsScore : undefined)
+      ?? cv.metadata?.atsScore;
+  };
+  const cvsWithAts = existingCVs.filter(cv => getScoreForCV(cv) !== undefined);
   const averageATSScore = cvsWithAts.length > 0 
-    ? Math.round(cvsWithAts.reduce((sum, cv) => sum + (cv.atsScore ?? (cv as any).metadata?.atsScore ?? 0), 0) / cvsWithAts.length) 
+    ? Math.round(cvsWithAts.reduce((sum, cv) => sum + (getScoreForCV(cv) ?? 0), 0) / cvsWithAts.length) 
     : 0;
   const topSectionRef = React.useRef<HTMLDivElement>(null);
   
@@ -407,6 +575,32 @@ export default function Step1Parser({
     if (filterType === 'all') return true;
     return cv.cvType === filterType;
   });
+
+  const coverLetterMap = React.useMemo(() => {
+    const map = new Map<string, any[]>();
+    existingCoverLetters.forEach((cl: any) => {
+      const rawCvId = cl?.cvId;
+      const cvId = rawCvId ? String(rawCvId) : null;
+      if (cvId && cvId !== 'undefined' && cvId !== 'null') {
+        if (!map.has(cvId)) map.set(cvId, []);
+        map.get(cvId)!.push(cl);
+      }
+    });
+    return map;
+  }, [existingCoverLetters]);
+
+  const orphanedCoverLetters = React.useMemo(() => {
+    const pairedCvIds = new Set<string>();
+    filteredCVs.forEach(cv => {
+      const cvId = String(cv.id || cv._id);
+      if (coverLetterMap.has(cvId)) pairedCvIds.add(cvId);
+    });
+    return existingCoverLetters.filter((cl: any) => {
+      const rawCvId = cl?.cvId;
+      const cvId = rawCvId ? String(rawCvId) : null;
+      return !cvId || !pairedCvIds.has(cvId);
+    });
+  }, [filteredCVs, existingCoverLetters, coverLetterMap]);
 
   // Handle editing an existing CV - navigate to editor with full fetch
   const handleEditExistingCV = (cv: ExistingCV) => {
@@ -772,7 +966,7 @@ export default function Step1Parser({
         <div ref={topSectionRef} className="step-one-hero w-full flex flex-col min-h-[30vh] pt-6 sm:pt-8 pb-4 sm:pb-6">
           <div className="w-full max-w-7xl mx-auto px-4 sm:px-8">
             <div
-              className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 sm:gap-6 mb-5 sm:mb-7 origin-bottom max-w-6xl mx-auto w-full"
+              className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 sm:gap-6 mb-5 sm:mb-7 origin-bottom w-full px-1"
             >
               {/* Breadcrumb instead of welcome text */}
               <div className="flex items-center gap-1.5 text-base text-gray-500 dark:text-gray-400 font-medium py-2">
@@ -785,63 +979,77 @@ export default function Step1Parser({
                 <ChevronRight className="h-4 w-4 text-gray-450 dark:text-gray-500" />
                 <span className="text-gray-800 dark:text-gray-200 font-bold">
                   {activeTab === 'cvs' ? 'Editor' : 'Cover Letters'}
-                </span>
-              </div>
+                 </span>
+               </div>
 
-              {/* Stats Widgets */}
-              <div className="grid grid-cols-3 items-stretch gap-2 sm:gap-3 shrink-0 w-full lg:w-auto lg:min-w-[530px]">
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('cvs')}
-                  aria-label={`Show ${existingCVs.length} resumes`}
-                  className="step-one-stat group relative overflow-hidden flex items-center gap-2 sm:gap-3 px-3 sm:px-5 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-r from-lime-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  <div className="step-one-stat-icon relative w-10 h-10 bg-lime-500/10 border border-lime-500/15 rounded-xl flex items-center justify-center text-lime-500 shadow-inner group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-300">
-                    <FileText className="w-5 h-5" />
-                  </div>
-                  <div className="step-one-stat-copy relative text-left">
-                    <div className="text-xl font-black text-gray-900 dark:text-white">{existingCVs.length}</div>
-                    <div className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider">Resumes</div>
-                  </div>
-                </button>
+               {activeDocumentTab && onDocumentTabChange && (
+                 <div
+                   className="flex justify-center self-center"
+                   role="tablist"
+                   aria-label="Document type"
+                 >
+                   <div className="relative grid grid-cols-2 w-full max-w-[330px] sm:w-[310px] rounded-full p-1 bg-[var(--bg-tertiary)] border border-[color:var(--border-primary)] shadow-inner">
+                     <motion.div
+                       className="absolute inset-y-1 w-[calc(50%-4px)] rounded-full bg-[var(--accent-primary)] shadow-[0_5px_18px_rgba(132,204,22,0.22)]"
+                       animate={{ x: (activeDocumentTab ?? 'cvs') === 'cvs' ? 0 : '100%' }}
+                       transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+                     />
+                     {([
+                       ['cvs', 'RESUME'],
+                       ['cover-letters', 'COVER LETTER'],
+                     ] as const).map(([tab, label]) => (
+                       <button
+                         key={tab}
+                         role="tab"
+                         aria-selected={activeDocumentTab === tab}
+                         onClick={() => onDocumentTabChange(tab)}
+                          className={`relative z-10 min-h-9 px-3 rounded-full text-[10px] sm:text-[11px] font-black tracking-[0.13em] transition-colors duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-primary)] ${
+                            activeDocumentTab === tab ? 'text-black' : 'text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)]'
+                          }`}
+                       >
+                         {label}
+                       </button>
+                     ))}
+                   </div>
+                 </div>
+               )}
 
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('cover-letters')}
-                  aria-label={`Show ${existingCoverLetters.length} cover letters`}
-                  className="step-one-stat group relative overflow-hidden flex items-center gap-2 sm:gap-3 px-3 sm:px-5 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  <div className="step-one-stat-icon relative w-10 h-10 bg-purple-500/10 border border-purple-500/15 rounded-xl flex items-center justify-center text-purple-500 shadow-inner group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300">
-                    <Files className="w-5 h-5" />
-                  </div>
-                  <div className="step-one-stat-copy relative text-left">
-                    <div className="text-xl font-black text-gray-900 dark:text-white">{existingCoverLetters.length}</div>
-                    <div className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider">Cover Letters</div>
-                  </div>
-                </button>
+                {/* Stats Widgets */}
+               <div className="flex items-center gap-6 sm:gap-8 shrink-0 w-full lg:w-auto lg:min-w-[400px]">
+                 <button
+                   type="button"
+                   onClick={() => setActiveTab('cvs')}
+                   aria-label={`Show ${existingCVs.length} resumes`}
+                   className="flex flex-col items-start gap-0.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
+                 >
+                   <span className="text-xl font-black text-gray-900 dark:text-white">{existingCVs.length}</span>
+                   <span className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider">Resumes</span>
+                 </button>
 
-                <div className="step-one-stat group relative overflow-hidden flex items-center gap-2 sm:gap-3 px-3 sm:px-5 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl cursor-default">
-                  <div className="absolute inset-0 bg-gradient-to-r from-lime-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  <div className="step-one-stat-icon relative w-10 h-10 bg-lime-500/10 border border-lime-500/15 rounded-xl flex items-center justify-center text-lime-500 dark:text-[#80FF00] shadow-inner group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-300">
-                    <Gauge className="w-5 h-5" />
-                  </div>
-                  <div className="step-one-stat-copy relative text-left">
-                    <div className="text-xl font-black text-gray-900 dark:text-white">
-                      {averageATSScore}%
-                    </div>
-                    <div className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider">Avg. ATS Score</div>
-                  </div>
-                </div>
-              </div>
+                 <button
+                   type="button"
+                   onClick={() => setActiveTab('cover-letters')}
+                   aria-label={`Show ${existingCoverLetters.length} cover letters`}
+                   className="flex flex-col items-start gap-0.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
+                 >
+                   <span className="text-xl font-black text-gray-900 dark:text-white">{existingCoverLetters.length}</span>
+                   <span className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider">Cover Letters</span>
+                 </button>
+
+                 <div className="flex flex-col items-start gap-0.5 text-left">
+                   <span className="text-xl font-black text-gray-900 dark:text-white">
+                     {averageATSScore}%
+                   </span>
+                   <span className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider">Avg. ATS Score</span>
+                 </div>
+               </div>
             </div>
 
-           {/* Action Cards Grid - horizontal scroll on mobile, grid on sm+ */}
-           <div 
-             className="flex sm:grid gap-3 sm:gap-4 origin-top sm:grid-cols-2 lg:grid-cols-3 max-w-6xl mx-auto w-full overflow-x-auto sm:overflow-x-visible pb-2 sm:pb-0 snap-x snap-mandatory sm:snap-none scroll-pl-4 -mx-4 px-4 sm:mx-0 sm:px-0"
-             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-           >
+{/* Action Cards Grid - horizontal scroll on mobile, grid on sm+ */}
+            <div 
+              className="flex sm:grid gap-3 sm:gap-4 origin-top sm:grid-cols-2 lg:grid-cols-3 w-full overflow-x-auto sm:overflow-x-visible pb-2 sm:pb-0 snap-x snap-mandatory sm:snap-none scroll-pl-4 -mx-4 px-4 sm:mx-0 sm:px-0"
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            >
             {activeTab === 'cvs' ? (
               <>
                 {/* Resume Cards */}
@@ -1022,25 +1230,23 @@ export default function Step1Parser({
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                    {activeTab === 'cvs' && (
-                      <label className="relative flex items-center h-10 min-w-[142px] rounded-full border border-gray-200 dark:border-white/5 bg-gray-100 dark:bg-[#141810] text-[color:var(--text-primary)] focus-within:ring-2 focus-within:ring-[var(--accent-primary)]/50 transition-all">
-                        <SlidersHorizontal className="absolute left-3.5 w-3.5 h-3.5 text-[color:var(--text-secondary)] pointer-events-none" />
-                        <span className="sr-only">Filter resumes</span>
-                        <select
-                          value={filterType}
-                          onChange={(event) => setFilterType(event.target.value as typeof filterType)}
-                          className="w-full h-full appearance-none bg-transparent pl-9 pr-8 text-xs font-bold outline-none cursor-pointer"
-                          aria-label="Filter resumes"
-                        >
-                          <option value="all">Recent</option>
-                          <option value="master">Primary</option>
-                          <option value="journey">Job Based</option>
-                          <option value="standalone">Custom</option>
-                          <option value="archived">Archived</option>
-                        </select>
-                        <ChevronDown className="absolute right-3 w-3.5 h-3.5 text-[color:var(--text-secondary)] pointer-events-none" />
-                      </label>
-                    )}
+                    <label className="relative flex items-center h-10 min-w-[142px] rounded-full border border-gray-200 dark:border-white/5 bg-gray-100 dark:bg-[#141810] text-[color:var(--text-primary)] focus-within:ring-2 focus-within:ring-[var(--accent-primary)]/50 transition-all">
+                      <SlidersHorizontal className="absolute left-3.5 w-3.5 h-3.5 text-[color:var(--text-secondary)] pointer-events-none" />
+                      <span className="sr-only">Filter documents</span>
+                      <select
+                        value={filterType}
+                        onChange={(event) => setFilterType(event.target.value as typeof filterType)}
+                        className="w-full h-full appearance-none bg-transparent pl-9 pr-8 text-xs font-bold outline-none cursor-pointer"
+                        aria-label="Filter documents"
+                      >
+                        <option value="all">Recent</option>
+                        <option value="master">Primary</option>
+                        <option value="journey">Job Based</option>
+                        <option value="standalone">Custom</option>
+                        <option value="archived">Archived</option>
+                      </select>
+                      <ChevronDown className="absolute right-3 w-3.5 h-3.5 text-[color:var(--text-secondary)] pointer-events-none" />
+                    </label>
 
                     {/* Grid / List Layout Switcher */}
                     <div className="flex items-center bg-gray-100 dark:bg-[#141810] p-1 rounded-full border border-gray-200 dark:border-white/5 w-fit">
@@ -1080,7 +1286,7 @@ export default function Step1Parser({
                     </div>
                   ))}
                 </div>
-              ) : activeTab === 'cvs' && (filteredCVs.length > 0 || draftCV) ? (
+              ) : (filteredCVs.length > 0 || draftCV || orphanedCoverLetters.length > 0) ? (
                 viewLayout === 'grid' ? (
                   <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5 px-1">
                   
@@ -1164,68 +1370,69 @@ export default function Step1Parser({
                     </motion.div>
                   )}
   
-                  {filteredCVs.map((cv, index) => (
-                    <motion.div
-                      key={cv.id || cv._id}
-                      initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                      whileInView={{ opacity: 1, scale: 1, y: 0 }}
-                      viewport={{ once: true }}
-                      transition={{ delay: index * 0.05 }}
-                      onClick={() => handleEditExistingCV(cv)}
-                      className="step-one-document-card group cursor-pointer hover:scale-[1.01] transition-all duration-300 relative overflow-hidden"
-                    >
-                      <div className="step-one-document-preview relative aspect-[1/1.414] w-full rounded-none overflow-hidden bg-white shadow-md hover:shadow-xl transition-shadow duration-300">
-                        <LazyThumbnail item={cv} />
-                        
-                        <div className="absolute top-2 sm:top-4 left-2 sm:left-4 z-30">
-                          <span className={`px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[6px] sm:text-[7px] font-black uppercase tracking-wider shadow-md ${
-                            cv.cvType === 'master' ? 'bg-[#0D2C54]/90 text-blue-200' :
-                            cv.cvType === 'journey' ? 'bg-[#5C3A21]/90 text-amber-200' :
-                            'bg-[#134074]/90 text-cyan-200'
-                          }`}>
-                            {cv.cvType === 'master' ? 'Primary' : cv.cvType === 'journey' ? 'Job Based' : 'Custom'}
-                          </span>
-                        </div>
-                        
-                        <div className="absolute top-2 sm:top-4 right-2 sm:right-4 z-30 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
-                          <div className="w-7 h-7 sm:w-9 sm:h-9 bg-black/60 backdrop-blur-md rounded-lg flex items-center justify-center shadow-lg hover:bg-lime-500 hover:text-black text-white transition-colors duration-200">
-                            <Edit2 className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5" />
-                          </div>
-                          {cv.cvType !== 'master' && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteCV(cv.id || cv._id || '', e);
-                              }}
-                              className="w-7 h-7 sm:w-9 sm:h-9 bg-black/60 backdrop-blur-md rounded-lg flex items-center justify-center shadow-lg hover:bg-red-500 text-red-400 hover:text-white transition-colors duration-200"
-                              title="Delete"
-                            >
-                              <Trash2 className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5" />
-                            </button>
-                          )}
-                        </div>
+                   {filteredCVs.map((cv, index) => {
+                     const cvCoverLetters = coverLetterMap.get(String(cv.id || cv._id)) || [];
+                     return (
+                       <CVPairThumbnail
+                         key={cv.id || cv._id}
+                         cv={cv}
+                         coverLetters={cvCoverLetters}
+                         index={index}
+                         onEditCV={() => handleEditExistingCV(cv)}
+                         onDeleteCV={(e) => { e.stopPropagation(); handleDeleteCV(cv.id || cv._id || '', e); }}
+                         onEditCoverLetter={(cl) => router.push(`/editor?mode=edit-cover-letter&coverLetterId=${cl.id || cl._id}`)}
+                         onDeleteCoverLetter={(cl, e) => { e.stopPropagation(); handleDeleteCoverLetter(cl.id || cl._id || '', e); }}
+                         getRelativeTime={getRelativeTime}
+                         getScoreForCV={getScoreForCV}
+                       />
+                     );
+                   })}
+                   {orphanedCoverLetters.map((cl: any) => (
+                     <motion.div
+                       key={cl.id || cl._id}
+                       initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                       whileInView={{ opacity: 1, scale: 1, y: 0 }}
+                       viewport={{ once: true }}
+                       onClick={() => router.push(`/editor?mode=edit-cover-letter&coverLetterId=${cl.id || cl._id}`)}
+                       className="step-one-document-card group cursor-pointer hover:scale-[1.01] transition-all duration-300 relative overflow-hidden"
+                     >
+                       <div className="step-one-document-preview relative aspect-[1/1.414] w-full rounded-none overflow-hidden bg-white shadow-md hover:shadow-xl transition-shadow duration-300">
+                         <LazyThumbnail item={cl} isCoverLetter={true} />
 
-                        <div className="step-one-thumbnail-overlay absolute inset-x-0 bottom-0 z-20 px-3 sm:px-4 pt-10 sm:pt-14 pb-3 sm:pb-3.5 text-white">
-                          {/* Title */}
-                          <h4 className="text-[11px] sm:text-xs font-semibold text-white truncate tracking-tight drop-shadow-sm leading-snug" title={cv.title || 'Untitled Resume'}>
-                            {cv.title || 'Untitled Resume'}
-                          </h4>
-                          {/* Inline meta row: time + ATS score */}
-                          <div className="flex items-center justify-between gap-2 mt-1">
-                            <p className="text-[9px] sm:text-[10px] text-white/60 font-medium flex items-center gap-1">
-                              <span className="w-1 h-1 bg-[#80FF00] rounded-full shadow-[0_0_6px_rgba(128,255,0,0.6)]" />
-                              {getRelativeTime(cv.updatedAt || cv.createdAt)}
-                            </p>
-                            {(typeof cv.atsScore === 'number' || (cv as any).metadata?.atsScore !== undefined) && (
-                              <span className="text-[9px] sm:text-[10px] font-semibold text-[#80FF00] flex items-center gap-0.5 shrink-0">
-                                {cv.atsScore ?? (cv as any).metadata?.atsScore}% ATS
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))}
+                         <div className="absolute top-2 sm:top-4 left-2 sm:left-4 z-30">
+                           <span className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[7px] sm:text-[9px] font-black uppercase tracking-wider shadow-md bg-emerald-600 text-white shadow-emerald-500/20">
+                             Cover Letter
+                           </span>
+                         </div>
+
+                         <div className="absolute top-2 sm:top-4 right-2 sm:right-4 z-30 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
+                           <div className="w-7 h-7 sm:w-9 sm:h-9 bg-black/60 backdrop-blur-md rounded-lg flex items-center justify-center shadow-lg hover:bg-lime-500 hover:text-black text-white transition-colors duration-200">
+                             <Edit2 className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5" />
+                           </div>
+                           <button
+                             onClick={(e) => {
+                               e.stopPropagation();
+                               handleDeleteCoverLetter(cl.id || cl._id || '', e);
+                             }}
+                             className="w-7 h-7 sm:w-9 sm:h-9 bg-black/60 backdrop-blur-md rounded-lg flex items-center justify-center shadow-lg hover:bg-red-500 text-red-400 hover:text-white transition-colors duration-200"
+                             title="Delete"
+                           >
+                             <Trash2 className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5" />
+                           </button>
+                         </div>
+
+                         <div className="step-one-thumbnail-overlay absolute inset-x-0 bottom-0 z-20 px-3 sm:px-4 pt-10 sm:pt-14 pb-3 sm:pb-3.5 text-white">
+                           <h4 className="text-[11px] sm:text-xs font-semibold text-white truncate tracking-tight drop-shadow-sm leading-snug" title={cl.title || 'Untitled Cover Letter'}>
+                             {cl.title || 'Untitled Cover Letter'}
+                           </h4>
+                           <p className="text-[9px] sm:text-[10px] text-white/60 font-medium flex items-center gap-1 mt-1">
+                             <span className="w-1 h-1 bg-[#80FF00] rounded-full shadow-[0_0_6px_rgba(128,255,0,0.6)]" />
+                             {getRelativeTime(cl.updatedAt || cl.createdAt)}
+                           </p>
+                         </div>
+                       </div>
+                     </motion.div>
+                   ))}
                 </div>
                 ) : (
                   <div className="flex flex-col gap-3 px-1">
@@ -1304,236 +1511,230 @@ export default function Step1Parser({
                       </motion.div>
                     )}
   
-                    {filteredCVs.map((cv, index) => (
-                      <motion.div
-                        key={cv.id || cv._id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.03 }}
-                        onClick={() => handleEditExistingCV(cv)}
-                        className="group cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-white dark:bg-[#141810] border border-gray-250 dark:border-white/5 rounded-2xl hover:border-lime-500/30 hover:shadow-lg transition-all duration-300 w-full"
-                      >
-                        <div className="flex items-center gap-4 flex-grow min-w-0">
-                          {/* Mini Thumbnail */}
-                          <div className="w-10 h-14 bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 rounded-none overflow-hidden flex-shrink-0 relative">
-                            <LazyThumbnail item={cv} />
-                          </div>
-                          <div className="min-w-0">
-                            <h4 className="text-base font-black text-gray-900 dark:text-white truncate group-hover:text-lime-600 dark:group-hover:text-lime-500">
-                              {cv.title || 'Untitled Resume'}
-                            </h4>
-                            <div className="flex flex-wrap items-center gap-2 mt-1">
-                              <span className={`px-2 py-0.5 rounded-full text-[7px] font-black uppercase tracking-wider ${
-                                cv.cvType === 'master' ? 'bg-[#0D2C54] text-blue-200' :
-                                cv.cvType === 'journey' ? 'bg-[#5C3A21] text-amber-200' :
-                                'bg-[#134074] text-cyan-200'
-                              }`}>
-                                {cv.cvType === 'master' ? 'Primary' : cv.cvType === 'journey' ? 'Job Based' : 'Custom'}
-                              </span>
-                              <span className="text-[10px] text-gray-500 dark:text-gray-400 font-bold">
-                                Edited {getRelativeTime(cv.updatedAt || cv.createdAt)}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-  
-                        <div className="flex items-center gap-4 shrink-0 justify-between sm:justify-end w-full sm:w-auto">
-                          {/* ATS Score */}
-                          {(typeof cv.atsScore === 'number' || (cv as any).metadata?.atsScore !== undefined) ? (
-                            <div className="flex items-center gap-1.5 shrink-0 bg-lime-500/10 dark:bg-[#80FF00]/10 border border-lime-500/20 dark:border-[#80FF00]/20 px-2.5 py-1 rounded-full text-lime-600 dark:text-[#80FF00]">
-                              <span className="w-1.5 h-1.5 rounded-full bg-lime-500 dark:bg-[#80FF00] animate-pulse" />
-                              <span className="text-xs font-black">{cv.atsScore ?? (cv as any).metadata?.atsScore}%</span>
-                              <span className="text-[8px] uppercase tracking-wider text-gray-500 dark:text-gray-405 font-bold">ATS</span>
-                            </div>
-                          ) : (
-                            <div className="w-1" />
-                          )}
-  
-                          {/* Avatars */}
-                          <div className="hidden xs:flex items-center -space-x-1.5 overflow-hidden">
-                            <div className="inline-block h-6 w-6 rounded-full ring-2 ring-white dark:ring-[#141810] bg-blue-500 flex items-center justify-center text-[9px] font-bold text-white shadow-sm">
-                              {cv.title ? cv.title.substring(0, 2).toUpperCase() : 'CV'}
-                            </div>
-                            <div className="inline-block h-6 w-6 rounded-full ring-2 ring-white dark:ring-[#141810] bg-[#80FF00] flex items-center justify-center text-[9px] font-black text-black shadow-sm">
-                              JD
-                            </div>
-                          </div>
-  
-                          {/* Action Buttons */}
-                          <div className="flex items-center gap-1.5">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleEditExistingCV(cv);
-                              }}
-                              className="p-2 bg-gray-100 hover:bg-lime-500 hover:text-black dark:bg-[#1a230f]/60 dark:hover:bg-[#80FF00] dark:hover:text-black text-gray-700 dark:text-gray-300 rounded-lg transition-all"
-                              title="Edit"
-                            >
-                              <Edit2 className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={(e) => handleDuplicateCV(cv.id || cv._id || '', cv.title, e)}
-                              className="p-2 bg-gray-100 hover:bg-lime-500 hover:text-black dark:bg-[#1a230f]/60 dark:hover:bg-[#80FF00] dark:hover:text-black text-gray-700 dark:text-gray-300 rounded-lg transition-all"
-                              title="Duplicate"
-                            >
-                              <Copy className="w-4 h-4" />
-                            </button>
-                            {cv.cvType !== 'master' && (
-                              <button
-                                onClick={(e) => handleDeleteCV(cv.id || cv._id || '', e)}
-                                className="p-2 bg-gray-100 hover:bg-red-500 hover:text-white dark:bg-[#1a230f]/60 dark:hover:bg-red-650 dark:hover:text-white text-red-500 dark:text-red-400 rounded-lg transition-all"
-                                title="Delete"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      </motion.div>
-                    ))}
+                     {filteredCVs.map((cv, index) => {
+                       const cvCoverLetters = coverLetterMap.get(String(cv.id || cv._id)) || [];
+                       return (
+                         <React.Fragment key={cv.id || cv._id}>
+                           <motion.div
+                             initial={{ opacity: 0, y: 10 }}
+                             animate={{ opacity: 1, y: 0 }}
+                             transition={{ delay: index * 0.03 }}
+                             onClick={() => handleEditExistingCV(cv)}
+                             className="group cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-white dark:bg-[#141810] border border-gray-250 dark:border-white/5 rounded-2xl hover:border-lime-500/30 hover:shadow-lg transition-all duration-300 w-full"
+                           >
+                             <div className="flex items-center gap-4 flex-grow min-w-0">
+                               <div className="w-10 h-14 bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 rounded-none overflow-hidden flex-shrink-0 relative">
+                                 <LazyThumbnail item={cv} />
+                               </div>
+                               <div className="min-w-0">
+                                 <h4 className="text-base font-black text-gray-900 dark:text-white truncate group-hover:text-lime-600 dark:group-hover:text-lime-500">
+                                   {cv.title || 'Untitled Resume'}
+                                 </h4>
+                                 <div className="flex flex-wrap items-center gap-2 mt-1">
+                                   <span className={`px-2 py-0.5 rounded-full text-[7px] font-black uppercase tracking-wider ${
+                                     cv.cvType === 'master' ? 'bg-[#0D2C54] text-blue-200' :
+                                     cv.cvType === 'journey' ? 'bg-[#5C3A21] text-amber-200' :
+                                     'bg-[#134074] text-cyan-200'
+                                   }`}>
+                                     {cv.cvType === 'master' ? 'Primary' : cv.cvType === 'journey' ? 'Job Based' : 'Custom'}
+                                   </span>
+                                   <span className="text-[10px] text-gray-500 dark:text-gray-400 font-bold">
+                                     Edited {getRelativeTime(cv.updatedAt || cv.createdAt)}
+                                   </span>
+                                 </div>
+                               </div>
+                             </div>
+
+                             <div className="flex items-center gap-4 shrink-0 justify-between sm:justify-end w-full sm:w-auto">
+                               {cvCoverLetters.length > 0 && (
+                                 <div className="hidden sm:flex items-center gap-2">
+                                   {cvCoverLetters.map((cl: any) => (
+                                     <div
+                                       key={cl.id || cl._id}
+                                       onClick={(e) => {
+                                         e.stopPropagation();
+                                         router.push(`/editor?mode=edit-cover-letter&coverLetterId=${cl.id || cl._id}`);
+                                       }}
+                                       className="flex items-center gap-1.5 px-2 py-1 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-lg cursor-pointer hover:bg-emerald-100 dark:hover:bg-emerald-500/20 transition-colors"
+                                       title={cl.title || 'Cover Letter'}
+                                     >
+                                       <FileText className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                                       <span className="text-[9px] font-black text-emerald-700 dark:text-emerald-300 truncate max-w-[80px]">
+                                         {cl.title || 'Cover Letter'}
+                                       </span>
+                                     </div>
+                                   ))}
+                                 </div>
+                               )}
+
+                               {(typeof cv.atsScore === 'number' || (cv as any).metadata?.atsScore !== undefined) ? (
+                                 <div className="flex items-center gap-1.5 shrink-0 bg-lime-500/10 dark:bg-[#80FF00]/10 border border-lime-500/20 dark:border-[#80FF00]/20 px-2.5 py-1 rounded-full text-lime-600 dark:text-[#80FF00]">
+                                   <span className="w-1.5 h-1.5 rounded-full bg-lime-500 dark:bg-[#80FF00] animate-pulse" />
+                                   <span className="text-xs font-black">{cv.atsScore ?? (cv as any).metadata?.atsScore}%</span>
+                                   <span className="text-[8px] uppercase tracking-wider text-gray-500 dark:text-gray-405 font-bold">ATS</span>
+                                 </div>
+                               ) : (
+                                 <div className="w-1" />
+                               )}
+
+                               <div className="hidden xs:flex items-center -space-x-1.5 overflow-hidden">
+                                 <div className="inline-block h-6 w-6 rounded-full ring-2 ring-white dark:ring-[#141810] bg-blue-500 flex items-center justify-center text-[9px] font-bold text-white shadow-sm">
+                                   {cv.title ? cv.title.substring(0, 2).toUpperCase() : 'CV'}
+                                 </div>
+                                 <div className="inline-block h-6 w-6 rounded-full ring-2 ring-white dark:ring-[#141810] bg-[#80FF00] flex items-center justify-center text-[9px] font-black text-black shadow-sm">
+                                   JD
+                                 </div>
+                               </div>
+
+                               <div className="flex items-center gap-1.5">
+                                 <button
+                                   onClick={(e) => {
+                                     e.stopPropagation();
+                                     handleEditExistingCV(cv);
+                                   }}
+                                   className="p-2 bg-gray-100 hover:bg-lime-500 hover:text-black dark:bg-[#1a230f]/60 dark:hover:bg-[#80FF00] dark:hover:text-black text-gray-700 dark:text-gray-300 rounded-lg transition-all"
+                                   title="Edit"
+                                 >
+                                   <Edit2 className="w-4 h-4" />
+                                 </button>
+                                 <button
+                                   onClick={(e) => handleDuplicateCV(cv.id || cv._id || '', cv.title, e)}
+                                   className="p-2 bg-gray-100 hover:bg-lime-500 hover:text-black dark:bg-[#1a230f]/60 dark:hover:bg-[#80FF00] dark:hover:text-black text-gray-700 dark:text-gray-300 rounded-lg transition-all"
+                                   title="Duplicate"
+                                 >
+                                   <Copy className="w-4 h-4" />
+                                 </button>
+                                 {cv.cvType !== 'master' && (
+                                   <button
+                                     onClick={(e) => handleDeleteCV(cv.id || cv._id || '', e)}
+                                     className="p-2 bg-gray-100 hover:bg-red-500 hover:text-white dark:bg-[#1a230f]/60 dark:hover:bg-red-650 dark:hover:text-white text-red-500 dark:text-red-400 rounded-lg transition-all"
+                                     title="Delete"
+                                   >
+                                     <Trash2 className="w-4 h-4" />
+                                   </button>
+                                 )}
+                               </div>
+                             </div>
+                           </motion.div>
+
+                           {cvCoverLetters.length > 0 && (
+                             <div className="sm:pl-14 pl-2 flex flex-col gap-2">
+                               {cvCoverLetters.map((cl: any) => (
+                                 <motion.div
+                                   key={cl.id || cl._id}
+                                   initial={{ opacity: 0, x: -10 }}
+                                   animate={{ opacity: 1, x: 0 }}
+                                   onClick={() => router.push(`/editor?mode=edit-cover-letter&coverLetterId=${cl.id || cl._id}`)}
+                                   className="group cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-white dark:bg-[#141810] border border-gray-250 dark:border-white/5 rounded-2xl hover:border-emerald-500/30 hover:shadow-lg transition-all duration-300 w-full"
+                                 >
+                                   <div className="flex items-center gap-3 flex-grow min-w-0">
+                                     <div className="w-8 h-10 bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 rounded-none overflow-hidden flex-shrink-0 relative">
+                                       <LazyThumbnail item={cl} isCoverLetter={true} />
+                                     </div>
+                                     <div className="min-w-0">
+                                       <h4 className="text-sm font-black text-gray-900 dark:text-white truncate group-hover:text-emerald-600 dark:group-hover:text-emerald-500">
+                                         {cl.title || 'Untitled Cover Letter'}
+                                       </h4>
+                                       <div className="flex items-center gap-2 mt-0.5">
+                                         <span className="px-2 py-0.5 rounded-full text-[7px] font-black uppercase tracking-wider bg-emerald-600 text-white">
+                                           Cover Letter
+                                         </span>
+                                         <span className="text-[10px] text-gray-500 dark:text-gray-400 font-bold">
+                                           Edited {getRelativeTime(cl.updatedAt || cl.createdAt)}
+                                         </span>
+                                       </div>
+                                     </div>
+                                   </div>
+
+                                   <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-auto">
+                                     <button
+                                       onClick={(e) => {
+                                         e.stopPropagation();
+                                         router.push(`/editor?mode=edit-cover-letter&coverLetterId=${cl.id || cl._id}`);
+                                       }}
+                                       className="p-2 bg-gray-100 hover:bg-lime-500 hover:text-black dark:bg-[#1a230f]/60 dark:hover:bg-[#80FF00] dark:hover:text-black text-gray-700 dark:text-gray-300 rounded-lg transition-all"
+                                       title="Edit"
+                                     >
+                                       <Edit2 className="w-4 h-4" />
+                                     </button>
+                                     <button
+                                       onClick={(e) => handleDeleteCoverLetter(cl.id || cl._id || '', e)}
+                                       className="p-2 bg-gray-100 hover:bg-red-500 hover:text-white dark:bg-[#1a230f]/60 dark:hover:bg-red-650 dark:hover:text-white text-red-500 dark:text-red-400 rounded-lg transition-all"
+                                       title="Delete"
+                                     >
+                                       <Trash2 className="w-4 h-4" />
+                                     </button>
+                                   </div>
+                                 </motion.div>
+                               ))}
+                             </div>
+                           )}
+                         </React.Fragment>
+                       );
+                     })}
+
+                     {orphanedCoverLetters.map((cl: any) => (
+                       <motion.div
+                         key={cl.id || cl._id}
+                         initial={{ opacity: 0, y: 10 }}
+                         animate={{ opacity: 1, y: 0 }}
+                         onClick={() => router.push(`/editor?mode=edit-cover-letter&coverLetterId=${cl.id || cl._id}`)}
+                         className="group cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-white dark:bg-[#141810] border border-gray-250 dark:border-white/5 rounded-2xl hover:border-lime-500/30 hover:shadow-lg transition-all duration-300 w-full"
+                       >
+                         <div className="flex items-center gap-4 flex-grow min-w-0">
+                           <div className="w-10 h-10 bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 rounded-none overflow-hidden flex-shrink-0 relative">
+                             <LazyThumbnail item={cl} isCoverLetter={true} />
+                           </div>
+                           <div className="min-w-0">
+                             <h4 className="text-base font-black text-gray-900 dark:text-white truncate group-hover:text-lime-600 dark:group-hover:text-lime-500">
+                               {cl.title || 'Untitled Cover Letter'}
+                             </h4>
+                             <div className="flex flex-wrap items-center gap-2 mt-1">
+                               <span className="px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-emerald-600 text-white">
+                                 Cover Letter
+                               </span>
+                               <span className="text-[10px] text-gray-500 dark:text-gray-400 font-bold">
+                                 Edited {getRelativeTime(cl.updatedAt || cl.createdAt)}
+                               </span>
+                             </div>
+                           </div>
+                         </div>
+
+                         <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-auto">
+                           <button
+                             onClick={(e) => {
+                               e.stopPropagation();
+                               router.push(`/editor?mode=edit-cover-letter&coverLetterId=${cl.id || cl._id}`);
+                             }}
+                             className="p-2 bg-gray-100 hover:bg-lime-500 hover:text-black dark:bg-[#1a230f]/60 dark:hover:bg-[#80FF00] dark:hover:text-black text-gray-700 dark:text-gray-300 rounded-lg transition-all"
+                             title="Edit"
+                           >
+                             <Edit2 className="w-4 h-4" />
+                           </button>
+                           <button
+                             onClick={(e) => handleDeleteCoverLetter(cl.id || cl._id || '', e)}
+                             className="p-2 bg-gray-100 hover:bg-red-500 hover:text-white dark:bg-[#1a230f]/60 dark:hover:bg-red-650 dark:hover:text-white text-red-500 dark:text-red-400 rounded-lg transition-all"
+                             title="Delete"
+                           >
+                             <Trash2 className="w-4 h-4" />
+                           </button>
+                         </div>
+                       </motion.div>
+                     ))}
                   </div>
                 )
-            ) : activeTab === 'cvs' ? (
+              ) : (
                 <div className="text-center py-16 sm:py-32 bg-black/5 dark:bg-white/[0.02] rounded-2xl sm:rounded-[3rem] border-2 border-dashed border-gray-200 dark:border-white/10 mx-1">
                   <FolderOpen className="w-12 h-12 sm:w-20 sm:h-20 text-gray-200 dark:text-gray-800 mx-auto mb-6 sm:mb-8 animate-bounce transition-all duration-1000" />
-                  <h4 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white mb-2 sm:mb-3 tracking-tight">No Resumes</h4>
+                  <h4 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white mb-2 sm:mb-3 tracking-tight">No Documents</h4>
                   <p className="text-base sm:text-lg text-gray-600 dark:text-gray-400 font-medium max-w-xs mx-auto px-4">
-                    Build your first high-performance resume using the options above.
+                    Build your first high-performance resume or cover letter using the options above.
                   </p>
                 </div>
-              ) : null}
-
-              {/* Cover Letters Grid */}
-              {activeTab === 'cover-letters' && (
-                isLoadingCoverLetters ? (
-                  <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5 px-1">
-                    {[1, 2, 3, 4, 5].map(i => (
-                      <div key={i} className="flex flex-col gap-2 sm:gap-3">
-                        <div className="w-full aspect-[1/1.414] bg-gray-100 dark:bg-white/5 rounded-none animate-pulse border border-gray-200 dark:border-white/5" />
-                        <div className="h-4 sm:h-5 w-3/4 bg-gray-100 dark:bg-white/5 rounded animate-pulse" />
-                        <div className="h-2.5 sm:h-3 w-1/2 bg-gray-100 dark:bg-white/5 rounded animate-pulse" />
-                      </div>
-                    ))}
-                  </div>
-                ) : existingCoverLetters && existingCoverLetters.length > 0 ? (
-                  viewLayout === 'grid' ? (
-                    <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5 px-1">
-                      {existingCoverLetters.map((cl, index) => (
-                        <motion.div
-                          key={cl.id || cl._id}
-                          initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                          whileInView={{ opacity: 1, scale: 1, y: 0 }}
-                          viewport={{ once: true }}
-                          transition={{ delay: index * 0.05 }}
-                          onClick={() => router.push(`/editor?mode=edit-cover-letter&coverLetterId=${cl.id || cl._id}`)}
-                          className="step-one-document-card group cursor-pointer hover:scale-[1.01] transition-all duration-300 relative overflow-hidden"
-                        >
-                          <div className="step-one-document-preview relative aspect-[1/1.414] w-full rounded-none overflow-hidden bg-white shadow-md hover:shadow-xl transition-shadow duration-300">
-                            <LazyThumbnail item={cl} isCoverLetter={true} />
-                            
-                            <div className="absolute top-2 sm:top-4 left-2 sm:left-4 z-30">
-                              <span className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[7px] sm:text-[9px] font-black uppercase tracking-wider shadow-md bg-emerald-600 text-white shadow-emerald-500/20">
-                                Cover Letter
-                              </span>
-                            </div>
-                            
-                            <div className="absolute top-2 sm:top-4 right-2 sm:right-4 z-30 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
-                              <div className="w-7 h-7 sm:w-9 sm:h-9 bg-black/60 backdrop-blur-md rounded-lg flex items-center justify-center shadow-lg hover:bg-lime-500 hover:text-black text-white transition-colors duration-200">
-                                <Edit2 className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5" />
-                              </div>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteCoverLetter(cl.id || cl._id || '', e);
-                                }}
-                                className="w-7 h-7 sm:w-9 sm:h-9 bg-black/60 backdrop-blur-md rounded-lg flex items-center justify-center shadow-lg hover:bg-red-500 text-red-400 hover:text-white transition-colors duration-200"
-                                title="Delete"
-                              >
-                                <Trash2 className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5" />
-                              </button>
-                            </div>
-
-                            <div className="step-one-thumbnail-overlay absolute inset-x-0 bottom-0 z-20 px-3 sm:px-4 pt-10 sm:pt-14 pb-3 sm:pb-3.5 text-white">
-                              {/* Title */}
-                              <h4 className="text-[11px] sm:text-xs font-semibold text-white truncate tracking-tight drop-shadow-sm leading-snug" title={cl.title || 'Untitled Cover Letter'}>
-                                {cl.title || 'Untitled Cover Letter'}
-                              </h4>
-                              {/* Inline time row */}
-                              <p className="text-[9px] sm:text-[10px] text-white/60 font-medium flex items-center gap-1 mt-1">
-                                <span className="w-1 h-1 bg-[#80FF00] rounded-full shadow-[0_0_6px_rgba(128,255,0,0.6)]" />
-                                {getRelativeTime(cl.updatedAt || cl.createdAt)}
-                              </p>
-                            </div>
-                          </div>
-                        </motion.div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="flex flex-col gap-3 px-1">
-                      {existingCoverLetters.map((cl, index) => (
-                        <motion.div
-                          key={cl.id || cl._id}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: index * 0.03 }}
-                          onClick={() => router.push(`/editor?mode=edit-cover-letter&coverLetterId=${cl.id || cl._id}`)}
-                          className="group cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-white dark:bg-[#141810] border border-gray-250 dark:border-white/5 rounded-2xl hover:border-lime-500/30 hover:shadow-lg transition-all duration-300 w-full"
-                        >
-                          <div className="flex items-center gap-4 flex-grow min-w-0">
-                            {/* Mini Thumbnail */}
-                            <div className="w-10 h-14 bg-gray-55 dark:bg-black/30 border border-gray-200 dark:border-white/10 rounded-none overflow-hidden flex-shrink-0 relative">
-                              <LazyThumbnail item={cl} isCoverLetter={true} />
-                            </div>
-                            <div className="min-w-0">
-                              <h4 className="text-base font-black text-gray-900 dark:text-white truncate group-hover:text-lime-600 dark:group-hover:text-lime-500">
-                                {cl.title || 'Untitled Cover Letter'}
-                              </h4>
-                              <div className="flex items-center gap-2 mt-1">
-                                <span className="px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-emerald-600 text-white">
-                                  Cover Letter
-                                </span>
-                                <span className="text-[10px] text-gray-500 dark:text-gray-400 font-bold">
-                                  Edited {getRelativeTime(cl.updatedAt || cl.createdAt)}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-  
-                          <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-auto">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                router.push(`/editor?mode=edit-cover-letter&coverLetterId=${cl.id || cl._id}`);
-                              }}
-                              className="p-2 bg-gray-100 hover:bg-lime-500 hover:text-black dark:bg-[#1a230f]/60 dark:hover:bg-[#80FF00] dark:hover:text-black text-gray-700 dark:text-gray-300 rounded-lg transition-all"
-                              title="Edit"
-                            >
-                              <Edit2 className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={(e) => handleDeleteCoverLetter(cl.id || cl._id || '', e)}
-                              className="p-2 bg-gray-100 hover:bg-red-500 hover:text-white dark:bg-[#1a230f]/60 dark:hover:bg-red-650 dark:hover:text-white text-red-555 rounded-lg transition-all"
-                              title="Delete"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </motion.div>
-                      ))}
-                    </div>
-                  )
-                ) : (
-                  <div className="text-center py-16 sm:py-32 bg-black/5 dark:bg-white/[0.02] rounded-2xl sm:rounded-[3rem] border-2 border-dashed border-gray-200 dark:border-white/10 mx-1">
-                    <FolderOpen className="w-12 h-12 sm:w-20 sm:h-20 text-gray-400 dark:text-gray-600 mx-auto mb-6 sm:mb-8 animate-bounce transition-all duration-1000" />
-                    <h4 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white mb-2 sm:mb-3 tracking-tight">No Cover Letters</h4>
-                    <p className="text-base sm:text-lg text-gray-600 dark:text-gray-400 font-medium max-w-xs mx-auto px-4">
-                      Create your first cover letter from the dashboard or job application journey.
-                    </p>
-                  </div>
-                )
               )}
+
             </motion.div>
-            </div>
+          </div>
           </div>
         )}
         </motion.div>

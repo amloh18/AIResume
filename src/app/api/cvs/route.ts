@@ -275,6 +275,20 @@ export async function GET(request: NextRequest) {
         finalCvType
       });
 
+      // Resolve score from scoreReport if it is present
+      const reportScore = cv.metadata?.surgeonAnalysis?.scoreReport?.overall_score || 
+                          cv.scoreReport?.overall_score;
+
+      const finalMetadata = { ...baseMetadata };
+
+      if (reportScore !== undefined && reportScore !== null && reportScore > 0) {
+        if (finalCvType === 'journey') {
+          finalMetadata.atsScore = reportScore;
+        } else {
+          finalMetadata.cvScore = reportScore;
+        }
+      }
+
       return {
         id: cv._id,
         title: cv.title,
@@ -288,7 +302,7 @@ export async function GET(request: NextRequest) {
         updatedAt: cv.updatedAt,
         journeyId: cv.journeyId ? (typeof cv.journeyId === 'string' ? cv.journeyId : cv.journeyId.toString()) : undefined, // Include journeyId
         cvType: finalCvType, // Use determined cvType
-        metadata: baseMetadata, // Use filtered metadata for list views
+        metadata: finalMetadata, // Use filtered metadata for list views
         ...(projection === 'full' && {
           cvData: cv.cvData,
           templateId: cv.templateId,

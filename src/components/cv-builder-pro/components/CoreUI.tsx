@@ -648,7 +648,7 @@ export const CanvasZone = ({ readOnly = false, zoneId, blocks, cvData, EditableW
           <AnimatePresence mode="popLayout">
             {blocks.map((instance: any, index: number) => (
               <React.Fragment key={instance?.id || `snippet-${index}`}>
-                {index > 0 && (
+                {index > 0 && !readOnly && (
                   <InsertSnippetHandle
                     onAddSnippet={onAddSnippet}
                     zoneId={zoneId}

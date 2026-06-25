@@ -34,6 +34,7 @@ interface ChatHistoryItem {
 }
 
 const SUGGESTIONS = [
+  { label: '✨ Optimize my CV', prompt: 'Optimize my CV' },
   { label: '🎯 Tailor CV to JD', prompt: 'Tailor my CV to the target job description' },
   { label: '✍️ Improve Summary', prompt: 'Improve my CV summary/profile section to make it more impactful' },
   { label: '🚀 Enhance Bullet Points', prompt: 'Enhance the bullet points in my work experience section with stronger action verbs and metrics' },
@@ -126,6 +127,7 @@ const MoriChatInterface: React.FC = () => {
       const payload = {
         chatId,
         cvId: state.cvId,
+        cvType: state.cvType,
         messages: messages.concat(userMessage),
         cvData: state.cvData,
         selection: currentSelection,

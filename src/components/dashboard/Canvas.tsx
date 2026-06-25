@@ -441,7 +441,11 @@ const Canvas: React.FC = () => {
         cvType: cv.cvType || cv.metadata?.cvType || (cv.journeyId ? 'journey' : cv.metadata?.isMaster ? 'master' : 'standalone'),
         completionPercentage: cv.completionPercentage || calculateCompletionPercentage(cv),
         isMaster: cv.metadata?.isMaster === true || cv.isMaster === true,
-        atsScore: cv.metadata?.atsScore || cv.atsScore,
+        atsScore: cv.metadata?.surgeonAnalysis?.scoreReport?.overall_score ??
+                  cv.scoreReport?.overall_score ??
+                  cv.metadata?.atsScore ??
+                  cv.metadata?.cvScore ??
+                  cv.atsScore,
         metadata: cv.metadata
       })) as CV[];
 
@@ -577,6 +581,19 @@ const Canvas: React.FC = () => {
   };
 
   const calculateCompletionPercentage = (cv: any): number => {
+    // Prioritize overall score from analysis report or metadata score syncs
+    const reportScore = 
+      cv.metadata?.surgeonAnalysis?.scoreReport?.overall_score ??
+      cv.scoreReport?.overall_score ??
+      cv.metadata?.cvScore ??
+      cv.metadata?.atsScore ??
+      cv.atsScore ??
+      cv.cvScore;
+
+    if (reportScore !== undefined && reportScore !== null) {
+      return reportScore;
+    }
+
     // If CV is published, it's considered complete
     if (cv.status === 'published') return 100;
 
@@ -713,7 +730,11 @@ const Canvas: React.FC = () => {
               cv.metadata?.isMaster === 'true' ||
               cv.isMaster === true ||
               cv.metadata?.createdVia === 'ai-career-report',
-            atsScore: cv.metadata?.atsScore, // Single source of truth from CentralScoreManager
+            atsScore: cv.metadata?.surgeonAnalysis?.scoreReport?.overall_score ??
+              cv.scoreReport?.overall_score ??
+              cv.metadata?.atsScore ??
+              cv.metadata?.cvScore ??
+              cv.atsScore, // Single source of truth from CentralScoreManager
             metadata: cv.metadata // Include full metadata
           } as CV;
         });

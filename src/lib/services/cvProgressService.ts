@@ -10,6 +10,19 @@ export class CVProgressService {
    * @returns Completion percentage (0-100)
    */
   static calculateCompletionPercentage(cv: any): number {
+    // Prioritize overall score from analysis report or metadata score syncs
+    const reportScore = 
+      cv.metadata?.surgeonAnalysis?.scoreReport?.overall_score ??
+      cv.scoreReport?.overall_score ??
+      cv.metadata?.cvScore ??
+      cv.metadata?.atsScore ??
+      cv.atsScore ??
+      cv.cvScore;
+
+    if (reportScore !== undefined && reportScore !== null) {
+      return reportScore;
+    }
+
     // If CV is published, it's considered complete
     if (cv.status === 'published') return 100;
     

@@ -245,7 +245,18 @@ export async function POST(request: NextRequest) {
     );
 
     // Use ATS score if available (journey CV), otherwise fall back to CV score
-    const finalScore = scoreResult.atsScore?.total ?? scoreResult.cvScore.total;
+    let finalScore = scoreResult.atsScore?.total ?? scoreResult.cvScore.total;
+
+    // Prioritize overall score from analysis report or metadata score syncs
+    const reportScore = cv.metadata?.surgeonAnalysis?.scoreReport?.overall_score || 
+                        cv.scoreReport?.overall_score ||
+                        cv.metadata?.atsScore ||
+                        cv.metadata?.cvScore;
+
+    if (reportScore !== undefined && reportScore !== null && reportScore > 0) {
+      console.log('📊 ATS Calculate Score API - Overriding calculate-score with surgeon analysis score report:', reportScore);
+      finalScore = reportScore;
+    }
 
     console.log('✅ ATS Calculate Score API - Score calculated using CentralScoreManager:', {
       score: finalScore,

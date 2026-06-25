@@ -77,6 +77,7 @@ export interface ICV extends Document {
       analyzedAt: Date;
       contentHash: string; // Hash of CV content + job data for cache invalidation
       jobDataHash?: string; // Hash of linked job data if present
+      scoreReport?: any; // Cached score report from ANALYSIS_AGENT_PROMPT
     };
   };
 }
@@ -233,7 +234,8 @@ const cvSchema = new Schema<ICV>({
       seniorityLevel: { type: String },
       analyzedAt: { type: Date },
       contentHash: { type: String },
-      jobDataHash: { type: String }
+      jobDataHash: { type: String },
+      scoreReport: { type: Schema.Types.Mixed }
     }
   }
 }, {
