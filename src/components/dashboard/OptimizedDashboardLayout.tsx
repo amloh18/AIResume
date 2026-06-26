@@ -58,7 +58,7 @@ const DashboardContent: React.FC<{ children?: React.ReactNode }> = ({ children }
         {/* Removed padding-left hacks since the sticky sidebar naturally pushes this flex-1 container */}
         <div className="flex flex-col flex-1 layout-stable relative z-0 transition-all duration-300 min-w-0">
           {/* Global Header */}
-          <header className="w-full h-16 bg-white dark:bg-[#141810] flex items-center justify-between px-6 z-30 flex-shrink-0">
+          <header className="w-full h-16 bg-white dark:bg-[#141810] flex items-center justify-between px-6 z-[60] sticky top-0 flex-shrink-0 border-b border-gray-100 dark:border-gray-800/60">
             {/* Left: Mobile hamburger menu toggle */}
             <div className="flex items-center w-[20%] sm:w-[25%] lg:hidden">
               <button

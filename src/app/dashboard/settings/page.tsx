@@ -14,6 +14,7 @@ import {
   CreditCard,
   Gift,
   Link,
+  Mail,
   Users,
   Bell,
   Settings,
@@ -49,6 +50,8 @@ import PageHeader from '@/components/dashboard/PageHeader';
 import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
 import { useUserData } from '@/lib/hooks/useUserData';
 import { getPlanName } from '@/lib/utils/userPlanUtils';
+import toast from 'react-hot-toast';
+import EmailConnectModal from '@/components/dashboard/jobs/EmailConnectModal';
 
 // --- TYPES ---
 
@@ -884,6 +887,39 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  // Integrations States
+  const [emailSyncConnected, setEmailSyncConnected] = useState(false);
+  const [emailSyncAddress, setEmailSyncAddress] = useState('');
+  const [emailSyncProvider, setEmailSyncProvider] = useState<'gmail' | 'outlook' | 'imap'>('gmail');
+  const [emailConnecting, setEmailConnecting] = useState(false);
+  const [emailInput, setEmailInput] = useState('');
+
+  const [isEmailConnectModalOpen, setIsEmailConnectModalOpen] = useState(false);
+  const [modalInitialTab, setModalInitialTab] = useState<'email' | 'calendar'>('email');
+
+  const handleModalConnected = (data: { provider: string; emailAddress: string; syncStatus: string }) => {
+    if (data.provider === 'calendar' || data.provider === 'google') {
+      fetchCalendarSettings();
+    } else {
+      fetchEmailSyncStatus();
+    }
+  };
+
+  const [calendarSettings, setCalendarSettings] = useState<any>({
+    connected: false,
+    provider: 'google',
+    syncEnabled: false,
+    syncSettings: {
+      includeInterviews: true,
+      includeFollowUps: true,
+      includeDeadlines: true,
+      reminderMinutes: 60,
+      colorCoding: true,
+    }
+  });
+  const [calendarConnecting, setCalendarConnecting] = useState(false);
+  const [syncingCalendar, setSyncingCalendar] = useState(false);
+
   // 2FA State
   const [showTwoFactorSetup, setShowTwoFactorSetup] = useState(false);
   const [twoFactorSessionId, setTwoFactorSessionId] = useState<string | null>(null);
@@ -912,6 +948,32 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
 
   const isSocialLogin = ['google', 'apple', 'nextauth'].includes(user?.authProvider?.toLowerCase() || '');
 
+  const fetchEmailSyncStatus = async () => {
+    try {
+      const response = await fetch('/api/tracker/emails/sync');
+      const data = await response.json();
+      if (data.success) {
+        setEmailSyncConnected(data.connected);
+        setEmailSyncAddress(data.emailAddress || '');
+        setEmailSyncProvider(data.provider || 'gmail');
+      }
+    } catch (error) {
+      console.error('Error fetching email sync status:', error);
+    }
+  };
+
+  const fetchCalendarSettings = async () => {
+    try {
+      const response = await fetch('/api/user/settings');
+      const data = await response.json();
+      if (data.success && data.data?.settings?.advanced?.integrations?.calendar) {
+        setCalendarSettings(data.data.settings.advanced.integrations.calendar);
+      }
+    } catch (error) {
+      console.error('Error fetching calendar settings:', error);
+    }
+  };
+
   // Load initial settings from user data
   useEffect(() => {
     if (user?.settings?.notifications) {
@@ -934,11 +996,188 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
     };
     
     fetchSecuritySettings();
+    fetchEmailSyncStatus();
+    fetchCalendarSettings();
   }, [user]);
 
   const showToastNotification = (type: 'success' | 'error' | 'info', message: string) => {
-    // Notification removed - can be implemented with toast library
-    console.log(`${type}: ${message}`);
+    if (type === 'success') {
+      toast.success(message);
+    } else if (type === 'error') {
+      toast.error(message);
+    } else {
+      toast(message);
+    }
+  };
+
+  const handleConnectCalendar = async () => {
+    setCalendarConnecting(true);
+    try {
+      const response = await fetch('/api/calendar/auth');
+      const data = await response.json();
+      if (data.success) {
+        const popup = window.open(
+          data.authUrl,
+          'google-calendar-auth',
+          'width=500,height=600,scrollbars=yes,resizable=yes'
+        );
+        const checkClosed = setInterval(() => {
+          if (popup?.closed) {
+            clearInterval(checkClosed);
+            setCalendarConnecting(false);
+            fetchCalendarSettings();
+            showToastNotification('success', 'Calendar connection complete.');
+          }
+        }, 1000);
+      } else {
+        throw new Error(data.error);
+      }
+    } catch (error) {
+      console.error('Error connecting calendar:', error);
+      setCalendarConnecting(false);
+      showToastNotification('error', 'Failed to connect calendar');
+    }
+  };
+
+  const handleDisconnectCalendar = async () => {
+    try {
+      const updatedCalendar = {
+        ...calendarSettings,
+        connected: false,
+        accessToken: undefined,
+        refreshToken: undefined,
+        syncEnabled: false,
+      };
+      await updateCalendarSettings(updatedCalendar);
+      showToastNotification('success', 'Google Calendar disconnected.');
+    } catch (error) {
+      console.error('Error disconnecting calendar:', error);
+    }
+  };
+
+  const handleForceSyncCalendar = async () => {
+    setSyncingCalendar(true);
+    try {
+      const response = await fetch('/api/calendar/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          accessToken: calendarSettings.accessToken,
+          refreshToken: calendarSettings.refreshToken,
+        }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        showToastNotification('success', `Calendar synced: ${data.syncedCount || 0} applications updated.`);
+      } else {
+        showToastNotification('error', data.error || 'Failed to sync calendar');
+      }
+    } catch (error) {
+      showToastNotification('error', 'Error syncing calendar');
+    } finally {
+      setSyncingCalendar(false);
+    }
+  };
+
+  const updateCalendarSettings = async (updatedCalendar: any) => {
+    try {
+      const response = await fetch('/api/user/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          settings: {
+            advanced: {
+              integrations: {
+                calendar: updatedCalendar
+              }
+            }
+          }
+        })
+      });
+      const data = await response.json();
+      if (data.success) {
+        setCalendarSettings(updatedCalendar);
+      } else {
+        showToastNotification('error', 'Failed to update calendar settings');
+      }
+    } catch (error) {
+      console.error('Error updating calendar settings:', error);
+      showToastNotification('error', 'Error updating calendar settings');
+    }
+  };
+
+  const handleCalendarSettingToggle = async (key: string, value: any) => {
+    const updated = {
+      ...calendarSettings,
+      [key]: value
+    };
+    await updateCalendarSettings(updated);
+  };
+
+  const handleCalendarSubsettingChange = async (key: string, value: any) => {
+    const updated = {
+      ...calendarSettings,
+      syncSettings: {
+        ...(calendarSettings.syncSettings || {}),
+        [key]: value
+      }
+    };
+    await updateCalendarSettings(updated);
+  };
+
+  const handleConnectEmail = async () => {
+    if (!emailInput) return;
+    setEmailConnecting(true);
+    try {
+      const response = await fetch('/api/tracker/emails/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'connect',
+          provider: emailSyncProvider,
+          emailAddress: emailInput
+        })
+      });
+      const data = await response.json();
+      if (data.success) {
+        setEmailSyncConnected(true);
+        setEmailSyncAddress(emailInput);
+        setEmailInput('');
+        showToastNotification('success', `Email tracking connected for ${emailInput}`);
+      } else {
+        showToastNotification('error', data.error || 'Failed to connect email');
+      }
+    } catch (error) {
+      showToastNotification('error', 'Error connecting email');
+    } finally {
+      setEmailConnecting(false);
+    }
+  };
+
+  const handleDisconnectEmail = async () => {
+    if (!confirm('Are you sure you want to disconnect email tracking?')) return;
+    setEmailConnecting(true);
+    try {
+      const response = await fetch('/api/tracker/emails/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'disconnect'
+        })
+      });
+      const data = await response.json();
+      if (data.success) {
+        setEmailSyncConnected(false);
+        setEmailSyncAddress('');
+        showToastNotification('success', 'Email tracking disconnected.');
+      } else {
+        showToastNotification('error', data.error || 'Failed to disconnect email');
+      }
+    } catch (error) {
+      showToastNotification('error', 'Error disconnecting email');
+    } finally {
+      setEmailConnecting(false);
+    }
   };
 
   const handleNotificationToggle = async (type: 'email' | 'push', value: boolean) => {
@@ -1501,9 +1740,174 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
             </div>
           </div>
         </div>
+
+        {/* Integration Section */}
+        <div className="space-y-6 pt-8 border-t border-gray-200 dark:border-gray-700">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+              <Link className="h-5 w-5 text-lime-500" />
+              Integration
+            </h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              Manage your linked email and calendar accounts for automated job application tracking.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            {/* Email Account Integration */}
+            <div className="py-4 border-b border-gray-200 dark:border-gray-700 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <div className="text-sm font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                  <Mail className="h-4 w-4 text-emerald-500" />
+                  Email Integration (Gmail / Outlook)
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-300 mt-1 max-w-xl">
+                  Sync recruiter emails directly. When recruiter messages are matched, the job pipeline stage updates automatically.
+                </div>
+                {emailSyncConnected && (
+                  <div className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold mt-2 flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    Connected to {emailSyncAddress} ({emailSyncProvider.toUpperCase()})
+                  </div>
+                )}
+              </div>
+
+              <div className="flex-shrink-0">
+                {emailSyncConnected ? (
+                  <button
+                    onClick={handleDisconnectEmail}
+                    disabled={emailConnecting}
+                    className="px-4 py-2 border border-red-200 dark:border-red-950 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg text-sm font-medium transition duration-150 disabled:opacity-50"
+                  >
+                    Disconnect
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setModalInitialTab('email');
+                      setIsEmailConnectModalOpen(true);
+                    }}
+                    className="px-4 py-2 bg-lime-500 hover:bg-lime-600 text-black rounded-lg text-xs font-semibold transition"
+                  >
+                    Connect Email
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Calendar Integration */}
+            <div className="py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <div className="text-sm font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-blue-500" />
+                  Calendar Sync (Google Calendar)
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-300 mt-1 max-w-xl">
+                  Automatically synchronize job application deadlines, follow-up reminders, and scheduled recruiter interviews to your primary calendar.
+                </div>
+                {calendarSettings.connected && (
+                  <div className="text-xs text-blue-600 dark:text-blue-400 font-semibold mt-2 flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse"></span>
+                    Connected to Google Calendar
+                  </div>
+                )}
+              </div>
+
+              <div className="flex-shrink-0">
+                {calendarSettings.connected ? (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleForceSyncCalendar}
+                      disabled={syncingCalendar}
+                      className="px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-xs font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition flex items-center gap-1.5"
+                    >
+                      {syncingCalendar ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                      Sync Now
+                    </button>
+                    <button
+                      onClick={handleDisconnectCalendar}
+                      className="px-4 py-2 border border-red-200 dark:border-red-950 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg text-sm font-medium transition"
+                    >
+                      Disconnect
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setModalInitialTab('calendar');
+                      setIsEmailConnectModalOpen(true);
+                    }}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold transition"
+                  >
+                    Connect Calendar
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Expandable Calendar Settings */}
+            {calendarSettings.connected && (
+              <div className="mt-2 pl-4 border-l-2 border-lime-500/30 space-y-4 pt-2">
+                <div className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-white/5">
+                  <div className="space-y-0.5">
+                    <div className="text-xs font-medium text-gray-800 dark:text-gray-200">Enable Calendar Syncing</div>
+                    <div className="text-[10px] text-gray-500 dark:text-gray-400">Keep Google Calendar updated automatically</div>
+                  </div>
+                  <button
+                    onClick={() => handleCalendarSettingToggle('syncEnabled', !calendarSettings.syncEnabled)}
+                    className={`w-10 h-5 rounded-full transition-colors ${calendarSettings.syncEnabled ? 'bg-lime-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+                  >
+                    <div className={`w-4 h-4 bg-white rounded-full transition-transform ${calendarSettings.syncEnabled ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                  </button>
+                </div>
+
+                {calendarSettings.syncEnabled && (
+                  <div className="space-y-3 pl-2">
+                    <div className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sync Options</div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <label className="flex items-center gap-2 text-xs font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={calendarSettings.syncSettings?.includeInterviews ?? true}
+                          onChange={(e) => handleCalendarSubsettingChange('includeInterviews', e.target.checked)}
+                          className="rounded border-gray-300 dark:border-gray-700 text-lime-600 focus:ring-lime-500 h-3.5 w-3.5"
+                        />
+                        Include Interviews
+                      </label>
+                      <label className="flex items-center gap-2 text-xs font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={calendarSettings.syncSettings?.includeFollowUps ?? true}
+                          onChange={(e) => handleCalendarSubsettingChange('includeFollowUps', e.target.checked)}
+                          className="rounded border-gray-300 dark:border-gray-700 text-lime-600 focus:ring-lime-500 h-3.5 w-3.5"
+                        />
+                        Include Follow-ups
+                      </label>
+                      <label className="flex items-center gap-2 text-xs font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={calendarSettings.syncSettings?.includeDeadlines ?? true}
+                          onChange={(e) => handleCalendarSubsettingChange('includeDeadlines', e.target.checked)}
+                          className="rounded border-gray-300 dark:border-gray-700 text-lime-600 focus:ring-lime-500 h-3.5 w-3.5"
+                        />
+                        Include Deadlines
+                      </label>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Toast Notifications */}
+      <EmailConnectModal
+        isOpen={isEmailConnectModalOpen}
+        onClose={() => setIsEmailConnectModalOpen(false)}
+        initialTab={modalInitialTab}
+        onConnected={handleModalConnected}
+      />
     </div>
   );
 };

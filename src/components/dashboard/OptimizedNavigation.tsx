@@ -273,6 +273,7 @@ const OptimizedNavigation: React.FC = () => {
       'analytics': '/dashboard',
       'jobs': '/dashboard/jobs',
       'jobs-dashboard': '/dashboard/jobs',
+      'tracker': '/dashboard/tracker',
       'settings': '/dashboard/settings',
       'resume-enhancer': '/editor',
       'cover-letter-generator': '/editor?tab=cover-letters',
@@ -346,39 +347,64 @@ const OptimizedNavigation: React.FC = () => {
       id: 'resume-enhancer',
       name: 'Editor',
       icon: Target,
-      description: 'AI-powered CV optimization',
-      route: '/editor'
+      description: 'AI CV optimization',
+      route: '/editor',
+      color: 'text-emerald-600 dark:text-emerald-400',
+      bg: 'bg-emerald-50 dark:bg-emerald-900/30',
+      activeBg: 'bg-emerald-500/15 border-emerald-500/40',
+    },
+    {
+      id: 'tracker',
+      name: 'Tracker',
+      icon: Briefcase,
+      description: 'Job application tracker',
+      route: '/dashboard/tracker',
+      color: 'text-blue-600 dark:text-blue-400',
+      bg: 'bg-blue-50 dark:bg-blue-900/30',
+      activeBg: 'bg-blue-500/15 border-blue-500/40',
     },
     {
       id: 'cover-letter-generator',
-      name: 'Cover Letter Generator',
+      name: 'Cover Letter',
       icon: PenTool,
-      description: 'Create custom cover letters',
-      route: '/editor?tab=cover-letters'
+      description: 'Create cover letters',
+      route: '/editor?tab=cover-letters',
+      color: 'text-violet-600 dark:text-violet-400',
+      bg: 'bg-violet-50 dark:bg-violet-900/30',
+      activeBg: 'bg-violet-500/15 border-violet-500/40',
     },
     {
       id: 'interview-coach',
-      name: 'Interview Coach',
+      name: 'Interview',
       icon: Mic,
-      description: 'AI interview preparation',
-      route: '/dashboard/interview'
+      description: 'AI interview prep',
+      route: '/dashboard/interview',
+      color: 'text-amber-600 dark:text-amber-400',
+      bg: 'bg-amber-50 dark:bg-amber-900/30',
+      activeBg: 'bg-amber-500/15 border-amber-500/40',
     },
     {
       id: 'linkedin-enhancer',
-      name: 'LinkedIn Enhancer',
+      name: 'LinkedIn',
       icon: Linkedin,
-      description: 'Optimize your LinkedIn profile',
+      description: 'LinkedIn profile optimizer',
       route: '/linkedin-enhancer',
-      badge: 'NEW'
+      color: 'text-sky-600 dark:text-sky-400',
+      bg: 'bg-sky-50 dark:bg-sky-900/30',
+      activeBg: 'bg-sky-500/15 border-sky-500/40',
+      badge: 'NEW',
     },
     {
       id: 'extension',
-      name: 'Chrome Extension',
+      name: 'Extension',
       icon: ExternalLink,
-      description: 'Save jobs from any site',
+      description: 'Chrome extension',
       route: 'https://chromewebstore.google.com/detail/fphkljfgefkfemmlfbpnjdojnfeadaii?utm_source=item-share-cb',
-      external: true
-    }
+      external: true,
+      color: 'text-rose-600 dark:text-rose-400',
+      bg: 'bg-rose-50 dark:bg-rose-900/30',
+      activeBg: 'bg-rose-500/15 border-rose-500/40',
+    },
   ];
 
   return (
@@ -485,14 +511,17 @@ const OptimizedNavigation: React.FC = () => {
         })}
 
 
-        {/* Tools Section */}
-        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800 px-2">
-          <div className={`px-3 mb-2 ${!isDesktopExpanded ? 'hidden lg:hidden' : 'lg:block'}`}>
-            <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+        {/* Tools Section — Square Tiles */}
+        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800">
+          {/* Section Label — only when expanded */}
+          <div className={`px-3 mb-3 ${!isDesktopExpanded ? 'hidden lg:hidden' : 'lg:block'}`}>
+            <h3 className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.18em]">
               Tools
             </h3>
           </div>
-          <div className="grid grid-cols-1 gap-2">
+
+          {/* Tile Grid: 2-col expanded, 1-col collapsed */}
+          <div className={`grid gap-2 px-1 ${isDesktopExpanded ? 'lg:grid-cols-2' : 'lg:grid-cols-1'} grid-cols-2`}>
             {toolSections.map((section) => {
               const Icon = section.icon;
               const isActive = activeSection === section.id;
@@ -501,56 +530,67 @@ const OptimizedNavigation: React.FC = () => {
               const Component = isExternal ? motion.a : motion.button;
               const componentProps = isExternal
                 ? {
-                  href: section.route,
-                  target: '_blank',
-                  rel: 'noopener noreferrer',
-                  onClick: () => {
-                    if (isMobileMenuOpen) {
-                      setIsOpen(false);
-                    }
+                    href: section.route,
+                    target: '_blank',
+                    rel: 'noopener noreferrer',
+                    onClick: () => { if (isMobileMenuOpen) setIsOpen(false); }
                   }
-                }
                 : {
-                  onClick: () => handleNavigation(section.id),
-                  onMouseEnter: () => {
-                    if (!isExternal && section.route.startsWith('/')) {
-                      router.prefetch(section.route);
-                      preloadOnHover(section.id);
+                    onClick: () => {
+                      if (section.route.startsWith('/')) {
+                        setActiveSection(section.id);
+                        if (isMobileMenuOpen) setIsOpen(false);
+                        router.push(section.route);
+                      }
+                    },
+                    onMouseEnter: () => {
+                      if (section.route.startsWith('/')) {
+                        router.prefetch(section.route);
+                      }
                     }
-                  }
-                };
+                  };
+
+              const colorClass = (section as any).color || 'text-gray-600 dark:text-gray-400';
+              const bgClass = (section as any).bg || 'bg-gray-50 dark:bg-gray-900/30';
 
               return (
                 <Component
                   key={section.id}
                   {...componentProps}
-                  className={`w-full flex items-center gap-4 px-5 py-4 rounded-xl transition-all duration-200 text-left relative outline-none focus:outline-none focus:ring-0 focus:shadow-none hover:shadow-none !shadow-none ${isDesktopExpanded ? 'lg:px-4 lg:py-3 lg:justify-start' : 'lg:px-3 lg:py-3 lg:justify-center'} ${isActive
-                    ? 'bg-[#1a230f] dark:bg-[#1a230f] border border-[rgb(129,255,0)] text-[rgb(129,255,0)]'
-                    : 'bg-white dark:bg-[#1f2916] text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-800 border border-gray-100 dark:border-gray-800'
+                  title={section.name}
+                  className={`relative group flex flex-col items-center justify-center rounded-2xl border transition-all duration-200 cursor-pointer outline-none focus:outline-none focus:ring-0 !shadow-none
+                    ${isDesktopExpanded
+                      ? 'p-3 gap-2 aspect-square'
+                      : 'lg:p-3 lg:gap-1 lg:aspect-square p-3 gap-2 aspect-square'
+                    }
+                    ${isActive
+                      ? `${(section as any).activeBg || 'bg-emerald-500/15 border-emerald-500/40'}`
+                      : 'bg-white dark:bg-[#1a2015] border-gray-100 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-sm'
                     }`}
                   style={{ outline: 'none', boxShadow: 'none' }}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
+                  whileHover={{ scale: 1.04, y: -1 }}
+                  whileTap={{ scale: 0.97 }}
                 >
-                  {/* NEW Badge */}
+                  {/* Badge */}
                   {(section as any).badge && (
-                    <span className="absolute -top-1.5 -right-1.5 px-1.5 py-0.5 text-[8px] font-bold bg-lime-500 dark:bg-[#80FF00] text-black rounded-full">
+                    <span className="absolute -top-1.5 -right-1.5 px-1.5 py-0.5 text-[8px] font-black bg-lime-400 text-black rounded-full z-10">
                       {(section as any).badge}
                     </span>
                   )}
-                  <Icon className={`w-6 h-6 lg:w-5 lg:h-5 flex-shrink-0 ${isActive ? 'text-[rgb(129,255,0)]' : 'text-gray-500 dark:text-gray-400'}`} />
-                  <div className={`flex-1 min-w-0 ${!isDesktopExpanded ? 'lg:hidden' : ''}`}>
-                    <div className="text-base lg:text-sm font-medium truncate flex items-baseline gap-1">
-                      {section.name}
-                      {isExternal && <ExternalLink className="w-3 h-3 opacity-60" />}
-                    </div>
-                    <div className={`text-sm lg:text-[11px] truncate mt-0.5 ${isActive
-                      ? 'text-[rgb(129,255,0)]/70'
-                      : 'text-gray-500 dark:text-gray-400'
-                      }`}>
-                      {section.description}
-                    </div>
+
+                  {/* Icon container */}
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-all duration-200 ${isActive ? 'scale-110' : ''} ${bgClass}`}>
+                    <Icon className={`w-5 h-5 ${isActive ? colorClass.split(' ')[0] + ' dark:' + colorClass.split(' ')[1] : colorClass}`} />
                   </div>
+
+                  {/* Label — shown in expanded mode */}
+                  <span className={`text-[10px] font-bold leading-tight text-center truncate w-full
+                    ${isActive ? colorClass : 'text-gray-600 dark:text-gray-400'}
+                    ${isDesktopExpanded ? '' : 'lg:hidden'}
+                  `}>
+                    {section.name}
+                    {isExternal && <ExternalLink className="w-2.5 h-2.5 inline ml-0.5 opacity-60" />}
+                  </span>
                 </Component>
               );
             })}
@@ -561,51 +601,50 @@ const OptimizedNavigation: React.FC = () => {
       {/* HR Dashboard Button - Show for B2B users and Admins */}
       {(userData?.b2b?.tenantId || userData?.isB2b || isAdmin) && (
         <div className={`px-6 pb-2 ${isDesktopExpanded ? 'lg:px-4' : 'lg:px-2'}`}>
-          <motion.button
-            onClick={() => {
-              if (isMobileMenuOpen) {
-                setIsOpen(false);
-              }
-              router.push('/b2b/dashboard');
-            }}
-            className={`w-full flex items-center gap-4 px-5 py-4 rounded-xl transition-all duration-200 text-left ${isDesktopExpanded ? 'lg:px-4 lg:justify-start' : 'lg:px-3 lg:py-3 lg:justify-center'} bg-[rgb(129,255,0)]/10 text-[#4C9900] dark:text-[rgb(129,255,0)] hover:bg-[rgb(129,255,0)]/20`}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            title={!isDesktopExpanded ? 'HR Dashboard' : undefined}
-          >
-            <Briefcase className="w-6 h-6 lg:w-5 lg:h-5 flex-shrink-0" />
-            <div className={`flex-1 min-w-0 ${!isDesktopExpanded ? 'lg:hidden' : ''}`}>
-              <div className="text-base lg:text-sm font-medium truncate">HR Dashboard</div>
-              <div className="text-sm lg:text-xs opacity-80 truncate mt-0.5">
-                Switch to Business Portal
+          <div className="grid grid-cols-2 gap-2">
+            <motion.button
+              onClick={() => {
+                if (isMobileMenuOpen) {
+                  setIsOpen(false);
+                }
+                router.push('/b2b/dashboard');
+              }}
+              className={`w-full h-full min-h-[88px] flex flex-col items-start justify-between gap-3 rounded-xl border border-[rgb(129,255,0)]/15 transition-all duration-200 text-left p-4 bg-[rgb(129,255,0)]/10 text-[#4C9900] dark:text-[rgb(129,255,0)] hover:bg-[rgb(129,255,0)]/20`}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              title="HR Dashboard"
+            >
+              <Briefcase className="w-5 h-5 flex-shrink-0" />
+              <div className="min-w-0 w-full">
+                <div className="text-sm font-medium truncate">HR Dashboard</div>
+                <div className="text-[11px] opacity-80 truncate mt-0.5">
+                  Business Portal
+                </div>
               </div>
-            </div>
-          </motion.button>
-        </div>
-      )}
+            </motion.button>
 
-      {/* Admin Button - Only show for admin users */}
-      {isAdmin && (
-        <div className={`px-6 pb-4 ${isDesktopExpanded ? 'lg:px-4' : 'lg:px-2'}`}>
-          <motion.button
-            onClick={() => {
-              if (isMobileMenuOpen) {
-                setIsOpen(false);
-              }
-              router.push('/admin/dashboard');
-            }}
-            className={`w-full flex items-center gap-4 px-5 py-4 rounded-xl transition-all duration-200 text-left ${isDesktopExpanded ? 'lg:px-4 lg:justify-start' : 'lg:px-3 lg:py-3 lg:justify-center'} bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 hover:bg-purple-200 dark:hover:bg-purple-900/50`}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            <Shield className="w-6 h-6 lg:w-5 lg:h-5 flex-shrink-0" />
-            <div className={`flex-1 min-w-0 ${!isDesktopExpanded ? 'lg:hidden' : ''}`}>
-              <div className="text-base lg:text-sm font-medium truncate">Switch to Admin</div>
-              <div className="text-sm lg:text-xs text-purple-600 dark:text-purple-300 truncate mt-0.5">
-                Access admin dashboard
-              </div>
-            </div>
-          </motion.button>
+            {isAdmin && (
+              <motion.button
+                onClick={() => {
+                  if (isMobileMenuOpen) {
+                    setIsOpen(false);
+                  }
+                  router.push('/admin/dashboard');
+                }}
+                className="w-full h-full min-h-[88px] flex flex-col items-start justify-between gap-3 rounded-xl border border-purple-500/15 transition-all duration-200 text-left p-4 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 hover:bg-purple-200 dark:hover:bg-purple-900/50"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <Shield className="w-5 h-5 flex-shrink-0" />
+                <div className="min-w-0 w-full">
+                  <div className="text-sm font-medium truncate">Admin Dashboard</div>
+                  <div className="text-[11px] text-purple-600 dark:text-purple-300 truncate mt-0.5">
+                    System controls
+                  </div>
+                </div>
+              </motion.button>
+            )}
+          </div>
         </div>
       )}
 

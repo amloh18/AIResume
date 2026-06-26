@@ -276,29 +276,28 @@ export async function getTargetedUsers(filters: any = {}): Promise<any[]> {
 
     // Apply usage metrics
     if (filters.usageMetrics) {
+      // usage.cvCreatedCount – number of CVs created by the user
       if (filters.usageMetrics.minCVsCreated !== undefined) {
-        query['usage.cvCreatedCount'] = { $gte: filters.usageMetrics.minCVsCreated };
+        query['usage.cvCreatedCount'] = { $gte: Number(filters.usageMetrics.minCVsCreated) };
       }
       if (filters.usageMetrics.maxCVsCreated !== undefined) {
         query['usage.cvCreatedCount'] = {
           ...query['usage.cvCreatedCount'],
-          $lte: filters.usageMetrics.maxCVsCreated
+          $lte: Number(filters.usageMetrics.maxCVsCreated)
         };
       }
+      // usage.journeysCreated – number of job-application journeys created
       if (filters.usageMetrics.minJourneysCompleted !== undefined) {
-        query['usage.journeysCreated'] = { $gte: filters.usageMetrics.minJourneysCompleted };
+        query['usage.journeysCreated'] = { $gte: Number(filters.usageMetrics.minJourneysCompleted) };
       }
       if (filters.usageMetrics.maxJourneysCompleted !== undefined) {
         query['usage.journeysCreated'] = {
           ...query['usage.journeysCreated'],
-          $lte: filters.usageMetrics.maxJourneysCompleted
+          $lte: Number(filters.usageMetrics.maxJourneysCompleted)
         };
       }
-      if (filters.usageMetrics.minUsageMinutes !== undefined) {
-        // Assuming usage is tracked in minutes in usage.totalSessionDurationMinutes
-        // If this field doesn't exist yet, it will just return 0 matches, which is safe.
-        query['usage.totalSessionDurationMinutes'] = { $gte: filters.usageMetrics.minUsageMinutes };
-      }
+      // NOTE: minUsageMinutes was removed – the field usage.totalSessionDurationMinutes
+      // does not exist in the User model and would return 0 results.
       console.log('✅ Applied usageMetrics filter:', filters.usageMetrics);
     }
 

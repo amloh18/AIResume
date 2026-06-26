@@ -4,11 +4,11 @@
 import React, { useState, useEffect } from 'react';
 import { usePricingPlans } from '@/lib/hooks/usePricingPlans';
 import { AdminPricingPlanSkeleton } from './AdminSkeletons';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
 import {
-  Plus, Edit, Eye, Link, ToggleLeft, ToggleRight, CreditCard, CheckCircle, 
-  AlertCircle, ExternalLink, Copy, Settings, Globe, Gift, Tag, X, 
-  DollarSign, Save, Loader2, Zap, Shield, TrendingUp, ArrowUpRight
+  Plus, Edit, Eye, Link, ToggleLeft, ToggleRight, CheckCircle, 
+  AlertCircle, ExternalLink, Copy, Settings, Globe, X, 
+  Save, Loader2, Zap, Shield, TrendingUp, ArrowUpRight
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import UniversalPaymentModal from '@/components/payment/UniversalPaymentModal';
@@ -22,8 +22,14 @@ import { useRouter } from 'next/navigation';
 import { LocationService } from '@/lib/payment/locationService';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const PricingPlanManager: React.FC = () => {
+interface PricingPlanManagerProps {
+  activeSubTab?: string;
+  onSubTabChange?: (subTab: string) => void;
+}
+
+const PricingPlanManager: React.FC<PricingPlanManagerProps> = ({ activeSubTab, onSubTabChange }) => {
   const router = useRouter();
+  const currentTab = activeSubTab || 'plans';
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [selectedPlanForPreview, setSelectedPlanForPreview] = useState<any>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -107,26 +113,7 @@ const PricingPlanManager: React.FC = () => {
         </div>
       </div>
 
-      <Tabs defaultValue="plans" className="w-full">
-        <TabsList className="flex items-center gap-2 bg-white/5 border border-white/5 p-1 rounded-2xl w-fit">
-          {[
-            { id: 'plans', icon: CreditCard, label: 'Protocols' },
-            { id: 'regional', icon: Globe, label: 'Regional' },
-            { id: 'promotions', icon: Gift, label: 'Signals' },
-            { id: 'coupons', icon: Tag, label: 'Bypass' },
-            { id: 'revenue', icon: DollarSign, label: 'Liquidity' }
-          ].map(tab => (
-            <TabsTrigger 
-              key={tab.id} 
-              value={tab.id}
-              className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all data-[state=active]:bg-emerald-500 data-[state=active]:text-black text-white/40 hover:text-white"
-            >
-              <tab.icon className="h-4 w-4" />
-              {tab.label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-
+      <Tabs value={currentTab} onValueChange={onSubTabChange} className="w-full">
         <TabsContent value="plans" className="mt-10 space-y-10">
           {/* Quick Metrics */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

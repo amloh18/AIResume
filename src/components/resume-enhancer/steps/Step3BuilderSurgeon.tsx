@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect, useImperativeHandle, forwardRef, useRef, useMemo, useCallback } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
 import { sanitizeErrorMessage } from '@/lib/api/error-handler';
 import { downloadCanvasAsPDF } from '@/lib/utils/downloadCanvas';
@@ -84,6 +85,8 @@ export interface Step3BuilderSurgeonRef {
 
 const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurgeonProps>(
   ({ onComplete, onActiveSectionChange }, ref) => {
+    const { data: session } = useSession();
+    const isGuestMode = !session;
     const { state, dispatch, convertToJourney, loadCV, getAnalysisModeInfo, setTemplate, setAtsScoreCap, goToStep } = useResumeEnhancer();
     const router = useRouter();
     const pathname = usePathname();
@@ -1262,6 +1265,7 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
                 }}
                 theme={typeof window !== 'undefined' && document.documentElement.classList.contains('dark') ? 'dark' : 'light'}
                 moriChatMode={state.moriChatMode}
+                isGuestMode={isGuestMode}
               />
             </div>
           </div>

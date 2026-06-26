@@ -13,15 +13,20 @@ interface Stage {
 }
 
 const defaultStages: Stage[] = [
+  { label: 'Draft', count: 0, color: 'bg-slate-400', path: '/dashboard/tracker?filter=draft' },
+  { label: 'Created', count: 0, color: 'bg-cyan-500', path: '/dashboard/tracker?filter=created' },
   { label: 'Applied', count: 3, color: 'bg-blue-500', path: '/dashboard/tracker?filter=applied' },
   { label: 'Screening', count: 2, color: 'bg-indigo-500', path: '/dashboard/tracker?filter=screening' },
-  { label: 'Assessment', count: 1, color: 'bg-purple-500', path: '/dashboard/tracker?filter=assessment' },
   { label: 'Interview', count: 2, color: 'bg-amber-500', path: '/dashboard/tracker?filter=interview' },
   { label: 'Offer', count: 1, color: 'bg-[#83d60d]', path: '/dashboard/tracker?filter=offer' },
+  { label: 'Accepted', count: 0, color: 'bg-emerald-500', path: '/dashboard/tracker?filter=accepted' },
   { label: 'Rejected', count: 12, color: 'bg-rose-500', path: '/dashboard/tracker?filter=rejected' },
+  { label: 'Withdrawn', count: 0, color: 'bg-zinc-500', path: '/dashboard/tracker?filter=withdrawn' },
 ];
 
 export default function JobPipelineWidget({ stages = defaultStages, loading = false, empty = false }: { stages?: Stage[], loading?: boolean, empty?: boolean }) {
+  const maxCount = Math.max(1, ...stages.map((s) => s.count));
+
   return (
     <DashboardWidget
       id="job-pipeline"
@@ -42,17 +47,17 @@ export default function JobPipelineWidget({ stages = defaultStages, loading = fa
       }}
       className="h-full"
     >
-      <div className="flex gap-2 min-h-[120px]">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-2 min-h-[160px]">
         {stages.map((stage, idx) => (
           <div 
             key={stage.label} 
             className="flex-1 flex flex-col gap-2 group cursor-pointer"
             onClick={() => console.log(`Navigate to ${stage.path}`)}
           >
-            <div className="flex-1 relative bg-gray-50 dark:bg-white/5 rounded-2xl border border-gray-100 dark:border-white/5 overflow-hidden group-hover:border-[#83d60d]/30 transition-all">
+            <div className="relative min-h-[88px] bg-gray-50 dark:bg-white/5 rounded-2xl border border-gray-100 dark:border-white/5 overflow-hidden group-hover:border-[#83d60d]/30 transition-all">
               <motion.div 
                 initial={{ height: 0 }}
-                animate={{ height: `${(stage.count / Math.max(...stages.map(s => s.count))) * 100}%` }}
+                animate={{ height: `${(stage.count / maxCount) * 100}%` }}
                 className={cn("absolute bottom-0 inset-x-0 opacity-20", stage.color)}
               />
               <div className="absolute inset-0 flex flex-col items-center justify-center">

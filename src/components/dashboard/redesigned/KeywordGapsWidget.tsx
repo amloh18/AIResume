@@ -30,7 +30,7 @@ export default function KeywordGapsWidget({ keywords = defaultKeywords, loading 
       empty={empty}
       emptyState={{
         title: "No keyword gaps detected",
-        description: "Your CV is well-optimized for your target roles.",
+        description: "Run an ATS scan on a tailored CV to find missing keywords for your target role.",
       }}
       className="h-full"
     >
@@ -42,6 +42,7 @@ export default function KeywordGapsWidget({ keywords = defaultKeywords, loading 
           >
             <Tag size={12} className="text-gray-400 group-hover:text-[#83d60d]" />
             <span className="text-xs font-bold text-gray-600 dark:text-gray-300">{kw.name}</span>
+            <span className="text-[9px] font-black text-gray-300 dark:text-white/20 uppercase">{kw.category}</span>
             <div className="w-4 h-4 rounded-full bg-white dark:bg-white/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
               <Plus size={10} className="text-[#83d60d]" />
             </div>
@@ -49,12 +50,14 @@ export default function KeywordGapsWidget({ keywords = defaultKeywords, loading 
         ))}
       </div>
       
-      <div className="mt-6 p-4 rounded-[24px] bg-slate-900 dark:bg-black border border-gray-800">
-        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Pro Tip</p>
-        <p className="text-[11px] font-medium text-gray-300 leading-relaxed">
-          Adding these 5 keywords could increase your match score by up to <span className="text-[#83d60d] font-black">24%</span>.
-        </p>
-      </div>
+      {keywords.length > 0 && (
+        <div className="mt-6 p-4 rounded-[24px] bg-slate-900 dark:bg-black border border-gray-800">
+          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Pro Tip</p>
+          <p className="text-[11px] font-medium text-gray-300 leading-relaxed">
+            Adding these {keywords.length} keyword{keywords.length > 1 ? 's' : ''} could increase your match score by up to <span className="text-[#83d60d] font-black">{Math.min(40, keywords.length * 5)}%</span>.
+          </p>
+        </div>
+      )}
     </DashboardWidget>
   );
 }

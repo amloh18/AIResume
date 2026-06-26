@@ -6,7 +6,8 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import Logo from '@/components/ui/Logo';
 import {
-  LayoutDashboard, BarChart3, Users, Settings, LogOut, Activity, Mail, Database, CreditCard, Shield, X, Sparkles, FileText, MessageSquare, Bell, Briefcase, UserCircle, ChevronRight
+  LayoutDashboard, BarChart3, Users, Settings, LogOut, Activity, Mail, Database, CreditCard, Shield, X, Sparkles, FileText, MessageSquare, Bell, Briefcase, UserCircle, ChevronRight,
+  Globe, Gift, Tag, DollarSign
 } from 'lucide-react';
 import { useSession, signOut } from 'next-auth/react';
 import { ADMIN_THEME } from '@/lib/config/adminTheme';
@@ -56,7 +57,18 @@ export default function AdminNavigation({ activeTab, activeSubTab, onTabChange, 
             { id: 'sponsorships', label: 'Data Tables', icon: Database },
           ]
         },
-        { id: 'pricing', label: 'Pricing', icon: CreditCard },
+        { 
+          id: 'pricing', 
+          label: 'Pricing', 
+          icon: CreditCard,
+          subItems: [
+            { id: 'plans', label: 'Protocols', icon: CreditCard },
+            { id: 'regional', label: 'Regional', icon: Globe },
+            { id: 'promotions', label: 'Signals', icon: Gift },
+            { id: 'coupons', label: 'Bypass', icon: Tag },
+            { id: 'revenue', label: 'Liquidity', icon: DollarSign },
+          ]
+        },
       ]
     },
     {
