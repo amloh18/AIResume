@@ -107,6 +107,7 @@ interface Job {
     changedAt: Date;
     previousStatus?: string;
   }>;
+  extractedJd?: any;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -930,8 +931,8 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
         window.dispatchEvent(new CustomEvent('jobUpdated', { detail: { job: savedJob, isAutoSave } }));
 
         // Step 2: If this is a new job, implement the "Job First" workflow
-        // Create an Application Package automatically
-        if (isNewJob && !isAutoSave && user?.id) {
+        // Create an Application Package automatically (only if not a draft job)
+        if (isNewJob && !isAutoSave && user?.id && savedJob.status !== 'draft') {
           try {
             console.log('🎯 EditJobSidebar - Creating Application Package for new job:', savedJob.id || savedJob._id);
 
@@ -1095,7 +1096,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed bg-black/50 backdrop-blur-sm z-40"
+            className="fixed bg-black/50 backdrop-blur-sm z-[9998]"
             style={{
               top: 0,
               left: 0,
@@ -1115,7 +1116,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            className="fixed right-0 top-0 h-screen bg-white dark:bg-[#141810] shadow-2xl z-50 flex flex-col"
+            className="fixed right-0 top-0 h-screen bg-white dark:bg-[#141810] shadow-2xl z-[9999] flex flex-col"
             style={{ width: sidebarWidth }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -1370,21 +1371,38 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
                   </div>
                 </div>
 
-                {/* Salary Information */}
                 <div>
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Salary Information</h3>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-gray-500 dark:text-gray-400">Period:</span>
-                      <select
-                        value={formData.salary?.period || 'yearly'}
-                        onChange={(e) => handleFormChange('salary', { ...formData.salary, period: e.target.value as 'yearly' | 'monthly' | 'hourly' })}
-                        className="px-2 py-1 text-xs bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 rounded text-gray-700 dark:text-white focus:border-lime-500 dark:focus:border-lime-400/50 focus:outline-none"
-                      >
-                        <option value="yearly">Yearly</option>
-                        <option value="monthly">Monthly</option>
-                        <option value="hourly">Hourly</option>
-                      </select>
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-500 dark:text-gray-400">Currency:</span>
+                        <select
+                          value={formData.salary?.currency || 'USD'}
+                          onChange={(e) => handleFormChange('salary', { ...formData.salary, currency: e.target.value })}
+                          className="px-2 py-1 text-xs bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 rounded text-gray-700 dark:text-white focus:border-lime-500 focus:outline-none"
+                        >
+                          <option value="USD">USD ($)</option>
+                          <option value="GBP">GBP (£)</option>
+                          <option value="EUR">EUR (€)</option>
+                          <option value="CAD">CAD ($)</option>
+                          <option value="AUD">AUD ($)</option>
+                          <option value="INR">INR (₹)</option>
+                          <option value="AED">AED (AED)</option>
+                        </select>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-500 dark:text-gray-400">Period:</span>
+                        <select
+                          value={formData.salary?.period || 'yearly'}
+                          onChange={(e) => handleFormChange('salary', { ...formData.salary, period: e.target.value as 'yearly' | 'monthly' | 'hourly' })}
+                          className="px-2 py-1 text-xs bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 rounded text-gray-700 dark:text-white focus:border-lime-500 dark:focus:border-lime-400/50 focus:outline-none"
+                        >
+                          <option value="yearly">Yearly</option>
+                          <option value="monthly">Monthly</option>
+                          <option value="hourly">Hourly</option>
+                        </select>
+                      </div>
                     </div>
                   </div>
 

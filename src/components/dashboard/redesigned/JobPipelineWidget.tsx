@@ -14,7 +14,7 @@ interface Stage {
 
 const defaultStages: Stage[] = [
   { label: 'Draft', count: 0, color: 'bg-slate-400', path: '/dashboard/tracker?filter=draft' },
-  { label: 'Created', count: 0, color: 'bg-cyan-500', path: '/dashboard/tracker?filter=created' },
+  { label: 'Staging', count: 0, color: 'bg-cyan-500', path: '/dashboard/tracker?filter=created' },
   { label: 'Applied', count: 3, color: 'bg-blue-500', path: '/dashboard/tracker?filter=applied' },
   { label: 'Screening', count: 2, color: 'bg-indigo-500', path: '/dashboard/tracker?filter=screening' },
   { label: 'Interview', count: 2, color: 'bg-amber-500', path: '/dashboard/tracker?filter=interview' },

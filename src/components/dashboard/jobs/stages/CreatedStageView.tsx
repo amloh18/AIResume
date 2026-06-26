@@ -54,7 +54,7 @@ const CreatedStageView: React.FC<CreatedStageViewProps> = ({
   const filteredJobs = showReadyOnly
     ? jobs.filter(job => {
       const journeys = getJobJourneys(job.id);
-      const atsScore = journeys[0]?.atsScore || 0;
+      const atsScore = journeys[0]?.atsScore || (job as any).atsScore || (job as any).matchScore || 0;
       return atsScore >= 80;
     })
     : jobs;
@@ -112,7 +112,7 @@ const CreatedStageView: React.FC<CreatedStageViewProps> = ({
             {filteredJobs.map((job) => {
               const journeys = getJobJourneys(job.id);
               const journey = journeys[0]; // Primary journey
-              const atsScore = journey?.atsScore || 0;
+              const atsScore = journey?.atsScore || (job as any).atsScore || (job as any).matchScore || 0;
               const hasCV = !!journey?.cvId;
               const hasCL = !!journey?.coverLetterId;
               const riskLevel = job.trustSnapshot?.ghostRiskLevel || 'unknown';

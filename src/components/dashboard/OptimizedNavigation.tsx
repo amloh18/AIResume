@@ -349,9 +349,9 @@ const OptimizedNavigation: React.FC = () => {
       icon: Target,
       description: 'AI CV optimization',
       route: '/editor',
-      color: 'text-emerald-600 dark:text-emerald-400',
-      bg: 'bg-emerald-50 dark:bg-emerald-900/30',
-      activeBg: 'bg-emerald-500/15 border-emerald-500/40',
+      color: 'text-gray-600 dark:text-gray-400',
+      bg: 'bg-gray-50 dark:bg-gray-800/30',
+      activeBg: 'bg-[#1a230f] border-[rgb(129,255,0)]/40',
     },
     {
       id: 'tracker',
@@ -359,9 +359,9 @@ const OptimizedNavigation: React.FC = () => {
       icon: Briefcase,
       description: 'Job application tracker',
       route: '/dashboard/tracker',
-      color: 'text-blue-600 dark:text-blue-400',
-      bg: 'bg-blue-50 dark:bg-blue-900/30',
-      activeBg: 'bg-blue-500/15 border-blue-500/40',
+      color: 'text-gray-600 dark:text-gray-400',
+      bg: 'bg-gray-50 dark:bg-gray-800/30',
+      activeBg: 'bg-[#1a230f] border-[rgb(129,255,0)]/40',
     },
     {
       id: 'cover-letter-generator',
@@ -369,9 +369,9 @@ const OptimizedNavigation: React.FC = () => {
       icon: PenTool,
       description: 'Create cover letters',
       route: '/editor?tab=cover-letters',
-      color: 'text-violet-600 dark:text-violet-400',
-      bg: 'bg-violet-50 dark:bg-violet-900/30',
-      activeBg: 'bg-violet-500/15 border-violet-500/40',
+      color: 'text-gray-600 dark:text-gray-400',
+      bg: 'bg-gray-50 dark:bg-gray-800/30',
+      activeBg: 'bg-[#1a230f] border-[rgb(129,255,0)]/40',
     },
     {
       id: 'interview-coach',
@@ -379,9 +379,9 @@ const OptimizedNavigation: React.FC = () => {
       icon: Mic,
       description: 'AI interview prep',
       route: '/dashboard/interview',
-      color: 'text-amber-600 dark:text-amber-400',
-      bg: 'bg-amber-50 dark:bg-amber-900/30',
-      activeBg: 'bg-amber-500/15 border-amber-500/40',
+      color: 'text-gray-600 dark:text-gray-400',
+      bg: 'bg-gray-50 dark:bg-gray-800/30',
+      activeBg: 'bg-[#1a230f] border-[rgb(129,255,0)]/40',
     },
     {
       id: 'linkedin-enhancer',
@@ -389,9 +389,9 @@ const OptimizedNavigation: React.FC = () => {
       icon: Linkedin,
       description: 'LinkedIn profile optimizer',
       route: '/linkedin-enhancer',
-      color: 'text-sky-600 dark:text-sky-400',
-      bg: 'bg-sky-50 dark:bg-sky-900/30',
-      activeBg: 'bg-sky-500/15 border-sky-500/40',
+      color: 'text-gray-600 dark:text-gray-400',
+      bg: 'bg-gray-50 dark:bg-gray-800/30',
+      activeBg: 'bg-[#1a230f] border-[rgb(129,255,0)]/40',
       badge: 'NEW',
     },
     {
@@ -401,9 +401,9 @@ const OptimizedNavigation: React.FC = () => {
       description: 'Chrome extension',
       route: 'https://chromewebstore.google.com/detail/fphkljfgefkfemmlfbpnjdojnfeadaii?utm_source=item-share-cb',
       external: true,
-      color: 'text-rose-600 dark:text-rose-400',
-      bg: 'bg-rose-50 dark:bg-rose-900/30',
-      activeBg: 'bg-rose-500/15 border-rose-500/40',
+      color: 'text-gray-600 dark:text-gray-400',
+      bg: 'bg-gray-50 dark:bg-gray-800/30',
+      activeBg: 'bg-[#1a230f] border-[rgb(129,255,0)]/40',
     },
   ];
 
@@ -494,12 +494,12 @@ const OptimizedNavigation: React.FC = () => {
             >
               <Icon className={`w-6 h-6 lg:w-5 lg:h-5 flex-shrink-0 ${isActive ? 'text-[rgb(129,255,0)]' : ''}`} />
               <div className={`flex-1 min-w-0 ${!isDesktopExpanded ? 'lg:hidden' : ''}`}>
-                <div className="text-base lg:text-sm font-medium truncate flex items-baseline gap-1">
+                <div className="text-sm font-semibold truncate flex items-baseline gap-1">
                   {section.name}
                   {section.id === 'jobs-dashboard' && <Lock className="w-3 h-3 opacity-60 ml-1" />}
                   {isExternal && <ExternalLink className="w-3 h-3 opacity-60" />}
                 </div>
-                <div className={`text-sm lg:text-[11px] truncate mt-0.5 ${isActive
+                <div className={`text-xs truncate mt-0.5 ${isActive
                   ? 'text-[rgb(129,255,0)]/70'
                   : 'text-gray-500 dark:text-gray-400'
                   }`}>
@@ -580,12 +580,12 @@ const OptimizedNavigation: React.FC = () => {
 
                   {/* Icon container */}
                   <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-all duration-200 ${isActive ? 'scale-110' : ''} ${bgClass}`}>
-                    <Icon className={`w-5 h-5 ${isActive ? colorClass.split(' ')[0] + ' dark:' + colorClass.split(' ')[1] : colorClass}`} />
+                    <Icon className={`w-5 h-5 ${isActive ? 'text-[rgb(129,255,0)] dark:text-[rgb(129,255,0)]' : 'text-gray-500 dark:text-gray-400'}`} />
                   </div>
 
                   {/* Label — shown in expanded mode */}
                   <span className={`text-[10px] font-bold leading-tight text-center truncate w-full
-                    ${isActive ? colorClass : 'text-gray-600 dark:text-gray-400'}
+                    ${isActive ? 'text-[rgb(129,255,0)] dark:text-[rgb(129,255,0)]' : 'text-gray-600 dark:text-gray-400'}
                     ${isDesktopExpanded ? '' : 'lg:hidden'}
                   `}>
                     {section.name}

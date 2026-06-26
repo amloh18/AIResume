@@ -185,7 +185,8 @@ export async function POST(request: NextRequest) {
         sourceUrl: url || parsedData.sourceUrl,
         tags: parsedData.skills || [],
         sponsorship: sponsorship,
-        notes: undefined // Notes are now empty since requirements/benefits moved to description
+        notes: undefined, // Notes are now empty since requirements/benefits moved to description
+        extractedJd: parsedData.richData || null // Return the full rich structure
       };
 
       console.log('✅ Job Parse API - Parsing complete, returning response');
@@ -198,7 +199,8 @@ export async function POST(request: NextRequest) {
           benefits: parsedData.benefits || [],
           jobType: parsedData.jobType,
           experience: parsedData.experience,
-          education: parsedData.education
+          education: parsedData.education,
+          richData: parsedData.richData || null
         }
       });
     } catch (error) {

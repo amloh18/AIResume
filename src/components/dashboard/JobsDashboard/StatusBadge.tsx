@@ -16,7 +16,7 @@ export default function StatusBadge({ status }: StatusBadgeProps) {
       icon: Clock,
     },
     created: {
-      label: 'Created',
+      label: 'Staging',
       color: 'bg-blue-500/20 text-blue-600 dark:text-blue-400',
       icon: Calendar,
     },

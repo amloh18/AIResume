@@ -47,7 +47,7 @@ import JobCard from './JobCard';
 import JobRoleCard from './JobRoleCard';
 import JobSidebar from '@/components/dashboard/jobs/JobSidebar';
 import EditJobSidebar from '@/components/dashboard/jobs/EditJobSidebar';
-import JobParserDialog from '@/components/dashboard/jobs/JobParserDialog';
+import JobParserSidebar from '@/components/dashboard/jobs/JobParserSidebar';
 import AuthPromptModal from './AuthPromptModal';
 import { CVJourney } from '@/types/cv';
 import { authenticatedFetchWithUserId } from '@/lib/utils/apiUtils';
@@ -3466,7 +3466,7 @@ export default function ResumeEnhancerContainer({
         )}
       </AnimatePresence>
 
-      <JobParserDialog
+      <JobParserSidebar
         isOpen={showRoleModal || showJobParserDialog}
         onClose={() => {
           setShowRoleModal(false);

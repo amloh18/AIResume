@@ -155,6 +155,7 @@ export interface IJobApplication extends Document {
       };
     }>;
   };
+  extractedJd?: any; // Stores rich AI extracted details mapped to .vscode/job_refine.md schema
 
   createdAt: Date;
   updatedAt: Date;
@@ -415,6 +416,10 @@ const jobApplicationSchema = new Schema<IJobApplication>({
       }
     }]
   },
+  extractedJd: {
+    type: Schema.Types.Mixed,
+    default: null
+  },
   isArchived: {
     type: Boolean,
     default: false
@@ -426,6 +431,11 @@ const jobApplicationSchema = new Schema<IJobApplication>({
       ret.id = ret._id;
       delete ret._id;
       delete ret.__v;
+      
+      // Ensure extractedJd is passed to client
+      if (doc.extractedJd) {
+        ret.extractedJd = doc.extractedJd;
+      }
 
       // Safely handle the daysSinceApplication calculation
       try {

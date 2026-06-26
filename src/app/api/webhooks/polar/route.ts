@@ -15,6 +15,7 @@ import subscriptionService from '@/lib/services/subscriptionService';
 import { createTransaction } from '@/lib/services/transactionService';
 import { withTransaction } from '@/lib/utils/db-transaction';
 import crypto from 'crypto';
+import { validateEvent, WebhookVerificationError } from '@polar-sh/sdk/webhooks';
 
 const webhookSecret = process.env.POLAR_WEBHOOK_SECRET;
 
@@ -29,23 +30,28 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.text();
     const headersList = await headers();
-    const signature = headersList.get('polar-signature') || headersList.get('x-polar-signature');
 
-    if (!signature || !webhookSecret) {
-      return NextResponse.json({ error: 'Missing signature or webhook secret' }, { status: 400 });
+    if (!webhookSecret) {
+      console.error('POLAR_WEBHOOK_SECRET is missing');
+      return NextResponse.json({ error: 'Missing webhook secret' }, { status: 400 });
     }
 
-    const expectedSignature = crypto
-      .createHmac('sha256', webhookSecret)
-      .update(body)
-      .digest('hex');
-
-    if (signature !== expectedSignature) {
-      console.error('Polar webhook signature verification failed');
-      return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
+    let event;
+    try {
+      const headersRecord: Record<string, string> = {};
+      headersList.forEach((value, key) => {
+        headersRecord[key] = value;
+      });
+      
+      event = validateEvent(body, headersRecord, webhookSecret);
+    } catch (validationError) {
+      if (validationError instanceof WebhookVerificationError) {
+        console.error('Polar webhook signature verification failed:', validationError.message);
+        return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
+      }
+      console.error('Polar webhook validation error:', validationError);
+      return NextResponse.json({ error: 'Validation failed' }, { status: 400 });
     }
-
-    const event = JSON.parse(body);
     await getConnection();
 
     const idempotencyKey = getPolarIdempotencyKey(event);

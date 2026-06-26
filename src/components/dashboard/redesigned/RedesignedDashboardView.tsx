@@ -182,7 +182,7 @@ export default function RedesignedDashboardView({ tier, isExpanded = false }: Re
   const trackerPipelineStages = useMemo(() => {
     const stageDefs = [
       { label: 'Draft', status: 'draft', color: 'bg-slate-400' },
-      { label: 'Created', status: 'created', color: 'bg-cyan-500' },
+      { label: 'Staging', status: 'created', color: 'bg-cyan-500' },
       { label: 'Applied', status: 'applied', color: 'bg-blue-500' },
       { label: 'Screening', status: 'screening', color: 'bg-indigo-500' },
       { label: 'Interview', status: 'interview', color: 'bg-amber-500' },

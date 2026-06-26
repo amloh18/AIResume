@@ -287,8 +287,8 @@ const CVListView: React.FC<CVListViewProps> = ({
                                 {/* Stage */}
                                 {showStage && (
                                     <td className="px-6 py-3">
-                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-medium capitalize ${getStageColor(cv.stage || 'Created')}`}>
-                                            {cv.stage || 'Created'}
+                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-medium capitalize ${getStageColor(cv.stage || 'Staging')}`}>
+                                            {cv.stage || 'Staging'}
                                         </span>
                                     </td>
                                 )}

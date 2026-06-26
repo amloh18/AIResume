@@ -391,6 +391,41 @@ export async function PUT(
     const removeUndefinedKeys = (obj: Record<string, any>) =>
       Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined));
 
+    // Extract ATS score from cvData if present in body.cvData and not explicitly passed in body
+    let cvDataScore: number | undefined = undefined;
+    if (body.cvData && typeof body.cvData === 'object') {
+      const cvDataObj = body.cvData;
+      const possibleScore = 
+        cvDataObj.analysis?.score ?? 
+        cvDataObj.analysis?.overall_score ?? 
+        cvDataObj.analysis?.overallScore ?? 
+        cvDataObj.analysisReport?.overall_score ?? 
+        cvDataObj.analysisReport?.score ?? 
+        cvDataObj.atsScore ?? 
+        cvDataObj.score ?? 
+        cvDataObj.scoreReport?.overall_score ??
+        cvDataObj.metadata?.atsScore ??
+        cvDataObj.metadata?.surgeonAnalysis?.scoreReport?.overall_score;
+
+      if (possibleScore !== undefined && possibleScore !== null && typeof possibleScore === 'number') {
+        cvDataScore = possibleScore;
+        console.log('📊 CV UPDATE API - Found score in cvData:', cvDataScore);
+      }
+    }
+
+    if (cvDataScore !== undefined) {
+      const targetType = body.cvType || cv.cvType;
+      if (targetType === 'journey') {
+        if (body.cv_score_ats === undefined) {
+          body.cv_score_ats = cvDataScore;
+        }
+      } else {
+        if (body.cv_score_master === undefined) {
+          body.cv_score_master = cvDataScore;
+        }
+      }
+    }
+
     for (const field of allowedFields) {
       if (body[field] !== undefined) {
         // Sanitize cvData before adding to updateData

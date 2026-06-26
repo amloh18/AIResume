@@ -1490,7 +1490,7 @@ const RecentJobsWidget: React.FC<{
         return 'Screening';
       case 'created':
       default:
-        return 'Created';
+        return 'Staging';
     }
   };
 
