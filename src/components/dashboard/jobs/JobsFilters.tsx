@@ -93,7 +93,7 @@ const JobsFilters: React.FC<JobsFiltersProps> = ({
           >
             <option value="all">All Statuses</option>
             <option value="draft">Draft</option>
-            <option value="created">Created</option>
+            <option value="created">Staging</option>
             <option value="applied">Applied</option>
             <option value="interview">Interview</option>
             <option value="offer">Offer</option>

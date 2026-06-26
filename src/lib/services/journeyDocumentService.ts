@@ -368,52 +368,11 @@ export async function createJourneyDocuments(
         throw new Error('CV not found or has no data');
       }
 
-      // Ensure CV has AI analysis - generate if missing
-      let cvDataWithAnalysis = cvDocument.cvData;
-      if (!cvDocument.metadata?.aiAnalysis) {
-        console.log('⚠️ Journey Document Service - CV missing AI analysis, generating...');
-        try {
-          // Call career analysis API directly using internal server-side approach
-          // Use the analysis functions directly if possible, otherwise use fetch with proper URL
-          const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-          const analysisResponse = await fetch(`${baseUrl}/api/ai/career-analysis`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              cvData: cvDocument.cvData,
-              jobData: job,
-              userId: userId
-            })
-          });
-
-          if (analysisResponse.ok) {
-            const analysisResult = await analysisResponse.json();
-            if (analysisResult.success && analysisResult.analysis) {
-              // Update CV with AI analysis
-              cvDocument.metadata = cvDocument.metadata || {};
-              cvDocument.metadata.aiAnalysis = analysisResult.analysis;
-              await cvDocument.save();
-              cvDataWithAnalysis = {
-                ...cvDocument.cvData,
-                metadata: {
-                  ...cvDocument.metadata,
-                  aiAnalysis: analysisResult.analysis
-                }
-              };
-              console.log('✅ Journey Document Service - AI analysis generated and saved to CV');
-            }
-          }
-        } catch (analysisError) {
-          console.error('⚠️ Journey Document Service - Failed to generate AI analysis, continuing without it:', analysisError);
-          // Continue without AI analysis - cover letter will still be generated
-        }
-      } else {
-        // Include metadata in cvData for cover letter generation
-        cvDataWithAnalysis = {
-          ...cvDocument.cvData,
-          metadata: cvDocument.metadata
-        };
-      }
+      // Include metadata in cvData for cover letter generation
+      const cvDataWithAnalysis = {
+        ...cvDocument.cvData,
+        metadata: cvDocument.metadata
+      };
 
       // Generate header from CV and job data
       let header = '';

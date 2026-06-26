@@ -23,7 +23,7 @@ import JobsHeader from './jobs/JobsHeader';
 import JobsListView from './jobs/JobsListView';
 import JobsKanbanView from './jobs/JobsKanbanView';
 import JobsFilters from './jobs/JobsFilters';
-import JobParserDialog from './jobs/JobParserDialog';
+import JobParserSidebar from './jobs/JobParserSidebar';
 import TrackerCreatedStageModal from './jobs/TrackerCreatedStageModal';
 import DownloadModal from '@/components/ui/DownloadModal';
 import { useJobsPersistence } from '@/lib/hooks/useJobsPersistence';
@@ -1515,7 +1515,7 @@ const JobsTracker: React.FC = () => {
                       >
                         <option value="" disabled>Update Status</option>
                         <option value="draft">Draft</option>
-                        <option value="created">Created</option>
+                        <option value="created">Staging</option>
                         <option value="applied">Applied</option>
                         <option value="interview">Interview</option>
                         <option value="offer">Offer</option>
@@ -1644,7 +1644,7 @@ const JobsTracker: React.FC = () => {
         />
       )}
 
-      <JobParserDialog
+      <JobParserSidebar
         isOpen={showJobParserDialog}
         onClose={() => setShowJobParserDialog(false)}
         onParseComplete={handleParseComplete}

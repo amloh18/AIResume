@@ -3,6 +3,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
 import { usePaymentModal } from '@/contexts/PaymentModalContext';
+import { useSession } from 'next-auth/react';
+import { useAuthModalStore } from '@/lib/stores/authModalStore';
 import { 
   Send, Sparkles, User, Loader2, Trash2, CornerDownRight, 
   MousePointer2, MessageSquare, History, Edit2, X, Plus, ChevronRight
@@ -44,6 +46,10 @@ const SUGGESTIONS = [
 const MoriChatInterface: React.FC = () => {
   const { state, updateCVData } = useResumeEnhancer();
   const { openPaymentModal } = usePaymentModal();
+  const { data: session, status: sessionStatus } = useSession();
+  const { openModal } = useAuthModalStore();
+  const isGuestMode = sessionStatus === 'unauthenticated';
+
   const [limitExhausted, setLimitExhausted] = useState(false);
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>([
@@ -68,6 +74,7 @@ const MoriChatInterface: React.FC = () => {
 
   // Fetch History
   const fetchHistory = async () => {
+    if (sessionStatus === 'unauthenticated') return;
     try {
       const res = await fetch('/api/ai/mori-chat/history');
       if (res.ok) {
@@ -83,8 +90,10 @@ const MoriChatInterface: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchHistory();
-  }, []);
+    if (sessionStatus === 'authenticated') {
+      fetchHistory();
+    }
+  }, [sessionStatus]);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -345,6 +354,97 @@ const MoriChatInterface: React.FC = () => {
     }]);
     setShowHistory(false);
   };
+
+  if (isGuestMode) {
+    return (
+      <div className="flex flex-col h-full bg-transparent relative overflow-hidden">
+        {/* Header Bar */}
+        <div className="px-4 py-2 border-b border-slate-200 dark:border-white/10 flex items-center justify-between bg-white dark:bg-transparent shrink-0">
+          <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
+            <MessageSquare className="w-4 h-4 text-emerald-500" />
+            Mori AI Assistant
+          </div>
+        </div>
+
+        {/* Guest Info Card Container */}
+        <div className="flex-1 flex items-center justify-center p-6 bg-slate-50/50 dark:bg-transparent overflow-y-auto">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full max-w-[340px] p-6 rounded-2xl bg-white dark:bg-[var(--bg-primary)] border border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col gap-5 text-center relative overflow-hidden group"
+          >
+            {/* Glowing background light */}
+            <div className="absolute -top-12 -left-12 w-28 h-28 rounded-full bg-emerald-500/10 dark:bg-emerald-500/20 blur-2xl group-hover:scale-125 transition-transform duration-500 pointer-events-none"></div>
+            <div className="absolute -bottom-12 -right-12 w-28 h-28 rounded-full bg-teal-500/10 dark:bg-teal-500/20 blur-2xl group-hover:scale-125 transition-transform duration-500 pointer-events-none"></div>
+
+            {/* Sparkles Icon */}
+            <div className="mx-auto w-12 h-12 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+              <Sparkles className="w-6 h-6 text-white animate-pulse" />
+            </div>
+
+            {/* Typography & Copy */}
+            <div>
+              <h3 className="text-base font-bold text-slate-800 dark:text-white tracking-tight">
+                Unlock Mori AI Assistant
+              </h3>
+              <p className="text-[11.5px] text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
+                Supercharge your job hunt with our expert CV AI partner. Mori reads your CV, drafts changes dynamically, and optimizes it for your dream role.
+              </p>
+            </div>
+
+            {/* Feature List */}
+            <div className="text-left bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5 rounded-xl p-3.5 space-y-2.5">
+              <div className="flex items-start gap-2.5">
+                <div className="w-4 h-4 rounded-full bg-emerald-500/10 dark:bg-emerald-500/20 flex items-center justify-center shrink-0 mt-0.5">
+                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">✓</span>
+                </div>
+                <div>
+                  <h5 className="text-[11px] font-bold text-slate-700 dark:text-slate-300">Natural Language Edits</h5>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400">Instruct Mori to edit any section of your CV instantly.</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-2.5">
+                <div className="w-4 h-4 rounded-full bg-emerald-500/10 dark:bg-emerald-500/20 flex items-center justify-center shrink-0 mt-0.5">
+                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">✓</span>
+                </div>
+                <div>
+                  <h5 className="text-[11px] font-bold text-slate-700 dark:text-slate-300">Targeted Job Tailoring</h5>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400">Align your experience directly to target job descriptions.</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-2.5">
+                <div className="w-4 h-4 rounded-full bg-emerald-500/10 dark:bg-emerald-500/20 flex items-center justify-center shrink-0 mt-0.5">
+                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">✓</span>
+                </div>
+                <div>
+                  <h5 className="text-[11px] font-bold text-slate-700 dark:text-slate-300">ATS Optimization</h5>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400">Enhance keywords to pass automated screening systems.</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => openModal({ view: 'signup', callbackUrl: window.location.href })}
+                className="w-full py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-xl text-[12px] font-bold transition-all shadow-md shadow-emerald-500/20 hover:shadow-lg active:scale-[0.98] flex items-center justify-center gap-1.5"
+              >
+                <span>Sign Up to Use AI</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+              
+              <button
+                onClick={() => openModal({ view: 'signin', callbackUrl: window.location.href })}
+                className="w-full py-2 hover:bg-slate-50 dark:hover:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-400 rounded-xl text-[12px] font-semibold transition-all active:scale-[0.98]"
+              >
+                Already have an account? Log In
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-full bg-transparent relative overflow-hidden">

@@ -124,7 +124,7 @@ const ApplicationStatsWidget: React.FC<ApplicationStatsWidgetProps> = ({ userId 
         fullMark: max,
       },
       {
-        metric: 'Created',
+        metric: 'Staging',
         value: stats.created || 0,
         fullMark: max,
       },

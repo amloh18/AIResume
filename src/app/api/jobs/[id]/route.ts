@@ -136,6 +136,7 @@ export async function GET(
       trustSnapshot: (job as any).trustSnapshot,
       transparencySnapshot: (job as any).transparencySnapshot,
       interviewCoach: job.interviewCoach,
+      extractedJd: job.extractedJd,
       atsAnalysis: job.atsAnalysis,
       statusHistory: (job.statusHistory || []).map((sh: any) => ({
         ...sh,
@@ -1026,6 +1027,7 @@ export async function PUT(
       trustScore: (job as any).trustScore,
       trustSnapshot: (job as any).trustSnapshot,
       transparencySnapshot: (job as any).transparencySnapshot,
+      extractedJd: job.extractedJd,
       isArchived: Boolean(job.isArchived),
       createdAt: job.createdAt instanceof Date ? job.createdAt.toISOString() : job.createdAt,
       updatedAt: job.updatedAt instanceof Date ? job.updatedAt.toISOString() : job.updatedAt

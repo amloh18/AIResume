@@ -1,4 +1,6 @@
 import { Browser, Page } from 'puppeteer';
+import fs from 'fs';
+import path from 'path';
 
 // Try to import puppeteer, but don't fail if it's not available
 let puppeteer: any = null;
@@ -28,6 +30,82 @@ export interface JobDetails {
   postedDate?: string;
   applicationDeadline?: string;
   sourceUrl: string;
+}
+
+/**
+ * Utility to repair truncated or invalid JSON strings returned by LLM
+ */
+function repairTruncatedJson(str: string): string {
+  str = str.trim();
+  
+  // Try parsing first
+  try {
+    JSON.parse(str);
+    return str;
+  } catch (_) {}
+
+  // 1. Handle unclosed string
+  let quotesCount = 0;
+  for (let i = 0; i < str.length; i++) {
+    if (str[i] === '"' && (i === 0 || str[i - 1] !== '\\')) {
+      quotesCount++;
+    }
+  }
+  if (quotesCount % 2 !== 0) {
+    str += '"';
+  }
+
+  // 2. Clear out any trailing commas or half-written object keys/values that will break JSON
+  let prevStr = "";
+  while (str !== prevStr) {
+    prevStr = str;
+    str = str.trim()
+      .replace(/,\s*$/, '') // trailing comma
+      .replace(/:\s*$/, '') // trailing colon
+      .replace(/,\s*"\w*"\s*$/, '') // incomplete property key
+      .replace(/,\s*\{\s*$/, '') // incomplete object
+      .replace(/,\s*\[\s*$/, ''); // incomplete array
+  }
+
+  // 3. Track braces and brackets
+  const stack: string[] = [];
+  let inString = false;
+  for (let i = 0; i < str.length; i++) {
+    const char = str[i];
+    if (char === '"' && (i === 0 || str[i - 1] !== '\\')) {
+      inString = !inString;
+      continue;
+    }
+    if (inString) continue;
+
+    if (char === '{') {
+      stack.push('{');
+    } else if (char === '[') {
+      stack.push('[');
+    } else if (char === '}') {
+      if (stack[stack.length - 1] === '{') {
+        stack.pop();
+      }
+    } else if (char === ']') {
+      if (stack[stack.length - 1] === '[') {
+        stack.pop();
+      }
+    }
+  }
+
+  // 4. Close remaining structural brackets
+  while (stack.length > 0) {
+    const current = stack.pop();
+    if (current === '{') {
+      str = str.trim().replace(/,\s*$/, '');
+      str += '}';
+    } else if (current === '[') {
+      str = str.trim().replace(/,\s*$/, '');
+      str += ']';
+    }
+  }
+
+  return str;
 }
 
 export class JobParserService {
@@ -394,66 +472,52 @@ export class JobParserService {
         }
       }
 
-      // Use LLM to extract structured data
       const { callGeminiWithFallback } = await import('@/lib/utils/gemini-api-helper');
+      const systemPrompt = `You are an expert job description analyst. Extracts structured data from any JD, however vague. Keep all text fields, descriptions, and list items extremely concise (under 120 characters each) to fit output token limits. Return ONLY valid JSON, no markdown, no code fences. Fill in all fields, handling missing information gracefully by setting defaults or marked as unknown.`;
       
-      const systemPrompt = `You are a job description parser. Extract structured information from job postings. Return ONLY valid JSON, no markdown, no code fences.`;
-      
-      const userPrompt = `Parse this job description and extract:
-- title: Job title
-- company: Company name
-- location: Location (city, state, country, or remote)
-- salary: Object with min, max (numbers), currency (string), period ("yearly"|"monthly"|"hourly")
-- requirements: Array of required skills/qualifications
-- benefits: Array of benefits mentioned
-- jobType: "full-time"|"part-time"|"contract"|"internship"
-- experience: Required experience level
-- education: Education requirements
-- skills: Array of technical skills mentioned
-- postedDate: Date posted (if mentioned)
-- applicationDeadline: Application deadline (if mentioned)
-- sourceUrl: The URL or source (use provided URL if available, otherwise "manual")
-
-Note: Do NOT extract or repeat the full description text in the response (we already have it).
-
-Job Description:
-${jobText}
-
-Return JSON matching this structure:
-{
-  "title": "...",
-  "company": "...",
-  "location": "...",
-  "salary": {"min": 0, "max": 0, "currency": "USD", "period": "yearly"},
-  "requirements": [],
-  "benefits": [],
-  "jobType": "...",
-  "experience": "...",
-  "education": "...",
-  "skills": [],
-  "postedDate": "...",
-  "applicationDeadline": "...",
-  "sourceUrl": "${isUrl ? textOrUrl : 'manual'}"
-}`;
-
+      let userPrompt = '';
+      try {
+        const filePath = path.join(process.cwd(), 'public/job_refine.md');
+        const fileContent = fs.readFileSync(filePath, 'utf8');
+        const sectionHeader = '## full job details extraction prompt';
+        if (fileContent.includes(sectionHeader)) {
+          const index = fileContent.indexOf(sectionHeader);
+          let rawPrompt = fileContent.substring(index + sectionHeader.length).trim();
+          
+          // Extract the double-quoted string containing the prompt block
+          const firstQuote = rawPrompt.indexOf('"');
+          const lastQuote = rawPrompt.lastIndexOf('"');
+          if (firstQuote !== -1 && lastQuote !== -1 && firstQuote < lastQuote) {
+            rawPrompt = rawPrompt.substring(firstQuote + 1, lastQuote);
+          }
+          
+          // Replace placeholders
+          userPrompt = rawPrompt
+            .replace('{{RAW_JD}}', jobText)
+            .replace('{{SOURCE_URL}}', isUrl ? textOrUrl : 'manual')
+            .replace('{{MASTER_CV_DATA}}', 'None provided');
+        } else {
+          throw new Error('Could not find full job details extraction prompt section in job_refine.md');
+        }
+      } catch (fileError) {
+        console.error('Failed to load dynamic job parse prompt from file, using fallback:', fileError);
+        userPrompt = `Extract structured job data from the following job description: ${jobText}`;
+      }
+ 
       const result = await callGeminiWithFallback({
         prompt: userPrompt,
         systemPrompt,
-        temperature: 0.3, // Lower temperature for more consistent extraction
-        maxTokens: 2048,
-        model: 'gemini-2.5-flash-lite',
+        temperature: 0.1,
+        maxTokens: 8192, // Use model maximum to prevent truncation issues
+        model: 'gemini-2.5-flash',
         responseMimeType: 'application/json'
       });
-
-      // Validate result
+ 
       if (!result || !result.content) {
         throw new Error('Gemini API returned empty or invalid response');
       }
-
-      // Parse JSON from response
+ 
       let jsonText = result.content;
-      
-      // Remove code fences if present
       jsonText = jsonText
         .replace(/```json[\s\S]*?\n/g, '')
         .replace(/```[\s\S]*?\n/g, '')
@@ -466,40 +530,47 @@ Return JSON matching this structure:
         if (!jsonMatch) {
           throw new Error('No JSON object boundaries found in response');
         }
-        parsed = JSON.parse(jsonMatch[0]);
+        
+        // Apply JSON repair to handle potential truncation gracefully
+        const repairedJson = repairTruncatedJson(jsonMatch[0]);
+        parsed = JSON.parse(repairedJson);
       } catch (parseErr) {
-        console.error('❌ Failed to parse Gemini response as JSON. Raw content was:', jsonText);
+        console.error('Failed parsing, attempting aggressive repair. Raw text:', jsonText);
         try {
-          parsed = JSON.parse(jsonText);
-        } catch {
-          throw new Error(`Could not parse LLM response as JSON: ${parseErr instanceof Error ? parseErr.message : 'Unknown error'}`);
+          const repairedJson = repairTruncatedJson(jsonText);
+          parsed = JSON.parse(repairedJson);
+        } catch (innerErr) {
+          console.error('Could not repair JSON at all:', innerErr);
+          throw innerErr;
         }
       }
       
-      // Map to JobDetails interface
-      return {
-        title: parsed.title || '',
-        company: parsed.company || '',
-        location: parsed.location,
-        salary: parsed.salary ? {
-          min: parsed.salary.min,
-          max: parsed.salary.max,
-          currency: parsed.salary.currency || 'USD',
-          period: (parsed.salary.period === 'hourly' || parsed.salary.period === 'monthly' || parsed.salary.period === 'yearly')
-            ? parsed.salary.period
-            : 'yearly'
+      // Store rich data under a custom symbol or return as part of the object
+      const mappedDetails: JobDetails & { richData?: any } = {
+        title: parsed.role?.job_title?.value || parsed.tracker_enrichment?.tracker_card_data?.display_title || '',
+        company: parsed.company?.company_name?.value || parsed.tracker_enrichment?.tracker_card_data?.display_company || '',
+        location: parsed.location?.location_raw || parsed.tracker_enrichment?.tracker_card_data?.display_location || undefined,
+        salary: parsed.compensation ? {
+          min: parsed.compensation.salary_min || parsed.compensation.salary_min_inferred || undefined,
+          max: parsed.compensation.salary_max || parsed.compensation.salary_max_inferred || undefined,
+          currency: parsed.compensation.salary_currency || 'USD',
+          period: parsed.compensation.salary_period === 'annual' ? 'year' : parsed.compensation.salary_period === 'monthly' ? 'month' : parsed.compensation.salary_period === 'hourly' ? 'hour' : 'year'
         } : undefined,
-        description: jobText, // Map directly to full original job description text
-        requirements: parsed.requirements || [],
-        benefits: parsed.benefits || [],
-        jobType: parsed.jobType,
-        experience: parsed.experience,
-        education: parsed.education,
-        skills: parsed.skills || [],
-        postedDate: parsed.postedDate,
-        applicationDeadline: parsed.applicationDeadline,
-        sourceUrl: parsed.sourceUrl || (isUrl ? textOrUrl : 'manual')
+        description: jobText,
+        requirements: (parsed.role_content?.requirements_must_have || []).map((r: any) => r.text)
+          .concat((parsed.role_content?.requirements_nice_to_have || []).map((r: any) => r.text)),
+        benefits: (parsed.compensation?.benefits || []).map((b: any) => b.detail || b.category),
+        jobType: parsed.employment_terms?.employment_type?.value || undefined,
+        experience: parsed.role?.seniority_level?.value || undefined,
+        education: parsed.skills?.education_requirements?.degree_level || undefined,
+        skills: (parsed.skills?.skills_technical || []).map((s: any) => s.skill),
+        postedDate: parsed.application_info?.posting_date || undefined,
+        applicationDeadline: parsed.application_info?.application_deadline || undefined,
+        sourceUrl: parsed.application_info?.apply_url || (isUrl ? textOrUrl : 'manual'),
+        richData: parsed // Include the entire structured result
       };
+
+      return mappedDetails;
     } catch (error) {
       console.error('Error parsing job description with LLM:', error);
       throw new Error(`Failed to parse job description: ${error instanceof Error ? error.message : 'Unknown error'}`);

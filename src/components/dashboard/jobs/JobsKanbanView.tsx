@@ -267,7 +267,7 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
     },
     {
       status: "created",
-      title: "Created",
+      title: "Staging",
       color: draftColor,
       hoverColor:
         "bg-purple-100 dark:bg-purple-500/20 border-purple-300 dark:border-purple-500/30 text-purple-600 dark:text-white",

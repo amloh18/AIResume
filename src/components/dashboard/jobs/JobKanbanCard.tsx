@@ -127,7 +127,8 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
   // States & Hooks for document generation progress tracking
   const [progress, setProgress] = useState(15);
   const primaryJourney = jobJourneys[0];
-  const isGenerating = stage === "created" && primaryJourney && (
+  const isGenerating = stage === "created" && (
+    !primaryJourney ||
     primaryJourney.status === "processing_documents" ||
     (primaryJourney.status !== "creation_failed" && primaryJourney.status !== "ready" && (!primaryJourney.cvId || !primaryJourney.coverLetterId))
   );
@@ -152,7 +153,7 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
 
   // Polling database for updates on journey status
   React.useEffect(() => {
-    if (!isGenerating || !primaryJourney?.id) return;
+    if (!isGenerating) return;
 
     let isMounted = true;
     const pollTimer = setInterval(async () => {
@@ -160,10 +161,12 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
         const res = await fetch(`/api/application-journey?jobId=${job.id || job._id}`);
         if (res.ok && isMounted) {
           const result = await res.json();
-          if (result.success && result.data?.journeys) {
-            const updatedJourney = result.data.journeys.find(
-              (j: any) => j.id === primaryJourney.id || j._id === primaryJourney.id
-            );
+          if (result.success && result.data?.journeys && result.data.journeys.length > 0) {
+            const updatedJourney = primaryJourney
+              ? result.data.journeys.find(
+                  (j: any) => j.id === primaryJourney.id || j._id === primaryJourney.id || j.jobId === job.id || j.jobId === job._id
+                )
+              : result.data.journeys[0];
             if (updatedJourney) {
               const hasBoth = updatedJourney.cvId && updatedJourney.coverLetterId;
               const notProcessing = updatedJourney.status !== "processing_documents";
@@ -367,7 +370,7 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
 
   const renderCreatedContent = () => {
     const primaryJourney = jobJourneys[0];
-    const atsScore = primaryJourney?.atsScore;
+    const atsScore = primaryJourney?.atsScore || job.atsScore || job.matchScore;
     const hasCV = !!primaryJourney?.cvId;
     const hasCL = !!primaryJourney?.coverLetterId;
 

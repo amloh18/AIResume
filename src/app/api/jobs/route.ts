@@ -73,6 +73,7 @@ const serializeJob = (job: any) => {
     trustSnapshot: job?.trustSnapshot,
     transparencySnapshot: job?.transparencySnapshot,
     interviewCoach: job?.interviewCoach,
+    extractedJd: job?.extractedJd,
     isArchived: Boolean(job?.isArchived),
     createdAt: job?.createdAt,
     updatedAt: job?.updatedAt
@@ -189,7 +190,8 @@ export async function POST(request: NextRequest) {
       trustSnapshot,
       transparencySnapshot,
       source: bodySource, // Allow source to be passed in body as fallback
-      cvId // Optional CV ID to link to journey
+      cvId, // Optional CV ID to link to journey
+      extractedJd
     } = body;
 
     // If source is not set from auth, use body source or default based on auth method
@@ -370,7 +372,8 @@ export async function POST(request: NextRequest) {
             interviews: [],
             followUps: [],
             attachments: [],
-            tags: source === 'extension' ? ['extension-saved'] : (tags || [])
+            tags: source === 'extension' ? ['extension-saved'] : (tags || []),
+            extractedJd: extractedJd || undefined
           };
 
           const [createdJob] = await JobApplication.create([jobData], { session });
@@ -480,7 +483,8 @@ export async function POST(request: NextRequest) {
           interviews: [],
           followUps: [],
           attachments: [],
-          tags: source === 'extension' ? ['extension-saved'] : (tags || [])
+          tags: source === 'extension' ? ['extension-saved'] : (tags || []),
+          extractedJd: extractedJd || undefined
         };
 
         jobApplication = await JobApplication.create(jobData);

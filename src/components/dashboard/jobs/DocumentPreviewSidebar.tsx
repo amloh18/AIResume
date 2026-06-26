@@ -33,7 +33,7 @@ export default function DocumentPreviewSidebar({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[110]"
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9998]"
         onClick={onClose}
       />
       <motion.div
@@ -41,7 +41,7 @@ export default function DocumentPreviewSidebar({
         animate={{ x: 0 }}
         exit={{ x: '100%' }}
         transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-        className="fixed right-0 top-0 h-screen bg-white dark:bg-[#141810] shadow-2xl z-[111] flex flex-col w-full md:w-[60vw] lg:w-[50vw]"
+        className="fixed right-0 top-0 h-screen bg-white dark:bg-[#141810] shadow-2xl z-[9999] flex flex-col w-full md:w-[60vw] lg:w-[50vw]"
       >
         <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-white/10 flex-shrink-0">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">

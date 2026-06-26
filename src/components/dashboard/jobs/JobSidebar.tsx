@@ -82,6 +82,7 @@ interface JobApplication {
   atsScore?: number;
   atsAnalysis?: any;
   statusHistory?: any[];
+  extractedJd?: any;
 }
 
 
@@ -761,7 +762,7 @@ ${userName}`
     const normalizedTimelineStatus = job.status === 'screening' ? 'applied' : job.status;
     const items = [
       { key: 'draft', label: 'Draft' },
-      { key: 'created', label: 'Created' },
+      { key: 'created', label: 'Staging' },
       { key: 'applied', label: 'Applied' },
       { key: 'interview', label: 'Interview' },
       { key: 'offer', label: 'Offer' },
@@ -1620,7 +1621,7 @@ ${userName}`
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="fixed bg-black/50 backdrop-blur-sm z-[999]"
+          className="fixed bg-black/50 backdrop-blur-sm z-[9998]"
           style={{
             top: 0,
             left: 0,
@@ -1639,7 +1640,7 @@ ${userName}`
           animate={{ x: 0 }}
           exit={{ x: '100%' }}
           transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-          className="fixed right-0 top-16 h-[calc(100vh-4rem)] bg-white dark:bg-[#141810] shadow-2xl z-[1000] flex flex-col transition-all duration-300"
+          className="fixed right-0 top-0 h-screen bg-white dark:bg-[#141810] shadow-2xl z-[9999] flex flex-col transition-all duration-300"
           style={{ width: sidebarWidth, right: showCommsSidebar && windowWidth >= 768 ? '450px' : '0' }}
           onClick={(e) => e.stopPropagation()}
         >
@@ -1789,7 +1790,7 @@ ${userName}`
                               <Sparkles className="h-6 w-6" />
                             </div>
                             <div>
-                              <h4 className="text-xl font-bold text-gray-900 dark:text-white">Journey Snapshot</h4>
+                              <h4 className="text-lg font-bold text-gray-900 dark:text-white">Journey Snapshot</h4>
                               <p className="text-xs text-gray-500">Key metrics for this application stage</p>
                             </div>
                           </div>
@@ -1816,7 +1817,7 @@ ${userName}`
                               {job.status === 'draft' ? <Target className="h-6 w-6" /> : <Sparkles className="h-6 w-6" />}
                             </div>
                             <div>
-                              <h4 className="text-2xl font-semibold text-gray-900 dark:text-white">{journeyCardData.title}</h4>
+                              <h4 className="text-lg font-bold text-gray-900 dark:text-white">{journeyCardData.title}</h4>
                               <p className="text-sm text-gray-600 dark:text-gray-300">{journeyCardData.summary}</p>
                             </div>
                           </div>
@@ -2255,30 +2256,34 @@ ${userName}`
         )}
 
         {showDetailsModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[1001] bg-black/70 backdrop-blur-md flex items-center justify-center p-4"
-            onClick={() => setShowDetailsModal(false)}
-          >
+          <React.Fragment key="details-modal-sidebar">
+            {/* Modal Backdrop */}
             <motion.div
-              initial={{ scale: 0.96, opacity: 0, y: 12 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.96, opacity: 0, y: 12 }}
-              className="w-full max-w-4xl rounded-[28px] border border-gray-200 bg-white p-6 shadow-2xl dark:border-white/10 dark:bg-[#171d15]"
-              onClick={(e) => e.stopPropagation()}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[1001] bg-black/50 backdrop-blur-sm"
+              onClick={() => setShowDetailsModal(false)}
+            />
+
+            {/* Modal Sidebar Panel */}
+            <motion.div
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="fixed inset-y-0 right-0 w-full max-w-2xl bg-white dark:bg-[#141810] shadow-2xl border-l border-gray-200 dark:border-white/10 z-[1002] flex flex-col overflow-hidden"
             >
-              <div className="mb-5 flex items-start justify-between gap-4">
+              <div className="p-6 border-b border-gray-200 dark:border-white/10 flex-shrink-0 flex items-start justify-between gap-4">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">
                     {detailsModalView === 'details' ? 'Job Details' : 'Application Insights'}
                   </p>
-                  <h3 className="text-2xl font-semibold text-gray-900 dark:text-white">
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mt-1">
                     {job.jobTitle || job.title} at {job.company}
                   </h3>
                   {activeActionPayload && (
-                    <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                    <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
                       Viewing {formatStageLabel(activeActionPayload.stage)} context
                       {activeJourneyForPayload?.id ? ` with journey ${activeJourneyForPayload.id.slice(0, 8)}` : ' without a linked journey yet'}.
                     </p>
@@ -2292,7 +2297,7 @@ ${userName}`
                 </button>
               </div>
 
-              <div className="mb-6 flex gap-2 rounded-2xl bg-gray-100 p-1 dark:bg-[#222a1f]">
+              <div className="mb-6 flex gap-2 rounded-2xl bg-gray-100 p-1 dark:bg-[#222a1f] mx-6 mt-4">
                 <button
                   onClick={() => setDetailsModalView('details')}
                   className={`flex-1 rounded-xl px-4 py-2 text-sm font-medium transition ${
@@ -2316,163 +2321,484 @@ ${userName}`
               </div>
 
               {activeActionPayload && (
-                <div className="mb-6 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600 dark:border-white/10 dark:bg-[#20281d] dark:text-gray-300">
+                <div className="mb-6 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600 dark:border-white/10 dark:bg-[#20281d] dark:text-gray-300 mx-6">
                   {activeActionId === 'open_insights'
                     ? `Insights are filtered to the ${formatStageLabel(activeActionPayload.stage)} stage for this tracker item.`
                     : `This panel opened from the ${formatStageLabel(activeActionPayload.stage)} stage and keeps the current job, journey, and entitlement context together.`}
                 </div>
               )}
 
-              {detailsModalView === 'details' ? (
-                <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
-                  <div className="space-y-5">
-                    <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d]">
-                      <h4 className="mb-4 text-base font-semibold text-gray-900 dark:text-white">Core Details</h4>
-                      <div className="space-y-4">
-                        <div className="flex items-start gap-3">
-                          <Building2 className="mt-0.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
-                          <div>
-                            <p className="text-xs uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Company</p>
-                            <p className="text-sm font-medium text-gray-900 dark:text-white">{job.company}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-start gap-3">
-                          <MapPin className="mt-0.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
-                          <div>
-                            <p className="text-xs uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Location</p>
-                            <p className="text-sm font-medium text-gray-900 dark:text-white">{job.location || fallbacks.defaultLocation}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-start gap-3">
-                          <Briefcase className="mt-0.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
-                          <div>
-                            <p className="text-xs uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Type</p>
-                            <p className="text-sm font-medium capitalize text-gray-900 dark:text-white">{job.jobType || job.type || 'Not specified'}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-start gap-3">
-                          <DollarSign className="mt-0.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
-                          <div>
-                            <p className="text-xs uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Salary</p>
-                            <p className="text-sm font-medium text-gray-900 dark:text-white">{formatJobSalary(job.salary, fallbacks.defaultSalary)}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-start gap-3">
-                          <Calendar className="mt-0.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
-                          <div>
-                            <p className="text-xs uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Deadline</p>
-                            <p className="text-sm font-medium text-gray-900 dark:text-white">{formatJobDate(job.deadline, 'No deadline set')}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-start gap-3">
-                          <ExternalLink className="mt-0.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
-                          <div className="min-w-0">
-                            <p className="text-xs uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Job URL</p>
-                            {job.jobUrl ? (
-                              <a href={job.jobUrl} target="_blank" rel="noopener noreferrer" className="truncate text-sm font-medium text-emerald-600 hover:underline dark:text-[#80FF00]">
-                                {job.jobUrl}
-                              </a>
-                            ) : (
-                              <p className="text-sm font-medium text-gray-900 dark:text-white">No URL provided</p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {job.contactDetails && (job.contactDetails.name || job.contactDetails.email || job.contactDetails.phone || job.contactDetails.role) && (
+              <div className="flex-1 overflow-y-auto p-6">
+                {detailsModalView === 'details' ? (
+                  <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
+                    {/* Left Column */}
+                    <div className="space-y-5">
+                      {/* Core Details */}
                       <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d]">
-                        <h4 className="mb-4 text-base font-semibold text-gray-900 dark:text-white">Contact Details</h4>
+                        <h4 className="mb-4 text-base font-semibold text-gray-900 dark:text-white">Core Details</h4>
                         <div className="space-y-4">
-                          {job.contactDetails.name && <p className="text-sm text-gray-700 dark:text-gray-300"><span className="font-medium text-gray-900 dark:text-white">Name:</span> {job.contactDetails.name}</p>}
-                          {job.contactDetails.role && <p className="text-sm text-gray-700 dark:text-gray-300"><span className="font-medium text-gray-900 dark:text-white">Role:</span> {job.contactDetails.role}</p>}
-                          {job.contactDetails.email && <p className="text-sm text-gray-700 dark:text-gray-300"><span className="font-medium text-gray-900 dark:text-white">Email:</span> {job.contactDetails.email}</p>}
-                          {job.contactDetails.phone && <p className="text-sm text-gray-700 dark:text-gray-300"><span className="font-medium text-gray-900 dark:text-white">Phone:</span> {job.contactDetails.phone}</p>}
+                          <div className="flex items-start gap-3">
+                            <Building2 className="mt-0.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
+                            <div>
+                              <p className="text-xs uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Company</p>
+                              <p className="text-sm font-medium text-gray-900 dark:text-white">{job.company}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-start gap-3">
+                            <MapPin className="mt-0.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
+                            <div>
+                              <p className="text-xs uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Location</p>
+                              <p className="text-sm font-medium text-gray-900 dark:text-white">{job.location || fallbacks.defaultLocation}</p>
+                              {job.extractedJd?.location?.location_type?.value && (
+                                <span className="inline-block mt-1 px-2 py-0.5 text-xs bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 rounded capitalize">
+                                  Type: {job.extractedJd.location.location_type.value}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-start gap-3">
+                            <Briefcase className="mt-0.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
+                            <div>
+                              <p className="text-xs uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Type</p>
+                              <p className="text-sm font-medium capitalize text-gray-900 dark:text-white">{job.jobType || job.type || 'Not specified'}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-start gap-3">
+                            <DollarSign className="mt-0.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
+                            <div>
+                              <p className="text-xs uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Salary</p>
+                              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                {formatJobSalary(job.salary, fallbacks.defaultSalary)}
+                                {job.extractedJd?.compensation?.salary_inferred && (
+                                  <span className="inline-block ml-2 px-1.5 py-0.5 text-[10px] bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 rounded">
+                                    Estimated
+                                  </span>
+                                )}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-start gap-3">
+                            <Calendar className="mt-0.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
+                            <div>
+                              <p className="text-xs uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Deadline</p>
+                              <p className="text-sm font-medium text-gray-900 dark:text-white">{formatJobDate(job.deadline, 'No deadline set')}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-start gap-3">
+                            <ExternalLink className="mt-0.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
+                            <div className="min-w-0">
+                              <p className="text-xs uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Job URL</p>
+                              {job.jobUrl ? (
+                                <a href={job.jobUrl} target="_blank" rel="noopener noreferrer" className="truncate text-sm font-medium text-emerald-600 hover:underline dark:text-[#80FF00]">
+                                  {job.jobUrl}
+                                </a>
+                              ) : (
+                                <p className="text-sm font-medium text-gray-900 dark:text-white">No URL provided</p>
+                              )}
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    )}
-                  </div>
 
-                  <div className="space-y-5">
-                    <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d]">
-                      <h4 className="mb-4 text-base font-semibold text-gray-900 dark:text-white">Job Description</h4>
-                      <div className="max-h-[260px] overflow-y-auto whitespace-pre-wrap text-sm leading-6 text-gray-700 dark:text-gray-300">
-                        {job.jobDescription || fallbacks.defaultJobDescription}
-                      </div>
+                      {/* Contact Details */}
+                      {job.contactDetails && (job.contactDetails.name || job.contactDetails.email || job.contactDetails.phone || job.contactDetails.role) && (
+                        <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d]">
+                          <h4 className="mb-4 text-base font-semibold text-gray-900 dark:text-white">Contact Details</h4>
+                          <div className="space-y-4">
+                            {job.contactDetails.name && <p className="text-sm text-gray-700 dark:text-gray-300"><span className="font-medium text-gray-900 dark:text-white">Name:</span> {job.contactDetails.name}</p>}
+                            {job.contactDetails.role && <p className="text-sm text-gray-700 dark:text-gray-300"><span className="font-medium text-gray-900 dark:text-white">Role:</span> {job.contactDetails.role}</p>}
+                            {job.contactDetails.email && <p className="text-sm text-gray-700 dark:text-gray-300"><span className="font-medium text-gray-900 dark:text-white">Email:</span> {job.contactDetails.email}</p>}
+                            {job.contactDetails.phone && <p className="text-sm text-gray-700 dark:text-gray-300"><span className="font-medium text-gray-900 dark:text-white">Phone:</span> {job.contactDetails.phone}</p>}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Requirements */}
+                      {job.extractedJd?.role_content && (
+                        <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d] space-y-4">
+                          <h4 className="text-base font-semibold text-gray-900 dark:text-white">Job Requirements</h4>
+                          
+                          {/* Must Have */}
+                          {job.extractedJd.role_content.requirements_must_have?.length > 0 && (
+                            <div>
+                              <h5 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Must Have</h5>
+                              <ul className="space-y-1.5 text-sm text-gray-700 dark:text-gray-300">
+                                {job.extractedJd.role_content.requirements_must_have.map((req: any, i: number) => (
+                                  <li key={i} className="flex items-start gap-2">
+                                    <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-red-500 flex-shrink-0" />
+                                    <span>{req.text} {req.years_required ? `(${req.years_required} yrs)` : ''}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+
+                          {/* Nice to Have */}
+                          {job.extractedJd.role_content.requirements_nice_to_have?.length > 0 && (
+                            <div>
+                              <h5 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Nice to Have</h5>
+                              <ul className="space-y-1.5 text-sm text-gray-700 dark:text-gray-300">
+                                {job.extractedJd.role_content.requirements_nice_to_have.map((req: any, i: number) => (
+                                  <li key={i} className="flex items-start gap-2">
+                                    <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-lime-500 flex-shrink-0" />
+                                    <span>{req.text} {req.years_required ? `(${req.years_required} yrs)` : ''}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+
+                          {/* Inferred Requirements */}
+                          {job.extractedJd.role_content.requirements_inferred?.length > 0 && (
+                            <div>
+                              <h5 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Inferred (AI Identified)</h5>
+                              <ul className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
+                                {job.extractedJd.role_content.requirements_inferred.map((req: any, i: number) => (
+                                  <li key={i} className="flex flex-col bg-white/50 dark:bg-white/5 p-2 rounded-lg border border-gray-100 dark:border-white/5">
+                                    <span className="font-medium text-gray-900 dark:text-white flex items-center gap-1.5">
+                                      <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                                      {req.text}
+                                    </span>
+                                    {req.inference_reason && (
+                                      <span className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 italic">Reason: {req.inference_reason}</span>
+                                    )}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Skills & Tech Stack */}
+                      {job.extractedJd?.skills && (
+                        <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d] space-y-4">
+                          <h4 className="text-base font-semibold text-gray-900 dark:text-white">Skills & Tech Stack</h4>
+                          
+                          {/* Technical Skills */}
+                          {job.extractedJd.skills.skills_technical?.length > 0 && (
+                            <div>
+                              <h5 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Technical Skills</h5>
+                              <div className="flex flex-wrap gap-1.5">
+                                {job.extractedJd.skills.skills_technical.map((item: any, i: number) => (
+                                  <span key={i} className={`px-2.5 py-1 text-xs font-medium rounded-full ${
+                                    item.importance === 'critical' 
+                                      ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 border border-red-200/50' 
+                                      : item.importance === 'strong'
+                                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
+                                        : 'bg-gray-100 text-gray-800 dark:bg-white/10 dark:text-gray-300'
+                                  }`}>
+                                    {item.skill}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Tools & Platforms */}
+                          {job.extractedJd.skills.tools_and_platforms?.length > 0 && (
+                            <div>
+                              <h5 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Tools & Platforms</h5>
+                              <div className="flex flex-wrap gap-1.5">
+                                {job.extractedJd.skills.tools_and_platforms.map((item: any, i: number) => (
+                                  <span key={i} className="px-2.5 py-1 text-xs font-medium bg-lime-100 text-lime-800 dark:bg-[#80FF00]/10 dark:text-[#80FF00] rounded-full border border-lime-200/20">
+                                    {item.tool}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Soft Skills */}
+                          {job.extractedJd.skills.skills_soft?.length > 0 && (
+                            <div>
+                              <h5 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Soft Skills</h5>
+                              <div className="flex flex-wrap gap-1.5">
+                                {job.extractedJd.skills.skills_soft.map((item: any, i: number) => (
+                                  <span key={i} className="px-2.5 py-1 text-xs font-medium bg-gray-100 text-gray-800 dark:bg-white/10 dark:text-gray-300 rounded-full">
+                                    {item.skill}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
 
-                    <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d]">
-                      <h4 className="mb-4 text-base font-semibold text-gray-900 dark:text-white">Notes</h4>
-                      <div className="whitespace-pre-wrap text-sm leading-6 text-gray-700 dark:text-gray-300">
-                        {job.notes || 'No notes added yet.'}
+                    {/* Right Column */}
+                    <div className="space-y-5">
+                      {/* Job Description */}
+                      <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d]">
+                        <h4 className="mb-4 text-base font-semibold text-gray-900 dark:text-white">Job Description</h4>
+                        <div className="max-h-[300px] overflow-y-auto whitespace-pre-wrap text-sm leading-6 text-gray-700 dark:text-gray-300 pr-2">
+                          {job.jobDescription || fallbacks.defaultJobDescription}
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
-                  <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d]">
-                    <h4 className="mb-4 text-base font-semibold text-gray-900 dark:text-white">Application Snapshot</h4>
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600 dark:text-gray-300">Status</span>
-                        <span className="text-sm font-semibold capitalize text-gray-900 dark:text-white">{job.status}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600 dark:text-gray-300">Success Probability</span>
-                        <span className="text-sm font-semibold text-gray-900 dark:text-white">{successProb}%</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600 dark:text-gray-300">Priority</span>
-                        <span className="text-sm font-semibold capitalize text-gray-900 dark:text-white">{job.priority || 'medium'}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600 dark:text-gray-300">Sponsorship</span>
-                        <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                          {job.sponsorship === 'yes' ? 'Provided' : job.sponsorship === 'no' ? 'Not provided' : 'Unknown'}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600 dark:text-gray-300">Match Score</span>
-                        <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">{insightsLoading ? '...' : `${keywordMatchScore}%`}</span>
-                      </div>
-                    </div>
-                  </div>
 
-                  <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d]">
-                    <h4 className="mb-4 text-base font-semibold text-gray-900 dark:text-white">Deeper Insights</h4>
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600 dark:text-gray-300">Hiring Trend</span>
-                        <span className="text-sm font-semibold text-gray-900 dark:text-white">{insightsLoading ? '...' : insights?.companyHiringTrend || 'Unknown'}</span>
+                      {/* Notes */}
+                      <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d]">
+                        <h4 className="mb-4 text-base font-semibold text-gray-900 dark:text-white">Notes</h4>
+                        <div className="whitespace-pre-wrap text-sm leading-6 text-gray-700 dark:text-gray-300">
+                          {job.notes || 'No notes added yet.'}
+                        </div>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600 dark:text-gray-300">Skills Gap</span>
-                        <span className="text-right text-sm font-semibold text-gray-900 dark:text-white">{insightsLoading ? '...' : insights?.skillsGap || 'Unable to analyze'}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600 dark:text-gray-300">Market Competitiveness</span>
-                        <span className={`text-right text-sm font-semibold ${
-                          salaryComp.comparison === 'above'
-                            ? 'text-green-600 dark:text-green-400'
-                            : salaryComp.comparison === 'below'
-                              ? 'text-red-600 dark:text-red-400'
-                              : 'text-gray-900 dark:text-white'
-                        }`}>
-                          {salaryComp.comparison !== 'unknown' ? salaryComp.text : (insightsLoading ? '...' : insights?.marketCompetitiveness || 'Unknown')}
-                        </span>
-                      </div>
-                      {nudge && (
-                        <div className="rounded-xl bg-blue-50 px-4 py-3 text-sm leading-6 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300">
-                          <span className="font-semibold">Smart action:</span> {nudge}
+
+                      {/* Team & Culture */}
+                      {job.extractedJd?.team_and_culture && (
+                        <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d] space-y-4">
+                          <h4 className="text-base font-semibold text-gray-900 dark:text-white">Team & Culture</h4>
+                          
+                          {/* Structure */}
+                          {job.extractedJd.team_and_culture.team_structure && (
+                            <div className="grid grid-cols-2 gap-3 text-sm border-b border-gray-100 dark:border-white/5 pb-3">
+                              {job.extractedJd.team_and_culture.team_structure.department && (
+                                <div>
+                                  <span className="text-xs text-gray-500 dark:text-gray-400 block">Department</span>
+                                  <span className="font-medium text-gray-900 dark:text-white">{job.extractedJd.team_and_culture.team_structure.department}</span>
+                                </div>
+                              )}
+                              {job.extractedJd.team_and_culture.team_structure.reports_to && (
+                                <div>
+                                  <span className="text-xs text-gray-500 dark:text-gray-400 block">Reports To</span>
+                                  <span className="font-medium text-gray-900 dark:text-white">{job.extractedJd.team_and_culture.team_structure.reports_to}</span>
+                                </div>
+                              )}
+                              {job.extractedJd.team_and_culture.team_structure.team_size && (
+                                <div>
+                                  <span className="text-xs text-gray-500 dark:text-gray-400 block">Team Size</span>
+                                  <span className="font-medium text-gray-900 dark:text-white">{job.extractedJd.team_and_culture.team_structure.team_size}</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Company Values */}
+                          {job.extractedJd.team_and_culture.company_values?.length > 0 && (
+                            <div>
+                              <h5 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Company Values</h5>
+                              <div className="space-y-2 text-sm">
+                                {job.extractedJd.team_and_culture.company_values.map((val: any, i: number) => (
+                                  <div key={i} className="flex flex-col bg-white/50 dark:bg-white/5 p-2 rounded-lg border border-gray-100 dark:border-white/5">
+                                    <span className="font-semibold text-gray-900 dark:text-white">{val.value}</span>
+                                    {val.evidence && <span className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{val.evidence}</span>}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
                   </div>
-                </div>
-              )}
+                ) : (
+                  <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
+                    {/* Left Column */}
+                    <div className="space-y-5">
+                      {/* Application Snapshot */}
+                      <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d]">
+                        <h4 className="mb-4 text-base font-semibold text-gray-900 dark:text-white">Application Snapshot</h4>
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-gray-600 dark:text-gray-300">Status</span>
+                            <span className="text-sm font-semibold capitalize text-gray-900 dark:text-white">{job.status}</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-gray-600 dark:text-gray-300">Success Probability</span>
+                            <span className="text-sm font-semibold text-gray-900 dark:text-white">{successProb}%</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-gray-600 dark:text-gray-300">Priority</span>
+                            <span className="text-sm font-semibold capitalize text-gray-900 dark:text-white">{job.priority || 'medium'}</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-gray-600 dark:text-gray-300">Sponsorship</span>
+                            <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                              {job.sponsorship === 'yes' ? 'Provided' : job.sponsorship === 'no' ? 'Not provided' : 'Unknown'}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-gray-600 dark:text-gray-300">Match Score</span>
+                            <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">{insightsLoading ? '...' : `${keywordMatchScore}%`}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* JD Quality & Flags */}
+                      {job.extractedJd?.jd_quality && (
+                        <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d] space-y-4">
+                          <div className="flex items-center justify-between">
+                            <h4 className="text-base font-semibold text-gray-900 dark:text-white">JD Quality Audit</h4>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-gray-500 dark:text-gray-400 capitalize">Grade: {job.extractedJd.jd_quality.jd_quality_grade}</span>
+                              <span className={`px-2 py-0.5 rounded text-xs font-bold ${
+                                job.extractedJd.jd_quality.jd_quality_score >= 70
+                                  ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                                  : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
+                              }`}>
+                                {job.extractedJd.jd_quality.jd_quality_score}/100
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Red Flags */}
+                          {job.extractedJd.jd_quality.jd_red_flags?.length > 0 && (
+                            <div className="space-y-2">
+                              <span className="text-xs font-semibold text-red-600 dark:text-red-400 block uppercase tracking-wider">Concerns & Red Flags ({job.extractedJd.jd_quality.jd_red_flags.length})</span>
+                              <div className="space-y-2">
+                                {job.extractedJd.jd_quality.jd_red_flags.map((flag: any, i: number) => (
+                                  <div key={i} className="flex gap-2 p-2 bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 rounded-lg text-sm text-gray-700 dark:text-gray-300">
+                                    <AlertCircle className="h-4 w-4 text-red-500 flex-shrink-0 mt-0.5" />
+                                    <div>
+                                      <span className="font-semibold block text-red-800 dark:text-red-400">{flag.flag}</span>
+                                      <span className="text-xs text-gray-600 dark:text-gray-400 mt-0.5 block">{flag.detail}</span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Positive Signals */}
+                          {job.extractedJd.jd_quality.jd_positive_signals?.length > 0 && (
+                            <div className="space-y-2">
+                              <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 block uppercase tracking-wider">Positive Signals</span>
+                              <div className="space-y-2">
+                                {job.extractedJd.jd_quality.jd_positive_signals.map((sig: any, i: number) => (
+                                  <div key={i} className="flex gap-2 p-2 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 rounded-lg text-sm text-gray-700 dark:text-gray-300">
+                                    <Sparkles className="h-4 w-4 text-emerald-500 flex-shrink-0 mt-0.5" />
+                                    <div>
+                                      <span className="font-semibold block text-emerald-800 dark:text-emerald-400">{sig.signal}</span>
+                                      {sig.detail && <span className="text-xs text-gray-600 dark:text-gray-400 mt-0.5 block">{sig.detail}</span>}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Right Column */}
+                    <div className="space-y-5">
+                      {/* Deeper Insights */}
+                      <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d]">
+                        <h4 className="mb-4 text-base font-semibold text-gray-900 dark:text-white">Deeper Insights</h4>
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-gray-600 dark:text-gray-300">Hiring Trend</span>
+                            <span className="text-sm font-semibold text-gray-900 dark:text-white">{insightsLoading ? '...' : insights?.companyHiringTrend || 'Unknown'}</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-gray-600 dark:text-gray-300">Skills Gap</span>
+                            <span className="text-right text-sm font-semibold text-gray-900 dark:text-white">{insightsLoading ? '...' : insights?.skillsGap || 'Unable to analyze'}</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-gray-600 dark:text-gray-300">Market Competitiveness</span>
+                            <span className={`text-right text-sm font-semibold ${
+                              salaryComp.comparison === 'above'
+                                ? 'text-green-600 dark:text-green-400'
+                                : salaryComp.comparison === 'below'
+                                  ? 'text-red-600 dark:text-red-400'
+                                  : 'text-gray-900 dark:text-white'
+                            }`}>
+                              {salaryComp.comparison !== 'unknown' ? salaryComp.text : (insightsLoading ? '...' : insights?.marketCompetitiveness || 'Unknown')}
+                            </span>
+                          </div>
+                          {nudge && (
+                            <div className="rounded-xl bg-blue-50 px-4 py-3 text-sm leading-6 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300">
+                              <span className="font-semibold">Smart action:</span> {nudge}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* ATS Keywords Section */}
+                      {job.extractedJd?.ats_keywords && (
+                        <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d] space-y-4">
+                          <h4 className="text-base font-semibold text-gray-900 dark:text-white">ATS Target Keywords</h4>
+                          
+                          {/* Primary Keywords */}
+                          {job.extractedJd.ats_keywords.primary?.length > 0 && (
+                            <div>
+                              <h5 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Primary Keywords (High Importance)</h5>
+                              <div className="flex flex-wrap gap-1.5">
+                                {job.extractedJd.ats_keywords.primary.map((kw: any, i: number) => (
+                                  <span key={i} className="px-2.5 py-1 text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400 rounded-lg flex items-center gap-1">
+                                    {kw.keyword}
+                                    {kw.frequency > 0 && <span className="opacity-60 font-mono text-[9px]">x{kw.frequency}</span>}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Secondary Keywords */}
+                          {job.extractedJd.ats_keywords.secondary?.length > 0 && (
+                            <div>
+                              <h5 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Secondary Keywords</h5>
+                              <div className="flex flex-wrap gap-1.5">
+                                {job.extractedJd.ats_keywords.secondary.map((kw: any, i: number) => (
+                                  <span key={i} className="px-2.5 py-1 text-xs font-medium bg-gray-100 text-gray-800 dark:bg-white/10 dark:text-gray-300 rounded-lg">
+                                    {kw.keyword}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Interview Prep & Questions */}
+                      {job.extractedJd?.tracker_enrichment && (
+                        <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d] space-y-4">
+                          <h4 className="text-base font-semibold text-gray-900 dark:text-white">Interview Prep Planner</h4>
+                          
+                          {/* Prep Topics */}
+                          {job.extractedJd.tracker_enrichment.interview_prep_topics?.length > 0 && (
+                            <div className="space-y-2">
+                              <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 block uppercase tracking-wider">Top Topics to Prepare</span>
+                              <div className="space-y-2">
+                                {job.extractedJd.tracker_enrichment.interview_prep_topics.map((item: any, i: number) => (
+                                  <div key={i} className="flex flex-col bg-white/50 dark:bg-white/5 p-2 rounded-lg border border-gray-100 dark:border-white/5 text-sm">
+                                    <span className="font-semibold text-gray-900 dark:text-white flex items-center justify-between">
+                                      {item.topic}
+                                      {item.prep_type && (
+                                        <span className="px-1.5 py-0.5 text-[10px] bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 rounded uppercase">
+                                          {item.prep_type}
+                                        </span>
+                                      )}
+                                    </span>
+                                    {item.why_likely && <span className="text-xs text-gray-500 dark:text-gray-400 mt-1">{item.why_likely}</span>}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Questions to Ask */}
+                          {job.extractedJd.tracker_enrichment.questions_to_ask_interviewer?.length > 0 && (
+                            <div className="space-y-2">
+                              <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 block uppercase tracking-wider">Suggested Questions for the Interviewer</span>
+                              <div className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
+                                {job.extractedJd.tracker_enrichment.questions_to_ask_interviewer.map((item: any, i: number) => (
+                                  <div key={i} className="p-2 bg-white/50 dark:bg-white/5 rounded-lg border border-gray-100 dark:border-white/5">
+                                    <span className="font-medium text-gray-900 dark:text-white block">Q: {item.question}</span>
+                                    {item.why_ask && <span className="text-xs text-gray-500 dark:text-gray-400 mt-1 block">Context: {item.why_ask}</span>}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             </motion.div>
-          </motion.div>
+          </React.Fragment>
         )}
 
         {/* EditJobSidebar - Layered on top */}

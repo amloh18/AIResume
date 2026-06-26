@@ -87,7 +87,7 @@ const DashboardContent: React.FC<{ children?: React.ReactNode }> = ({ children }
           </header>
 
           {/* Page Content */}
-          <main className="flex-1 overflow-auto relative z-0">
+          <main className="flex-1 overflow-auto relative">
             <div className="px-6 py-5 h-full flex flex-col">
               <CVCheckRedirect>
                 {children}
