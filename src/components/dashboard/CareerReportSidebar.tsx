@@ -240,7 +240,7 @@ const CareerReportSidebar: React.FC<CareerReportSidebarProps> = ({
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-              className="fixed right-0 top-0 h-screen bg-white dark:bg-[#141810] shadow-2xl z-50 flex flex-col"
+              className="fixed right-0 top-16 h-[calc(100vh-4rem)] bg-white dark:bg-[#141810] shadow-2xl z-50 flex flex-col"
               style={{
                 width: sidebarWidth
               }}
@@ -304,7 +304,7 @@ const CareerReportSidebar: React.FC<CareerReportSidebarProps> = ({
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            className="fixed right-0 top-0 h-screen bg-white dark:bg-[#141810] shadow-2xl z-50 flex flex-col"
+            className="fixed right-0 top-16 h-[calc(100vh-4rem)] bg-white dark:bg-[#141810] shadow-2xl z-50 flex flex-col"
             style={{
               width: sidebarWidth
             }}

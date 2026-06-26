@@ -57,6 +57,8 @@ function DashboardContent() {
   const [cvScore, setCvScore] = useState(68);
   const [notification, setNotification] = useState<string | null>(null);
   const [demoLayoutType, setDemoLayoutType] = useState<'cv' | 'tracker' | 'auto_apply' | null>(null);
+  const [jobs, setJobs] = useState<any[]>([]);
+  const [jobsLoading, setJobsLoading] = useState(false);
 
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
@@ -96,6 +98,31 @@ function DashboardContent() {
       setIsLoading(false);
     }
   }, [status]);
+
+  useEffect(() => {
+    const fetchJobs = async () => {
+      try {
+        setJobsLoading(true);
+        const res = await authenticatedFetch('/api/jobs');
+        const result = await res.json();
+        if (result.success && Array.isArray(result.data)) {
+          setJobs(result.data);
+        }
+      } catch (err) {
+        console.error('Failed to load jobs:', err);
+      } finally {
+        setJobsLoading(false);
+      }
+    };
+
+    if (status === 'authenticated') {
+      fetchJobs();
+    }
+  }, [status]);
+
+  // Calculate matched jobs stats
+  const activeJobs = jobs.filter((j: any) => !['draft', 'archived'].includes(j.status)).length;
+  const highMatchJobs = jobs.filter((j: any) => (j.atsScore || 0) >= 80).length;
 
   const handleTouchStart = (e: React.TouchEvent) => {
     setTouchStart(e.targetTouches[0].clientY);
@@ -154,9 +181,9 @@ function DashboardContent() {
   const currentTier = tierMap[layoutType] || 'starter';
 
   const sublines: Record<string, string> = {
-    starter: `Your Master CV is ${cvScore}% optimized for ATS.`,
-    focused: "3 active jobs need attention this week.",
-    smart: "8 matching jobs found, 3 applications ready."
+    starter: `${highMatchJobs} of ${activeJobs} jobs matched.`,
+    focused: `${highMatchJobs} of ${activeJobs} jobs matched.`,
+    smart: `${highMatchJobs} of ${activeJobs} jobs matched.`
   };
 
   return (
@@ -259,7 +286,7 @@ function DashboardContent() {
             </motion.p>
           </motion.div>
  
-          <motion.div 
+           <motion.div 
             layout
             animate={{ scale: isExpanded ? 0.9 : 1, opacity: isExpanded ? 0.8 : 1 }}
             transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
@@ -271,15 +298,17 @@ function DashboardContent() {
                 <circle 
                   className="text-[#83d60d] transition-all duration-1000" 
                   strokeWidth="4" 
-                  strokeDasharray={`${(cvScore / 100) * 100}, 100`}
+                  strokeDasharray={`${Math.min(100, (highMatchJobs / Math.max(activeJobs, 1)) * 100)}, 100`}
                   strokeLinecap="round" stroke="currentColor" fill="none" cx="18" cy="18" r="16" 
                 />
               </svg>
-              <span className="absolute text-[10px] font-black dark:text-white">{cvScore}</span>
+              <span className="absolute text-[10px] font-black dark:text-white">{highMatchJobs}</span>
             </div>
             <div className="pr-2">
-              <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">CV Score</h3>
-              <p className="text-xs font-bold text-gray-800 dark:text-gray-300">Calibrated</p>
+              <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Jobs Matched</h3>
+              <p className="text-xs font-bold text-gray-800 dark:text-gray-300">
+                {highMatchJobs} / {activeJobs} matched
+              </p>
             </div>
           </motion.div>
         </motion.div>

@@ -38,11 +38,11 @@ export default function CVStrengthRadar({ metrics = defaultMetrics, loading = fa
       loading={loading}
       empty={empty}
       emptyState={{
-        title: "No CV analyzed yet",
-        description: "Upload a CV to generate insights.",
+        title: "No analysis yet",
+        description: "Open your Master CV and run an analysis to see your strength breakdown.",
         action: {
-          label: "Upload CV",
-          onClick: () => console.log('Upload CV'),
+          label: "Open Editor",
+          onClick: () => window.location.href = '/editor',
           primary: true
         }
       }}

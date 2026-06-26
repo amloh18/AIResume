@@ -417,7 +417,10 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
     }
   };
 
-  const handlePreviewTargets = async (overrideCsvRecipients?: Array<{ name: string; email: string }>) => {
+  const handlePreviewTargets = async (
+    overrideCsvRecipients?: Array<{ name: string; email: string }>,
+    overrideTargetFilters?: any
+  ) => {
     setPreviewingTargets(true);
     try {
       const response = await fetch(
@@ -426,7 +429,9 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            targetFilters: formData.targetFilters,
+            // Use overrideTargetFilters if provided (avoids stale-closure issue when called
+            // immediately after a filter state update before React re-renders).
+            targetFilters: overrideTargetFilters !== undefined ? overrideTargetFilters : formData.targetFilters,
             csvRecipients: overrideCsvRecipients !== undefined ? overrideCsvRecipients : formData.csvRecipients,
             limit: 10,
           }),
@@ -773,7 +778,14 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
                         <h4 className="text-lg font-black text-white uppercase">Sector Filtering</h4>
                         <div className="bg-white/[0.02] border border-white/5 rounded-[2rem] p-6">
                             <FilterPresets onApplyPreset={handleApplyFilterPreset} currentFilters={formData.targetFilters} />
-                            <div className="mt-6"><CampaignFilters filters={formData.targetFilters} onChange={(f) => handleInputChange("targetFilters", f)} /></div>
+                            <div className="mt-6"><CampaignFilters
+                              filters={formData.targetFilters}
+                              onChange={(f) => {
+                                handleInputChange("targetFilters", f);
+                                // Pass fresh filters directly to avoid stale-closure reading old formData
+                                handlePreviewTargets(undefined, f);
+                              }}
+                            /></div>
                         </div>
                     </section>
                     

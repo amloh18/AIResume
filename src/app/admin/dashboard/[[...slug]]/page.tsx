@@ -244,7 +244,12 @@ export default function AdminDashboard() {
                   {activeTab === 'management' && activeSubTab === 'drafts' && <DraftManagement />}
                   {activeTab === 'management' && activeSubTab === 'sponsorships' && <SponsorshipManager />}
 
-                  {activeTab === 'pricing' && <PricingPlanManager />}
+                  {activeTab === 'pricing' && (
+                    <PricingPlanManager 
+                      activeSubTab={activeSubTab} 
+                      onSubTabChange={(sub) => handleTabChange('pricing', sub)} 
+                    />
+                  )}
                 </motion.div>
               </AnimatePresence>
             </div>

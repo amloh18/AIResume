@@ -29,6 +29,7 @@ export interface CVCanvasBuilderProps {
   jobId?: string | null;
   role?: string | null;
   moriChatMode?: boolean;
+  isGuestMode?: boolean;
 }
 
 export interface CVCanvasBuilderRef {
@@ -323,7 +324,7 @@ const templateLayoutFlows: Record<string, { global: string[]; columns: string[][
   'hybrid-split': { global: ['header', 'main'], columns: [['left'], ['right']] },
 };
 
-const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ cvData, onDataChange, theme = 'dark', template, onTemplateChange, readOnly = false, cvId, jobId, role, moriChatMode = false }, ref) => {
+const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ cvData, onDataChange, theme = 'dark', template, onTemplateChange, readOnly = false, cvId, jobId, role, moriChatMode = false, isGuestMode = false }, ref) => {
   const isInternalLayoutChange = React.useRef(false);
   const [activeTemplate, setActiveTemplate] = useState(cvData?.metadata?.canvasTemplate || template || CANVAS_TEMPLATES[0]);
   const [focusedNode, setFocusedNode] = useState<HTMLElement | null>(null);
@@ -1125,16 +1126,18 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
           <button onClick={() => setIsTemplateModalOpen(true)} className={`p-3 rounded-2xl transition-all ${isDarkUI ? 'text-gray-400 hover:bg-[#222]' : 'text-gray-600 hover:bg-gray-100'}`} title="Templates"><LayoutTemplate size={20}/></button>
           <button onClick={() => setActiveSidebar(activeSidebar === 'data' ? null : 'data')} className={`p-3 rounded-2xl transition-all ${activeSidebar === 'data' ? 'bg-emerald-500/20 ' + brandGreen : (isDarkUI ? 'text-gray-400 hover:bg-[#222]' : 'text-gray-600 hover:bg-gray-100')}`} title="Raw Data JSON"><FileJson size={20}/></button>
           <div className="flex-1"></div>
-          <button 
-            onClick={() => {
-              const event = new CustomEvent('open-download-modal');
-              window.dispatchEvent(event);
-            }} 
-            className={`p-3 rounded-2xl transition-all shadow-xl ${brandGreenBg} hover:scale-110`} 
-            title="Download PDF"
-          >
-            <Download size={20}/>
-          </button>
+          {!isGuestMode && (
+            <button 
+              onClick={() => {
+                const event = new CustomEvent('open-download-modal');
+                window.dispatchEvent(event);
+              }} 
+              className={`p-3 rounded-2xl transition-all shadow-xl ${brandGreenBg} hover:scale-110`} 
+              title="Download PDF"
+            >
+              <Download size={20}/>
+            </button>
+          )}
         </div>
       )}
 

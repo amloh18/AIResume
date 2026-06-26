@@ -219,7 +219,7 @@ export class PolarService {
     }
   }
 
-  static async listOrders(params: { customerId?: string; customerEmail?: string }) {
+  static async listOrders(params: { customerId?: string; customerEmail?: string; limit?: number }) {
     const polarInstance = getPolarInstance();
     if (!polarInstance) {
       return {

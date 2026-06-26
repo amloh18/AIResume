@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useUnifiedAuth, getUserIdForAPI } from '@/lib/hooks/useUnifiedAuth';
-import { authenticatedFetch } from '@/lib/utils/apiUtils';
+import { authenticatedFetch, authenticatedFetchWithUserId } from '@/lib/utils/apiUtils';
 import { requestDeduplication } from '@/lib/utils/requestDeduplication';
 
 interface DashboardDataContextType {
@@ -224,7 +224,7 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
         setSecondaryLoading(prev => ({ ...prev, coverLetters: true }));
         setErrors(prev => ({ ...prev, coverLetters: null }));
         console.log('🔍 DashboardData - Fetching cover letters');
-        const response = await authenticatedFetch(endpoint);
+        const response = await authenticatedFetchWithUserId(endpoint, userId);
         const contentType = response.headers.get('content-type');
         if (contentType && contentType.includes('application/json')) {
           const result = await response.json();

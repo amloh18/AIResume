@@ -17,7 +17,9 @@ import JourneyTimelineCard from '../JourneyTimelineCard';
 import JobInfoContent from '../JobInfoContent';
 import EditJobSidebar from './EditJobSidebar';
 import DocumentPreviewSidebar from './DocumentPreviewSidebar';
+import { CommunicationSidebar } from './CommunicationSidebar';
 import toast from 'react-hot-toast';
+import { useUserData } from '@/lib/hooks/useUserData';
 import { useJobInsights, useJobFallbacks, formatJobDate, formatJobSalary, formatJobUrl } from '@/hooks/useJobInsights';
 import { CVJourney } from '@/types/cv';
 import { useRouter } from 'next/navigation';
@@ -100,6 +102,9 @@ const JobSidebar: React.FC<JobSidebarProps> = ({
   openContext,
 }) => {
   const { user } = useUnifiedAuth();
+  const { userData } = useUserData();
+  const userPlanKey = userData?.currentPlanKey || userData?.subscription?.planKey || 'free';
+  const isPremiumUser = ['focused_monthly', 'focused_yearly', 'smart_quarterly', 'smart_yearly', 'pro_monthly', 'pro_quarterly', 'pro_yearly', 'pro_lifetime', 'pro'].includes(userPlanKey);
   const router = useRouter();
   const { showExhaustionModal } = useCreditExhaustionHandler();
   const { shouldShow: shouldShowUpgradePopup, show: showUpgradePopup, dismiss: dismissUpgradePopup } = useUpgradePopupTrigger();
@@ -136,8 +141,31 @@ const JobSidebar: React.FC<JobSidebarProps> = ({
   const [emailSentStatus, setEmailSentStatus] = useState<Record<number, boolean>>({});
   const appliedOpenContextRef = useRef<string | null>(null);
 
-  // Dynamic data hooks
   const jobId = job.id || job._id;
+
+  // Comms sidebar states
+  const [showCommsSidebar, setShowCommsSidebar] = useState(false);
+  const [isEmailConnected, setIsEmailConnected] = useState(false);
+  const [connectedEmailAddress, setConnectedEmailAddress] = useState('');
+
+  const fetchEmailStatus = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/tracker/emails/sync`);
+      const data = await res.json();
+      if (data.success) {
+        setIsEmailConnected(data.connected);
+        setConnectedEmailAddress(data.emailAddress || '');
+      }
+    } catch (err) {
+      console.error('Error fetching email connection status:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchEmailStatus();
+  }, [jobId, fetchEmailStatus]);
+
+  // Dynamic data hooks
   const { insights, loading: insightsLoading } = useJobInsights(jobId);
   const fallbacks = useJobFallbacks();
 
@@ -1592,7 +1620,7 @@ ${userName}`
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="fixed bg-black/50 backdrop-blur-sm z-[99]"
+          className="fixed bg-black/50 backdrop-blur-sm z-[999]"
           style={{
             top: 0,
             left: 0,
@@ -1611,8 +1639,8 @@ ${userName}`
           animate={{ x: 0 }}
           exit={{ x: '100%' }}
           transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-          className="fixed right-0 top-0 h-screen bg-white dark:bg-[#141810] shadow-2xl z-[100] flex flex-col"
-          style={{ width: sidebarWidth }}
+          className="fixed right-0 top-16 h-[calc(100vh-4rem)] bg-white dark:bg-[#141810] shadow-2xl z-[1000] flex flex-col transition-all duration-300"
+          style={{ width: sidebarWidth, right: showCommsSidebar && windowWidth >= 768 ? '450px' : '0' }}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
@@ -1689,45 +1717,53 @@ ${userName}`
                   )}
                 </div>
 
-                <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-emerald-500/10 dark:bg-[#131810]">
-                  <div className="grid gap-3 md:grid-cols-7">
-                    {stageItems.map((stage, index) => (
-                      <div key={stage.key} className="relative">
-                        {index < stageItems.length - 1 && (
-                          <div className={`absolute left-[calc(50%+18px)] right-[-18px] top-4 hidden h-[2px] md:block ${
-                            stage.isCompleted ? 'bg-emerald-400' : 'bg-gray-200 dark:bg-emerald-500/20'
-                          }`} />
-                        )}
-                        <div className={`rounded-2xl border px-3 py-3 transition-colors ${
-                          stage.isCurrent
-                            ? 'border-blue-200 bg-blue-50 dark:border-blue-500/40 dark:bg-blue-900/20'
-                            : stage.isCompleted
-                              ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-500/30 dark:bg-emerald-900/20'
-                              : 'border-gray-200 bg-gray-50 dark:border-emerald-500/5 dark:bg-[#181f16]'
-                        }`}>
-                          <div className={`mb-2 flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold ${
+                <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-emerald-500/10 dark:bg-[#131810] relative overflow-hidden">
+                  {/* Progress Line Background */}
+                  <div className="absolute left-[8.33%] right-[8.33%] top-[28px] h-[2px] bg-gray-150 dark:bg-emerald-500/15" />
+                  
+                  {/* Active Progress Line */}
+                  {(() => {
+                    const currentIndex = stageItems.findIndex(s => s.isCurrent);
+                    const lastCompletedIndex = stageItems.reduce((maxIdx, s, idx) => s.isCompleted ? idx : maxIdx, 0);
+                    const activeIndex = currentIndex > -1 ? currentIndex : lastCompletedIndex;
+                    const progressWidthPercent = (activeIndex / (stageItems.length - 1)) * 83.33;
+                    return (
+                      <div 
+                        className="absolute left-[8.33%] top-[28px] h-[2px] bg-emerald-500 transition-all duration-300"
+                        style={{ width: `${progressWidthPercent}%` }}
+                      />
+                    );
+                  })()}
+
+                  <div className="grid grid-cols-6 relative z-10">
+                    {stageItems.map((stage, index) => {
+                      return (
+                        <div key={stage.key} className="flex flex-col items-center text-center">
+                          {/* Node Circle */}
+                          <div className={`mb-1.5 flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-bold transition-all duration-200 border ${
                             stage.isCurrent
-                              ? 'bg-blue-600 text-white'
+                              ? 'bg-blue-600 text-white border-blue-600 ring-4 ring-blue-500/15 scale-105'
                               : stage.isCompleted
-                                ? 'bg-emerald-500 text-white'
-                                : 'bg-gray-200 text-gray-600 dark:bg-white/10 dark:text-gray-300'
+                                ? 'bg-emerald-500 text-white border-emerald-500'
+                                : 'bg-gray-50 text-gray-400 dark:bg-[#151a11] dark:text-gray-500 border-gray-200 dark:border-white/5'
                           }`}>
-                            {stage.isCompleted ? <CheckCircle size={14} /> : index + 1}
+                            {stage.isCompleted ? <CheckCircle size={12} className="stroke-[2.5]" /> : index + 1}
                           </div>
-                          <p className={`text-sm font-semibold capitalize ${
-                            stage.isCurrent ? 'text-blue-700 dark:text-blue-300' : 'text-gray-900 dark:text-white'
+
+                          {/* Stage Label */}
+                          <p className={`text-[11px] font-bold capitalize truncate max-w-full px-1 ${
+                            stage.isCurrent ? 'text-blue-600 dark:text-blue-400' : 'text-gray-900 dark:text-white'
                           }`}>
                             {stage.label}
                           </p>
-                          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                            {stage.statusLabel}
-                          </p>
-                          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                            {formatTimelineDate(stage.stageDate)}
+
+                          {/* Status/Date */}
+                          <p className="text-[9px] text-gray-500 dark:text-gray-400 mt-0.5 truncate max-w-full px-1">
+                            {stage.stageDate ? formatTimelineDate(stage.stageDate) : stage.statusLabel}
                           </p>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               </section>
@@ -1746,24 +1782,55 @@ ${userName}`
                 <div className={`rounded-[28px] border p-6 shadow-sm ${journeyCardData.toneClasses}`}>
                   <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
                     <div className="space-y-4">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white dark:bg-[var(--bg-tertiary)] text-emerald-600 shadow-sm dark:text-emerald-400">
-                          {job.status === 'draft' ? <Target className="h-6 w-6" /> : <Sparkles className="h-6 w-6" />}
-                        </div>
-                        <div>
-                          <h4 className="text-2xl font-semibold text-gray-900 dark:text-white">{journeyCardData.title}</h4>
-                          <p className="text-sm text-gray-600 dark:text-gray-300">{journeyCardData.summary}</p>
-                        </div>
-                      </div>
-
-                      <div className="space-y-3">
-                        {journeyCardData.bullets.map((bullet, index) => (
-                          <div key={`${bullet}-${index}`} className="flex items-start gap-3">
-                            <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
-                            <p className="text-sm leading-6 text-gray-700 dark:text-gray-300">{bullet}</p>
+                      {(job.status === 'applied' || job.status === 'screening') ? (
+                        <div className="space-y-4">
+                          <div className="flex items-center gap-3 mb-2">
+                            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white dark:bg-[var(--bg-tertiary)] text-emerald-600 shadow-sm dark:text-emerald-400">
+                              <Sparkles className="h-6 w-6" />
+                            </div>
+                            <div>
+                              <h4 className="text-xl font-bold text-gray-900 dark:text-white">Journey Snapshot</h4>
+                              <p className="text-xs text-gray-500">Key metrics for this application stage</p>
+                            </div>
                           </div>
-                        ))}
-                      </div>
+
+                          <div className="grid gap-3 grid-cols-2">
+                            <div className="rounded-2xl bg-white/40 dark:bg-white/5 border border-gray-200 dark:border-white/10 px-4 py-4 backdrop-blur-sm shadow-sm flex flex-col justify-between min-h-[90px] hover:scale-[1.02] transition-transform duration-200">
+                              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Success Probability</p>
+                              <p className="text-3xl font-extrabold text-gray-900 dark:text-white mt-2">
+                                {journeyCardData.stats.find(s => s.label === 'Success Probability')?.value || '23%'}
+                              </p>
+                            </div>
+                            <div className="rounded-2xl bg-white/40 dark:bg-white/5 border border-gray-200 dark:border-white/10 px-4 py-4 backdrop-blur-sm shadow-sm flex flex-col justify-between min-h-[90px] hover:scale-[1.02] transition-transform duration-200">
+                              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Match Score</p>
+                              <p className="text-3xl font-extrabold text-lime-500 dark:text-lime-400 mt-2">
+                                {journeyCardData.stats.find(s => s.label === 'Match Score')?.value || '19%'}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white dark:bg-[var(--bg-tertiary)] text-emerald-600 shadow-sm dark:text-emerald-400">
+                              {job.status === 'draft' ? <Target className="h-6 w-6" /> : <Sparkles className="h-6 w-6" />}
+                            </div>
+                            <div>
+                              <h4 className="text-2xl font-semibold text-gray-900 dark:text-white">{journeyCardData.title}</h4>
+                              <p className="text-sm text-gray-600 dark:text-gray-300">{journeyCardData.summary}</p>
+                            </div>
+                          </div>
+
+                          <div className="space-y-3">
+                            {journeyCardData.bullets.map((bullet, index) => (
+                              <div key={`${bullet}-${index}`} className="flex items-start gap-3">
+                                <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+                                <p className="text-sm leading-6 text-gray-700 dark:text-gray-300">{bullet}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </>
+                      )}
 
                       <div className="flex flex-col gap-3 pt-2 sm:flex-row">
                         <motion.button
@@ -1790,7 +1857,7 @@ ${userName}`
                     </div>
 
                     <div className="space-y-4">
-                      {sidebarConfig.sections.showJourneySnapshot && (
+                      {sidebarConfig.sections.showJourneySnapshot && (job.status !== 'applied' && job.status !== 'screening') && (
                         <div className="rounded-2xl border border-white/70 bg-white/80 p-4 shadow-sm dark:border-white/10 dark:bg-[var(--bg-secondary)]">
                           <p className="mb-3 text-sm font-semibold text-gray-900 dark:text-white">Journey Snapshot</p>
                           <div className="grid gap-3 sm:grid-cols-2">
@@ -1871,6 +1938,7 @@ ${userName}`
                           </div>
                         </div>
                       )}
+
                     </div>
                   </div>
                 </div>
@@ -1958,6 +2026,79 @@ ${userName}`
                       </div>
                     </div>
                   )}
+
+                  {/* Integrated Inbox & Emails */}
+                  <div className="mt-5 pt-5 border-t border-gray-100 dark:border-white/5">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-1.5">
+                        <Mail className="h-4 w-4 text-emerald-500" />
+                        <p className="text-sm font-semibold text-gray-900 dark:text-white">Inbox & Emails</p>
+                      </div>
+                      
+                      {isPremiumUser ? (
+                        isEmailConnected ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400">
+                            <span className="h-1 w-1 rounded-full bg-emerald-500"></span>
+                            Connected
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-400">
+                            Disconnected
+                          </span>
+                        )
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-500 border border-amber-500/20 shadow-sm animate-pulse">
+                          🔒 Focused / Pro
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="text-xs leading-5">
+                      {isPremiumUser ? (
+                        isEmailConnected ? (
+                          <div className="space-y-2">
+                            <p className="text-gray-500 dark:text-gray-400">
+                              Inbox connection active (<b>{connectedEmailAddress}</b>). Recruiter threads are linked and stages are updated automatically.
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => setShowCommsSidebar(true)}
+                              className="inline-flex items-center gap-1 text-emerald-500 hover:text-emerald-600 font-semibold"
+                            >
+                              View Recruiter Threads & Reply <ArrowRight size={12} />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <p className="text-gray-500 dark:text-gray-400">
+                              Connect your inbox (Gmail/Outlook) to automatically sync emails from recruiters and track pipeline status.
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => setShowCommsSidebar(true)}
+                              className="inline-flex items-center gap-1 text-emerald-500 hover:text-emerald-600 font-semibold"
+                            >
+                              Connect Inbox / View Comms <ArrowRight size={12} />
+                            </button>
+                          </div>
+                        )
+                      ) : (
+                        <div className="relative rounded-2xl border border-white/5 bg-[#161d12] p-4 text-center overflow-hidden">
+                          <p className="text-gray-300 font-semibold mb-1">Recruiter Auto-Sync</p>
+                          <p className="text-[11px] text-gray-500 mb-3 max-w-sm mx-auto leading-relaxed">
+                            Upgrade to Focused or Pro to connect Gmail, Outlook, or IMAP. Automatically match emails, parse interviews, and auto-update journey stages.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => setShowUpgradePopupState(true)}
+                            className="px-4 py-2 bg-lime-500 hover:bg-lime-600 text-black rounded-xl text-xs font-bold transition shadow-md shadow-lime-500/10"
+                          >
+                            Upgrade to Unlock
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </section>
               )}
 
@@ -2049,7 +2190,7 @@ ${userName}`
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[101] bg-black/70 dark:bg-black/70 backdrop-blur-md flex items-center justify-center p-4"
+            className="fixed inset-0 z-[1001] bg-black/70 dark:bg-black/70 backdrop-blur-md flex items-center justify-center p-4"
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
@@ -2118,7 +2259,7 @@ ${userName}`
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[101] bg-black/70 backdrop-blur-md flex items-center justify-center p-4"
+            className="fixed inset-0 z-[1001] bg-black/70 backdrop-blur-md flex items-center justify-center p-4"
             onClick={() => setShowDetailsModal(false)}
           >
             <motion.div
@@ -2371,7 +2512,7 @@ ${userName}`
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[101] bg-black/70 dark:bg-black/70 backdrop-blur-md flex items-center justify-center p-4"
+            className="fixed inset-0 z-[1001] bg-black/70 dark:bg-black/70 backdrop-blur-md flex items-center justify-center p-4"
             onClick={() => setShowEmailSentDialog(false)}
           >
             <motion.div
@@ -2449,6 +2590,15 @@ ${userName}`
           cvData={cvData || previewDocumentData}
           jobData={job}
           template={previewTemplate}
+        />
+        <CommunicationSidebar
+          isOpen={showCommsSidebar}
+          onClose={() => setShowCommsSidebar(false)}
+          job={job}
+          onRefreshJob={() => {
+            fetchEmailStatus();
+            if (onRefresh) onRefresh();
+          }}
         />
       </>
     </AnimatePresence>

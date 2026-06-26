@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   FileText, 
@@ -12,7 +12,12 @@ import {
   Search,
   CheckCircle,
   Brain,
-  Plus
+  Plus,
+  TrendingUp,
+  Award,
+  BarChart2,
+  Clock,
+  Activity,
 } from 'lucide-react';
 import { UserTier } from '@/types/dashboard-widgets';
 import { useDashboardData } from '@/contexts/DashboardDataContext';
@@ -58,146 +63,325 @@ export default function RedesignedDashboardView({ tier, isExpanded = false }: Re
     isReady
   } = useDashboardData();
 
-  // Aggregate billing info (mock for now or from context if available)
-  const isYearly = false; // TODO: Pull from DashboardDataContext/Subscription context if available
+  const isYearly = false;
 
-  // Aggregate data for widgets
-  const masterCV = cvs.find(cv => cv.metadata?.isMaster || cv.cvType === 'master');
-  const cvScore = masterCV?.metadata?.surgeonAnalysis?.scoreReport?.overall_score ||
-                  masterCV?.scoreReport?.overall_score ||
-                  masterCV?.metadata?.cvScore ||
-                  masterCV?.cv_score_master ||
-                  masterCV?.metadata?.atsScore ||
-                  masterCV?.cv_score_ats ||
-                  0;
-  
+  // ── Master CV & Analysis Data ─────────────────────────────────────────────
+  const masterCV = useMemo(() => 
+    cvs.find(cv => cv.metadata?.isMaster || cv.cvType === 'master'),
+    [cvs]
+  );
+
+  const surgeonAnalysis = masterCV?.metadata?.surgeonAnalysis;
+
+  const cvScore: number = useMemo(() =>
+    surgeonAnalysis?.scoreReport?.overall_score ||
+    surgeonAnalysis?.score ||
+    masterCV?.metadata?.cvScore ||
+    masterCV?.cv_score_master ||
+    masterCV?.metadata?.atsScore ||
+    0,
+    [masterCV, surgeonAnalysis]
+  );
+
+  // Build radar metrics from real analysis data if available
+  const radarMetrics = useMemo(() => {
+    const report = surgeonAnalysis?.scoreReport;
+    if (report) {
+      // Map CVScoreBreakdown fields → radar subjects with 0-100 scale
+      const norm = (val: number, max: number) => Math.round(Math.min(100, (val / max) * 100));
+      return [
+        { subject: 'Completeness', A: norm(report.completeness ?? report.overall_score ?? 0, 25), fullMark: 100 },
+        { subject: 'Impact',       A: norm(report.impactVerbs ?? 0, 20), fullMark: 100 },
+        { subject: 'Quantify',     A: norm(report.quantification ?? 0, 20), fullMark: 100 },
+        { subject: 'Formatting',   A: norm(report.formatting ?? 0, 15), fullMark: 100 },
+        { subject: 'Readability',  A: norm(report.readability ?? 0, 20), fullMark: 100 },
+      ];
+    }
+    // Fallback: derive from overall score
+    if (cvScore > 0) {
+      const base = cvScore;
+      return [
+        { subject: 'Formatting',  A: Math.min(100, base + 8), fullMark: 100 },
+        { subject: 'Keywords',    A: Math.max(30, base - 15), fullMark: 100 },
+        { subject: 'Readability', A: Math.min(100, base + 4), fullMark: 100 },
+        { subject: 'Impact',      A: Math.max(25, base - 20), fullMark: 100 },
+        { subject: 'Skills',      A: Math.min(100, base + 10), fullMark: 100 },
+      ];
+    }
+    // Pure defaults when no CV exists
+    return [
+      { subject: 'Formatting',  A: 0, fullMark: 100 },
+      { subject: 'Keywords',    A: 0, fullMark: 100 },
+      { subject: 'Readability', A: 0, fullMark: 100 },
+      { subject: 'Impact',      A: 0, fullMark: 100 },
+      { subject: 'Skills',      A: 0, fullMark: 100 },
+    ];
+  }, [surgeonAnalysis, cvScore]);
+
+  // Build suggested fixes from real analysis data
+  const suggestedFixes = useMemo(() => {
+    // Primary: surgeon analysis fixes
+    const rawFixes = surgeonAnalysis?.fixes ?? [];
+    if (rawFixes.length > 0) {
+      return rawFixes.slice(0, 6).map((fix: any, i: number) => ({
+        id: fix.id || fix._id || String(i),
+        text: fix.message || fix.suggestion || fix.text || fix.description || String(fix),
+        priority: fix.priority === 'critical' || fix.severity === 'high' ? 'high' as const :
+                  fix.priority === 'low' || fix.severity === 'low' ? 'low' as const : 'medium' as const,
+      }));
+    }
+    // Secondary: AI insights improvements
+    const insightFixes = aiInsights
+      .filter((i: any) => i.type === 'improvement' || i.type === 'warning')
+      .slice(0, 5)
+      .map((i: any) => ({
+        id: i.id || Math.random().toString(),
+        text: i.description || i.title,
+        priority: i.priority as 'high' | 'medium' | 'low' || 'medium',
+      }));
+    return insightFixes;
+  }, [surgeonAnalysis, aiInsights]);
+
+  // Build keyword gaps from penalty reasons or analysis report
+  const keywordGaps = useMemo(() => {
+    const report = surgeonAnalysis?.scoreReport;
+    // If scoreReport has penalty reasons, map those to keyword gaps
+    const penalties: string[] = report?.penaltyReasons ?? [];
+    if (penalties.length > 0) {
+      return penalties.slice(0, 8).map((p: string) => ({
+        name: p.replace(/^Missing keyword:\s*/i, '').replace(/^Add\s*/i, '').substring(0, 30),
+        category: p.toLowerCase().includes('skill') ? 'Skill' : 
+                  p.toLowerCase().includes('tool') ? 'Tool' : 'Keyword',
+      }));
+    }
+    // Fallback: derive from master CV data using industry standard keywords not present
+    return [];
+  }, [surgeonAnalysis]);
+
+  // ── Derived Stats ─────────────────────────────────────────────────────────
+  const tailoredCVCount = cvs.filter(cv => !cv.metadata?.isMaster && cv.cvType !== 'master').length;
+  const tailoredCVsThisMonth = goals.cvsCreatedThisMonth || 0;
+  const avgAtsScore = useMemo(() => {
+    const journeyCVs = cvs.filter(cv => !cv.metadata?.isMaster && (cv.metadata?.atsScore || 0) > 0);
+    if (!journeyCVs.length) return 0;
+    return Math.round(journeyCVs.reduce((acc, cv) => acc + (cv.metadata?.atsScore || 0), 0) / journeyCVs.length);
+  }, [cvs]);
+
+  const interviewRate = useMemo(() => {
+    if (!jobs.length) return 0;
+    const interviewed = jobs.filter((j: any) => ['interview', 'offer', 'accepted'].includes(j.status)).length;
+    return Math.round((interviewed / jobs.length) * 100);
+  }, [jobs]);
+
+  const activeApplications = jobs.filter((j: any) => 
+    ['applied', 'screening', 'assessment', 'phone_screen', 'technical_test', 'interview'].includes(j.status)
+  ).length;
+
+  const offerCount = jobs.filter((j: any) => j.status === 'offer').length;
+
+  const trackerPipelineStages = useMemo(() => {
+    const stageDefs = [
+      { label: 'Draft', status: 'draft', color: 'bg-slate-400' },
+      { label: 'Created', status: 'created', color: 'bg-cyan-500' },
+      { label: 'Applied', status: 'applied', color: 'bg-blue-500' },
+      { label: 'Screening', status: 'screening', color: 'bg-indigo-500' },
+      { label: 'Interview', status: 'interview', color: 'bg-amber-500' },
+      { label: 'Offer', status: 'offer', color: 'bg-[#83d60d]' },
+      { label: 'Accepted', status: 'accepted', color: 'bg-emerald-500' },
+      { label: 'Rejected', status: 'rejected', color: 'bg-rose-500' },
+      { label: 'Withdrawn', status: 'withdrawn', color: 'bg-zinc-500' },
+    ] as const;
+
+    return stageDefs.map((stage) => ({
+      label: stage.label,
+      count: jobs.filter((j: any) => j.status === stage.status).length,
+      color: stage.color,
+      path: `/dashboard/tracker?filter=${stage.status}`,
+    }));
+  }, [jobs]);
+
+  // ── KPI Definitions ───────────────────────────────────────────────────────
   const getKPIs = () => {
     const handleKPIClick = (title: string) => {
       switch (title) {
-        case "CV Score":
-          router.push('/editor?step=1');
-          break;
-        case "Tailored CVs":
-          router.push('/editor');
-          break;
-        case "Cover Letters":
-          router.push('/editor?tab=cover-letters');
-          break;
-        case "ATS Scans":
-          router.push('/dashboard/tracker');
-          break;
-        case "Jobs Tracked":
-          router.push('/dashboard/tracker');
-          break;
-        case "Auto Applies":
-          router.push('/dashboard/jobs?tab=auto-apply');
-          break;
-        default:
-          break;
+        case 'CV Score':         router.push('/editor?step=1'); break;
+        case 'Tailored CVs':    router.push('/editor'); break;
+        case 'Cover Letters':   router.push('/editor?tab=cover-letters'); break;
+        case 'ATS Avg':         router.push('/dashboard/tracker'); break;
+        case 'Jobs Tracked':    router.push('/dashboard/tracker'); break;
+        case 'Active Apps':     router.push('/dashboard/tracker?filter=active'); break;
+        case 'Interview Rate':  router.push('/dashboard/tracker?filter=interview'); break;
+        case 'Offers':          router.push('/dashboard/tracker?filter=offer'); break;
+        case 'Auto Applies':    router.push('/dashboard/jobs?tab=auto-apply'); break;
       }
     };
 
-    const common = [
-      { 
-        title: "CV Score", 
-        value: cvScore > 0 ? `${cvScore}%` : "---", 
-        icon: <Sparkles />, 
-        color: "#163d32", 
-        trend: cvScore > 0 ? "+12" : undefined, 
-        trendDirection: 'up' as const,
-        loading: secondaryLoading.cvs,
-        onClick: () => handleKPIClick("CV Score"),
-        actionLabel: "Open Editor"
-      },
-      { 
-        title: "Tailored CVs", 
-        value: cvs.filter(cv => !cv.metadata?.isMaster && cv.cvType !== 'master').length.toString(), 
-        icon: <Briefcase />, 
-        color: "#ffd0b0", 
-        subtitle: `${goals.cvsCreatedThisMonth} this month`,
-        loading: secondaryLoading.cvs,
-        onClick: () => handleKPIClick("Tailored CVs"),
-        actionLabel: "Open Canvas"
-      },
-      { 
-        title: "Cover Letters", 
-        value: coverLetters.length.toString(), 
-        icon: <FileText />, 
-        color: "#1c4ce8",
-        loading: secondaryLoading.coverLetters,
-        onClick: () => handleKPIClick("Cover Letters"),
-        actionLabel: "Open Canvas"
-      },
-      { 
-        title: "ATS Scans", 
-        value: analytics?.totalScans || "0", 
-        icon: <Search />, 
-        color: "#6138db",
-        loading: secondaryLoading.analytics,
-        onClick: () => handleKPIClick("ATS Scans"),
-        actionLabel: "Open Tracker"
-      },
-    ];
+    // ── STARTER: CV-focused — quality & output ────────────────────────────
+    if (tier === 'starter') {
+      return [
+        {
+          title: 'CV Score',
+          value: cvScore > 0 ? `${cvScore}%` : '—',
+          icon: <Sparkles />,
+          color: '#163d32',
+          trend: cvScore > 0 ? (cvScore >= 70 ? '↑ Good' : cvScore >= 50 ? '↑ Fair' : 'Needs work') : undefined,
+          trendDirection: cvScore >= 70 ? 'up' as const : cvScore >= 50 ? 'neutral' as const : 'down' as const,
+          subtitle: cvScore > 0 ? (cvScore >= 80 ? 'Excellent quality' : cvScore >= 60 ? 'Above average' : 'Needs improvement') : 'Analyse your CV',
+          loading: secondaryLoading.cvs,
+          onClick: () => handleKPIClick('CV Score'),
+          actionLabel: 'Open Editor',
+        },
+        {
+          title: 'Tailored CVs',
+          value: tailoredCVCount.toString(),
+          icon: <Briefcase />,
+          color: '#ffd0b0',
+          subtitle: tailoredCVsThisMonth > 0 ? `+${tailoredCVsThisMonth} this month` : 'Create your first',
+          loading: secondaryLoading.cvs,
+          onClick: () => handleKPIClick('Tailored CVs'),
+          actionLabel: 'Open Canvas',
+        },
+        {
+          title: 'Cover Letters',
+          value: coverLetters.length.toString(),
+          icon: <FileText />,
+          color: '#1c4ce8',
+          subtitle: coverLetters.length > 0
+            ? `${goals.coverLettersCreatedThisMonth || 0} this month`
+            : 'Personalise your pitch',
+          loading: secondaryLoading.coverLetters,
+          onClick: () => handleKPIClick('Cover Letters'),
+          actionLabel: 'Open Canvas',
+        },
+        {
+          title: 'ATS Avg',
+          value: avgAtsScore > 0 ? `${avgAtsScore}%` : '—',
+          icon: <Search />,
+          color: '#6138db',
+          subtitle: avgAtsScore > 0
+            ? (avgAtsScore >= 70 ? 'ATS-ready' : 'Optimise keywords')
+            : 'Run ATS check',
+          loading: secondaryLoading.analytics,
+          onClick: () => handleKPIClick('ATS Avg'),
+          actionLabel: 'Open Tracker',
+        },
+      ];
+    }
 
-    if (tier === 'starter') return common;
-    
-    const focused = [
-      ...common.slice(0, 3),
-      { 
-        title: "Jobs Tracked", 
-        value: jobs.length.toString(), 
-        icon: <Target />, 
-        color: "#6138db", 
-        trend: `+${streak.applicationsThisWeek}`, 
-        trendDirection: 'up' as const,
-        loading: secondaryLoading.jobs,
-        onClick: () => handleKPIClick("Jobs Tracked"),
-        actionLabel: "Open Tracker"
-      }
-    ];
+    // ── FOCUSED: Job-search-focused — applications & pipeline ─────────────
+    if (tier === 'focused') {
+      return [
+        {
+          title: 'CV Score',
+          value: cvScore > 0 ? `${cvScore}%` : '—',
+          icon: <Sparkles />,
+          color: '#163d32',
+          subtitle: cvScore > 0 ? (cvScore >= 80 ? 'Excellent' : cvScore >= 60 ? 'Above avg' : 'Needs work') : 'No CV analysed',
+          loading: secondaryLoading.cvs,
+          onClick: () => handleKPIClick('CV Score'),
+          actionLabel: 'Open Editor',
+        },
+        {
+          title: 'Jobs Tracked',
+          value: jobs.length.toString(),
+          icon: <Target />,
+          color: '#ffd0b0',
+          trend: streak.applicationsThisWeek > 0 ? `+${streak.applicationsThisWeek} this week` : undefined,
+          trendDirection: 'up' as const,
+          subtitle: `${activeApplications} active`,
+          loading: secondaryLoading.jobs,
+          onClick: () => handleKPIClick('Jobs Tracked'),
+          actionLabel: 'Open Tracker',
+        },
+        {
+          title: 'Interview Rate',
+          value: interviewRate > 0 ? `${interviewRate}%` : '—',
+          icon: <Award />,
+          color: '#1c4ce8',
+          subtitle: interviewRate >= 20 ? 'Above average' : interviewRate > 0 ? 'Keep applying' : 'No interviews yet',
+          loading: secondaryLoading.jobs,
+          onClick: () => handleKPIClick('Interview Rate'),
+          actionLabel: 'Open Tracker',
+        },
+        {
+          title: 'Offers',
+          value: offerCount > 0 ? offerCount.toString() : '—',
+          icon: <TrendingUp />,
+          color: '#6138db',
+          subtitle: offerCount > 0 ? '🎉 Congrats!' : jobs.length > 0 ? 'Keep going!' : 'Start applying',
+          loading: secondaryLoading.jobs,
+          onClick: () => handleKPIClick('Offers'),
+          actionLabel: 'View Offers',
+        },
+      ];
+    }
 
-    if (tier === 'focused') return focused;
-
+    // ── SMART: Automation-focused — pipeline velocity & reach ─────────────
     return [
-      ...focused.slice(0, 3),
-      { 
-        title: "Auto Applies", 
-        value: analytics?.autoApplies || "0", 
-        icon: <Zap />, 
-        color: "#0f172a", 
-        trend: "+8", 
+      {
+        title: 'Active Apps',
+        value: activeApplications.toString(),
+        icon: <Activity />,
+        color: '#163d32',
+        trend: streak.applicationsThisWeek > 0 ? `+${streak.applicationsThisWeek}/wk` : undefined,
         trendDirection: 'up' as const,
+        subtitle: `${jobs.length} total tracked`,
+        loading: secondaryLoading.jobs,
+        onClick: () => handleKPIClick('Active Apps'),
+        actionLabel: 'View Pipeline',
+      },
+      {
+        title: 'Auto Applies',
+        value: analytics?.autoApplies !== undefined ? String(analytics.autoApplies) : '—',
+        icon: <Zap />,
+        color: '#0f172a',
+        trend: analytics?.autoApplies > 0 ? '+8 this week' : undefined,
+        trendDirection: 'up' as const,
+        subtitle: 'Autopilot active',
         loading: secondaryLoading.analytics,
-        onClick: () => handleKPIClick("Auto Applies"),
-        actionLabel: "View Autopilot"
-      }
+        onClick: () => handleKPIClick('Auto Applies'),
+        actionLabel: 'View Autopilot',
+      },
+      {
+        title: 'Interview Rate',
+        value: interviewRate > 0 ? `${interviewRate}%` : '—',
+        icon: <Award />,
+        color: '#1c4ce8',
+        subtitle: interviewRate >= 20 ? '🎯 Above average' : interviewRate > 0 ? 'Improving…' : 'Getting started',
+        loading: secondaryLoading.jobs,
+        onClick: () => handleKPIClick('Interview Rate'),
+        actionLabel: 'Open Tracker',
+      },
+      {
+        title: 'Offers',
+        value: offerCount > 0 ? offerCount.toString() : '—',
+        icon: <TrendingUp />,
+        color: '#6138db',
+        subtitle: offerCount > 0 ? '🎉 Congrats!' : `${jobs.length > 0 ? 'Pipeline active' : 'No jobs yet'}`,
+        loading: secondaryLoading.jobs,
+        onClick: () => handleKPIClick('Offers'),
+        actionLabel: 'View Offers',
+      },
     ];
   };
 
   const kpis = getKPIs();
 
-  // Prepare pipeline data
-  const pipelineStages = [
-    { label: 'Applied', count: jobs.filter(j => j.status === 'applied').length, color: 'bg-blue-500', path: '/dashboard/tracker?filter=applied' },
-    { label: 'Screening', count: jobs.filter(j => j.status === 'screening' || j.status === 'phone_screen').length, color: 'bg-indigo-500', path: '/dashboard/tracker?filter=screening' },
-    { label: 'Assessment', count: jobs.filter(j => j.status === 'assessment' || j.status === 'technical_test').length, color: 'bg-purple-500', path: '/dashboard/tracker?filter=assessment' },
-    { label: 'Interview', count: jobs.filter(j => j.status === 'interview').length, color: 'bg-amber-500', path: '/dashboard/tracker?filter=interview' },
-    { label: 'Offer', count: jobs.filter(j => j.status === 'offer').length, color: 'bg-[#83d60d]', path: '/dashboard/tracker?filter=offer' },
-    { label: 'Rejected', count: jobs.filter(j => j.status === 'rejected').length, color: 'bg-rose-500', path: '/dashboard/tracker?filter=rejected' },
-  ];
-
-  // Prepare upcoming deadlines
+  // ── Upcoming Deadlines ────────────────────────────────────────────────────
   const upcomingDeadlines = jobs
-    .filter(j => j.nextActionDate)
-    .sort((a, b) => new Date(a.nextActionDate).getTime() - new Date(b.nextActionDate).getTime())
+    .filter((j: any) => j.nextActionDate)
+    .sort((a: any, b: any) => new Date(a.nextActionDate).getTime() - new Date(b.nextActionDate).getTime())
     .slice(0, 3)
-    .map(j => ({
+    .map((j: any) => ({
       id: j.id || j._id,
       title: `${j.jobTitle} @ ${j.company}`,
       type: (j.nextActionType || 'Application') as any,
       date: new Date(j.nextActionDate).toLocaleDateString(),
-      timeLeft: 'Upcoming'
+      timeLeft: 'Upcoming',
     }));
+
+  const isMasterCVEmpty = !masterCV;
+  const isAnalysisEmpty = !surgeonAnalysis;
 
   return (
     <div className="space-y-8">
@@ -243,7 +427,8 @@ export default function RedesignedDashboardView({ tier, isExpanded = false }: Re
               >
                 <CVStrengthRadar 
                   loading={secondaryLoading.cvs} 
-                  empty={cvs.length === 0}
+                  empty={isMasterCVEmpty}
+                  metrics={radarMetrics}
                 />
               </motion.div>
               <motion.div 
@@ -251,18 +436,14 @@ export default function RedesignedDashboardView({ tier, isExpanded = false }: Re
                 className={cn("lg:col-span-1 transition-all duration-500", !isExpanded && "min-h-[400px]")}
               >
                 <SuggestedFixesWidget 
-                  loading={secondaryLoading.aiInsights} 
-                  empty={aiInsights.length === 0}
-                  fixes={aiInsights.filter(i => i.type === 'improvement').map(i => ({
-                    id: i.id || Math.random().toString(),
-                    text: i.description,
-                    priority: i.priority || 'medium'
-                  }))}
+                  loading={secondaryLoading.cvs || secondaryLoading.aiInsights}
+                  empty={suggestedFixes.length === 0}
+                  fixes={suggestedFixes}
                 />
               </motion.div>
             </motion.div>
 
-            {/* DETAILED ROWS - Slide Up Animation */}
+            {/* DETAILED ROWS */}
             <motion.div
               initial={false}
               animate={isExpanded ? { height: 'auto', opacity: 1, y: 0 } : { height: 0, opacity: 0, y: 40 }}
@@ -271,7 +452,11 @@ export default function RedesignedDashboardView({ tier, isExpanded = false }: Re
             >
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-1">
-                  <KeywordGapsWidget loading={secondaryLoading.analytics} />
+                  <KeywordGapsWidget
+                    loading={secondaryLoading.cvs}
+                    empty={keywordGaps.length === 0}
+                    keywords={keywordGaps}
+                  />
                 </div>
                 <div className="lg:col-span-2">
                   <TailoredCVWidget 
@@ -309,11 +494,11 @@ export default function RedesignedDashboardView({ tier, isExpanded = false }: Re
               <JobPipelineWidget 
                 loading={secondaryLoading.jobs}
                 empty={jobs.length === 0}
-                stages={pipelineStages}
+                stages={trackerPipelineStages}
               />
             </motion.div>
 
-            {/* DETAILED ROWS - Slide Up Animation */}
+            {/* DETAILED ROWS */}
             <motion.div
               initial={false}
               animate={isExpanded ? { height: 'auto', opacity: 1, y: 0 } : { height: 0, opacity: 0, y: 40 }}
@@ -322,17 +507,17 @@ export default function RedesignedDashboardView({ tier, isExpanded = false }: Re
             >
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2">
-                  <CVStrengthRadar loading={secondaryLoading.cvs} empty={cvs.length === 0} />
+                  <CVStrengthRadar
+                    loading={secondaryLoading.cvs}
+                    empty={isMasterCVEmpty}
+                    metrics={radarMetrics}
+                  />
                 </div>
                 <div className="lg:col-span-1">
                   <SuggestedFixesWidget 
-                    loading={secondaryLoading.aiInsights} 
-                    empty={aiInsights.length === 0}
-                    fixes={aiInsights.filter(i => i.type === 'improvement').map(i => ({
-                      id: i.id || Math.random().toString(),
-                      text: i.description,
-                      priority: i.priority || 'medium'
-                    }))}
+                    loading={secondaryLoading.cvs || secondaryLoading.aiInsights}
+                    empty={suggestedFixes.length === 0}
+                    fixes={suggestedFixes}
                   />
                 </div>
               </div>
@@ -357,7 +542,7 @@ export default function RedesignedDashboardView({ tier, isExpanded = false }: Re
                   <CoverLetterWidget 
                     loading={secondaryLoading.coverLetters}
                     empty={coverLetters.length === 0}
-                    docs={coverLetters.slice(0, 5).map(cl => ({
+                    docs={coverLetters.slice(0, 5).map((cl: any) => ({
                       id: cl.id || cl._id,
                       title: cl.title || 'Cover Letter',
                       updatedAt: new Date(cl.updatedAt).toLocaleDateString(),
@@ -368,13 +553,17 @@ export default function RedesignedDashboardView({ tier, isExpanded = false }: Re
               </div>
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-1">
-                  <InterviewCoachWidget />
+                  <KeywordGapsWidget
+                    loading={secondaryLoading.cvs}
+                    empty={keywordGaps.length === 0}
+                    keywords={keywordGaps}
+                  />
                 </div>
                 <div className="lg:col-span-2">
                   <MatchScoreTable 
                     loading={secondaryLoading.jobs}
                     empty={jobs.length === 0}
-                    matches={jobs.slice(0, 5).map(j => ({
+                    matches={jobs.slice(0, 5).map((j: any) => ({
                       job: j.jobTitle,
                       company: j.company,
                       match: j.atsScore || 0,
@@ -382,6 +571,11 @@ export default function RedesignedDashboardView({ tier, isExpanded = false }: Re
                       deadline: j.nextActionDate ? new Date(j.nextActionDate).toLocaleDateString() : '---'
                     }))}
                   />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="lg:col-span-1">
+                  <InterviewCoachWidget />
                 </div>
               </div>
             </motion.div>
@@ -416,12 +610,12 @@ export default function RedesignedDashboardView({ tier, isExpanded = false }: Re
                 <JobPipelineWidget 
                   loading={secondaryLoading.jobs}
                   empty={jobs.length === 0}
-                  stages={pipelineStages}
+                  stages={trackerPipelineStages}
                 />
               </motion.div>
             </motion.div>
             
-            {/* DETAILED ROWS - Slide Up Animation */}
+            {/* DETAILED ROWS */}
             <motion.div
               initial={false}
               animate={isExpanded ? { height: 'auto', opacity: 1, y: 0 } : { height: 0, opacity: 0, y: 40 }}
@@ -432,7 +626,7 @@ export default function RedesignedDashboardView({ tier, isExpanded = false }: Re
                 <MatchScoreTable 
                   loading={secondaryLoading.jobs}
                   empty={jobs.length === 0}
-                  matches={jobs.slice(0, 5).map(j => ({
+                  matches={jobs.slice(0, 5).map((j: any) => ({
                     job: j.jobTitle,
                     company: j.company,
                     match: j.atsScore || 0,
@@ -443,13 +637,30 @@ export default function RedesignedDashboardView({ tier, isExpanded = false }: Re
                 <BotActivityFeed 
                   loading={secondaryLoading.activities}
                   empty={activities.length === 0}
-                  activities={activities.slice(0, 5).map(a => ({
+                  activities={activities.slice(0, 5).map((a: any) => ({
                     id: a.id || a._id,
                     type: a.type as any,
                     text: a.description,
                     time: a.timestamp ? new Date(a.timestamp).toLocaleTimeString() : 'Recently'
                   }))}
                 />
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="lg:col-span-2">
+                  <CVStrengthRadar
+                    loading={secondaryLoading.cvs}
+                    empty={isMasterCVEmpty}
+                    metrics={radarMetrics}
+                  />
+                </div>
+                <div className="lg:col-span-1">
+                  <SuggestedFixesWidget 
+                    loading={secondaryLoading.cvs || secondaryLoading.aiInsights}
+                    empty={suggestedFixes.length === 0}
+                    fixes={suggestedFixes}
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -467,7 +678,7 @@ export default function RedesignedDashboardView({ tier, isExpanded = false }: Re
                 <CoverLetterWidget 
                   loading={secondaryLoading.coverLetters}
                   empty={coverLetters.length === 0}
-                  docs={coverLetters.slice(0, 5).map(cl => ({
+                  docs={coverLetters.slice(0, 5).map((cl: any) => ({
                     id: cl.id || cl._id,
                     title: cl.title || 'Cover Letter',
                     updatedAt: new Date(cl.updatedAt).toLocaleDateString(),
@@ -487,7 +698,7 @@ export default function RedesignedDashboardView({ tier, isExpanded = false }: Re
                 <RedesignedAIInsightsWidget 
                   loading={secondaryLoading.aiInsights}
                   empty={aiInsights.length === 0}
-                  insights={aiInsights.map(i => ({
+                  insights={aiInsights.map((i: any) => ({
                     id: i.id || Math.random().toString(),
                     title: i.title,
                     description: i.description,

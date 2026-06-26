@@ -32,11 +32,11 @@ export default function CoverLetterWidget({ docs = defaultDocs, loading = false,
         description: "Generate a cover letter for your next application.",
         action: {
           label: "Create Letter",
-          onClick: () => console.log('Create Letter'),
+          onClick: () => window.location.href = '/editor?tab=cover-letters',
           primary: true
         }
       }}
-      className="h-full"
+      className="h-auto min-h-[240px] w-full self-start"
     >
       <div className="space-y-3">
         {docs.map((doc) => (
