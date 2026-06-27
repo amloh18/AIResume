@@ -12,6 +12,7 @@ import JDInputPanel from '@/components/resume-enhancer/JDInputPanel';
 import { useUnifiedAuth } from '@/lib/hooks/useUnifiedAuth';
 import { authenticatedFetchWithUserId } from '@/lib/utils/apiUtils';
 import CVPreviewThumbnail from '@/components/dashboard/CVPreviewThumbnail';
+import CoverLetterPreview from '@/components/cv-preview/CoverLetterPreview';
 import { getAllTemplates } from '@/lib/templates/template-utils';
 import SmartJDModal from '@/components/resume-enhancer/SmartJDModal';
 import toast from 'react-hot-toast';
@@ -32,24 +33,60 @@ export const invalidateStep1Cache = () => {
 };
 
 interface ExistingCV {
-  _id?: string;
+  _id: string;
   id?: string;
   title: string;
-  cvType: 'master' | 'standalone' | 'journey';
-  createdAt: string;
   updatedAt: string;
-  cvData?: UnifiedCVDataStructure;
-  templateId?: any;
-  atsScore?: number;
-  metadata?: {
-    thumbnailUrl?: string;
+  createdAt: string;
+  cvData: UnifiedCVDataStructure;
+  template: {
+    id: string;
+    zones?: any;
     type?: string;
+    thumbnailUrl?: string;
     [key: string]: any;
   };
   status?: string;
 }
 
-const LazyThumbnail = ({ item, isCoverLetter = false }: { item: any, isCoverLetter?: boolean }) => {
+const LazyThumbnail = ({ item, isCoverLetter = false, cvData = null }: { item: any, isCoverLetter?: boolean, cvData?: any }) => {
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const [dimensions, setDimensions] = React.useState({ width: 0, height: 0 });
+
+  React.useEffect(() => {
+    if (!containerRef.current) return;
+
+    const updateDimensions = () => {
+      const container = containerRef.current;
+      if (!container) return;
+
+      const containerWidth = container.clientWidth;
+      const containerHeight = container.clientHeight;
+
+      if (containerWidth === 0 || containerHeight === 0) return;
+
+      const aspectRatio = 794 / 1123; // A4 aspect ratio
+      let renderWidth = containerWidth;
+      let renderHeight = containerWidth / aspectRatio;
+
+      if (renderHeight > containerHeight) {
+        renderHeight = containerHeight;
+        renderWidth = containerHeight * aspectRatio;
+      }
+
+      setDimensions({ width: renderWidth, height: renderHeight });
+    };
+
+    updateDimensions();
+    const resizeObserver = new ResizeObserver(() => {
+      updateDimensions();
+    });
+    resizeObserver.observe(containerRef.current);
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
+
   const templateObj = React.useMemo(() => {
     if (item.template && (item.template.zones || item.template.type)) return item.template;
     
@@ -92,29 +129,51 @@ const LazyThumbnail = ({ item, isCoverLetter = false }: { item: any, isCoverLett
   }
 
   return (
-    <div className="w-full h-full p-6 flex flex-col gap-4 bg-white relative overflow-hidden pointer-events-none">
-              {/* Header placeholder */}
-              <div className="space-y-2 border-b border-gray-100 pb-4">
-                <div className="h-4 w-1/3 bg-gray-200 rounded animate-pulse" />
-                <div className="h-3 w-1/4 bg-gray-100 rounded animate-pulse" />
-              </div>
-              {/* Body paragraph placeholders */}
-              <div className="space-y-3 pt-2">
-                <div className="h-2 w-full bg-gray-100 rounded animate-pulse" />
-                <div className="h-2 w-[95%] bg-gray-100 rounded animate-pulse" />
-                <div className="h-2 w-[90%] bg-gray-100 rounded animate-pulse" />
-                <div className="h-2 w-[85%] bg-gray-100 rounded animate-pulse" />
-              </div>
-              <div className="space-y-3 pt-2">
-                <div className="h-2 w-full bg-gray-100 rounded animate-pulse" />
-                <div className="h-2 w-[95%] bg-gray-100 rounded animate-pulse" />
-                <div className="h-2 w-[40%] bg-gray-100 rounded animate-pulse" />
-              </div>
-              {/* Signature placeholder */}
-              <div className="mt-auto pt-4 space-y-2">
-                <div className="h-2.5 w-1/4 bg-gray-200 rounded animate-pulse" />
-                <div className="h-2 w-1/5 bg-gray-100 rounded animate-pulse" />
-              </div>
+    <div ref={containerRef} className="w-full h-full flex items-center justify-center relative overflow-hidden bg-white pointer-events-none">
+      {dimensions.width > 0 && dimensions.height > 0 ? (
+        <div
+          className="relative overflow-hidden bg-white shrink-0"
+          style={{
+            width: `${dimensions.width}px`,
+            height: `${dimensions.height}px`,
+          }}
+        >
+          <div
+            className="absolute left-0 top-0"
+            style={{
+              width: '794px',
+              height: '1123px',
+              transform: `scale(${dimensions.width / 794})`,
+              transformOrigin: 'top left',
+            }}
+          >
+            <CoverLetterPreview
+              content={item.content || item.body || ''}
+              cvData={cvData || item.cvData}
+              jobData={item.jobData}
+              selectedCVData={cvData || item.cvData}
+              header={item.header}
+              body={item.body}
+              footer={item.footer}
+            />
+          </div>
+        </div>
+      ) : (
+        <div className="w-full h-full p-6 flex flex-col gap-4 bg-white relative overflow-hidden pointer-events-none">
+          {/* Header placeholder */}
+          <div className="space-y-2 border-b border-gray-100 pb-4">
+            <div className="h-4 w-1/3 bg-gray-200 rounded animate-pulse" />
+            <div className="h-3 w-1/4 bg-gray-100 rounded animate-pulse" />
+          </div>
+          {/* Body paragraph placeholders */}
+          <div className="space-y-3 pt-2">
+            <div className="h-2 w-full bg-gray-100 rounded animate-pulse" />
+            <div className="h-2 w-[95%] bg-gray-100 rounded animate-pulse" />
+            <div className="h-2 w-[90%] bg-gray-100 rounded animate-pulse" />
+            <div className="h-2 w-[85%] bg-gray-100 rounded animate-pulse" />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -235,7 +294,7 @@ const CVPairThumbnail: React.FC<CVPairThumbnailProps> = ({
           onClick={(e) => { e.stopPropagation(); onEditCoverLetter(firstCL); }}
         >
           <div className="relative aspect-[1/1.414] w-full rounded-lg overflow-hidden bg-white shadow-2xl shadow-black/30 border-2 border-emerald-400/40 ring-1 ring-emerald-400/20">
-            <LazyThumbnail item={firstCL} isCoverLetter={true} />
+            <LazyThumbnail item={firstCL} isCoverLetter={true} cvData={cv.cvData} />
 
             {/* CL badge */}
             <div className="absolute top-2 left-2 z-30">
