@@ -247,10 +247,16 @@ export default function ResumeEnhancerContainer({
   }, [coverLetterBlockedMessage, goToStep, isMasterCV, state.cvData, state.isTemplateOverlayOpen, setTemplateOverlayOpen, state.fresherMode]);
 
   useEffect(() => {
-    if (state.isJobSidebarOpen && !selectedJob && state.jobData) {
-      setSelectedJob(state.jobData);
+    if (state.isJobSidebarOpen) {
+      if (state.jobData) {
+        setSelectedJob(state.jobData);
+      } else {
+        setShowEditJobSidebar(true);
+      }
+    } else {
+      setShowEditJobSidebar(false);
     }
-  }, [state.isJobSidebarOpen, selectedJob, state.jobData]);
+  }, [state.isJobSidebarOpen, state.jobData]);
 
   useEffect(() => {
     const handleOpenJobSidebar = () => {
@@ -298,6 +304,43 @@ export default function ResumeEnhancerContainer({
       goToStepSafely(3, { silent: true });
     }
   }, [goToStepSafely, isMasterCV, state.currentStep]);
+
+  // Listen for deletions of the active job/journey and route back to step 1
+  useEffect(() => {
+    const handleJobDeleted = (e: Event) => {
+      const deletedJobId = (e as CustomEvent).detail?.jobId;
+      const currentJobId = state.jobData?.id || state.jobData?._id;
+      if (deletedJobId && currentJobId && deletedJobId === currentJobId) {
+        toast.error('The active job was deleted. Returning to Step 1.');
+        setTemplateOverlayOpen(false);
+        resetState();
+        if (typeof window !== 'undefined') {
+          window.location.href = '/editor';
+        }
+      }
+    };
+
+    const handleJourneyDeleted = (e: Event) => {
+      const deletedJourneyId = (e as CustomEvent).detail?.journeyId;
+      const currentJourneyId = state.journeyId;
+      if (deletedJourneyId && currentJourneyId && deletedJourneyId === currentJourneyId) {
+        toast.error('The CV journey was deleted. Returning to Step 1.');
+        setTemplateOverlayOpen(false);
+        resetState();
+        if (typeof window !== 'undefined') {
+          window.location.href = '/editor';
+        }
+      }
+    };
+
+    window.addEventListener('jobDeleted', handleJobDeleted);
+    window.addEventListener('journeyDeleted', handleJourneyDeleted);
+
+    return () => {
+      window.removeEventListener('jobDeleted', handleJobDeleted);
+      window.removeEventListener('journeyDeleted', handleJourneyDeleted);
+    };
+  }, [state.jobData, state.journeyId, resetState, setTemplateOverlayOpen]);
 
   // Extract ATS keywords from ATS context or skill gap analysis
   const atsKeywords = useMemo(() => {
@@ -3544,11 +3587,15 @@ export default function ResumeEnhancerContainer({
       {showEditJobSidebar && (
         <EditJobSidebar
           isOpen={showEditJobSidebar}
-          onClose={() => setShowEditJobSidebar(false)}
+          onClose={() => {
+            setShowEditJobSidebar(false);
+            setJobSidebarOpen(false);
+          }}
           userId={userId}
           editingJob={state.jobData && !state.jobData.id && !state.jobData._id ? state.jobData as any : undefined}
           onJobSaved={(savedJob) => {
             setShowEditJobSidebar(false);
+            setJobSidebarOpen(false);
             // After saving, we can set it as the active job
             setSelectedJob(savedJob);
             // Optionally, also update state.jobData

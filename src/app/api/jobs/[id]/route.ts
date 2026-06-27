@@ -278,6 +278,13 @@ export async function PUT(
       updatedAt: new Date()
     };
 
+    // Remove immutable/system fields to prevent MongoServerError or schema violations
+    delete updateData.id;
+    delete updateData._id;
+    delete updateData.userId;
+    delete updateData.createdAt;
+    delete updateData.__v;
+
     // Convert date strings to Date objects if provided
     if (body.deadline) {
       updateData.deadline = new Date(body.deadline);

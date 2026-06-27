@@ -166,8 +166,9 @@ function DashboardContent() {
     }
   };
 
-  // --- Conditional returns must be AFTER all hooks ---
-  if (isLoading || membershipLoading || (onboardingData?.activation_status === 'pending' && onboardingData?.activation_route)) {
+  // Let onboarding data and membership load in the background to speed up dashboard initial paint
+  // Only show fallback loader if we explicitly need to redirect due to pending onboarding activation
+  if (onboardingData?.activation_status === 'pending' && onboardingData?.activation_route) {
     return <LoadingFallback />;
   }
 

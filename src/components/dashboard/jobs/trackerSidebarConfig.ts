@@ -411,7 +411,7 @@ export function buildTrackerSidebarConfig({
             'The tracker keeps your documents, application state, and ATS feedback together.',
             'Add missing job context first if you want stronger tailored output.',
           ],
-      primaryLabel: primaryJourney ? 'Continue Journey' : 'Create Journey',
+      primaryLabel: primaryJourney ? 'Edit CV' : 'Create Journey',
       primaryActionId: primaryJourney ? 'continue_journey' : 'create_journey',
       primaryAction: primaryJourney ? handlers.continue_journey : handlers.create_journey,
       secondaryLabel: primaryJourney ? 'View Full Details' : 'Edit Job Details',

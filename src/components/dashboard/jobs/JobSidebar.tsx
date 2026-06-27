@@ -115,6 +115,7 @@ const JobSidebar: React.FC<JobSidebarProps> = ({
   const [journeys, setJourneys] = useState<CVJourney[]>(initialJourneys);
   const [loadingJourneys, setLoadingJourneys] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  const [isConfirmingDeleteJob, setIsConfirmingDeleteJob] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isJobDescriptionExpanded, setIsJobDescriptionExpanded] = useState(false);
   const [showEmailTemplate, setShowEmailTemplate] = useState(false);
@@ -1202,6 +1203,7 @@ ${userName}`
 
       // Show success message
       toast.success('CV journey deleted successfully');
+      window.dispatchEvent(new CustomEvent('journeyDeleted', { detail: { journeyId } }));
 
       // Refresh the parent component
       await onRefresh();
@@ -1357,6 +1359,7 @@ ${userName}`
       }
 
       toast.success('Job deleted successfully!');
+      window.dispatchEvent(new CustomEvent('jobDeleted', { detail: { jobId } }));
       onClose(); // Close modal after deletion
       onRefresh();
 
@@ -1681,15 +1684,33 @@ ${userName}`
               >
                 <Edit size={20} className="text-gray-600 dark:text-white/60" />
               </motion.button>
-              <motion.button
-                onClick={handleDeleteJob}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-colors"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                title="Delete Job"
-              >
-                <Trash2 size={20} className="text-gray-600 dark:text-white/60" />
-              </motion.button>
+              {isConfirmingDeleteJob ? (
+                <div className="flex items-center gap-1.5 bg-red-500/10 dark:bg-red-500/20 border border-red-500/35 rounded-xl px-2 py-1 animate-in fade-in slide-in-from-right-2 duration-200">
+                  <span className="text-[10px] font-black uppercase text-red-600 dark:text-red-400 select-none">Delete Job?</span>
+                  <button
+                    onClick={handleDeleteJob}
+                    className="px-2 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg text-[10px] font-extrabold uppercase transition-all"
+                  >
+                    Yes
+                  </button>
+                  <button
+                    onClick={() => setIsConfirmingDeleteJob(false)}
+                    className="px-2 py-1 bg-gray-200 dark:bg-white/10 hover:bg-gray-300 dark:hover:bg-white/20 text-gray-700 dark:text-gray-300 rounded-lg text-[10px] font-extrabold uppercase transition-all"
+                  >
+                    No
+                  </button>
+                </div>
+              ) : (
+                <motion.button
+                  onClick={() => setIsConfirmingDeleteJob(true)}
+                  className="p-2 hover:bg-red-500/10 dark:hover:bg-red-500/20 rounded-lg transition-colors group"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  title="Delete Job"
+                >
+                  <Trash2 size={20} className="text-gray-600 dark:text-white/60 group-hover:text-red-500 transition-colors" />
+                </motion.button>
+              )}
               <motion.button
                 onClick={onClose}
                 className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-colors"
@@ -1780,166 +1801,105 @@ ${userName}`
                   </span>
                 </div>
 
-                <div className={`rounded-[28px] border p-6 shadow-sm ${journeyCardData.toneClasses}`}>
-                  <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-                    <div className="space-y-4">
-                      {(job.status === 'applied' || job.status === 'screening') ? (
-                        <div className="space-y-4">
-                          <div className="flex items-center gap-3 mb-2">
-                            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white dark:bg-[var(--bg-tertiary)] text-emerald-600 shadow-sm dark:text-emerald-400">
-                              <Sparkles className="h-6 w-6" />
-                            </div>
-                            <div>
-                              <h4 className="text-lg font-bold text-gray-900 dark:text-white">Journey Snapshot</h4>
-                              <p className="text-xs text-gray-500">Key metrics for this application stage</p>
-                            </div>
-                          </div>
-
-                          <div className="grid gap-3 grid-cols-2">
-                            <div className="rounded-2xl bg-white/40 dark:bg-white/5 border border-gray-200 dark:border-white/10 px-4 py-4 backdrop-blur-sm shadow-sm flex flex-col justify-between min-h-[90px] hover:scale-[1.02] transition-transform duration-200">
-                              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Success Probability</p>
-                              <p className="text-3xl font-extrabold text-gray-900 dark:text-white mt-2">
-                                {journeyCardData.stats.find(s => s.label === 'Success Probability')?.value || '23%'}
-                              </p>
-                            </div>
-                            <div className="rounded-2xl bg-white/40 dark:bg-white/5 border border-gray-200 dark:border-white/10 px-4 py-4 backdrop-blur-sm shadow-sm flex flex-col justify-between min-h-[90px] hover:scale-[1.02] transition-transform duration-200">
-                              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Match Score</p>
-                              <p className="text-3xl font-extrabold text-lime-500 dark:text-lime-400 mt-2">
-                                {journeyCardData.stats.find(s => s.label === 'Match Score')?.value || '19%'}
-                              </p>
-                            </div>
-                          </div>
+                <div className={`rounded-[24px] border p-5 shadow-sm ${journeyCardData.toneClasses}`}>
+                  <div className="flex flex-col gap-4">
+                    {/* Top Row: Title, Eyebrow & Description */}
+                    <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                      <div className="space-y-1 flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={`rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wider ${journeyCardData.accentClasses}`}>
+                            {journeyCardData.eyebrow}
+                          </span>
+                          <h4 className="text-xs font-black text-gray-900 dark:text-white uppercase tracking-wider">
+                            {journeyCardData.title || (job.status === 'applied' || job.status === 'screening' ? 'Journey Snapshot' : 'Next Steps')}
+                          </h4>
                         </div>
-                      ) : (
-                        <>
-                          <div className="flex items-center gap-3">
-                            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white dark:bg-[var(--bg-tertiary)] text-emerald-600 shadow-sm dark:text-emerald-400">
-                              {job.status === 'draft' ? <Target className="h-6 w-6" /> : <Sparkles className="h-6 w-6" />}
-                            </div>
-                            <div>
-                              <h4 className="text-lg font-bold text-gray-900 dark:text-white">{journeyCardData.title}</h4>
-                              <p className="text-sm text-gray-600 dark:text-gray-300">{journeyCardData.summary}</p>
-                            </div>
-                          </div>
+                        <p className="text-xs text-gray-600 dark:text-gray-300 leading-normal max-w-lg">
+                          {journeyCardData.summary}
+                        </p>
+                      </div>
 
-                          <div className="space-y-3">
-                            {journeyCardData.bullets.map((bullet, index) => (
-                              <div key={`${bullet}-${index}`} className="flex items-start gap-3">
-                                <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
-                                <p className="text-sm leading-6 text-gray-700 dark:text-gray-300">{bullet}</p>
-                              </div>
-                            ))}
+                      {/* Stats chips row */}
+                      <div className="flex flex-wrap gap-2 shrink-0 md:justify-end">
+                        {journeyCardData.stats.map((stat) => (
+                          <div key={stat.label} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/60 dark:bg-white/5 border border-gray-200/50 dark:border-white/5 text-[11px] font-semibold text-gray-800 dark:text-gray-200">
+                            <span className="opacity-60">{stat.label}:</span>
+                            <span className="font-extrabold text-[#80FF00] dark:text-[#99FF00]">{stat.value}</span>
                           </div>
-                        </>
-                      )}
+                        ))}
+                      </div>
+                    </div>
 
-                      <div className="flex flex-col gap-3 pt-2 sm:flex-row">
+                    {/* Previews / Document Indicators Inline */}
+                    {primaryJourney && (primaryJourney.cvId || primaryJourney.coverLetterId) && (
+                      <div className="flex flex-wrap items-center gap-3 bg-white/40 dark:bg-white/5 border border-gray-200/40 dark:border-white/5 rounded-xl p-3">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-gray-500 dark:text-gray-400">Ready Previews:</span>
+                        <div className="flex flex-wrap gap-2">
+                          {primaryJourney.cvId && (
+                            <button
+                              onClick={() => void handleOpenDocumentPreview('cv')}
+                              disabled={previewLoading === 'cv'}
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200/60 dark:border-white/10 bg-white/80 dark:bg-[#1a2015] px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:text-[var(--text-secondary)] dark:hover:bg-[var(--bg-tertiary)] transition-colors"
+                            >
+                              {previewLoading === 'cv' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Eye className="h-3.5 w-3.5" />}
+                              CV
+                            </button>
+                          )}
+                          {primaryJourney.coverLetterId && (
+                            <button
+                              onClick={() => void handleOpenDocumentPreview('coverLetter')}
+                              disabled={previewLoading === 'coverLetter'}
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200/60 dark:border-white/10 bg-white/80 dark:bg-[#1a2015] px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:text-[var(--text-secondary)] dark:hover:bg-[var(--bg-tertiary)] transition-colors"
+                            >
+                              {previewLoading === 'coverLetter' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Eye className="h-3.5 w-3.5" />}
+                              Cover Letter
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Divider */}
+                    <div className="h-[1px] bg-gray-205/60 dark:bg-white/5" />
+
+                    {/* Actions and status inline */}
+                    <div className="flex flex-wrap items-center justify-between gap-4">
+                      {/* Action buttons side-by-side */}
+                      <div className="flex items-center gap-2">
                         <motion.button
                           onClick={() => void runSidebarAction(journeyCardData.primaryActionId)}
                           disabled={isMovingToCreated || isCreatingJourney}
-                          className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#80FF00] px-5 py-3 text-sm font-semibold text-black shadow-sm transition hover:brightness-95 dark:bg-[#99FF00] dark:hover:brightness-95 disabled:opacity-60"
-                          whileHover={{ scale: 1.01 }}
+                          className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#80FF00] px-4 py-2.5 text-xs font-black text-black shadow-sm transition hover:brightness-95 dark:bg-[#99FF00] disabled:opacity-60"
+                          whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
                         >
-                          {journeyCardData.primaryLabel}
-                          <ArrowRight className="h-4 w-4" />
+                          <span>{journeyCardData.primaryLabel}</span>
+                          <ArrowRight className="h-3.5 w-3.5" />
                         </motion.button>
                         {journeyCardData.secondaryAction && journeyCardData.secondaryLabel && (
                           <motion.button
                             onClick={() => journeyCardData.secondaryActionId && void runSidebarAction(journeyCardData.secondaryActionId)}
-                            className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-5 py-3 text-sm font-semibold text-gray-800 transition hover:bg-gray-50 dark:border-white/10 dark:bg-[var(--bg-secondary)] dark:text-[var(--text-primary)] dark:hover:bg-[var(--bg-tertiary)]"
-                            whileHover={{ scale: 1.01 }}
+                            className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-gray-250 bg-white px-4 py-2.5 text-xs font-black text-gray-800 hover:bg-gray-50 dark:border-white/15 dark:bg-white/5 dark:text-white dark:hover:bg-white/10 transition-all"
+                            whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                           >
                             {journeyCardData.secondaryLabel}
                           </motion.button>
                         )}
                       </div>
-                    </div>
 
-                    <div className="space-y-4">
-                      {sidebarConfig.sections.showJourneySnapshot && (job.status !== 'applied' && job.status !== 'screening') && (
-                        <div className="rounded-2xl border border-white/70 bg-white/80 p-4 shadow-sm dark:border-white/10 dark:bg-[var(--bg-secondary)]">
-                          <p className="mb-3 text-sm font-semibold text-gray-900 dark:text-white">Journey Snapshot</p>
-                          <div className="grid gap-3 sm:grid-cols-2">
-                            {journeyCardData.stats.map((stat) => (
-                              <div key={stat.label} className="rounded-xl bg-gray-50 px-3 py-3 dark:bg-[var(--bg-tertiary)]">
-                                <p className="text-xs uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">{stat.label}</p>
-                                <p className="mt-1 text-sm font-semibold text-gray-900 dark:text-white">{stat.value}</p>
-                              </div>
-                            ))}
-                          </div>
+                      {/* Journey Status Nudge */}
+                      {primaryJourney ? (
+                        <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#80FF00] animate-pulse shrink-0" />
+                          <span>Status: <strong className="capitalize text-gray-700 dark:text-gray-300">{primaryJourney.status?.replace(/_/g, ' ') || 'In progress'}</strong></span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+                          <span>Journey not started</span>
                         </div>
                       )}
-
-                      {sidebarConfig.sections.showTrackerJourneySummary && (
-                        <div className="rounded-2xl border border-white/70 bg-white/80 p-4 shadow-sm dark:border-white/10 dark:bg-[var(--bg-secondary)]">
-                          <div className="flex items-center justify-between">
-                            <p className="text-sm font-semibold text-gray-900 dark:text-white">Tracker Journey</p>
-                            <span className="text-xs text-gray-500 dark:text-gray-400">
-                              {loadingJourneys ? 'Loading...' : primaryJourney ? 'Active' : 'Not started'}
-                            </span>
-                          </div>
-                          <div className="mt-3 space-y-3 text-sm text-gray-600 dark:text-gray-300">
-                            {primaryJourney ? (
-                              <>
-                                <div className="flex items-center justify-between">
-                                  <span>Journey status</span>
-                                  <span className="font-medium capitalize text-gray-900 dark:text-white">
-                                    {primaryJourney.status?.replace(/_/g, ' ') || 'In progress'}
-                                  </span>
-                                </div>
-                                {typeof primaryJourney.currentStep === 'number' && typeof primaryJourney.totalSteps === 'number' && (
-                                  <div className="flex items-center justify-between">
-                                    <span>Current step</span>
-                                    <span className="font-medium text-gray-900 dark:text-white">
-                                      {primaryJourney.currentStep}/{primaryJourney.totalSteps}
-                                    </span>
-                                  </div>
-                                )}
-                                {(primaryJourney.updatedAt || primaryJourney.metadata?.updatedAt) && (
-                                  <div className="flex items-center justify-between">
-                                    <span>Last updated</span>
-                                    <span className="font-medium text-gray-900 dark:text-white">
-                                      {formatJobDate(primaryJourney.updatedAt || primaryJourney.metadata?.updatedAt)}
-                                    </span>
-                                  </div>
-                                )}
-                                {(primaryJourney.cvId || primaryJourney.coverLetterId) && (
-                                  <div className="border-t border-gray-200 pt-3 dark:border-white/10">
-                                    <p className="mb-2 text-xs uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">
-                                      Ready previews
-                                    </p>
-                                    <div className="flex flex-wrap gap-2">
-                                      <button
-                                        onClick={() => void handleOpenDocumentPreview('cv')}
-                                        disabled={!primaryJourney.cvId || previewLoading === 'cv'}
-                                        className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:text-[var(--text-secondary)] dark:hover:bg-[var(--bg-tertiary)]"
-                                      >
-                                        {previewLoading === 'cv' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Eye className="h-3.5 w-3.5" />}
-                                        Preview CV
-                                      </button>
-                                      <button
-                                        onClick={() => void handleOpenDocumentPreview('coverLetter')}
-                                        disabled={!primaryJourney.coverLetterId || previewLoading === 'coverLetter'}
-                                        className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:text-[var(--text-secondary)] dark:hover:bg-[var(--bg-tertiary)]"
-                                      >
-                                        {previewLoading === 'coverLetter' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Eye className="h-3.5 w-3.5" />}
-                                        Preview Cover Letter
-                                      </button>
-                                    </div>
-                                  </div>
-                                )}
-                              </>
-                            ) : (
-                              <p className="leading-6">
-                                {sidebarConfig.trackerJourneyEmptyState}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
                     </div>
                   </div>
                 </div>
@@ -2262,7 +2222,7 @@ ${userName}`
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[1001] bg-black/50 backdrop-blur-sm"
+              className="fixed inset-0 z-[10001] bg-black/50 backdrop-blur-sm"
               onClick={() => setShowDetailsModal(false)}
             />
 
@@ -2272,7 +2232,7 @@ ${userName}`
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed inset-y-0 right-0 w-full max-w-2xl bg-white dark:bg-[#141810] shadow-2xl border-l border-gray-200 dark:border-white/10 z-[1002] flex flex-col overflow-hidden"
+              className="fixed inset-y-0 right-0 w-full max-w-2xl bg-white dark:bg-[#141810] shadow-2xl border-l border-gray-200 dark:border-white/10 z-[10002] flex flex-col overflow-hidden"
             >
               <div className="p-6 border-b border-gray-200 dark:border-white/10 flex-shrink-0 flex items-start justify-between gap-4">
                 <div>
