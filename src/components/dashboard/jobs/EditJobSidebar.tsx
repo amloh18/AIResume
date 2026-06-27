@@ -970,35 +970,6 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
 
         if (!isAutoSave) {
           onJobSaved(savedJob);
-          // Reset form state after successful save
-          setFormData({
-            jobTitle: '',
-            company: '',
-            location: '',
-            jobUrl: '',
-            jobDescription: '',
-            notes: '',
-            priority: 'medium',
-            status: 'created',
-            deadline: getDateString(15), // Default to 15 days from now
-            sponsorship: 'unknown',
-            tags: [],
-            salary: {
-              min: undefined,
-              max: undefined,
-              currency: 'USD',
-              period: 'yearly' as 'hourly' | 'monthly' | 'yearly'
-            },
-            contactDetails: { name: '', email: '', phone: '', role: '' },
-            interviews: [],
-            followUps: [],
-            attachments: [],
-            source: 'other' as 'linkedin' | 'indeed' | 'company-website' | 'referral' | 'other',
-            sourceUrl: '',
-            atsScore: undefined,
-            atsAnalysis: undefined,
-            statusHistory: []
-          });
           setHasUnsavedChanges(false);
           onClose();
         } else {

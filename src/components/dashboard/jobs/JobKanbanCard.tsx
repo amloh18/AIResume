@@ -124,9 +124,9 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
   // Prevent infinite loops by tracking attempts locally
   const hasAnalyzedRef = React.useRef(false);
 
-  // States & Hooks for document generation progress tracking
   const [progress, setProgress] = useState(15);
   const primaryJourney = jobJourneys[0];
+  const atsScore = primaryJourney?.atsScore || job.atsScore;
   const isGenerating = stage === "created" && (
     !primaryJourney ||
     primaryJourney.status === "processing_documents" ||
@@ -294,12 +294,7 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
         </div>
       );
     } else {
-      return (
-        <div className="flex items-center gap-1.5 mt-2 text-xs text-gray-500 dark:text-gray-400 font-medium bg-gray-50 dark:bg-gray-800/50 px-2 py-1 rounded">
-          <Clock size={12} />
-          <span>Expires on {formatDate(targetDate)}</span>
-        </div>
-      );
+      return null;
     }
   };
 
@@ -370,7 +365,6 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
 
   const renderCreatedContent = () => {
     const primaryJourney = jobJourneys[0];
-    const atsScore = primaryJourney?.atsScore || job.atsScore || job.matchScore;
     const hasCV = !!primaryJourney?.cvId;
     const hasCL = !!primaryJourney?.coverLetterId;
 
@@ -438,36 +432,19 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
       <>
         {/* Compact View */}
         <div className="flex justify-between items-center mt-2">
-          <div className="flex-1 mr-3">
-            <div className="flex items-center justify-between text-xs mb-1">
-              <span className="font-medium text-gray-600 dark:text-gray-300">
-                ATS Score
-              </span>
-              <span
-                className={
-                  atsScore && atsScore >= 80
-                    ? "text-green-600"
-                    : "text-amber-600"
-                }
-              >
-                {atsScore || 0}/100
-              </span>
-            </div>
-            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
-              <div
-                className={`h-1.5 rounded-full ${atsScore && atsScore >= 80 ? "bg-green-500" : "bg-amber-500"}`}
-                style={{ width: `${atsScore || 0}%` }}
-              />
-            </div>
+          <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+            <span>Documents ready</span>
           </div>
           <div className="flex gap-1.5">
             <div
               className={`p-1 rounded-full ${hasCV ? "bg-green-100 text-green-600" : "bg-red-100 text-red-500"}`}
+              title={hasCV ? "CV Generated" : "No CV"}
             >
               <FileText size={12} />
             </div>
             <div
               className={`p-1 rounded-full ${hasCL ? "bg-green-100 text-green-600" : "bg-red-100 text-red-500"}`}
+              title={hasCL ? "Cover Letter Generated" : "No Cover Letter"}
             >
               <FileText size={12} />
             </div>
@@ -823,6 +800,26 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
           {stage === "rejected" && (
             <div className="mt-2 text-xs text-red-500 font-medium">
               Application Rejected
+            </div>
+          )}
+
+          {/* Inline ATS + Deadline Display for Staging (created), Applied, and Interview stages */}
+          {["created", "applied", "interview"].includes(stage) && (
+            <div className="flex items-center justify-between text-[11px] mt-2.5 pt-2.5 border-t border-gray-100 dark:border-white/5 gap-2">
+              <div className="flex items-center gap-1">
+                <span className="text-gray-500 dark:text-gray-400 font-bold">ATS Score:</span>
+                <span className={`font-black ${atsScore && atsScore >= 80 ? 'text-green-600 dark:text-green-400' : atsScore && atsScore > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400'}`}>
+                  {atsScore && atsScore > 0 ? `${atsScore}%` : 'N/A'}
+                </span>
+              </div>
+              {job.deadline && (
+                <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400">
+                  <Calendar size={11} className="shrink-0" />
+                  <span className="truncate">
+                    Due {new Date(job.deadline).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                  </span>
+                </div>
+              )}
             </div>
           )}
         </div>

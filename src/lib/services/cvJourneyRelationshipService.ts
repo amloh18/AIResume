@@ -318,6 +318,30 @@ export class ApplicationJourneyRelationshipService {
       }
 
       await journey.save();
+
+      // Sync to JobApplication model so tracker has immediate access to the score
+      const targetJobId = jobId || journey.jobId;
+      if (targetJobId) {
+        try {
+          const suggestions = factorBreakdown?.suggestions || factorBreakdown?.overall_feedback || [];
+          const matchedKeywords = factorBreakdown?.matchedKeywords || factorBreakdown?.strengths || [];
+          const missingKeywords = factorBreakdown?.missingKeywords || [];
+
+          await JobApplication.findByIdAndUpdate(targetJobId, {
+            atsScore: atsScore,
+            atsAnalysis: {
+              matchedKeywords: Array.isArray(matchedKeywords) ? matchedKeywords : [],
+              missingKeywords: Array.isArray(missingKeywords) ? missingKeywords : [],
+              suggestions: Array.isArray(suggestions) ? suggestions : [],
+              analyzedAt: new Date()
+            }
+          });
+          console.log(`✅ ATS Score sync - Updated JobApplication ${targetJobId} with score ${atsScore}`);
+        } catch (jobErr) {
+          console.error('⚠️ ATS Score sync - Failed to update JobApplication:', jobErr);
+        }
+      }
+
       return true;
     } catch (error) {
       console.error('Error updating journey ATS score:', error);
