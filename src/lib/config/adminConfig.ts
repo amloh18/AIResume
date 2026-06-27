@@ -36,7 +36,7 @@ export async function getPlanKeys(): Promise<string[]> {
   } catch (error) {
     console.error('Error fetching plan keys:', error);
     // Fallback to default plans
-    return ['free', 'pro_monthly', 'pro_quarterly', 'pro_yearly', 'pro_lifetime'];
+    return ['starter_monthly', 'starter_yearly', 'focused_monthly', 'focused_yearly', 'smart_quarterly', 'smart_yearly'];
   }
 }
 
@@ -60,11 +60,12 @@ export async function getPlanDisplayNames(): Promise<Record<string, string>> {
     console.error('Error fetching plan display names:', error);
     // Fallback display names
     return {
-      'free': 'Free',
-      'pro_monthly': 'Monthly Pro',
-      'pro_quarterly': 'Quarterly Pro',
-      'pro_yearly': 'Yearly Pro',
-      'pro_lifetime': 'Lifetime'
+      'starter_monthly': 'Starter Monthly',
+      'starter_yearly': 'Starter Yearly',
+      'focused_monthly': 'Focused Monthly',
+      'focused_yearly': 'Focused Yearly',
+      'smart_quarterly': 'Smart Quarterly',
+      'smart_yearly': 'Smart Yearly'
     };
   }
 }

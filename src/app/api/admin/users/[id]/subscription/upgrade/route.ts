@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
-import { User } from '@/models';
+import { User, Subscription } from '@/models';
 import Invoice from '@/models/Invoice';
 import InvoiceItem from '@/models/InvoiceItem';
 import { getAdminPricingPlan } from '@/models/admin-models';
@@ -111,6 +111,33 @@ export async function POST(
         { success: false, error: 'Failed to update user subscription' },
         { status: 500 }
       );
+    }
+
+    // Create/update active subscription in the Subscription collection/table
+    try {
+      // Inactivate previous active subscriptions for this user
+      await Subscription.updateMany(
+        { userId: userId, status: { $in: ['active', 'past_due'] } },
+        { $set: { status: 'inactive', cancelledAt: new Date() } }
+      );
+
+      // Create new subscription doc in DB
+      await Subscription.create({
+        userId: userId,
+        planId: plan._id,
+        status: 'active',
+        startDate: startDate,
+        endDate: endDate,
+        billingCycle: interval || (planKey === 'pro_lifetime' ? 'one-time' : 'monthly'),
+        amount: 0,
+        currency: 'USD',
+        paymentMethod: 'polar',
+        paymentProviderId: `admin_${userId}_${Date.now()}`,
+        finalAmount: 0
+      });
+      console.log(`✅ Subscription record created in DB for user ${userId}`);
+    } catch (subError) {
+      console.error('Error creating subscription database record:', subError);
     }
 
     // Handle credits on plan change

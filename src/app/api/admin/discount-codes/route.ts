@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import Coupon from '@/models/Coupon';
+import PolarService from '@/lib/payment/polar';
 
 export async function GET(request: NextRequest) {
   try {
@@ -9,6 +10,32 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const includeInactive = searchParams.get('includeInactive') === 'true';
     const codeFilter = searchParams.get('code');
+
+    // Sync from Polar
+    try {
+      const polarRes = await PolarService.listDiscounts();
+      if (polarRes.success && polarRes.discounts) {
+        for (const polarDiscount of polarRes.discounts) {
+          if (polarDiscount.code) {
+            const existing = await Coupon.findOne({ code: polarDiscount.code });
+            if (!existing) {
+              const val = polarDiscount.type === 'percentage' ? polarDiscount.amount : (polarDiscount.amount / 100);
+              await Coupon.create({
+                code: polarDiscount.code,
+                name: polarDiscount.name,
+                discountType: polarDiscount.type === 'percentage' ? 'percentage' : 'fixed',
+                discountValue: val,
+                isActive: true,
+                providerId: polarDiscount.id,
+                provider: 'polar'
+              });
+            }
+          }
+        }
+      }
+    } catch (polarError) {
+      console.error('Failed to sync discounts from Polar during GET:', polarError);
+    }
 
     // Build query
     const query: any = {};
@@ -20,7 +47,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch coupons (unified model)
-    const coupons = await Coupon.find(query).lean()
+    const coupons = await Coupon.find(query)
       .sort({ createdAt: -1 })
       .lean();
 
@@ -40,6 +67,24 @@ export async function POST(request: NextRequest) {
     await getConnection();
 
     const body = await request.json();
+
+    // Create discount in Polar
+    try {
+      const polarRes = await PolarService.createDiscount({
+        name: body.name || body.code,
+        code: body.code,
+        duration: body.duration || 'once',
+        type: body.discountType === 'percentage' ? 'percentage' : 'fixed',
+        amount: body.discountValue,
+        currency: body.currency || 'USD'
+      });
+      if (polarRes.success && polarRes.discount) {
+        body.providerId = polarRes.discount.id;
+        body.provider = 'polar';
+      }
+    } catch (polarError) {
+      console.error('Failed to sync discount creation to Polar:', polarError);
+    }
 
     // Create new coupon
     const coupon = new Coupon(body);
@@ -109,6 +154,16 @@ export async function DELETE(request: NextRequest) {
         { success: false, error: 'Code ID is required' },
         { status: 400 }
       );
+    }
+
+    // Fetch coupon to check provider id
+    const coupon = await Coupon.findById(codeId);
+    if (coupon && coupon.provider === 'polar' && coupon.providerId) {
+      try {
+        await PolarService.deleteDiscount(coupon.providerId);
+      } catch (polarError) {
+        console.error('Failed to sync discount deletion to Polar:', polarError);
+      }
     }
 
     // Delete coupon

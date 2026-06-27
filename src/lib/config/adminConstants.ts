@@ -90,7 +90,7 @@ export type TimeRange = typeof TIME_RANGES[number];
  * Default values
  */
 export const DEFAULT_CURRENCY: SupportedCurrency = 'EUR';
-export const DEFAULT_PLAN_KEY = 'free';
+export const DEFAULT_PLAN_KEY = 'starter_monthly';
 export const DEFAULT_PAGINATION_LIMIT = 50;
 export const DEFAULT_SEARCH_DEBOUNCE_MS = 300;
 

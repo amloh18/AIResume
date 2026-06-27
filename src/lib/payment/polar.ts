@@ -287,6 +287,53 @@ export class PolarService {
       };
     }
   }
+
+  static async listDiscounts() {
+    const polarInstance = getPolarInstance();
+    if (!polarInstance) return { success: false, error: 'Polar is not configured' };
+    try {
+      const result = await polarInstance.discounts.list({});
+      return { success: true, discounts: result.items || [] };
+    } catch (error) {
+      console.error('Polar listDiscounts error:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  }
+
+  static async createDiscount(params: any) {
+    const polarInstance = getPolarInstance();
+    if (!polarInstance) return { success: false, error: 'Polar is not configured' };
+    try {
+      // Polar API expects the amount as integer (cents for currency, or 100x value for percentage)
+      const isPercentage = params.type === 'percentage';
+      const amountVal = isPercentage ? Math.round(params.amount) : Math.round(params.amount * 100);
+
+      const discount = await polarInstance.discounts.create({
+        name: params.name,
+        code: params.code,
+        duration: params.duration || 'once',
+        type: params.type || 'percentage',
+        amount: amountVal,
+        currency: params.currency || 'USD'
+      });
+      return { success: true, discount };
+    } catch (error) {
+      console.error('Polar createDiscount error:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  }
+
+  static async deleteDiscount(discountId: string) {
+    const polarInstance = getPolarInstance();
+    if (!polarInstance) return { success: false, error: 'Polar is not configured' };
+    try {
+      await polarInstance.discounts.delete({ id: discountId });
+      return { success: true };
+    } catch (error) {
+      console.error('Polar deleteDiscount error:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  }
 }
 
 export default PolarService;

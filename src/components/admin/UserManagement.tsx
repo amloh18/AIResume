@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { AdminUserManagementSkeleton } from './AdminSkeletons';
 import {
   Users, Search, Filter, MoreVertical, Trash2, Eye, Mail, CreditCard, Calendar, Globe, Crown, 
@@ -34,6 +35,7 @@ interface User {
 }
 
 const UserManagement: React.FC = () => {
+  const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -308,8 +310,7 @@ const UserManagement: React.FC = () => {
                         key={user._id}
                         variants={item}
                         onClick={() => {
-                          setSelectedUserForActivity(user);
-                          setIsActivityModalOpen(true);
+                          router.push(`/admin/dashboard/management-users/${user._id}`);
                         }}
                         className="group cursor-pointer hover:bg-white/[0.03] transition-colors"
                       >

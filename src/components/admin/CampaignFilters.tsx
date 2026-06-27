@@ -26,24 +26,24 @@ function FilterChip({
 }) {
   const colorMap = {
     emerald: {
-      active: 'bg-emerald-500/15 border-emerald-500/40 text-emerald-700 dark:text-emerald-300',
-      inactive: 'bg-[var(--admin-filter-bg,hsl(0,0%,96%))] dark:bg-white/[0.04] border-[var(--admin-filter-border,hsl(0,0%,85%))] dark:border-white/8 text-[var(--admin-filter-text,hsl(0,0%,40%))] dark:text-white/50 hover:border-emerald-400/50 dark:hover:border-emerald-500/30 hover:text-emerald-700 dark:hover:text-emerald-300',
+      active: 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400',
+      inactive: 'bg-white/5 border-white/10 text-white/50 hover:border-emerald-400/50 hover:text-white',
     },
     blue: {
-      active: 'bg-blue-500/15 border-blue-500/40 text-blue-700 dark:text-blue-300',
-      inactive: 'bg-[var(--admin-filter-bg,hsl(0,0%,96%))] dark:bg-white/[0.04] border-[var(--admin-filter-border,hsl(0,0%,85%))] dark:border-white/8 text-[var(--admin-filter-text,hsl(0,0%,40%))] dark:text-white/50 hover:border-blue-400/50 dark:hover:border-blue-500/30 hover:text-blue-700 dark:hover:text-blue-300',
+      active: 'bg-blue-500/15 border-blue-500/40 text-blue-400',
+      inactive: 'bg-white/5 border-white/10 text-white/50 hover:border-blue-400/50 hover:text-white',
     },
     amber: {
-      active: 'bg-amber-500/15 border-amber-500/40 text-amber-700 dark:text-amber-300',
-      inactive: 'bg-[var(--admin-filter-bg,hsl(0,0%,96%))] dark:bg-white/[0.04] border-[var(--admin-filter-border,hsl(0,0%,85%))] dark:border-white/8 text-[var(--admin-filter-text,hsl(0,0%,40%))] dark:text-white/50 hover:border-amber-400/50 dark:hover:border-amber-500/30 hover:text-amber-700 dark:hover:text-amber-300',
+      active: 'bg-amber-500/15 border-amber-500/40 text-amber-400',
+      inactive: 'bg-white/5 border-white/10 text-white/50 hover:border-amber-400/50 hover:text-white',
     },
     purple: {
-      active: 'bg-purple-500/15 border-purple-500/40 text-purple-700 dark:text-purple-300',
-      inactive: 'bg-[var(--admin-filter-bg,hsl(0,0%,96%))] dark:bg-white/[0.04] border-[var(--admin-filter-border,hsl(0,0%,85%))] dark:border-white/8 text-[var(--admin-filter-text,hsl(0,0%,40%))] dark:text-white/50 hover:border-purple-400/50 dark:hover:border-purple-500/30 hover:text-purple-700 dark:hover:text-purple-300',
+      active: 'bg-purple-500/15 border-purple-500/40 text-purple-400',
+      inactive: 'bg-white/5 border-white/10 text-white/50 hover:border-purple-400/50 hover:text-white',
     },
     rose: {
-      active: 'bg-rose-500/15 border-rose-500/40 text-rose-700 dark:text-rose-300',
-      inactive: 'bg-[var(--admin-filter-bg,hsl(0,0%,96%))] dark:bg-white/[0.04] border-[var(--admin-filter-border,hsl(0,0%,85%))] dark:border-white/8 text-[var(--admin-filter-text,hsl(0,0%,40%))] dark:text-white/50 hover:border-rose-400/50 dark:hover:border-rose-500/30 hover:text-rose-700 dark:hover:text-rose-300',
+      active: 'bg-rose-500/15 border-rose-500/40 text-rose-400',
+      inactive: 'bg-white/5 border-white/10 text-white/50 hover:border-rose-400/50 hover:text-white',
     },
   };
 
@@ -83,14 +83,14 @@ function FilterSection({
   count?: number;
 }) {
   return (
-    <div className="rounded-xl border border-[var(--admin-border,hsl(0,0%,88%))] dark:border-white/6 bg-[var(--admin-card-bg,hsl(0,0%,99%))] dark:bg-white/[0.02] overflow-hidden">
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-[var(--admin-border,hsl(0,0%,88%))] dark:border-white/5">
-        <Icon className="w-3.5 h-3.5 text-[var(--admin-muted,hsl(0,0%,55%))] dark:text-white/30" />
-        <span className="text-[10px] font-black uppercase tracking-[0.18em] text-[var(--admin-muted,hsl(0,0%,45%))] dark:text-white/30">
+    <div className="rounded-2xl border border-white/10 bg-[#111111] overflow-hidden">
+      <div className="flex items-center gap-2 px-4 py-3 border-b border-white/5">
+        <Icon className="w-3.5 h-3.5 text-white/30" />
+        <span className="text-[10px] font-black uppercase tracking-[0.18em] text-white/40">
           {label}
         </span>
         {count !== undefined && count > 0 && (
-          <span className="ml-auto text-[9px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full">
+          <span className="ml-auto text-[9px] font-bold bg-emerald-500/15 text-emerald-400 px-2 py-0.5 rounded-full">
             {count} active
           </span>
         )}
@@ -324,219 +324,142 @@ export default function CampaignFilters({ filters, onChange, twoColumn = false }
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-lg bg-emerald-500/15 flex items-center justify-center">
-            <Filter className="w-3.5 h-3.5 text-emerald-500" />
-          </div>
-          <h3 className="text-sm font-bold text-[var(--admin-text,hsl(0,0%,10%))] dark:text-white">
-            Target Filters
-          </h3>
-          {hasActiveFilters && (
-            <span className="text-[10px] font-bold bg-emerald-500 text-white px-2 py-0.5 rounded-full">
-              Active
-            </span>
-          )}
+      {/* Filters Row */}
+      <div className="flex flex-wrap items-center gap-4 bg-[#111111] border border-white/10 p-5 rounded-2xl">
+        {/* Tier Selector */}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-[9px] font-black uppercase text-white/30 tracking-wider">Tier</label>
+          <select
+            value={localFilters.membershipPlans?.[0] || ""}
+            onChange={(e) => {
+              const val = e.target.value;
+              emit({
+                ...localFilters,
+                membershipPlans: val ? [val] : undefined
+              });
+            }}
+            className="bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 font-bold min-w-[120px]"
+          >
+            <option value="">All Tiers</option>
+            {availablePlans.map(p => (
+              <option key={p} value={p}>{p.toUpperCase()}</option>
+            ))}
+          </select>
         </div>
-      </div>
 
-      {/* Active Filters Bar */}
-      {hasActiveFilters && (
-        <div className="p-3 rounded-xl bg-[var(--admin-filter-bg,hsl(0,0%,96%))] dark:bg-white/[0.03] border border-[var(--admin-border,hsl(0,0%,88%))] dark:border-white/5">
-          <ActiveFiltersBar
-            filters={localFilters}
-            onClear={clearAllFilters}
-            onRemovePlan={removePlan}
-            onClearAge={clearUserAge}
-            onClearRegion={clearRegion}
+        {/* Registration Window */}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-[9px] font-black uppercase text-white/30 tracking-wider">Registration</label>
+          <select
+            value={localFilters.userAge ? `${localFilters.userAge.type}-${localFilters.userAge.days}` : ""}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (!val) {
+                const { userAge, ...rest } = localFilters;
+                emit(rest);
+              } else {
+                const [type, days] = val.split('-');
+                emit({
+                  ...localFilters,
+                  userAge: { type, days: parseInt(days) }
+                });
+              }
+            }}
+            className="bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 font-bold min-w-[150px]"
+          >
+            <option value="">All Users</option>
+            <option value="new_users-7">New (last 7 days)</option>
+            <option value="new_users-30">New (last 30 days)</option>
+            <option value="existing_users-30">Returning (30+ days)</option>
+            <option value="existing_users-90">Returning (90+ days)</option>
+          </select>
+        </div>
+
+        {/* Region Selector */}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-[9px] font-black uppercase text-white/30 tracking-wider">Region</label>
+          <select
+            value={localFilters.region || ""}
+            onChange={(e) => handleRegionChange(e.target.value)}
+            className="bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 font-bold min-w-[110px]"
+          >
+            <option value="">All Regions</option>
+            {availableRegions.map(r => (
+              <option key={r} value={r}>{r}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Email Verification */}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-[9px] font-black uppercase text-white/30 tracking-wider">Email Status</label>
+          <select
+            value={localFilters.emailVerified === undefined ? "" : String(localFilters.emailVerified)}
+            onChange={(e) => {
+              const val = e.target.value;
+              handleBooleanFilter('emailVerified', val === "" ? null : val === "true");
+            }}
+            className="bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 font-bold min-w-[120px]"
+          >
+            <option value="">All Statuses</option>
+            <option value="true">Verified Only</option>
+            <option value="false">Unverified Only</option>
+          </select>
+        </div>
+
+        {/* Min CVs */}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-[9px] font-black uppercase text-white/30 tracking-wider">Min CVs</label>
+          <input
+            type="number"
+            min="0"
+            value={localFilters.usageMetrics?.minCVsCreated ?? ''}
+            onChange={(e) => handleUsageMetricChange('minCVsCreated', e.target.value)}
+            placeholder="0"
+            className="bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 font-bold w-20 text-center"
           />
         </div>
-      )}
 
-      {/* ── Membership Plans ── */}
-      <FilterSection icon={Users} label="Membership Tier" count={planCount}>
-        <div className="flex flex-wrap gap-2">
-          {availablePlans.map((plan) => {
-            const isActive = localFilters.membershipPlans?.includes(plan) ?? false;
-            const color = planColors[plan] || 'emerald';
-            return (
-              <FilterChip
-                key={plan}
-                label={plan.charAt(0).toUpperCase() + plan.slice(1)}
-                active={isActive}
-                color={color}
-                onClick={() => handlePlanChange(plan, !isActive)}
-                onRemove={isActive ? () => removePlan(plan) : undefined}
-              />
-            );
-          })}
+        {/* Min Journeys */}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-[9px] font-black uppercase text-white/30 tracking-wider">Min Journeys</label>
+          <input
+            type="number"
+            min="0"
+            value={localFilters.usageMetrics?.minJourneysCompleted ?? ''}
+            onChange={(e) => handleUsageMetricChange('minJourneysCompleted', e.target.value)}
+            placeholder="0"
+            className="bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 font-bold w-20 text-center"
+          />
         </div>
-        {availablePlans.length === 0 && (
-          <p className="text-[11px] text-[var(--admin-muted,hsl(0,0%,55%))] dark:text-white/30 italic">
-            Loading plans…
-          </p>
+
+        {/* Clear Button */}
+        {hasActiveFilters && (
+          <button
+            onClick={clearAllFilters}
+            className="self-end px-4 py-2 border border-red-500/20 hover:border-red-500/40 bg-red-500/10 hover:bg-red-500/20 text-red-400 font-black uppercase tracking-wider text-[9px] rounded-xl transition-all h-8.5 mt-auto"
+          >
+            Clear Filters
+          </button>
         )}
-      </FilterSection>
+      </div>
 
-      {/* ── User Age ── */}
-      <FilterSection icon={Clock} label="Registration Window" count={localFilters.userAge ? 1 : 0}>
-        <div className="space-y-3">
-          <div className="flex flex-wrap gap-2">
-            {[
-              { value: '', label: 'All Users' },
-              { value: 'new_users', label: 'New Users' },
-              { value: 'existing_users', label: 'Returning' },
-            ].map(({ value, label }) => {
-              const isActive = (localFilters.userAge?.type || '') === value;
-              return (
-                <FilterChip
-                  key={value || 'all'}
-                  label={label}
-                  active={isActive}
-                  color="blue"
-                  onClick={() => handleUserAgeChange(value as any, localFilters.userAge?.days)}
-                />
-              );
-            })}
-          </div>
-
-          {localFilters.userAge && (
-            <div className="mt-3">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-[var(--admin-muted,hsl(0,0%,45%))] dark:text-white/30 block mb-2">
-                Within last N days
-              </label>
-              <div className="flex gap-2 flex-wrap">
-                {[7, 14, 30, 60, 90].map((d) => {
-                  const isActive = localFilters.userAge?.days === d;
-                  return (
-                    <button
-                      key={d}
-                      type="button"
-                      onClick={() => handleUserAgeChange(localFilters.userAge.type, d)}
-                      className={`px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-all ${
-                        isActive
-                          ? 'bg-blue-500/15 border-blue-500/40 text-blue-700 dark:text-blue-300'
-                          : 'bg-[var(--admin-filter-bg,hsl(0,0%,96%))] dark:bg-white/[0.04] border-[var(--admin-filter-border,hsl(0,0%,85%))] dark:border-white/8 text-[var(--admin-muted,hsl(0,0%,45%))] dark:text-white/40 hover:border-blue-400/40'
-                      }`}
-                    >
-                      {d}d
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </div>
-      </FilterSection>
-
-      {/* ── Region ── */}
-      <FilterSection icon={Globe} label="Geographic Region" count={localFilters.region ? 1 : 0}>
-        <div className="flex flex-wrap gap-2">
-          {availableRegions.map((region) => {
-            const isActive = localFilters.region === region;
-            return (
-              <FilterChip
-                key={region}
-                label={region}
-                active={isActive}
-                color="purple"
-                onClick={() => handleRegionChange(isActive ? '' : region)}
-                onRemove={isActive ? clearRegion : undefined}
-              />
-            );
-          })}
-        </div>
-      </FilterSection>
-
-      {/* ── Engagement / Verification ── */}
-      <FilterSection icon={BarChart3} label="Engagement" count={localFilters.emailVerified !== undefined ? 1 : 0}>
-        <div className="space-y-3">
-          <div>
-            <label className="text-[10px] font-bold uppercase tracking-widest text-[var(--admin-muted,hsl(0,0%,45%))] dark:text-white/30 block mb-2">
-              Email Verification
-            </label>
-            <div className="flex gap-2">
-              {[
-                { label: 'Any', value: null },
-                { label: 'Verified', value: true },
-                { label: 'Unverified', value: false },
-              ].map(({ label, value }) => {
-                const isActive = localFilters.emailVerified === value && (value !== null || localFilters.emailVerified === null);
-                const activeActual = value === null
-                  ? localFilters.emailVerified === undefined
-                  : localFilters.emailVerified === value;
-                return (
-                  <FilterChip
-                    key={label}
-                    label={label}
-                    active={activeActual}
-                    color="amber"
-                    onClick={() => handleBooleanFilter('emailVerified', value)}
-                  />
-                );
-              })}
-            </div>
-          </div>
-
-          <div>
-            <label className="text-[10px] font-bold uppercase tracking-widest text-[var(--admin-muted,hsl(0,0%,45%))] dark:text-white/30 block mb-2">
-              Min CVs Created
-            </label>
-            <input
-              type="number"
-              min="0"
-              value={localFilters.usageMetrics?.minCVsCreated ?? ''}
-              onChange={(e) => handleUsageMetricChange('minCVsCreated', e.target.value)}
-              placeholder="e.g. 1"
-              className="w-full px-3 py-2 rounded-lg text-xs font-semibold border bg-[var(--admin-filter-bg,hsl(0,0%,97%))] dark:bg-black/30 border-[var(--admin-filter-border,hsl(0,0%,85%))] dark:border-white/8 text-[var(--admin-text,hsl(0,0%,10%))] dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 placeholder:text-[var(--admin-muted,hsl(0,0%,60%))] dark:placeholder:text-white/20 transition-all"
-            />
-          </div>
-
-          <div>
-            <label className="text-[10px] font-bold uppercase tracking-widest text-[var(--admin-muted,hsl(0,0%,45%))] dark:text-white/30 block mb-2">
-              Min Journeys Created
-            </label>
-            <input
-              type="number"
-              min="0"
-              value={localFilters.usageMetrics?.minJourneysCompleted ?? ''}
-              onChange={(e) => handleUsageMetricChange('minJourneysCompleted', e.target.value)}
-              placeholder="e.g. 1"
-              className="w-full px-3 py-2 rounded-lg text-xs font-semibold border bg-[var(--admin-filter-bg,hsl(0,0%,97%))] dark:bg-black/30 border-[var(--admin-filter-border,hsl(0,0%,85%))] dark:border-white/8 text-[var(--admin-text,hsl(0,0%,10%))] dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 placeholder:text-[var(--admin-muted,hsl(0,0%,60%))] dark:placeholder:text-white/20 transition-all"
-            />
-          </div>
-        </div>
-      </FilterSection>
-
-      {/* ── Summary ── */}
+      {/* Active Scope Summary */}
       {hasActiveFilters && (
-        <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
-          <div className="flex items-center gap-2 mb-2">
+        <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
             <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400">
-              Active Scope
+            <span className="text-[9px] font-black uppercase tracking-widest text-emerald-400">
+              Active Scope:
             </span>
-          </div>
-          <div className="space-y-1 text-[11px] font-medium text-[var(--admin-muted,hsl(0,0%,40%))] dark:text-white/40">
-            {(localFilters.membershipPlans?.length > 0) && (
-              <div>Tiers: {localFilters.membershipPlans.join(', ')}</div>
-            )}
-            {localFilters.userAge && (
-              <div>
-                {localFilters.userAge.type === 'new_users' ? 'New' : 'Returning'} users within {localFilters.userAge.days} days
-              </div>
-            )}
-            {localFilters.region && <div>Region: {localFilters.region}</div>}
-            {localFilters.emailVerified !== undefined && (
-              <div>Email: {localFilters.emailVerified ? 'Verified only' : 'Unverified only'}</div>
-            )}
-            {localFilters.usageMetrics?.minCVsCreated !== undefined && (
-              <div>Min CVs created: {localFilters.usageMetrics.minCVsCreated}</div>
-            )}
-            {localFilters.usageMetrics?.minJourneysCompleted !== undefined && (
-              <div>Min journeys: {localFilters.usageMetrics.minJourneysCompleted}</div>
-            )}
+            <div className="flex flex-wrap gap-x-3 text-[10px] font-bold text-white/50">
+              {localFilters.membershipPlans?.length > 0 && <span>Tiers: {localFilters.membershipPlans.join(', ')}</span>}
+              {localFilters.userAge && <span>{localFilters.userAge.type === 'new_users' ? 'New' : 'Returning'} ({localFilters.userAge.days}d)</span>}
+              {localFilters.region && <span>Region: {localFilters.region}</span>}
+              {localFilters.emailVerified !== undefined && <span>Email: {localFilters.emailVerified ? 'Verified' : 'Unverified'}</span>}
+              {localFilters.usageMetrics?.minCVsCreated > 0 && <span>Min CVs: {localFilters.usageMetrics.minCVsCreated}</span>}
+              {localFilters.usageMetrics?.minJourneysCompleted > 0 && <span>Min Journeys: {localFilters.usageMetrics.minJourneysCompleted}</span>}
+            </div>
           </div>
         </div>
       )}

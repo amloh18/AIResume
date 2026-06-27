@@ -60,6 +60,7 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
   const { user } = useUnifiedAuth();
   const { membership, loading: membershipLoading, canAccess } = useMembership();
   const [inputText, setInputText] = useState(initialData?.jobDescription || '');
+  const [urlInput, setUrlInput] = useState('');
   const [activeTab, setActiveTab] = useState<'paste' | 'upload' | 'url'>('paste');
   const [isParsing, setIsParsing] = useState(false);
   const [parsedData, setParsedData] = useState<ParsedJobData | null>(null);
@@ -78,6 +79,9 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
   });
   const [editedTags, setEditedTags] = useState<string[]>([]);
   const [newTagInput, setNewTagInput] = useState('');
+  const [editedBenefits, setEditedBenefits] = useState<string[]>([]);
+  const [newBenefitInput, setNewBenefitInput] = useState('');
+  const [sponsorship, setSponsorship] = useState<'yes' | 'no' | 'unknown'>('unknown');
 
   // Dropdown & selector states
   const [experienceLevel, setExperienceLevel] = useState('Mid Level');
@@ -117,6 +121,7 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
   useEffect(() => {
     if (!isOpen) {
       setInputText('');
+      setUrlInput('');
       setParsedData(null);
       setError(null);
       setIsParsing(false);
@@ -125,6 +130,9 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
       setEditedLocation('');
       setEditedSalary({ min: undefined, max: undefined, currency: '$', period: 'yearly' });
       setEditedTags([]);
+      setEditedBenefits([]);
+      setNewBenefitInput('');
+      setSponsorship('unknown');
       setActiveTab('paste');
       setExperienceLevel('Mid Level');
       setIsPasteAreaCollapsed(false);
@@ -154,9 +162,16 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
   };
 
   const handleParse = async () => {
-    if (!inputText) {
-      setError('Please enter job description text');
-      return;
+    if (activeTab === 'url') {
+      if (!urlInput) {
+        setError('Please enter a job URL');
+        return;
+      }
+    } else {
+      if (!inputText) {
+        setError('Please enter job description text');
+        return;
+      }
     }
 
     if (!user?.id) {
@@ -188,9 +203,11 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          text: inputText,
-        }),
+        body: JSON.stringify(
+          activeTab === 'url'
+            ? { url: urlInput }
+            : { text: inputText }
+        ),
       });
 
       if (!response.ok) {
@@ -230,6 +247,24 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
           setExperienceLevel(result.data.experienceLevel);
         }
 
+        // Extract benefits and sponsorship
+        const richData = result.data.extractedJd || result.data.richData;
+        let extractedBenefits: string[] = [];
+        if (richData?.compensation?.benefits) {
+          extractedBenefits = richData.compensation.benefits.map((b: any) => b.detail || b.category);
+        } else if (result.data.benefits) {
+          extractedBenefits = result.data.benefits;
+        }
+        setEditedBenefits(extractedBenefits);
+
+        if (result.data.sponsorship) {
+          setSponsorship(result.data.sponsorship);
+        } else if (richData?.right_to_work?.visa_sponsorship_offered !== undefined) {
+          setSponsorship(richData.right_to_work.visa_sponsorship_offered ? 'yes' : 'no');
+        } else {
+          setSponsorship('unknown');
+        }
+
         setIsPasteAreaCollapsed(true);
         toast.success('Job description parsed successfully!');
       } else {
@@ -246,14 +281,16 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
 
   const handleSave = () => {
     if (parsedData) {
-      const updatedData: ParsedJobData = {
+      const updatedData: ParsedJobData & { sponsorship?: string; benefits?: string[] } = {
         ...parsedData,
         jobTitle: editedJobTitle || parsedData.jobTitle,
         company: editedCompany || parsedData.company,
         location: editedLocation || parsedData.location,
         salary: editedSalary,
         experienceLevel: experienceLevel,
-        tags: editedTags
+        tags: editedTags,
+        sponsorship: sponsorship,
+        benefits: editedBenefits,
       };
       onParseComplete(updatedData);
       handleClose();
@@ -262,14 +299,16 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
 
   const handleSaveAndTrack = () => {
     if (parsedData && onSaveAndTrack) {
-      const updatedData: ParsedJobData = {
+      const updatedData: ParsedJobData & { sponsorship?: string; benefits?: string[] } = {
         ...parsedData,
         jobTitle: editedJobTitle || parsedData.jobTitle,
         company: editedCompany || parsedData.company,
         location: editedLocation || parsedData.location,
         salary: editedSalary,
         experienceLevel: experienceLevel,
-        tags: editedTags
+        tags: editedTags,
+        sponsorship: sponsorship,
+        benefits: editedBenefits,
       };
       onSaveAndTrack(updatedData);
       handleClose();
@@ -289,6 +328,20 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
         setEditedTags([...editedTags, newTagInput.trim()]);
       }
       setNewTagInput('');
+    }
+  };
+
+  const handleRemoveBenefit = (benefitToRemove: string) => {
+    setEditedBenefits(editedBenefits.filter(b => b !== benefitToRemove));
+  };
+
+  const handleAddBenefit = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && newBenefitInput.trim()) {
+      e.preventDefault();
+      if (!editedBenefits.includes(newBenefitInput.trim())) {
+        setEditedBenefits([...editedBenefits, newBenefitInput.trim()]);
+      }
+      setNewBenefitInput('');
     }
   };
 
@@ -454,10 +507,18 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
                           type="url"
                           placeholder="https://linkedin.com/jobs/view/..."
                           className="w-full max-w-xs px-3 py-1.5 text-xs bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl text-gray-900 dark:text-white focus:outline-none mb-3"
-                          disabled
+                          value={urlInput}
+                          onChange={(e) => setUrlInput(e.target.value)}
+                          disabled={isParsing}
                         />
-                        <Button variant="outline" size="sm" className="rounded-xl border-gray-200 dark:border-white/10 text-xs" disabled>
-                          Import Link
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="rounded-xl border-gray-200 dark:border-white/10 text-xs"
+                          disabled={isParsing || !urlInput}
+                          onClick={handleParse}
+                        >
+                          {isParsing ? 'Importing...' : 'Import Link'}
                         </Button>
                       </div>
                     )}
@@ -533,7 +594,7 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
               <div className="space-y-3">
                 <button
                   onClick={handleParse}
-                  disabled={isParsing || !inputText || activeTab === 'upload'}
+                  disabled={isParsing || (activeTab === 'paste' && !inputText) || (activeTab === 'url' && !urlInput) || activeTab === 'upload'}
                   className="w-full relative py-3 bg-gradient-to-r from-lime-500 to-emerald-600 hover:brightness-105 transition-all text-white font-bold rounded-xl text-xs shadow-lg shadow-lime-500/10 flex items-center justify-center gap-2"
                 >
                   {isParsing ? (
@@ -676,18 +737,62 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
                     </div>
                   </div>
 
-                  {/* Company */}
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold text-gray-700 dark:text-gray-300">Company Name</label>
-                    <div className="relative">
-                      <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                      <input
-                        type="text"
-                        value={editedCompany}
-                        onChange={(e) => setEditedCompany(e.target.value)}
-                        className="w-full pl-9 pr-3 py-2 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/5 rounded-xl text-xs text-gray-900 dark:text-white focus:outline-none focus:border-lime-500 focus:ring-1 focus:ring-lime-500"
-                        placeholder="Company"
-                      />
+                  {/* Company & Location in a grid */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-gray-700 dark:text-gray-300">Company Name</label>
+                      <div className="relative">
+                        <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input
+                          type="text"
+                          value={editedCompany}
+                          onChange={(e) => setEditedCompany(e.target.value)}
+                          className="w-full pl-9 pr-3 py-2 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/5 rounded-xl text-xs text-gray-900 dark:text-white focus:outline-none focus:border-lime-500 focus:ring-1 focus:ring-lime-500"
+                          placeholder="Company"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-gray-700 dark:text-gray-300">Location</label>
+                      <div className="relative">
+                        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input
+                          type="text"
+                          value={editedLocation}
+                          onChange={(e) => setEditedLocation(e.target.value)}
+                          className="w-full pl-9 pr-3 py-2 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/5 rounded-xl text-xs text-gray-900 dark:text-white focus:outline-none focus:border-lime-500 focus:ring-1 focus:ring-lime-500"
+                          placeholder="Location"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Experience Level & Visa Sponsorship */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-gray-700 dark:text-gray-300">Experience Level</label>
+                      <select
+                        value={experienceLevel}
+                        onChange={(e) => setExperienceLevel(e.target.value)}
+                        className="w-full py-2 px-3 bg-gray-50 dark:bg-[#1A201A] border border-gray-200 dark:border-white/5 rounded-xl text-xs text-gray-900 dark:text-white focus:outline-none focus:border-lime-500"
+                      >
+                        <option value="Entry Level">Entry Level</option>
+                        <option value="Mid Level">Mid Level</option>
+                        <option value="Senior Level">Senior Level</option>
+                        <option value="Lead / Manager">Lead / Manager</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-gray-700 dark:text-gray-300">Visa Sponsorship</label>
+                      <select
+                        value={sponsorship}
+                        onChange={(e) => setSponsorship(e.target.value as 'yes' | 'no' | 'unknown')}
+                        className="w-full py-2 px-3 bg-gray-50 dark:bg-[#1A201A] border border-gray-200 dark:border-white/5 rounded-xl text-xs text-gray-900 dark:text-white focus:outline-none focus:border-lime-500"
+                      >
+                        <option value="yes">Yes (Sponsored)</option>
+                        <option value="no">No</option>
+                        <option value="unknown">Unknown</option>
+                      </select>
                     </div>
                   </div>
 
@@ -757,69 +862,110 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
                       />
                     </div>
                   </div>
-                </motion.div>
-              )}
 
-              {/* Recent Analyses Section */}
-              <div className="space-y-3 pt-4 border-t border-gray-150 dark:border-white/5">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-xs font-bold text-gray-700 dark:text-gray-300">Recent Analyses</h3>
-                  <button className="text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:underline" onClick={fetchRecentJobs}>
-                    Refresh
-                  </button>
-                </div>
-                <div className="space-y-2">
-                  {recentLoading ? (
-                    <div className="flex justify-center py-4">
-                      <Loader2 className="w-4 h-4 text-gray-400 animate-spin" />
+                  {/* Benefits & Perks */}
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-gray-700 dark:text-gray-300">Benefits & Perks</label>
+                    <div className="p-3 border border-gray-200 dark:border-white/5 rounded-xl bg-gray-50/50 dark:bg-white/5 space-y-2">
+                      <div className="flex flex-wrap gap-1.5">
+                        {editedBenefits.length === 0 ? (
+                          <span className="text-[10px] text-gray-400">No benefits added yet</span>
+                        ) : (
+                          editedBenefits.map((benefit, idx) => (
+                            <span
+                              key={idx}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200/50 dark:border-emerald-900/30 rounded-lg text-[10px] font-medium"
+                            >
+                              {benefit}
+                              <button
+                                onClick={() => handleRemoveBenefit(benefit)}
+                                className="text-emerald-400 hover:text-emerald-600 dark:hover:text-emerald-200"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </span>
+                          ))
+                        )}
+                      </div>
+                      <input
+                        type="text"
+                        value={newBenefitInput}
+                        onChange={(e) => setNewBenefitInput(e.target.value)}
+                        onKeyDown={handleAddBenefit}
+                        placeholder="Add benefit & press Enter..."
+                        className="w-full bg-transparent border-t border-gray-250 dark:border-white/5 pt-2 text-[11px] text-gray-900 dark:text-white focus:outline-none placeholder:text-gray-400"
+                      />
                     </div>
-                  ) : recentJobs.length === 0 ? (
-                    <p className="text-[10px] text-gray-500 text-center py-2">No recent analyses found</p>
-                  ) : (
-                    recentJobs.slice(0, 3).map((job: any) => {
-                      const companyName = job.company || 'Unknown Company';
-                      const initial = companyName.substring(0, 2).toUpperCase();
-                      const atsScore = job.atsScore || job.matchScore || 75;
+                  </div>
+
+                  {/* JD Quality & ATS Insights */}
+                  {parsedData.extractedJd && (
+                    <div className="space-y-3 pt-3 border-t border-gray-150 dark:border-white/5">
+                      <h4 className="text-[11px] font-bold text-gray-700 dark:text-gray-300">JD Quality & ATS Metrics</h4>
                       
-                      // Format time ago helper
-                      let timeAgo = 'Recently';
-                      if (job.createdAt) {
-                        const date = new Date(job.createdAt);
-                        const now = new Date();
-                        const diffMs = now.getTime() - date.getTime();
-                        const diffMins = Math.floor(diffMs / 60000);
-                        const diffHours = Math.floor(diffMins / 60);
-                        const diffDays = Math.floor(diffHours / 24);
-
-                        if (diffMins < 60) timeAgo = `${diffMins}m ago`;
-                        else if (diffHours < 24) timeAgo = `${diffHours}h ago`;
-                        else timeAgo = `${diffDays}d ago`;
-                      }
-
-                      return (
-                        <div key={job.id || job._id} className="p-3 bg-gray-50/50 dark:bg-white/5 border border-gray-150 dark:border-white/5 rounded-xl flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-lime-100 text-lime-700 dark:bg-lime-950/30 dark:text-lime-400 flex items-center justify-center font-bold text-xs shrink-0">
-                              {initial}
-                            </div>
-                            <div>
-                              <p className="text-xs font-bold text-gray-900 dark:text-white truncate max-w-[200px]">
-                                {job.jobTitle || job.title}
-                              </p>
-                              <p className="text-[9px] text-gray-400 mt-0.5 truncate max-w-[200px]">
-                                {companyName} • {timeAgo}
-                              </p>
+                      {/* Score & ATS platform row */}
+                      <div className="grid grid-cols-2 gap-3">
+                        {parsedData.extractedJd.jd_quality?.jd_quality_score !== undefined && (
+                          <div className="p-3 rounded-xl bg-lime-500/5 dark:bg-lime-500/5 border border-lime-500/20 flex flex-col justify-center">
+                            <span className="text-[9px] text-gray-400 uppercase font-bold tracking-wider">Quality Score</span>
+                            <div className="flex items-baseline gap-1 mt-0.5">
+                              <span className="text-lg font-extrabold text-lime-600 dark:text-lime-400">
+                                {parsedData.extractedJd.jd_quality.jd_quality_score}%
+                              </span>
+                              <span className="text-[10px] text-gray-500 font-medium capitalize">
+                                ({parsedData.extractedJd.jd_quality.jd_quality_grade || 'Fair'})
+                              </span>
                             </div>
                           </div>
-                          <span className="px-2 py-0.5 text-[9px] font-bold text-blue-600 bg-blue-50 dark:bg-blue-950/20 dark:text-blue-400 rounded-full shrink-0">
-                            {atsScore}% ATS
-                          </span>
+                        )}
+                        
+                        {parsedData.extractedJd.application_info?.ats_platform && (
+                          <div className="p-3 rounded-xl bg-blue-500/5 dark:bg-blue-500/5 border border-blue-500/20 flex flex-col justify-center">
+                            <span className="text-[9px] text-gray-400 uppercase font-bold tracking-wider">ATS Platform</span>
+                            <span className="text-xs font-bold text-blue-600 dark:text-blue-400 mt-1 capitalize">
+                              {parsedData.extractedJd.application_info.ats_platform}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Red Flags / Warnings */}
+                      {parsedData.extractedJd.jd_quality?.jd_red_flags && parsedData.extractedJd.jd_quality.jd_red_flags.length > 0 && (
+                        <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/10 border border-rose-200/50 dark:border-rose-900/20 space-y-1.5">
+                          <div className="flex items-center gap-1.5 text-rose-700 dark:text-rose-400">
+                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                            <span className="text-[10px] font-bold uppercase tracking-wider">Red Flags ({parsedData.extractedJd.jd_quality.jd_red_flags.length})</span>
+                          </div>
+                          <ul className="list-disc pl-4 space-y-1 text-[10px] text-gray-600 dark:text-gray-400">
+                            {parsedData.extractedJd.jd_quality.jd_red_flags.map((flagObj: any, idx: number) => (
+                              <li key={idx}>
+                                <strong className="text-gray-700 dark:text-gray-300">{flagObj.flag}:</strong> {flagObj.detail}
+                              </li>
+                            ))}
+                          </ul>
                         </div>
-                      );
-                    })
+                      )}
+
+                      {/* Positive Signals */}
+                      {parsedData.extractedJd.jd_quality?.jd_positive_signals && parsedData.extractedJd.jd_quality.jd_positive_signals.length > 0 && (
+                        <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/10 border border-emerald-200/50 dark:border-emerald-900/20 space-y-1.5">
+                          <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400">
+                            <CheckCircle className="w-3.5 h-3.5 shrink-0" />
+                            <span className="text-[10px] font-bold uppercase tracking-wider">Positive Signals ({parsedData.extractedJd.jd_quality.jd_positive_signals.length})</span>
+                          </div>
+                          <ul className="list-disc pl-4 space-y-1 text-[10px] text-gray-600 dark:text-gray-400">
+                            {parsedData.extractedJd.jd_quality.jd_positive_signals.map((sigObj: any, idx: number) => (
+                              <li key={idx}>
+                                <strong className="text-gray-700 dark:text-gray-300">{sigObj.signal}:</strong> {sigObj.detail}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
                   )}
-                </div>
-              </div>
+                </motion.div>
+              )}
 
             </div>
 

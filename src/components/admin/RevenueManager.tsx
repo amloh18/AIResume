@@ -12,11 +12,13 @@ import {
   Calendar,
   Download,
   ExternalLink,
-  CreditCard
+  CreditCard,
+  CheckCircle
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { formatCurrency, convertToINR } from '@/lib/utils/currencyConverter';
 import { ADMIN_THEME } from '@/lib/config/adminTheme';
+import { useToast } from '@/hooks/use-toast';
 import { motion } from 'framer-motion';
 
 interface RevenueData {
@@ -43,9 +45,11 @@ interface RevenueData {
 }
 
 export default function RevenueManager() {
+  const { toast } = useToast();
   const [period, setPeriod] = useState<'day' | 'week' | 'month' | 'quarter' | 'year'>('month');
   const [loading, setLoading] = useState(true);
   const [revenueData, setRevenueData] = useState<RevenueData | null>(null);
+  const [sentInvoices, setSentInvoices] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     fetchRevenueData();
@@ -72,6 +76,7 @@ export default function RevenueManager() {
   const handleSendInvoice = async (userId: string, invoiceUrl?: string) => {
     if (invoiceUrl) {
       window.open(invoiceUrl, '_blank');
+      setSentInvoices(prev => ({ ...prev, [userId]: true }));
     } else {
       try {
         const response = await fetch(`/api/admin/invoices/generate`, {
@@ -80,13 +85,14 @@ export default function RevenueManager() {
           body: JSON.stringify({ userId })
         });
         if (response.ok) {
-          alert('Invoice sent successfully!');
+          setSentInvoices(prev => ({ ...prev, [userId]: true }));
+          toast({ title: "Success", description: "Invoice generated & sent successfully!", variant: "success" });
         } else {
-          alert('Failed to send invoice');
+          toast({ title: "Error", description: "Failed to send invoice", variant: "destructive" });
         }
       } catch (error) {
         console.error('Error sending invoice:', error);
-        alert('Failed to send invoice');
+        toast({ title: "Error", description: "Failed to send invoice", variant: "destructive" });
       }
     }
   };
@@ -320,10 +326,18 @@ export default function RevenueManager() {
                     <td className="px-8 py-6 text-right">
                       <button
                         onClick={() => handleSendInvoice(purchase.userId, purchase.invoiceUrl)}
-                        className="p-2.5 rounded-xl bg-white/5 hover:bg-emerald-500/10 text-white/30 hover:text-emerald-400 transition-all border border-transparent hover:border-emerald-500/20"
+                        className={`p-2.5 rounded-xl transition-all border ${
+                          sentInvoices[purchase.userId] 
+                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
+                            : 'bg-white/5 hover:bg-emerald-500/10 text-white/30 hover:text-emerald-400 border-transparent hover:border-emerald-500/20'
+                        }`}
                         title="Send Receipt"
                       >
-                        <Mail className="w-4 h-4" />
+                        {sentInvoices[purchase.userId] ? (
+                          <CheckCircle className="w-4 h-4" />
+                        ) : (
+                          <Mail className="w-4 h-4" />
+                        )}
                       </button>
                     </td>
                   </tr>

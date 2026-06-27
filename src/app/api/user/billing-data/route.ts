@@ -5,6 +5,7 @@ import { authOptions } from '@/lib/auth';
 import { getConnection } from '@/lib/database';
 import { User, Subscription, PaymentMethod, Invoice, Transaction } from '@/models';
 import InvoiceItem from '@/models/InvoiceItem';
+import PolarService from '@/lib/payment/polar';
 
 /**
  * Unified billing data API
@@ -124,7 +125,7 @@ export async function GET(request: NextRequest) {
     }));
 
     // Format invoices with items
-    const invoicesData = invoices.map((inv: any) => ({
+    const dbInvoicesFormatted = invoices.map((inv: any) => ({
       id: inv._id,
       invoiceNumber: inv.invoiceNumber,
       subtotal: inv.subtotal || inv.amount,
@@ -143,6 +144,48 @@ export async function GET(request: NextRequest) {
       createdAt: inv.createdAt,
       items: itemsByInvoice[inv._id.toString()] || []
     }));
+
+    // Fetch orders from Polar
+    let polarInvoices = [];
+    try {
+      const polarResult = await PolarService.listOrders({ 
+        customerEmail: user.email 
+      });
+
+      if (polarResult.success && polarResult.orders) {
+        polarInvoices = polarResult.orders.map((order: any) => ({
+          id: order.id,
+          invoiceNumber: order.id.substring(0, 8).toUpperCase(),
+          subtotal: order.amount / 100, // Polar amounts are in cents
+          taxAmount: (order.tax_amount || 0) / 100,
+          amount: order.amount / 100,
+          currency: order.currency.toUpperCase(),
+          status: 'paid', // If it's an order in Polar, it's paid
+          planName: order.product?.name || 'Subscription',
+          billingCycle: order.product?.recurring_interval || 'one-time',
+          paymentMethodType: 'card',
+          paymentMethodLast4: '****',
+          paidAt: order.created_at,
+          dueDate: order.created_at,
+          invoiceDate: order.created_at,
+          description: `Order for ${order.product?.name || 'CVCircle Pro'}`,
+          createdAt: order.created_at,
+          isPolar: true,
+          items: []
+        }));
+      }
+    } catch (polarError) {
+      console.warn('Failed to fetch Polar orders in billing-data:', polarError);
+    }
+
+    const allInvoices = [...dbInvoicesFormatted, ...polarInvoices];
+    allInvoices.sort((a: any, b: any) => {
+      const dateA = new Date(a.createdAt || a.invoiceDate || 0).getTime();
+      const dateB = new Date(b.createdAt || b.invoiceDate || 0).getTime();
+      return dateB - dateA;
+    });
+
+    const invoicesData = allInvoices.slice(0, 20);
 
     // Format transactions
     const transactionsData = transactions.map((t: any) => ({

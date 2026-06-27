@@ -16,7 +16,7 @@ const ToastViewport = React.forwardRef<
   <ToastPrimitives.Viewport
     ref={ref}
     className={cn(
-      "fixed bottom-4 right-4 z-[9999] flex max-h-screen w-full flex-col p-4 tablet:right-4 tablet:flex-col tablet:max-w-[420px]",
+      "fixed top-4 right-4 z-[9999] flex max-h-screen w-full flex-col p-4 tablet:right-4 tablet:flex-col tablet:max-w-[420px]",
       className
     )}
     {...props}
@@ -25,17 +25,17 @@ const ToastViewport = React.forwardRef<
 ToastViewport.displayName = ToastPrimitives.Viewport.displayName
 
 const toastVariants = cva(
-  "group pointer-events-auto relative flex w-full items-center justify-between overflow-hidden transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-right-full data-[state=open]:slide-in-from-top-full data-[state=open]:tablet:slide-in-from-bottom-full",
+  "group pointer-events-auto relative flex w-full items-center justify-between overflow-hidden transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-right-full data-[state=open]:slide-in-from-top-full data-[state=open]:tablet:slide-in-from-top-full",
   {
     variants: {
       variant: {
-        default: "bg-transparent rounded-xl",
+        default: "bg-[#111111]/90 text-white border border-white/10 shadow-2xl backdrop-blur-xl rounded-2xl p-4",
         destructive:
-          "destructive group border-red-500/30 bg-red-950/90 text-red-50 shadow-red-900/20 ring-1 ring-red-500/20 rounded-xl border p-4 shadow-2xl backdrop-blur-xl",
+          "destructive group border-red-500/30 bg-[#111111]/90 text-red-50 shadow-red-900/20 ring-1 ring-red-500/20 rounded-2xl border p-4 shadow-2xl backdrop-blur-xl",
         success:
-          "group border-green-500/30 bg-green-950/90 text-green-50 shadow-green-900/20 ring-1 ring-green-500/20 rounded-xl border p-4 shadow-2xl backdrop-blur-xl",
+          "group border-emerald-500/30 bg-[#111111]/90 text-emerald-50 shadow-emerald-900/20 ring-1 ring-emerald-500/20 rounded-2xl border p-4 shadow-2xl backdrop-blur-xl",
         premium:
-          "bg-[#1A1F1A]/95 text-white border-lime-500/30 shadow-lime-900/20 ring-1 ring-lime-500/20 rounded-xl border p-4 shadow-2xl backdrop-blur-xl",
+          "bg-[#111111]/90 text-white border-lime-500/30 shadow-lime-900/20 ring-1 ring-lime-500/20 rounded-2xl border p-4 shadow-2xl backdrop-blur-xl",
       },
     },
     defaultVariants: {

@@ -348,7 +348,7 @@ const nextConfig: NextConfig = {
   // Vercel deployment optimizations
   trailingSlash: false,
   
-  transpilePackages: ['next-auth', 'pdfjs-dist'],
+  transpilePackages: ['next-auth'],
 
   async redirects() {
     return [
@@ -362,6 +362,7 @@ const nextConfig: NextConfig = {
 
   // External packages for server-side rendering
   serverExternalPackages: [
+    'pdfjs-dist',
     '@napi-rs/canvas',
     'canvas',
     'tesseract.js',

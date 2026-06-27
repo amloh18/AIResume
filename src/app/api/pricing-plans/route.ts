@@ -1,9 +1,9 @@
-// @ts-nocheck
 export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import { getAdminPricingPlan } from '@/models/admin-models';
 import { createErrorResponse } from '@/lib/api/error-handler';
+import PolarService from '@/lib/payment/polar';
 
 /**
  * GET /api/pricing-plans
@@ -61,6 +61,34 @@ export async function GET(request: NextRequest) {
 
     if (!plans?.length) {
       throw new Error('No pricing plans found in database');
+    }
+
+    // Dynamic Sync from Polar Dashboard Products catalog
+    try {
+      const polarRes = await PolarService.listProducts();
+      if (polarRes.success && polarRes.products) {
+        const polarProducts = Array.isArray(polarRes.products) ? polarRes.products : polarRes.products.items || [];
+        for (const plan of plans) {
+          const matchedProduct = polarProducts.find((p: any) => 
+            p.metadata?.planKey === plan.key || 
+            p.name?.toLowerCase().includes(plan.name?.toLowerCase()) ||
+            p.name?.toLowerCase().replace(/\s+/g, '_') === plan.key
+          );
+          if (matchedProduct) {
+            plan.polarProductId = matchedProduct.id;
+            if (matchedProduct.prices && matchedProduct.prices.length > 0) {
+              const priceObj = matchedProduct.prices[0];
+              plan.polarPriceId = priceObj.id;
+              if (priceObj.price_amount !== undefined) {
+                const amountVal = priceObj.price_amount / 100;
+                PLAN_USD_PRICES[plan.key] = amountVal;
+              }
+            }
+          }
+        }
+      }
+    } catch (polarSyncError) {
+      console.error('Failed to sync pricing plans from Polar Dashboard API:', polarSyncError);
     }
 
     const currentDate = new Date();

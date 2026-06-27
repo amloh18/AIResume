@@ -31,11 +31,7 @@ const PRESET_TEMPLATES: FilterPreset[] = [
         icon: <Users className="w-5 h-5" />,
         category: 'onboarding',
         filters: {
-            registrationDateRange: {
-                preset: 'last7days',
-                startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-                endDate: new Date().toISOString()
-            }
+            userAge: { type: 'new_users', days: 7 }
         },
         color: 'bg-blue-500/10 border-blue-500/30 hover:border-blue-500/50'
     },
@@ -57,51 +53,41 @@ const PRESET_TEMPLATES: FilterPreset[] = [
         icon: <Zap className="w-5 h-5" />,
         category: 're-engagement',
         filters: {
-            lastActiveRange: {
-                preset: 'inactive30',
-                endDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
-            }
+            userAge: { type: 'existing_users', days: 30 }
         },
         color: 'bg-orange-500/10 border-orange-500/30 hover:border-orange-500/50'
     },
     {
         id: 'dormant-users',
         name: 'Dormant Users (90+ Days)',
-        description: 'Users inactive for over 3 months - last chance',
+        description: 'Users inactive for over 3 months - churn risk',
         icon: <Zap className="w-5 h-5" />,
         category: 're-engagement',
         filters: {
-            lastActiveRange: {
-                preset: 'inactive60',
-                endDate: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString()
-            }
+            userAge: { type: 'existing_users', days: 90 }
         },
         color: 'bg-red-500/10 border-red-500/30 hover:border-red-500/50'
     },
     {
         id: 'high-engagement-free',
         name: 'Upsale to Premium',
-        description: 'Free plan users with high engagement',
+        description: 'Starter plan users registered in the last 7 days',
         icon: <TrendingUp className="w-5 h-5" />,
         category: 'upsale',
         filters: {
-            membershipPlans: ['free'],
-            lastActiveRange: {
-                preset: 'last7days',
-                startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-                endDate: new Date().toISOString()
-            }
+            membershipPlans: ['starter_monthly'],
+            userAge: { type: 'new_users', days: 7 }
         },
         color: 'bg-green-500/10 border-green-500/30 hover:border-green-500/50'
     },
     {
-        id: 'pro-users',
-        name: 'Pro Plan Members',
-        description: 'All users on pro plans (monthly/quarterly/yearly/lifetime)',
+        id: 'focused-members',
+        name: 'Focused Plan Members',
+        description: 'Users subscribed to Focused monthly or yearly tiers',
         icon: <Heart className="w-5 h-5" />,
         category: 'retention',
         filters: {
-            membershipPlans: ['pro_monthly', 'pro_quarterly', 'pro_yearly', 'pro_lifetime']
+            membershipPlans: ['focused_monthly', 'focused_yearly']
         },
         color: 'bg-pink-500/10 border-pink-500/30 hover:border-pink-500/50'
     },
@@ -121,43 +107,97 @@ const PRESET_TEMPLATES: FilterPreset[] = [
     {
         id: 'active-users-promo',
         name: 'Active Users Promotion',
-        description: 'Active users who logged in within last 14 days',
+        description: 'Users active in the last 30 days',
         icon: <Star className="w-5 h-5" />,
         category: 'promotional',
         filters: {
-            lastActiveRange: {
-                preset: 'last14days',
-                startDate: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-                endDate: new Date().toISOString()
-            }
+            userAge: { type: 'new_users', days: 30 }
         },
         color: 'bg-purple-500/10 border-purple-500/30 hover:border-purple-500/50'
     },
     {
-        id: 'all-pro-users',
-        name: 'All Pro Members',
-        description: 'All users on any pro plan',
+        id: 'smart-members',
+        name: 'Smart Plan Members',
+        description: 'Users on Smart quarterly or yearly tiers',
         icon: <Star className="w-5 h-5" />,
         category: 'promotional',
         filters: {
-            membershipPlans: ['pro_monthly', 'pro_quarterly', 'pro_yearly', 'pro_lifetime']
+            membershipPlans: ['smart_quarterly', 'smart_yearly']
         },
         color: 'bg-yellow-500/10 border-yellow-500/30 hover:border-yellow-500/50'
     },
     {
-        id: 'all-active',
-        name: 'All Active Users',
-        description: 'Everyone who logged in within last 30 days',
+        id: 'all-premium',
+        name: 'All Paid Members',
+        description: 'Everyone on any active focused or smart plan',
         icon: <Users className="w-5 h-5" />,
         category: 'promotional',
         filters: {
-            lastActiveRange: {
-                preset: 'last30days',
-                startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-                endDate: new Date().toISOString()
-            }
+            membershipPlans: ['focused_monthly', 'focused_yearly', 'smart_quarterly', 'smart_yearly']
         },
         color: 'bg-indigo-500/10 border-indigo-500/30 hover:border-indigo-500/50'
+    },
+    /* Advanced presets added for complicated filters */
+    {
+        id: 'highly-active-starter',
+        name: 'Highly Active Starter Members',
+        description: 'Starter members with 3+ CVs created (Target for upsales)',
+        icon: <TrendingUp className="w-5 h-5" />,
+        category: 'upsale',
+        filters: {
+            membershipPlans: ['starter_monthly'],
+            usageMetrics: { minCVsCreated: 3 }
+        },
+        color: 'bg-emerald-500/10 border-emerald-500/30 hover:border-emerald-500/50'
+    },
+    {
+        id: 'smart-power-users',
+        name: 'Smart Plan Power Users',
+        description: 'Smart members with 5+ CVs and 3+ Job Journeys completed',
+        icon: <Star className="w-5 h-5" />,
+        category: 'retention',
+        filters: {
+            membershipPlans: ['smart_quarterly', 'smart_yearly'],
+            usageMetrics: { minCVsCreated: 5, minJourneysCompleted: 3 }
+        },
+        color: 'bg-amber-500/10 border-amber-500/30 hover:border-amber-500/50'
+    },
+    {
+        id: 'dormant-paid-members',
+        name: 'Dormant Paid Members',
+        description: 'Paid plan subscribers inactive for over 90 days (Extreme churn risk)',
+        icon: <Zap className="w-5 h-5" />,
+        category: 're-engagement',
+        filters: {
+            membershipPlans: ['focused_monthly', 'focused_yearly', 'smart_quarterly', 'smart_yearly'],
+            userAge: { type: 'existing_users', days: 90 }
+        },
+        color: 'bg-red-500/10 border-red-500/30 hover:border-red-500/50'
+    },
+    {
+        id: 'unverified-new-registrants',
+        name: 'Unverified New Registrants',
+        description: 'Users registered in the last 7 days whose email is unverified',
+        icon: <Users className="w-5 h-5" />,
+        category: 'onboarding',
+        filters: {
+            emailVerified: false,
+            userAge: { type: 'new_users', days: 7 }
+        },
+        color: 'bg-cyan-500/10 border-cyan-500/30 hover:border-cyan-500/50'
+    },
+    {
+        id: 'active-us-focused',
+        name: 'Active US Focused Users',
+        description: 'US region users on Focused tiers active within the last 30 days',
+        icon: <Target className="w-5 h-5" />,
+        category: 'promotional',
+        filters: {
+            membershipPlans: ['focused_monthly', 'focused_yearly'],
+            region: 'US',
+            userAge: { type: 'new_users', days: 30 }
+        },
+        color: 'bg-violet-500/10 border-violet-500/30 hover:border-violet-500/50'
     }
 ];
 
@@ -196,98 +236,37 @@ export default function FilterPresets({
     };
 
     return (
-        <div className="space-y-4">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h3 className={`text-lg font-semibold ${ADMIN_THEME.text.primary}`}>Quick Filter Presets</h3>
-                    <p className={`text-sm ${ADMIN_THEME.text.muted} mt-1`}>
-                        Apply pre-configured audience filters for common scenarios
-                    </p>
-                </div>
-                {onSaveCustomPreset && (
-                    <Button
-                        onClick={() => setShowSaveCustom(!showSaveCustom)}
-                        variant="outline"
-                        className={ADMIN_THEME.button.outline}
-                    >
-                        <Bookmark className="w-4 h-4 mr-2" />
-                        Save Current as Preset
-                    </Button>
-                )}
-            </div>
-
-            {showSaveCustom && (
-                <Card className={ADMIN_THEME.card.base}>
-                    <CardContent className="p-4">
-                        <div className="flex items-center gap-2">
-                            <input
-                                type="text"
-                                value={customPresetName}
-                                onChange={(e) => setCustomPresetName(e.target.value)}
-                                placeholder="Enter preset name..."
-                                className={`flex-1 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${ADMIN_THEME.input.base} ${ADMIN_THEME.input.focus}`}
-                            />
-                            <Button
-                                onClick={handleSaveCustom}
-                                disabled={!customPresetName.trim()}
-                                className={ADMIN_THEME.button.primary}
-                            >
-                                Save
-                            </Button>
-                            <Button
-                                onClick={() => setShowSaveCustom(false)}
-                                variant="outline"
-                                className={ADMIN_THEME.button.outline}
-                            >
-                                Cancel
-                            </Button>
-                        </div>
-                    </CardContent>
-                </Card>
-            )}
-
-            <div className="grid grid-cols-1 tablet:grid-cols-2 gap-3">
+        <div className="flex items-center gap-3">
+            <span className="text-[10px] font-black uppercase text-white/30 tracking-widest">Presets:</span>
+            <select
+                onChange={(e) => {
+                    const selected = PRESET_TEMPLATES.find(p => p.id === e.target.value);
+                    if (selected) handleApplyPreset(selected);
+                }}
+                className="bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 font-bold cursor-pointer"
+                defaultValue=""
+            >
+                <option value="" disabled className="bg-[#111111] text-white/40">Select Preset Filters...</option>
                 {PRESET_TEMPLATES.map((preset) => (
-                    <Card
-                        key={preset.id}
-                        className={`cursor-pointer transition-all ${ADMIN_THEME.card.base} ${selectedPresetId === preset.id ? 'ring-2 ring-emerald-500' : ''
-                            }`}
-                        onClick={() => handleApplyPreset(preset)}
-                    >
-                        <CardContent className="p-4">
-                            <div className="flex items-start gap-3">
-                                <div className={`p-2 rounded-lg bg-emerald-50 text-emerald-600`}>
-                                    {preset.icon}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center justify-between mb-1">
-                                        <h4 className={`${ADMIN_THEME.text.primary} font-semibold text-sm`}>
-                                            {preset.name}
-                                        </h4>
-                                        <span className={`text-xs px-2 py-0.5 rounded ${ADMIN_THEME.badge.inactive}`}>
-                                            {getCategoryLabel(preset.category)}
-                                        </span>
-                                    </div>
-                                    <p className={`${ADMIN_THEME.text.muted} text-xs`}>
-                                        {preset.description}
-                                    </p>
-                                    {preset.estimatedCount !== undefined && (
-                                        <div className="mt-2 text-xs text-emerald-600 font-medium">
-                                            ~{preset.estimatedCount.toLocaleString()} users
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
+                    <option key={preset.id} value={preset.id} className="bg-[#111111] text-white">
+                        {preset.name}
+                    </option>
                 ))}
-            </div>
+            </select>
 
-            <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
-                <p className="text-sm text-emerald-700">
-                    <strong>Tip:</strong> After applying a preset, you can further customize the filters to refine your audience.
-                </p>
-            </div>
+            {onSaveCustomPreset && (
+                <button
+                    onClick={() => {
+                        const name = prompt("Enter a name for this custom preset:");
+                        if (name && name.trim()) {
+                            onSaveCustomPreset(name.trim(), currentFilters);
+                        }
+                    }}
+                    className="text-[10px] font-black uppercase text-white/40 hover:text-white border border-white/10 px-4 py-2.5 rounded-xl hover:bg-white/5 transition-all"
+                >
+                    Save As Preset
+                </button>
+            )}
         </div>
     );
 }
