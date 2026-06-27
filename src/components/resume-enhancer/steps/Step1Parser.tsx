@@ -47,6 +47,10 @@ interface ExistingCV {
     [key: string]: any;
   };
   status?: string;
+  cvType?: 'master' | 'journey' | 'standalone';
+  journeyId?: string;
+  metadata?: any;
+  atsScore?: number;
 }
 
 const LazyThumbnail = ({ item, isCoverLetter = false, cvData = null }: { item: any, isCoverLetter?: boolean, cvData?: any }) => {
@@ -203,140 +207,111 @@ const CVPairThumbnail: React.FC<CVPairThumbnailProps> = ({
   const firstCL = coverLetters[0];
 
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.9, y: 20 }}
-      whileInView={{ opacity: 1, scale: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ delay: index * 0.05 }}
-      className="step-one-document-card group relative"
-      onHoverStart={() => setIsHovered(true)}
-      onHoverEnd={() => setIsHovered(false)}
-      style={{ isolation: 'isolate' }}
-    >
+    <React.Fragment>
       {/* CV Card */}
-      <div
-        className="step-one-document-preview relative aspect-[1/1.414] w-full rounded-none overflow-hidden bg-white shadow-md hover:shadow-xl transition-shadow duration-300 cursor-pointer"
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+        whileInView={{ opacity: 1, scale: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ delay: index * 0.05 }}
         onClick={onEditCV}
+        className="step-one-document-card group cursor-pointer hover:scale-[1.01] transition-all duration-300 relative overflow-hidden"
       >
-        <LazyThumbnail item={cv} />
+        <div className="step-one-document-preview relative aspect-[1/1.414] w-full rounded-none overflow-hidden bg-white shadow-md hover:shadow-xl transition-shadow duration-300">
+          <LazyThumbnail item={cv} />
 
-        {/* CV type badge */}
-        <div className="absolute top-2 sm:top-4 left-2 sm:left-4 z-30">
-          <span className={`px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[6px] sm:text-[7px] font-black uppercase tracking-wider shadow-md ${
-            cv.cvType === 'master' ? 'bg-[#0D2C54]/90 text-blue-200' :
-            cv.cvType === 'journey' ? 'bg-[#5C3A21]/90 text-amber-200' :
-            'bg-[#134074]/90 text-cyan-200'
-          }`}>
-            {cv.cvType === 'master' ? 'Primary' : cv.cvType === 'journey' ? 'Job Based' : 'Custom'}
-          </span>
-        </div>
-
-        {/* Cover Letter idle indicator badge */}
-        {hasCoverLetter && (
-          <motion.div
-            animate={{ opacity: isHovered ? 0 : 1 }}
-            transition={{ duration: 0.15 }}
-            className="absolute bottom-12 sm:bottom-14 right-2 sm:right-3 z-30"
-          >
-            <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[7px] font-black bg-emerald-500/90 text-white shadow-lg shadow-emerald-500/30 border border-emerald-400/30 backdrop-blur-sm">
-              <svg className="w-2 h-2 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
-              CL
+          {/* CV type badge */}
+          <div className="absolute top-2 sm:top-4 left-2 sm:left-4 z-30">
+            <span className={`px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[6px] sm:text-[7px] font-black uppercase tracking-wider shadow-md ${
+              cv.cvType === 'master' ? 'bg-[#0D2C54]/90 text-blue-200' :
+              cv.cvType === 'journey' ? 'bg-[#5C3A21]/90 text-amber-200' :
+              'bg-[#134074]/90 text-cyan-200'
+            }`}>
+              {cv.cvType === 'master' ? 'Primary' : cv.cvType === 'journey' ? 'Job Based' : 'Custom'}
             </span>
-          </motion.div>
-        )}
-
-        {/* Edit/Delete hover buttons */}
-        <div className="absolute top-2 sm:top-4 right-2 sm:right-4 z-30 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
-          <div className="w-7 h-7 sm:w-9 sm:h-9 bg-black/60 backdrop-blur-md rounded-lg flex items-center justify-center shadow-lg hover:bg-lime-500 hover:text-black text-white transition-colors duration-200">
-            <Edit2 className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5" />
           </div>
-          {cv.cvType !== 'master' && (
-            <button
-              onClick={(e) => { e.stopPropagation(); onDeleteCV(e); }}
-              className="w-7 h-7 sm:w-9 sm:h-9 bg-black/60 backdrop-blur-md rounded-lg flex items-center justify-center shadow-lg hover:bg-red-500 text-red-400 hover:text-white transition-colors duration-200"
-              title="Delete"
-            >
-              <Trash2 className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5" />
-            </button>
-          )}
-        </div>
 
-        {/* Bottom gradient overlay */}
-        <div className="step-one-thumbnail-overlay absolute inset-x-0 bottom-0 z-20 px-3 sm:px-4 pt-10 sm:pt-14 pb-3 sm:pb-3.5 text-white">
-          <h4 className="text-[11px] sm:text-xs font-semibold text-white truncate tracking-tight drop-shadow-sm leading-snug" title={cv.title || 'Untitled Resume'}>
-            {cv.title || 'Untitled Resume'}
-          </h4>
-          <div className="flex items-center justify-between gap-2 mt-1">
-            <p className="text-[9px] sm:text-[10px] text-white/60 font-medium flex items-center gap-1">
-              <span className="w-1 h-1 bg-[#80FF00] rounded-full shadow-[0_0_6px_rgba(128,255,0,0.6)]" />
-              {getRelativeTime(cv.updatedAt || cv.createdAt)}
-            </p>
-            {getScoreForCV(cv) !== undefined && (
-              <span className="text-[9px] sm:text-[10px] font-semibold text-[#80FF00] flex items-center gap-0.5 shrink-0">
-                {getScoreForCV(cv)}% ATS
-              </span>
+          {/* Edit/Delete hover buttons */}
+          <div className="absolute top-2 sm:top-4 right-2 sm:right-4 z-30 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
+            <div className="w-7 h-7 sm:w-9 sm:h-9 bg-black/60 backdrop-blur-md rounded-lg flex items-center justify-center shadow-lg hover:bg-lime-500 hover:text-black text-white transition-colors duration-200">
+              <Edit2 className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5" />
+            </div>
+            {cv.cvType !== 'master' && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onDeleteCV(e); }}
+                className="w-7 h-7 sm:w-9 sm:h-9 bg-black/60 backdrop-blur-md rounded-lg flex items-center justify-center shadow-lg hover:bg-red-500 text-red-400 hover:text-white transition-colors duration-200"
+                title="Delete"
+              >
+                <Trash2 className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5" />
+              </button>
             )}
           </div>
-        </div>
-      </div>
 
-      {/* Cover Letter spring-reveal overlay — slides in from the right */}
+          {/* Bottom gradient overlay */}
+          <div className="step-one-thumbnail-overlay absolute inset-x-0 bottom-0 z-20 px-3 sm:px-4 pt-10 sm:pt-14 pb-3 sm:pb-3.5 text-white">
+            <h4 className="text-[11px] sm:text-xs font-semibold text-white truncate tracking-tight drop-shadow-sm leading-snug" title={cv.title || 'Untitled Resume'}>
+              {cv.title || 'Untitled Resume'}
+            </h4>
+            <div className="flex items-center justify-between gap-2 mt-1">
+              <p className="text-[9px] sm:text-[10px] text-white/60 font-medium flex items-center gap-1">
+                <span className="w-1 h-1 bg-[#80FF00] rounded-full shadow-[0_0_6px_rgba(128,255,0,0.6)]" />
+                {getRelativeTime(cv.updatedAt || cv.createdAt)}
+              </p>
+              {getScoreForCV(cv) !== undefined && (
+                <span className="text-[9px] sm:text-[10px] font-semibold text-[#80FF00] flex items-center gap-0.5 shrink-0">
+                  {getScoreForCV(cv)}% ATS
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Linked Cover Letter Card */}
       {hasCoverLetter && firstCL && (
         <motion.div
-          initial={false}
-          animate={{
-            x: isHovered ? '-55%' : '15%',
-            opacity: isHovered ? 1 : 0,
-            scale: isHovered ? 0.92 : 0.85,
-          }}
-          transition={{ type: 'spring', stiffness: 300, damping: 28, mass: 0.8 }}
-          className="absolute top-0 right-0 w-[72%] z-40 origin-left cursor-pointer"
-          onClick={(e) => { e.stopPropagation(); onEditCoverLetter(firstCL); }}
+          initial={{ opacity: 0, scale: 0.9, y: 20 }}
+          whileInView={{ opacity: 1, scale: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ delay: (index * 0.05) + 0.02 }}
+          onClick={() => onEditCoverLetter(firstCL)}
+          className="step-one-document-card group cursor-pointer hover:scale-[1.01] transition-all duration-300 relative overflow-hidden"
         >
-          <div className="relative aspect-[1/1.414] w-full rounded-lg overflow-hidden bg-white shadow-2xl shadow-black/30 border-2 border-emerald-400/40 ring-1 ring-emerald-400/20">
+          <div className="step-one-document-preview relative aspect-[1/1.414] w-full rounded-none overflow-hidden bg-white shadow-md hover:shadow-xl transition-shadow duration-300">
             <LazyThumbnail item={firstCL} isCoverLetter={true} cvData={cv.cvData} />
 
-            {/* CL badge */}
-            <div className="absolute top-2 left-2 z-30">
-              <span className="px-1.5 py-0.5 rounded-full text-[7px] font-black uppercase tracking-wider bg-emerald-600/90 text-white shadow-md">
-                Cover Letter
+            <div className="absolute top-2 sm:top-4 left-2 sm:left-4 z-30">
+              <span className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[7px] sm:text-[9px] font-black uppercase tracking-wider shadow-md bg-emerald-600 text-white shadow-emerald-500/20">
+                Cover Letter (Linked)
               </span>
             </div>
 
-            {/* Link indicator */}
-            <div className="absolute top-2 right-2 z-30">
-              <div className="w-5 h-5 bg-emerald-500 rounded-full flex items-center justify-center shadow-md shadow-emerald-500/40">
-                <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                </svg>
+            <div className="absolute top-2 sm:top-4 right-2 sm:right-4 z-30 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
+              <div className="w-7 h-7 sm:w-9 sm:h-9 bg-black/60 backdrop-blur-md rounded-lg flex items-center justify-center shadow-lg hover:bg-lime-500 hover:text-black text-white transition-colors duration-200">
+                <Edit2 className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5" />
               </div>
+              <button
+                onClick={(e) => { e.stopPropagation(); onDeleteCoverLetter(firstCL, e); }}
+                className="w-7 h-7 sm:w-9 sm:h-9 bg-black/60 backdrop-blur-md rounded-lg flex items-center justify-center shadow-lg hover:bg-red-500 text-red-400 hover:text-white transition-colors duration-200"
+                title="Delete"
+              >
+                <Trash2 className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5" />
+              </button>
             </div>
 
-            {/* Delete CL button */}
-            <button
-              onClick={(e) => { e.stopPropagation(); onDeleteCoverLetter(firstCL, e); }}
-              className="absolute bottom-2 right-2 z-30 w-6 h-6 bg-black/60 backdrop-blur-md rounded-md flex items-center justify-center text-red-400 hover:bg-red-500 hover:text-white transition-colors duration-200 opacity-0 group-hover:opacity-100"
-              title="Delete cover letter"
-            >
-              <Trash2 className="w-3 h-3" />
-            </button>
-
-            {/* CL title bar */}
-            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent px-2 pt-6 pb-2">
-              <p className="text-[9px] text-white/80 font-medium truncate">
-                {firstCL.title || 'Cover Letter'}
+            <div className="step-one-thumbnail-overlay absolute inset-x-0 bottom-0 z-20 px-3 sm:px-4 pt-10 sm:pt-14 pb-3 sm:pb-3.5 text-white">
+              <h4 className="text-[11px] sm:text-xs font-semibold text-white truncate tracking-tight drop-shadow-sm leading-snug" title={firstCL.title || 'Untitled Cover Letter'}>
+                {firstCL.title || 'Untitled Cover Letter'}
+              </h4>
+              <p className="text-[9px] sm:text-[10px] text-white/60 font-medium flex items-center gap-1 mt-1">
+                <span className="w-1 h-1 bg-[#80FF00] rounded-full shadow-[0_0_6px_rgba(128,255,0,0.6)]" />
+                {getRelativeTime(firstCL.updatedAt || firstCL.createdAt)}
               </p>
             </div>
           </div>
-
-          {/* Connector line between CV and CL */}
-          <div className="absolute top-1/2 -left-3 -translate-y-1/2 flex items-center gap-0.5 pointer-events-none">
-            <div className="w-2 h-0.5 bg-emerald-400/60 rounded-full" />
-            <div className="w-1.5 h-1.5 bg-emerald-400/80 rounded-full" />
-          </div>
         </motion.div>
       )}
-    </motion.div>
+    </React.Fragment>
   );
 };
 
@@ -417,7 +392,7 @@ export default function Step1Parser({
     e.stopPropagation();
     if (!window.confirm('Are you sure you want to delete this cover letter?')) return;
     try {
-      const response = await fetch(`/api/cover-letters/${clId}`, {
+      const response = await fetch(`/api/cover-letters/${clId}?userId=${user?.id || ''}`, {
         method: 'DELETE',
       });
       if (response.ok) {
@@ -643,10 +618,18 @@ export default function Step1Parser({
       if (cvId && cvId !== 'undefined' && cvId !== 'null') {
         if (!map.has(cvId)) map.set(cvId, []);
         map.get(cvId)!.push(cl);
+      } else if (cl.journeyId && cl.journeyId !== 'undefined' && cl.journeyId !== 'null') {
+        // Fallback: Link via journeyId if cvId is missing
+        const matchingCv = existingCVs.find(cv => cv.journeyId === cl.journeyId || cv.metadata?.journeyId === cl.journeyId);
+        if (matchingCv) {
+          const cvIdStr = String(matchingCv.id || matchingCv._id);
+          if (!map.has(cvIdStr)) map.set(cvIdStr, []);
+          map.get(cvIdStr)!.push(cl);
+        }
       }
     });
     return map;
-  }, [existingCoverLetters]);
+  }, [existingCoverLetters, existingCVs]);
 
   const orphanedCoverLetters = React.useMemo(() => {
     const pairedCvIds = new Set<string>();
@@ -657,7 +640,18 @@ export default function Step1Parser({
     return existingCoverLetters.filter((cl: any) => {
       const rawCvId = cl?.cvId;
       const cvId = rawCvId ? String(rawCvId) : null;
-      return !cvId || !pairedCvIds.has(cvId);
+      
+      if (cvId && pairedCvIds.has(cvId)) return false;
+      
+      // Check if it was mapped via journeyId
+      if (cl.journeyId) {
+        const matchingCv = filteredCVs.find(cv => cv.journeyId === cl.journeyId || cv.metadata?.journeyId === cl.journeyId);
+        if (matchingCv) {
+          const matchingCvId = String(matchingCv.id || matchingCv._id);
+          if (pairedCvIds.has(matchingCvId)) return false;
+        }
+      }
+      return true;
     });
   }, [filteredCVs, existingCoverLetters, coverLetterMap]);
 
