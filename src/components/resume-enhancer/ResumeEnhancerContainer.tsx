@@ -1150,10 +1150,28 @@ export default function ResumeEnhancerContainer({
 
       if (mode === 'edit' || mode === 'edit-master' || mode === 'edit-cover-letter') {
         let actualCvId = cvId;
+        let effectiveJourneyId = journeyId;
         let coverLetterData: any = null;
         
         setIsLoading(true);
         try {
+          // Fallback: If we have a journeyId query parameter but no direct cvId, pre-resolve it from the journey
+          if (!actualCvId && effectiveJourneyId) {
+            console.log('🔍 edit-cover-letter: Fetching journey to resolve cvId:', effectiveJourneyId);
+            try {
+              const journeyResponse = await fetch(`/api/application-journey?journeyId=${effectiveJourneyId}`);
+              if (journeyResponse.ok) {
+                const journeyResult = await journeyResponse.json();
+                if (journeyResult.success && journeyResult.data?.journey?.cvId) {
+                  actualCvId = journeyResult.data.journey.cvId;
+                  console.log('✅ Resolved cvId from journey query param:', actualCvId);
+                }
+              }
+            } catch (err) {
+              console.error('Failed to pre-resolve cvId from journey param:', err);
+            }
+          }
+
           if (mode === 'edit-cover-letter' && clId) {
              const clResponse = await fetch(`/api/cover-letters/${clId}?userId=${userId === 'guest' ? '' : userId}`);
              if (clResponse.ok) {
@@ -1161,6 +1179,24 @@ export default function ResumeEnhancerContainer({
                  if (clResult.success && clResult.coverLetter) {
                     coverLetterData = clResult.coverLetter;
                     actualCvId = coverLetterData.cvId || actualCvId;
+                    effectiveJourneyId = coverLetterData.journeyId || effectiveJourneyId;
+
+                    // Fallback: If cover letter does not have cvId but has journeyId, fetch the journey to retrieve cvId
+                    if (!actualCvId && effectiveJourneyId) {
+                      console.log('🔍 edit-cover-letter: Missing cvId, fetching from journey:', effectiveJourneyId);
+                      try {
+                        const journeyResponse = await fetch(`/api/application-journey?journeyId=${effectiveJourneyId}`);
+                        if (journeyResponse.ok) {
+                          const journeyResult = await journeyResponse.json();
+                          if (journeyResult.success && journeyResult.data?.journey?.cvId) {
+                            actualCvId = journeyResult.data.journey.cvId;
+                            console.log('✅ Found cvId in journey:', actualCvId);
+                          }
+                        }
+                      } catch (err) {
+                        console.error('Failed to fetch cvId from journey:', err);
+                      }
+                    }
                  }
              }
           }
@@ -1193,6 +1229,12 @@ export default function ResumeEnhancerContainer({
           const result = await response.json();
           const cv = result.data.cv;
 
+          // Ensure CV has correct journeyId linked if we resolved it from the cover letter or URL params
+          if (cv && !cv.journeyId && effectiveJourneyId) {
+            cv.journeyId = effectiveJourneyId;
+            console.log('✅ Bound effectiveJourneyId to cv.journeyId:', effectiveJourneyId);
+          }
+
           // Fetch associated cover letter if we don't have it yet (e.g. loading CV directly in edit mode)
           if (!coverLetterData && actualCvId && userId !== 'guest') {
              try {
@@ -1204,8 +1246,23 @@ export default function ResumeEnhancerContainer({
                         coverLetterData = matchingCl;
                     }
                 }
+
+                // Fallback: If not found by cvId, but CV has a journeyId or we have a journeyId in URL params, check by journeyId
+                const effectiveJourneyId = cv.journeyId || cv.metadata?.journeyId || journeyId;
+                if (!coverLetterData && effectiveJourneyId) {
+                    console.log('🔍 edit: Associated cover letter not found by cvId, searching by journeyId:', effectiveJourneyId);
+                    const clJourneyResponse = await fetch(`/api/cover-letters?userId=${userId}&journeyId=${effectiveJourneyId}`);
+                    if (clJourneyResponse.ok) {
+                        const clJourneyResult = await clJourneyResponse.json();
+                        const matchingCl = clJourneyResult.data?.coverLetters?.[0];
+                        if (matchingCl) {
+                            coverLetterData = matchingCl;
+                            console.log('✅ Found cover letter via journeyId:', coverLetterData._id || coverLetterData.id);
+                        }
+                    }
+                }
              } catch (clFetchErr) {
-                console.warn('Failed to pre-fetch cover letter for CV:', clFetchErr);
+                 console.warn('Failed to pre-fetch cover letter for CV:', clFetchErr);
              }
           }
 
@@ -1269,13 +1326,14 @@ export default function ResumeEnhancerContainer({
             initialTemplateRef.current = cv.template || null;
           } else {
             // Always load CV with resolved type and jobData (for journey CVs)
+            const finalCvType = (resolvedCvType === 'standalone' && (cv.journeyId || journeyId)) ? 'journey' : resolvedCvType;
             loadCV({
               cvId: cv.id,
-              cvType: resolvedCvType,
+              cvType: finalCvType,
               cvTitle: cv.title,
               cvData: cv.cvData,
               template: cv.template,
-              journeyId: cv.journeyId,
+              journeyId: cv.journeyId || journeyId,
               jobData: cv.jobData,
               coverLetterId: coverLetterData ? (coverLetterData.id || coverLetterData._id) : undefined,
               scoreReport: loadedReport
@@ -1371,6 +1429,13 @@ export default function ResumeEnhancerContainer({
 
             const result = await response.json();
             const cv = result.data.cv;
+
+            // Ensure CV has correct journeyId linked if we resolved it from the cover letter
+            const effectiveJourneyId = cv.journeyId || cv.metadata?.journeyId || journeyId;
+            if (cv && !cv.journeyId && effectiveJourneyId) {
+              cv.journeyId = effectiveJourneyId;
+              console.log('✅ Bound effectiveJourneyId to cv.journeyId:', effectiveJourneyId);
+            }
 
             // Force journey type for journey mode
             const resolvedCvType: 'journey' = 'journey';

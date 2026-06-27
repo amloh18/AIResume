@@ -2268,6 +2268,10 @@ const Canvas: React.FC = () => {
   // Filter and sort Cover Letters
   const filteredAndSortedCoverLetters = React.useMemo(() => {
     let filtered = coverLetters.filter(cl => {
+      // Exclude cover letters that are already linked to a journey/CV
+      const isLinked = journeys.some(j => j.coverLetterId === cl.id || j.coverLetterId === cl._id || j.cvId === cl.cvId);
+      if (isLinked) return false;
+
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
         return cl.title.toLowerCase().includes(query) ||
@@ -2653,45 +2657,89 @@ const Canvas: React.FC = () => {
                     filteredAndSortedCVs.map((cv, index) => {
                       // Find linked journey for this CV (performance optimization - no API call per card)
                       const linkedJourney = journeys.find(journey => journey.cvId === cv.id) || null;
+                      const hasLinkedCoverLetter = !!(linkedJourney?.coverLetterId);
+                      const matchingCoverLetter = hasLinkedCoverLetter 
+                        ? coverLetters.find(cl => cl.id === linkedJourney.coverLetterId || cl._id === linkedJourney.coverLetterId)
+                        : null;
+
                       return (
-                        <CVCardOverlay
-                          key={cv.id || `cv-${index}`}
-                          cv={{
-                            id: cv.id,
-                            title: cv.title,
-                            lastModified: cv.lastModified,
-                            status: cv.status,
-                            views: cv.views,
-                            isStarred: cv.isStarred,
-                            thumbnail: cv.thumbnail,
-                            description: cv.description,
-                            cvData: cv.cvData,
-                            template: cv.template,
-                            completionPercentage: cv.completionPercentage,
-                            isMaster: cv.isMaster,
-                            journeyId: cv.journeyId,
-                            cvType: cv.cvType,
-                            atsScore: cv.atsScore,
-                            metadata: cv.metadata
-                          }}
-                          linkedJourney={linkedJourney}
-                          onEdit={(cv) => { handleCVClick(cv as any); }}
-                          onDownload={(cv) => { handleDownloadCV(cv as any); }}
-                          onDelete={(cv) => { handleDeleteCV(cv as any); }}
-                          onToggleStar={toggleStar}
-                          onViewReport={(cv) => { handleViewCareerReport(cv as any); }}
-                          onRename={(cvId, newTitle) => {
-                            setEditingTitle(newTitle);
-                            saveTitle(cvId);
-                          }}
-                          onEditJourney={(cv, journey) => { handleEditJourney(cv as any, journey); }}
-                          onTitleEdit={(cvId, newTitle) => setEditingTitle(newTitle)}
-                          editingCVId={editingCVId}
-                          editingTitle={editingTitle}
-                          onStartEditing={(cv) => startEditing(cv as any)}
-                          onSaveTitle={saveTitle}
-                          onCancelEditing={cancelEditing}
-                        />
+                        <React.Fragment key={cv.id || `cv-${index}`}>
+                          <CVCardOverlay
+                            cv={{
+                              id: cv.id,
+                              title: cv.title,
+                              lastModified: cv.lastModified,
+                              status: cv.status,
+                              views: cv.views,
+                              isStarred: cv.isStarred,
+                              thumbnail: cv.thumbnail,
+                              description: cv.description,
+                              cvData: cv.cvData,
+                              template: cv.template,
+                              completionPercentage: cv.completionPercentage,
+                              isMaster: cv.isMaster,
+                              journeyId: cv.journeyId,
+                              cvType: cv.cvType,
+                              atsScore: cv.atsScore,
+                              metadata: cv.metadata
+                            }}
+                            linkedJourney={linkedJourney}
+                            onEdit={(cv) => { handleCVClick(cv as any); }}
+                            onDownload={(cv) => { handleDownloadCV(cv as any); }}
+                            onDelete={(cv) => { handleDeleteCV(cv as any); }}
+                            onToggleStar={toggleStar}
+                            onViewReport={(cv) => { handleViewCareerReport(cv as any); }}
+                            onRename={(cvId, newTitle) => {
+                              setEditingTitle(newTitle);
+                              saveTitle(cvId);
+                            }}
+                            onEditJourney={(cv, journey) => { handleEditJourney(cv as any, journey); }}
+                            onTitleEdit={(cvId, newTitle) => setEditingTitle(newTitle)}
+                            editingCVId={editingCVId}
+                            editingTitle={editingTitle}
+                            onStartEditing={(cv) => startEditing(cv as any)}
+                            onSaveTitle={saveTitle}
+                            onCancelEditing={cancelEditing}
+                          />
+                          {matchingCoverLetter && (
+                            <div className="flex flex-col gap-3 pb-3">
+                              <CoverLetterCardOverlay
+                                coverLetter={{
+                                  id: matchingCoverLetter.id,
+                                  title: matchingCoverLetter.title,
+                                  lastModified: String(matchingCoverLetter.lastModified),
+                                  status: matchingCoverLetter.status,
+                                  content: matchingCoverLetter.content || '',
+                                  isStarred: matchingCoverLetter.isStarred,
+                                  views: matchingCoverLetter.views || 0,
+                                  thumbnail: matchingCoverLetter.thumbnail || '',
+                                  metadata: matchingCoverLetter.metadata,
+                                  journeyId: matchingCoverLetter.journeyId,
+                                  cvId: matchingCoverLetter.cvId,
+                                  jobId: matchingCoverLetter.jobId
+                                }}
+                                onEdit={(cl) => {
+                                  const params = new URLSearchParams();
+                                  params.set('mode', 'edit-cover-letter');
+                                  params.set('coverLetterId', cl.id);
+                                  if (cl.journeyId) params.set('journeyId', cl.journeyId);
+                                  if (cl.cvId) params.set('cvId', cl.cvId);
+                                  if (cl.jobId) params.set('jobId', cl.jobId);
+                                  router.push(`/editor?${params.toString()}`);
+                                }}
+                                onDownload={handleDownloadCoverLetter}
+                                onDelete={handleDeleteCoverLetter}
+                                onToggleStar={toggleCoverLetterStar}
+                                onTitleEdit={(id, newTitle) => setEditingCoverLetterTitle(newTitle)}
+                                editingCoverLetterId={editingCoverLetterId}
+                                editingTitle={editingCoverLetterTitle}
+                                onStartEditing={startEditingCoverLetter}
+                                onSaveTitle={saveCoverLetterTitle}
+                                onCancelEditing={cancelEditingCoverLetter}
+                              />
+                            </div>
+                          )}
+                        </React.Fragment>
                       );
                     })
                   ) : searchQuery ? (
