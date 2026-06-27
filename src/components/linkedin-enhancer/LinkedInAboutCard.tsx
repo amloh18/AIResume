@@ -66,10 +66,22 @@ export default function LinkedInAboutCard({ data }: LinkedInAboutCardProps) {
             <div className="flex flex-col lg:flex-row divide-y lg:divide-y-0 lg:divide-x divide-gray-100">
                 {/* Original Column */}
                 <div className="flex-1 p-6 bg-gray-50/50">
-                    <div className="flex items-center justify-between mb-4">
+                     <div className="flex items-center justify-between mb-4">
                         <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">Original About</span>
+                        {data.current && (
+                            <button
+                                onClick={() => {
+                                    window.dispatchEvent(new CustomEvent('mori-cv-selection', {
+                                        detail: { path: 'basics.summary', text: data.current }
+                                    }));
+                                }}
+                                className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 font-semibold flex items-center gap-1 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-1 rounded-md transition-colors"
+                            >
+                                <Sparkles className="w-3 h-3" /> Edit with Mori
+                            </button>
+                        )}
                     </div>
-                    <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+                    <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">
                         {data.current || <span className="italic text-gray-400">No about section provided</span>}
                     </div>
                 </div>

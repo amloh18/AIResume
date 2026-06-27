@@ -65,6 +65,18 @@ export default function LinkedInHeroCard({ data, userProfileImage }: LinkedInHer
                 <div className="flex-1 p-6 bg-gray-50/50">
                     <div className="flex items-center justify-between mb-4">
                         <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">Original Profile</span>
+                        {data.current.headline && (
+                            <button
+                                onClick={() => {
+                                    window.dispatchEvent(new CustomEvent('mori-cv-selection', {
+                                        detail: { path: 'basics.label', text: data.current.headline }
+                                    }));
+                                }}
+                                className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 font-semibold flex items-center gap-1 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-1 rounded-md transition-colors"
+                            >
+                                <Sparkles className="w-3 h-3" /> Edit with Mori
+                            </button>
+                        )}
                     </div>
                     
                     <div className="flex items-start gap-4">

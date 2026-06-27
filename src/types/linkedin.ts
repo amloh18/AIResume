@@ -5,7 +5,7 @@
 
 // User context for tone and targeting
 export interface LinkedInUserContext {
-    tone_selection: 'Professional' | 'Visionary' | 'Technical' | 'Relatable';
+    tone_selection: 'Professional' | 'Startup-Friendly' | 'Executive' | 'Conversational';
     target_industry: string;
     career_goal: string;
 }

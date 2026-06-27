@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ExternalLink, FolderGit2, Calendar, Building2 } from 'lucide-react';
+import { ExternalLink, FolderGit2, Calendar, Building2, Sparkles } from 'lucide-react';
 import CopyableText, { CopyAllButton } from './CopyableText';
 import type { LinkedInProjectEntry } from '@/types/linkedin';
 
@@ -68,6 +68,7 @@ export default function LinkedInProjectsCard({ data, showEnhanced = true }: Link
                     <ProjectEntry
                         key={project.id || index}
                         project={project}
+                        index={index}
                         showEnhanced={showEnhanced}
                     />
                 ))}
@@ -78,10 +79,11 @@ export default function LinkedInProjectsCard({ data, showEnhanced = true }: Link
 
 interface ProjectEntryProps {
     project: LinkedInProjectEntry;
+    index: number;
     showEnhanced: boolean;
 }
 
-function ProjectEntry({ project, showEnhanced }: ProjectEntryProps) {
+function ProjectEntry({ project, index, showEnhanced }: ProjectEntryProps) {
     // Safe access with defaults
     const origData = project.original_data || {};
     const enhData = project.enhanced_data || { title: '', description_bullets: [], tagged_skills: [], improvement_notes: '' };
@@ -123,10 +125,25 @@ function ProjectEntry({ project, showEnhanced }: ProjectEntryProps) {
                 {/* Content */}
                 <div className="flex-1 min-w-0">
                     {/* Title */}
-                    <CopyableText
-                        text={displayTitle}
-                        className="text-base font-semibold text-gray-900 block mb-1"
-                    />
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                        <CopyableText
+                            text={displayTitle}
+                            className="text-base font-semibold text-gray-900 block"
+                        />
+                        <button
+                            onClick={() => {
+                                window.dispatchEvent(new CustomEvent('mori-cv-selection', {
+                                    detail: { 
+                                        path: `projects[${index}].description`, 
+                                        text: origData.description || ''
+                                    }
+                                }));
+                            }}
+                            className="text-[10px] text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 font-semibold flex items-center gap-0.5 bg-emerald-50 dark:bg-emerald-500/10 px-1.5 py-0.5 rounded transition-colors shrink-0"
+                        >
+                            <Sparkles className="w-2.5 h-2.5" /> Edit with Mori
+                        </button>
+                    </div>
 
                     {/* Date Range */}
                     {origData.date_range && (
