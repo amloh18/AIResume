@@ -306,6 +306,14 @@ export default function Step4CoverLetter({ onComplete }: Step4CoverLetterProps) 
       {showTemplateSelector && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] no-print">
           <div className="bg-white dark:bg-[#141810] border border-slate-200 dark:border-white/10 rounded-2xl shadow-2xl w-[95vw] md:w-[90vw] max-w-5xl max-h-[85vh] flex flex-col overflow-hidden animate-fade-in-up animate-in duration-200">
+            {/* Dark mode overrides for light-themed PDF previews */}
+            <style dangerouslySetInnerHTML={{__html: `
+              .cl-preview-container .dark\\:text-slate-100 { color: #1e293b !important; }
+              .cl-preview-container .dark\\:text-slate-200 { color: #334155 !important; }
+              .cl-preview-container .dark\\:text-slate-300 { color: #475569 !important; }
+              .cl-preview-container .dark\\:text-gray-400 { color: #6b7280 !important; }
+              .cl-preview-container .dark\\:bg-white\\/\\[0\\.02\\] { background-color: #f8fafc !important; }
+            `}} />
             {/* Modal Header */}
             <div className="px-6 py-4 border-b border-slate-100 dark:border-white/5 flex items-center justify-between bg-slate-50 dark:bg-transparent">
               <div>
@@ -358,7 +366,7 @@ export default function Step4CoverLetter({ onComplete }: Step4CoverLetterProps) 
                       }`}
                     >
                       {/* Live Scaled Down Preview */}
-                      <div className="@container w-full h-[140px] bg-white border-b border-slate-150 dark:border-white/5 flex justify-center items-start p-3 relative overflow-hidden select-none">
+                      <div className="cl-preview-container @container w-full h-[140px] bg-white border-b border-slate-150 dark:border-white/5 flex justify-center items-start p-3 relative overflow-hidden select-none">
                         <div 
                           className="w-[800px] shrink-0 origin-top transform" 
                           style={{ 
