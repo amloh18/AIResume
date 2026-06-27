@@ -2500,7 +2500,7 @@ export default function ResumeEnhancerContainer({
       const isEditMode = mode === 'edit' || mode === 'edit-master' || mode === 'journey';
 
       // Use cvId from state, or fallback to prop, or use the one from URL params
-      const effectiveCvId = state.cvId || cvId;
+      const effectiveCvId = (state.cvId && state.cvId !== 'guest-draft') ? state.cvId : (cvId && cvId !== 'guest-draft' ? cvId : undefined);
 
       // LAYER 1: UPSERT PATTERN - If Master CV has no ID, create instead of erroring
       // This fixes the "CV ID missing" error by automatically switching to CREATE mode

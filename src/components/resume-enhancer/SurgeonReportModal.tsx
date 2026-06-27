@@ -838,7 +838,7 @@ export default function SurgeonReportModal({ isOpen, onClose, onReviewAndFix }: 
                         }
 
                         // Save CV in background after applying all fixes
-                        if (state.cvId && state.cvData) {
+                        if (state.cvId && state.cvId !== 'guest-draft' && state.cvData) {
                           try {
                             await fetch(`/api/cvs/${state.cvId}`, {
                               method: 'PUT',

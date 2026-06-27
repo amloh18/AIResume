@@ -6,6 +6,7 @@ import { X, User, FileText, Sparkles, Calendar, CheckCircle, AlertCircle, Trash2
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { ADMIN_THEME } from '@/lib/config/adminTheme';
 
 interface DraftDetail {
   id: string;

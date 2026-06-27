@@ -892,6 +892,109 @@ export async function robustDocumentParser(
 
     // Pre-validate: Ensure all required fields exist before Zod validation
     const ensureRequiredFields = (data: any): any => {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+      const sanitizeUrlField = (val: any): string | null => {
+        if (!val) return null;
+        const str = String(val).trim();
+        if (str === '') return '';
+        try {
+          let testStr = str;
+          if (!/^https?:\/\//i.test(str)) {
+            testStr = 'https://' + str;
+          }
+          new URL(testStr);
+          return testStr;
+        } catch {
+          return null;
+        }
+      };
+
+      // Ensure basics exists and its email/urls are sanitized
+      if (!data.basics) {
+        data.basics = {
+          name: null,
+          label: null,
+          email: null,
+          phone: null,
+          url: null,
+          summary: null,
+          image: null,
+          location: {
+            address: null,
+            postalCode: null,
+            city: null,
+            countryCode: null,
+            region: null
+          },
+          profiles: []
+        };
+      } else {
+        data.basics.name = data.basics.name ?? null;
+        data.basics.label = data.basics.label ?? null;
+        data.basics.phone = data.basics.phone ?? null;
+        data.basics.summary = data.basics.summary ?? null;
+        data.basics.image = data.basics.image ?? null;
+        data.basics.url = sanitizeUrlField(data.basics.url);
+        
+        if (data.basics.location) {
+          data.basics.location = {
+            address: data.basics.location.address ?? null,
+            postalCode: data.basics.location.postalCode ?? null,
+            city: data.basics.location.city ?? null,
+            countryCode: data.basics.location.countryCode ?? null,
+            region: data.basics.location.region ?? null
+          };
+        } else {
+          data.basics.location = null;
+        }
+
+        if (data.basics.email) {
+          let emailStr = String(data.basics.email).trim();
+          if (!emailRegex.test(emailStr)) {
+            // Repair common OCR issues
+            if (/@gmaitcom$/i.test(emailStr)) {
+              emailStr = emailStr.replace(/@gmaitcom$/i, '@gmail.com');
+            } else if (/@gmailcom$/i.test(emailStr)) {
+              emailStr = emailStr.replace(/@gmailcom$/i, '@gmail.com');
+            }
+            
+            // Try standard repair for missing dot before TLD
+            if (!emailRegex.test(emailStr)) {
+              const lastAt = emailStr.lastIndexOf('@');
+              if (lastAt !== -1) {
+                const domain = emailStr.substring(lastAt + 1);
+                if (!domain.includes('.')) {
+                  const tldMatch = domain.match(/(.+)(com|net|org|edu|gov|in|io|co|uk)$/i);
+                  if (tldMatch) {
+                    emailStr = emailStr.substring(0, lastAt + 1) + tldMatch[1] + '.' + tldMatch[2];
+                  }
+                }
+              }
+            }
+          }
+          
+          if (!emailRegex.test(emailStr)) {
+            console.warn(`⚠️ CV Parse API - Sanitizing invalid email: ${data.basics.email} -> null`);
+            data.basics.email = null;
+          } else {
+            data.basics.email = emailStr;
+          }
+        } else {
+          data.basics.email = null;
+        }
+
+        if (Array.isArray(data.basics.profiles)) {
+          data.basics.profiles = data.basics.profiles.map((p: any) => ({
+            network: p.network ?? null,
+            username: p.username ?? null,
+            url: sanitizeUrlField(p.url)
+          }));
+        } else {
+          data.basics.profiles = [];
+        }
+      }
+
       // Ensure arrays exist
       if (!data.work) data.work = [];
       if (!data.education) data.education = [];
@@ -909,13 +1012,13 @@ export async function robustDocumentParser(
       if (Array.isArray(data.education)) {
         data.education = data.education.map((edu: any) => ({
           institution: edu.institution ?? null,
-          url: edu.url ?? null,
+          url: sanitizeUrlField(edu.url),
           area: edu.area ?? null,
           studyType: edu.studyType ?? null,
           startDate: edu.startDate ?? null,
           endDate: edu.endDate ?? null,
           score: edu.score ?? null,
-          courses: edu.courses ?? [], // Optional field
+          courses: edu.courses ?? [],
           description: edu.description ?? null
         }));
       }
@@ -927,9 +1030,9 @@ export async function robustDocumentParser(
           startDate: proj.startDate ?? null,
           endDate: proj.endDate ?? null,
           description: proj.description ?? null,
-          highlights: proj.highlights ?? [], // Optional field
+          highlights: proj.highlights ?? [],
           keywords: proj.keywords ?? [],
-          url: proj.url ?? null
+          url: sanitizeUrlField(proj.url)
         }));
       }
 
@@ -938,7 +1041,7 @@ export async function robustDocumentParser(
         data.work = data.work.map((w: any) => ({
           name: w.name ?? null,
           position: w.position ?? null,
-          url: w.url ?? null,
+          url: sanitizeUrlField(w.url),
           startDate: w.startDate ?? null,
           endDate: w.endDate ?? null,
           summary: w.summary ?? null,
@@ -951,7 +1054,7 @@ export async function robustDocumentParser(
         data.volunteer = data.volunteer.map((v: any) => ({
           organization: v.organization ?? null,
           position: v.position ?? null,
-          url: v.url ?? null,
+          url: sanitizeUrlField(v.url),
           startDate: v.startDate ?? null,
           endDate: v.endDate ?? null,
           summary: v.summary ?? null,
@@ -983,7 +1086,7 @@ export async function robustDocumentParser(
           name: c.name ?? null,
           date: c.date ?? null,
           issuer: c.issuer ?? null,
-          url: c.url ?? null,
+          url: sanitizeUrlField(c.url),
           description: c.description ?? null
         }));
       }
@@ -994,7 +1097,7 @@ export async function robustDocumentParser(
           name: p.name ?? null,
           publisher: p.publisher ?? null,
           releaseDate: p.releaseDate ?? null,
-          url: p.url ?? null,
+          url: sanitizeUrlField(p.url),
           summary: p.summary ?? null
         }));
       }

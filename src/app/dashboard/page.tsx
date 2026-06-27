@@ -31,6 +31,7 @@ import LoadingOverlay from '@/components/ui/LoadingOverlay';
 import RedesignedDashboardView from '@/components/dashboard/redesigned/RedesignedDashboardView';
 import { UserTier } from '@/types/dashboard-widgets';
 import { authenticatedFetch } from '@/lib/utils/apiUtils';
+import { useMembership } from '@/lib/hooks/useMembership';
 
 // --- Specialized Hero Widgets (Legacy removed or moved if needed) ---
 
@@ -50,6 +51,7 @@ function DashboardContent() {
   const router = useRouter();
   
   // --- All Hooks must be at the top ---
+  const { membership, loading: membershipLoading } = useMembership();
   const [onboardingData, setOnboardingData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -165,13 +167,31 @@ function DashboardContent() {
   };
 
   // --- Conditional returns must be AFTER all hooks ---
-  if (isLoading || (onboardingData?.activation_status === 'pending' && onboardingData?.activation_route)) {
+  if (isLoading || membershipLoading || (onboardingData?.activation_status === 'pending' && onboardingData?.activation_route)) {
     return <LoadingFallback />;
   }
 
   const userRole = (session?.user as any)?.role || 'user';
   const isAdmin = userRole === 'admin' || userRole === 'superadmin';
-  const layoutType = demoLayoutType || onboardingData?.dashboard_layout_type || 'cv';
+  
+  // Determine layout type based on active plan (membership)
+  let layoutType: 'cv' | 'tracker' | 'auto_apply' = 'cv';
+  if (demoLayoutType) {
+    layoutType = demoLayoutType;
+  } else if (membership?.planKey) {
+    const planKeyLower = membership.planKey.toLowerCase();
+    if (planKeyLower.startsWith('smart') || planKeyLower.startsWith('pro')) {
+      layoutType = 'auto_apply';
+    } else if (planKeyLower.startsWith('focused')) {
+      layoutType = 'tracker';
+    } else if (planKeyLower.startsWith('starter')) {
+      layoutType = 'cv';
+    } else {
+      layoutType = onboardingData?.dashboard_layout_type || 'cv';
+    }
+  } else {
+    layoutType = onboardingData?.dashboard_layout_type || 'cv';
+  }
 
   const tierMap: Record<string, UserTier> = {
     cv: 'starter',

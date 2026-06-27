@@ -360,6 +360,7 @@ export async function PUT(
 
     // Check if status changed from 'draft' to 'created' - handle this in transaction
     let job: any = null;
+    let jobLimitInfo: any = null;
 
     if (previousStatus === 'draft' && newStatus === 'created') {
       // ATOMIC OPERATION: Use transaction to ensure credit check + status update + credit spending are atomic
@@ -400,6 +401,7 @@ export async function PUT(
             user.currentPlanKey || 'free',
             user.subscription
           );
+          jobLimitInfo = jobLimitCheck;
 
           console.log(`🔍 Job Update API - Job limit check result (in transaction):`, {
             allowed: jobLimitCheck.allowed,
@@ -498,8 +500,8 @@ export async function PUT(
                 metadata: {
                   oldStatus: 'draft',
                   newStatus: 'created',
-                  isUnlimited: jobLimitCheck.limit === -1,
-                  jobsRemaining: jobLimitCheck.limit === -1 ? -1 : Math.max(0, jobLimitCheck.limit - jobLimitCheck.currentCount - 1)
+                  isUnlimited: !jobLimitInfo || jobLimitInfo.limit === -1,
+                  jobsRemaining: (!jobLimitInfo || jobLimitInfo.limit === -1) ? -1 : Math.max(0, jobLimitInfo.limit - jobLimitInfo.currentCount - 1)
                 }
               })
             ]).catch(logError => {

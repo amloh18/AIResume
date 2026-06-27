@@ -98,6 +98,8 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
   const [previewingTargets, setPreviewingTargets] = useState(false);
   const [testEmails, setTestEmails] = useState("amlohsl@icloud.com");
   const [previewedEmails, setPreviewedEmails] = useState<string[]>([]);
+  const [manualName, setManualName] = useState("");
+  const [manualEmail, setManualEmail] = useState("");
   const [availableTemplates, setAvailableTemplates] =
     useState<CampaignTemplate[]>(campaignTemplates);
   const [templateCategoryFilter, setTemplateCategoryFilter] =
@@ -186,7 +188,7 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
     const extension = file.name.split('.').pop()?.toLowerCase();
     
     try {
-        const recipients: Array<{ name: string; email: string }> = [];
+        const uniqueRecipientsMap = new Map<string, { name: string; email: string }>();
 
         if (extension === 'xlsx' || extension === 'xls') {
             const XLSX = await import('xlsx');
@@ -218,23 +220,28 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
                         row.forEach(cell => {
                             const val = String(cell || '').trim();
                             if (val.includes('@') && val.includes('.')) {
-                                email = val;
+                                const cleanEmail = val.toLowerCase();
+                                if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+                                    email = cleanEmail;
+                                }
                             } else if (val && name === "Valued User" && isNaN(Number(val))) {
                                 name = val;
                             }
                         });
 
                         if (email) {
-                            recipients.push({ name, email });
+                            uniqueRecipientsMap.set(email, { name, email });
                         }
                     });
 
+                    const recipients = Array.from(uniqueRecipientsMap.values());
+
                     if (recipients.length > 0) {
                         setFormData(prev => ({ ...prev, csvRecipients: recipients }));
-                        toast({ title: "Data Ingested", description: `Successfully merged ${recipients.length} identities from Excel.`, variant: "success" });
+                        toast({ title: "Data Ingested", description: `Successfully merged ${recipients.length} valid unique identities from Excel.`, variant: "success" });
                         handlePreviewTargets(recipients);
                     } else {
-                        toast({ title: "No Data Found", description: "Could not find valid email addresses in the file.", variant: "destructive" });
+                        toast({ title: "No Data Found", description: "Could not find valid unique email addresses in the file.", variant: "destructive" });
                     }
                 } catch (err) {
                     toast({ title: "Parsing Error", description: "Failed to read Excel structure.", variant: "destructive" });
@@ -276,19 +283,30 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
                     let email = "";
 
                     parts.forEach(part => {
-                        if (part.includes('@') && part.includes('.')) email = part;
-                        else if (part && name === "Valued User" && isNaN(Number(part))) name = part;
+                        const cleanPart = part.trim();
+                        if (cleanPart.includes('@') && cleanPart.includes('.')) {
+                            const cleanEmail = cleanPart.toLowerCase();
+                            if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+                                email = cleanEmail;
+                            }
+                        } else if (cleanPart && name === "Valued User" && isNaN(Number(cleanPart))) {
+                            name = cleanPart;
+                        }
                     });
 
-                    if (email) recipients.push({ name, email });
+                    if (email) {
+                        uniqueRecipientsMap.set(email, { name, email });
+                    }
                 });
+
+                const recipients = Array.from(uniqueRecipientsMap.values());
 
                 if (recipients.length > 0) {
                     setFormData(prev => ({ ...prev, csvRecipients: recipients }));
-                    toast({ title: "CSV Ingested", description: `Captured ${recipients.length} identity nodes.`, variant: "success" });
+                    toast({ title: "CSV Ingested", description: `Captured ${recipients.length} valid unique identity nodes.`, variant: "success" });
                     handlePreviewTargets(recipients);
                 } else {
-                    toast({ title: "Upload Failed", description: "No valid email stream detected.", variant: "destructive" });
+                    toast({ title: "Upload Failed", description: "No valid unique email stream detected.", variant: "destructive" });
                 }
             } catch (error) {
                 console.error("CSV Ingestion Error:", error);
@@ -459,6 +477,36 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
     }
   };
 
+  const handleAddManualRecipient = () => {
+    const email = manualEmail.trim().toLowerCase();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      toast({ title: "Validation Error", description: "Please enter a valid email address.", variant: "destructive" });
+      return;
+    }
+    const name = manualName.trim() || "Valued User";
+    
+    // Check if already exists in csvRecipients
+    const exists = (formData.csvRecipients || []).some(r => r.email === email);
+    if (exists) {
+      toast({ title: "Duplicate Email", description: "This email is already in the list.", variant: "destructive" });
+      return;
+    }
+
+    const updatedCsv = [...(formData.csvRecipients || []), { name, email }];
+    setFormData(prev => ({ ...prev, csvRecipients: updatedCsv }));
+    setManualName("");
+    setManualEmail("");
+    handlePreviewTargets(updatedCsv);
+    toast({ title: "Recipient Added", description: `Added ${email} to manual recipients.`, variant: "success" });
+  };
+
+  const handleRemoveManualRecipient = (email: string) => {
+    const updatedCsv = (formData.csvRecipients || []).filter(r => r.email !== email);
+    setFormData(prev => ({ ...prev, csvRecipients: updatedCsv }));
+    handlePreviewTargets(updatedCsv);
+    toast({ title: "Recipient Removed", description: `Removed ${email} from manual list.`, variant: "info" });
+  };
+
   const handleSendTest = async () => {
     if (!testEmails.trim()) {
       toast({ title: "Validation Error", description: "Please enter an email address", variant: "destructive" });
@@ -622,43 +670,34 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
           </div>
         </div>
 
-        {/* Progress Tracker (2 Steps) */}
-        <div className="px-8 py-6 bg-white/[0.01] border-b border-white/5">
-          <div className="flex items-center justify-center gap-12 max-w-lg mx-auto">
+        {/* Progress Tracker & Target Stats Header Row */}
+        <div className="px-8 py-4 bg-white/[0.01] border-b border-white/5 flex items-center justify-between z-10">
+          {/* Steps (Left) */}
+          <div className="flex items-center gap-10">
             {steps.map((step, idx) => {
               const isActive = step.id === currentStep;
               const isCompleted = currentStepIndex > idx;
               return (
                 <React.Fragment key={step.id}>
-                  <div className="flex flex-col items-center gap-3 relative">
+                  <div className="flex items-center gap-3">
                     <button
                       onClick={() => isCompleted && setCurrentStep(step.id)}
-                      className={`w-12 h-12 rounded-2xl border flex items-center justify-center transition-all duration-500 ${
+                      className={`w-10 h-10 rounded-xl border flex items-center justify-center transition-all duration-500 ${
                         isActive 
-                          ? 'bg-emerald-500 border-emerald-400 text-black shadow-[0_0_30px_rgba(16,185,129,0.4)]' 
+                          ? 'bg-emerald-500 border-emerald-400 text-black shadow-[0_0_20px_rgba(16,185,129,0.3)]' 
                           : isCompleted 
                             ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
                             : 'bg-white/5 border-white/5 text-white/20'
                       }`}
                     >
-                      {isCompleted ? <CheckCircle className="w-6 h-6" /> : <step.icon className="w-6 h-6" />}
+                      {isCompleted ? <CheckCircle className="w-5 h-5" /> : <step.icon className="w-5 h-5" />}
                     </button>
                     <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${isActive ? 'text-emerald-400' : 'text-white/20'}`}>
                       {step.label}
                     </span>
-                    {idx === currentStepIndex && (
-                      <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest bg-emerald-500/10 px-2 py-0.5 rounded-md">
-                        Total Target Base {targetedCount.toLocaleString()}
-                      </span>
-                    )}
-                    {!isActive && idx <= currentStepIndex && idx !== currentStepIndex && (
-                      <span className="text-[10px] font-black text-emerald-400/70 uppercase tracking-widest bg-emerald-500/10 px-2 py-0.5 rounded-md">
-                        Total Target Base {targetedCount.toLocaleString()}
-                      </span>
-                    )}
                   </div>
                   {idx < steps.length - 1 && (
-                    <div className="w-24 h-[2px] bg-white/5 relative overflow-hidden">
+                    <div className="w-16 h-[2px] bg-white/5 relative overflow-hidden">
                       <motion.div 
                         initial={{ scaleX: 0 }}
                         animate={{ scaleX: isCompleted ? 1 : 0 }}
@@ -669,6 +708,13 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
                 </React.Fragment>
               );
             })}
+          </div>
+
+          {/* Total Target Base Card (Right) */}
+          <div className="flex items-center gap-3 bg-[#111111] border border-white/10 px-4 py-2 rounded-xl shadow-lg">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-[9px] font-black uppercase tracking-wider text-white/40">Total Target Base</span>
+            <span className="text-sm font-black text-emerald-400">{targetedCount.toLocaleString()}</span>
           </div>
         </div>
 
@@ -760,7 +806,7 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
               )}
 
               {currentStep === "dispatch" && (
-                <motion.div key="dispatch" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="space-y-10">
+                <motion.div key="dispatch" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="space-y-8">
                   {/* Email Preview Mini-Card - ADDED AS REQUESTED */}
                   <div className="bg-[#111111] border border-white/10 rounded-[2rem] p-6 flex items-center justify-between group">
                     <div className="flex items-center gap-4">
@@ -773,64 +819,194 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
                     <button onClick={() => { setCurrentStep("design"); setActiveDesignTab("preview"); }} className="text-[10px] font-black uppercase text-emerald-500 border border-emerald-500/20 px-4 py-2 rounded-xl hover:bg-emerald-500/10 transition-all">Review Design</button>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <section className="space-y-6">
-                        <h4 className="text-lg font-black text-white uppercase">Sector Filtering</h4>
-                        <div className="bg-white/[0.02] border border-white/5 rounded-[2rem] p-6">
-                            <FilterPresets onApplyPreset={handleApplyFilterPreset} currentFilters={formData.targetFilters} />
-                            <div className="mt-6"><CampaignFilters
-                              filters={formData.targetFilters}
-                              onChange={(f) => {
-                                handleInputChange("targetFilters", f);
-                                // Pass fresh filters directly to avoid stale-closure reading old formData
-                                handlePreviewTargets(undefined, f);
-                              }}
-                            /></div>
-                        </div>
-                    </section>
-                    
-                    <section className="space-y-6">
-                        <h4 className="text-lg font-black text-white uppercase">Bulk Ingestion</h4>
-                        <div className="bg-white/[0.02] border border-white/5 rounded-[2rem] p-8 border-dashed flex flex-col items-center text-center">
-                            <Database className="w-8 h-8 text-emerald-500 mb-4" />
-                            <p className="text-[10px] text-white/30 font-bold mb-6">Upload CSV or XLSX protocols</p>
-                            <Input type="file" accept=".csv,.xlsx,.xls" onChange={handleFileUpload} className="bg-white/5 border-white/5 h-12 file:bg-white/10 file:text-white file:rounded-lg file:px-4" />
-                            {formData.csvRecipients && formData.csvRecipients.length > 0 && (
-                                <div className="mt-4 px-4 py-2 bg-emerald-500/10 text-emerald-400 rounded-xl text-[10px] font-black uppercase">{formData.csvRecipients.length} Identities Merged</div>
-                            )}
-                        </div>
-
-                        <div className="bg-emerald-600 rounded-[2rem] p-8 text-black">
-                            <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Total Target Base</p>
-                            <h2 className="text-5xl font-black tracking-tighter">{targetedCount.toLocaleString()}</h2>
-                        </div>
-                    </section>
+                  {/* Target Filters Row */}
+                  <div className="bg-white/[0.02] border border-white/5 rounded-[2rem] p-6 space-y-6">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/5 pb-4">
+                      <div>
+                        <h4 className="text-sm font-black text-white uppercase tracking-wider">Target Filters</h4>
+                        <p className="text-[10px] text-white/40">Refine the target audience using dynamic metrics and criteria.</p>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <FilterPresets onApplyPreset={handleApplyFilterPreset} currentFilters={formData.targetFilters} />
+                      </div>
+                    </div>
+                    <div>
+                      <CampaignFilters
+                        filters={formData.targetFilters}
+                        onChange={(f) => {
+                          handleInputChange("targetFilters", f);
+                          handlePreviewTargets(undefined, f);
+                        }}
+                      />
+                    </div>
                   </div>
 
-                  <section className="bg-white/[0.02] border border-white/5 rounded-[2.5rem] p-10">
-                    <h3 className="text-lg font-black text-white uppercase mb-8 flex items-center gap-3"><Clock className="w-5 h-5 text-emerald-500" /> Temporal Dispatch</h3>
-                    <div className="grid grid-cols-3 gap-4">
-                      {['now', 'scheduled', 'recurring'].map(type => (
-                        <div key={type} onClick={() => handleInputChange("sendType", type)} className={`p-6 rounded-[2rem] border transition-all cursor-pointer ${formData.sendType === type ? 'bg-emerald-500 border-emerald-400 text-black' : 'bg-white/[0.02] border-white/5 text-white hover:border-white/20'}`}>
-                          <h4 className="text-sm font-black uppercase">{type}</h4>
+                  {/* Dispatch Configuration Row: Temporal & Test Dispatch in One Row */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Temporal Dispatch */}
+                    <div className="bg-white/[0.02] border border-white/5 rounded-[2rem] p-6 space-y-4">
+                      <div className="flex items-center gap-2 border-b border-white/5 pb-3">
+                        <Clock className="w-4 h-4 text-emerald-500" />
+                        <h4 className="text-xs font-black text-white uppercase tracking-wider">Temporal Dispatch</h4>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2">
+                        {['now', 'scheduled', 'recurring'].map(type => (
+                          <div 
+                            key={type} 
+                            onClick={() => handleInputChange("sendType", type)} 
+                            className={`py-2 px-3 rounded-xl border text-center transition-all cursor-pointer text-[10px] font-black uppercase tracking-wider ${
+                              formData.sendType === type 
+                                ? 'bg-emerald-500 border-emerald-400 text-black' 
+                                : 'bg-black/40 border-white/10 text-white/60 hover:text-white hover:border-white/20'
+                            }`}
+                          >
+                            {type}
+                          </div>
+                        ))}
+                      </div>
+                      {formData.sendType === "scheduled" && (
+                        <div className="grid grid-cols-2 gap-3 mt-3">
+                          <Input 
+                            type="date" 
+                            value={formData.sendDate} 
+                            onChange={(e) => handleInputChange("sendDate", e.target.value)} 
+                            className="bg-black/40 border-white/5 rounded-xl h-10 text-xs text-white" 
+                          />
+                          <Input 
+                            type="time" 
+                            value={formData.sendTime} 
+                            onChange={(e) => handleInputChange("sendTime", e.target.value)} 
+                            className="bg-black/40 border-white/5 rounded-xl h-10 text-xs text-white" 
+                          />
                         </div>
-                      ))}
+                      )}
                     </div>
-                    {formData.sendType === "scheduled" && (
-                        <div className="grid grid-cols-2 gap-4 mt-8">
-                            <Input type="date" value={formData.sendDate} onChange={(e) => handleInputChange("sendDate", e.target.value)} className="bg-black/40 border-white/5 rounded-2xl py-6" />
-                            <Input type="time" value={formData.sendTime} onChange={(e) => handleInputChange("sendTime", e.target.value)} className="bg-black/40 border-white/5 rounded-2xl py-6" />
-                        </div>
-                    )}
-                  </section>
 
-                  <section className="bg-white/[0.02] border border-white/5 rounded-[2.5rem] p-10">
-                    <h3 className="text-lg font-black text-white uppercase mb-8 flex items-center gap-3"><Mail className="w-5 h-5 text-emerald-500" /> Test Dispatch</h3>
-                    <div className="flex gap-4">
-                        <Input value={testEmails} onChange={(e) => setTestEmails(e.target.value)} className="bg-black/40 border-white/5 rounded-2xl py-6" />
-                        <button onClick={handleSendTest} className="px-8 py-4 bg-white/5 hover:bg-white/10 rounded-2xl font-black text-[10px] uppercase border border-white/5">Deploy Test</button>
+                    {/* Test Dispatch */}
+                    <div className="bg-white/[0.02] border border-white/5 rounded-[2rem] p-6 space-y-4">
+                      <div className="flex items-center gap-2 border-b border-white/5 pb-3">
+                        <Mail className="w-4 h-4 text-emerald-500" />
+                        <h4 className="text-xs font-black text-white uppercase tracking-wider">Test Dispatch</h4>
+                      </div>
+                      <div className="flex gap-2">
+                        <Input 
+                          placeholder="test@example.com" 
+                          value={testEmails} 
+                          onChange={(e) => setTestEmails(e.target.value)} 
+                          className="bg-black/40 border-white/5 rounded-xl h-10 text-xs text-white placeholder:text-white/20" 
+                        />
+                        <button 
+                          onClick={handleSendTest} 
+                          className="px-5 h-10 bg-white/5 hover:bg-white/10 text-white font-black text-[10px] uppercase tracking-wider rounded-xl transition-all border border-white/10 shrink-0"
+                        >
+                          Deploy Test
+                        </button>
+                      </div>
+                      <p className="text-[9px] text-white/30 leading-normal">
+                        Send a preview run of this campaign payload to check layout rendering.
+                      </p>
                     </div>
-                  </section>
+                  </div>
+
+                  {/* Add Recipient Inline Row (Full Width) */}
+                  <div className="bg-white/[0.02] border border-white/5 rounded-[2rem] p-6 space-y-4">
+                    <h4 className="text-xs font-black text-white uppercase tracking-wider">Add Recipients Manually</h4>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <Input 
+                        placeholder="Name (e.g. Alex Smith)" 
+                        value={manualName} 
+                        onChange={(e) => setManualName(e.target.value)} 
+                        className="bg-black/40 border-white/5 rounded-xl h-10 text-white placeholder:text-white/20"
+                      />
+                      <Input 
+                        placeholder="Email address" 
+                        value={manualEmail} 
+                        onChange={(e) => setManualEmail(e.target.value)} 
+                        className="bg-black/40 border-white/5 rounded-xl h-10 text-white placeholder:text-white/20"
+                      />
+                      <button 
+                        onClick={handleAddManualRecipient}
+                        className="px-6 h-10 bg-emerald-600 hover:bg-emerald-500 text-black font-black text-[10px] uppercase tracking-wider rounded-xl transition-all border border-emerald-500/20"
+                      >
+                        Add to List
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Combined Recipients Review Lists (Full Width) */}
+                  <div className="bg-white/[0.02] border border-white/5 rounded-[2.5rem] p-6 space-y-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/5 pb-4">
+                      <div>
+                        <h4 className="text-sm font-black text-white uppercase tracking-wider">Identities on this Campaign</h4>
+                        <p className="text-[10px] text-white/40">Review, add or remove users included in this run.</p>
+                      </div>
+
+                      {/* CSV Ingestion Button */}
+                      <div className="flex items-center gap-3">
+                        <label className="cursor-pointer px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-wider text-white transition-all flex items-center gap-1.5">
+                          <Database className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>Ingest CSV</span>
+                          <input 
+                            type="file" 
+                            accept=".csv,.xlsx,.xls" 
+                            onChange={handleFileUpload} 
+                            className="hidden" 
+                          />
+                        </label>
+                        {formData.csvRecipients && formData.csvRecipients.length > 0 && (
+                          <span className="px-3 py-1.5 bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 rounded-xl text-[9px] font-black uppercase tracking-wider">
+                            {formData.csvRecipients.length} Ingested
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Lists Container - Side-by-side */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      {/* Manual / Uploaded List */}
+                      <div className="space-y-3">
+                        <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Manual & CSV Ingested ({formData.csvRecipients?.length || 0})</p>
+                        {formData.csvRecipients && formData.csvRecipients.length > 0 ? (
+                          <div className="max-h-60 overflow-y-auto space-y-2 rounded-xl bg-black/20 p-3 border border-white/5">
+                            {formData.csvRecipients.map((rec, i) => (
+                              <div key={i} className="flex items-center justify-between text-xs py-1.5 border-b border-white/5 last:border-b-0 px-2 hover:bg-white/[0.02] rounded-lg">
+                                <div>
+                                  <span className="font-bold text-white mr-2">{rec.name}</span>
+                                  <span className="text-white/40">{rec.email}</span>
+                                </div>
+                                <button 
+                                  onClick={() => handleRemoveManualRecipient(rec.email)}
+                                  className="text-red-400 hover:text-red-500 text-[10px] uppercase font-black tracking-widest px-2 py-1 rounded hover:bg-red-500/10 transition-all"
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-white/20 italic">No manually added or uploaded recipients.</p>
+                        )}
+                      </div>
+
+                      {/* Dynamic DB Filtered Preview List */}
+                      <div className="space-y-3">
+                        <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Dynamic Filter Matches (Previewing {previewedEmails.length})</p>
+                        {previewedEmails.length > 0 ? (
+                          <div className="max-h-60 overflow-y-auto space-y-2 rounded-xl bg-black/20 p-3 border border-white/5">
+                            {previewedEmails.map((email, i) => (
+                              <div key={i} className="flex items-center justify-between text-xs py-1.5 border-b border-white/5 last:border-b-0 px-2">
+                                <span className="text-white/70">{email}</span>
+                                <span className="text-[9px] font-black text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full uppercase tracking-wider">Dynamic Match</span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-white/20 italic">No dynamic database users match the selected filters.</p>
+                        )}
+                      </div>
+                    </div>
+
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>

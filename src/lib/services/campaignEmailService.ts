@@ -103,6 +103,18 @@ export class CampaignEmailService {
             // Filter out removed or already sent ones
             const targetRecipients = recipients.filter(r => !r.removed && r.status !== 'sent');
 
+            // Enforce daily SMTP limit quotas and transactional reservations
+            const { checkEmailLimitAllowed } = await import('@/lib/services/emailLimiter');
+            const limitCheck = await checkEmailLimitAllowed('campaign', targetRecipients.length);
+            if (!limitCheck.allowed) {
+                if (!isDryRun) {
+                    campaign.status = 'cancelled';
+                    campaign.notes = limitCheck.reason;
+                    await campaign.save();
+                }
+                throw new Error(limitCheck.reason);
+            }
+
             console.log(`📧 Campaign ${campaignId}: Found ${targetRecipients.length} eligible recipients (Total: ${recipients.length})`);
 
             if (targetRecipients.length === 0) {
@@ -121,20 +133,16 @@ export class CampaignEmailService {
                 return result;
             }
 
-            let hasTimedOut = false;
-
-            // Send to each recipient using shared transporter
             // Limit concurrency to avoid overwhelming the email provider
-            const BATCH_SIZE = 10;
+            const BATCH_SIZE = 100;
             const BATCH_DELAY_MS = 300;
 
             for (let i = 0; i < targetRecipients.length; i += BATCH_SIZE) {
                 const batch = targetRecipients.slice(i, i + BATCH_SIZE);
 
-                if (isDryRun) {
-                    result.totalSent += batch.length;
-                    continue;
-                }
+                const bulkOps: any[] = [];
+                let successCount = 0;
+                let failedCount = 0;
 
                 await Promise.all(batch.map(async (user) => {
                     try {
@@ -193,65 +201,78 @@ export class CampaignEmailService {
                         }
 
                         if (sendResponse.success) {
-                            result.totalSent++;
-                            await EmailCampaign.updateOne(
-                                { _id: campaignId, 'recipients.email': user.email },
-                                {
-                                    $set: {
-                                        'recipients.$.status': 'sent',
-                                        'recipients.$.sentAt': new Date(),
-                                        'recipients.$.error': undefined,
-                                    },
-                                    $inc: {
-                                        'performance.sent': 1,
-                                        'performance.delivered': 1,
-                                        sentCount: 1,
-                                        deliveredCount: 1
+                            successCount++;
+                            bulkOps.push({
+                                updateOne: {
+                                    filter: { _id: campaignId, 'recipients.email': user.email },
+                                    update: {
+                                        $set: {
+                                            'recipients.$.status': 'sent',
+                                            'recipients.$.sentAt': new Date(),
+                                            'recipients.$.error': undefined,
+                                        }
                                     }
                                 }
-                            );
+                            });
                         } else {
-                            result.totalFailed++;
+                            failedCount++;
                             result.errors = result.errors || [];
                             result.errors.push(`Failed for ${user.email}: ${sendResponse.error}`);
-                            await EmailCampaign.updateOne(
-                                { _id: campaignId, 'recipients.email': user.email },
-                                {
-                                    $set: {
-                                        'recipients.$.status': 'failed',
-                                        'recipients.$.error': sendResponse.error,
-                                    },
-                                    $inc: {
-                                        'performance.sent': 1,
-                                        'performance.bounced': 1,
-                                        bouncedCount: 1
+                            bulkOps.push({
+                                updateOne: {
+                                    filter: { _id: campaignId, 'recipients.email': user.email },
+                                    update: {
+                                        $set: {
+                                            'recipients.$.status': 'failed',
+                                            'recipients.$.error': sendResponse.error,
+                                        }
                                     }
                                 }
-                            );
+                            });
                         }
 
                     } catch (err: any) {
                         console.error(`Error sending to ${user.email}:`, err);
-                        result.totalFailed++;
+                        failedCount++;
                         result.errors = result.errors || [];
                         result.errors.push(`Error for ${user.email}: ${err.message}`);
-                        if (!isDryRun) {
-                            await EmailCampaign.updateOne(
-                                { _id: campaignId, 'recipients.email': user.email },
-                                {
+                        bulkOps.push({
+                            updateOne: {
+                                filter: { _id: campaignId, 'recipients.email': user.email },
+                                update: {
                                     $set: {
                                         'recipients.$.status': 'failed',
                                         'recipients.$.error': err.message,
-                                    },
-                                    $inc: {
-                                        'performance.bounced': 1,
-                                        bouncedCount: 1
                                     }
                                 }
-                            ).catch(() => {});
-                        }
+                            }
+                        });
                     }
                 }));
+
+                // Apply updates in one bulk operation to drastically reduce database roundtrips
+                if (bulkOps.length > 0) {
+                    await EmailCampaign.bulkWrite(bulkOps);
+                }
+
+                // Increment stats in a single document update call
+                if (successCount > 0 || failedCount > 0) {
+                    result.totalSent += successCount;
+                    result.totalFailed += failedCount;
+                    await EmailCampaign.updateOne(
+                        { _id: campaignId },
+                        {
+                            $inc: {
+                                'performance.sent': successCount + failedCount,
+                                'performance.delivered': successCount,
+                                'performance.bounced': failedCount,
+                                sentCount: successCount,
+                                deliveredCount: successCount,
+                                bouncedCount: failedCount
+                            }
+                        }
+                    );
+                }
 
                 // Small delay between batches
                 if (i + BATCH_SIZE < targetRecipients.length) {

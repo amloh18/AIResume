@@ -92,7 +92,15 @@ export const createTransporter = () => {
     return null;
   }
 
-  return nodemailer.createTransport(config);
+  // Enable SMTP pooling for super fast connection reuse (perfect for Hostinger)
+  return nodemailer.createTransport({
+    ...config,
+    pool: true,
+    maxConnections: 30,
+    maxMessages: Infinity,
+    rateDelta: 1000,
+    rateLimit: 100, // 100 sends per second maximum throttling
+  });
 };
 
 // Get sender email address
@@ -118,6 +126,14 @@ const getSenderEmail = (): string => {
 
 // Send email verification
 export async function sendEmailVerification(email: string, verificationLink: string, firstName: string) {
+  // Check daily limits and transactional reservations
+  const { checkEmailLimitAllowed } = await import('./services/emailLimiter');
+  const limitCheck = await checkEmailLimitAllowed('system', 1);
+  if (!limitCheck.allowed) {
+    console.error('❌ Email limit check failed:', limitCheck.reason);
+    return { success: false, error: limitCheck.reason };
+  }
+
   const transporter = createTransporter();
 
   if (!transporter) {
@@ -157,6 +173,14 @@ export async function sendEmailVerification(email: string, verificationLink: str
 
 // Send password reset email
 export async function sendPasswordResetEmail(email: string, resetLink: string, firstName: string) {
+  // Check daily limits and transactional reservations
+  const { checkEmailLimitAllowed } = await import('./services/emailLimiter');
+  const limitCheck = await checkEmailLimitAllowed('system', 1);
+  if (!limitCheck.allowed) {
+    console.error('❌ Email limit check failed:', limitCheck.reason);
+    return { success: false, error: limitCheck.reason };
+  }
+
   const transporter = createTransporter();
 
   if (!transporter) {
@@ -215,6 +239,14 @@ export async function testEmailService() {
 
 // Generic email sending function
 export async function sendEmail({ to, subject, text, html, from }: { to: string; subject: string; text: string; html: string; from?: string }) {
+  // Check daily limits and transactional reservations
+  const { checkEmailLimitAllowed } = await import('./services/emailLimiter');
+  const limitCheck = await checkEmailLimitAllowed('system', 1);
+  if (!limitCheck.allowed) {
+    console.error('❌ Email limit check failed:', limitCheck.reason);
+    return { success: false, error: limitCheck.reason };
+  }
+
   const transporter = createTransporter();
 
   if (!transporter) {
@@ -276,6 +308,14 @@ export async function sendVerificationCode(
   type: 'email-verification' | 'passwordless-login' | 'password-reset'
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    // Check daily limits and transactional reservations
+    const { checkEmailLimitAllowed } = await import('./services/emailLimiter');
+    const limitCheck = await checkEmailLimitAllowed('system', 1);
+    if (!limitCheck.allowed) {
+      console.error('❌ Email limit check failed:', limitCheck.reason);
+      return { success: false, error: limitCheck.reason };
+    }
+
     const config = getEmailConfig();
     if (!config) {
       console.warn('⚠️ No email service configured');

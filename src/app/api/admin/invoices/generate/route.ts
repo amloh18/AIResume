@@ -62,10 +62,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Create new invoice
+    const amountVal = subscription.finalAmount || subscription.amount || 0;
+    const invoiceNumberVal = `INV-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+
     const invoice = new Invoice({
       userId,
       planId: subscription.planId,
-      amount: subscription.finalAmount || subscription.amount,
+      amount: amountVal,
+      subtotal: amountVal,
+      invoiceNumber: invoiceNumberVal,
       currency: subscription.currency || 'INR',
       status: 'paid',
       planName: subscription.planId?.name || 'Unknown Plan',

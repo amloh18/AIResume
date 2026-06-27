@@ -746,7 +746,7 @@ class SubscriptionService {
   getEffectivePlan(user: any): { currentPlanKey: string; subscription: any; isExpired: boolean } {
     if (!user || !user.subscription) {
       return {
-        currentPlanKey: 'free',
+        currentPlanKey: 'starter_monthly',
         subscription: null,
         isExpired: false
       };
@@ -756,7 +756,7 @@ class SubscriptionService {
     const now = new Date();
     let isExpired = false;
 
-    if (sub.status === 'active' && user.currentPlanKey !== 'free') {
+    if (sub.status === 'active' && user.currentPlanKey !== 'starter_monthly') {
       const expiresAt = sub.accessExpiresAt || sub.currentPeriodEnd || sub.endDate;
       if (expiresAt) {
         const expiryDate = new Date(expiresAt);
@@ -769,18 +769,18 @@ class SubscriptionService {
 
     if (isExpired || sub.status === 'expired') {
       return {
-        currentPlanKey: 'free',
+        currentPlanKey: 'starter_monthly',
         subscription: {
           ...sub,
           status: 'expired',
-          planKey: 'free'
+          planKey: 'starter_monthly'
         },
         isExpired: true
       };
     }
 
     return {
-      currentPlanKey: user.currentPlanKey || 'free',
+      currentPlanKey: user.currentPlanKey || 'starter_monthly',
       subscription: sub,
       isExpired: false
     };

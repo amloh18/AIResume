@@ -286,56 +286,7 @@ export async function GET(request: NextRequest) {
       updatedAt: journey.updatedAt
     }));
 
-    // Check for journeys missing CV or cover letter and trigger creation automatically
-    const journeysNeedingDocuments = journeys.filter(journey => {
-      const journeyId = journey._id.toString();
-      const hasNoCV = !journey.cvId;
-      const hasNoCoverLetter = !journey.coverLetterId;
-      const isProcessingOrInProgress = journey.status === 'processing_documents' || journey.status === 'in-progress';
 
-      return (hasNoCV || hasNoCoverLetter) && isProcessingOrInProgress;
-    });
-
-    // Trigger document creation for journeys missing documents (run in background)
-    if (journeysNeedingDocuments.length > 0) {
-      console.log(`🚀 Application Journey API - Found ${journeysNeedingDocuments.length} journeys needing documents, triggering creation...`);
-
-      journeysNeedingDocuments.forEach(journey => {
-        const journeyId = journey._id.toString();
-
-        // Refresh queue state so overlay messaging matches the recovery path
-        if (journey.status !== 'processing_documents' || !journey.generationState) {
-          getJourneyGenerationEntitlement(userId)
-            .then((generationEntitlement) => ApplicationJourney.findByIdAndUpdate(journeyId, {
-              status: 'processing_documents',
-              generationState: createQueuedGenerationState(generationEntitlement),
-              'metadata.updatedAt': new Date()
-            }))
-            .catch(err => {
-              console.error(`❌ Application Journey API - Failed to update journey status for ${journeyId}:`, err);
-            });
-        }
-
-        // Trigger document creation in background
-        setImmediate(async () => {
-          try {
-            console.log(`🚀 Application Journey API - Auto-triggering document creation for journey: ${journeyId}`);
-            const result = await createJourneyDocuments(journeyId, userId);
-
-            if (result.success) {
-              console.log(`✅ Application Journey API - Auto-created documents for journey ${journeyId}:`, {
-                cvId: result.cvId,
-                coverLetterId: result.coverLetterId
-              });
-            } else {
-              console.error(`❌ Application Journey API - Auto-document creation failed for journey ${journeyId}:`, result.error);
-            }
-          } catch (error) {
-            console.error(`❌ Application Journey API - Error in auto-document creation for journey ${journeyId}:`, error);
-          }
-        });
-      });
-    }
 
     // Calculate total count for pagination
     const totalCount = await ApplicationJourney.countDocuments(baseQuery);

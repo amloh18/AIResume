@@ -561,7 +561,7 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
         isPublicRoute,
         isAdminRoute
       });
-      const es = new EventSource('/api/stream-notifications');
+      const es = new EventSource('/api/stream-notifications', { withCredentials: true });
 
       es.onopen = () => {
         console.log('🟢 NotificationContext - SSE Connection established successfully!');

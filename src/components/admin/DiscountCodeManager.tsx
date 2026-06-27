@@ -307,29 +307,26 @@ const DiscountCodeManager: React.FC = () => {
       </div>
 
       {/* Summary Stats */}
-      <div className="grid grid-cols-1 tablet:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-          <div className="text-2xl font-bold text-gray-900 dark:text-white">{discountCodes.length}</div>
-          <div className="text-sm text-gray-600 dark:text-gray-400">Total Codes</div>
-        </div>
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-          <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-            {discountCodes.filter(c => isCodeValid(c)).length}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        {[
+          { label: 'Total Codes', val: discountCodes.length, icon: Calendar, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+          { label: 'Active Codes', val: discountCodes.filter(c => isCodeValid(c)).length, icon: CheckCircle, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+          { label: 'Total Uses', val: discountCodes.reduce((sum, code) => sum + code.usedCount, 0), icon: Users, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+          { label: 'Percentage Codes', val: discountCodes.filter(c => c.type === 'percentage').length, icon: Percent, color: 'text-purple-500', bg: 'bg-purple-500/10' },
+        ].map((m, i) => (
+          <div key={i} className="bg-[#111111] border border-white/10 p-6 rounded-[2rem] flex flex-col justify-between h-36 group hover:border-white/20 transition-all shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/[0.02] blur-3xl rounded-full" />
+            <div className="flex justify-between items-start relative z-10">
+              <div className={`p-2.5 rounded-xl ${m.bg} ${m.color}`}>
+                <m.icon className="w-5 h-5" />
+              </div>
+            </div>
+            <div className="relative z-10 space-y-1">
+              <p className="text-white/20 text-[10px] font-black uppercase tracking-widest">{m.label}</p>
+              <p className="text-2xl font-black text-white">{m.val}</p>
+            </div>
           </div>
-          <div className="text-sm text-gray-600 dark:text-gray-400">Active Codes</div>
-        </div>
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-          <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-            {discountCodes.reduce((sum, code) => sum + code.usedCount, 0)}
-          </div>
-          <div className="text-sm text-gray-600 dark:text-gray-400">Total Uses</div>
-        </div>
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-          <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
-            {discountCodes.filter(c => c.type === 'percentage').length}
-          </div>
-          <div className="text-sm text-gray-600 dark:text-gray-400">Percentage Codes</div>
-        </div>
+        ))}
       </div>
 
       {/* Discount Codes Grid */}

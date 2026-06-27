@@ -23,6 +23,7 @@ import AIAnalytics from '@/components/admin/AIAnalytics';
 import LogsViewer from '@/components/admin/LogsViewer';
 import ContentAnalytics from '@/components/admin/ContentAnalytics';
 import SponsorshipManager from '@/components/admin/SponsorshipManager';
+import UserActivityModal from '@/components/admin/UserActivityModal';
 
 export default function AdminDashboard() {
   const { data: session, status } = useSession();
@@ -54,6 +55,7 @@ export default function AdminDashboard() {
   const parts = rawPath.split('-');
   const activeTab = parts[0];
   const activeSubTab = parts.slice(1).join('-') || '';
+  const userIdParam = slug?.[1];
 
   // Update URL path when tab changes
   const handleTabChange = (tab: string, subTab?: string) => {
@@ -168,13 +170,24 @@ export default function AdminDashboard() {
               {/* Breadcrumbs / Path */}
               <div className="hidden sm:flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-white/30">
                 <Command className="w-4 h-4" />
-                <span>Admin</span>
+                <span className="cursor-pointer hover:text-white transition-colors" onClick={() => handleTabChange('overview')}>Admin</span>
                 <ChevronRight className="w-3 h-3" />
-                <span className="text-white/80">{activeTab}</span>
+                <span className="cursor-pointer hover:text-white transition-colors" onClick={() => handleTabChange(activeTab)}>{activeTab}</span>
                 {activeSubTab && (
                   <>
                     <ChevronRight className="w-3 h-3" />
-                    <span className="text-emerald-400">{activeSubTab}</span>
+                    <span 
+                      className={`cursor-pointer hover:text-white transition-colors ${!userIdParam ? 'text-emerald-400 font-black' : ''}`}
+                      onClick={() => handleTabChange(activeTab, activeSubTab)}
+                    >
+                      {activeSubTab}
+                    </span>
+                  </>
+                )}
+                {userIdParam && (
+                  <>
+                    <ChevronRight className="w-3 h-3" />
+                    <span className="text-emerald-400 font-black truncate max-w-[200px]">{userIdParam}</span>
                   </>
                 )}
               </div>
@@ -237,7 +250,17 @@ export default function AdminDashboard() {
                   {activeTab === 'analytics' && activeSubTab === 'logs' && <LogsViewer />}
                   {activeTab === 'analytics' && activeSubTab === 'system' && <SystemHealth />}
 
-                  {activeTab === 'management' && activeSubTab === 'users' && <UserManagement />}
+                  {activeTab === 'management' && activeSubTab === 'users' && (
+                    userIdParam ? (
+                      <UserActivityModal 
+                        userId={userIdParam} 
+                        isOpen={true} 
+                        onClose={() => router.push('/admin/dashboard/management-users')} 
+                      />
+                    ) : (
+                      <UserManagement />
+                    )
+                  )}
                   {activeTab === 'management' && activeSubTab === 'businesses' && <BusinessManagement />}
                   {activeTab === 'management' && activeSubTab === 'campaigns' && <EmailCampaignManager />}
                   {activeTab === 'management' && activeSubTab === 'notifications' && <UnifiedNotificationManager />}

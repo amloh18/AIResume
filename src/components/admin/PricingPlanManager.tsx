@@ -94,24 +94,26 @@ const PricingPlanManager: React.FC<PricingPlanManagerProps> = ({ activeSubTab, o
   if (!mounted) return null;
 
   return (
-    <motion.div variants={container} initial="hidden" animate="show" className="space-y-10">
+    <motion.div variants={container} initial="hidden" animate="show" className={currentTab === 'revenue' ? "space-y-0" : "space-y-10"}>
       {/* Command Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
-        <div>
-          <h1 className="text-4xl font-black text-white tracking-tighter uppercase">
-            Economic <span className="text-emerald-500">Matrix</span>
-          </h1>
-          <p className="text-white/40 text-xs font-bold uppercase tracking-[0.2em] mt-2">
-            Monetization Protocols • Multi-Regional Pricing
-          </p>
-        </div>
+      {currentTab !== 'revenue' && (
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
+          <div>
+            <h1 className="text-4xl font-black text-white tracking-tighter uppercase">
+              Economic <span className="text-emerald-500">Matrix</span>
+            </h1>
+            <p className="text-white/40 text-xs font-bold uppercase tracking-[0.2em] mt-2">
+              Monetization Protocols • Multi-Regional Pricing
+            </p>
+          </div>
 
-        <div className="flex items-center gap-4">
-          <button onClick={() => setIsAddCountryModalOpen(true)} className="bg-emerald-600 hover:bg-emerald-500 text-black font-black rounded-2xl px-8 py-4 shadow-[0_0_30px_rgba(16,185,129,0.2)] flex items-center gap-2 text-xs uppercase tracking-widest transition-all">
-            <Plus className="w-5 h-5" /> Establish Plan
-          </button>
+          <div className="flex items-center gap-4">
+            <button onClick={() => setIsAddCountryModalOpen(true)} className="bg-emerald-600 hover:bg-emerald-500 text-black font-black rounded-2xl px-8 py-4 shadow-[0_0_30px_rgba(16,185,129,0.2)] flex items-center gap-2 text-xs uppercase tracking-widest transition-all">
+              <Plus className="w-5 h-5" /> Establish Plan
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       <Tabs value={currentTab} onValueChange={onSubTabChange} className="w-full">
         <TabsContent value="plans" className="mt-10 space-y-10">
