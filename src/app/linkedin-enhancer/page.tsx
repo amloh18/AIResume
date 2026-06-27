@@ -89,6 +89,8 @@ function LinkedInGate() {
     );
 }
 
+import OptimizedDashboardLayout from '@/components/dashboard/OptimizedDashboardLayout';
+
 function LinkedInEnhancerPageContent() {
     const { membership, loading } = useMembership();
 
@@ -103,7 +105,11 @@ function LinkedInEnhancerPageContent() {
         return <LinkedInGate />;
     }
 
-    return <LinkedInEnhancerContainer />;
+    return (
+        <OptimizedDashboardLayout noPadding={true}>
+            <LinkedInEnhancerContainer />
+        </OptimizedDashboardLayout>
+    );
 }
 
 export default function LinkedInEnhancerPage() {

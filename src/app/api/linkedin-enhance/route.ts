@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { callGeminiWithAllKeysFallback } from '@/lib/utils/gemini-api-fallback';
 import LinkedInSnapshot from '@/models/LinkedInSnapshot';
+import fs from 'fs';
+import path from 'path';
 
 /**
  * LinkedIn Enhancer API Endpoint
@@ -47,9 +49,26 @@ export async function POST(request: NextRequest) {
         // Only return cached if tone matches
         if (existingSnapshot && existingSnapshot.tone === tone) {
           console.log('Returning cached LinkedIn enhancement for CV:', cvId);
+          const cachedContent = existingSnapshot.generatedContent || {};
+          
           return NextResponse.json({
             success: true,
-            ...existingSnapshot.generatedContent,
+            sections: {
+              hero: cachedContent.hero || {},
+              about: cachedContent.about || {},
+              experience: cachedContent.experience || [],
+              projects: cachedContent.projects || [],
+              skills_matrix: cachedContent.skills_matrix || {},
+            },
+            side_cards: cachedContent.side_cards || {
+              profile_strength_score: 50,
+              skill_gap_analysis: '',
+              recommended_actions: [],
+              affiliate_courses: [],
+              networking: [],
+              career_pathway: { next_step: '', missing_skill: '' }
+            },
+            career_guide: cachedContent.career_guide || null,
             fromCache: true
           });
         }
@@ -99,7 +118,7 @@ export async function POST(request: NextRequest) {
     let aiResponse: string | null = null;
     try {
       aiResponse = await callGeminiWithAllKeysFallback(prompt, {
-        model: 'gemini-2.5-flash-lite',
+        model: 'gemini-2.5-flash',
         temperature: regenerate ? 0.9 : 0.7, // Higher temperature for variations
         maxTokens: 4000,
       });
@@ -125,6 +144,16 @@ export async function POST(request: NextRequest) {
     if (fetchedCvId || cvId) {
       try {
         const saveId = fetchedCvId || cvId;
+        const dbContent = {
+          hero: enhancedData.sections?.hero,
+          about: enhancedData.sections?.about,
+          experience: enhancedData.sections?.experience,
+          projects: enhancedData.sections?.projects,
+          skills_matrix: enhancedData.sections?.skills_matrix,
+          career_guide: enhancedData.career_guide,
+          side_cards: enhancedData.side_cards
+        };
+
         await LinkedInSnapshot.findOneAndUpdate(
           { userId: session.user.id, sourceCvId: saveId },
           {
@@ -132,7 +161,7 @@ export async function POST(request: NextRequest) {
             sourceCvId: saveId,
             tone,
             targetIndustry,
-            generatedContent: enhancedData,
+            generatedContent: dbContent,
             updatedAt: new Date()
           },
           { upsert: true, new: true }
@@ -164,139 +193,45 @@ export async function POST(request: NextRequest) {
 function buildLinkedInEnhancerPrompt(cvData: any, tone: string, targetIndustry?: string, variationSeed?: number): string {
   const cvJson = JSON.stringify(cvData, null, 2);
   
-  // Add variation instruction if seed is provided
-  const variationInstruction = variationSeed 
-    ? `\n# VARIATION REQUEST (Seed: ${variationSeed})
+  // Read prompt template from public/images/lindkedin_prompt.md
+  let promptTemplate = '';
+  try {
+    const filePath = path.join(process.cwd(), 'public', 'images', 'lindkedin_prompt.md');
+    promptTemplate = fs.readFileSync(filePath, 'utf8');
+  } catch (err) {
+    console.error('Failed to read linkedin_prompt.md, falling back to basic prompt', err);
+    promptTemplate = `Transform CV data to LinkedIn Profile.\nTone: {{TONE_PREFERENCE}}\nCV: {{MASTER_CV_DATA}}`;
+  }
+
+  // Map tone from UI selector values to expected prompt keys
+  const mappedTone = tone.toLowerCase();
+
+  // Extract details for placeholder replacement
+  const candidateName = cvData.basics?.name || 
+    (cvData.personalInfo ? `${cvData.personalInfo.firstName || ''} ${cvData.personalInfo.lastName || ''}`.trim() : '') || 
+    'Candidate';
+  const targetRole = targetIndustry || cvData.basics?.label || cvData.personalInfo?.title || '';
+
+  // Replace placeholders in the prompt template
+  let finalPrompt = promptTemplate
+    .replace('{{MASTER_CV_DATA}}', cvJson)
+    .replace('{{TONE_PREFERENCE}}', mappedTone)
+    .replace('{{TARGET_ROLE}}', targetRole)
+    .replace('{{CANDIDATE_NAME}}', candidateName)
+    .replace('{{EXISTING_LINKEDIN_DATA}}', '');
+
+  // Add variation instruction if seed is provided for regeneration
+  if (variationSeed) {
+    finalPrompt += `\n\n# VARIATION REQUEST (Seed: ${variationSeed})
 This is a regeneration request. Create a FRESH and DIFFERENT version of the LinkedIn profile:
 - Use different wording and phrasing while maintaining the same professional quality
 - Explore alternative narrative strategies for the About section
 - Vary the bullet point structures in Experience
 - Consider different SEO keyword combinations
-- Ensure this feels like a distinct alternative, not a rehash`
-    : '';
-
-  return `# MISSION
-You are a Senior Executive Career Brand Strategist. Your goal is to transform a CV JSON into a high-conversion LinkedIn Profile. You are optimized to handle 100+ complex professional edge cases, ensuring no profile is generic or broken.
-${variationInstruction}
-# TONE INSTRUCTION
-Apply the "${tone}" tone to all generated content:
-- Professional: Authoritative, polished, formal business language
-- Visionary: Future-focused, inspiring, thought leadership style
-- Technical: Precise, data-driven, industry jargon appropriate
-- Relatable: Warm, approachable, storytelling focus
-
-${targetIndustry ? `# TARGET INDUSTRY: ${targetIndustry}\nOptimize keywords and skills for this specific industry.` : ''}
-
-# 100+ EDGE CASE LOGIC (Strict Guidelines)
-1. CAREER ANOMALIES: 
-   - Gaps >1 year? Reframe as "Strategic Sabbatical" or "Focused Upskilling."
-   - Job Hopping? Group roles by "Consulting/Project Basis" to show versatility.
-   - Long Tenure (>10 years)? Nested promotion view to show upward trajectory.
-2. INDUSTRY PIVOTS: 
-   - Identify "Transferable Bridge Skills" (e.g., Nurse to Tech = Process Optimization).
-   - Write an 'About' section that explains the 'Why' of the pivot.
-3. SENIORITY VS JUNIOR:
-   - Students: Focus on Projects & Potential. 
-   - Executives: Focus on P&L, Board Influence, and ROI.
-4. TECHNICAL & NICHE:
-   - Handle extreme jargon by providing a "Layman's Hook" while keeping "Technical Proof" in bullets.
-   - For Confidential Roles: Use "Abstracted Impact" (e.g., "Led classified logistics for [X] region").
-5. STRUCTURAL ISSUES:
-   - The Ghost Gap: 1+ years unexplained - suggest "Professional Development" placeholder
-   - The Over-Tenured: 15+ years at one company - break into promotional entries
-   - The Serial Jumper: 5 jobs in 2 years - pivot to "Consultant/Rapid Growth Specialist"
-   - The Overlap: 2 full-time roles simultaneously - identify Primary vs Side Venture
-6. CONTENT ISSUES:
-   - Zero Metrics: Add placeholder [X]% for user to fill
-   - Text Wall: Convert 10+ lines to 4 bullets max
-   - Over-Buzzwords: Replace "Synergy" and "Passionate" with action verbs
-   - Extreme Brevity: Expand based on industry standards
-7. SKILL ISSUES:
-   - Outdated Tech: Remove "Flash", "Word 2003" - suggest modern equivalents
-   - Soft Skill Overload: Extract hard skills from experience text
-   - Skill/Role Mismatch: Flag in improvement_notes
-
-# SYSTEM CONSTRAINTS
-- Headline: 220 chars max. Key value must be in first 60 chars (visible in search).
-- About: 2,600 chars. Use "Hook -> Story -> Proof -> CTA" structure. Hook must be in first 200 chars (mobile visible).
-- Experience Bullets: Start with strong Action Verbs. Use Unicode symbols for readability. Max 2000 chars per role.
-- Formatting: Must strip all HTML and provide clean text for copy-pasting.
-
-# OUTPUT JSON FORMAT
-Return ONLY valid JSON, no other text:
-{
-  "audit": { 
-    "detected_edge_cases": ["list of issues found and handled"], 
-    "strategy_applied": "overall strategy description" 
-  },
-  "sections": {
-    "hero": {
-      "enhanced": {
-        "headline": "max 220 chars, key value in first 60",
-        "seo_keywords_used": ["keyword1", "keyword2"],
-        "location_suggestion": "optimized location string",
-        "rationale": "why this headline works",
-        "confidence_score": 95
-      }
-    },
-    "about": {
-      "enhanced": {
-        "hook": "first 200 chars - attention grabbing",
-        "body": "main content with proof points",
-        "cta": "call to action",
-        "character_count": 0,
-        "narrative_strategy": "why this structure",
-        "confidence_score": 92
-      }
-    },
-    "experience": [
-      {
-        "id": "original role id or generated",
-        "enhanced_data": {
-          "title": "optimized title max 100 chars",
-          "description_bullets": ["bullet 1", "bullet 2"],
-          "tagged_skills": ["skill1", "skill2"],
-          "improvement_notes": "what was improved and why",
-          "confidence_score": 90
-        }
-      }
-    ],
-    "skills_matrix": {
-      "top_3_priority": ["most important skills for profile"],
-      "suggested_additions": ["skills to add"],
-      "industry_specific": ["industry skills"],
-      "interpersonal": ["soft skills"]
-    }
-  },
-  "side_cards": {
-    "profile_strength_score": 85,
-    "skill_gap_analysis": "what skills are missing",
-    "recommended_actions": ["action1", "action2"],
-    "affiliate_courses": [
-      {
-        "title": "course name",
-        "provider": "Coursera",
-        "affiliate_url": "#",
-        "logic": "why this course is recommended"
-      }
-    ],
-    "networking": [
-      { "group_name": "relevant group", "members": "50k+" }
-    ],
-    "career_pathway": {
-      "next_step": "suggested next role",
-      "missing_skill": "what's needed"
-    }
-  },
-  "career_guide": {
-    "salary_insight": "market salary context",
-    "next_steps": ["step1", "step2"],
-    "missing_credentials": ["cert1", "cert2"]
+- Ensure this feels like a distinct alternative, not a rehash`;
   }
-}
 
-# USER INPUT (CV JSON)
-${cvJson}`;
+  return finalPrompt;
 }
 
 /**

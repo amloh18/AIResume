@@ -84,11 +84,11 @@ export default function LinkedInExperienceCard({ data }: LinkedInExperienceCardP
                     </div>
                     <div className="space-y-6">
                         {validData.map((experience, index) => (
-                            <ExperienceEntry key={experience.id || index} data={experience} isEnhancedView={false} isLast={index === validData.length - 1} />
+                            <ExperienceEntry key={experience.id || index} data={experience} index={index} isEnhancedView={false} isLast={index === validData.length - 1} />
                         ))}
                     </div>
                 </div>
-
+ 
                 {/* Enhanced Column */}
                 <div className="flex-1 p-6 relative flex flex-col">
                     <div className="flex items-center justify-between mb-6">
@@ -109,7 +109,7 @@ export default function LinkedInExperienceCard({ data }: LinkedInExperienceCardP
                         </div>
                         {hasEnhancements && <CopyAllButton content={allEnhancedContent} label="Copy All" />}
                     </div>
-
+ 
                     {isLoading ? (
                         <div className="space-y-6 flex-1">
                             {[1, 2].map(i => (
@@ -135,7 +135,7 @@ export default function LinkedInExperienceCard({ data }: LinkedInExperienceCardP
                     ) : hasEnhancements ? (
                         <div className="space-y-6 flex-1">
                             {validData.map((experience, index) => (
-                                <ExperienceEntry key={experience.id || index} data={experience} isEnhancedView={true} isLast={index === validData.length - 1} />
+                                <ExperienceEntry key={experience.id || index} data={experience} index={index} isEnhancedView={true} isLast={index === validData.length - 1} />
                             ))}
                         </div>
                     ) : (
@@ -146,14 +146,15 @@ export default function LinkedInExperienceCard({ data }: LinkedInExperienceCardP
         </motion.div>
     );
 }
-
+ 
 interface ExperienceEntryProps {
     data: LinkedInExperienceEntry;
+    index: number;
     isEnhancedView: boolean;
     isLast: boolean;
 }
-
-function ExperienceEntry({ data, isEnhancedView, isLast }: ExperienceEntryProps) {
+ 
+function ExperienceEntry({ data, index, isEnhancedView, isLast }: ExperienceEntryProps) {
     const { dispatch } = useLinkedInEnhancer();
     const originalData = data.original_data || {};
     const enhancedData = data.enhanced_data || { title: '', description_bullets: [], tagged_skills: [], improvement_notes: '' };
@@ -212,10 +213,25 @@ function ExperienceEntry({ data, isEnhancedView, isLast }: ExperienceEntryProps)
                                 className="w-full text-sm font-semibold text-gray-900 p-1 border border-blue-300 rounded focus:ring-1 focus:ring-blue-500"
                             />
                         ) : (
-                            <div className="text-sm font-semibold text-gray-900">
+                            <div className="text-sm font-semibold text-gray-900 flex-1">
                                 {displayTitle}
                                 {isEnhancedView && data.status === 'ACCEPTED' && <Check className="inline-block w-3 h-3 text-blue-600 ml-1" />}
                             </div>
+                        )}
+                        {!isEnhancedView && (
+                            <button
+                                onClick={() => {
+                                    window.dispatchEvent(new CustomEvent('mori-cv-selection', {
+                                        detail: { 
+                                            path: `work[${index}].summary`, 
+                                            text: originalData.description 
+                                        }
+                                    }));
+                                }}
+                                className="text-[10px] text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 font-semibold flex items-center gap-0.5 bg-emerald-50 dark:bg-emerald-500/10 px-1.5 py-0.5 rounded transition-colors shrink-0"
+                            >
+                                <Sparkles className="w-2.5 h-2.5" /> Edit with Mori
+                            </button>
                         )}
                     </div>
 

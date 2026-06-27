@@ -15,10 +15,11 @@ import NotificationCenter from '@/components/notifications/NotificationCenter';
 
 interface OptimizedDashboardLayoutProps {
   children?: React.ReactNode;
+  noPadding?: boolean;
 }
 
 // Inner component that can access contexts
-const DashboardContent: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
+const DashboardContent: React.FC<{ children?: React.ReactNode; noPadding?: boolean }> = ({ children, noPadding }) => {
   const { user, loading: authLoading } = useUnifiedAuth();
   const { userData, loading: userLoading } = useUserData();
   const { isOpen: isMobileMenuOpen, toggleSidebar, isDesktopExpanded } = useMobileSidebar();
@@ -88,7 +89,7 @@ const DashboardContent: React.FC<{ children?: React.ReactNode }> = ({ children }
 
           {/* Page Content */}
           <main className="flex-1 overflow-auto relative">
-            <div className="px-6 py-5 h-full flex flex-col">
+            <div className={`${noPadding ? '' : 'px-6 py-5'} h-full flex flex-col`}>
               <CVCheckRedirect>
                 {children}
               </CVCheckRedirect>
@@ -100,12 +101,12 @@ const DashboardContent: React.FC<{ children?: React.ReactNode }> = ({ children }
   );
 };
 
-const OptimizedDashboardLayout: React.FC<OptimizedDashboardLayoutProps> = ({ children }) => {
+const OptimizedDashboardLayout: React.FC<OptimizedDashboardLayoutProps> = ({ children, noPadding }) => {
   return (
     <MobileSidebarProvider>
       <JobJourneyProvider>
         <DashboardDataProvider>
-          <DashboardContent>
+          <DashboardContent noPadding={noPadding}>
             {children}
           </DashboardContent>
         </DashboardDataProvider>
