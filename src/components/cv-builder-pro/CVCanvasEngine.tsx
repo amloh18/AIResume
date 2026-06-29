@@ -593,14 +593,16 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
       const MIN_PUSH_HEIGHT = 4;
 
       const rawBreakables = Array.from(
-        doc.querySelectorAll('.cv-page-breakable, .cv-keep-with-next')
+        doc.querySelectorAll('.cv-item.cv-page-breakable, .cv-keep-with-next')
       ) as HTMLElement[];
 
       const allBreakables = rawBreakables.filter((item) => {
         if (!item.isConnected) return false;
+        // Exclude cv-keep-with-next items (section titles) that are already nested
+        // inside a cv-page-breakable item container — they travel with their item
         if (
           item.classList.contains('cv-keep-with-next') &&
-          item.parentElement?.closest('.cv-page-breakable')
+          item.parentElement?.closest('.cv-item.cv-page-breakable')
         ) {
           return false;
         }
@@ -1150,7 +1152,39 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     setReplacingSnippet(null);
   };
 
-  const handleTogglePhoto = () => handleDataChange('basics.showAvatar', !cvData.basics?.showAvatar);
+  const photoInputRef = React.useRef<HTMLInputElement>(null);
+
+  // Listen for avatar upload requests dispatched from AvatarEditable overlay
+  React.useEffect(() => {
+    const handler = () => photoInputRef.current?.click();
+    window.addEventListener('cv-avatar-upload-request', handler);
+    return () => window.removeEventListener('cv-avatar-upload-request', handler);
+  }, []);
+
+  const handleTogglePhoto = () => {
+    if (!cvData.basics?.showAvatar) {
+      // Enable avatar and open file picker
+      handleDataChange('basics.showAvatar', true);
+      setTimeout(() => photoInputRef.current?.click(), 50);
+    } else {
+      // When avatar is already shown, open file picker to change it
+      photoInputRef.current?.click();
+    }
+  };
+
+  const handlePhotoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target?.result as string;
+      handleDataChange('basics.avatar', dataUrl);
+      handleDataChange('basics.showAvatar', true);
+    };
+    reader.readAsDataURL(file);
+    // Reset so the same file can be re-selected
+    e.target.value = '';
+  };
 
   const renderCanvasLayout = () => {
     const layoutType = activeTemplate.type;
@@ -1211,25 +1245,35 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
       }}
     >
       <div className={`h-full w-full flex font-sans overflow-hidden transition-colors duration-300 ${readOnly ? '' : bgApp}`}>
+        {/* Hidden file input for avatar upload */}
+        {!readOnly && (
+          <input
+            ref={photoInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handlePhotoFileChange}
+          />
+        )}
         {!readOnly && <FloatingToolbar targetNode={focusedNode} onSuggestPoint={handleSuggestPoint} />}
 
       {!readOnly && (
-        <div className={`w-16 border-r flex flex-col items-center py-4 gap-4 z-30 shrink-0 transition-colors ${bgNav}`}>
-          <div className={`p-2 rounded-xl mb-2 ${brandGreenBg} shadow-lg`} title="CVCIRCLE Builder"><FileText size={20} /></div>
-          <button onClick={() => setActiveSidebar(activeSidebar === 'design' ? null : 'design')} className={`p-3 rounded-2xl transition-all ${activeSidebar === 'design' ? 'bg-emerald-500/20 ' + brandGreen : (isDarkUI ? 'text-gray-400 hover:bg-[#222]' : 'text-gray-600 hover:bg-gray-100')}`} title="Design & Layout"><Palette size={20}/></button>
-          <button onClick={() => setIsTemplateModalOpen(true)} className={`p-3 rounded-2xl transition-all ${isDarkUI ? 'text-gray-400 hover:bg-[#222]' : 'text-gray-600 hover:bg-gray-100'}`} title="Templates"><LayoutTemplate size={20}/></button>
-          <button onClick={() => setActiveSidebar(activeSidebar === 'data' ? null : 'data')} className={`p-3 rounded-2xl transition-all ${activeSidebar === 'data' ? 'bg-emerald-500/20 ' + brandGreen : (isDarkUI ? 'text-gray-400 hover:bg-[#222]' : 'text-gray-600 hover:bg-gray-100')}`} title="Raw Data JSON"><FileJson size={20}/></button>
+        <div className={`w-14 border-r flex flex-col items-center py-5 gap-3 z-30 shrink-0 transition-colors ${bgNav}`}>
+          <div className={`w-8 h-8 flex items-center justify-center rounded-xl mb-3 ${brandGreenBg} shadow-lg`} title="CVCIRCLE Builder"><FileText size={16} /></div>
+          <button onClick={() => setActiveSidebar(activeSidebar === 'design' ? null : 'design')} className={`w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-200 hover:scale-110 active:scale-95 ${activeSidebar === 'design' ? 'text-emerald-500' : (isDarkUI ? 'text-gray-500 hover:text-gray-200' : 'text-gray-400 hover:text-gray-700')}`} title="Design & Layout"><Palette size={18}/></button>
+          <button onClick={() => setIsTemplateModalOpen(true)} className={`w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-200 hover:scale-110 active:scale-95 ${isDarkUI ? 'text-gray-500 hover:text-gray-200' : 'text-gray-400 hover:text-gray-700'}`} title="Templates"><LayoutTemplate size={18}/></button>
+          <button onClick={() => setActiveSidebar(activeSidebar === 'data' ? null : 'data')} className={`w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-200 hover:scale-110 active:scale-95 ${activeSidebar === 'data' ? 'text-emerald-500' : (isDarkUI ? 'text-gray-500 hover:text-gray-200' : 'text-gray-400 hover:text-gray-700')}`} title="Raw Data JSON"><FileJson size={18}/></button>
           <div className="flex-1"></div>
           {!isGuestMode && (
-            <button 
+            <button
               onClick={() => {
                 const event = new CustomEvent('open-download-modal');
                 window.dispatchEvent(event);
-              }} 
-              className={`p-3 rounded-2xl transition-all shadow-xl ${brandGreenBg} hover:scale-110`} 
+              }}
+              className={`w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-200 hover:scale-110 active:scale-95 shadow-lg ${brandGreenBg}`}
               title="Download PDF"
             >
-              <Download size={20}/>
+              <Download size={18}/>
             </button>
           )}
         </div>
@@ -1836,6 +1880,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
           .cv-document-wrapper { transform: none !important; padding: 0 !important; box-shadow: none !important; margin: 0 !important; overflow: visible !important; }
           .cv-document { width: 100% !important; min-height: auto !important; box-shadow: none !important; margin: 0 !important; padding: 0 !important; overflow: visible !important; display: block !important; height: auto !important; mask-image: none !important; -webkit-mask-image: none !important; }
           .cv-page-breakable { margin-top: 0 !important; }
+          .cv-section-wrapper { break-inside: avoid !important; page-break-inside: avoid !important; display: block !important; width: 100% !important; }
           .cv-section { break-inside: auto !important; page-break-inside: auto !important; display: block !important; width: 100% !important; }
           .cv-item { break-inside: avoid !important; page-break-inside: avoid !important; display: block !important; width: 100% !important; }
           .cv-keep-with-next { break-inside: avoid !important; page-break-inside: avoid !important; break-after: avoid !important; display: block !important; width: 100% !important; }
