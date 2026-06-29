@@ -337,13 +337,12 @@
   transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.step-one-hero {
+.step-one-shell {
   position: relative;
   isolation: isolate;
-  overflow: hidden;
 }
 
-.step-one-hero::before {
+.step-one-shell::before {
   content: '';
   position: absolute;
   z-index: -1;
@@ -353,6 +352,12 @@
     radial-gradient(circle at 18% 10%, color-mix(in srgb, var(--accent-primary) 8%, transparent), transparent 32%),
     radial-gradient(circle at 82% 72%, color-mix(in srgb, var(--accent-primary) 5%, transparent), transparent 28%);
   opacity: 0.85;
+}
+
+.step-one-hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
 }
 
 .step-one-stat,
@@ -429,7 +434,7 @@
 }
 
 .step-one-documents {
-  border-top: 1px solid var(--border-primary);
+  border: 1px solid var(--border-primary);
 }
 
 @media (max-width: 639px) {

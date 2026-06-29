@@ -793,10 +793,12 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
           doc.style.height = newHeight;
         }
 
-        // Reset the flag after style changes have settled in the DOM (150ms)
-        setTimeout(() => {
-          isInternalLayoutChange.current = false;
-        }, 150);
+        // Reset the flag after style changes have settled in the DOM (double frame)
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            isInternalLayoutChange.current = false;
+          });
+        });
       });
     };
 
