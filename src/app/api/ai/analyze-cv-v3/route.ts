@@ -70,23 +70,59 @@ export async function POST(request: NextRequest) {
 
         let content = aiResponse.content.trim();
 
-        // Robust extraction of JSON content
+        // Strip markdown code fences
         const codeBlockRegex = /```(?:json)?\s*([\s\S]*?)```/;
         const codeBlockMatch = content.match(codeBlockRegex);
         if (codeBlockMatch) {
             content = codeBlockMatch[1].trim();
         }
 
-        let jsonStart = content.indexOf('{');
-        let jsonEnd = content.lastIndexOf('}');
+        // Extract outermost JSON object
+        const jsonStart = content.indexOf('{');
+        const jsonEnd = content.lastIndexOf('}');
         if (jsonStart === -1 || jsonEnd === -1 || jsonEnd < jsonStart) {
-            throw new Error('No valid JSON object found in response');
+            throw new Error('No valid JSON object found in AI response');
         }
 
         let jsonString = content.substring(jsonStart, jsonEnd + 1);
-        jsonString = jsonString.replace(/,(\s*[}\]])/g, '$1'); // trailing comma fix
 
-        const scoreReport = JSON.parse(jsonString);
+        // ── Comprehensive JSON repair ────────────────────────────────────────
+        // 1. Remove ALL trailing commas before } or ] (handles arrays AND objects)
+        jsonString = jsonString.replace(/,(\s*[}\]])/g, '$1');
+
+        // 2. Attempt to parse; if it fails, try to auto-close truncated JSON
+        let scoreReport: any;
+        try {
+            scoreReport = JSON.parse(jsonString);
+        } catch (firstError: any) {
+            // Auto-close attempt: count open braces/brackets and close them
+            let openBraces = 0;
+            let openBrackets = 0;
+            let inString = false;
+            let escape = false;
+            for (const ch of jsonString) {
+                if (escape) { escape = false; continue; }
+                if (ch === '\\' && inString) { escape = true; continue; }
+                if (ch === '"') { inString = !inString; continue; }
+                if (inString) continue;
+                if (ch === '{') openBraces++;
+                else if (ch === '}') openBraces--;
+                else if (ch === '[') openBrackets++;
+                else if (ch === ']') openBrackets--;
+            }
+            // Remove trailing comma if present before closing
+            const trimmed = jsonString.trimEnd();
+            const lastChar = trimmed[trimmed.length - 1];
+            let patched = lastChar === ',' ? trimmed.slice(0, -1) : trimmed;
+            // Close open structures
+            for (let i = 0; i < openBrackets; i++) patched += ']';
+            for (let i = 0; i < openBraces; i++) patched += '}';
+            try {
+                scoreReport = JSON.parse(patched);
+            } catch (secondError: any) {
+                throw new Error(`Failed to parse AI JSON response: ${firstError.message}`);
+            }
+        }
 
         return NextResponse.json({
             success: true,

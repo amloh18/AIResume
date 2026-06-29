@@ -247,6 +247,8 @@ const nextConfig: NextConfig = {
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
     // Minimum quality for optimization
     minimumCacheTTL: 60,
+    // Configure allowed image qualities to resolve next-image-unconfigured-qualities warnings
+    qualities: [75, 80, 85, 100],
   },
   // Performance optimizations
   experimental: {
