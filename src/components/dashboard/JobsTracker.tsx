@@ -1550,9 +1550,9 @@ const JobsTracker: React.FC = () => {
 
           {/* View Content - Kanban or List */}
           <div className="flex-1 min-h-0 w-full relative overflow-hidden">
-            <div className="absolute inset-x-0 top-0 bottom-0 mt-4 px-0 sm:px-4 md:px-6 overflow-x-auto overflow-y-hidden">
+            <div className="absolute inset-x-0 top-0 bottom-0 mt-4 px-0 sm:px-4 md:px-6 overflow-x-auto overflow-y-hidden scrollbar-hide">
               {viewMode === 'kanban' ? (
-                <div className="h-full w-full overflow-x-auto overflow-y-hidden rounded-lg">
+                <div className="h-full w-full overflow-x-auto overflow-y-hidden rounded-lg scrollbar-hide">
                   <JobsKanbanView
                     jobs={filteredJobsForView}
                     jobsByStatus={jobsByStatus}

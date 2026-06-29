@@ -16,7 +16,6 @@ import { setupEventErrorHandling } from '@/lib/utils/errorHandler';
 import { Toaster } from '@/components/ui/toaster';
 import { Session } from 'next-auth';
 import ClientErrorBoundary from './ClientErrorBoundary';
-import { FeedbackPrompt } from '@/components/feedback/FeedbackPrompt';
 import FeaturePromotionProvider from '@/components/promotions/FeaturePromotionProvider';
 import AuthModal from '@/components/auth/AuthModal';
 
@@ -36,7 +35,6 @@ function ConditionalProviders({ children }: ClientProvidersProps) {
               <CookieConsent />
               <SessionCleanup />
               <Toaster />
-              <FeedbackPrompt />
               <AuthModal />
               {children}
             </FeaturePromotionProvider>

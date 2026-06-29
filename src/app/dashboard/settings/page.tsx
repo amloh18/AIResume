@@ -2062,10 +2062,7 @@ const MembershipBilling = ({ user }: { user: User }) => {
                   {(() => {
                     const isFree = currentPlanKey === 'free';
                     const isStarter = currentPlanKey === 'starter_monthly';
-                    const displayAmount = isStarter ? 0 : (subscription?.amount ?? 0);
-                    const displayCurrency = subscription?.currency || 'USD';
-                    const displayInterval = subscription?.billingCycle || 'mo';
-
+                    
                     if (isFree) {
                       return (
                         <div className="flex justify-between items-center text-sm">
@@ -2077,19 +2074,61 @@ const MembershipBilling = ({ user }: { user: User }) => {
                       );
                     }
 
+                    // Original/Gross price
+                    let originalAmount = subscription?.amount;
+                    if (!originalAmount || originalAmount === 0) {
+                      const cycle = subscription?.billingCycle || (currentPlanKey.includes('yearly') ? 'yearly' : currentPlanKey.includes('quarterly') ? 'quarterly' : 'monthly');
+                      if (cycle === 'yearly') originalAmount = currentPlanDetails?.price_yearly;
+                      else if (cycle === 'quarterly') originalAmount = currentPlanDetails?.price_quarterly;
+                      else originalAmount = currentPlanDetails?.price_monthly;
+                    }
+                    if (!originalAmount) {
+                      originalAmount = currentPlanDetails?.price || 0;
+                    }
+
+                    const displayCurrency = subscription?.currency || 'USD';
+                    const displayIntervalRaw = subscription?.billingCycle || (currentPlanKey.includes('yearly') ? 'yearly' : currentPlanKey.includes('quarterly') ? 'quarterly' : 'monthly');
+                    const displayInterval = displayIntervalRaw === 'monthly' ? 'mo' : displayIntervalRaw === 'quarterly' ? '3months' : displayIntervalRaw === 'yearly' ? 'yr' : displayIntervalRaw;
+
+                    // Discount/Effective price
+                    const discountAmount = subscription?.discountAmount || 0;
+                    const finalAmount = subscription?.finalAmount !== undefined ? subscription.finalAmount : originalAmount;
+                    const hasDiscount = discountAmount > 0 && finalAmount < originalAmount;
+
                     return (
-                      <div className="space-y-1">
+                      <div className="space-y-2">
                         <div className="flex justify-between items-center text-sm">
                           <span className="text-gray-600 dark:text-gray-400 flex items-center gap-1.5">
                             <DollarSign className="w-4 h-4" /> Price
                           </span>
                           <div>
-                            <span className="font-semibold text-gray-900 dark:text-white">
-                              {formatCurrency(displayAmount, displayCurrency)}
-                            </span>
-                            <span className="text-gray-500 dark:text-gray-400">/{displayInterval}</span>
+                            {hasDiscount ? (
+                              <div className="flex items-center gap-2">
+                                <span className="line-through text-xs text-gray-400">
+                                  {formatCurrency(originalAmount, displayCurrency)}
+                                </span>
+                                <span className="font-semibold text-green-600 dark:text-green-400">
+                                  {formatCurrency(finalAmount, displayCurrency)}
+                                </span>
+                                <span className="text-gray-500 dark:text-gray-400">/{displayInterval}</span>
+                              </div>
+                            ) : (
+                              <div>
+                                <span className="font-semibold text-gray-900 dark:text-white">
+                                  {formatCurrency(originalAmount, displayCurrency)}
+                                </span>
+                                <span className="text-gray-500 dark:text-gray-400">/{displayInterval}</span>
+                              </div>
+                            )}
                           </div>
                         </div>
+                        
+                        {hasDiscount && subscription?.endDate && (
+                          <div className="text-[11px] text-right font-medium text-green-600 dark:text-green-400">
+                            Discount active until {formatDate(subscription.endDate)}
+                          </div>
+                        )}
+
                         {isStarter && (
                           <p className="text-[10px] text-right font-medium text-indigo-600 dark:text-indigo-400">
                             Free Subscription ($0 invoices will be emailed from Polar)
@@ -2099,11 +2138,7 @@ const MembershipBilling = ({ user }: { user: User }) => {
                     );
                   })()}
 
-                  <div className="pt-2">
-                    <a href="#payment-history" className="text-sm text-lime-600 dark:text-lime-400 hover:text-lime-700 dark:hover:text-lime-300 font-medium flex items-center gap-1 transition-colors">
-                      View Billing History <ArrowRight className="w-3.5 h-3.5" />
-                    </a>
-                  </div>
+
                 </div>
               </div>
             )}
@@ -2160,6 +2195,30 @@ const MembershipBilling = ({ user }: { user: User }) => {
                 </button>
               </div>
             )}
+          </div>
+        </div>
+
+        {/* Support & Assistant Section */}
+        <div className="space-y-6 pt-6 border-t border-gray-200 dark:border-gray-800">
+          <div className="glass-widget-premium p-6 rounded-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                <span className="w-2 h-2 bg-green-500 rounded-full animate-ping"></span>
+                Need Help with Billing or Account?
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-300">
+                Ask Mori Assistant, our helpful virtual guide. Understand plans, ask about invoices, resolve account issues, or get in touch with our support teams.
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                localStorage.setItem('mori_assistant_active', 'true');
+                window.dispatchEvent(new CustomEvent('mori-assistant-toggle', { detail: true }));
+              }}
+              className="py-2.5 px-6 bg-lime-500 hover:bg-lime-600 text-white font-semibold rounded-lg text-sm transition-colors text-center shadow-lg shadow-lime-500/20 whitespace-nowrap"
+            >
+              Chat with Mori Assistant
+            </button>
           </div>
         </div>
 

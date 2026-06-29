@@ -121,6 +121,7 @@ export async function POST(request: NextRequest) {
         model: 'gemini-2.5-flash',
         temperature: regenerate ? 0.9 : 0.7, // Higher temperature for variations
         maxTokens: 4000,
+        responseMimeType: 'application/json',
       });
     } catch (error) {
       console.error('Gemini API error:', error);
@@ -231,6 +232,12 @@ This is a regeneration request. Create a FRESH and DIFFERENT version of the Link
 - Ensure this feels like a distinct alternative, not a rehash`;
   }
 
+  // Append strict output instruction to prevent model confusion and truncation
+  finalPrompt += `\n\n# CRITICAL OUTPUT INSTRUCTION
+You MUST generate and return the complete JSON object matching the "FULL RETURN SHAPE" defined at the very bottom of the instructions.
+Do NOT stop generating after the headline. You must generate all sections: "tone_applied", "target_role", "headline", "about", "experience", "skills", "education", "featured", "profile_score", and "changes_log".
+Ensure your response is valid JSON and contains all fields.`;
+
   return finalPrompt;
 }
 
@@ -251,7 +258,89 @@ function parseAIResponse(response: string): any {
     // Try to parse JSON
     const parsed = JSON.parse(cleaned.trim());
 
-    // Validate required fields exist
+    // Check if the response follows the new schema from public/images/lindkedin_prompt.md
+    const isNewSchema = parsed.headline && parsed.about && !parsed.sections;
+
+    if (isNewSchema) {
+      // Map experience bullets
+      const mappedExperience = (parsed.experience || []).map((exp: any) => {
+        const bullets = typeof exp.description === 'string'
+          ? exp.description
+              .split('\n')
+              .map((b: string) => b.trim())
+              .filter((b: string) => b.length > 0)
+          : Array.isArray(exp.description) ? exp.description : [];
+
+        return {
+          company: exp.company || '',
+          title: exp.title || '',
+          enhanced_data: {
+            title: exp.title || '',
+            description_bullets: bullets,
+            tagged_skills: exp.skills_tags || [],
+            improvement_notes: exp.why_this_change || '',
+            confidence_score: 90
+          }
+        };
+      });
+
+      // Map recommendations to actions list
+      const actions = (parsed.featured?.recommendations || []).map((r: any) => r.title + ': ' + r.why);
+
+      return {
+        audit: { 
+          detected_edge_cases: parsed.changes_log?.unresolvable_gaps || [], 
+          strategy_applied: parsed.changes_log?.why_this_change || 'Applied brand strategy'
+        },
+        sections: {
+          hero: {
+            enhanced: {
+              headline: parsed.headline?.text || '',
+              seo_keywords_used: parsed.headline?.keywords_embedded || [],
+              location_suggestion: parsed.headline?.mobile_preview || '',
+              rationale: parsed.headline?.why_this_change || '',
+              confidence_score: 95
+            }
+          },
+          about: {
+            enhanced: {
+              hook: parsed.about?.hook || '',
+              body: (parsed.about?.story || '') + '\n\n' + (parsed.about?.proof || '') + '\n\n' + (parsed.about?.cta || ''),
+              cta: parsed.about?.cta || '',
+              character_count: parsed.about?.char_count || 0,
+              narrative_strategy: parsed.about?.why_this_change || '',
+              confidence_score: 92
+            }
+          },
+          experience: mappedExperience,
+          projects: [],
+          skills_matrix: {
+            top_3_priority: parsed.skills?.top_3 || [],
+            suggested_additions: parsed.skills?.added || [],
+            industry_specific: parsed.skills?.full_list || [],
+            interpersonal: []
+          },
+        },
+        side_cards: {
+          profile_strength_score: parsed.profile_score?.after?.total || 75,
+          skill_gap_analysis: parsed.skills?.why_this_change || '',
+          recommended_actions: actions,
+          affiliate_courses: [],
+          networking: [],
+          career_pathway: {
+            next_step: parsed.target_role || '',
+            missing_skill: (parsed.skills?.added || [])[0] || ''
+          },
+        },
+        career_guide: {
+          salary_insight: parsed.changes_log?.why_this_change || '',
+          next_steps: parsed.changes_log?.unresolvable_gaps || [],
+          missing_credentials: parsed.skills?.added || []
+        },
+      };
+    }
+
+    // Default/Fallback to old schema matching
     return {
       audit: parsed.audit || { detected_edge_cases: [], strategy_applied: '' },
       sections: {
@@ -273,7 +362,7 @@ function parseAIResponse(response: string): any {
     };
   } catch (error) {
     console.error('Failed to parse AI response:', error);
-    console.error('Raw response:', response.substring(0, 500));
+    console.error('Raw response:', response);
 
     // Return fallback structure
     return {

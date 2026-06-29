@@ -252,7 +252,7 @@ export async function PUT(request: NextRequest) {
     await getConnection();
 
     const body = await request.json();
-    const { id, title, content, header, body: bodyContent, footer, status, targetCompany, targetPosition, keywords } = body;
+    const { id, title, content, header, body: bodyContent, footer, status, targetCompany, targetPosition, keywords, cvId, jobId, journeyId } = body;
 
     if (!id) {
       return NextResponse.json(
@@ -267,6 +267,9 @@ export async function PUT(request: NextRequest) {
     if (bodyContent !== undefined) updateData.body = bodyContent;
     if (footer !== undefined) updateData.footer = footer;
     if (status) updateData.status = status;
+    if (cvId !== undefined) updateData.cvId = cvId;
+    if (jobId !== undefined) updateData.jobId = jobId;
+    if (journeyId !== undefined) updateData.journeyId = journeyId;
     if (targetCompany !== undefined) updateData['metadata.targetCompany'] = targetCompany;
     if (targetPosition !== undefined) updateData['metadata.targetPosition'] = targetPosition;
     if (keywords) updateData['metadata.keywords'] = keywords;

@@ -4,7 +4,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import Logo from '@/components/ui/Logo';
-import { Upload, FileText, Files, Gauge, Edit3, CheckCircle2, Loader2, Briefcase, Sparkles, AlertTriangle, FolderOpen, Edit2, Copy, Plus, Grid, List, Trash2, SlidersHorizontal, ChevronDown, ChevronRight } from 'lucide-react';
+import { Upload, FileText, Files, Gauge, Edit3, CheckCircle2, Loader2, Briefcase, Sparkles, AlertTriangle, FolderOpen, Edit2, Copy, Plus, Grid, List, LayoutGrid, Trash2, SlidersHorizontal, ChevronDown, ChevronRight, CornerDownRight } from 'lucide-react';
+import { CVJourneyLookupService } from '@/lib/services/cvJourneyLookupService';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
 import { UnifiedCVDataStructure, DEFAULT_UNIFIED_CV_DATA } from '@/types/unified-cv-schema';
 import { sanitizeErrorMessage } from '@/lib/api/error-handler';
@@ -360,7 +361,19 @@ export default function Step1Parser({
   const [linkedInImportError, setLinkedInImportError] = useState('');
   const [forcedCvType, setForcedCvType] = useState<'master' | 'journey' | 'standalone' | null>(null);
   const [isCreatingBlank, setIsCreatingBlank] = useState(false);
-  const [viewLayout, setViewLayout] = useState<'grid' | 'list'>('grid');
+  const [viewLayout, setViewLayout] = useState<'grid' | 'list' | 'compact'>('grid');
+  const [cvJourneysMap, setCvJourneysMap] = useState<Map<string, any>>(new Map());
+
+  useEffect(() => {
+    const saved = localStorage.getItem('editor_view_layout');
+    if (saved === 'grid' || saved === 'list' || saved === 'compact') {
+      setViewLayout(saved);
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('editor_view_layout', viewLayout);
+  }, [viewLayout]);
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
 
   const firstName = user?.name ? user.name.split(' ')[0] : 'Guest';
@@ -522,6 +535,12 @@ export default function Step1Parser({
         cachedExistingCVs = cvs;
         lastFetchTime = Date.now();
         setExistingCVs(cvs);
+        const cvIds = cvs.map((c: any) => String(c.id || c._id));
+        if (user?.id) {
+          CVJourneyLookupService.findJourneysByCVIds(cvIds, user.id).then(map => {
+            setCvJourneysMap(map);
+          });
+        }
       }
     } catch (error) {
       console.error('Failed to fetch existing CVs:', error);
@@ -1245,8 +1264,8 @@ export default function Step1Parser({
               >
                 <div className="step-one-documents-header flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-5 pb-5 border-b border-[color:var(--border-primary)] pt-5">
                   <div>
-                    <h3 className="text-xl sm:text-2xl font-black text-[color:var(--text-primary)] tracking-tight text-left">Your Documents</h3>
-                    <p className="mt-1 text-xs sm:text-sm text-[color:var(--text-secondary)]">All your resumes and cover letters in one place.</p>
+                    <h3 className="mt-1 text-xs sm:text-sm text-[color:var(--text-secondary)]">Your Documents</h3>
+                    <p className="text-xl sm:text-2xl font-black text-[color:var(--text-primary)] tracking-tight text-left">All your resumes and cover letters in one place.</p>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2 sm:gap-3">
@@ -1269,10 +1288,10 @@ export default function Step1Parser({
                     </label>
 
                     {/* Grid / List Layout Switcher */}
-                    <div className="flex items-center bg-gray-100 dark:bg-[#141810] p-1 rounded-full border border-gray-200 dark:border-white/5 w-fit">
+                    <div className="flex items-center bg-gray-100 dark:bg-[#141810] p-1 rounded-full border border-gray-200 dark:border-white/5 w-fit h-10">
                       <button
                         onClick={() => setViewLayout('grid')}
-                        className={`flex items-center gap-1 px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
+                        className={`flex items-center gap-1 px-4 h-full rounded-full text-xs font-bold transition-all ${
                           viewLayout === 'grid'
                             ? 'bg-lime-500 text-black dark:bg-[#0d100a] dark:text-[#80FF00] dark:border dark:border-[#80FF00]/25 shadow-md'
                             : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
@@ -1282,8 +1301,19 @@ export default function Step1Parser({
                         Grid
                       </button>
                       <button
+                        onClick={() => setViewLayout('compact')}
+                        className={`flex items-center gap-1 px-4 h-full rounded-full text-xs font-bold transition-all ${
+                          viewLayout === 'compact'
+                            ? 'bg-lime-500 text-black dark:bg-[#0d100a] dark:text-[#80FF00] dark:border dark:border-[#80FF00]/25 shadow-md'
+                            : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
+                        }`}
+                      >
+                        <LayoutGrid className="w-3.5 h-3.5" />
+                        Compact
+                      </button>
+                      <button
                         onClick={() => setViewLayout('list')}
-                        className={`flex items-center gap-1 px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
+                        className={`flex items-center gap-1 px-4 h-full rounded-full text-xs font-bold transition-all ${
                           viewLayout === 'list'
                             ? 'bg-lime-500 text-black dark:bg-[#0d100a] dark:text-[#80FF00] dark:border dark:border-[#80FF00]/25 shadow-md'
                             : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
@@ -1297,7 +1327,7 @@ export default function Step1Parser({
                 </div>
 
               {isLoadingCVs ? (
-                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5">
+                <div className={viewLayout === 'compact' ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2" : "grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5"}>
                   {[1, 2, 3, 4, 5].map(i => (
                     <div key={i} className="relative">
                       {/* Image block matches aspect ratio of real CVPairThumbnail */}
@@ -1312,8 +1342,8 @@ export default function Step1Parser({
                   ))}
                 </div>
               ) : (filteredCVs.length > 0 || draftCV || orphanedCoverLetters.length > 0) ? (
-                viewLayout === 'grid' ? (
-                  <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5 px-1">
+                viewLayout !== 'list' ? (
+                  <div className={viewLayout === 'compact' ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 px-1" : "grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5 px-1"}>
                   
                   {/* Render Draft CV if it exists */}
                   {draftCV && filterType === 'all' && (
@@ -1460,294 +1490,253 @@ export default function Step1Parser({
                    ))}
                 </div>
                 ) : (
-                  <div className="flex flex-col gap-3 px-1">
-                    {draftCV && filterType === 'all' && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        onClick={() => {
-                          if (draftCV) {
-                            if (draftCV.cvData) {
-                              dispatch({ type: 'SET_CV_DATA', payload: draftCV.cvData });
-                            }
-                            if (draftCV.template) {
-                              dispatch({ type: 'SET_TEMPLATE', payload: draftCV.template });
-                              dispatch({ type: 'SET_SELECTED_TEMPLATE', payload: draftCV.template });
-                            }
-                            if (draftCV.cvTitle) {
-                              dispatch({ type: 'SET_CV_TITLE', payload: draftCV.cvTitle });
-                            }
-                            if (draftCV.targetRole && draftCV.seniorityLevel) {
-                              dispatch({ type: 'SET_ROLE_CONTEXT', payload: { targetRole: draftCV.targetRole, seniorityLevel: draftCV.seniorityLevel } });
-                            }
-                            
-                            if (!draftCV.template || draftCV.currentStep === 2) {
-                              goToStep(1);
-                              setTemplateOverlayOpen(true);
-                            } else {
-                              goToStep(Math.max(3, draftCV.currentStep || 3) as 1 | 2 | 3 | 4 | 5);
-                            }
-                          }
-                        }}
-                        className="group cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-white dark:bg-[#141810] border border-gray-250 dark:border-white/5 rounded-2xl hover:border-orange-500/30 hover:shadow-lg transition-all duration-300 w-full"
-                      >
-                        <div className="flex items-center gap-4 flex-grow min-w-0">
-                          {/* Mini Thumbnail */}
-                          <div className="w-10 h-14 bg-orange-55/40 dark:bg-orange-950/20 border border-dashed border-orange-350 dark:border-orange-500/30 rounded-none flex items-center justify-center flex-shrink-0 relative overflow-hidden">
-                            <FileText className="w-5 h-5 text-orange-500" />
-                          </div>
-                          <div className="min-w-0">
-                            <h4 className="text-base font-black text-gray-900 dark:text-white truncate group-hover:text-orange-650 dark:group-hover:text-orange-550">
-                              {draftCV.cvTitle || 'Unfinished Resume'}
-                            </h4>
-                            <div className="flex items-center gap-2 mt-1">
-                              <span className="px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-orange-500 text-white">
-                                Unsaved Draft
-                              </span>
-                              <span className="text-[10px] text-gray-500 dark:text-gray-400 font-bold">
+                  <div className="bg-white dark:bg-[#0d100a] rounded-2xl border border-gray-250 dark:border-white/5 overflow-hidden shadow-sm">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="border-b border-gray-250 dark:border-white/5 bg-gray-50 dark:bg-black/25">
+                            <th className="px-6 py-4 text-xs font-black uppercase text-gray-400 tracking-wider">Type</th>
+                            <th className="px-6 py-4 text-xs font-black uppercase text-gray-400 tracking-wider">Document Name</th>
+                            <th className="px-6 py-4 text-xs font-black uppercase text-gray-400 tracking-wider">Company</th>
+                            <th className="px-6 py-4 text-xs font-black uppercase text-gray-400 tracking-wider">Profile</th>
+                            <th className="px-6 py-4 text-xs font-black uppercase text-gray-400 tracking-wider">Last Modified</th>
+                            <th className="px-6 py-4 text-xs font-black uppercase text-gray-400 tracking-wider">Score</th>
+                            <th className="px-6 py-4 text-xs font-black uppercase text-gray-400 tracking-wider text-right">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {draftCV && filterType === 'all' && (
+                            <tr className="border-b border-gray-200 dark:border-white/5 bg-orange-50/20 dark:bg-orange-950/10">
+                              <td className="px-6 py-4">
+                                <span className="px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-orange-500 text-white">
+                                  Unsaved Draft
+                                </span>
+                              </td>
+                              <td className="px-6 py-4">
+                                <span 
+                                  onClick={() => {
+                                    if (draftCV) {
+                                      if (draftCV.cvData) dispatch({ type: 'SET_CV_DATA', payload: draftCV.cvData });
+                                      if (draftCV.template) {
+                                        dispatch({ type: 'SET_TEMPLATE', payload: draftCV.template });
+                                        dispatch({ type: 'SET_SELECTED_TEMPLATE', payload: draftCV.template });
+                                      }
+                                      if (draftCV.cvTitle) dispatch({ type: 'SET_CV_TITLE', payload: draftCV.cvTitle });
+                                      if (draftCV.targetRole && draftCV.seniorityLevel) {
+                                        dispatch({ type: 'SET_ROLE_CONTEXT', payload: { targetRole: draftCV.targetRole, seniorityLevel: draftCV.seniorityLevel } });
+                                      }
+                                      if (!draftCV.template || draftCV.currentStep === 2) {
+                                        goToStep(1);
+                                        setTemplateOverlayOpen(true);
+                                      } else {
+                                        goToStep(Math.max(3, draftCV.currentStep || 3) as 1 | 2 | 3 | 4 | 5);
+                                      }
+                                    }
+                                  }}
+                                  className="font-black text-gray-900 dark:text-white hover:text-orange-650 dark:hover:text-orange-400 cursor-pointer text-sm"
+                                >
+                                  {draftCV.cvTitle || 'Unfinished Resume'}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 text-xs text-gray-500 dark:text-gray-400 font-semibold">
+                                {draftCV.targetCompany || '—'}
+                              </td>
+                              <td className="px-6 py-4 text-xs text-gray-500 dark:text-gray-400 font-bold">
+                                {draftCV.targetRole || 'In-progress Resume'}
+                              </td>
+                              <td className="px-6 py-4 text-xs text-gray-500 dark:text-gray-400 font-semibold">
                                 Edited {new Date(draftCV.lastSaved || Date.now()).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-  
-                        <div className="flex items-center gap-3 shrink-0 self-end sm:self-auto">
-                          <button
-                            onClick={async (e) => {
-                              e.stopPropagation();
-                              if (window.confirm('Are you sure you want to delete this draft?')) {
-                                try {
-                                  const response = await fetch('/api/cv-draft/delete', { method: 'DELETE' });
-                                  if (response.ok) {
-                                    setDraftCV(null);
-                                    cachedDraftCV = null;
-                                  }
-                                } catch (err) {
-                                  console.error('Failed to delete draft:', err);
-                                }
-                              }
-                            }}
-                            className="p-2 bg-gray-100 hover:bg-red-500 hover:text-white dark:bg-[#1a230f]/60 dark:hover:bg-red-650 dark:hover:text-white text-red-500 rounded-lg transition-all"
-                            title="Delete"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </motion.div>
-                    )}
-  
-                     {filteredCVs.map((cv, index) => {
-                       const cvCoverLetters = coverLetterMap.get(String(cv.id || cv._id)) || [];
-                       return (
-                         <React.Fragment key={cv.id || cv._id}>
-                           <motion.div
-                             initial={{ opacity: 0, y: 10 }}
-                             animate={{ opacity: 1, y: 0 }}
-                             transition={{ delay: index * 0.03 }}
-                             onClick={() => handleEditExistingCV(cv)}
-                             className="group cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-white dark:bg-[#141810] border border-gray-250 dark:border-white/5 rounded-2xl hover:border-lime-500/30 hover:shadow-lg transition-all duration-300 w-full"
-                           >
-                             <div className="flex items-center gap-4 flex-grow min-w-0">
-                               <div className="w-10 h-14 bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 rounded-none overflow-hidden flex-shrink-0 relative">
-                                 <LazyThumbnail item={cv} />
-                               </div>
-                               <div className="min-w-0">
-                                 <h4 className="text-base font-black text-gray-900 dark:text-white truncate group-hover:text-lime-600 dark:group-hover:text-lime-500">
-                                   {cv.title || 'Untitled Resume'}
-                                 </h4>
-                                 <div className="flex flex-wrap items-center gap-2 mt-1">
-                                   <span className={`px-2 py-0.5 rounded-full text-[7px] font-black uppercase tracking-wider ${
-                                     cv.cvType === 'master' ? 'bg-[#0D2C54] text-blue-200' :
-                                     cv.cvType === 'journey' ? 'bg-[#5C3A21] text-amber-200' :
-                                     'bg-[#134074] text-cyan-200'
-                                   }`}>
-                                     {cv.cvType === 'master' ? 'Primary' : cv.cvType === 'journey' ? 'Job Based' : 'Custom'}
-                                   </span>
-                                   <span className="text-[10px] text-gray-500 dark:text-gray-400 font-bold">
-                                     Edited {getRelativeTime(cv.updatedAt || cv.createdAt)}
-                                   </span>
-                                 </div>
-                               </div>
-                             </div>
+                              </td>
+                              <td className="px-6 py-4 text-xs text-gray-400">—</td>
+                              <td className="px-6 py-4 text-right">
+                                <div className="flex items-center justify-end gap-1.5">
+                                  <button
+                                    onClick={async (e) => {
+                                      e.stopPropagation();
+                                      if (window.confirm('Are you sure you want to delete this draft?')) {
+                                        try {
+                                          const response = await fetch('/api/cv-draft/delete', { method: 'DELETE' });
+                                          if (response.ok) {
+                                            setDraftCV(null);
+                                            cachedDraftCV = null;
+                                          }
+                                        } catch (err) {
+                                          console.error('Failed to delete draft:', err);
+                                        }
+                                      }
+                                    }}
+                                    className="p-2 bg-gray-155 hover:bg-red-500 hover:text-white dark:bg-[#1a230f]/60 dark:hover:bg-red-650 dark:hover:text-white text-red-500 dark:text-red-400 rounded-lg transition-all"
+                                    title="Delete Draft"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
 
-                             <div className="flex items-center gap-4 shrink-0 justify-between sm:justify-end w-full sm:w-auto">
-                               {cvCoverLetters.length > 0 && (
-                                 <div className="hidden sm:flex items-center gap-2">
-                                   {cvCoverLetters.map((cl: any) => (
-                                     <div
-                                       key={cl.id || cl._id}
-                                       onClick={(e) => {
-                                         e.stopPropagation();
-                                         router.push(`/editor?mode=edit-cover-letter&coverLetterId=${cl.id || cl._id}`);
-                                       }}
-                                       className="flex items-center gap-1.5 px-2 py-1 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-lg cursor-pointer hover:bg-emerald-100 dark:hover:bg-emerald-500/20 transition-colors"
-                                       title={cl.title || 'Cover Letter'}
-                                     >
-                                       <FileText className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                                       <span className="text-[9px] font-black text-emerald-700 dark:text-emerald-300 truncate max-w-[80px]">
-                                         {cl.title || 'Cover Letter'}
-                                       </span>
-                                     </div>
-                                   ))}
-                                 </div>
-                               )}
+                          {filteredCVs.map((cv) => {
+                            const cvCoverLetters = coverLetterMap.get(String(cv.id || cv._id)) || [];
+                            return (
+                              <React.Fragment key={cv.id || cv._id}>
+                                <tr className="border-b border-gray-250 dark:border-white/5 hover:bg-gray-50/50 dark:hover:bg-white/[0.02] transition-colors">
+                                  <td className="px-6 py-4">
+                                    <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider ${
+                                      cv.cvType === 'master' ? 'bg-purple-600 text-white' : cv.cvType === 'journey' ? 'bg-lime-500 text-black dark:bg-[#80FF00]/10 dark:text-[#80FF00]' : 'bg-blue-600 text-white'
+                                    }`}>
+                                      {cv.cvType === 'master' ? 'Primary' : cv.cvType === 'journey' ? 'Job Based' : 'Custom'}
+                                    </span>
+                                  </td>
+                                  <td className="px-6 py-4">
+                                    <span 
+                                      onClick={() => handleEditExistingCV(cv)}
+                                      className="font-black text-gray-900 dark:text-white hover:text-lime-650 dark:hover:text-lime-500 cursor-pointer text-sm"
+                                    >
+                                      {cv.title || 'Untitled CV'}
+                                    </span>
+                                  </td>
+                                  <td className="px-6 py-4 text-xs text-gray-500 dark:text-gray-400 font-semibold">
+                                    {cvJourneysMap.get(String(cv.id || cv._id))?.company || cv.cvData?.work?.[0]?.name || '—'}
+                                  </td>
+                                  <td className="px-6 py-4 text-xs text-gray-500 dark:text-gray-400 font-bold">
+                                    {cvJourneysMap.get(String(cv.id || cv._id))?.jobTitle || cv.cvData?.basics?.label || cv.cvData?.work?.[0]?.position || 'No Role Context'}
+                                  </td>
+                                  <td className="px-6 py-4 text-xs text-gray-500 dark:text-gray-400 font-semibold">
+                                    Edited {getRelativeTime(cv.updatedAt || cv.createdAt)}
+                                  </td>
+                                  <td className="px-6 py-4">
+                                    {(typeof cv.atsScore === 'number' || (cv as any).metadata?.atsScore !== undefined) ? (
+                                      <span className="text-xs font-black text-lime-600 dark:text-[#80FF00] bg-lime-500/10 dark:bg-[#80FF00]/10 px-2.5 py-0.5 rounded-full">
+                                        {cv.atsScore ?? (cv as any).metadata?.atsScore}%
+                                      </span>
+                                    ) : (
+                                      <span className="text-xs text-gray-400">—</span>
+                                    )}
+                                  </td>
+                                  <td className="px-6 py-4 text-right">
+                                    <div className="flex items-center justify-end gap-1.5">
+                                      <button
+                                        onClick={() => handleEditExistingCV(cv)}
+                                        className="p-2 bg-gray-100 hover:bg-lime-500 hover:text-black dark:bg-[#1a230f]/60 dark:hover:bg-[#80FF00] dark:hover:text-black text-gray-700 dark:text-gray-300 rounded-lg transition-all"
+                                        title="Edit"
+                                      >
+                                        <Edit2 className="w-4 h-4" />
+                                      </button>
+                                      <button
+                                        onClick={(e) => handleDuplicateCV(cv.id || cv._id || '', cv.title, e)}
+                                        className="p-2 bg-gray-100 hover:bg-lime-500 hover:text-black dark:bg-[#1a230f]/60 dark:hover:bg-[#80FF00] dark:hover:text-black text-gray-700 dark:text-gray-300 rounded-lg transition-all"
+                                        title="Duplicate"
+                                      >
+                                        <Copy className="w-4 h-4" />
+                                      </button>
+                                      {cv.cvType !== 'master' && (
+                                        <button
+                                          onClick={(e) => handleDeleteCV(cv.id || cv._id || '', e)}
+                                          className="p-2 bg-gray-100 hover:bg-red-500 hover:text-white dark:bg-[#1a230f]/60 dark:hover:bg-red-650 dark:hover:text-white text-red-500 dark:text-red-400 rounded-lg transition-all"
+                                          title="Delete"
+                                        >
+                                          <Trash2 className="w-4 h-4" />
+                                        </button>
+                                      )}
+                                    </div>
+                                  </td>
+                                </tr>
 
-                               {(typeof cv.atsScore === 'number' || (cv as any).metadata?.atsScore !== undefined) ? (
-                                 <div className="flex items-center gap-1.5 shrink-0 bg-lime-500/10 dark:bg-[#80FF00]/10 border border-lime-500/20 dark:border-[#80FF00]/20 px-2.5 py-1 rounded-full text-lime-600 dark:text-[#80FF00]">
-                                   <span className="w-1.5 h-1.5 rounded-full bg-lime-500 dark:bg-[#80FF00] animate-pulse" />
-                                   <span className="text-xs font-black">{cv.atsScore ?? (cv as any).metadata?.atsScore}%</span>
-                                   <span className="text-[8px] uppercase tracking-wider text-gray-500 dark:text-gray-405 font-bold">ATS</span>
-                                 </div>
-                               ) : (
-                                 <div className="w-1" />
-                               )}
+                                {cvCoverLetters.map((cl) => (
+                                  <tr key={cl.id || cl._id} className="border-b border-gray-200 dark:border-white/5 bg-gray-50/30 dark:bg-white/[0.01]">
+                                    <td className="px-6 py-3 pl-10">
+                                      <div className="flex items-center gap-1.5">
+                                        <CornerDownRight className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                                        <span className="text-xs text-gray-500 dark:text-gray-400 font-bold">
+                                          Letter
+                                        </span>
+                                      </div>
+                                    </td>
+                                    <td className="px-6 py-3">
+                                      <span 
+                                        onClick={() => router.push(`/editor?mode=edit-cover-letter&coverLetterId=${cl.id || cl._id}`)}
+                                        className="font-bold text-gray-700 dark:text-gray-300 hover:text-emerald-500 cursor-pointer text-xs"
+                                      >
+                                        {cl.title || 'Untitled Cover Letter'}
+                                      </span>
+                                    </td>
+                                    <td className="px-6 py-3 text-xs text-gray-400 font-semibold">—</td>
+                                    <td className="px-6 py-3 text-xs text-gray-400 font-semibold">—</td>
+                                    <td className="px-6 py-3 text-xs text-gray-500 dark:text-gray-400 font-semibold">
+                                      Edited {getRelativeTime(cl.updatedAt || cl.createdAt)}
+                                    </td>
+                                    <td className="px-6 py-3 text-xs text-gray-400">—</td>
+                                    <td className="px-6 py-3 text-right">
+                                      <div className="flex items-center justify-end gap-1.5">
+                                        <button
+                                          onClick={() => router.push(`/editor?mode=edit-cover-letter&coverLetterId=${cl.id || cl._id}`)}
+                                          className="p-1.5 bg-gray-100 hover:bg-lime-500 hover:text-black dark:bg-[#1a230f]/60 dark:hover:bg-[#80FF00] dark:hover:text-black text-gray-700 dark:text-gray-300 rounded-lg transition-all"
+                                          title="Edit Cover Letter"
+                                        >
+                                          <Edit2 className="w-3.5 h-3.5" />
+                                        </button>
+                                        <button
+                                          onClick={(e) => handleDeleteCoverLetter(cl.id || cl._id || '', e)}
+                                          className="p-1.5 bg-gray-100 hover:bg-red-500 hover:text-white dark:bg-[#1a230f]/60 dark:hover:bg-[#80FF00] dark:hover:text-black text-red-500 dark:text-red-400 rounded-lg transition-all"
+                                          title="Delete Cover Letter"
+                                        >
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </React.Fragment>
+                            );
+                          })}
 
-                               <div className="hidden xs:flex items-center -space-x-1.5 overflow-hidden">
-                                 <div className="inline-block h-6 w-6 rounded-full ring-2 ring-white dark:ring-[#141810] bg-blue-500 flex items-center justify-center text-[9px] font-bold text-white shadow-sm">
-                                   {cv.title ? cv.title.substring(0, 2).toUpperCase() : 'CV'}
-                                 </div>
-                                 <div className="inline-block h-6 w-6 rounded-full ring-2 ring-white dark:ring-[#141810] bg-[#80FF00] flex items-center justify-center text-[9px] font-black text-black shadow-sm">
-                                   JD
-                                 </div>
-                               </div>
-
-                               <div className="flex items-center gap-1.5">
-                                 <button
-                                   onClick={(e) => {
-                                     e.stopPropagation();
-                                     handleEditExistingCV(cv);
-                                   }}
-                                   className="p-2 bg-gray-100 hover:bg-lime-500 hover:text-black dark:bg-[#1a230f]/60 dark:hover:bg-[#80FF00] dark:hover:text-black text-gray-700 dark:text-gray-300 rounded-lg transition-all"
-                                   title="Edit"
-                                 >
-                                   <Edit2 className="w-4 h-4" />
-                                 </button>
-                                 <button
-                                   onClick={(e) => handleDuplicateCV(cv.id || cv._id || '', cv.title, e)}
-                                   className="p-2 bg-gray-100 hover:bg-lime-500 hover:text-black dark:bg-[#1a230f]/60 dark:hover:bg-[#80FF00] dark:hover:text-black text-gray-700 dark:text-gray-300 rounded-lg transition-all"
-                                   title="Duplicate"
-                                 >
-                                   <Copy className="w-4 h-4" />
-                                 </button>
-                                 {cv.cvType !== 'master' && (
-                                   <button
-                                     onClick={(e) => handleDeleteCV(cv.id || cv._id || '', e)}
-                                     className="p-2 bg-gray-100 hover:bg-red-500 hover:text-white dark:bg-[#1a230f]/60 dark:hover:bg-red-650 dark:hover:text-white text-red-500 dark:text-red-400 rounded-lg transition-all"
-                                     title="Delete"
-                                   >
-                                     <Trash2 className="w-4 h-4" />
-                                   </button>
-                                 )}
-                               </div>
-                             </div>
-                           </motion.div>
-
-                           {cvCoverLetters.length > 0 && (
-                             <div className="sm:pl-14 pl-2 flex flex-col gap-2">
-                               {cvCoverLetters.map((cl: any) => (
-                                 <motion.div
-                                   key={cl.id || cl._id}
-                                   initial={{ opacity: 0, x: -10 }}
-                                   animate={{ opacity: 1, x: 0 }}
-                                   onClick={() => router.push(`/editor?mode=edit-cover-letter&coverLetterId=${cl.id || cl._id}`)}
-                                   className="group cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-white dark:bg-[#141810] border border-gray-250 dark:border-white/5 rounded-2xl hover:border-emerald-500/30 hover:shadow-lg transition-all duration-300 w-full"
-                                 >
-                                   <div className="flex items-center gap-3 flex-grow min-w-0">
-                                     <div className="w-8 h-10 bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 rounded-none overflow-hidden flex-shrink-0 relative">
-                                       <LazyThumbnail item={cl} isCoverLetter={true} />
-                                     </div>
-                                     <div className="min-w-0">
-                                       <h4 className="text-sm font-black text-gray-900 dark:text-white truncate group-hover:text-emerald-600 dark:group-hover:text-emerald-500">
-                                         {cl.title || 'Untitled Cover Letter'}
-                                       </h4>
-                                       <div className="flex items-center gap-2 mt-0.5">
-                                         <span className="px-2 py-0.5 rounded-full text-[7px] font-black uppercase tracking-wider bg-emerald-600 text-white">
-                                           Cover Letter
-                                         </span>
-                                         <span className="text-[10px] text-gray-500 dark:text-gray-400 font-bold">
-                                           Edited {getRelativeTime(cl.updatedAt || cl.createdAt)}
-                                         </span>
-                                       </div>
-                                     </div>
-                                   </div>
-
-                                   <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-auto">
-                                     <button
-                                       onClick={(e) => {
-                                         e.stopPropagation();
-                                         router.push(`/editor?mode=edit-cover-letter&coverLetterId=${cl.id || cl._id}`);
-                                       }}
-                                       className="p-2 bg-gray-100 hover:bg-lime-500 hover:text-black dark:bg-[#1a230f]/60 dark:hover:bg-[#80FF00] dark:hover:text-black text-gray-700 dark:text-gray-300 rounded-lg transition-all"
-                                       title="Edit"
-                                     >
-                                       <Edit2 className="w-4 h-4" />
-                                     </button>
-                                     <button
-                                       onClick={(e) => handleDeleteCoverLetter(cl.id || cl._id || '', e)}
-                                       className="p-2 bg-gray-100 hover:bg-red-500 hover:text-white dark:bg-[#1a230f]/60 dark:hover:bg-red-650 dark:hover:text-white text-red-500 dark:text-red-400 rounded-lg transition-all"
-                                       title="Delete"
-                                     >
-                                       <Trash2 className="w-4 h-4" />
-                                     </button>
-                                   </div>
-                                 </motion.div>
-                               ))}
-                             </div>
-                           )}
-                         </React.Fragment>
-                       );
-                     })}
-
-                     {orphanedCoverLetters.map((cl: any) => (
-                       <motion.div
-                         key={cl.id || cl._id}
-                         initial={{ opacity: 0, y: 10 }}
-                         animate={{ opacity: 1, y: 0 }}
-                         onClick={() => router.push(`/editor?mode=edit-cover-letter&coverLetterId=${cl.id || cl._id}`)}
-                         className="group cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-white dark:bg-[#141810] border border-gray-250 dark:border-white/5 rounded-2xl hover:border-lime-500/30 hover:shadow-lg transition-all duration-300 w-full"
-                       >
-                         <div className="flex items-center gap-4 flex-grow min-w-0">
-                           <div className="w-10 h-10 bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 rounded-none overflow-hidden flex-shrink-0 relative">
-                             <LazyThumbnail item={cl} isCoverLetter={true} />
-                           </div>
-                           <div className="min-w-0">
-                             <h4 className="text-base font-black text-gray-900 dark:text-white truncate group-hover:text-lime-600 dark:group-hover:text-lime-500">
-                               {cl.title || 'Untitled Cover Letter'}
-                             </h4>
-                             <div className="flex flex-wrap items-center gap-2 mt-1">
-                               <span className="px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-emerald-600 text-white">
-                                 Cover Letter
-                               </span>
-                               <span className="text-[10px] text-gray-500 dark:text-gray-400 font-bold">
-                                 Edited {getRelativeTime(cl.updatedAt || cl.createdAt)}
-                               </span>
-                             </div>
-                           </div>
-                         </div>
-
-                         <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-auto">
-                           <button
-                             onClick={(e) => {
-                               e.stopPropagation();
-                               router.push(`/editor?mode=edit-cover-letter&coverLetterId=${cl.id || cl._id}`);
-                             }}
-                             className="p-2 bg-gray-100 hover:bg-lime-500 hover:text-black dark:bg-[#1a230f]/60 dark:hover:bg-[#80FF00] dark:hover:text-black text-gray-700 dark:text-gray-300 rounded-lg transition-all"
-                             title="Edit"
-                           >
-                             <Edit2 className="w-4 h-4" />
-                           </button>
-                           <button
-                             onClick={(e) => handleDeleteCoverLetter(cl.id || cl._id || '', e)}
-                             className="p-2 bg-gray-100 hover:bg-red-500 hover:text-white dark:bg-[#1a230f]/60 dark:hover:bg-red-650 dark:hover:text-white text-red-500 dark:text-red-400 rounded-lg transition-all"
-                             title="Delete"
-                           >
-                             <Trash2 className="w-4 h-4" />
-                           </button>
-                         </div>
-                       </motion.div>
-                     ))}
+                          {orphanedCoverLetters.map((cl) => (
+                            <tr key={cl.id || cl._id} className="border-b border-gray-250 dark:border-white/5 hover:bg-gray-50/55 dark:hover:bg-white/[0.02] transition-colors">
+                              <td className="px-6 py-4">
+                                <span className="text-xs text-gray-500 dark:text-gray-400 font-bold">
+                                  Letter
+                                </span>
+                              </td>
+                              <td className="px-6 py-4">
+                                <span 
+                                  onClick={() => router.push(`/editor?mode=edit-cover-letter&coverLetterId=${cl.id || cl._id}`)}
+                                  className="font-black text-gray-900 dark:text-white hover:text-emerald-600 dark:hover:text-emerald-500 cursor-pointer text-sm"
+                                >
+                                  {cl.title || 'Untitled Cover Letter'}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 text-xs text-gray-400 font-semibold">—</td>
+                              <td className="px-6 py-4 text-xs text-gray-400 font-semibold">—</td>
+                              <td className="px-6 py-4 text-xs text-gray-500 dark:text-gray-400 font-semibold">
+                                Edited {getRelativeTime(cl.updatedAt || cl.createdAt)}
+                              </td>
+                              <td className="px-6 py-4 text-xs text-gray-400">—</td>
+                              <td className="px-6 py-4 text-right">
+                                <div className="flex items-center justify-end gap-1.5">
+                                  <button
+                                    onClick={() => router.push(`/editor?mode=edit-cover-letter&coverLetterId=${cl.id || cl._id}`)}
+                                    className="p-2 bg-gray-100 hover:bg-lime-500 hover:text-black dark:bg-[#1a230f]/60 dark:hover:bg-[#80FF00] dark:hover:text-black text-gray-700 dark:text-gray-300 rounded-lg transition-all"
+                                    title="Edit Cover Letter"
+                                  >
+                                    <Edit2 className="w-4 h-4" />
+                                  </button>
+                                  <button
+                                    onClick={(e) => handleDeleteCoverLetter(cl.id || cl._id || '', e)}
+                                    className="p-2 bg-gray-150 hover:bg-red-500 hover:text-white dark:bg-[#1a230f]/60 dark:hover:bg-[#80FF00] dark:hover:text-black text-gray-700 dark:text-gray-300 rounded-lg transition-all"
+                                    title="Delete Cover Letter"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 )
+
               ) : (
                 <div className="text-center py-16 sm:py-32 bg-black/5 dark:bg-white/[0.02] rounded-2xl sm:rounded-[3rem] border-2 border-dashed border-gray-200 dark:border-white/10 mx-1">
                   <FolderOpen className="w-12 h-12 sm:w-20 sm:h-20 text-gray-200 dark:text-gray-800 mx-auto mb-6 sm:mb-8 animate-bounce transition-all duration-1000" />

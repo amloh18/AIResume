@@ -270,7 +270,7 @@ export function usePricingPlans(options: UsePricingPlansOptions = {}): UsePricin
       return num >= 1000 ? Math.round(num).toLocaleString() : Math.round(num).toString();
     };
 
-    const isQuarterly = plan.key === 'pro_quarterly' || plan.key === 'smart_quaterly' || plan.key.includes('quarterly') || plan.key.includes('quaterly');
+    const isQuarterly = false; // Disabled monthly equivalent for quarterly plans to show price/3months directly
     const isYearly = plan.key === 'pro_yearly' || plan.key === 'starter_yearly' || plan.key === 'starter_yealry' || plan.key === 'focused_yearly' || plan.key === 'smart_yearly' || plan.key.includes('yearly') || plan.key.includes('yealry');
 
     if (isQuarterly || isYearly) {

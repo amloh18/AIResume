@@ -495,7 +495,7 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
                                   <span className="text-xl tablet:text-2xl font-extrabold text-gray-900 dark:text-white leading-tight">
                                     {(() => {
                                       const basePriceStr = monthlyEquivalent.showMonthly ? monthlyEquivalent.price : regionalPrice;
-                                      const suffix = plan.key.includes('monthly') ? '/m' : '';
+                                      const suffix = plan.key.includes('monthly') ? '/m' : plan.key.includes('quarterly') ? '/3months' : '';
                                       if (basePriceStr.endsWith('*')) {
                                         return `${basePriceStr.slice(0, -1)}${suffix}*`;
                                       }

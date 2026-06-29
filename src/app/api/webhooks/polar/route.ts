@@ -232,12 +232,16 @@ async function handleCheckoutCompleted(checkout: any) {
     const invoice = await Invoice.create([{
       userId: user._id,
       subscriptionId: subscription._id,
-      amount: finalAmount + discountAmount,
-      discountAmount: discountAmount,
-      finalAmount: finalAmount,
+      subtotal: finalAmount + discountAmount,
+      taxAmount: 0,
+      amount: finalAmount,
       currency: currency.toUpperCase(),
       status: 'paid',
+      planName: finalPlanName,
+      planId: pricingPlan._id,
+      billingCycle: billingCycle as 'monthly' | 'quarterly' | 'yearly' | 'one-time',
       dueDate: new Date(),
+      invoiceDate: new Date(),
       paidAt: new Date(),
       paymentProvider: 'polar',
       metadata: {
@@ -251,8 +255,10 @@ async function handleCheckoutCompleted(checkout: any) {
     const invoiceItem = await InvoiceItem.create([{
       invoiceId: invoice[0]._id,
       description: `${finalPlanName} Subscription`,
-      amount: finalAmount + discountAmount,
       quantity: 1,
+      unitPrice: finalAmount + discountAmount,
+      amount: finalAmount + discountAmount,
+      type: 'subscription',
       metadata: {
         planName: finalPlanName,
         billingCycle: billingCycle,
