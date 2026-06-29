@@ -1254,7 +1254,7 @@ export default function Step1Parser({
 
         {/* Continue Editing Section */}
         {!isGuestMode && (
-          <div className="step-one-documents w-full min-h-[80vh] pt-4 sm:pt-6 bg-[var(--bg-primary)] relative">
+          <div className="step-one-documents mx-6 sm:mx-12 mb-12 sm:mb-[72px] rounded-2xl sm:rounded-3xl pt-4 sm:pt-6 bg-[var(--bg-primary)] relative shadow-sm">
             <div className="w-full max-w-7xl mx-auto px-4 sm:px-8 pb-32">
               <motion.div
                 initial={{ opacity: 0, y: 40 }}
