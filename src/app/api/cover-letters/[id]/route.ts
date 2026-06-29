@@ -72,7 +72,7 @@ export async function PUT(
     await getConnection();
     const { id } = await params;
     const body = await request.json();
-    const { jobId, userId, title, content, header, body: bodyContent, footer, status, metadata, targetCompany, targetPosition, keywords, cvId } = body;
+    const { jobId, userId, title, content, header, body: bodyContent, footer, status, metadata, targetCompany, targetPosition, keywords, cvId, journeyId } = body;
 
     // Fetch the cover letter document
     const coverLetter = await CoverLetter.findById(id);
@@ -92,6 +92,7 @@ export async function PUT(
     if (status !== undefined) coverLetter.status = status;
     if (jobId !== undefined) coverLetter.jobId = jobId;
     if (cvId !== undefined) coverLetter.cvId = cvId;
+    if (journeyId !== undefined) coverLetter.journeyId = journeyId;
     
     // Update metadata fields if provided
     if (!coverLetter.metadata) {

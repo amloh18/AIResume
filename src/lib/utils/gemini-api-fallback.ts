@@ -52,6 +52,7 @@ export async function callGeminiWithAllKeysFallback(
     userId?: string;
     action?: string;
     endpoint?: string;
+    responseMimeType?: string;
   }
 ): Promise<string> {
   const apiKey = getGeminiApiKey();
@@ -78,6 +79,7 @@ export async function callGeminiWithAllKeysFallback(
         config: {
           temperature: options?.temperature || 0.7,
           maxOutputTokens: options?.maxTokens || 2048,
+          responseMimeType: options?.responseMimeType,
         }
       });
     } catch (primaryError) {
@@ -89,16 +91,20 @@ export async function callGeminiWithAllKeysFallback(
         config: {
           temperature: options?.temperature || 0.7,
           maxOutputTokens: options?.maxTokens || 2048,
+          responseMimeType: options?.responseMimeType,
         }
       });
     }
 
     const latencySeconds = (Date.now() - callStart) / 1000;
-
     const text = result.text || '';
 
     if (text) {
-      console.log(`✅ Gemini API call successful using ${usedModel}`);
+      console.log(`✅ Gemini API call successful using ${usedModel}. Length: ${text.length} chars.`);
+      if ((result as any).candidates?.[0]) {
+        const candidate = (result as any).candidates[0];
+        console.log(`Debug Gemini candidate: finishReason=${candidate.finishReason}, safetyRatings=${JSON.stringify(candidate.safetyRatings)}`);
+      }
 
       const usageMetadata = (result as any).usageMetadata;
       const promptString = typeof prompt === 'string' ? prompt : JSON.stringify(prompt);

@@ -124,13 +124,13 @@ const RedesignedPricingCards: React.FC<RedesignedPricingCardsProps> = ({
       case 'focused_yearly':
         return '/y';
       case 'smart_quarterly':
-        return '/q';
+        return '/3months';
       case 'smart_yearly':
         return '/y';
       case 'pro_monthly':
         return '/m';
       case 'pro_quarterly':
-        return '/q';
+        return '/3months';
       case 'pro_yearly':
         return '/y';
       case 'pro_lifetime':

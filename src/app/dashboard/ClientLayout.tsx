@@ -4,6 +4,7 @@ import React, { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import OptimizedDashboardLayout from '@/components/dashboard/OptimizedDashboardLayout';
 import UniversalPaymentModal from '@/components/payment/UniversalPaymentModal';
+import MoriAssistant from '@/components/dashboard/MoriAssistant';
 
 interface ClientLayoutProps {
   children: React.ReactNode;
@@ -40,6 +41,7 @@ const ClientLayoutContent: React.FC<ClientLayoutProps> = ({ children }) => {
           onSuccess={() => setShowPaymentModal(false)}
         />
       )}
+      <MoriAssistant />
     </OptimizedDashboardLayout>
   );
 };

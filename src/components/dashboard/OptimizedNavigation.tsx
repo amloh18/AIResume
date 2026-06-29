@@ -601,27 +601,34 @@ const OptimizedNavigation: React.FC = () => {
       {/* HR Dashboard Button - Show for B2B users and Admins */}
       {(userData?.b2b?.tenantId || userData?.isB2b || isAdmin) && (
         <div className={`px-6 pb-2 ${isDesktopExpanded ? 'lg:px-4' : 'lg:px-2'}`}>
-          <div className="grid grid-cols-2 gap-2">
-            <motion.button
-              onClick={() => {
-                if (isMobileMenuOpen) {
-                  setIsOpen(false);
+          <div className={isDesktopExpanded ? "grid grid-cols-2 gap-2" : "flex flex-col items-center gap-2"}>
+            {(userData?.b2b?.tenantId || userData?.isB2b) && (
+              <motion.button
+                onClick={() => {
+                  if (isMobileMenuOpen) {
+                    setIsOpen(false);
+                  }
+                  router.push('/b2b/dashboard');
+                }}
+                className={isDesktopExpanded
+                  ? "w-full h-full min-h-[88px] flex flex-col items-start justify-between gap-3 rounded-xl border border-[rgb(129,255,0)]/15 transition-all duration-200 text-left p-4 bg-[rgb(129,255,0)]/10 text-[#4C9900] dark:text-[rgb(129,255,0)] hover:bg-[rgb(129,255,0)]/20"
+                  : "w-9 h-9 flex items-center justify-center rounded-xl border border-[rgb(129,255,0)]/15 bg-[rgb(129,255,0)]/10 text-[#4C9900] dark:text-[rgb(129,255,0)] hover:bg-[rgb(129,255,0)]/20"
                 }
-                router.push('/b2b/dashboard');
-              }}
-              className={`w-full h-full min-h-[88px] flex flex-col items-start justify-between gap-3 rounded-xl border border-[rgb(129,255,0)]/15 transition-all duration-200 text-left p-4 bg-[rgb(129,255,0)]/10 text-[#4C9900] dark:text-[rgb(129,255,0)] hover:bg-[rgb(129,255,0)]/20`}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              title="HR Dashboard"
-            >
-              <Briefcase className="w-5 h-5 flex-shrink-0" />
-              <div className="min-w-0 w-full">
-                <div className="text-sm font-medium truncate">HR Dashboard</div>
-                <div className="text-[11px] opacity-80 truncate mt-0.5">
-                  Business Portal
-                </div>
-              </div>
-            </motion.button>
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                title="HR Dashboard"
+              >
+                <Briefcase className="w-5 h-5 flex-shrink-0" />
+                {isDesktopExpanded && (
+                  <div className="min-w-0 w-full text-left">
+                    <div className="text-sm font-medium truncate">HR Dashboard</div>
+                    <div className="text-[11px] opacity-80 truncate mt-0.5">
+                      Business Portal
+                    </div>
+                  </div>
+                )}
+              </motion.button>
+            )}
 
             {isAdmin && (
               <motion.button
@@ -631,17 +638,23 @@ const OptimizedNavigation: React.FC = () => {
                   }
                   router.push('/admin/dashboard');
                 }}
-                className="w-full h-full min-h-[88px] flex flex-col items-start justify-between gap-3 rounded-xl border border-purple-500/15 transition-all duration-200 text-left p-4 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 hover:bg-purple-200 dark:hover:bg-purple-900/50"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+                className={isDesktopExpanded
+                  ? "w-full h-full min-h-[88px] flex flex-col items-start justify-between gap-3 rounded-xl border border-purple-500/15 transition-all duration-200 text-left p-4 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 hover:bg-purple-200 dark:hover:bg-purple-900/50"
+                  : "w-9 h-9 flex items-center justify-center rounded-xl border border-purple-500/15 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 hover:bg-purple-200 dark:hover:bg-purple-900/50"
+                }
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                title="Admin Dashboard"
               >
                 <Shield className="w-5 h-5 flex-shrink-0" />
-                <div className="min-w-0 w-full">
-                  <div className="text-sm font-medium truncate">Admin Dashboard</div>
-                  <div className="text-[11px] text-purple-600 dark:text-purple-300 truncate mt-0.5">
-                    System controls
+                {isDesktopExpanded && (
+                  <div className="min-w-0 w-full text-left">
+                    <div className="text-sm font-medium truncate">Admin Dashboard</div>
+                    <div className="text-[11px] text-purple-600 dark:text-purple-300 truncate mt-0.5">
+                      System controls
+                    </div>
                   </div>
-                </div>
+                )}
               </motion.button>
             )}
           </div>

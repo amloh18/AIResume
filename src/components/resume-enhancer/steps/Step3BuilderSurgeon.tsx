@@ -605,6 +605,14 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
       }
     }, [state.cvType, state.journeyId, state.jobData, jdText]);
 
+    React.useEffect(() => {
+      const handleOpenMoriChat = () => {
+        dispatch({ type: 'SET_MORI_CHAT_MODE', payload: true });
+      };
+      window.addEventListener('open-mori-chat', handleOpenMoriChat);
+      return () => window.removeEventListener('open-mori-chat', handleOpenMoriChat);
+    }, [dispatch]);
+
 
 
 

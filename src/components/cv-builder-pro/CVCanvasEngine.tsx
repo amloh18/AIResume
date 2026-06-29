@@ -358,6 +358,68 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     devicePixelRatio: typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1,
   }));
 
+  const workspaceRef = React.useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const workspace = workspaceRef.current;
+    if (!workspace) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      if (e.ctrlKey) {
+        e.preventDefault();
+        setZoom(prev => {
+          const delta = -e.deltaY * 0.5;
+          const newZoom = Math.min(200, Math.max(50, prev + delta));
+          return Math.round(newZoom);
+        });
+      }
+    };
+
+    let initialDistance = 0;
+    let initialZoom = 100;
+
+    const getDistance = (touches: TouchList) => {
+      if (touches.length < 2) return 0;
+      const dx = touches[0].clientX - touches[1].clientX;
+      const dy = touches[0].clientY - touches[1].clientY;
+      return Math.sqrt(dx * dx + dy * dy);
+    };
+
+    const handleTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        initialDistance = getDistance(e.touches);
+        initialZoom = zoom;
+      }
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches.length === 2 && initialDistance > 0) {
+        e.preventDefault();
+        const currentDistance = getDistance(e.touches);
+        const ratio = currentDistance / initialDistance;
+        const newZoom = Math.min(200, Math.max(50, initialZoom * ratio));
+        setZoom(Math.round(newZoom));
+      }
+    };
+
+    const handleTouchEnd = () => {
+      initialDistance = 0;
+    };
+
+    workspace.addEventListener('wheel', handleWheel, { passive: false });
+    workspace.addEventListener('touchstart', handleTouchStart, { passive: false });
+    workspace.addEventListener('touchmove', handleTouchMove, { passive: false });
+    workspace.addEventListener('touchend', handleTouchEnd);
+
+    return () => {
+      workspace.removeEventListener('wheel', handleWheel);
+      workspace.removeEventListener('touchstart', handleTouchStart);
+      workspace.removeEventListener('touchmove', handleTouchMove);
+      workspace.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [zoom]);
+
   useEffect(() => {
     if (template && template.id !== activeTemplate.id && !cvData?.metadata?.canvasTemplate) {
       loadTemplate(template);
@@ -471,6 +533,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
 
   useEffect(() => {
     if (!cvData?.metadata?.canvasTemplate) {
@@ -866,8 +929,39 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     const path = getFocusedPath();
     if (!path || (!path.includes('description') && !path.includes('summary'))) return;
     const originalText = focusedNode?.innerText || '';
-    setPointSuggestion({ path, text: originalText, originalText, node: focusedNode as HTMLElement, loading: false });
+    
+    // Ensure legacy floating card is closed
+    setPointSuggestion(null);
+
+    const sectionName = path.includes('summary') ? 'Summary' : 'Experience/Project Description';
+    
+    // Cache section details and open Mori Assistant
+    localStorage.setItem('mori_cv_context', JSON.stringify({
+      path,
+      text: originalText,
+      sectionName
+    }));
+    localStorage.setItem('mori_assistant_active', 'true');
+    window.dispatchEvent(new CustomEvent('mori-assistant-toggle', { 
+      detail: {
+        active: true,
+        cvContext: { path, text: originalText, sectionName }
+      }
+    }));
   };
+
+  useEffect(() => {
+    const handleApply = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const { path, text } = customEvent.detail || {};
+      if (path && text) {
+        handleDataChange(path, text);
+        setPointSuggestion(null);
+      }
+    };
+    window.addEventListener('mori-apply-suggestion', handleApply);
+    return () => window.removeEventListener('mori-apply-suggestion', handleApply);
+  }, [handleDataChange]);
 
   useEffect(() => {
     if (!focusedNode) return;
@@ -1238,6 +1332,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
 
         <div className="flex-1 flex flex-col relative min-w-0">
           <div
+            ref={workspaceRef}
             className={readOnly ? 'w-full' : `flex-1 overflow-auto relative flex justify-center custom-scrollbar transition-colors ${bgWorkspace}`}
             style={readOnly ? undefined : {
               paddingTop: layoutMetrics.workspacePaddingY,
@@ -1317,7 +1412,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
 
       </div>
 
-      {!readOnly && <FloatingAICard pointSuggestion={pointSuggestion} setPointSuggestion={setPointSuggestion} handleFetchSuggestion={handleFetchSuggestion} cvData={cvData} handleDataChange={handleDataChange} />}
+      {/* Removed ThinkHard AI contextual suggestion card in favor of Mori Assistant AI panel */}
       {!readOnly && dragPreview?.markup && (
         <div
           className="fixed z-[130] pointer-events-none"
