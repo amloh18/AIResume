@@ -40,6 +40,7 @@ export const AvatarEditable = ({ data, sizeClass, shapeClass, borderClass, readO
   const handleDragEnd = () => setIsDragging(false);
 
   if (readOnly) {
+    if (!avatarSrc) return null;
     return (
       <img
         src={avatarSrc}

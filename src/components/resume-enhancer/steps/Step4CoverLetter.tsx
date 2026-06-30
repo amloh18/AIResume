@@ -184,13 +184,18 @@ export default function Step4CoverLetter({ onComplete }: Step4CoverLetterProps) 
     });
   };
 
+  const stripHtml = (html: string) => {
+    if (!html) return '';
+    return html.replace(/<[^>]*>/g, '').trim();
+  };
+
   const today = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
-  const name = state.cvData?.basics?.name || 'Your Name';
-  const email = state.cvData?.basics?.email || 'email@example.com';
-  const phone = state.cvData?.basics?.phone || '';
-  const location = state.cvData?.basics?.location?.city ? `${state.cvData.basics.location.city}${state.cvData.basics.location.countryCode ? `, ${state.cvData.basics.location.countryCode}` : ''}` : '';
-  const recipientName = state.jobData?.contactPerson || 'Hiring Manager';
-  const companyName = state.jobData?.company || 'Company Name';
+  const name = stripHtml(state.cvData?.basics?.name || 'Your Name');
+  const email = stripHtml(state.cvData?.basics?.email || 'email@example.com');
+  const phone = stripHtml(state.cvData?.basics?.phone || '');
+  const location = stripHtml(state.cvData?.basics?.location?.city ? `${state.cvData.basics.location.city}${state.cvData.basics.location.countryCode ? `, ${state.cvData.basics.location.countryCode}` : ''}` : '');
+  const recipientName = stripHtml(state.jobData?.contactPerson || 'Hiring Manager');
+  const companyName = stripHtml(state.jobData?.company || 'Company Name');
 
   return (
     <div className="flex flex-col h-[calc(100vh-64px)] min-h-0 relative overflow-hidden bg-gray-50 dark:bg-[var(--bg-primary)]">
@@ -217,6 +222,7 @@ export default function Step4CoverLetter({ onComplete }: Step4CoverLetterProps) 
                 isEditing={isEditing}
                 onBodyChange={handleBodyChange}
                 design={design}
+                zoom={zoom}
                 showMoriChat={showMoriChat}
                 onToggleMoriChat={() => setShowMoriChat(!showMoriChat)}
                 onChangeHeaderStyle={() => setShowTemplateSelector(true)}

@@ -12,6 +12,7 @@ import { usePaymentModal } from '@/contexts/PaymentModalContext';
 import { analyzeText } from '@/lib/grammar/engine';
 import { computeCanvasLayoutMetrics } from './layout-utils';
 import { DEFAULT_UNIFIED_CV_DATA } from '@/types/unified-cv-schema';
+import { useUserData } from '@/lib/hooks/useUserData';
 
 const ReadOnlyWrapper = (props: any) => <EditableField {...props} readOnly={true} />;
 const EditableWrapper = EditableField;
@@ -326,6 +327,8 @@ const templateLayoutFlows: Record<string, { global: string[]; columns: string[][
 
 const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ cvData, onDataChange, theme = 'dark', template, onTemplateChange, readOnly = false, cvId, jobId, role, moriChatMode = false, isGuestMode = false }, ref) => {
   const isInternalLayoutChange = React.useRef(false);
+  const { userData } = useUserData();
+
   const [activeTemplate, setActiveTemplate] = useState(cvData?.metadata?.canvasTemplate || template || CANVAS_TEMPLATES[0]);
   const [focusedNode, setFocusedNode] = useState<HTMLElement | null>(null);
   const [zones, setZones] = useState<Record<string, any[]>>(() => {
@@ -352,6 +355,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
   const [scanning, setScanning] = useState(false);
   const [zoom, setZoom] = useState(100);
   const [totalPagesCount, setTotalPagesCount] = useState(1);
+  const [pageAssignments, setPageAssignments] = useState<Record<string, number>>({});
   const [viewport, setViewport] = useState(() => ({
     width: typeof window === 'undefined' ? 1440 : window.innerWidth,
     height: typeof window === 'undefined' ? 1080 : window.innerHeight,
@@ -571,262 +575,6 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Pagination Engine
-  useEffect(() => {
-    const container = document.querySelector('.cv-document-wrapper');
-    if (!container) return;
-
-    let debounceTimer: ReturnType<typeof setTimeout>;
-    let settleDebounce: ReturnType<typeof setTimeout>;
-    const MAX_REASONABLE_PAGES = 50;
-    const MIN_SCALE = 0.25;
-
-    const paginate = () => {
-      const doc = container.querySelector('.cv-document') as HTMLElement;
-      if (!doc) return;
-
-      const PAGE_HEIGHT = layoutMetrics.pageHeightPx;
-      const PAGE_GAP = layoutMetrics.pageGapPx;
-      const EFFECTIVE_HEIGHT = layoutMetrics.slotHeightPx;
-      const PAGE_TOP_PADDING = layoutMetrics.pageTopPaddingPx;
-      const PAGE_BOTTOM_PADDING = layoutMetrics.pageBottomPaddingPx;
-      const MIN_PUSH_HEIGHT = 4;
-
-      const rawBreakables = Array.from(
-        doc.querySelectorAll('.cv-item.cv-page-breakable, .cv-keep-with-next')
-      ) as HTMLElement[];
-
-      const allBreakables = rawBreakables.filter((item) => {
-        if (!item.isConnected) return false;
-        // Exclude cv-keep-with-next items (section titles) that are already nested
-        // inside a cv-page-breakable item container — they travel with their item
-        if (
-          item.classList.contains('cv-keep-with-next') &&
-          item.parentElement?.closest('.cv-item.cv-page-breakable')
-        ) {
-          return false;
-        }
-        return true;
-      });
-
-      requestAnimationFrame(() => {
-        // Set internal layout change flag to avoid triggering ResizeObserver recursively
-        isInternalLayoutChange.current = true;
-
-        // Reset margins to natural state first
-        allBreakables.forEach(item => { item.style.marginTop = ''; });
-        doc.style.height = '';
-
-        const docRect = doc.getBoundingClientRect();
-        const scale = docRect.width > 0 && doc.offsetWidth > 0 ? docRect.width / doc.offsetWidth : 1;
-
-        if (!Number.isFinite(scale) || scale < MIN_SCALE || !Number.isFinite(EFFECTIVE_HEIGHT) || EFFECTIVE_HEIGHT <= 0) {
-          console.warn('CVCanvasEngine pagination skipped due to invalid layout metrics', {
-            scale,
-            effectiveHeight: EFFECTIVE_HEIGHT,
-          });
-          isInternalLayoutChange.current = false;
-          return;
-        }
-
-        const printableHeight = PAGE_HEIGHT - PAGE_TOP_PADDING - PAGE_BOTTOM_PADDING;
-
-        // BATCH READ PHASE (Measure natural positions)
-        const naturalData = allBreakables.map((item) => {
-          const itemRect = item.getBoundingClientRect();
-          const top = (itemRect.top - docRect.top) / scale;
-          const height = itemRect.height / scale;
-          const bottom = top + height;
-          const style = window.getComputedStyle(item);
-          const naturalMargin = parseFloat(style.marginTop) || 0;
-
-          // Find zoneId using dataset
-          const zoneEl = item.closest('[data-zone-id]');
-          const zoneId = zoneEl ? zoneEl.getAttribute('data-zone-id') || 'main' : 'main';
-
-          return {
-            element: item,
-            naturalTop: top,
-            height,
-            naturalBottom: bottom,
-            naturalMargin,
-            isKeepWithNext: item.classList.contains('cv-keep-with-next'),
-            zoneId
-          };
-        });
-
-        // Resolve layout flow definitions
-        const flow = templateLayoutFlows[activeTemplate.type] || { global: [], columns: [] };
-
-        // CALCULATION PHASE (Zone-aware multi-column simulator)
-        let globalShift = 0;
-        const columnShifts = new Map<number, number>();
-        const pushes = new Map<HTMLElement, number>();
-        const pushedElements = new Set<HTMLElement>();
-
-        naturalData.forEach((data, index) => {
-          const item = data.element;
-          
-          let parent = item.parentElement;
-          let isAncestorPushed = false;
-          while (parent && parent !== doc) {
-            if (pushedElements.has(parent)) {
-              isAncestorPushed = true;
-              break;
-            }
-            parent = parent.parentElement;
-          }
-
-          if (isAncestorPushed) return;
-
-          const zoneId = data.zoneId;
-          const isGlobal = flow.global.includes(zoneId) || flow.columns.length === 0;
-
-          let colGroupIdx = -1;
-          if (!isGlobal) {
-            colGroupIdx = flow.columns.findIndex(cols => cols.includes(zoneId));
-          }
-
-          // Calculate applied shift
-          const activeColShift = colGroupIdx !== -1 ? (columnShifts.get(colGroupIdx) || 0) : 0;
-          const appliedShift = globalShift + activeColShift;
-
-          const shiftedTop = data.naturalTop + appliedShift;
-          const shiftedBottom = shiftedTop + data.height;
-
-          const pageIndex = Math.max(0, Math.floor(shiftedTop / EFFECTIVE_HEIGHT));
-          const pageContentTop = pageIndex * EFFECTIVE_HEIGHT + PAGE_TOP_PADDING;
-          const pageContentBottom = pageIndex * EFFECTIVE_HEIGHT + PAGE_HEIGHT - PAGE_BOTTOM_PADDING;
-          const nextPageContentTop = (pageIndex + 1) * EFFECTIVE_HEIGHT + PAGE_TOP_PADDING;
-
-          let requiredPush = 0;
-
-          if (pageIndex > 0 && shiftedTop < pageContentTop) {
-            requiredPush = Math.max(requiredPush, pageContentTop - shiftedTop);
-          }
-
-          if (
-            shiftedBottom > pageContentBottom &&
-            data.height < printableHeight &&
-            data.height > MIN_PUSH_HEIGHT
-          ) {
-            requiredPush = Math.max(requiredPush, nextPageContentTop - shiftedTop);
-          } else if (data.isKeepWithNext) {
-            const nextData = naturalData[index + 1];
-            if (nextData && !pushedElements.has(nextData.element)) {
-              // Only keep with next if it's in the same zone or column group
-              const isSameFlow = nextData.zoneId === zoneId || 
-                (!isGlobal && flow.columns.some(cols => cols.includes(zoneId) && cols.includes(nextData.zoneId)));
-
-              if (isSameFlow) {
-                const nextActiveColShift = colGroupIdx !== -1 ? (columnShifts.get(colGroupIdx) || 0) : 0;
-                const nextAppliedShift = globalShift + nextActiveColShift;
-                const nextShiftedTop = nextData.naturalTop + nextAppliedShift;
-                const nextShiftedBottom = nextShiftedTop + nextData.height;
-                if (
-                  nextShiftedBottom > pageContentBottom &&
-                  nextData.height < printableHeight &&
-                  nextData.height > MIN_PUSH_HEIGHT
-                ) {
-                  requiredPush = Math.max(requiredPush, nextPageContentTop - shiftedTop);
-                }
-              }
-            }
-          }
-
-          const normalizedPush = Math.min(requiredPush, EFFECTIVE_HEIGHT);
-          if (Number.isFinite(normalizedPush) && normalizedPush > 0) {
-            pushes.set(item, normalizedPush);
-            pushedElements.add(item);
-            if (isGlobal) {
-              globalShift += normalizedPush;
-            } else if (colGroupIdx !== -1) {
-              columnShifts.set(colGroupIdx, (columnShifts.get(colGroupIdx) || 0) + normalizedPush);
-            }
-          }
-        });
-
-        // BATCH WRITE PHASE
-        allBreakables.forEach((item) => {
-          const pushVal = pushes.get(item) || 0;
-          if (pushVal > 0) {
-            const data = naturalData.find(d => d.element === item);
-            const naturalMargin = data?.naturalMargin || 0;
-            item.style.marginTop = `${pushVal + naturalMargin}px`;
-          } else {
-            item.style.marginTop = '';
-          }
-        });
-
-        let maxBottom = 0;
-        allBreakables.forEach((item) => {
-          const currentBottom = (item.getBoundingClientRect().bottom - docRect.top) / scale;
-          if (Number.isFinite(currentBottom) && currentBottom > maxBottom) {
-            maxBottom = currentBottom;
-          }
-        });
-
-        const naturalScrollHeight = doc.scrollHeight / scale;
-        const measuredBottom = Math.max(maxBottom, naturalScrollHeight);
-        if (!Number.isFinite(measuredBottom) || measuredBottom <= 0) {
-          console.warn('CVCanvasEngine pagination aborted due to invalid measured bottom', { measuredBottom });
-          isInternalLayoutChange.current = false;
-          return;
-        }
-
-        const totalPages = Math.min(
-          MAX_REASONABLE_PAGES,
-          Math.max(1, Math.ceil(measuredBottom / EFFECTIVE_HEIGHT))
-        );
-
-        if (totalPages === MAX_REASONABLE_PAGES && measuredBottom / EFFECTIVE_HEIGHT > MAX_REASONABLE_PAGES) {
-          console.warn('CVCanvasEngine pagination capped suspicious page count', {
-            measuredBottom,
-            effectiveHeight: EFFECTIVE_HEIGHT,
-          });
-        }
-
-        setTotalPagesCount(prev => prev !== totalPages ? totalPages : prev);
-
-        const newHeight = `${(totalPages * PAGE_HEIGHT) + Math.max(0, totalPages - 1) * PAGE_GAP}px`;
-        if (doc.style.height !== newHeight) {
-          doc.style.height = newHeight;
-        }
-
-        // Reset the flag after style changes have settled in the DOM (double frame)
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            isInternalLayoutChange.current = false;
-          });
-        });
-      });
-    };
-
-    const initTimer = setTimeout(paginate, 120);
-    const settleTimer = setTimeout(paginate, 450);
-
-    const ro = new ResizeObserver(() => {
-      if (isInternalLayoutChange.current) {
-        return;
-      }
-      clearTimeout(debounceTimer);
-      clearTimeout(settleDebounce);
-      debounceTimer = setTimeout(paginate, 60);
-      settleDebounce = setTimeout(paginate, 450);
-    });
-
-    const docElement = container.querySelector('.cv-document');
-    if (docElement) ro.observe(docElement);
-
-    return () => {
-      clearTimeout(initTimer);
-      clearTimeout(settleTimer);
-      clearTimeout(debounceTimer);
-      clearTimeout(settleDebounce);
-      ro.disconnect();
-    };
-  }, [cvData, templateAnimKey, activeTemplate, layoutMetrics.pageBottomPaddingPx, layoutMetrics.pageGapPx, layoutMetrics.pageHeightPx, layoutMetrics.pageTopPaddingPx, layoutMetrics.slotHeightPx]);
-
   useImperativeHandle(ref, () => ({
     openTemplateSelector: () => setIsTemplateModalOpen(true),
     openAddSection: () => setReplacingSnippet({ zoneId: Object.keys(zones)[0] || 'main', isAdd: true }),
@@ -851,6 +599,15 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     const updated = setNestedValue(cvData, path, value);
     onDataChange(updated);
   };
+
+  // Dynamically sync user avatar from settings if basics.avatar is empty
+  useEffect(() => {
+    if (!readOnly && userData?.avatar && !cvData?.basics?.avatar) {
+      let updated = setNestedValue(cvData, 'basics.avatar', userData.avatar);
+      updated = setNestedValue(updated, 'basics.showAvatar', true);
+      onDataChange(updated);
+    }
+  }, [userData?.avatar, cvData?.basics?.avatar, onDataChange, readOnly, cvData]);
 
   const getFocusedPath = useCallback(() => {
     if (!focusedNode) return null;
@@ -1079,10 +836,16 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
         // Safety check to ensure the source zone exists and has the index
         if (!newZones[sourceZoneId] || !newZones[sourceZoneId][sourceIndex]) return prev;
         
-        newZones[sourceZoneId].splice(sourceIndex, 1);
+        const sourceList = [...newZones[sourceZoneId]];
+        sourceList.splice(sourceIndex, 1);
+        newZones[sourceZoneId] = sourceList;
+        
         let finalInsertIndex = insertIndex;
         if (sourceZoneId === targetZoneId && sourceIndex < insertIndex) finalInsertIndex -= 1;
-        newZones[targetZoneId].splice(finalInsertIndex, 0, instance);
+        
+        const targetList = sourceZoneId === targetZoneId ? sourceList : [...(newZones[targetZoneId] || [])];
+        targetList.splice(finalInsertIndex, 0, instance);
+        newZones[targetZoneId] = targetList;
       }
       return newZones;
     });
@@ -1091,11 +854,12 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
   const moveSnippet = (zoneId: string, index: number, dir: number) => { 
     setZones(prev => { 
       const newZones = { ...prev }; 
-      const list = newZones[zoneId]; 
-      if (!list || index + dir < 0 || index + dir >= list.length) return prev; 
+      const list = [...(newZones[zoneId] || [])]; 
+      if (list.length === 0 || index + dir < 0 || index + dir >= list.length) return prev; 
       const item = list[index]; 
       list.splice(index, 1); 
       list.splice(index + dir, 0, item); 
+      newZones[zoneId] = list; 
       return newZones; 
     }); 
   };
@@ -1103,7 +867,11 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
   const removeSnippet = (zoneId: string, index: number) => { 
     setZones(prev => { 
       const newZones = { ...prev }; 
-      if (newZones[zoneId]) newZones[zoneId].splice(index, 1); 
+      if (newZones[zoneId]) {
+        const list = [...newZones[zoneId]];
+        list.splice(index, 1);
+        newZones[zoneId] = list;
+      }
       return newZones; 
     }); 
   };
@@ -1141,6 +909,9 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     if (!replacingSnippet) return;
     setZones(prev => {
       const newZones = { ...prev };
+      if (!newZones[replacingSnippet.zoneId]) {
+        newZones[replacingSnippet.zoneId] = [];
+      }
       if (replacingSnippet.isAdd) {
         if (typeof replacingSnippet.insertIndex === 'number') {
           newZones[replacingSnippet.zoneId].splice(replacingSnippet.insertIndex, 0, { id: generateId(), type: newType });
@@ -1148,7 +919,9 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
           newZones[replacingSnippet.zoneId].push({ id: generateId(), type: newType });
         }
       }
-      else newZones[replacingSnippet.zoneId][replacingSnippet.index] = { id: generateId(), type: newType };
+      else {
+        newZones[replacingSnippet.zoneId][replacingSnippet.index] = { id: generateId(), type: newType };
+      }
       return newZones;
     });
     setReplacingSnippet(null);
@@ -1162,6 +935,159 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     window.addEventListener('cv-avatar-upload-request', handler);
     return () => window.removeEventListener('cv-avatar-upload-request', handler);
   }, []);
+
+  const pageAssignmentsRef = React.useRef(pageAssignments);
+  pageAssignmentsRef.current = pageAssignments;
+  const recentAssignmentsRef = React.useRef<string[]>([]);
+
+  // Dynamically calculate page partitioning assignments based on DOM snippet heights
+  React.useEffect(() => {
+    const docElement = document.querySelector('.cv-document');
+    if (!docElement) return undefined;
+
+    const measureAndPaginate = () => {
+      const scale = zoom / 100;
+      const isA4 = design.pageSize === 'A4';
+      const H = isA4 ? 1122.5 : 1056;
+      const M = layoutMetrics.pageMarginPx || 40;
+      const usableHeight = H - 2 * M;
+
+      // 1. Measure all rendered snippet/unit heights from the DOM
+      const unitHeights: Record<string, number> = {};
+      docElement.querySelectorAll('[data-block-id]').forEach(blockEl => {
+        const blockId = blockEl.getAttribute('data-block-id');
+        if (!blockId) return;
+
+        const parentHeight = blockEl.getBoundingClientRect().height / scale;
+
+        // Find all list entry children inside this block
+        const entryElements = Array.from(blockEl.querySelectorAll('.cv-item.cv-page-breakable')) as HTMLElement[];
+
+        if (entryElements.length > 0) {
+          let sumEntriesHeight = 0;
+          entryElements.forEach(entryEl => {
+            const entryId = entryEl.getAttribute('data-entry-id');
+            if (entryId) {
+              const h = entryEl.getBoundingClientRect().height / scale;
+              const unitId = `${blockId}_entry_${entryId}`;
+              unitHeights[unitId] = h;
+              sumEntriesHeight += h;
+            }
+          });
+
+          // Header height is the leftover space
+          const headerUnitId = `${blockId}_header`;
+          unitHeights[headerUnitId] = Math.max(0, parentHeight - sumEntriesHeight);
+        } else {
+          // Non-list block
+          unitHeights[blockId] = parentHeight;
+        }
+      });
+
+      // 2. Compute page assignments for each zone/unit flow
+      const newAssignments: Record<string, number> = {};
+      const safeZones = zones || {};
+      let maxPageNum = 0;
+
+      Object.keys(safeZones).forEach(zoneId => {
+        const blocks = safeZones[zoneId] || [];
+        let currentPage = 0;
+        let currentHeight = 0;
+
+        blocks.forEach(block => {
+          // Check if this block is a list snippet
+          const snippetDef = SNIPPETS[block.type];
+          const isList = snippetDef && ['Experience', 'Education', 'Projects', 'Certifications', 'Awards', 'Publications', 'Volunteer', 'References'].includes(snippetDef.category);
+
+          if (isList) {
+            const collectionName = snippetDef.category.toLowerCase();
+            const entries = cvData[collectionName] || [];
+
+            // 1. Process header unit and 1st entry together
+            const headerUnitId = `${block.id}_header`;
+            const headerH = unitHeights[headerUnitId] || 40;
+            
+            const firstEntry = entries[0];
+            const firstEntryH = firstEntry ? (unitHeights[`${block.id}_entry_${firstEntry.id}`] || 80) : 0;
+
+            if (currentHeight + headerH + firstEntryH > usableHeight && currentHeight > 0) {
+              currentPage++;
+              currentHeight = 0;
+            }
+            newAssignments[headerUnitId] = currentPage;
+            currentHeight += headerH;
+            if (currentPage > maxPageNum) maxPageNum = currentPage;
+
+            // 2. Process each entry unit
+            entries.forEach((entry: any, entryIdx: number) => {
+              const entryUnitId = `${block.id}_entry_${entry.id}`;
+              const entryH = unitHeights[entryUnitId] || 80;
+              
+              if (entryIdx > 0) {
+                if (currentHeight + entryH > usableHeight && currentHeight > 0) {
+                  currentPage++;
+                  currentHeight = 0;
+                }
+              }
+              newAssignments[entryUnitId] = currentPage;
+              currentHeight += entryH;
+              if (currentPage > maxPageNum) maxPageNum = currentPage;
+            });
+          } else {
+            // Non-list block unit
+            const h = unitHeights[block.id] || 80;
+            if (currentHeight + h > usableHeight && currentHeight > 0) {
+              currentPage++;
+              currentHeight = 0;
+            }
+            newAssignments[block.id] = currentPage;
+            currentHeight += h;
+            if (currentPage > maxPageNum) maxPageNum = currentPage;
+          }
+        });
+      });
+
+      // 3. Set total pages count state
+      setTotalPagesCount(maxPageNum + 1);
+
+      // Cycle oscillation detection
+      const assignmentsStr = JSON.stringify(newAssignments);
+      if (recentAssignmentsRef.current.includes(assignmentsStr)) {
+        return; // Abort cycle
+      }
+
+      // 4. Update page assignments state only if changed to avoid loop
+      const oldAssignments = pageAssignmentsRef.current;
+      const isChanged = Object.keys(newAssignments).some(id => newAssignments[id] !== oldAssignments[id]) ||
+                        Object.keys(oldAssignments).some(id => newAssignments[id] !== oldAssignments[id]);
+      if (isChanged) {
+        recentAssignmentsRef.current.push(assignmentsStr);
+        if (recentAssignmentsRef.current.length > 5) {
+          recentAssignmentsRef.current.shift();
+        }
+        setPageAssignments(newAssignments);
+      }
+    };
+
+    // Run adjust layout loop on requestAnimationFrame
+    const rafId = requestAnimationFrame(measureAndPaginate);
+
+    // Watch for mutations (user typing or editing content) to recalculate page breaks dynamically dynamically with debounce
+    let debounceTimer: any;
+    const observer = new MutationObserver(() => {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        measureAndPaginate();
+      }, 80);
+    });
+    observer.observe(docElement, { childList: true, subtree: true, characterData: true });
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      clearTimeout(debounceTimer);
+      observer.disconnect();
+    };
+  }, [cvData, zones, design, zoom, activeTemplate, layoutMetrics.pageMarginPx]);
 
   const handleTogglePhoto = () => {
     if (!cvData.basics?.showAvatar) {
@@ -1177,13 +1103,65 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
   const handlePhotoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // Check if the file size is larger than 1MB (1,048,576 bytes)
+    if (file.size > 1024 * 1024) {
+      alert('Please upload an image smaller than 1MB.');
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = (ev) => {
       const dataUrl = ev.target?.result as string;
-      handleDataChange('basics.avatar', dataUrl);
-      handleDataChange('basics.showAvatar', true);
+
+      // Load image to crop it to 1:1 square ratio dynamically
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        // Force 1:1 square aspect ratio at 400x400 pixels
+        const targetSize = 400;
+        canvas.width = targetSize;
+        canvas.height = targetSize;
+
+        // Calculate center crop boundaries
+        const sourceSize = Math.min(img.width, img.height);
+        const sourceX = (img.width - sourceSize) / 2;
+        const sourceY = (img.height - sourceSize) / 2;
+
+        // Draw cropped and scaled image onto the canvas
+        ctx.drawImage(img, sourceX, sourceY, sourceSize, sourceSize, 0, 0, targetSize, targetSize);
+
+        // Convert back to base64 Data URL (JPEG format for optimal compression)
+        const croppedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+
+        handleDataChange('basics.avatar', croppedDataUrl);
+        handleDataChange('basics.showAvatar', true);
+
+        // Update settings database in real-time
+        fetch('/api/user', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ avatar: croppedDataUrl }),
+        }).then((res) => {
+          if (res.ok) {
+            // Dispatch event to sync with other hooks
+            window.dispatchEvent(new CustomEvent('userProfileUpdated', {
+              detail: { user: { avatar: croppedDataUrl } }
+            }));
+          }
+        }).catch((err) => {
+          console.error('Error updating user avatar in settings:', err);
+        });
+      };
+      img.src = dataUrl;
     };
     reader.readAsDataURL(file);
+
     // Reset so the same file can be re-selected
     e.target.value = '';
   };
@@ -1191,24 +1169,259 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
   const renderCanvasLayout = () => {
     const layoutType = activeTemplate.type;
     const safeZones = zones || {};
-    const renderZone = (zoneId: string, className: string, isDark = false) => (
-      <CanvasZone readOnly={readOnly} zoneId={zoneId} blocks={safeZones[zoneId] || []} cvData={cvData} EditableWrapper={readOnly ? ReadOnlyWrapper : EditableWrapper} handleDrop={handleZoneDrop} moveSnippet={moveSnippet} removeSnippet={removeSnippet} onReplace={handleReplaceClick} onAddSnippet={handleAddClick} onTogglePhoto={handleTogglePhoto} onAddListEntry={handleAddListEntry} moveEntry={moveEntry} deleteEntry={deleteEntry} dragState={dragState} activeTemplate={activeTemplate} layoutZones={safeZones} className={className} isDark={isDark} onOpenSkillsSuggestions={() => void openSkillsSuggestions()} isDropAllowed={isSnippetDropAllowed} />
-    );
+
+    const isColorDark = (hex: string) => {
+      if (!hex || hex[0] !== '#') return false;
+      const cleanHex = hex.replace('#', '');
+      if (cleanHex.length === 3) {
+        const r = parseInt(cleanHex[0] + cleanHex[0], 16);
+        const g = parseInt(cleanHex[1] + cleanHex[1], 16);
+        const b = parseInt(cleanHex[2] + cleanHex[2], 16);
+        return (r * 299 + g * 587 + b * 114) / 1000 < 140;
+      }
+      const r = parseInt(cleanHex.substring(0, 2), 16);
+      const g = parseInt(cleanHex.substring(2, 4), 16);
+      const b = parseInt(cleanHex.substring(4, 6), 16);
+      return (r * 299 + g * 587 + b * 114) / 1000 < 140;
+    };
+    const isDarkSidebar = isColorDark(design.sidebarBgColor || '#f8fafc');
+
+    const getPageBlocks = (zoneId: string, pageIdx: number) => {
+      const blocks = safeZones[zoneId] || [];
+      return blocks.filter(block => {
+        const snippetDef = SNIPPETS[block.type];
+        const isList = snippetDef && ['Experience', 'Education', 'Projects', 'Certifications', 'Awards', 'Publications', 'Volunteer', 'References'].includes(snippetDef.category);
+
+        if (isList) {
+          const headerUnitId = `${block.id}_header`;
+          if ((pageAssignments[headerUnitId] ?? 0) === pageIdx) {
+            return true;
+          }
+          const collectionName = snippetDef.category.toLowerCase();
+          const entries = cvData[collectionName] || [];
+          return entries.some((entry: any) => {
+            const entryUnitId = `${block.id}_entry_${entry.id}`;
+            return (pageAssignments[entryUnitId] ?? 0) === pageIdx;
+          });
+        } else {
+          const assignedPage = pageAssignments[block.id] ?? 0;
+          return assignedPage === pageIdx;
+        }
+      });
+    };
+
+    const renderPageZone = (zoneId: string, pageIdx: number, className: string, isDark = false) => {
+      const pageBlocks = getPageBlocks(zoneId, pageIdx);
+      
+      const getGlobalIndex = (pageSpecificIdx: number) => {
+        const globalBlocks = safeZones[zoneId] || [];
+        if (pageSpecificIdx >= 0 && pageSpecificIdx < pageBlocks.length) {
+          const targetBlock = pageBlocks[pageSpecificIdx];
+          return globalBlocks.findIndex(b => b.id === targetBlock.id);
+        }
+        return -1;
+      };
+
+      return (
+        <CanvasZone
+          readOnly={readOnly}
+          zoneId={`${zoneId}_page_${pageIdx}`}
+          blocks={pageBlocks}
+          cvData={cvData}
+          EditableWrapper={readOnly ? ReadOnlyWrapper : EditableWrapper}
+          handleDrop={(targetZoneId: string, dragData: any, dropIdx: number) => {
+            const globalBlocks = safeZones[zoneId] || [];
+            
+            let insertIndex = 0;
+            if (dropIdx !== undefined && dropIdx < pageBlocks.length) {
+              const targetBlock = pageBlocks[dropIdx];
+              insertIndex = globalBlocks.findIndex(b => b.id === targetBlock.id);
+            } else {
+              if (pageBlocks.length > 0) {
+                const lastBlock = pageBlocks[pageBlocks.length - 1];
+                insertIndex = globalBlocks.findIndex(b => b.id === lastBlock.id) + 1;
+              } else {
+                insertIndex = globalBlocks.length;
+              }
+            }
+            handleZoneDrop(zoneId, dragData, insertIndex);
+          }}
+          moveSnippet={(targetZoneId: string, pageSpecificIdx: number, dir: number) => {
+            const gIdx = getGlobalIndex(pageSpecificIdx);
+            if (gIdx !== -1) {
+              moveSnippet(zoneId, gIdx, dir);
+            }
+          }}
+          removeSnippet={(targetZoneId: string, pageSpecificIdx: number) => {
+            const gIdx = getGlobalIndex(pageSpecificIdx);
+            if (gIdx !== -1) {
+              removeSnippet(zoneId, gIdx);
+            }
+          }}
+          onReplace={(targetZoneId: string, pageSpecificIdx: number, type: string) => {
+            const gIdx = getGlobalIndex(pageSpecificIdx);
+            if (gIdx !== -1) {
+              handleReplaceClick(zoneId, gIdx, type);
+            }
+          }}
+          onAddSnippet={handleAddClick}
+          onTogglePhoto={handleTogglePhoto}
+          onAddListEntry={handleAddListEntry}
+          moveEntry={moveEntry}
+          deleteEntry={deleteEntry}
+          dragState={dragState}
+          activeTemplate={activeTemplate}
+          layoutZones={safeZones}
+          className={className}
+          isDark={isDark}
+          onOpenSkillsSuggestions={() => void openSkillsSuggestions()}
+          isDropAllowed={isSnippetDropAllowed}
+        />
+      );
+    };
 
     const formatOption = design.formatOption || 'hybrid';
     const formatClass = formatOption === 'bullets_only' ? 'cv-format-bullets-only' : (formatOption === 'paragraph_only' ? 'cv-format-paragraph-only' : 'cv-format-hybrid');
 
-    switch (layoutType) {
-      case '1-col': return <div className={`w-full shadow-2xl mx-auto flex flex-col cv-document ${formatClass}`} style={{ width: 'var(--cv-page-width)', minHeight: 'var(--cv-page-height)', backgroundColor: 'transparent' }}><div className="h-max" style={{ padding: 'var(--cv-page-margin)' }}>{renderZone('main', 'w-full min-w-0')}</div></div>;
-      case '2-col': return <div className={`w-full shadow-2xl mx-auto flex flex-col cv-document ${formatClass}`} style={{ width: 'var(--cv-page-width)', minHeight: 'var(--cv-page-height)', backgroundColor: 'transparent' }}>{safeZones['header'] && <div style={{ paddingTop: 'var(--cv-page-margin)', paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 0 }}>{renderZone('header', 'w-full min-w-0')}</div>}<div className="flex h-max items-start" style={{ gap: 'var(--cv-column-gap)', paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)', paddingTop: safeZones['header'] ? 'var(--cv-section-gap, 16px)' : 'var(--cv-page-margin)' }}><div className="flex-1 min-w-0">{renderZone('left', 'h-max')}</div><div className="flex-1 min-w-0">{renderZone('right', 'h-max')}</div></div></div>;
-      case 'sidebar-left': return <div className={`w-full shadow-2xl mx-auto flex cv-document relative ${formatClass}`} style={{ width: 'var(--cv-page-width)', minHeight: 'var(--cv-page-height)', backgroundColor: 'transparent' }}><div className="absolute left-0 top-0 bottom-0 w-[32%] z-0" style={{ backgroundColor: 'var(--cv-sidebar-bg)' }}></div><div className="w-[32%] min-w-0 border-r border-slate-200 relative z-10" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: '5mm', paddingTop: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)' }}>{renderZone('sidebar', 'h-max', false)}</div><div className="w-[68%] min-w-0 relative z-10" style={{ paddingLeft: '5mm', paddingRight: 'var(--cv-page-margin)', paddingTop: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)' }}>{renderZone('main', 'h-max')}</div></div>;
-      case 'sidebar-left-dark': return <div className={`w-full shadow-2xl mx-auto flex cv-document relative ${formatClass}`} style={{ width: 'var(--cv-page-width)', minHeight: 'var(--cv-page-height)', backgroundColor: 'transparent' }}><div className="absolute left-0 top-0 bottom-0 w-[32%] z-0" style={{ backgroundColor: 'var(--cv-sidebar-bg)' }}></div><div className="w-[32%] min-w-0 relative z-10" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: '5mm', paddingTop: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)' }}>{renderZone('sidebar', 'h-max', true)}</div><div className="w-[68%] min-w-0 relative z-10" style={{ paddingLeft: '5mm', paddingRight: 'var(--cv-page-margin)', paddingTop: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)' }}>{renderZone('main', 'h-max')}</div></div>;
-      case 'sidebar-right': return <div className={`w-full shadow-2xl mx-auto flex cv-document relative ${formatClass}`} style={{ width: 'var(--cv-page-width)', minHeight: 'var(--cv-page-height)', backgroundColor: 'transparent' }}><div className="w-[68%] min-w-0 relative z-10" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: '5mm', paddingTop: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)' }}>{renderZone('main', 'h-max')}</div><div className="absolute right-0 top-0 bottom-0 w-[32%] z-0" style={{ backgroundColor: 'var(--cv-sidebar-bg)' }}></div><div className="w-[32%] min-w-0 border-l border-slate-200 relative z-10" style={{ paddingLeft: '5mm', paddingRight: 'var(--cv-page-margin)', paddingTop: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)' }}>{renderZone('sidebar', 'h-max', false)}</div></div>;
-      case 'top-sidebar-left': return <div className={`w-full shadow-2xl mx-auto flex flex-col cv-document relative ${formatClass}`} style={{ width: 'var(--cv-page-width)', minHeight: 'var(--cv-page-height)', backgroundColor: 'transparent' }}>{safeZones['header'] && <div className="relative z-10" style={{ paddingTop: 'var(--cv-page-margin)', paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 0 }}>{renderZone('header', 'w-full min-w-0')}</div>}<div className="flex h-max relative z-10 items-start" style={{ gap: 'var(--cv-column-gap)', paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)', paddingTop: 'var(--cv-section-gap, 16px)' }}><div className="absolute left-[var(--cv-page-margin)] top-[var(--cv-section-gap,16px)] bottom-[var(--cv-page-margin)] w-[calc(32%-1rem)] rounded-lg z-[-1]" style={{ backgroundColor: 'var(--cv-sidebar-bg)' }}></div><div className="w-[32%] min-w-0 border-r border-slate-200" style={{ paddingRight: '5mm' }}>{renderZone('sidebar', 'h-max', false)}</div><div className="w-[68%] min-w-0">{renderZone('main', 'h-max')}</div></div></div>;
-      case 'top-sidebar-right': return <div className={`w-full shadow-2xl mx-auto flex flex-col cv-document relative ${formatClass}`} style={{ width: 'var(--cv-page-width)', minHeight: 'var(--cv-page-height)', backgroundColor: 'transparent' }}>{safeZones['header'] && <div className="relative z-10" style={{ paddingTop: 'var(--cv-page-margin)', paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 0 }}>{renderZone('header', 'w-full min-w-0')}</div>}<div className="flex h-max relative z-10 items-start" style={{ gap: 'var(--cv-column-gap)', paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)', paddingTop: 'var(--cv-section-gap, 16px)' }}><div className="w-[68%] min-w-0">{renderZone('main', 'h-max')}</div><div className="absolute right-[var(--cv-page-margin)] top-[var(--cv-section-gap,16px)] bottom-[var(--cv-page-margin)] w-[calc(32%-1rem)] rounded-lg z-[-1]" style={{ backgroundColor: 'var(--cv-sidebar-bg)' }}></div><div className="w-[32%] min-w-0 border-l border-slate-200" style={{ paddingLeft: '5mm' }}>{renderZone('sidebar', 'h-max', false)}</div></div></div>;
-      case 'hybrid-split': return <div className={`w-full shadow-2xl mx-auto flex flex-col cv-document ${formatClass}`} style={{ width: 'var(--cv-page-width)', minHeight: 'var(--cv-page-height)', backgroundColor: 'transparent' }}>{safeZones['header'] && <div style={{ paddingTop: 'var(--cv-page-margin)', paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 0 }}>{renderZone('header', 'w-full min-w-0')}</div>}<div style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingTop: 'var(--cv-section-gap, 16px)', paddingBottom: 0 }}>{renderZone('main', 'w-full min-w-0')}</div><div className="flex h-max items-start" style={{ gap: 'var(--cv-column-gap)', paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)', paddingTop: 0 }}><div className="flex-1 min-w-0">{renderZone('left', 'h-max')}</div><div className="flex-1 min-w-0">{renderZone('right', 'h-max')}</div></div></div>;
-      default: return <div>Layout not found</div>;
-    }
+    const maxPage = Object.values(pageAssignments).reduce((max, p) => Math.max(max, p), 0);
+    const totalPages = maxPage + 1;
+    const pages = Array.from({ length: totalPages }, (_, i) => i);
+
+    return (
+      <div className={`flex flex-col items-center gap-[var(--cv-page-gap)] cv-document ${formatClass}`} style={{ width: 'var(--cv-page-width)' }}>
+        {pages.map(pageIdx => {
+          const renderLayout = () => {
+            switch (layoutType) {
+              case '1-col': 
+                return (
+                  <div className="h-full w-full" style={{ padding: 'var(--cv-page-margin)' }}>
+                    {renderPageZone('main', pageIdx, 'w-full min-w-0')}
+                  </div>
+                );
+              case '2-col': 
+                return (
+                  <div className="h-full w-full flex flex-col" style={{ padding: 'var(--cv-page-margin)' }}>
+                    {pageIdx === 0 && safeZones['header'] && (
+                      <div className="mb-4">{renderPageZone('header', pageIdx, 'w-full min-w-0')}</div>
+                    )}
+                    <div className="flex flex-1 items-start gap-[var(--cv-column-gap)]">
+                      <div className="flex-1 min-w-0">{renderPageZone('left', pageIdx, 'h-max')}</div>
+                      <div className="flex-1 min-w-0">{renderPageZone('right', pageIdx, 'h-max')}</div>
+                    </div>
+                  </div>
+                );
+              case 'sidebar-left': 
+                return (
+                  <div className="h-full w-full flex relative" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingTop: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)' }}>
+                    <div className="absolute left-0 top-0 bottom-0 z-0" style={{ backgroundColor: 'var(--cv-sidebar-bg)', width: 'calc(32% + 0.36 * var(--cv-page-margin))' }}></div>
+                    <div className={`w-[32%] min-w-0 border-r border-slate-200 relative z-10 ${isDarkSidebar ? 'cv-dark-sidebar text-white' : ''}`} style={{ paddingRight: '5mm' }}>
+                      {renderPageZone('sidebar', pageIdx, 'h-max', isDarkSidebar)}
+                    </div>
+                    <div className="w-[68%] min-w-0 relative z-10" style={{ paddingLeft: '5mm' }}>
+                      {renderPageZone('main', pageIdx, 'h-max')}
+                    </div>
+                  </div>
+                );
+              case 'sidebar-left-dark': 
+                return (
+                  <div className="h-full w-full flex relative" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingTop: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)' }}>
+                    <div className="absolute left-0 top-0 bottom-0 z-0" style={{ backgroundColor: 'var(--cv-sidebar-bg)', width: 'calc(32% + 0.36 * var(--cv-page-margin))' }}></div>
+                    <div className={`w-[32%] min-w-0 relative z-10 ${isDarkSidebar ? 'cv-dark-sidebar text-white' : ''}`} style={{ paddingRight: '5mm' }}>
+                      {renderPageZone('sidebar', pageIdx, 'h-max', isDarkSidebar)}
+                    </div>
+                    <div className="w-[68%] min-w-0 relative z-10" style={{ paddingLeft: '5mm' }}>
+                      {renderPageZone('main', pageIdx, 'h-max')}
+                    </div>
+                  </div>
+                );
+              case 'sidebar-right': 
+                return (
+                  <div className="h-full w-full flex relative" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingTop: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)' }}>
+                    <div className="absolute right-0 top-0 bottom-0 z-0" style={{ backgroundColor: 'var(--cv-sidebar-bg)', width: 'calc(32% + 0.36 * var(--cv-page-margin))' }}></div>
+                    <div className="w-[68%] min-w-0 relative z-10" style={{ paddingRight: '5mm' }}>
+                      {renderPageZone('main', pageIdx, 'h-max')}
+                    </div>
+                    <div className={`w-[32%] min-w-0 border-l border-slate-200 relative z-10 ${isDarkSidebar ? 'cv-dark-sidebar text-white' : ''}`} style={{ paddingLeft: '5mm' }}>
+                      {renderPageZone('sidebar', pageIdx, 'h-max', isDarkSidebar)}
+                    </div>
+                  </div>
+                );
+              case 'top-sidebar-left': 
+                return (
+                  <div className="h-full w-full flex flex-col relative" style={{ minHeight: 'var(--cv-page-height)' }}>
+                    {pageIdx === 0 && safeZones['header'] && (
+                      <div className="relative z-10" style={{ paddingTop: 'var(--cv-page-margin)', paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 0 }}>
+                        {renderPageZone('header', pageIdx, 'w-full min-w-0')}
+                      </div>
+                    )}
+                    <div className="flex flex-1 relative z-10 items-start gap-[var(--cv-column-gap)]" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)', paddingTop: pageIdx === 0 && safeZones['header'] ? 'var(--cv-section-gap, 16px)' : 'var(--cv-page-margin)' }}>
+                      <div className="absolute left-[var(--cv-page-margin)] top-[var(--cv-section-gap,16px)] bottom-[var(--cv-page-margin)] w-[calc(32%-1rem)] rounded-lg z-[-1]" style={{ backgroundColor: 'var(--cv-sidebar-bg)' }}></div>
+                      <div className={`w-[32%] min-w-0 border-r border-slate-200 ${isDarkSidebar ? 'cv-dark-sidebar text-white' : ''}`} style={{ paddingRight: '5mm' }}>
+                        {renderPageZone('sidebar', pageIdx, 'h-max', isDarkSidebar)}
+                      </div>
+                      <div className="w-[68%] min-w-0">
+                        {renderPageZone('main', pageIdx, 'h-max')}
+                      </div>
+                    </div>
+                  </div>
+                );
+              case 'top-sidebar-right': 
+                return (
+                  <div className="h-full w-full flex flex-col relative" style={{ minHeight: 'var(--cv-page-height)' }}>
+                    {pageIdx === 0 && safeZones['header'] && (
+                      <div className="relative z-10" style={{ paddingTop: 'var(--cv-page-margin)', paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 0 }}>
+                        {renderPageZone('header', pageIdx, 'w-full min-w-0')}
+                      </div>
+                    )}
+                    <div className="flex flex-1 relative z-10 items-start gap-[var(--cv-column-gap)]" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)', paddingTop: pageIdx === 0 && safeZones['header'] ? 'var(--cv-section-gap, 16px)' : 'var(--cv-page-margin)' }}>
+                      <div className="w-[68%] min-w-0">
+                        {renderPageZone('main', pageIdx, 'h-max')}
+                      </div>
+                      <div className="absolute right-[var(--cv-page-margin)] top-[var(--cv-section-gap,16px)] bottom-[var(--cv-page-margin)] w-[calc(32%-1rem)] rounded-lg z-[-1]" style={{ backgroundColor: 'var(--cv-sidebar-bg)' }}></div>
+                      <div className={`w-[32%] min-w-0 border-l border-slate-200 ${isDarkSidebar ? 'cv-dark-sidebar text-white' : ''}`} style={{ paddingLeft: '5mm' }}>
+                        {renderPageZone('sidebar', pageIdx, 'h-max', isDarkSidebar)}
+                      </div>
+                    </div>
+                  </div>
+                );
+              case 'hybrid-split': 
+                return (
+                  <div className="h-full w-full flex flex-col" style={{ minHeight: 'var(--cv-page-height)' }}>
+                    {pageIdx === 0 && safeZones['header'] && (
+                      <div style={{ paddingTop: 'var(--cv-page-margin)', paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 0 }}>
+                        {renderPageZone('header', pageIdx, 'w-full min-w-0')}
+                      </div>
+                    )}
+                    <div style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingTop: pageIdx === 0 && safeZones['header'] ? 'var(--cv-section-gap, 16px)' : 'var(--cv-page-margin)', paddingBottom: 0 }}>
+                      {renderPageZone('main', pageIdx, 'w-full min-w-0')}
+                    </div>
+                    <div className="flex flex-1 items-start gap-[var(--cv-column-gap)]" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)', paddingTop: 'var(--cv-section-gap, 16px)' }}>
+                      <div className="flex-1 min-w-0">{renderPageZone('left', pageIdx, 'h-max')}</div>
+                      <div className="flex-1 min-w-0">{renderPageZone('right', pageIdx, 'h-max')}</div>
+                    </div>
+                  </div>
+                );
+              default: return <div>Layout not found</div>;
+            }
+          };
+
+          return (
+            <div 
+              key={pageIdx} 
+              className="cv-page shadow-2xl relative bg-white overflow-hidden flex flex-col" 
+              style={{ 
+                width: 'var(--cv-page-width)', 
+                height: 'var(--cv-page-height)', 
+                minHeight: 'var(--cv-page-height)',
+                boxSizing: 'border-box'
+              }}
+            >
+              {renderLayout()}
+            </div>
+          );
+        })}
+      </div>
+    );
   };
 
   return (
@@ -1216,8 +1429,10 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
       value={{
         cvData,
         design,
+        setDesign,
         handleDataChange,
         setFocusedNode,
+        pageAssignments,
         aiIssues: [...aiIssues, ...grammarIssues],
         activeIssueId,
         moriChatMode,
@@ -1294,7 +1509,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
               <div><label className={`text-xs font-bold uppercase tracking-widest mb-2 flex justify-between ${textMuted}`}><span>Line Spacing</span><span className={brandGreen}>{design.spacing.toFixed(1)}x</span></label><input type="range" min="0.5" max="2" step="0.1" value={design.spacing} onChange={(e) => setDesign({...design, spacing: parseFloat(e.target.value)})} className="w-full accent-emerald-500" /></div>
               <div><label className={`text-xs font-bold uppercase tracking-widest mb-2 flex justify-between ${textMuted}`}><span>Page Margin</span><span className={brandGreen}>{design.pageMargin}px</span></label><input type="range" min="0" max="80" step="1" value={design.pageMargin} onChange={(e) => setDesign({...design, pageMargin: parseInt(e.target.value)})} className="w-full accent-emerald-500" /></div>
               <div><label className={`text-xs font-bold uppercase tracking-widest mb-2 block ${textMuted}`}>Accent Color</label><div className="flex gap-3 flex-wrap">{['#7EE787', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#1f2937', '#000000', '#ffffff'].map(c => (<button key={c} onClick={() => setDesign({...design, accentColor: c})} className={`w-7 h-7 rounded-full border-2 transition-transform ${design.accentColor === c ? 'border-white scale-125 shadow-lg' : 'border-transparent hover:scale-110'}`} style={{ backgroundColor: c }} />))}</div></div>
-              <div><label className={`text-xs font-bold uppercase tracking-widest mb-2 block ${textMuted}`}>Sidebar Background</label><div className="flex gap-3 flex-wrap">{['#ffffff', '#f8fafc', '#f3f4f6', '#1e293b', '#0f172a', '#172554'].map(c => (<button key={c} onClick={() => setDesign({...design, sidebarBgColor: c})} className={`w-7 h-7 rounded-full border-2 transition-transform ${design.sidebarBgColor === c ? 'border-emerald-500 scale-125 shadow-lg' : 'border-gray-300 dark:border-gray-600 hover:scale-110'}`} style={{ backgroundColor: c }} />))}</div></div>
+              <div><label className={`text-xs font-bold uppercase tracking-widest mb-2 block ${textMuted}`}>Sidebar Background</label><div className="flex gap-3 flex-wrap">{['#ffffff', '#f8fafc', '#f3f4f6', '#fafaf9', '#f0fdf4', '#f0f9ff', '#fff1f2', '#1e293b', '#0f172a', '#111827', '#1a0f0f', '#0d233a', '#0c2511', '#2a1428'].map(c => (<button key={c} onClick={() => setDesign({...design, sidebarBgColor: c})} className={`w-7 h-7 rounded-full border-2 transition-transform ${design.sidebarBgColor === c ? 'border-emerald-500 scale-125 shadow-lg' : 'border-gray-300 dark:border-gray-600 hover:scale-110'}`} style={{ backgroundColor: c }} />))}</div></div>
               <div><label className={`text-xs font-bold uppercase tracking-widest mb-2 flex justify-between ${textMuted}`}><span>Section Gap</span><span className={brandGreen}>{design.sectionGap}px</span></label><input type="range" min="0" max="60" step="1" value={design.sectionGap} onChange={(e) => setDesign({...design, sectionGap: parseInt(e.target.value)})} className="w-full accent-emerald-500" /></div>
               <div className="mt-4"><label className={`flex items-center justify-between cursor-pointer`}><span className={`text-xs font-bold uppercase tracking-widest ${textMuted}`}>Header Icons</span><div className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors ${design.showHeaderIcons ? brandGreenBg : (isDarkUI ? 'bg-[#333]' : 'bg-gray-300')}`} onClick={() => setDesign({...design, showHeaderIcons: !design.showHeaderIcons})}><span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${design.showHeaderIcons ? 'translate-x-6' : 'translate-x-1'}`} /></div></label></div>
               <div className="mt-4"><label className={`flex items-center justify-between cursor-pointer`}><span className={`text-xs font-bold uppercase tracking-widest ${textMuted}`}>Contact Icons</span><div className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors ${design.showContactIcons ? brandGreenBg : (isDarkUI ? 'bg-[#333]' : 'bg-gray-300')}`} onClick={() => setDesign({...design, showContactIcons: !design.showContactIcons})}><span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${design.showContactIcons ? 'translate-x-6' : 'translate-x-1'}`} /></div></label></div>
@@ -1389,13 +1604,11 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
           >
           {readOnly ? (
             <div className="cv-document-wrapper relative text-gray-900" style={canvasStyleVars}>
-              <div className="cv-page-visualizer"></div>
               {renderCanvasLayout()}
             </div>
           ) : (
             <div key={templateAnimKey} className="transform origin-top transition-transform h-max pb-20 text-gray-900" style={{ transform: `scale(${zoom / 100})` }}>
               <div className="cv-document-wrapper relative" style={canvasStyleVars}>
-                <div className="cv-page-visualizer"></div>
                 {renderCanvasLayout()}
               </div>
             </div>
@@ -1804,23 +2017,12 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
         .custom-scrollbar::-webkit-scrollbar-thumb { background: ${isDarkUI ? '#444' : '#ccc'}; border-radius: 4px; }
         .cv-document { 
           font-family: var(--cv-font), sans-serif; color: #111827; font-size: var(--cv-base-size); position: relative; z-index: 10; 
-          min-height: var(--cv-page-height);
-          mask-image: linear-gradient(to bottom, 
-            black 0, 
-            black var(--cv-page-height), 
-            transparent var(--cv-page-height), 
-            transparent calc(var(--cv-page-height) + var(--cv-page-gap))
-          );
-          mask-size: 100% calc(var(--cv-page-height) + var(--cv-page-gap));
-          mask-repeat: repeat-y;
-          -webkit-mask-image: linear-gradient(to bottom, 
-            black 0, 
-            black var(--cv-page-height), 
-            transparent var(--cv-page-height), 
-            transparent calc(var(--cv-page-height) + var(--cv-page-gap))
-          );
-          -webkit-mask-size: 100% calc(var(--cv-page-height) + var(--cv-page-gap));
-          -webkit-mask-repeat: repeat-y;
+        }
+        .cv-page {
+          font-family: var(--cv-font), sans-serif; color: #111827; font-size: var(--cv-base-size); position: relative; z-index: 10; 
+          background: #ffffff;
+          box-sizing: border-box;
+          overflow: hidden;
         }
         .cv-document .text-gray-900 { color: #111827 !important; }
         .cv-document .text-gray-800 { color: #1f2937 !important; }
@@ -1832,6 +2034,37 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
         .cv-document .text-gray-200 { color: #e5e7eb !important; }
         .cv-document .text-gray-100 { color: #f3f4f6 !important; }
         .cv-document .text-white { color: #ffffff !important; }
+        
+        /* Dark Sidebar Override Rules */
+        .cv-document .cv-dark-sidebar,
+        .cv-document .cv-dark-sidebar h1,
+        .cv-document .cv-dark-sidebar h2,
+        .cv-document .cv-dark-sidebar h3,
+        .cv-document .cv-dark-sidebar h4,
+        .cv-document .cv-dark-sidebar h5,
+        .cv-document .cv-dark-sidebar h6,
+        .cv-document .cv-dark-sidebar span,
+        .cv-document .cv-dark-sidebar div,
+        .cv-document .cv-dark-sidebar p,
+        .cv-document .cv-dark-sidebar li {
+          color: rgba(255, 255, 255, 0.95) !important;
+        }
+        .cv-document .cv-dark-sidebar .cv-accent-text {
+          color: var(--cv-accent) !important;
+        }
+        .cv-document .cv-dark-sidebar .text-gray-400,
+        .cv-document .cv-dark-sidebar .text-gray-500,
+        .cv-document .cv-dark-sidebar .text-slate-400,
+        .cv-document .cv-dark-sidebar .cv-subtitle,
+        .cv-document .cv-dark-sidebar .cv-date {
+          color: rgba(255, 255, 255, 0.6) !important;
+        }
+        .cv-document .cv-dark-sidebar .border-slate-600,
+        .cv-document .cv-dark-sidebar .border-gray-200,
+        .cv-document .cv-dark-sidebar .border-gray-300 {
+          border-color: rgba(255, 255, 255, 0.15) !important;
+        }
+        
         .cv-name { font-size: calc(var(--cv-base-size) * 2.5); line-height: 1.1; }
         .cv-name-narrow { font-size: calc(var(--cv-base-size) * 2.0); line-height: 1.1; }
         .cv-role { font-size: calc(var(--cv-base-size) * 1.15); }
@@ -1872,6 +2105,14 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
         }
 
         .cv-page-visualizer { position: absolute; inset: 0; pointer-events: none; z-index: 1; background-size: 100% calc(var(--cv-page-height) + var(--cv-page-gap)); background-image: linear-gradient(to bottom, #ffffff 0, #ffffff var(--cv-page-height), transparent var(--cv-page-height), transparent calc(var(--cv-page-height) + var(--cv-page-gap))); filter: drop-shadow(0 15px 25px rgba(0,0,0,0.15)); }
+        .cv-page-visualizer::after {
+          content: "";
+          position: absolute;
+          inset: 0;
+          pointer-events: none;
+          background-size: 100% calc(var(--cv-page-height) + var(--cv-page-gap));
+          background-image: linear-gradient(to bottom, transparent var(--cv-page-height), rgba(239, 68, 68, 0.4) var(--cv-page-height), rgba(239, 68, 68, 0.4) calc(var(--cv-page-height) + 2px), transparent calc(var(--cv-page-height) + 2px));
+        }
         
         .cv-page-breakable { page-break-inside: auto; break-inside: auto; }
         
@@ -1891,8 +2132,8 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
         }
         @keyframes fadeInUp { from { opacity: 0; transform: translate(-50%, 10px); } to { opacity: 1; transform: translate(-50%, 0); } }
         .animate-fade-in-up { animation: fadeInUp 0.2s ease-out forwards; }
-        @keyframes snippetEntrance { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .snippet-anim { animation: snippetEntrance 0.4s ease-out forwards; }
+        @keyframes snippetEntrance { from { opacity: 0; } to { opacity: 1; } }
+        .snippet-anim { animation: snippetEntrance 0.3s ease-out forwards; }
       `}} />
       </div>
     </CanvasContext.Provider>
