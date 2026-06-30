@@ -65,7 +65,8 @@ export async function POST(request: NextRequest) {
             prompt,
             systemPrompt: 'You are a JSON-only recruiter analysis API. Return ONLY valid JSON. No conversational filler, no markdown code blocks.',
             temperature: 0.2,
-            maxTokens: 8000
+            maxTokens: 8000,
+            responseMimeType: 'application/json'
         });
 
         let content = aiResponse.content.trim();
