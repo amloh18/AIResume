@@ -269,11 +269,13 @@ async function extractTextFromFile(fileBuffer: Buffer, mimeType: string): Promis
       // pdfjs v5 requires an explicit workerSrc (empty string breaks it)
       if (pdfjs.GlobalWorkerOptions && !pdfjs.GlobalWorkerOptions.workerSrc) {
         try {
-          const workerPath = require.resolve('pdfjs-dist/legacy/build/pdf.worker.mjs');
+          const path = await import('path');
+          const workerPath = path.resolve(process.cwd(), 'node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs');
           pdfjs.GlobalWorkerOptions.workerSrc = `file://${workerPath}`;
         } catch {
           try {
-            const workerPath = require.resolve('pdfjs-dist/build/pdf.worker.mjs');
+            const path = await import('path');
+            const workerPath = path.resolve(process.cwd(), 'node_modules/pdfjs-dist/build/pdf.worker.mjs');
             pdfjs.GlobalWorkerOptions.workerSrc = `file://${workerPath}`;
           } catch { /* leave unconfigured, will fail gracefully */ }
         }

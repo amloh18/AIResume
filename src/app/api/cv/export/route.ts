@@ -10,13 +10,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const {
-      cvData,
-      template,
-      format,
-      userId,
-      cvId,
-      jobId,
     const body = await request.json();
     const { cvData, template, format, userId, cvId, jobId, paperSize = 'A4', orientation = 'portrait', filename, htmlContent } = body;
 
