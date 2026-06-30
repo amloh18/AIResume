@@ -63,9 +63,7 @@ export async function downloadCanvasAsPDF(
   options: CanvasDownloadOptions = {}
 ): Promise<void> {
   const paperSize = options.paperSize || 'A4';
-  const quality = options.quality ?? 0.92;
-  const dims = PAGE_DIMS[paperSize];
-
+  
   // ── 1. Find the live canvas document element ──────────────────────────────
   const cvDoc = document.querySelector('.cv-document') as HTMLElement | null;
   if (!cvDoc) {
@@ -74,120 +72,133 @@ export async function downloadCanvasAsPDF(
     );
   }
 
-  // ── 2. Read real page metrics from CSS variables (set by CVCanvasEngine) ──
-  const pageHeightPx = readCssPxVar(cvDoc, '--cv-page-height', dims.heightPx);
-  const pageGapPx    = readCssPxVar(cvDoc, '--cv-page-gap',    DEFAULT_PAGE_GAP_PX);
-  const slotHeightPx = pageHeightPx + pageGapPx; // one "page slot" in the document
+  // ── 2. Clone the DOM to clean it up before sending to server ───────────────
+  const clone = cvDoc.cloneNode(true) as HTMLElement;
+  
+  // Remove editor-only UI
+  const editorSelectors = [
+    '.no-print',
+    '[data-no-print]',
+    '.cv-drag-handle',
+    '.cv-drag-overlay',
+    '.inline-add-section-button',
+    '.section-hover-controls',
+    '.cv-editor-only',
+    '.cv-section-drag-overlay',
+    '.cv-drop-zone-indicator',
+  ];
+  clone.querySelectorAll(editorSelectors.join(',')).forEach(el => {
+    (el as HTMLElement).style.display = 'none';
+  });
 
-  // Natural (un-zoomed) element height — all content stacked vertically
-  const totalContentH = cvDoc.scrollHeight;
-  const totalPages = Math.max(1, Math.ceil(totalContentH / slotHeightPx));
+  // Strip contenteditable so it renders clean text
+  clone.querySelectorAll('[contenteditable]').forEach(el => {
+    el.removeAttribute('contenteditable');
+  });
 
-  // ── 3. Dynamic imports (avoid SSR / tree-shake bloat) ────────────────────
-  const [html2canvasModule, { jsPDF }] = await Promise.all([
-    import('html2canvas'),
-    import('jspdf'),
-  ]);
-  const html2canvas = html2canvasModule.default;
+  // Remove the gap and shadow for the print version
+  clone.style.gap = '0px';
+  clone.style.boxShadow = 'none';
+  clone.style.transform = 'none'; // Ensure no scale
+  clone.style.margin = '0px';
+  
+  // Clean up individual pages
+  clone.querySelectorAll('.cv-page').forEach(page => {
+    const pageEl = page as HTMLElement;
+    pageEl.style.boxShadow = 'none';
+    pageEl.style.margin = '0px';
+    // Ensure break-after is applied for Puppeteer pagination
+    pageEl.style.breakAfter = 'page';
+    pageEl.style.pageBreakAfter = 'always';
+  });
 
-  // ── 4. Render the element to a high-resolution canvas ────────────────────
-  const CAPTURE_SCALE = 2; // 2× → crisp on retina without huge files
+  // Ensure absolute URLs for images so Puppeteer can load them
+  clone.querySelectorAll('img').forEach(img => {
+    if (img.src && img.src.startsWith('/')) {
+      img.src = window.location.origin + img.src;
+    }
+  });
 
-  const fullCanvas = await html2canvas(cvDoc, {
-    scale: CAPTURE_SCALE,
-    useCORS: true,
-    allowTaint: true,
-    backgroundColor: '#ffffff',
-    logging: false,
-    // Capture at natural element width (794px for A4) ignoring any parent zoom/scale
-    width: cvDoc.offsetWidth,
-    height: totalContentH,
-    windowWidth: cvDoc.offsetWidth,
-    onclone: (clonedDoc: Document) => {
-      // Disable all CSS transitions, animations, and keyframe delays in the cloned document
-      const style = clonedDoc.createElement('style');
-      style.innerHTML = `
-        * {
-          animation: none !important;
-          transition: none !important;
-          transition-duration: 0s !important;
-          animation-duration: 0s !important;
+  // ── 3. Extract all page styles (Tailwind, custom fonts, etc) ─────────────
+  const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
+    .map(el => {
+      if (el.tagName === 'LINK') {
+        const href = el.getAttribute('href');
+        if (href && href.startsWith('/')) {
+          const linkClone = el.cloneNode() as HTMLLinkElement;
+          linkClone.href = window.location.origin + href;
+          return linkClone.outerHTML;
         }
-      `;
-      clonedDoc.head.appendChild(style);
-
-      const clone = clonedDoc.querySelector('.cv-document') as HTMLElement | null;
-      if (clone) {
-        // Remove the CSS mask that hides content in the page-gap zones
-        clone.style.maskImage       = 'none';
-        clone.style.webkitMaskImage = 'none';
-        clone.style.height          = `${totalContentH}px`;
-        clone.style.overflow        = 'visible';
       }
+      return el.outerHTML;
+    })
+    .join('\n');
 
-      // Hide editor-only UI so it doesn't appear in the PDF
-      const editorSelectors = [
-        '.no-print',
-        '[data-no-print]',
-        '.cv-drag-handle',
-        '.cv-drag-overlay',
-        '.inline-add-section-button',
-        '.section-hover-controls',
-        '.cv-editor-only',
-        '.cv-section-drag-overlay',
-        '.cv-drop-zone-indicator',
-      ];
-      clonedDoc.querySelectorAll(editorSelectors.join(',')).forEach(el => {
-        (el as HTMLElement).style.display = 'none';
-      });
+  // ── 4. Construct the complete HTML payload ───────────────────────────────
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="utf-8">
+      <title>${filename}</title>
+      <base href="${window.location.origin}">
+      ${styles}
+      <style>
+        /* Force exact page dimensions and hide anything outside */
+        @page {
+          margin: 0;
+          size: ${paperSize === 'Letter' ? '8.5in 11in' : 'A4'};
+        }
+        body {
+          margin: 0;
+          padding: 0;
+          background: white;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+        .cv-document {
+          width: 100% !important;
+        }
+      </style>
+    </head>
+    <body class="bg-white">
+      ${clone.outerHTML}
+    </body>
+    </html>
+  `;
 
-      // Strip contenteditable so html2canvas renders clean text
-      clonedDoc.querySelectorAll('[contenteditable]').forEach(el => {
-        el.removeAttribute('contenteditable');
-      });
+  // ── 5. Send to server for Puppeteer rendering ────────────────────────────
+  const response = await fetch('/api/cv/export', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
     },
+    body: JSON.stringify({
+      htmlContent,
+      format: 'pdf',
+      paperSize,
+      filename: filename.replace('.pdf', ''),
+      // We send minimal dummy data just to satisfy the API validation,
+      // because Puppeteer will solely use our htmlContent.
+      cvData: { basics: { name: filename } },
+      template: { id: 'canvas' },
+    }),
   });
 
-  // ── 5. Build jsPDF document, one page at a time ───────────────────────────
-  const doc = new jsPDF({
-    orientation: 'portrait',
-    unit: 'mm',
-    format: [dims.widthMm, dims.heightMm],
-  });
-
-  // px-to-mm conversion factor for the captured canvas
-  const canvasWidthPx = cvDoc.offsetWidth * CAPTURE_SCALE;
-  const pxToMm = dims.widthMm / canvasWidthPx;
-  const pageHeightMm = pageHeightPx * CAPTURE_SCALE * pxToMm;
-
-  for (let page = 0; page < totalPages; page++) {
-    if (page > 0) doc.addPage();
-
-    // Source Y in the full canvas (each slot = page + gap, we only take the page part)
-    const srcY = page * slotHeightPx * CAPTURE_SCALE;
-    const srcH = pageHeightPx * CAPTURE_SCALE;
-
-    if (srcY >= fullCanvas.height) break; // no more content
-    const actualSrcH = Math.min(srcH, fullCanvas.height - srcY);
-    if (actualSrcH <= 0) break;
-
-    // Crop this page out of the full canvas
-    const pageCanvas = document.createElement('canvas');
-    pageCanvas.width  = canvasWidthPx;
-    pageCanvas.height = srcH;
-
-    const ctx = pageCanvas.getContext('2d')!;
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
-    ctx.drawImage(
-      fullCanvas,
-      0, srcY, canvasWidthPx, actualSrcH,  // source rect
-      0, 0,   canvasWidthPx, actualSrcH    // dest rect (top of page canvas)
-    );
-
-    const imgData = pageCanvas.toDataURL('image/jpeg', quality);
-    doc.addImage(imgData, 'JPEG', 0, 0, dims.widthMm, Math.min(dims.heightMm, pageHeightMm));
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || `PDF generation failed with status ${response.status}`);
   }
 
-  doc.save(filename);
+  // ── 6. Download the resulting PDF Blob ──────────────────────────────────
+  const blob = await response.blob();
+  const downloadUrl = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = downloadUrl;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(downloadUrl);
 }
+
