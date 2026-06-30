@@ -12,6 +12,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 export const CanvasContext = React.createContext<any>(null);
 
+export const SnippetContext = React.createContext<{
+  blockId: string;
+  pageIdx: number;
+  pageAssignments: Record<string, number>;
+} | null>(null);
+
 export const EditableField = ({ data: explicitData, path, multiline, onChange: explicitOnChange, setFocusedRef: explicitSetFocusedRef, readOnly, nowrap, breakAll, aiIssues: explicitAiIssues, activeIssueId: explicitActiveIssueId, onIssueClick: explicitOnIssueClick, isDate = false, dateFormat: explicitDateFormat }: any) => {
   const ctx = React.useContext(CanvasContext);
   
@@ -395,12 +401,21 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const midY = rect.top + rect.height / 2;
     const insertIndex = e.clientY < midY ? index : index + 1;
-    if (dragState.overZoneId !== zoneId || dragState.overIndex !== insertIndex) {
+        if (dragState.overZoneId !== zoneId || dragState.overIndex !== insertIndex) {
       document.dispatchEvent(new CustomEvent('snippet-drag-over', { detail: { zoneId, index: insertIndex } }));
     }
   };
 
+  const match = zoneId.match(/_page_(\d+)$/);
+  const pageIdx = match ? parseInt(match[1]) : 0;
+
   const Title = ({ titleKey, overrideClass }: any) => {
+    const headerUnitId = `${instance.id}_header`;
+    const assignedPage = ctx?.pageAssignments?.[headerUnitId] ?? 0;
+    if (assignedPage !== pageIdx) {
+      return null;
+    }
+
     const isSidebar = ['sidebar', 'left', 'right'].includes(zoneId);
     const styleKey = isSidebar && activeTemplate?.sidebarTitleStyle ? activeTemplate.sidebarTitleStyle : activeTemplate?.titleStyle;
     const Renderer = TITLE_STYLES[styleKey] || TITLE_STYLES['standard'];
@@ -417,7 +432,7 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
   const controls = showInlineControls ? (
     <div className="absolute -top-[28px] right-0 opacity-0 group-hover/inner:opacity-100 transition-all duration-200 flex items-center gap-0 z-[200] no-print">
       {/* Action icons group */}
-      {isHeader && (
+      {isHeader && instance.type !== 'header-accent' && (
         <button
           onClick={onTogglePhoto}
           className="w-7 h-7 flex items-center justify-center text-blue-500/70 hover:text-blue-600 transition-all duration-150 hover:scale-110 active:scale-95"
@@ -444,44 +459,56 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
           <Wand2 size={13}/>
         </button>
       )}
+      {isHeader && (
+        <div className="flex items-center gap-0.5 border-r border-slate-700/20 dark:border-white/10 pr-1 mr-1">
+          <button
+            onClick={() => ctx?.setDesign?.({ ...ctx.design, headerAlign: 'left' })}
+            className={`w-7 h-7 flex items-center justify-center transition-all duration-150 hover:scale-110 active:scale-95 bg-transparent ${
+              (ctx?.design?.headerAlign || 'left') === 'left' ? 'text-emerald-500' : 'text-slate-400/70 hover:text-slate-600'
+            }`}
+            title="Align text left"
+          >
+            <AlignLeft size={13} />
+          </button>
+          <button
+            onClick={() => ctx?.setDesign?.({ ...ctx.design, headerAlign: 'center' })}
+            className={`w-7 h-7 flex items-center justify-center transition-all duration-150 hover:scale-110 active:scale-95 bg-transparent ${
+              ctx?.design?.headerAlign === 'center' ? 'text-emerald-500' : 'text-slate-400/70 hover:text-slate-600'
+            }`}
+            title="Center text"
+          >
+            <AlignCenter size={13} />
+          </button>
+          <button
+            onClick={() => ctx?.setDesign?.({ ...ctx.design, headerAlign: 'right' })}
+            className={`w-7 h-7 flex items-center justify-center transition-all duration-150 hover:scale-110 active:scale-95 bg-transparent ${
+              ctx?.design?.headerAlign === 'right' ? 'text-emerald-500' : 'text-slate-400/70 hover:text-slate-600'
+            }`}
+            title="Align text right"
+          >
+            <AlignRight size={13} />
+          </button>
+        </div>
+      )}
       <button
         onClick={() => onReplace(zoneId, index, instance.type)}
-        className="w-7 h-7 flex items-center justify-center text-slate-400/70 hover:text-slate-600 transition-all duration-150 hover:scale-110 active:scale-95"
-        title="Replace section style"
+        className="w-7 h-7 flex items-center justify-center text-slate-400/70 hover:text-slate-600 transition-all duration-150 hover:scale-110 active:scale-95 bg-transparent"
+        title="Change Style"
       >
-        <RefreshCw size={12}/>
+        <RefreshCw size={13}/>
+      </button>
+      <button
+        onClick={() => removeSnippet(zoneId, index)}
+        className="w-7 h-7 flex items-center justify-center text-red-400/70 hover:text-red-500 transition-all duration-150 hover:scale-110 active:scale-95 bg-transparent"
+        title="Delete section"
+      >
+        <Trash2 size={13}/>
       </button>
       {!isHeader && (
         <>
-          <button
-            onClick={() => moveSnippet(zoneId, index, -1)}
-            className="w-7 h-7 flex items-center justify-center text-slate-400/70 hover:text-slate-600 transition-all duration-150 hover:scale-110 active:scale-95"
-            title="Move section up"
-          >
-            <ChevronUp size={14}/>
-          </button>
-          <button
-            onClick={() => moveSnippet(zoneId, index, 1)}
-            className="w-7 h-7 flex items-center justify-center text-slate-400/70 hover:text-slate-600 transition-all duration-150 hover:scale-110 active:scale-95"
-            title="Move section down"
-          >
-            <ChevronDown size={14}/>
-          </button>
-          <button
-            onClick={handleRemoveSnippet}
-            className={`w-7 h-7 flex items-center justify-center transition-all duration-150 hover:scale-110 active:scale-95 ${
-              confirmingRemove
-                ? 'text-white bg-red-500 rounded-lg'
-                : 'text-red-400/70 hover:text-red-600'
-            }`}
-            title={confirmingRemove ? 'Click again to confirm delete' : 'Delete section'}
-            aria-label={confirmingRemove ? 'Confirm delete section' : 'Delete section'}
-          >
-            <Trash2 size={13}/>
-          </button>
-          {/* Grip — ONLY this div initiates drag */}
-          <div
-            className="w-7 h-7 flex items-center justify-center cursor-grab text-slate-400/70 hover:text-blue-500 transition-all duration-150 hover:scale-110 active:cursor-grabbing"
+          <div className="w-[1.5px] h-4 bg-slate-200 dark:bg-slate-700/50 mx-1" />
+          <div 
+            className="w-7 h-7 flex items-center justify-center text-slate-400/70 hover:text-slate-600 cursor-grab active:cursor-grabbing transition-all duration-150 bg-transparent"
             title="Drag to reorder"
             draggable
             onDragStart={handleDragStart as any}
@@ -511,43 +538,46 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
   const moriHoverClass = ctx?.moriChatMode ? 'hover:bg-emerald-500/10 hover:shadow-[0_0_0_2px_rgba(16,185,129,0.4)] cursor-pointer rounded-lg transition-all' : '';
   
   return (
-    <motion.div
-      layout="position"
-      initial={{ opacity: 0, y: 15 }}
-      animate={{ opacity: isBeingDragged ? 0 : 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.96, y: -10 }}
-      transition={{ 
-        type: 'spring', 
-        stiffness: 400, 
-        damping: 35, 
-        opacity: { duration: 0.25 },
-        y: { type: 'spring', stiffness: 350, damping: 30 }
-      }}
-      onDragOver={handleDragOver as any}
-      className={`relative group/snippet cv-section-wrapper ${showDropLine ? 'mt-10' : 'mt-0'} ${moriHoverClass}`}
-      style={isHeader ? {} : { marginBottom: isLastSnippetInZone ? 0 : 'var(--cv-section-gap, 16px)', visibility: isBeingDragged ? 'hidden' : 'visible' }}
-      onClick={handleMoriClick}
-    >
-      {showDropLine && (
-        <div className="absolute -top-8 left-0 w-full min-h-[30px] rounded-xl border-2 border-dashed border-emerald-400 bg-emerald-50/95 shadow-[0_0_0_1px_rgba(16,185,129,0.1),0_10px_30px_rgba(16,185,129,0.12)] flex items-center justify-center pointer-events-none z-30 animate-pulse">
-          <span className="px-3 py-1 rounded-full bg-white text-[10px] font-bold uppercase tracking-[0.22em] text-emerald-700">Drop Section Here</span>
+    <SnippetContext.Provider value={{ blockId: instance.id, pageIdx, pageAssignments: ctx?.pageAssignments || {} }}>
+      <motion.div
+        layout="position"
+        initial={{ opacity: 0, y: 15 }}
+        animate={{ opacity: isBeingDragged ? 0 : 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.96, y: -10 }}
+        transition={{ 
+          type: 'spring', 
+          stiffness: 400, 
+          damping: 35, 
+          opacity: { duration: 0.25 },
+          y: { type: 'spring', stiffness: 350, damping: 30 }
+        }}
+        onDragOver={handleDragOver as any}
+        data-block-id={instance.id}
+        className={`relative group/snippet cv-section-wrapper ${showDropLine ? 'mt-10' : 'mt-0'} ${moriHoverClass}`}
+        style={isHeader ? {} : { marginBottom: isLastSnippetInZone ? 0 : 'var(--cv-section-gap, 16px)', visibility: isBeingDragged ? 'hidden' : 'visible' }}
+        onClick={handleMoriClick}
+      >
+        {showDropLine && (
+          <div className="absolute -top-8 left-0 w-full min-h-[30px] rounded-xl border-2 border-dashed border-emerald-400 bg-emerald-50/95 shadow-[0_0_0_1px_rgba(16,185,129,0.1),0_10px_30px_rgba(16,185,129,0.12)] flex items-center justify-center pointer-events-none z-30 animate-pulse">
+            <span className="px-3 py-1 rounded-full bg-white text-[10px] font-bold uppercase tracking-[0.22em] text-emerald-700">Drop Section Here</span>
+          </div>
+        )}
+        <div className={`relative hover:z-[150] group/inner w-full`}>
+          {controls}
+          <div className={`px-2 py-1 pointer-events-auto snippet-content relative z-10 w-full ${!content && !readOnly ? 'min-h-[60px] flex flex-col justify-center' : ''}`}>
+            {!readOnly && (
+              <div className="absolute left-[-1px] right-[-1px] top-[-1px] bottom-[-1px] bg-emerald-50/10 opacity-0 group-hover/inner:opacity-100 pointer-events-none transition-all duration-200 z-[-1] border border-transparent group-hover/inner:border-emerald-400 group-hover/inner:border-dashed shadow-none group-hover/inner:shadow-sm rounded-md group-hover/inner:rounded-tr-none group-hover/inner:rounded-tl-none transition-shadow"></div>
+            )}
+            {content || (!readOnly && (
+              <div className="text-center opacity-40 select-none cursor-pointer hover:opacity-80 transition-opacity p-4 border border-dashed border-gray-300 rounded-lg mt-2" onClick={() => onAddListEntry(SnippetComponent.category)}>
+                <Title titleKey={SnippetComponent.category.toLowerCase()} />
+                <div className="text-[11px] uppercase tracking-widest mt-3 font-bold text-gray-500 flex items-center justify-center gap-1"><PlusCircle size={14}/> Add {SnippetComponent.category}</div>
+              </div>
+            ))}
+          </div>
         </div>
-      )}
-      <div className={`relative hover:z-[150] group/inner w-full`}>
-        {controls}
-        <div className={`px-2 py-1 pointer-events-auto snippet-content relative z-10 w-full ${!content && !readOnly ? 'min-h-[60px] flex flex-col justify-center' : ''}`}>
-          {!readOnly && (
-            <div className="absolute left-[-1px] right-[-1px] top-[-1px] bottom-[-1px] bg-emerald-50/10 opacity-0 group-hover/inner:opacity-100 pointer-events-none transition-all duration-200 z-[-1] border border-transparent group-hover/inner:border-emerald-400 group-hover/inner:border-dashed shadow-none group-hover/inner:shadow-sm rounded-md group-hover/inner:rounded-tr-none group-hover/inner:rounded-tl-none transition-shadow"></div>
-          )}
-          {content || (!readOnly && (
-            <div className="text-center opacity-40 select-none cursor-pointer hover:opacity-80 transition-opacity p-4 border border-dashed border-gray-300 rounded-lg mt-2" onClick={() => onAddListEntry(SnippetComponent.category)}>
-              <Title titleKey={SnippetComponent.category.toLowerCase()} />
-              <div className="text-[11px] uppercase tracking-widest mt-3 font-bold text-gray-500 flex items-center justify-center gap-1"><PlusCircle size={14}/> Add {SnippetComponent.category}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </motion.div>
+      </motion.div>
+    </SnippetContext.Provider>
   );
 };
 
@@ -702,14 +732,30 @@ export const StaticLayoutRenderer = ({ template, cvData, ReadOnlyWrapper, design
       </div>
     );
   };
+  const isColorDark = (hex: string) => {
+    if (!hex || hex[0] !== '#') return false;
+    const cleanHex = hex.replace('#', '');
+    if (cleanHex.length === 3) {
+      const r = parseInt(cleanHex[0] + cleanHex[0], 16);
+      const g = parseInt(cleanHex[1] + cleanHex[1], 16);
+      const b = parseInt(cleanHex[2] + cleanHex[2], 16);
+      return (r * 299 + g * 587 + b * 114) / 1000 < 140;
+    }
+    const r = parseInt(cleanHex.substring(0, 2), 16);
+    const g = parseInt(cleanHex.substring(2, 4), 16);
+    const b = parseInt(cleanHex.substring(4, 6), 16);
+    return (r * 299 + g * 587 + b * 114) / 1000 < 140;
+  };
+  const isDarkSidebar = isColorDark(defaultDesign.sidebarBgColor || '#f8fafc');
+
   switch (template.type) {
     case '1-col': return <div className={`w-full h-full cv-document ${formatClass}`} style={{ ...wrapperStyle, padding: '57px 76px', backgroundColor: '#ffffff' }}>{renderZone('main', 'w-full min-w-0')}</div>;
     case '2-col': return <div className={`w-full h-full flex flex-col cv-document ${formatClass}`} style={{ ...wrapperStyle, backgroundColor: '#ffffff' }}>{template.zones['header'] && <div className="pt-[57px] px-[76px] pb-0">{renderZone('header', 'w-full min-w-0')}</div>}<div className="flex flex-1 items-start px-[76px] pb-[57px] pt-0 gap-8"><div className="flex-1 min-w-0">{renderZone('left', 'h-full')}</div><div className="flex-1 min-w-0">{renderZone('right', 'h-full')}</div></div></div>;
-    case 'sidebar-left': return <div className={`w-full h-full flex cv-document ${formatClass}`} style={{ ...wrapperStyle, backgroundColor: '#ffffff' }}><div className="w-[32%] min-w-0 border-r border-slate-200 pl-[76px] pr-[19px] py-[57px]" style={{ backgroundColor: 'var(--cv-sidebar-bg)' }}>{renderZone('sidebar', 'h-full', false)}</div><div className="w-[68%] min-w-0 pl-[19px] pr-[76px] py-[57px]">{renderZone('main', 'h-full')}</div></div>;
-    case 'sidebar-left-dark': return <div className={`w-full h-full flex cv-document ${formatClass}`} style={{ ...wrapperStyle, backgroundColor: '#ffffff' }}><div className="w-[32%] min-w-0 pl-[76px] pr-[19px] py-[57px]" style={{ backgroundColor: 'var(--cv-sidebar-bg)' }}>{renderZone('sidebar', 'h-full', true)}</div><div className="w-[68%] min-w-0 pl-[19px] pr-[76px] py-[57px]">{renderZone('main', 'h-full')}</div></div>;
-    case 'sidebar-right': return <div className={`w-full h-full flex cv-document ${formatClass}`} style={{ ...wrapperStyle, backgroundColor: '#ffffff' }}><div className="w-[68%] min-w-0 pl-[76px] pr-[19px] py-[57px]">{renderZone('main', 'h-full')}</div><div className="w-[32%] min-w-0 border-l border-slate-200 pl-[19px] pr-[76px] py-[57px]" style={{ backgroundColor: 'var(--cv-sidebar-bg)' }}>{renderZone('sidebar', 'h-full', false)}</div></div>;
-    case 'top-sidebar-right': return <div className={`w-full h-full flex flex-col cv-document ${formatClass}`} style={{ ...wrapperStyle, backgroundColor: '#ffffff' }}>{template.zones['header'] && <div className="pt-[57px] px-[76px] pb-0">{renderZone('header', 'w-full min-w-0')}</div>}<div className="flex flex-1 items-start px-[76px] pb-[57px] pt-0 gap-8"><div className="w-[68%] min-w-0">{renderZone('main', 'h-full')}</div><div className="w-[32%] min-w-0 border-l border-slate-200 pl-[19px] py-4 -my-4 rounded-lg" style={{ backgroundColor: 'var(--cv-sidebar-bg)' }}>{renderZone('sidebar', 'h-full', false)}</div></div></div>;
-    case 'top-sidebar-left': return <div className={`w-full h-full flex flex-col cv-document ${formatClass}`} style={{ ...wrapperStyle, backgroundColor: '#ffffff' }}>{template.zones['header'] && <div className="pt-[57px] px-[76px] pb-0">{renderZone('header', 'w-full min-w-0')}</div>}<div className="flex flex-1 items-start px-[76px] pb-[57px] pt-0 gap-8"><div className="w-[32%] min-w-0 border-r border-slate-200 pr-[19px] py-4 -my-4 rounded-lg" style={{ backgroundColor: 'var(--cv-sidebar-bg)' }}>{renderZone('sidebar', 'h-full', false)}</div><div className="w-[68%] min-w-0">{renderZone('main', 'h-full')}</div></div></div>;
+    case 'sidebar-left': return <div className={`w-full h-full flex cv-document ${formatClass}`} style={{ ...wrapperStyle, backgroundColor: '#ffffff' }}><div className={`w-[32%] min-w-0 border-r border-slate-200 pl-[76px] pr-[19px] py-[57px] ${isDarkSidebar ? 'cv-dark-sidebar text-white' : ''}`} style={{ backgroundColor: 'var(--cv-sidebar-bg)' }}>{renderZone('sidebar', 'h-full', isDarkSidebar)}</div><div className="w-[68%] min-w-0 pl-[19px] pr-[76px] py-[57px]">{renderZone('main', 'h-full')}</div></div>;
+    case 'sidebar-left-dark': return <div className={`w-full h-full flex cv-document ${formatClass}`} style={{ ...wrapperStyle, backgroundColor: '#ffffff' }}><div className={`w-[32%] min-w-0 pl-[76px] pr-[19px] py-[57px] ${isDarkSidebar ? 'cv-dark-sidebar text-white' : ''}`} style={{ backgroundColor: 'var(--cv-sidebar-bg)' }}>{renderZone('sidebar', 'h-full', isDarkSidebar)}</div><div className="w-[68%] min-w-0 pl-[19px] pr-[76px] py-[57px]">{renderZone('main', 'h-full')}</div></div>;
+    case 'sidebar-right': return <div className={`w-full h-full flex cv-document ${formatClass}`} style={{ ...wrapperStyle, backgroundColor: '#ffffff' }}><div className="w-[68%] min-w-0 pl-[76px] pr-[19px] py-[57px]">{renderZone('main', 'h-full')}</div><div className={`w-[32%] min-w-0 border-l border-slate-200 pl-[19px] pr-[76px] py-[57px] ${isDarkSidebar ? 'cv-dark-sidebar text-white' : ''}`} style={{ backgroundColor: 'var(--cv-sidebar-bg)' }}>{renderZone('sidebar', 'h-full', isDarkSidebar)}</div></div>;
+    case 'top-sidebar-right': return <div className={`w-full h-full flex flex-col cv-document ${formatClass}`} style={{ ...wrapperStyle, backgroundColor: '#ffffff' }}>{template.zones['header'] && <div className="pt-[57px] px-[76px] pb-0">{renderZone('header', 'w-full min-w-0')}</div>}<div className="flex flex-1 items-start px-[76px] pb-[57px] pt-0 gap-8"><div className="w-[68%] min-w-0">{renderZone('main', 'h-full')}</div><div className={`w-[32%] min-w-0 border-l border-slate-200 pl-[19px] py-4 -my-4 rounded-lg ${isDarkSidebar ? 'cv-dark-sidebar text-white' : ''}`} style={{ backgroundColor: 'var(--cv-sidebar-bg)' }}>{renderZone('sidebar', 'h-full', isDarkSidebar)}</div></div></div>;
+    case 'top-sidebar-left': return <div className={`w-full h-full flex flex-col cv-document ${formatClass}`} style={{ ...wrapperStyle, backgroundColor: '#ffffff' }}>{template.zones['header'] && <div className="pt-[57px] px-[76px] pb-0">{renderZone('header', 'w-full min-w-0')}</div>}<div className="flex flex-1 items-start px-[76px] pb-[57px] pt-0 gap-8"><div className={`w-[32%] min-w-0 border-r border-slate-200 pr-[19px] py-4 -my-4 rounded-lg ${isDarkSidebar ? 'cv-dark-sidebar text-white' : ''}`} style={{ backgroundColor: 'var(--cv-sidebar-bg)' }}>{renderZone('sidebar', 'h-full', isDarkSidebar)}</div><div className="w-[68%] min-w-0">{renderZone('main', 'h-full')}</div></div></div>;
     case 'hybrid-split': return <div className={`w-full h-full flex flex-col cv-document ${formatClass}`} style={{ ...wrapperStyle, backgroundColor: '#ffffff' }}>{template.zones['header'] && <div className="pt-[57px] px-[76px] pb-0">{renderZone('header', 'w-full min-w-0')}</div>}<div className="px-[76px] pt-0 pb-0">{renderZone('main', 'w-full min-w-0')}</div><div className="flex flex-1 items-start px-[76px] pb-[57px] pt-0 gap-8"><div className="flex-1 min-w-0">{renderZone('left', 'h-full')}</div><div className="flex-1 min-w-0">{renderZone('right', 'h-full')}</div></div></div>;
     default: return <div>Layout not found</div>;
   }

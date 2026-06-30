@@ -258,36 +258,43 @@ export const TITLE_STYLES: Record<string, React.FC<{ children: React.ReactNode; 
 // ==========================================
 export const SNIPPETS: Record<string, { id: string; name: string; category: string; render: (props: any) => React.ReactNode }> = {
   // === HEADERS (7) ===
-  'header-minimal': { id: 'header-minimal', name: 'Minimal Center', category: 'Header', render: ({ data, Editable, zoneId, isDark, showIcons, design, layoutZones, Title }: any) => {
+  'header-minimal': { id: 'header-minimal', name: 'Minimal Center', category: 'Header', render: ({ data, Editable, zoneId, isDark, showIcons, design, layoutZones, Title, readOnly }: any) => {
     const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
     const hasSidebarContact = layoutZones && Object.values(layoutZones).flat().some((block: any) => block?.type === 'sidebar-contact');
+    const align = design.headerAlign || 'center';
+    const alignClass = align === 'left' ? 'items-start text-left' : align === 'right' ? 'items-end text-right' : 'items-center text-center';
+    const justifyClass = align === 'left' ? 'justify-start' : align === 'right' ? 'justify-end' : 'justify-center';
+
     return (
-      <div className={`flex ${isNarrow ? 'flex-col items-center text-center' : 'items-center text-left'} gap-5 pb-4 border-b ${isDark ? 'border-slate-700 text-gray-300' : 'border-gray-200 text-gray-600'} snippet-anim cv-keep-with-next`}>
+      <div className={`flex ${isNarrow ? 'flex-col items-center text-center' : 'items-center'} gap-5 pb-4 border-b ${isDark ? 'border-slate-700 text-gray-300' : 'border-gray-200 text-gray-600'} snippet-anim cv-keep-with-next`}>
         <Title titleKey="header" overrideClass="hidden" />
         {data?.basics?.showAvatar && <AvatarEditable data={data} sizeClass={isNarrow ? 'w-24 h-24 mb-3' : 'w-20 h-20'} shapeClass="rounded-full shadow-md" borderClass={isDark ? 'border-2 border-slate-700' : ''} readOnly={readOnly} />}
-        <div className={`min-w-0 w-full ${isNarrow ? '' : 'flex flex-col items-center'}`}>
-          <h1 className={`${isNarrow ? TYPOGRAPHY.nameNarrow : TYPOGRAPHY.name} ${isDark ? 'text-white' : 'text-gray-900'} mb-1 uppercase tracking-widest ${!isNarrow && 'text-center'}`}><Editable path="basics.name" nowrap /></h1>
-          <h2 className={`${TYPOGRAPHY.role} ${isDark ? 'text-gray-400' : ''} mb-3 ${!isNarrow && 'text-center'}`}><Editable path="basics.title" nowrap /></h2>
+        <div className={`min-w-0 w-full flex flex-col ${alignClass}`}>
+          <h1 className={`${isNarrow ? TYPOGRAPHY.nameNarrow : TYPOGRAPHY.name} ${isDark ? 'text-white' : 'text-gray-900'} mb-1 uppercase tracking-widest`}><Editable path="basics.name" nowrap={!isNarrow} /></h1>
+          <h2 className={`${TYPOGRAPHY.role} ${isDark ? 'text-gray-400' : ''} mb-3`}><Editable path="basics.title" nowrap={!isNarrow} /></h2>
           {!hasSidebarContact && (
-            <div className={`flex flex-wrap justify-center ${isNarrow ? 'flex-col gap-1.5 items-center' : 'gap-x-4 gap-y-1.5 items-center'} ${TYPOGRAPHY.contact}`}>
-              <ContactLinks data={data} Editable={Editable} isNarrow={isNarrow} showIcons={showIcons} design={design} />
+            <div className={`flex flex-wrap ${isNarrow ? 'flex-col gap-1.5 items-center' : `gap-x-4 gap-y-1.5 items-center ${justifyClass}`} ${TYPOGRAPHY.contact}`}>
+              <ContactLinks data={data} Editable={Editable} isNarrow={isNarrow} showIcons={showIcons} design={design} align={isNarrow ? 'justify-center' : justifyClass} />
             </div>
           )}
         </div>
       </div>
     );
   }},
-  'header-split': { id: 'header-split', name: 'Split Modern', category: 'Header', render: ({ data, Editable, zoneId, isDark, showIcons, design, layoutZones, Title }: any) => {
+  'header-split': { id: 'header-split', name: 'Split Modern', category: 'Header', render: ({ data, Editable, zoneId, isDark, showIcons, design, layoutZones, Title, readOnly }: any) => {
     const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
     const hasSidebarContact = layoutZones && Object.values(layoutZones).flat().some((block: any) => block?.type === 'sidebar-contact');
+    const align = design.headerAlign || 'left';
+    const alignClass = align === 'center' ? 'items-center text-center' : align === 'right' ? 'items-end text-right' : 'items-start text-left';
+
     return (
       <div className={`flex ${isNarrow ? 'flex-col gap-4 text-center items-center' : 'justify-between items-end'} pb-4 border-b-[1.5px] ${isDark ? 'border-slate-600' : 'border-slate-800'} snippet-anim w-full cv-keep-with-next`}>
         <Title titleKey="header" overrideClass="hidden" />
-        <div className={`flex ${isNarrow ? 'flex-col text-center items-center' : 'items-center text-left'} gap-4 min-w-0`}>
+        <div className={`flex ${isNarrow ? 'flex-col text-center items-center' : 'items-center'} gap-4 min-w-0`}>
           {data?.basics?.showAvatar && <AvatarEditable data={data} sizeClass={isNarrow ? 'w-24 h-24' : 'w-16 h-16'} shapeClass="rounded-full shadow-md" readOnly={readOnly} />}
-          <div className="min-w-0">
-            <h1 className={`${isNarrow ? TYPOGRAPHY.nameNarrow : TYPOGRAPHY.name} ${isDark ? 'text-white' : 'text-slate-800'} mb-1.5`}><Editable path="basics.name" nowrap /></h1>
-            <h2 className={`${TYPOGRAPHY.role} ${isDark ? 'text-slate-400' : 'text-slate-600'}`}><Editable path="basics.title" nowrap /></h2>
+          <div className={`min-w-0 flex flex-col ${alignClass}`}>
+            <h1 className={`${isNarrow ? TYPOGRAPHY.nameNarrow : TYPOGRAPHY.name} ${isDark ? 'text-white' : 'text-slate-800'} mb-1.5`}><Editable path="basics.name" nowrap={!isNarrow} /></h1>
+            <h2 className={`${TYPOGRAPHY.role} ${isDark ? 'text-slate-400' : 'text-slate-600'}`}><Editable path="basics.title" nowrap={!isNarrow} /></h2>
           </div>
         </div>
         {!hasSidebarContact && (
@@ -298,58 +305,70 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
       </div>
     );
   }},
-  'header-avatar': { id: 'header-avatar', name: 'Avatar Left Bold', category: 'Header', render: ({ data, Editable, zoneId, isDark, showIcons, design, layoutZones, Title }: any) => {
+  'header-avatar': { id: 'header-avatar', name: 'Avatar Left Bold', category: 'Header', render: ({ data, Editable, zoneId, isDark, showIcons, design, layoutZones, Title, readOnly }: any) => {
     const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
     const hasSidebarContact = layoutZones && Object.values(layoutZones).flat().some((block: any) => block?.type === 'sidebar-contact');
+    const align = design.headerAlign || 'left';
+    const alignClass = align === 'center' ? 'items-center text-center' : align === 'right' ? 'items-end text-right' : 'items-start text-left';
+    const justifyClass = align === 'center' ? 'justify-center' : align === 'right' ? 'justify-end' : 'justify-start';
+
     return (
       <div className={`flex ${isNarrow ? 'flex-col items-center text-center' : 'items-center'} gap-5 pb-5 snippet-anim w-full cv-keep-with-next`}>
         <Title titleKey="header" overrideClass="hidden" />
         {data?.basics?.showAvatar && <AvatarEditable data={data} sizeClass={isNarrow ? 'w-28 h-28' : 'w-24 h-24'} shapeClass="rounded-full shadow-lg" borderClass={isDark ? 'border-2 border-slate-700' : 'border-4 border-white'} readOnly={readOnly} />}
-        <div className="min-w-0 w-full">
-          <h1 className={`${isNarrow ? TYPOGRAPHY.nameNarrow : TYPOGRAPHY.name} ${isDark ? 'text-white' : 'text-gray-900'} mb-1.5`}><Editable path="basics.name" nowrap /></h1>
-          <h2 className={`${TYPOGRAPHY.role} mb-3`}><Editable path="basics.title" nowrap /></h2>
+        <div className={`min-w-0 w-full flex flex-col ${alignClass}`}>
+          <h1 className={`${isNarrow ? TYPOGRAPHY.nameNarrow : TYPOGRAPHY.name} ${isDark ? 'text-white' : 'text-gray-900'} mb-1.5`}><Editable path="basics.name" nowrap={!isNarrow} /></h1>
+          <h2 className={`${TYPOGRAPHY.role} mb-3`}><Editable path="basics.title" nowrap={!isNarrow} /></h2>
           {!hasSidebarContact && (
-            <div className={`flex flex-wrap ${isNarrow ? 'flex-col gap-1.5 justify-center items-center' : 'gap-x-4 gap-y-1.5 items-center'} ${TYPOGRAPHY.contact} ${isDark ? 'text-gray-300' : 'text-gray-500'}`}>
-              <ContactLinks data={data} Editable={Editable} isNarrow={isNarrow} showIcons={showIcons} design={design} />
+            <div className={`flex flex-wrap ${isNarrow ? 'flex-col gap-1.5 justify-center items-center' : `gap-x-4 gap-y-1.5 items-center ${justifyClass}`} ${TYPOGRAPHY.contact} ${isDark ? 'text-gray-300' : 'text-gray-500'}`}>
+              <ContactLinks data={data} Editable={Editable} isNarrow={isNarrow} showIcons={showIcons} design={design} align={isNarrow ? 'justify-center' : justifyClass} />
             </div>
           )}
         </div>
       </div>
     );
   }},
-  'header-boxed': { id: 'header-boxed', name: 'Elegant Box', category: 'Header', render: ({ data, Editable, zoneId, isDark, showIcons, design, layoutZones, Title }: any) => {
+  'header-boxed': { id: 'header-boxed', name: 'Elegant Box', category: 'Header', render: ({ data, Editable, zoneId, isDark, showIcons, design, layoutZones, Title, readOnly }: any) => {
     const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
     const hasSidebarContact = layoutZones && Object.values(layoutZones).flat().some((block: any) => block?.type === 'sidebar-contact');
+    const align = design.headerAlign || 'center';
+    const alignClass = align === 'left' ? 'items-start text-left' : align === 'right' ? 'items-end text-right' : 'items-center text-center';
+    const justifyClass = align === 'left' ? 'justify-start' : align === 'right' ? 'justify-end' : 'justify-center';
+
     return (
       <div className={`flex ${isNarrow ? 'flex-col items-center text-center' : 'items-center text-left'} gap-5 pb-5 snippet-anim w-full cv-keep-with-next`}>
         <Title titleKey="header" overrideClass="hidden" />
         {data?.basics?.showAvatar && <AvatarEditable data={data} sizeClass={isNarrow ? 'w-28 h-28 mb-4' : 'w-24 h-24'} shapeClass="rounded-full shadow-xl" borderClass={isDark ? 'border-2 border-slate-700' : 'border-[4px] border-white'} readOnly={readOnly} />}
-        <div className="min-w-0 w-full flex flex-col items-center text-center">
+        <div className={`min-w-0 w-full flex flex-col ${alignClass}`}>
           <div className={`inline-block border-[2px] px-8 py-3 mb-4 tracking-[0.25em] uppercase ${isDark ? 'border-white text-white' : 'border-gray-900 text-gray-900'}`}>
-            <h1 className={`${isNarrow ? 'text-xl' : 'text-2xl'} font-bold`}><Editable path="basics.name" nowrap /></h1>
+            <h1 className={`${isNarrow ? 'text-xl' : 'text-2xl'} font-bold`}><Editable path="basics.name" nowrap={!isNarrow} /></h1>
           </div>
-          <h2 className={`${TYPOGRAPHY.role} mb-5 ${isDark ? 'text-gray-400' : ''}`}><Editable path="basics.title" nowrap /></h2>
+          <h2 className={`${TYPOGRAPHY.role} mb-5 ${isDark ? 'text-gray-400' : ''}`}><Editable path="basics.title" nowrap={!isNarrow} /></h2>
           {!hasSidebarContact && (
-            <div className={`flex flex-wrap justify-center ${isNarrow ? 'flex-col gap-1.5' : 'gap-x-4 gap-y-1.5'} ${TYPOGRAPHY.contact}`}>
-              <ContactLinks data={data} Editable={Editable} isNarrow={isNarrow} showIcons={showIcons} design={design} />
+            <div className={`flex flex-wrap justify-center ${isNarrow ? 'flex-col gap-1.5' : `gap-x-4 gap-y-1.5 ${justifyClass}`} ${TYPOGRAPHY.contact}`}>
+              <ContactLinks data={data} Editable={Editable} isNarrow={isNarrow} showIcons={showIcons} design={design} align={isNarrow ? 'justify-center' : justifyClass} />
             </div>
           )}
         </div>
       </div>
     );
   }},
-  'header-executive': { id: 'header-executive', name: 'Executive Stacked', category: 'Header', render: ({ data, Editable, zoneId, isDark, showIcons, design, layoutZones, Title }: any) => {
+  'header-executive': { id: 'header-executive', name: 'Executive Stacked', category: 'Header', render: ({ data, Editable, zoneId, isDark, showIcons, design, layoutZones, Title, readOnly }: any) => {
     const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
     const hasSidebarContact = layoutZones && Object.values(layoutZones).flat().some((block: any) => block?.type === 'sidebar-contact');
+    const align = design.headerAlign || 'left';
+    const alignClass = align === 'center' ? 'items-center text-center' : align === 'right' ? 'items-end text-right' : 'items-start text-left';
+    const justifyClass = align === 'center' ? 'justify-center' : align === 'right' ? 'justify-end' : 'justify-start';
+
     return (
       <div className={`flex ${isNarrow ? 'flex-col items-center text-center' : 'items-center text-left'} gap-5 pb-4 border-b-[1.5px] ${isDark ? 'border-slate-700' : 'border-gray-900'} snippet-anim w-full cv-keep-with-next`}>
         <Title titleKey="header" overrideClass="hidden" />
         {data?.basics?.showAvatar && <AvatarEditable data={data} sizeClass={isNarrow ? 'w-24 h-24 mb-3' : 'w-20 h-24'} shapeClass="rounded shadow-md" borderClass={isDark ? 'border border-slate-600' : ''} readOnly={readOnly} />}
-        <div className={`min-w-0 w-full flex flex-col ${isNarrow ? 'items-center text-center' : 'items-start'}`}>
-          <h1 className={`${isNarrow ? 'text-2xl text-center' : 'text-3xl uppercase'} font-extrabold tracking-widest mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}><Editable path="basics.name" nowrap /></h1>
+        <div className={`min-w-0 w-full flex flex-col ${alignClass}`}>
+          <h1 className={`${isNarrow ? 'text-2xl text-center' : 'text-3xl uppercase'} font-extrabold tracking-widest mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}><Editable path="basics.name" nowrap={!isNarrow} /></h1>
           {!hasSidebarContact && (
-            <div className={`flex flex-wrap ${isNarrow ? 'flex-col text-center gap-1.5' : 'gap-x-4 gap-y-1.5'} ${TYPOGRAPHY.contact} ${isDark ? 'text-gray-300' : 'text-gray-800'}`}>
-              <ContactLinks data={data} Editable={Editable} isNarrow={isNarrow} showIcons={showIcons} design={design} align={isNarrow ? 'justify-center' : ''} />
+            <div className={`flex flex-wrap ${isNarrow ? 'flex-col text-center gap-1.5' : `gap-x-4 gap-y-1.5 ${justifyClass}`} ${TYPOGRAPHY.contact} ${isDark ? 'text-gray-300' : 'text-gray-800'}`}>
+              <ContactLinks data={data} Editable={Editable} isNarrow={isNarrow} showIcons={showIcons} design={design} align={isNarrow ? 'justify-center' : justifyClass} />
             </div>
           )}
         </div>
@@ -364,8 +383,8 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
         <Title titleKey="header" overrideClass="hidden" />
         <div className={`flex ${isNarrow ? 'flex-col gap-6' : 'justify-between items-center'}`}>
           <div className={`min-w-0 ${isNarrow ? 'w-full text-center' : 'w-2/3'}`}>
-            <h1 className={`${isNarrow ? 'text-3xl' : 'text-4xl'} font-light tracking-widest uppercase mb-2 ${isDark ? 'text-white' : 'text-gray-800'}`}><Editable path="basics.name" nowrap /></h1>
-            <h2 className={`${TYPOGRAPHY.role} tracking-[0.25em]`}><Editable path="basics.title" nowrap /></h2>
+            <h1 className={`${isNarrow ? 'text-3xl' : 'text-4xl'} font-light tracking-widest uppercase mb-2 ${isDark ? 'text-white' : 'text-gray-800'}`}><Editable path="basics.name" nowrap={!isNarrow} /></h1>
+            <h2 className={`${TYPOGRAPHY.role} tracking-[0.25em]`}><Editable path="basics.title" nowrap={!isNarrow} /></h2>
           </div>
           {!hasSidebarContact && (
             <div className={`flex items-stretch gap-4 ${isNarrow ? 'w-full justify-center text-center' : 'text-right'}`}>
@@ -380,19 +399,23 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
       </div>
     );
   }},
-  'header-creative': { id: 'header-creative', name: 'Creative Block', category: 'Header', render: ({ data, Editable, zoneId, isDark, showIcons, design, layoutZones, Title }: any) => {
+  'header-creative': { id: 'header-creative', name: 'Creative Block', category: 'Header', render: ({ data, Editable, zoneId, isDark, showIcons, design, layoutZones, Title, readOnly }: any) => {
     const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
     const hasSidebarContact = layoutZones && Object.values(layoutZones).flat().some((block: any) => block?.type === 'sidebar-contact');
+    const align = design.headerAlign || 'left';
+    const alignClass = align === 'center' ? 'items-center text-center' : align === 'right' ? 'items-end text-right' : 'items-start text-left';
+    const justifyClass = align === 'center' ? 'justify-center' : align === 'right' ? 'justify-end' : 'justify-start';
+
     return (
       <div className={`flex ${isNarrow ? 'flex-col items-center text-center' : 'items-center text-left'} gap-6 p-6 rounded-xl snippet-anim cv-keep-with-next cv-accent-bg text-white shadow-lg`}>
         <Title titleKey="header" overrideClass="hidden" />
         {data?.basics?.showAvatar && <AvatarEditable data={data} sizeClass={isNarrow ? 'w-24 h-24 mb-4' : 'w-24 h-24'} shapeClass="rounded-full shadow-2xl" borderClass="border-4 border-white/20" readOnly={readOnly} />}
-        <div className="min-w-0 w-full flex flex-col">
-          <h1 className={`${isNarrow ? 'text-2xl' : 'text-4xl'} font-black tracking-tight mb-1`}><Editable path="basics.name" nowrap /></h1>
-          <h2 className={`text-sm font-semibold tracking-widest uppercase opacity-90 mb-4`}><Editable path="basics.title" nowrap /></h2>
+        <div className={`min-w-0 w-full flex flex-col ${alignClass}`}>
+          <h1 className={`${isNarrow ? 'text-2xl' : 'text-4xl'} font-black tracking-tight mb-1`}><Editable path="basics.name" nowrap={!isNarrow} /></h1>
+          <h2 className={`text-sm font-semibold tracking-widest uppercase opacity-90 mb-4`}><Editable path="basics.title" nowrap={!isNarrow} /></h2>
           {!hasSidebarContact && (
-            <div className={`flex flex-wrap ${isNarrow ? 'flex-col gap-1.5' : 'gap-x-4 gap-y-1.5'} text-xs font-medium opacity-90`}>
-              <ContactLinks data={data} Editable={Editable} isNarrow={isNarrow} showIcons={showIcons} design={design} />
+            <div className={`flex flex-wrap ${isNarrow ? 'flex-col gap-1.5' : `gap-x-4 gap-y-1.5 ${justifyClass}`} text-xs font-medium opacity-90`}>
+              <ContactLinks data={data} Editable={Editable} isNarrow={isNarrow} showIcons={showIcons} design={design} align={isNarrow ? 'justify-center' : justifyClass} />
             </div>
           )}
         </div>
@@ -586,11 +609,11 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
     const groups = normalizeSkillGroups(data?.skills);
     if (groups.length === 0) return null;
     return (
-      <div className="snippet-anim cv-section cv-item-avoid">
+      <div className="snippet-anim cv-section">
         <Title titleKey="skills" />
         <div className="flex flex-col gap-3 cv-gap-sm">
           {groups.map((group, index) => (
-            <div key={`${group.category}-${index}`} className="cv-keep-with-next">
+            <div key={`${group.category}-${index}`} className="cv-item-avoid">
               <div className={`${TYPOGRAPHY.itemTitle} mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                 {group.pathCategory ? <Editable path={group.pathCategory} nowrap /> : group.category}
               </div>
@@ -605,25 +628,25 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
   }},
   'skills-pills': { id: 'skills-pills', name: 'Solid Pills', category: 'Skills', render: ({ data, isDark, Title }: any) => {
     const allSkills = flattenSkillItems(data?.skills);
-    return (<div className="snippet-anim cv-section cv-item-avoid"><Title titleKey="skills" /><div className="flex flex-wrap gap-2 cv-gap-sm">{allSkills.map((skill: any, i: number) => (<span key={i} className={`px-3 py-1.5 text-xs font-semibold rounded-md border ${isDark ? 'bg-slate-700 border-slate-600 text-slate-200' : 'bg-slate-100 border-slate-200 text-slate-700'}`}>{skill.label}</span>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-wrap gap-2 cv-gap-sm">{allSkills.map((skill: any, i: number) => (<span key={i} className={`px-3 py-1.5 text-[0.85em] font-semibold rounded-md border cv-item-avoid ${isDark ? 'bg-slate-700 border-slate-600 text-slate-200' : 'bg-slate-100 border-slate-200 text-slate-700'}`}>{skill.label}</span>))}</div></div>);
   }},
   'skills-round-pills': { id: 'skills-round-pills', name: 'Round Pills', category: 'Skills', render: ({ data, isDark, Title }: any) => {
     const allSkills = flattenSkillItems(data?.skills);
-    return (<div className="snippet-anim cv-section cv-item-avoid"><Title titleKey="skills" /><div className="flex flex-wrap gap-2 cv-gap-sm">{allSkills.map((skill: any, i: number) => (<span key={i} className={`px-4 py-1.5 text-xs font-semibold rounded-full border ${isDark ? 'bg-slate-700 border-slate-600 text-slate-200' : 'bg-slate-100 border-slate-200 text-slate-700'}`}>{skill.label}</span>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-wrap gap-2 cv-gap-sm">{allSkills.map((skill: any, i: number) => (<span key={i} className={`px-4 py-1.5 text-[0.85em] font-semibold rounded-full border cv-item-avoid ${isDark ? 'bg-slate-700 border-slate-600 text-slate-200' : 'bg-slate-100 border-slate-200 text-slate-700'}`}>{skill.label}</span>))}</div></div>);
   }},
   'skills-dots': { id: 'skills-dots', name: 'Dot Rating', category: 'Skills', render: ({ data, isDark, Title }: any) => {
     const allSkills = flattenSkillItems(data?.skills).slice(0, 6);
-    return (<div className="snippet-anim w-full cv-section cv-item-avoid"><Title titleKey="skills" /><div className="grid grid-cols-1 gap-y-2 gap-x-4 cv-gap-sm">{allSkills.map((skill: any, i: number) => (<div key={i} className={`flex justify-between items-center ${TYPOGRAPHY.body}`}><span className={`truncate font-medium ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>{skill.label}</span><div className="flex gap-1.5">{[...Array(5)].map((_, dotIdx) => (<div key={dotIdx} className={`w-2 h-2 rounded-full ${dotIdx < skill.rating ? 'cv-accent-bg' : (isDark ? 'bg-slate-700' : 'bg-gray-200')}`}></div>))}</div></div>))}</div></div>);
+    return (<div className="snippet-anim w-full cv-section"><Title titleKey="skills" /><div className="grid grid-cols-1 gap-y-2 gap-x-4 cv-gap-sm">{allSkills.map((skill: any, i: number) => (<div key={i} className={`flex justify-between items-center ${TYPOGRAPHY.body} cv-item-avoid`}><span className={`truncate font-medium ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>{skill.label}</span><div className="flex gap-1.5">{[...Array(5)].map((_, dotIdx) => (<div key={dotIdx} className={`w-2 h-2 rounded-full ${dotIdx < skill.rating ? 'cv-accent-bg' : (isDark ? 'bg-slate-700' : 'bg-gray-200')}`}></div>))}</div></div>))}</div></div>);
   }},
   'skills-category-inline': { id: 'skills-category-inline', name: 'Category Inline', category: 'Skills', render: ({ data, Editable, isDark, Title }: any) => {
     const groups = normalizeSkillGroups(data?.skills);
     if (groups.length === 0) return null;
     return (
-      <div className="snippet-anim cv-section cv-item-avoid">
+      <div className="snippet-anim cv-section">
         <Title titleKey="skills" />
         <div className="flex flex-col gap-2 cv-gap-sm">
           {groups.map((group, index) => (
-            <div key={`${group.category}-${index}`} className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+            <div key={`${group.category}-${index}`} className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'} cv-item-avoid`}>
               <span className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-100' : 'text-gray-900'} mr-2`}>
                 {group.pathCategory ? <Editable path={group.pathCategory} nowrap /> : group.category}
               </span>
@@ -649,11 +672,11 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
   }},
   'languages-pills': { id: 'languages-pills', name: 'Solid Pills', category: 'Languages', render: ({ data, isDark, Title }: any) => {
     const items = (data.languages || '').split(',').map((s: string) => s.trim()).filter(Boolean);
-    return (<div className="snippet-anim cv-section cv-item-avoid"><Title titleKey="languages" /><div className="flex flex-wrap gap-2 cv-gap-sm">{items.map((item: string, i: number) => (<span key={i} className={`px-3 py-1.5 text-xs font-semibold rounded-md border ${isDark ? 'bg-slate-700 border-slate-600 text-slate-200' : 'bg-slate-100 border-slate-200 text-slate-700'}`}>{item.split('(')[0]}</span>))}</div></div>);
+    return (<div className="snippet-anim cv-section cv-item-avoid"><Title titleKey="languages" /><div className="flex flex-wrap gap-2 cv-gap-sm">{items.map((item: string, i: number) => (<span key={i} className={`px-3 py-1.5 text-[0.85em] font-semibold rounded-md border ${isDark ? 'bg-slate-700 border-slate-600 text-slate-200' : 'bg-slate-100 border-slate-200 text-slate-700'}`}>{item.split('(')[0]}</span>))}</div></div>);
   }},
   'languages-round-pills': { id: 'languages-round-pills', name: 'Round Pills', category: 'Languages', render: ({ data, isDark, Title }: any) => {
     const items = (data.languages || '').split(',').map((s: string) => s.trim()).filter(Boolean);
-    return (<div className="snippet-anim cv-section cv-item-avoid"><Title titleKey="languages" /><div className="flex flex-wrap gap-2 cv-gap-sm">{items.map((item: string, i: number) => (<span key={i} className={`px-4 py-1.5 text-xs font-semibold rounded-full border ${isDark ? 'bg-slate-700 border-slate-600 text-slate-200' : 'bg-slate-100 border-slate-200 text-slate-700'}`}>{item.split('(')[0]}</span>))}</div></div>);
+    return (<div className="snippet-anim cv-section cv-item-avoid"><Title titleKey="languages" /><div className="flex flex-wrap gap-2 cv-gap-sm">{items.map((item: string, i: number) => (<span key={i} className={`px-4 py-1.5 text-[0.85em] font-semibold rounded-full border ${isDark ? 'bg-slate-700 border-slate-600 text-slate-200' : 'bg-slate-100 border-slate-200 text-slate-700'}`}>{item.split('(')[0]}</span>))}</div></div>);
   }},
 
   // === INTERESTS ===
@@ -662,7 +685,7 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
   )},
   'interests-pills': { id: 'interests-pills', name: 'Outline Pills', category: 'Interests', render: ({ data, isDark, Title }: any) => {
     const items = (data.interests || '').split(',').map((s: string) => s.trim()).filter(Boolean);
-    return (<div className="snippet-anim cv-section cv-item-avoid"><Title titleKey="interests" /><div className="flex flex-wrap gap-2 cv-gap-sm">{items.map((item: string, i: number) => (<span key={i} className={`px-3 py-1.5 text-xs font-medium border rounded-full ${isDark ? 'border-slate-500 text-slate-200' : 'border-gray-400 text-gray-800'}`}>{item}</span>))}</div></div>);
+    return (<div className="snippet-anim cv-section cv-item-avoid"><Title titleKey="interests" /><div className="flex flex-wrap gap-2 cv-gap-sm">{items.map((item: string, i: number) => (<span key={i} className={`px-3 py-1.5 text-[0.85em] font-medium border rounded-full ${isDark ? 'border-slate-500 text-slate-200' : 'border-gray-400 text-gray-800'}`}>{item}</span>))}</div></div>);
   }},
 
   // === SIDEBAR SPECIFIC ===
@@ -703,10 +726,10 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
       <div className="snippet-anim w-full cv-keep-with-next">
         <Title titleKey="header" overrideClass="hidden" />
         <div className={isNarrow ? 'text-center' : ''}>
-          <h1 className={`font-black leading-none tracking-tighter mb-2 ${isNarrow ? 'text-3xl' : 'text-5xl'} ${isDark ? 'text-white' : 'text-gray-900'}`}><Editable path="basics.name" nowrap /></h1>
+          <h1 className={`font-black leading-none tracking-tighter mb-2 ${isNarrow ? 'text-3xl' : 'text-5xl'} ${isDark ? 'text-white' : 'text-gray-900'}`}><Editable path="basics.name" nowrap={!isNarrow} /></h1>
           <div className={`flex items-center gap-3 mb-3 ${isNarrow ? 'justify-center' : ''}`}>
             <div className="h-[2px] w-10 cv-accent-bg shrink-0" />
-            <h2 className={`${TYPOGRAPHY.role} text-[0.85em] shrink-0`}><Editable path="basics.title" nowrap /></h2>
+            <h2 className={`${TYPOGRAPHY.role} text-[0.85em] shrink-0`}><Editable path="basics.title" nowrap={!isNarrow} /></h2>
             <div className="h-[2px] flex-1 cv-accent-bg" />
           </div>
           {!hasSidebarContact && <div className={`flex flex-wrap gap-x-5 gap-y-1 ${isNarrow ? 'justify-center' : ''} ${TYPOGRAPHY.contact} ${isDark ? 'text-gray-400' : 'text-gray-500'}`}><ContactLinks data={data} Editable={Editable} isNarrow={isNarrow} showIcons={showIcons} design={design} /></div>}
@@ -721,8 +744,8 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
       <div className={`snippet-anim w-full cv-keep-with-next flex ${isNarrow ? 'flex-col gap-3 items-center text-center' : 'gap-8 items-end'} pb-4 border-b ${isDark ? 'border-slate-700' : 'border-gray-200'}`}>
         <Title titleKey="header" overrideClass="hidden" />
         <div className={`${isNarrow ? '' : 'flex-1'} min-w-0`}>
-          <h1 className={`font-bold leading-tight ${isNarrow ? TYPOGRAPHY.nameNarrow : TYPOGRAPHY.name} ${isDark ? 'text-white' : 'text-gray-900'}`}><Editable path="basics.name" nowrap /></h1>
-          <h2 className={`${TYPOGRAPHY.role} mt-1`}><Editable path="basics.title" nowrap /></h2>
+          <h1 className={`font-bold leading-tight ${isNarrow ? TYPOGRAPHY.nameNarrow : TYPOGRAPHY.name} ${isDark ? 'text-white' : 'text-gray-900'}`}><Editable path="basics.name" nowrap={!isNarrow} /></h1>
+          <h2 className={`${TYPOGRAPHY.role} mt-1`}><Editable path="basics.title" nowrap={!isNarrow} /></h2>
         </div>
         {!hasSidebarContact && <div className={`flex flex-col gap-1 shrink-0 ${TYPOGRAPHY.contact} ${isDark ? 'text-gray-400' : 'text-gray-500'} ${isNarrow ? 'items-center' : 'text-right max-w-[45%]'}`}><ContactLinks data={data} Editable={Editable} isNarrow={true} showIcons={showIcons} design={design} align={isNarrow ? 'justify-center' : 'justify-end'} /></div>}
       </div>
@@ -735,8 +758,8 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
       <div className="snippet-anim w-full cv-keep-with-next">
         <Title titleKey="header" overrideClass="hidden" />
         <div className="cv-accent-bg rounded-lg px-5 py-4 mb-3">
-          <h1 className={`font-extrabold tracking-tight text-white leading-tight ${isNarrow ? 'text-2xl' : 'text-3xl'}`}><Editable path="basics.name" nowrap /></h1>
-          <h2 className="text-[0.82em] font-semibold tracking-widest uppercase text-white/80 mt-0.5"><Editable path="basics.title" nowrap /></h2>
+          <h1 className={`font-extrabold tracking-tight text-white leading-tight ${isNarrow ? 'text-2xl' : 'text-3xl'}`}><Editable path="basics.name" nowrap={!isNarrow} /></h1>
+          <h2 className="text-[0.82em] font-semibold tracking-widest uppercase text-white/80 mt-0.5"><Editable path="basics.title" nowrap={!isNarrow} /></h2>
         </div>
         {!hasSidebarContact && <div className={`flex flex-wrap gap-x-4 gap-y-1 ${isNarrow ? 'flex-col items-start gap-1.5' : ''} ${TYPOGRAPHY.contact} ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><ContactLinks data={data} Editable={Editable} isNarrow={isNarrow} showIcons={showIcons} design={design} /></div>}
       </div>
@@ -892,7 +915,7 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
   ,'skills-grouped-sections': { id: 'skills-grouped-sections', name: 'Grouped by Category', category: 'Skills', render: ({ data, isDark, Title }: any) => {
     const groups = normalizeSkillGroups(data?.skills);
     if (groups.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-col gap-3">{groups.map((group, index) => (<div key={`${group.category}-${index}`}><div className={`text-[9px] uppercase tracking-widest font-bold mb-1.5 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{group.category}</div><div className="flex flex-wrap gap-1.5">{group.skills.map((skill: string, i: number) => (<span key={i} className={`text-[11px] px-2.5 py-0.5 rounded-md font-medium ${isDark ? 'bg-slate-700 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>{skill}</span>))}</div></div>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-col gap-3">{groups.map((group, index) => (<div key={`${group.category}-${index}`}><div className={`text-[0.72em] uppercase tracking-widest font-bold mb-1.5 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{group.category}</div><div className="flex flex-wrap gap-1.5">{group.skills.map((skill: string, i: number) => (<span key={i} className={`text-[0.85em] px-2.5 py-0.5 rounded-md font-medium ${isDark ? 'bg-slate-700 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>{skill}</span>))}</div></div>))}</div></div>);
   }}
   ,'skills-star-rating': { id: 'skills-star-rating', name: 'Star Rating', category: 'Skills', render: ({ data, isDark, Title }: any) => {
     const items = flattenSkillItems(data?.skills).slice(0, 8);
@@ -920,7 +943,7 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
   }}
   ,'certifications-badge': { id: 'certifications-badge', name: 'Badge Pills', category: 'Certifications', render: ({ data, isDark, Title, moveEntry, deleteEntry }: any) => {
     const certs = Array.isArray(data?.certifications) ? data.certifications : []; if (certs.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="certifications" /><div className="flex flex-wrap gap-2">{certs.map((c: any, i: number) => (<ListEntry key={c.id} collection="certifications" index={i} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`px-3 py-1.5 rounded-xl border text-[11px] font-semibold ${isDark ? 'border-slate-600 bg-slate-800 text-gray-200' : 'border-gray-200 bg-white text-gray-700 shadow-sm'}`}><div className="font-bold cv-accent-text">{c.name || c.title}</div><div className={`text-[9px] mt-0.5 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{c.issuer}</div></div></ListEntry>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="certifications" /><div className="flex flex-wrap gap-2">{certs.map((c: any, i: number) => (<ListEntry key={c.id} collection="certifications" index={i} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`px-3 py-1.5 rounded-xl border text-[0.85em] font-semibold ${isDark ? 'border-slate-600 bg-slate-800 text-gray-200' : 'border-gray-200 bg-white text-gray-700 shadow-sm'}`}><div className="font-bold cv-accent-text">{c.name || c.title}</div><div className={`text-[0.72em] mt-0.5 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{c.issuer}</div></div></ListEntry>))}</div></div>);
   }}
   ,'certifications-grid': { id: 'certifications-grid', name: '2-Col Card Grid', category: 'Certifications', render: ({ data, isDark, Title, moveEntry, deleteEntry }: any) => {
     const certs = Array.isArray(data?.certifications) ? data.certifications : []; if (certs.length === 0) return null;
@@ -969,7 +992,7 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
   }}
   ,'languages-accent-pills': { id: 'languages-accent-pills', name: 'Accent Pills', category: 'Languages', render: ({ data, isDark, Title }: any) => {
     const langs = Array.isArray(data?.languages) ? data.languages : []; if (langs.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="languages" /><div className="flex flex-wrap gap-2">{langs.map((l: any, i: number) => (<div key={i} className={`px-3 py-1.5 rounded-full text-[11px] font-bold cv-accent-bg text-white flex items-center gap-2`}><span>{l.name}</span><span className="w-1 h-1 rounded-full bg-white/40" /><span className="opacity-80 font-semibold">{l.level}</span></div>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="languages" /><div className="flex flex-wrap gap-2">{langs.map((l: any, i: number) => (<div key={i} className={`px-3 py-1.5 rounded-full text-[0.85em] font-bold cv-accent-bg text-white flex items-center gap-2`}><span>{l.name}</span><span className="w-1 h-1 rounded-full bg-white/40" /><span className="opacity-80 font-semibold">{l.level}</span></div>))}</div></div>);
   }}
   ,'languages-two-col': { id: 'languages-two-col', name: 'Two Column', category: 'Languages', render: ({ data, isDark, Title }: any) => {
     const langs = Array.isArray(data?.languages) ? data.languages : []; if (langs.length === 0) return null;
@@ -990,7 +1013,7 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
   // =======================================================
   ,'interests-accent-pills': { id: 'interests-accent-pills', name: 'Accent Pills', category: 'Interests', render: ({ data, isDark, Title }: any) => {
     const items = typeof data?.interests === 'string' ? data.interests.split(',').filter(Boolean) : []; if (items.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="interests" /><div className="flex flex-wrap gap-2">{items.map((item: string, i: number) => (<span key={i} className={`px-3 py-1 rounded-full text-[11px] font-medium border ${isDark ? 'border-slate-600 text-gray-300' : 'border-gray-200 text-gray-600'} cv-accent-text-hover`}>{item.trim()}</span>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="interests" /><div className="flex flex-wrap gap-2">{items.map((item: string, i: number) => (<span key={i} className={`px-3 py-1 rounded-full text-[0.85em] font-medium border ${isDark ? 'border-slate-600 text-gray-300' : 'border-gray-200 text-gray-600'} cv-accent-text-hover`}>{item.trim()}</span>))}</div></div>);
   }}
   ,'interests-icon-grid': { id: 'interests-icon-grid', name: 'Icon Grid', category: 'Interests', render: ({ data, isDark, Title }: any) => {
     const items = typeof data?.interests === 'string' ? data.interests.split(',').filter(Boolean) : []; if (items.length === 0) return null;
@@ -1015,7 +1038,7 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
   ,'sidebar-skills-grouped': { id: 'sidebar-skills-grouped', name: 'Skills by Group', category: 'Sidebar', render: ({ data, isDark, Title }: any) => {
     const groups = normalizeSkillGroups(data?.skills);
     if (groups.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-col gap-4">{groups.map((group, index) => (<div key={`${group.category}-${index}`}><div className={`text-[10px] uppercase tracking-widest font-bold mb-2 ${isDark ? 'text-gray-400' : 'text-gray-500'} border-b pb-1 ${isDark ? 'border-slate-700' : 'border-gray-200'}`}>{group.category}</div><div className="flex flex-wrap gap-1.5">{group.skills.map((skill: string, i: number) => (<span key={i} className={`text-[11px] px-2 py-1 rounded font-medium ${isDark ? 'bg-slate-800 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>{skill}</span>))}</div></div>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-col gap-4">{groups.map((group, index) => (<div key={`${group.category}-${index}`}><div className={`text-[0.78em] uppercase tracking-widest font-bold mb-2 ${isDark ? 'text-gray-400' : 'text-gray-500'} border-b pb-1 ${isDark ? 'border-slate-700' : 'border-gray-200'}`}>{group.category}</div><div className="flex flex-wrap gap-1.5">{group.skills.map((skill: string, i: number) => (<span key={i} className={`text-[0.85em] px-2 py-1 rounded font-medium ${isDark ? 'bg-slate-800 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>{skill}</span>))}</div></div>))}</div></div>);
   }}
   ,'sidebar-bio': { id: 'sidebar-bio', name: 'Mini Bio', category: 'Sidebar', render: ({ data, Editable, isDark, Title }: any) => (
     <div className="snippet-anim cv-section">

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useContext, useRef } from 'react';
 import { ChevronUp, ChevronDown, Trash2 } from 'lucide-react';
-import { CanvasContext } from './CoreUI';
+import { CanvasContext, SnippetContext } from './CoreUI';
 import { motion } from 'framer-motion';
 
 // REUSABLE ENTRY WRAPPER
@@ -10,8 +10,11 @@ import { motion } from 'framer-motion';
 const ListEntry = ({ collection, index, moveEntry, deleteEntry, children }: any) => {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const ctx = useContext(CanvasContext);
+  const snippetCtx = useContext(SnippetContext);
   const moriChatMode = ctx?.moriChatMode || false;
   const entryRef = useRef<HTMLDivElement>(null);
+
+
 
   useEffect(() => {
     const handleUpdated = (e: CustomEvent) => {
@@ -75,10 +78,19 @@ const ListEntry = ({ collection, index, moveEntry, deleteEntry, children }: any)
     }));
   };
 
-  const baseClass = "relative group/entry cv-item cv-page-breakable transition-all duration-200 rounded-md border border-transparent";
+  const baseClass = "relative group/entry cv-item cv-page-breakable transition-[background-color,border-color,box-shadow,opacity] duration-200 rounded-md border border-transparent";
   const hoverClass = moriChatMode 
     ? "hover:bg-emerald-500/10 hover:shadow-[0_0_0_2px_rgba(16,185,129,0.4)] cursor-pointer z-40" 
     : "hover:bg-[#10b981]/[0.02] shadow-none hover:shadow-[0_2px_8px_rgba(16,185,129,0.05)] group-hover/snippet:z-30 hover:z-40 hover:border-transparent";
+
+  const entryId = ctx?.cvData?.[collection]?.[index]?.id;
+  if (snippetCtx && entryId) {
+    const entryUnitId = `${snippetCtx.blockId}_entry_${entryId}`;
+    const assignedPage = snippetCtx.pageAssignments[entryUnitId] ?? 0;
+    if (assignedPage !== snippetCtx.pageIdx) {
+      return null;
+    }
+  }
 
   return (
     <motion.div
@@ -88,6 +100,7 @@ const ListEntry = ({ collection, index, moveEntry, deleteEntry, children }: any)
       className={`${baseClass} ${hoverClass}`}
       data-collection={collection}
       data-index={index}
+      data-entry-id={entryId}
     >
       <div className={`absolute -left-[32px] top-0 bottom-0 flex flex-col items-center justify-center opacity-0 group-hover/entry:opacity-100 group-focus-within/entry:opacity-100 pointer-events-none group-hover/entry:pointer-events-auto group-focus-within/entry:pointer-events-auto transition-opacity duration-200 no-print z-50 gap-0 ${moriChatMode ? 'hidden' : ''}`}>
           <button

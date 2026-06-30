@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { 
   ClassicHeader, 
   ModernHeader, 
@@ -86,7 +86,57 @@ interface CoverLetterLayoutEngineProps {
   showMoriChat?: boolean;
   onToggleMoriChat?: () => void;
   onChangeHeaderStyle?: () => void;
+  zoom?: number;
 }
+
+const splitHtmlIntoBlocks = (html: string): string[] => {
+  if (!html) return [];
+  const cleanContent = html.trim();
+  const isHtml = /<[a-z][\s\S]*>/i.test(cleanContent);
+  if (!isHtml) {
+    return cleanContent.split('\n\n').filter(p => p.trim() !== '').map(p => `<p>${p}</p>`);
+  }
+  
+  let normalized = cleanContent;
+  
+  if (normalized.startsWith('<p>') && normalized.endsWith('</p>')) {
+    const inner = normalized.substring(3, normalized.length - 4);
+    if (!inner.includes('<p>') && !inner.includes('</p>')) {
+      normalized = inner;
+    }
+  } else if (normalized.startsWith('<div>') && normalized.endsWith('</div>')) {
+    const inner = normalized.substring(5, normalized.length - 6);
+    if (!inner.includes('<div>') && !inner.includes('</div>')) {
+      normalized = inner;
+    }
+  }
+
+  let parts: string[] = [];
+  if (normalized.includes('<p>') || normalized.includes('<div>')) {
+    const temp = normalized
+      .replace(/<\/p>/gi, '</p>|||')
+      .replace(/<\/div>/gi, '</div>|||')
+      .split('|||');
+    parts = temp.filter(p => p.trim() !== '');
+  } else {
+    const temp = normalized.split(/(?:<br\s*\/?>\s*){2,}/gi);
+    parts = temp.filter(p => p.trim() !== '').map(p => {
+      const trimmed = p.trim();
+      if (!trimmed.startsWith('<')) {
+        return `<p>${trimmed}</p>`;
+      }
+      return trimmed;
+    });
+  }
+
+  return parts.map(part => {
+    const trimmed = part.trim();
+    if (!trimmed.startsWith('<')) {
+      return `<p>${trimmed}</p>`;
+    }
+    return trimmed;
+  });
+};
 
 export default function CoverLetterLayoutEngine({
   headerProps,
@@ -100,7 +150,8 @@ export default function CoverLetterLayoutEngine({
   onTemplateTypeChange,
   showMoriChat,
   onToggleMoriChat,
-  onChangeHeaderStyle
+  onChangeHeaderStyle,
+  zoom = 100
 }: CoverLetterLayoutEngineProps) {
 
   const HeaderComponent = useMemo(() => {
@@ -134,130 +185,232 @@ export default function CoverLetterLayoutEngine({
   };
 
   const activeDesign = { ...defaultDesign, ...design };
-  
   const fontClass = activeDesign.fontFamily;
 
-  const isHtml = /<[a-z][\s\S]*>/i.test(bodyContent);
-
-  // Splitting body content into paragraphs if it's plain text
-  const paragraphs = !isHtml ? bodyContent.split('\n\n').filter(p => p.trim() !== '') : [];
+  // Unify body content into block units (HTML tags or double newlines)
+  const letterBlocks = useMemo(() => {
+    return splitHtmlIntoBlocks(bodyContent);
+  }, [bodyContent]);
 
   const width = pageFormat === 'letter' ? '8.5in' : '210mm';
   const minHeight = pageFormat === 'letter' ? '11in' : '297mm';
 
+  const [pageAssignments, setPageAssignments] = useState<Record<string, number>>({});
+  const pageAssignmentsRef = useRef(pageAssignments);
+  pageAssignmentsRef.current = pageAssignments;
+  const recentAssignmentsRef = useRef<string[]>([]);
+
+  useEffect(() => {
+    if (isEditing) return;
+
+    const docElement = document.querySelector('.cover-letter-wrapper');
+    if (!docElement) return;
+
+    const measureAndPaginate = () => {
+      const scale = zoom / 100;
+      const H = pageFormat === 'letter' ? 1056 : 1122.5;
+      const usableHeight = H - 160; // Estimated usable page height minus margins
+
+      const unitHeights: Record<string, number> = {};
+
+      const headerEl = docElement.querySelector('[data-unit-id="header"]');
+      if (headerEl) {
+        unitHeights['header'] = headerEl.getBoundingClientRect().height / scale;
+      }
+
+      docElement.querySelectorAll('[data-paragraph-id]').forEach(el => {
+        const pId = el.getAttribute('data-paragraph-id');
+        if (pId) {
+          unitHeights[pId] = el.getBoundingClientRect().height / scale;
+        }
+      });
+
+      const footerEl = docElement.querySelector('[data-unit-id="footer"]');
+      if (footerEl) {
+        unitHeights['footer'] = footerEl.getBoundingClientRect().height / scale;
+      }
+
+      const newAssignments: Record<string, number> = {};
+      let currentPage = 0;
+      let currentHeight = 0;
+
+      // 1. Header
+      const headerH = unitHeights['header'] || 160;
+      newAssignments['header'] = 0;
+      currentHeight += headerH + 24;
+
+      // 2. Paragraphs
+      const pCount = letterBlocks.length;
+      for (let i = 0; i < pCount; i++) {
+        const pId = `p_${i}`;
+        const pH = unitHeights[pId] || 80;
+        if (currentHeight + pH > usableHeight && currentHeight > 0) {
+          currentPage++;
+          currentHeight = 0;
+        }
+        newAssignments[pId] = currentPage;
+        currentHeight += pH + 16;
+      }
+
+      // 3. Footer
+      const footerH = unitHeights['footer'] || 80;
+      if (currentHeight + footerH > usableHeight && currentHeight > 0) {
+        currentPage++;
+        currentHeight = 0;
+      }
+      newAssignments['footer'] = currentPage;
+
+      const assignmentsStr = JSON.stringify(newAssignments);
+      if (recentAssignmentsRef.current.includes(assignmentsStr)) {
+        return;
+      }
+
+      const oldAssignments = pageAssignmentsRef.current;
+      const isChanged = Object.keys(newAssignments).some(id => newAssignments[id] !== oldAssignments[id]) ||
+                        Object.keys(oldAssignments).some(id => newAssignments[id] !== oldAssignments[id]);
+      if (isChanged) {
+        recentAssignmentsRef.current.push(assignmentsStr);
+        if (recentAssignmentsRef.current.length > 5) {
+          recentAssignmentsRef.current.shift();
+        }
+        setPageAssignments(newAssignments);
+      }
+    };
+
+    const rafId = requestAnimationFrame(measureAndPaginate);
+    let debounceTimer: any;
+    const observer = new MutationObserver(() => {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(measureAndPaginate, 80);
+    });
+    observer.observe(docElement, { childList: true, subtree: true, characterData: true });
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      clearTimeout(debounceTimer);
+      observer.disconnect();
+    };
+  }, [bodyContent, pageFormat, activeDesign, letterBlocks.length, isEditing]);
+
+  const maxPage = Object.values(pageAssignments).reduce((max, p) => Math.max(max, p), 0);
+  const totalPages = maxPage + 1;
+  const pages = Array.from({ length: totalPages }, (_, i) => i);
+  const activePages = isEditing ? [0] : pages;
+
   return (
-    <div 
-      className={`mx-auto bg-white dark:bg-white shadow-2xl flex flex-col text-black transition-all duration-500 ease-in-out relative cover-letter-document cv-document ${fontClass}`}
-      style={{ 
-        width,
-        minHeight,
-        containerType: 'inline-size',
-        fontSize: `${activeDesign.fontSize}px`,
-        lineHeight: activeDesign.lineHeight,
-        '--cv-accent': activeDesign.accentColor
-      } as React.CSSProperties}
-    >
-      {/* 
-        We use a wrapper to ensure the minimum height matches exactly one page.
-      */}
-      <div 
-        className="flex flex-col relative w-full"
-        style={{ minHeight }}
-      >
-        {/* Page break indicators (visual only for multiple pages) */}
-        <div className="absolute inset-0 pointer-events-none z-0 opacity-100" 
-             style={{ 
-                backgroundRepeat: 'repeat-y',
-                backgroundSize: `100% ${minHeight}`, 
-                backgroundImage: `linear-gradient(to bottom, transparent calc(${minHeight} - 40px), #f8fafc calc(${minHeight} - 40px), transparent calc(${minHeight} - 40px), transparent ${minHeight})` 
-             }} 
-        />
-
-        <div 
-          className="flex flex-col relative z-10"
-          style={{ 
-            padding: `${activeDesign.pageMargin}cqw ${activeDesign.pageMargin * 1.5}cqw`,
-            minHeight
-          }}
-        >
-          {/* Render Selected Header Snippet */}
-          <CanvasSectionWrapper
-            isEditing={isEditing}
-            onClick={() => onChangeHeaderStyle && onChangeHeaderStyle()}
-            controls={
-              <button 
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (onChangeHeaderStyle) onChangeHeaderStyle();
-                }}
-                className="flex items-center gap-1.5 h-7 px-2.5 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 font-bold text-[11px] transition-all duration-200 rounded-lg hover:scale-105 active:scale-95 bg-transparent" 
-                title="Change Header Style"
-              >
-                <LayoutTemplate size={12}/> 
-                <span>Change</span>
-              </button>
-            }
+    <div className="flex flex-col items-center gap-6 cover-letter-wrapper" style={{ width }}>
+      {activePages.map(pageIdx => {
+        return (
+          <div 
+            key={pageIdx}
+            className={`bg-white dark:bg-white shadow-2xl flex flex-col text-black transition-all duration-500 ease-in-out relative cover-letter-document cv-document ${fontClass}`}
+            style={{ 
+              width,
+              height: minHeight,
+              minHeight,
+              containerType: 'inline-size',
+              fontSize: `${activeDesign.fontSize}px`,
+              lineHeight: activeDesign.lineHeight,
+              '--cv-accent': activeDesign.accentColor,
+              boxSizing: 'border-box'
+            } as React.CSSProperties}
           >
-            <HeaderComponent {...headerProps} />
-          </CanvasSectionWrapper>
+            <div 
+              className="flex flex-col relative z-10 w-full h-full cover-letter-page-content"
+              style={{ 
+                padding: `${activeDesign.pageMargin}cqw ${activeDesign.pageMargin * 1.5}cqw`,
+                boxSizing: 'border-box',
+                height: '100%'
+              }}
+            >
+              {/* Render Selected Header Snippet */}
+              {pageIdx === 0 && (
+                <div data-unit-id="header" className="w-full">
+                  <CanvasSectionWrapper
+                    isEditing={isEditing}
+                    onClick={() => onChangeHeaderStyle && onChangeHeaderStyle()}
+                    controls={
+                      <button 
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (onChangeHeaderStyle) onChangeHeaderStyle();
+                        }}
+                        className="flex items-center gap-1.5 h-7 px-2.5 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 font-bold text-[11px] transition-all duration-200 rounded-lg hover:scale-105 active:scale-95 bg-transparent" 
+                        title="Change Header Style"
+                      >
+                        <LayoutTemplate size={12}/> 
+                        <span>Change</span>
+                      </button>
+                    }
+                  >
+                    <HeaderComponent {...headerProps} />
+                  </CanvasSectionWrapper>
+                </div>
+              )}
 
-          {/* Body Layout - Single Column Responsive */}
-          <CanvasSectionWrapper
-            isEditing={isEditing}
-            controls={
-              <button 
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (onToggleMoriChat) onToggleMoriChat();
-                }}
-                className="flex items-center gap-1 h-7 px-2.5 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 font-bold text-[11px] transition-all duration-200 rounded-lg hover:scale-105 active:scale-95 bg-transparent" 
-                title="Ask Mori to improve"
-              >
-                <Sparkles size={12}/> 
-                <span>Ask Mori</span>
-              </button>
-            }
-          >
-            {isEditing ? (
-              <WYSIWYGEditor
-                value={bodyContent}
-                onChange={onBodyChange || (() => {})}
-                className={`w-full ${fontClass} text-black bg-transparent mt-4 mb-6`}
-                showToolbar={true}
-                reviewMode={false}
-                grammarLocale="us"
-                textColor="black"
-                autoExpand
-                noPadding={true}
-              />
-            ) : (
-              <>
-                {isHtml ? (
-                  <div 
-                    className="prose prose-sm max-w-none text-black mt-4 mb-6"
-                    style={{ fontSize: 'inherit', lineHeight: 'inherit' }}
-                    dangerouslySetInnerHTML={{ __html: bodyContent }} 
-                  />
+              {/* Body Layout - Single Column Responsive */}
+              <div className="flex-1 min-h-0 mt-4">
+                {isEditing ? (
+                  <CanvasSectionWrapper
+                    isEditing={isEditing}
+                    controls={
+                      <button 
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (onToggleMoriChat) onToggleMoriChat();
+                        }}
+                        className="flex items-center gap-1 h-7 px-2.5 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 font-bold text-[11px] transition-all duration-200 rounded-lg hover:scale-105 active:scale-95 bg-transparent" 
+                        title="Ask Mori to improve"
+                      >
+                        <Sparkles size={12}/> 
+                        <span>Ask Mori</span>
+                      </button>
+                    }
+                  >
+                    <WYSIWYGEditor
+                      value={bodyContent}
+                      onChange={onBodyChange || (() => {})}
+                      className={`w-full ${fontClass} text-black bg-transparent mt-2`}
+                      showToolbar={true}
+                      reviewMode={false}
+                      grammarLocale="us"
+                      textColor="black"
+                      autoExpand
+                      noPadding={true}
+                    />
+                  </CanvasSectionWrapper>
                 ) : (
-                  paragraphs.map((paragraph, idx) => (
-                    <p key={idx} className={`text-justify ${idx === 0 ? 'mt-4' : ''} ${idx === paragraphs.length - 1 ? 'mb-6' : 'mb-3'}`}>
-                      {paragraph.trim()}
-                    </p>
-                  ))
+                  <div className="space-y-4">
+                    {letterBlocks.map((block, idx) => {
+                      const assignedPage = pageAssignments[`p_${idx}`] ?? 0;
+                      if (assignedPage !== pageIdx) return null;
+                      return (
+                        <div 
+                          key={idx} 
+                          data-paragraph-id={`p_${idx}`}
+                          className="prose prose-sm max-w-none text-black text-justify leading-relaxed"
+                          style={{ fontSize: 'inherit', lineHeight: 'inherit' }}
+                          dangerouslySetInnerHTML={{ __html: block }}
+                        />
+                      );
+                    })}
+                  </div>
                 )}
-              </>
-            )}
-          </CanvasSectionWrapper>
+              </div>
 
-          {/* Footer Snippet / Layout */}
-          <div className="pt-4 border-t border-gray-100 text-black">
-            <p className="mb-2">{footerContent || 'Sincerely,'}</p>
-            <p className="font-bold text-lg tracking-tight">{headerProps.name}</p>
+              {/* Footer Snippet / Layout */}
+              {((isEditing && pageIdx === 0) || (!isEditing && (pageAssignments['footer'] ?? 0) === pageIdx)) && (
+                <div data-unit-id="footer" className="pt-4 border-t border-gray-100 text-black w-full mt-4">
+                  <p className="mb-2">{footerContent || 'Sincerely,'}</p>
+                  <p className="font-bold text-lg tracking-tight">{headerProps.name}</p>
+                </div>
+              )}
+            </div>
           </div>
-      </div>
-      </div>
+        );
+      })}
     </div>
   );
 }
