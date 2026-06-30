@@ -333,13 +333,18 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
   const [focusedNode, setFocusedNode] = useState<HTMLElement | null>(null);
   const [zones, setZones] = useState<Record<string, any[]>>(() => {
     const raw: Record<string, any[]> = cvData?.metadata?.canvasZones || {};
-    // Deduplicate blocks within each zone to prevent React duplicate-key warnings
     const deduped: Record<string, any[]> = {};
+    const globallySeen = new Set<string>(); // Prevent duplicate blocks across all zones
+    
     Object.keys(raw).forEach(zoneId => {
+      // Clean up old paginated keys from database
+      if (zoneId.includes('_page_')) return;
+      
       const seen = new Set<string>();
       deduped[zoneId] = (raw[zoneId] || []).filter((block: any) => {
-        if (!block?.id || seen.has(block.id)) return false;
+        if (!block?.id || seen.has(block.id) || globallySeen.has(block.id)) return false;
         seen.add(block.id);
+        globallySeen.add(block.id);
         return true;
       });
     });
@@ -356,6 +361,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
   const [zoom, setZoom] = useState(100);
   const [totalPagesCount, setTotalPagesCount] = useState(1);
   const [pageAssignments, setPageAssignments] = useState<Record<string, number>>({});
+  const [emptyZonePages, setEmptyZonePages] = useState<Record<string, number>>({});
   const [viewport, setViewport] = useState(() => ({
     width: typeof window === 'undefined' ? 1440 : window.innerWidth,
     height: typeof window === 'undefined' ? 1080 : window.innerHeight,
@@ -905,8 +911,22 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     onDataChange(updated);
   };
 
+  const isExecutingRef = React.useRef(false);
   const executeReplaceOrAdd = (newType: string) => {
-    if (!replacingSnippet) return;
+    if (!replacingSnippet || isExecutingRef.current) return;
+    isExecutingRef.current = true;
+    
+    // Safety check to prevent duplicate categories when adding
+    const category = SNIPPETS[newType]?.category;
+    if (replacingSnippet.isAdd && category) {
+      const currentCategories = Object.values(zones).flat().map((z: any) => SNIPPETS[z.type]?.category).filter(Boolean);
+      if (currentCategories.includes(category)) {
+        setReplacingSnippet(null);
+        isExecutingRef.current = false;
+        return;
+      }
+    }
+
     setZones(prev => {
       const newZones = { ...prev };
       if (!newZones[replacingSnippet.zoneId]) {
@@ -925,7 +945,12 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
       return newZones;
     });
     setReplacingSnippet(null);
+    setTimeout(() => {
+      isExecutingRef.current = false;
+    }, 100);
   };
+
+  const [replacingSnippetRaw, setReplacingSnippetState] = useState<any>(null);
 
   const photoInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -938,6 +963,8 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
 
   const pageAssignmentsRef = React.useRef(pageAssignments);
   pageAssignmentsRef.current = pageAssignments;
+  const emptyZonePagesRef = React.useRef(emptyZonePages);
+  emptyZonePagesRef.current = emptyZonePages;
   const recentAssignmentsRef = React.useRef<string[]>([]);
 
   // Dynamically calculate page partitioning assignments based on DOM snippet heights
@@ -950,7 +977,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
       const isA4 = design.pageSize === 'A4';
       const H = isA4 ? 1122.5 : 1056;
       const M = layoutMetrics.pageMarginPx || 40;
-      const usableHeight = H - 2 * M;
+      const usableHeight = H - 2 * M - 12; // 12px safety buffer to prevent clipping variations
 
       // 1. Measure all rendered snippet/unit heights from the DOM
       const unitHeights: Record<string, number> = {};
@@ -979,20 +1006,28 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
           const headerUnitId = `${blockId}_header`;
           unitHeights[headerUnitId] = Math.max(0, parentHeight - sumEntriesHeight);
         } else {
-          // Non-list block
+          // Non-list block OR empty list block
           unitHeights[blockId] = parentHeight;
+          // Also set it as the header height so empty list blocks measure correctly
+          unitHeights[`${blockId}_header`] = parentHeight;
         }
       });
 
       // 2. Compute page assignments for each zone/unit flow
       const newAssignments: Record<string, number> = {};
+      const newEmptyZonePages: Record<string, number> = {};
       const safeZones = zones || {};
       let maxPageNum = 0;
 
-      Object.keys(safeZones).forEach(zoneId => {
+      // Track height and page per layout zone so columns flow independently
+      const zonePages: Record<string, number> = {};
+      const zoneHeights: Record<string, number> = {};
+
+      const paginateZone = (zoneId: string, startPage: number, startHeight: number) => {
         const blocks = safeZones[zoneId] || [];
-        let currentPage = 0;
-        let currentHeight = 0;
+        let currPage = startPage;
+        let currHeight = startHeight;
+        const sectionGap = layoutMetrics.sectionGapPx || 16;
 
         blocks.forEach(block => {
           // Check if this block is a list snippet
@@ -1010,13 +1045,14 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
             const firstEntry = entries[0];
             const firstEntryH = firstEntry ? (unitHeights[`${block.id}_entry_${firstEntry.id}`] || 80) : 0;
 
-            if (currentHeight + headerH + firstEntryH > usableHeight && currentHeight > 0) {
-              currentPage++;
-              currentHeight = 0;
+            const blockGap = currHeight > 0 ? sectionGap : 0;
+            if (currHeight + blockGap + headerH + firstEntryH > usableHeight && currHeight > 0) {
+              currPage++;
+              currHeight = 0;
             }
-            newAssignments[headerUnitId] = currentPage;
-            currentHeight += headerH;
-            if (currentPage > maxPageNum) maxPageNum = currentPage;
+            newAssignments[headerUnitId] = currPage;
+            currHeight += (currHeight > 0 ? sectionGap : 0) + headerH;
+            if (currPage > maxPageNum) maxPageNum = currPage;
 
             // 2. Process each entry unit
             entries.forEach((entry: any, entryIdx: number) => {
@@ -1024,48 +1060,102 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
               const entryH = unitHeights[entryUnitId] || 80;
               
               if (entryIdx > 0) {
-                if (currentHeight + entryH > usableHeight && currentHeight > 0) {
-                  currentPage++;
-                  currentHeight = 0;
+                const entryGap = 12; // Standard small spacing gap between entries inside a list
+                if (currHeight + entryGap + entryH > usableHeight && currHeight > 0) {
+                  currPage++;
+                  currHeight = 0;
                 }
+                newAssignments[entryUnitId] = currPage;
+                currHeight += (currHeight > 0 ? entryGap : 0) + entryH;
+              } else {
+                newAssignments[entryUnitId] = currPage;
+                currHeight += entryH;
               }
-              newAssignments[entryUnitId] = currentPage;
-              currentHeight += entryH;
-              if (currentPage > maxPageNum) maxPageNum = currentPage;
+              if (currPage > maxPageNum) maxPageNum = currPage;
             });
           } else {
             // Non-list block unit
             const h = unitHeights[block.id] || 80;
-            if (currentHeight + h > usableHeight && currentHeight > 0) {
-              currentPage++;
-              currentHeight = 0;
+            const blockGap = currHeight > 0 ? sectionGap : 0;
+            if (currHeight + blockGap + h > usableHeight && currHeight > 0) {
+              currPage++;
+              currHeight = 0;
             }
-            newAssignments[block.id] = currentPage;
-            currentHeight += h;
-            if (currentPage > maxPageNum) maxPageNum = currentPage;
+            newAssignments[block.id] = currPage;
+            currHeight += (currHeight > 0 ? blockGap : 0) + h;
+            if (currPage > maxPageNum) maxPageNum = currPage;
           }
         });
+        
+        zonePages[zoneId] = currPage;
+        zoneHeights[zoneId] = currHeight;
+        return { endPage: currPage, endHeight: currHeight };
+      };
+
+      const processedZones = new Set<string>();
+      
+      const processZone = (zoneId: string, startPage: number, startHeight: number) => {
+        if (!safeZones[zoneId] || safeZones[zoneId].length === 0) {
+          newEmptyZonePages[zoneId] = startPage;
+          return { endPage: startPage, endHeight: startHeight };
+        }
+        processedZones.add(zoneId);
+        return paginateZone(zoneId, startPage, startHeight);
+      };
+
+      const layoutType = activeTemplate?.type || '1-col';
+
+      if (layoutType === 'hybrid-split') {
+        const headerState = processZone('header', 0, 0);
+        const mainState = processZone('main', headerState.endPage, headerState.endHeight);
+        processZone('left', mainState.endPage, mainState.endHeight);
+        processZone('right', mainState.endPage, mainState.endHeight);
+      } else if (layoutType === '2-col') {
+        const headerState = processZone('header', 0, 0);
+        processZone('left', headerState.endPage, headerState.endHeight);
+        processZone('right', headerState.endPage, headerState.endHeight);
+      } else if (layoutType === 'top-sidebar-left' || layoutType === 'top-sidebar-right') {
+        const headerState = processZone('header', 0, 0);
+        processZone('sidebar', headerState.endPage, headerState.endHeight);
+        processZone('main', headerState.endPage, headerState.endHeight);
+      } else if (layoutType === 'sidebar-left' || layoutType === 'sidebar-left-dark' || layoutType === 'sidebar-right') {
+        processZone('sidebar', 0, 0);
+        processZone('main', 0, 0);
+      } else {
+        const headerState = processZone('header', 0, 0);
+        processZone('main', headerState.endPage, headerState.endHeight);
+      }
+
+      // Process any unhandled zones independently to ensure they are assigned
+      Object.keys(safeZones).forEach(zoneId => {
+        if (!processedZones.has(zoneId)) {
+          processZone(zoneId, 0, 0);
+        }
       });
 
       // 3. Set total pages count state
       setTotalPagesCount(maxPageNum + 1);
 
       // Cycle oscillation detection
-      const assignmentsStr = JSON.stringify(newAssignments);
+      const assignmentsStr = JSON.stringify({ ...newAssignments, ...newEmptyZonePages });
       if (recentAssignmentsRef.current.includes(assignmentsStr)) {
         return; // Abort cycle
       }
 
       // 4. Update page assignments state only if changed to avoid loop
       const oldAssignments = pageAssignmentsRef.current;
+      const oldEmptyPages = emptyZonePagesRef.current;
       const isChanged = Object.keys(newAssignments).some(id => newAssignments[id] !== oldAssignments[id]) ||
-                        Object.keys(oldAssignments).some(id => newAssignments[id] !== oldAssignments[id]);
+                        Object.keys(oldAssignments).some(id => newAssignments[id] !== oldAssignments[id]) ||
+                        Object.keys(newEmptyZonePages).some(id => newEmptyZonePages[id] !== oldEmptyPages[id]) ||
+                        Object.keys(oldEmptyPages).some(id => newEmptyZonePages[id] !== oldEmptyPages[id]);
       if (isChanged) {
         recentAssignmentsRef.current.push(assignmentsStr);
         if (recentAssignmentsRef.current.length > 5) {
           recentAssignmentsRef.current.shift();
         }
         setPageAssignments(newAssignments);
+        setEmptyZonePages(newEmptyZonePages);
       }
     };
 
@@ -1090,14 +1180,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
   }, [cvData, zones, design, zoom, activeTemplate, layoutMetrics.pageMarginPx]);
 
   const handleTogglePhoto = () => {
-    if (!cvData.basics?.showAvatar) {
-      // Enable avatar and open file picker
-      handleDataChange('basics.showAvatar', true);
-      setTimeout(() => photoInputRef.current?.click(), 50);
-    } else {
-      // When avatar is already shown, open file picker to change it
-      photoInputRef.current?.click();
-    }
+    handleDataChange('basics.showAvatar', !cvData.basics?.showAvatar);
   };
 
   const handlePhotoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1212,9 +1295,17 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
 
     const renderPageZone = (zoneId: string, pageIdx: number, className: string, isDark = false) => {
       const pageBlocks = getPageBlocks(zoneId, pageIdx);
+      const globalBlocks = safeZones[zoneId] || [];
+      const isGloballyEmpty = globalBlocks.length === 0;
+      
+      const targetEmptyPage = emptyZonePages[zoneId] ?? 0;
+      const isEmptyZoneTarget = isGloballyEmpty && pageIdx === targetEmptyPage;
+
+      if (!isEmptyZoneTarget && pageBlocks.length === 0) {
+        return null;
+      }
       
       const getGlobalIndex = (pageSpecificIdx: number) => {
-        const globalBlocks = safeZones[zoneId] || [];
         if (pageSpecificIdx >= 0 && pageSpecificIdx < pageBlocks.length) {
           const targetBlock = pageBlocks[pageSpecificIdx];
           return globalBlocks.findIndex(b => b.id === targetBlock.id);
@@ -1230,8 +1321,6 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
           cvData={cvData}
           EditableWrapper={readOnly ? ReadOnlyWrapper : EditableWrapper}
           handleDrop={(targetZoneId: string, dragData: any, dropIdx: number) => {
-            const globalBlocks = safeZones[zoneId] || [];
-            
             let insertIndex = 0;
             if (dropIdx !== undefined && dropIdx < pageBlocks.length) {
               const targetBlock = pageBlocks[dropIdx];
@@ -1264,7 +1353,21 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
               handleReplaceClick(zoneId, gIdx, type);
             }
           }}
-          onAddSnippet={handleAddClick}
+          onAddSnippet={(targetZoneId: string, pageSpecificIdx?: number) => {
+            let globalInsertIndex = undefined;
+            if (pageSpecificIdx !== undefined && pageSpecificIdx < pageBlocks.length) {
+              const targetBlock = pageBlocks[pageSpecificIdx];
+              globalInsertIndex = globalBlocks.findIndex(b => b.id === targetBlock.id);
+            } else if (pageSpecificIdx !== undefined) {
+              if (pageBlocks.length > 0) {
+                const lastBlock = pageBlocks[pageBlocks.length - 1];
+                globalInsertIndex = globalBlocks.findIndex(b => b.id === lastBlock.id) + 1;
+              } else {
+                globalInsertIndex = globalBlocks.length;
+              }
+            }
+            handleAddClick(zoneId, globalInsertIndex);
+          }}
           onTogglePhoto={handleTogglePhoto}
           onAddListEntry={handleAddListEntry}
           moveEntry={moveEntry}
@@ -2102,6 +2205,18 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
           display: none !important;
           margin: 0 !important;
           padding: 0 !important;
+        }
+        
+        /* Ghost Wrapper Fix */
+        .cv-section-wrapper:has(.cv-continuation-marker) {
+          margin-top: 0 !important;
+          padding-top: 0 !important;
+        }
+        .cv-section-wrapper:has(.cv-continuation-marker) > div > .snippet-content > .cv-section,
+        .cv-section:has(.cv-continuation-marker) {
+          margin-top: 0 !important;
+          padding-top: 0 !important;
+          border-top: none !important;
         }
 
         .cv-page-visualizer { position: absolute; inset: 0; pointer-events: none; z-index: 1; background-size: 100% calc(var(--cv-page-height) + var(--cv-page-gap)); background-image: linear-gradient(to bottom, #ffffff 0, #ffffff var(--cv-page-height), transparent var(--cv-page-height), transparent calc(var(--cv-page-height) + var(--cv-page-gap))); filter: drop-shadow(0 15px 25px rgba(0,0,0,0.15)); }

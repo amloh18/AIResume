@@ -17,17 +17,15 @@ export async function POST(request: NextRequest) {
       userId,
       cvId,
       jobId,
-      paperSize = 'A4',
-      orientation = 'portrait',
-      filename
-    } = await request.json();
+    const body = await request.json();
+    const { cvData, template, format, userId, cvId, jobId, paperSize = 'A4', orientation = 'portrait', filename, htmlContent } = body;
 
     if (userId && userId !== session.user.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!cvData) {
-      return NextResponse.json({ error: 'CV data is required' }, { status: 400 });
+    if (!cvData && !htmlContent) {
+      return NextResponse.json({ error: 'CV data or HTML content is required' }, { status: 400 });
     }
 
     // Generate the export based on format
@@ -38,7 +36,8 @@ export async function POST(request: NextRequest) {
         exportResult = await generatePDFExport(cvData, template, {
           paperSize,
           orientation,
-          filename
+          filename,
+          htmlContent
         });
         break;
       case 'docx':
@@ -101,6 +100,7 @@ async function generatePDFExport(
     paperSize?: 'A4' | 'Letter';
     orientation?: 'portrait' | 'landscape';
     filename?: string;
+    htmlContent?: string;
   } = {}
 ) {
   // Use the existing PDFService for consistent PDF generation
@@ -121,7 +121,8 @@ async function generatePDFExport(
     
     const blob = await PDFService.generatePDF(cvData, compatibleTemplate, {
       paperSize: options.paperSize || 'A4',
-      orientation: options.orientation || 'portrait'
+      orientation: options.orientation || 'portrait',
+      htmlContent: options.htmlContent
     });
     
     // Convert Blob to Buffer for Next.js response

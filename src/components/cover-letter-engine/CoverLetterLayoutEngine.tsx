@@ -298,12 +298,12 @@ export default function CoverLetterLayoutEngine({
   const activePages = isEditing ? [0] : pages;
 
   return (
-    <div className="flex flex-col items-center gap-6 cover-letter-wrapper" style={{ width }}>
+    <div className={`flex flex-col items-center gap-6 cover-letter-wrapper cv-document ${fontClass}`} style={{ width, '--cv-page-height': minHeight, '--cv-page-gap': '24px' } as React.CSSProperties}>
       {activePages.map(pageIdx => {
         return (
           <div 
             key={pageIdx}
-            className={`bg-white dark:bg-white shadow-2xl flex flex-col text-black transition-all duration-500 ease-in-out relative cover-letter-document cv-document ${fontClass}`}
+            className="bg-white dark:bg-white shadow-2xl flex flex-col text-black transition-all duration-500 ease-in-out relative cover-letter-document cv-page"
             style={{ 
               width,
               height: minHeight,

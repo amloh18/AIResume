@@ -410,13 +410,23 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
   const pageIdx = match ? parseInt(match[1]) : 0;
 
   const Title = ({ titleKey, overrideClass }: any) => {
-    const headerUnitId = `${instance.id}_header`;
-    const assignedPage = ctx?.pageAssignments?.[headerUnitId] ?? 0;
-    if (assignedPage !== pageIdx) {
-      return null;
+    const isSidebar = ['sidebar', 'left', 'right'].includes(zoneId);
+    const snippetCtx = React.useContext(SnippetContext);
+
+    if (!ctx) {
+      if (overrideClass) return <h3 className={overrideClass}><EditableWrapper path={`sectionTitles.${titleKey}`} nowrap /></h3>;
+      return <h3><EditableWrapper path={`sectionTitles.${titleKey}`} nowrap /></h3>;
+    }
+    
+    // Check if this specific header block is assigned to the current page
+    if (snippetCtx) {
+      const headerUnitId = `${snippetCtx.blockId}_header`;
+      const assignedPage = snippetCtx.pageAssignments[headerUnitId] ?? 0;
+      if (assignedPage !== snippetCtx.pageIdx) {
+        return <div className="cv-continuation-marker" style={{ display: 'none' }}></div>;
+      }
     }
 
-    const isSidebar = ['sidebar', 'left', 'right'].includes(zoneId);
     const styleKey = isSidebar && activeTemplate?.sidebarTitleStyle ? activeTemplate.sidebarTitleStyle : activeTemplate?.titleStyle;
     const Renderer = TITLE_STYLES[styleKey] || TITLE_STYLES['standard'];
 

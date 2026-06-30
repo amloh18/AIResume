@@ -206,6 +206,20 @@ const flattenSkillItems = (rawSkills: any) => (
   )
 );
 
+const SkillsEditableOverlay = ({ groups, Editable, readOnly }: { groups: any[], Editable: any, readOnly?: boolean }) => {
+  if (readOnly || groups.length === 0 || !Editable) return null;
+  return (
+    <div className="flex flex-col gap-1 mt-2 p-1.5 border border-dashed border-gray-300/60 rounded bg-gray-50/30 opacity-30 hover:opacity-100 transition-opacity no-print">
+      {groups.map((g, i) => g.pathSkills && (
+        <div key={i} className="text-[11px] text-gray-500">
+          {groups.length > 1 && <span className="font-bold mr-1">{g.category}:</span>}
+          <Editable path={g.pathSkills} />
+        </div>
+      ))}
+    </div>
+  );
+};
+
 const SECTION_ICONS: any = {
   summary: User,
   experience: Briefcase,
@@ -626,17 +640,17 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
       </div>
     );
   }},
-  'skills-pills': { id: 'skills-pills', name: 'Solid Pills', category: 'Skills', render: ({ data, isDark, Title }: any) => {
+  'skills-pills': { id: 'skills-pills', name: 'Solid Pills', category: 'Skills', render: ({ data, Editable, isDark, Title, readOnly }: any) => {
     const allSkills = flattenSkillItems(data?.skills);
-    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-wrap gap-2 cv-gap-sm">{allSkills.map((skill: any, i: number) => (<span key={i} className={`px-3 py-1.5 text-[0.85em] font-semibold rounded-md border cv-item-avoid ${isDark ? 'bg-slate-700 border-slate-600 text-slate-200' : 'bg-slate-100 border-slate-200 text-slate-700'}`}>{skill.label}</span>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-wrap gap-2 cv-gap-sm">{allSkills.map((skill: any, i: number) => (<span key={i} className={`px-3 py-1.5 text-[0.85em] font-semibold rounded-md border cv-item-avoid ${isDark ? 'bg-slate-700 border-slate-600 text-slate-200' : 'bg-slate-100 border-slate-200 text-slate-700'}`}>{skill.label}</span>))}</div><SkillsEditableOverlay groups={normalizeSkillGroups(data?.skills)} Editable={Editable} readOnly={readOnly} /></div>);
   }},
-  'skills-round-pills': { id: 'skills-round-pills', name: 'Round Pills', category: 'Skills', render: ({ data, isDark, Title }: any) => {
+  'skills-round-pills': { id: 'skills-round-pills', name: 'Round Pills', category: 'Skills', render: ({ data, Editable, isDark, Title, readOnly }: any) => {
     const allSkills = flattenSkillItems(data?.skills);
-    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-wrap gap-2 cv-gap-sm">{allSkills.map((skill: any, i: number) => (<span key={i} className={`px-4 py-1.5 text-[0.85em] font-semibold rounded-full border cv-item-avoid ${isDark ? 'bg-slate-700 border-slate-600 text-slate-200' : 'bg-slate-100 border-slate-200 text-slate-700'}`}>{skill.label}</span>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-wrap gap-2 cv-gap-sm">{allSkills.map((skill: any, i: number) => (<span key={i} className={`px-4 py-1.5 text-[0.85em] font-semibold rounded-full border cv-item-avoid ${isDark ? 'bg-slate-700 border-slate-600 text-slate-200' : 'bg-slate-100 border-slate-200 text-slate-700'}`}>{skill.label}</span>))}</div><SkillsEditableOverlay groups={normalizeSkillGroups(data?.skills)} Editable={Editable} readOnly={readOnly} /></div>);
   }},
-  'skills-dots': { id: 'skills-dots', name: 'Dot Rating', category: 'Skills', render: ({ data, isDark, Title }: any) => {
+  'skills-dots': { id: 'skills-dots', name: 'Dot Rating', category: 'Skills', render: ({ data, Editable, isDark, Title, readOnly }: any) => {
     const allSkills = flattenSkillItems(data?.skills).slice(0, 6);
-    return (<div className="snippet-anim w-full cv-section"><Title titleKey="skills" /><div className="grid grid-cols-1 gap-y-2 gap-x-4 cv-gap-sm">{allSkills.map((skill: any, i: number) => (<div key={i} className={`flex justify-between items-center ${TYPOGRAPHY.body} cv-item-avoid`}><span className={`truncate font-medium ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>{skill.label}</span><div className="flex gap-1.5">{[...Array(5)].map((_, dotIdx) => (<div key={dotIdx} className={`w-2 h-2 rounded-full ${dotIdx < skill.rating ? 'cv-accent-bg' : (isDark ? 'bg-slate-700' : 'bg-gray-200')}`}></div>))}</div></div>))}</div></div>);
+    return (<div className="snippet-anim w-full cv-section"><Title titleKey="skills" /><div className="grid grid-cols-1 gap-y-2 gap-x-4 cv-gap-sm">{allSkills.map((skill: any, i: number) => (<div key={i} className={`flex justify-between items-center ${TYPOGRAPHY.body} cv-item-avoid`}><span className={`truncate font-medium ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>{skill.label}</span><div className="flex gap-1.5">{[...Array(5)].map((_, dotIdx) => (<div key={dotIdx} className={`w-2 h-2 rounded-full ${dotIdx < skill.rating ? 'cv-accent-bg' : (isDark ? 'bg-slate-700' : 'bg-gray-200')}`}></div>))}</div></div>))}</div><SkillsEditableOverlay groups={normalizeSkillGroups(data?.skills)} Editable={Editable} readOnly={readOnly} /></div>);
   }},
   'skills-category-inline': { id: 'skills-category-inline', name: 'Category Inline', category: 'Skills', render: ({ data, Editable, isDark, Title }: any) => {
     const groups = normalizeSkillGroups(data?.skills);
@@ -912,26 +926,26 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
   // =======================================================
   // NEW SNIPPETS — SKILLS (5 new)
   // =======================================================
-  ,'skills-grouped-sections': { id: 'skills-grouped-sections', name: 'Grouped by Category', category: 'Skills', render: ({ data, isDark, Title }: any) => {
+  ,'skills-grouped-sections': { id: 'skills-grouped-sections', name: 'Grouped by Category', category: 'Skills', render: ({ data, Editable, isDark, Title, readOnly }: any) => {
     const groups = normalizeSkillGroups(data?.skills);
     if (groups.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-col gap-3">{groups.map((group, index) => (<div key={`${group.category}-${index}`}><div className={`text-[0.72em] uppercase tracking-widest font-bold mb-1.5 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{group.category}</div><div className="flex flex-wrap gap-1.5">{group.skills.map((skill: string, i: number) => (<span key={i} className={`text-[0.85em] px-2.5 py-0.5 rounded-md font-medium ${isDark ? 'bg-slate-700 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>{skill}</span>))}</div></div>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-col gap-3">{groups.map((group, index) => (<div key={`${group.category}-${index}`}><div className={`text-[0.72em] uppercase tracking-widest font-bold mb-1.5 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{group.category}</div><div className="flex flex-wrap gap-1.5">{group.skills.map((skill: string, i: number) => (<span key={i} className={`text-[0.85em] px-2.5 py-0.5 rounded-md font-medium ${isDark ? 'bg-slate-700 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>{skill}</span>))}</div></div>))}</div><SkillsEditableOverlay groups={normalizeSkillGroups(data?.skills)} Editable={Editable} readOnly={readOnly} /></div>);
   }}
-  ,'skills-star-rating': { id: 'skills-star-rating', name: 'Star Rating', category: 'Skills', render: ({ data, isDark, Title }: any) => {
+  ,'skills-star-rating': { id: 'skills-star-rating', name: 'Star Rating', category: 'Skills', render: ({ data, Editable, isDark, Title, readOnly }: any) => {
     const items = flattenSkillItems(data?.skills).slice(0, 8);
-    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-col gap-2">{items.map((skill: any, i: number) => (<div key={i} className="flex justify-between items-center"><span className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{skill.label}</span><div className="flex gap-0.5">{[1,2,3,4,5].map(s => (<span key={s} className={`text-[13px] ${s <= skill.rating ? 'cv-accent-text' : (isDark ? 'text-slate-700' : 'text-gray-200')}`}>★</span>))}</div></div>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-col gap-2">{items.map((skill: any, i: number) => (<div key={i} className="flex justify-between items-center"><span className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{skill.label}</span><div className="flex gap-0.5">{[1,2,3,4,5].map(s => (<span key={s} className={`text-[13px] ${s <= skill.rating ? 'cv-accent-text' : (isDark ? 'text-slate-700' : 'text-gray-200')}`}>★</span>))}</div></div>))}</div><SkillsEditableOverlay groups={normalizeSkillGroups(data?.skills)} Editable={Editable} readOnly={readOnly} /></div>);
   }}
-  ,'skills-two-col-list': { id: 'skills-two-col-list', name: 'Two Column List', category: 'Skills', render: ({ data, isDark, Title }: any) => {
+  ,'skills-two-col-list': { id: 'skills-two-col-list', name: 'Two Column List', category: 'Skills', render: ({ data, Editable, isDark, Title, readOnly }: any) => {
     const items = flattenSkillItems(data?.skills);
-    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="grid grid-cols-2 gap-x-4 gap-y-1">{items.map((skill: any, i: number) => (<div key={i} className={`flex items-center gap-1.5 ${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><span className="cv-accent-text text-[10px] shrink-0">●</span>{skill.label}</div>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="grid grid-cols-2 gap-x-4 gap-y-1">{items.map((skill: any, i: number) => (<div key={i} className={`flex items-center gap-1.5 ${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><span className="cv-accent-text text-[10px] shrink-0">●</span>{skill.label}</div>))}</div><SkillsEditableOverlay groups={normalizeSkillGroups(data?.skills)} Editable={Editable} readOnly={readOnly} /></div>);
   }}
-  ,'skills-accent-badges': { id: 'skills-accent-badges', name: 'Accent Solid Badges', category: 'Skills', render: ({ data, isDark, Title }: any) => {
+  ,'skills-accent-badges': { id: 'skills-accent-badges', name: 'Accent Solid Badges', category: 'Skills', render: ({ data, Editable, isDark, Title, readOnly }: any) => {
     const items = flattenSkillItems(data?.skills);
-    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-wrap gap-1.5">{items.map((skill: any, i: number) => (<span key={i} className="text-[10px] font-bold px-2.5 py-1 rounded-md cv-accent-bg text-white tracking-wide">{skill.label}</span>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-wrap gap-1.5">{items.map((skill: any, i: number) => (<span key={i} className="text-[10px] font-bold px-2.5 py-1 rounded-md cv-accent-bg text-white tracking-wide">{skill.label}</span>))}</div><SkillsEditableOverlay groups={normalizeSkillGroups(data?.skills)} Editable={Editable} readOnly={readOnly} /></div>);
   }}
-  ,'skills-compact-inline': { id: 'skills-compact-inline', name: 'Compact Inline All', category: 'Skills', render: ({ data, isDark, Title }: any) => {
+  ,'skills-compact-inline': { id: 'skills-compact-inline', name: 'Compact Inline All', category: 'Skills', render: ({ data, Editable, isDark, Title, readOnly }: any) => {
     const all = flattenSkillItems(data?.skills);
-    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><p className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'} leading-relaxed`}>{all.map((skill: any, i: number) => <span key={i}>{skill.label}{i < all.length-1 && <span className={`mx-1.5 ${isDark ? 'text-gray-600' : 'text-gray-300'}`}>·</span>}</span>)}</p></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><p className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'} leading-relaxed`}>{all.map((skill: any, i: number) => <span key={i}>{skill.label}{i < all.length-1 && <span className={`mx-1.5 ${isDark ? 'text-gray-600' : 'text-gray-300'}`}>·</span>}</span>)}</p><SkillsEditableOverlay groups={normalizeSkillGroups(data?.skills)} Editable={Editable} readOnly={readOnly} /></div>);
   }}
 
   // =======================================================

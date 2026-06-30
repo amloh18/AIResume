@@ -17,6 +17,7 @@ export interface PDFGenerationOptions {
   password?: string;
   sectionOrder?: string[];
   sectionVisibility?: Record<string, boolean>;
+  htmlContent?: string;
 }
 
 export class PDFService extends BaseService {
@@ -55,25 +56,29 @@ export class PDFService extends BaseService {
       const config = configService.getPDFConfig();
       const cacheConfig = config.cache;
 
-      // Check cache first
-      const cacheKey = pdfCacheService.generateCacheKey(
-        cvData,
-        template,
-        options.paperSize || 'A4',
-        options.format || 'pdf'
-      );
+      // Check cache first - bypass for custom WYSIWYG editor HTML content
+      const cacheKey = options.htmlContent
+        ? null
+        : pdfCacheService.generateCacheKey(
+            cvData,
+            template,
+            options.paperSize || 'A4',
+            options.format || 'pdf'
+          );
 
-      const cached = await pdfCacheService.get(cacheKey);
-      if (cached) {
-        await metricsService.trackOperation(
-          this.serviceName,
-          'generatePDF',
-          0,
-          true,
-          undefined,
-          { cached: true }
-        );
-        return cached;
+      if (cacheKey) {
+        const cached = await pdfCacheService.get(cacheKey);
+        if (cached) {
+          await metricsService.trackOperation(
+            this.serviceName,
+            'generatePDF',
+            0,
+            true,
+            undefined,
+            { cached: true }
+          );
+          return cached;
+        }
       }
 
       // Generate PDF with retry logic
@@ -92,10 +97,11 @@ export class PDFService extends BaseService {
             templateId: template?.id || template?._id,
             customRenderer: template?.customRenderer,
             hasCustomRenderer: !!template?.customRenderer,
-            paperSize: options.paperSize || 'A4'
+            paperSize: options.paperSize || 'A4',
+            hasCustomHtml: !!options.htmlContent
           });
 
-          const html = await templateRendererService.renderToHTML(cvData, template, {
+          const html = options.htmlContent || await templateRendererService.renderToHTML(cvData, template, {
             paperSize: options.paperSize || 'A4',
             orientation: options.orientation || 'portrait',
             sectionOrder: options.sectionOrder,
@@ -134,7 +140,9 @@ export class PDFService extends BaseService {
           const blob = new Blob([new Uint8Array(pdfBuffer)], { type: 'application/pdf' });
 
           // Cache the result
-          await pdfCacheService.set(cacheKey, blob, cacheConfig.ttl);
+          if (cacheKey) {
+            await pdfCacheService.set(cacheKey, blob, cacheConfig.ttl);
+          }
 
           return blob;
         },
