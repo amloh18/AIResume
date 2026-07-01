@@ -89,7 +89,7 @@ const ThemeToggle: React.FC<ThemeToggleProps> = ({
         <Moon className={variantClasses.icon} />
       </button>
       {showLabel && (
-        <span className="ml-2 text-sm text-gray-600 dark:text-gray-300">
+        <span className="ml-2 text-small text-gray-600 dark:text-gray-300">
           {theme === 'dark' ? 'Dark' : 'Light'}
         </span>
       )}

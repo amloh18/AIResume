@@ -31,7 +31,7 @@ export default function LinkedInLanguagesCard({ data }: LinkedInLanguagesCardPro
             <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                     <Globe className="w-5 h-5 text-gray-500" />
-                    <h2 className="text-lg font-semibold text-gray-900">Languages</h2>
+                    <h2 className="text-h3 font-semibold text-gray-900">Languages</h2>
                 </div>
                 <CopyAllButton content={allContent} label="Copy All" />
             </div>
@@ -47,9 +47,9 @@ export default function LinkedInLanguagesCard({ data }: LinkedInLanguagesCardPro
                     >
                         <div className="flex items-center gap-2">
                             <MessageCircle className="w-4 h-4 text-gray-400" />
-                            <span className="text-sm font-medium text-gray-900">{language.name}</span>
+                            <span className="text-small font-medium text-gray-900">{language.name}</span>
                         </div>
-                        <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                        <span className="text-small text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
                             {language.proficiency}
                         </span>
                     </CopyableText>

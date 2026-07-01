@@ -11,7 +11,7 @@ export default function JobsErrorState({ message, onRetry }: JobsErrorStateProps
       <div className="p-4 rounded-full bg-red-500/20 mb-4">
         <AlertCircle className="w-12 h-12 text-red-500" />
       </div>
-      <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+      <h3 className="text-h3 font-semibold text-gray-900 dark:text-white mb-2">
         Something went wrong
       </h3>
       <p className="text-gray-600 dark:text-gray-400 mb-6 text-center max-w-md">

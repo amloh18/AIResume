@@ -224,9 +224,9 @@ const ProgressTrackingWidget: React.FC<ProgressTrackingWidgetProps> = ({ userId 
               if (active && payload && payload.length) {
                 return (
                   <div className="bg-white dark:bg-[#1F2937] border border-gray-200 dark:border-white/10 rounded-xl p-3 shadow-xl backdrop-blur-md">
-                    <p className="text-gray-500 dark:text-gray-400 text-xs mb-2">{formatDate(label)}</p>
+                    <p className="text-gray-500 dark:text-gray-400 text-small mb-2">{formatDate(label)}</p>
                     {payload.map((entry, index) => (
-                      <p key={index} className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                      <p key={index} className="text-small font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                         <span className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
                         {entry.name}: {entry.value}
                       </p>
@@ -330,7 +330,7 @@ const ProgressTrackingWidget: React.FC<ProgressTrackingWidgetProps> = ({ userId 
             <TrendingUp className="h-4 w-4 text-blue-400" />
           </div>
           <div className="min-w-0">
-            <h2 className="text-base font-bold text-gray-900 dark:text-white truncate">Progress Tracking</h2>
+            <h2 className="text-body font-bold text-gray-900 dark:text-white truncate">Progress Tracking</h2>
             <div className="flex items-center gap-3 mt-0.5">
               <div className="flex items-center gap-1.5">
                 <div className="w-1.5 h-1.5 rounded-full bg-[#3b82f6]"></div>

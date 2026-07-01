@@ -8,6 +8,7 @@ import ViewportMeta from '@/components/ViewportMeta'
 import GlobalCommandBar from '@/components/ui/GlobalCommandBar'
 import { getServerSession } from 'next-auth'
 import { authConfig } from '@/lib/auth-config'
+import { geistFont } from '@/lib/fonts'
 
 // Allow Next.js to determine rendering strategy (SSG vs SSR) automatically
 export const dynamic = 'auto'
@@ -165,14 +166,8 @@ export default async function RootLayout({
     <html lang="en">
       <head>
         <meta name="impact-site-verification" {...{ value: "044e0d11-071e-4480-aa4e-7fae5e6da834" }} />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Cabinet+Grotesk:wght@300;400;500;600;700;800;900&display=swap"
-        />
       </head>
-      <body>
+      <body className={`${geistFont.variable} geist-ui font-sans`}>
         <ViewportMeta />
         <ResourceHints />
         <React.Suspense fallback={

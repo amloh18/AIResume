@@ -38,16 +38,33 @@ const ChromeExtension = () => {
           transition={{ duration: 0.8, ease: "easeOut" }}
           viewport={{ once: true, margin: "-50px" }}
         >
-          <div className="flex flex-col tablet:flex-row items-start tablet:items-center justify-between gap-4 tablet:gap-6 mb-4">
+          <div className="flex flex-col tablet:flex-row items-start justify-between gap-4 tablet:gap-6 mb-4">
             <div className="flex-1">
-              <h2 className="text-2xl tablet:text-2xl desktop:text-3xl font-bold text-white mb-4 text-left">
+              {/* Decorative squiggle */}
+              <motion.div
+                className="mb-6 flex justify-start"
+                initial={{ opacity: 0, x: -20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5 }}
+              >
+                <svg width="48" height="24" viewBox="0 0 48 24" fill="none" className="text-[#81ff00]">
+                  <path
+                    d="M2 12C6 6 10 18 14 12C18 6 22 18 26 12C30 6 34 18 38 12C42 6 46 12 46 12"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </motion.div>
+              <h2 className="!text-[2rem] tablet:!text-[2.5rem] desktop:!text-[3rem] font-extrabold text-white mb-4 tracking-tighter !leading-[1.05] text-left">
                 Our Browser Extension Works on
                 <br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-lime-400 to-lime-500">
                   100+ Job Sites
                 </span>
               </h2>
-              <p className="text-xs tablet:text-sm desktop:text-base text-white/70 max-w-2xl text-left">
+              <p className="text-small tablet:text-small desktop:text-body text-white/70 max-w-2xl text-left">
                 Seamlessly integrate with all major job boards and career platforms
               </p>
             </div>
@@ -82,7 +99,7 @@ const ChromeExtension = () => {
             {JOB_SITES.map((site, index) => (
               <motion.div
                 key={site.name}
-                className="rounded-full px-4 py-2.5 tablet:px-6 tablet:py-3 text-white/90 bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 backdrop-blur-sm transition-all duration-300 text-xs tablet:text-sm font-medium shadow-lg flex items-center space-x-2 tablet:space-x-3 flex-shrink-0"
+                className="rounded-full px-4 py-2.5 tablet:px-6 tablet:py-3 text-white/90 bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 backdrop-blur-sm transition-all duration-300 text-small tablet:text-small font-medium shadow-lg flex items-center space-x-2 tablet:space-x-3 flex-shrink-0"
                 whileHover={{ scale: 1.05, y: -2 }}
               >
                 <div className="w-6 h-6 tablet:w-8 tablet:h-8 flex-shrink-0 bg-white rounded-full overflow-hidden flex items-center justify-center shadow-sm">
@@ -104,7 +121,7 @@ const ChromeExtension = () => {
             {JOB_SITES.map((site, index) => (
               <motion.div
                 key={`${site.name}-duplicate`}
-                className="rounded-full px-4 py-2.5 tablet:px-6 tablet:py-3 text-white/90 bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 backdrop-blur-sm transition-all duration-300 text-xs tablet:text-sm font-medium shadow-lg flex items-center space-x-2 tablet:space-x-3 flex-shrink-0"
+                className="rounded-full px-4 py-2.5 tablet:px-6 tablet:py-3 text-white/90 bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 backdrop-blur-sm transition-all duration-300 text-small tablet:text-small font-medium shadow-lg flex items-center space-x-2 tablet:space-x-3 flex-shrink-0"
                 whileHover={{ scale: 1.05, y: -2 }}
               >
                 <div className="w-6 h-6 tablet:w-8 tablet:h-8 flex-shrink-0 bg-white rounded-full overflow-hidden flex items-center justify-center shadow-sm">

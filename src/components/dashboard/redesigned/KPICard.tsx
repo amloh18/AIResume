@@ -45,10 +45,9 @@ export default function KPICard({
       whileHover={{ y: -4, scale: 1.01 }}
       onClick={onClick}
       className={cn(
-        'relative overflow-hidden border border-gray-100 dark:border-white/5 rounded-[32px] p-6 flex flex-col justify-between group cursor-pointer shadow-sm min-h-[160px]',
+        'relative overflow-hidden rounded-[32px] p-6 flex flex-col justify-between group cursor-pointer min-h-[160px] panel-glass',
         className
       )}
-      style={{ backgroundColor: color || 'white' }}
     >
       {/* Background Pattern / Icon */}
       <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform duration-700 rotate-12 pointer-events-none">
@@ -80,7 +79,7 @@ export default function KPICard({
             className={cn(
               "font-black tracking-tight leading-none group-hover:scale-105 transition-transform origin-left",
               isDarkColor ? 'text-white' : 'text-slate-900',
-              isExpanded ? 'text-xl' : (typeof value === 'string' && value.length > 4 ? 'text-2xl' : 'text-4xl')
+              isExpanded ? 'text-h3' : (typeof value === 'string' && value.length > 4 ? 'text-h2' : 'text-display')
             )}
           >
             {value}

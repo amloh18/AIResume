@@ -181,7 +181,7 @@ const RedesignedPricingCards: React.FC<RedesignedPricingCardsProps> = ({
         {/* Badge */}
         {(plan.isPopular || plan.isBestValue) && (
           <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 z-10">
-            <div className={`px-4 py-1 rounded-full text-sm font-bold shadow-lg ${plan.isBestValue
+            <div className={`px-4 py-1 rounded-full text-small font-bold shadow-lg ${plan.isBestValue
               ? 'bg-gradient-to-r from-emerald-400 to-teal-500 text-white'
               : 'bg-gradient-to-r from-blue-400 to-indigo-500 text-white'
               }`}>
@@ -196,10 +196,10 @@ const RedesignedPricingCards: React.FC<RedesignedPricingCardsProps> = ({
             <div className={`w-16 h-16 bg-gradient-to-br ${getPlanColor(plan)} rounded-2xl flex items-center justify-center mx-auto mb-4 text-white`}>
               {getPlanIcon(plan.key)}
             </div>
-            <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+            <h3 className="text-h2 font-bold text-gray-900 dark:text-white mb-2">
               {plan.name}
             </h3>
-            <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed">
+            <p className="text-gray-600 dark:text-gray-300 text-small leading-relaxed">
               {plan.description}
             </p>
           </div>
@@ -208,23 +208,23 @@ const RedesignedPricingCards: React.FC<RedesignedPricingCardsProps> = ({
           <div className="text-center mb-8">
             {plan.key === 'free' ? (
               <>
-                <div className="text-4xl font-bold text-gray-900 dark:text-white mb-2">Free</div>
-                <div className="text-gray-600 dark:text-gray-300 text-sm">
+                <div className="text-display font-bold text-gray-900 dark:text-white mb-2">Free</div>
+                <div className="text-gray-600 dark:text-gray-300 text-small">
                   No subscription required
                 </div>
               </>
             ) : plan.key === 'starter_monthly' ? (
               <>
-                <div className="text-4xl font-bold text-gray-900 dark:text-white mb-2">$0.00</div>
-                <div className="text-gray-600 dark:text-gray-300 text-sm">
+                <div className="text-display font-bold text-gray-900 dark:text-white mb-2">$0.00</div>
+                <div className="text-gray-600 dark:text-gray-300 text-small">
                   per month (with $0 invoice receipts)
                 </div>
               </>
             ) : (
               <>
-                <div className="text-4xl font-bold text-gray-900 dark:text-white mb-2 flex items-center justify-center gap-2">
+                <div className="text-display font-bold text-gray-900 dark:text-white mb-2 flex items-center justify-center gap-2">
                   {plan.isPromotionActive && (
-                    <span className="text-xl text-gray-400 dark:text-gray-500 line-through font-semibold">
+                    <span className="text-h3 text-gray-400 dark:text-gray-500 line-through font-semibold">
                       {plan.regionalPricing?.currencySymbol || plan.currencySymbol || '$'}
                       {plan.price_yearly || plan.price_monthly || plan.price_quarterly || plan.price_one_time}
                     </span>
@@ -233,7 +233,7 @@ const RedesignedPricingCards: React.FC<RedesignedPricingCardsProps> = ({
                     {plan.regionalPricing?.displayPrice || `${plan.regionalPricing?.currencySymbol || plan.currencySymbol || '$'}${price}`}
                   </span>
                 </div>
-                <div className="text-gray-600 dark:text-gray-300 text-sm">
+                <div className="text-gray-600 dark:text-gray-300 text-small">
                   {getBillingText(plan)}
                 </div>
               </>
@@ -246,7 +246,7 @@ const RedesignedPricingCards: React.FC<RedesignedPricingCardsProps> = ({
               {plan.features.map((feature, index) => (
                 <div key={index} className="flex items-center gap-3">
                   <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
-                  <span className="text-gray-700 dark:text-gray-300 text-sm">
+                  <span className="text-gray-700 dark:text-gray-300 text-small">
                     {feature}
                   </span>
                 </div>
@@ -258,16 +258,16 @@ const RedesignedPricingCards: React.FC<RedesignedPricingCardsProps> = ({
           <div className="bg-gray-50 dark:bg-gray-700 rounded-xl p-4 mb-6">
             <div className="grid grid-cols-2 gap-4 text-center">
               <div>
-                <div className="text-lg font-semibold text-gray-900 dark:text-white">
+                <div className="text-h3 font-semibold text-gray-900 dark:text-white">
                   {plan.key === 'free' || plan.key === 'starter_monthly' ? '3' : '∞'}
                 </div>
-                <div className="text-xs text-gray-600 dark:text-gray-300">Journey CVs</div>
+                <div className="text-small text-gray-600 dark:text-gray-300">Journey CVs</div>
               </div>
               <div>
-                <div className="text-lg font-semibold text-gray-900 dark:text-white">
+                <div className="text-h3 font-semibold text-gray-900 dark:text-white">
                   {plan.key === 'free' || plan.key === 'starter_monthly' ? '3' : plan.key === 'starter_yearly' ? '0' : '∞'}
                 </div>
-                <div className="text-xs text-gray-600 dark:text-gray-300">Jobs</div>
+                <div className="text-small text-gray-600 dark:text-gray-300">Jobs</div>
               </div>
             </div>
           </div>
@@ -277,14 +277,14 @@ const RedesignedPricingCards: React.FC<RedesignedPricingCardsProps> = ({
             <div className="space-y-3">
               <button
                 onClick={() => onPreview?.(plan)}
-                className="w-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 px-4 py-2 rounded-lg text-sm hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center justify-center gap-2 transition-colors"
+                className="w-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 px-4 py-2 rounded-lg text-small hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center justify-center gap-2 transition-colors"
               >
                 <Eye className="w-4 h-4" />
                 Preview
               </button>
               <button
                 onClick={() => onEdit?.(plan)}
-                className="w-full bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-200 px-4 py-2 rounded-lg text-sm hover:bg-green-200 dark:hover:bg-green-800 flex items-center justify-center gap-2 transition-colors"
+                className="w-full bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-200 px-4 py-2 rounded-lg text-small hover:bg-green-200 dark:hover:bg-green-800 flex items-center justify-center gap-2 transition-colors"
               >
                 <Edit className="w-4 h-4" />
                 Edit Plan
@@ -323,10 +323,10 @@ const RedesignedPricingCards: React.FC<RedesignedPricingCardsProps> = ({
       {essentialPlans.length > 0 && (
         <div>
           <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+            <h2 className="text-h1 font-bold text-gray-900 dark:text-white mb-4">
               Get Started
             </h2>
-            <p className="text-gray-600 dark:text-gray-300 text-lg">
+            <p className="text-gray-600 dark:text-gray-300 text-h3">
               Perfect for first-time users and quick job applications
             </p>
           </div>
@@ -343,10 +343,10 @@ const RedesignedPricingCards: React.FC<RedesignedPricingCardsProps> = ({
       {proPlans.length > 0 && (
         <div>
           <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+            <h2 className="text-h1 font-bold text-gray-900 dark:text-white mb-4">
               Professional Plans
             </h2>
-            <p className="text-gray-600 dark:text-gray-300 text-lg">
+            <p className="text-gray-600 dark:text-gray-300 text-h3">
               For active job seekers who need unlimited access to all tools
             </p>
           </div>
@@ -362,7 +362,7 @@ const RedesignedPricingCards: React.FC<RedesignedPricingCardsProps> = ({
       {/* Additional Info */}
       <div className="text-center">
         <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-6 max-w-2xl mx-auto">
-          <p className="text-gray-600 dark:text-gray-300 text-sm">
+          <p className="text-gray-600 dark:text-gray-300 text-small">
             All prices include applicable taxes. Cancel anytime.
             <br />
             Need help choosing? <a href="/contact" className="text-blue-600 dark:text-blue-400 hover:underline">Contact our support team</a>

@@ -61,7 +61,7 @@ export default function JobPipelineWidget({ stages = defaultStages, loading = fa
                 className={cn("absolute bottom-0 inset-x-0 opacity-20", stage.color)}
               />
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-xl font-black text-gray-900 dark:text-white group-hover:scale-110 transition-transform">
+                <span className="text-h3 font-black text-gray-900 dark:text-white group-hover:scale-110 transition-transform">
                   {stage.count}
                 </span>
               </div>

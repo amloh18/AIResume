@@ -17,17 +17,17 @@ const MasterCVBadge: React.FC<MasterCVBadgeProps> = ({
 }) => {
   const variants = {
     default: {
-      container: 'bg-gradient-to-r from-lime-400 to-lime-500 text-black px-3 py-1 rounded-full text-sm font-bold',
+      container: 'bg-gradient-to-r from-lime-400 to-lime-500 text-black px-3 py-1 rounded-full text-small font-bold',
       icon: 'h-4 w-4',
       text: 'Master CV'
     },
     compact: {
-      container: 'bg-lime-400/20 text-lime-400 border border-lime-400/30 px-2 py-1 rounded-md text-xs font-medium',
+      container: 'bg-lime-400/20 text-lime-400 border border-lime-400/30 px-2 py-1 rounded-md text-small font-medium',
       icon: 'h-3 w-3',
       text: 'Master'
     },
     large: {
-      container: 'bg-gradient-to-r from-lime-400 to-lime-500 text-black px-4 py-2 rounded-lg text-base font-bold shadow-lg',
+      container: 'bg-gradient-to-r from-lime-400 to-lime-500 text-black px-4 py-2 rounded-lg text-body font-bold shadow-lg',
       icon: 'h-5 w-5',
       text: 'Master CV'
     }

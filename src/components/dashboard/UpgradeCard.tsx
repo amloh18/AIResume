@@ -131,7 +131,7 @@ const UpgradeCard: React.FC<UpgradeCardProps> = ({ userId, onClose }) => {
                 {/* Title */}
                 <h3
                   id="upgrade-title"
-                  className="text-xl font-bold text-gray-900 dark:text-white"
+                  className="text-h3 font-bold text-gray-900 dark:text-white"
                 >
                   Unlock Premium
                 </h3>
@@ -139,7 +139,7 @@ const UpgradeCard: React.FC<UpgradeCardProps> = ({ userId, onClose }) => {
                 {/* Description */}
                 <p
                   id="upgrade-description"
-                  className="text-sm text-gray-900 dark:text-white"
+                  className="text-small text-gray-900 dark:text-white"
                 >
                   Upgrade to unlock all features
                 </p>
@@ -147,19 +147,19 @@ const UpgradeCard: React.FC<UpgradeCardProps> = ({ userId, onClose }) => {
                 {/* Plan Info Card */}
                 <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4 border border-red-200 dark:border-red-500/30">
                   <div className="text-center mb-3">
-                    <div className="inline-block bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full mb-2">
+                    <div className="inline-block bg-red-500 text-white text-small font-bold px-3 py-1 rounded-full mb-2">
                       Recommended
                     </div>
-                    <h4 className="text-lg font-bold text-gray-900 dark:text-white mb-1">
+                    <h4 className="text-h3 font-bold text-gray-900 dark:text-white mb-1">
                       {recommendedPlan.name}
                     </h4>
-                    <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                    <div className="text-h2 font-bold text-gray-900 dark:text-white">
                       {recommendedPlan.monthlyEquivalentString || `${recommendedPlan.currencySymbol}${recommendedPlan.monthlyEquivalent.toFixed(2)}`}
                     </div>
-                    <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                    <div className="text-small text-gray-600 dark:text-gray-400 mt-1">
                       Billed annually at {recommendedPlan.priceString || `${recommendedPlan.currencySymbol}${recommendedPlan.price}`}
                     </div>
-                    <div className="text-sm text-red-600 dark:text-red-400 font-medium mt-1">
+                    <div className="text-small text-red-600 dark:text-red-400 font-medium mt-1">
                       Save {recommendedPlan.savings}
                     </div>
                   </div>
@@ -170,7 +170,7 @@ const UpgradeCard: React.FC<UpgradeCardProps> = ({ userId, onClose }) => {
                   {benefits.map((benefit, index) => (
                     <li key={index} className="flex items-start gap-2">
                       <CheckCircle2 className="w-4 h-4 text-red-500 dark:text-red-400 mt-0.5 flex-shrink-0" />
-                      <span className="text-sm text-gray-900 dark:text-white">
+                      <span className="text-small text-gray-900 dark:text-white">
                         {benefit}
                       </span>
                     </li>

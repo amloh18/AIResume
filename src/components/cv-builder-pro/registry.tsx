@@ -202,6 +202,8 @@ const flattenSkillItems = (rawSkills: any) => (
       label,
       category: group.category,
       rating: clampSkillRating(group.rating, 5 - (index % 3)),
+      pathSkills: group.pathSkills,
+      skillIndex: index
     }))
   )
 );
@@ -626,17 +628,17 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
       </div>
     );
   }},
-  'skills-pills': { id: 'skills-pills', name: 'Solid Pills', category: 'Skills', render: ({ data, isDark, Title }: any) => {
+  'skills-pills': { id: 'skills-pills', name: 'Solid Pills', category: 'Skills', render: ({ data, Editable, isDark, Title }: any) => {
     const allSkills = flattenSkillItems(data?.skills);
-    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-wrap gap-2 cv-gap-sm">{allSkills.map((skill: any, i: number) => (<span key={i} className={`px-3 py-1.5 text-[0.85em] font-semibold rounded-md border cv-item-avoid ${isDark ? 'bg-slate-700 border-slate-600 text-slate-200' : 'bg-slate-100 border-slate-200 text-slate-700'}`}>{skill.label}</span>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-wrap gap-2 cv-gap-sm">{allSkills.map((skill: any, i: number) => (<span key={i} className={`px-3 py-1.5 text-[0.85em] font-semibold rounded-md border cv-item-avoid ${isDark ? 'bg-slate-700 border-slate-600 text-slate-200' : 'bg-slate-100 border-slate-200 text-slate-700'}`}><Editable path={skill.pathSkills} overrideValue={skill.label} arrayIndex={skill.skillIndex} nowrap /></span>))}</div></div>);
   }},
-  'skills-round-pills': { id: 'skills-round-pills', name: 'Round Pills', category: 'Skills', render: ({ data, isDark, Title }: any) => {
+  'skills-round-pills': { id: 'skills-round-pills', name: 'Round Pills', category: 'Skills', render: ({ data, Editable, isDark, Title }: any) => {
     const allSkills = flattenSkillItems(data?.skills);
-    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-wrap gap-2 cv-gap-sm">{allSkills.map((skill: any, i: number) => (<span key={i} className={`px-4 py-1.5 text-[0.85em] font-semibold rounded-full border cv-item-avoid ${isDark ? 'bg-slate-700 border-slate-600 text-slate-200' : 'bg-slate-100 border-slate-200 text-slate-700'}`}>{skill.label}</span>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-wrap gap-2 cv-gap-sm">{allSkills.map((skill: any, i: number) => (<span key={i} className={`px-4 py-1.5 text-[0.85em] font-semibold rounded-full border cv-item-avoid ${isDark ? 'bg-slate-700 border-slate-600 text-slate-200' : 'bg-slate-100 border-slate-200 text-slate-700'}`}><Editable path={skill.pathSkills} overrideValue={skill.label} arrayIndex={skill.skillIndex} nowrap /></span>))}</div></div>);
   }},
-  'skills-dots': { id: 'skills-dots', name: 'Dot Rating', category: 'Skills', render: ({ data, isDark, Title }: any) => {
+  'skills-dots': { id: 'skills-dots', name: 'Dot Rating', category: 'Skills', render: ({ data, Editable, isDark, Title }: any) => {
     const allSkills = flattenSkillItems(data?.skills).slice(0, 6);
-    return (<div className="snippet-anim w-full cv-section"><Title titleKey="skills" /><div className="grid grid-cols-1 gap-y-2 gap-x-4 cv-gap-sm">{allSkills.map((skill: any, i: number) => (<div key={i} className={`flex justify-between items-center ${TYPOGRAPHY.body} cv-item-avoid`}><span className={`truncate font-medium ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>{skill.label}</span><div className="flex gap-1.5">{[...Array(5)].map((_, dotIdx) => (<div key={dotIdx} className={`w-2 h-2 rounded-full ${dotIdx < skill.rating ? 'cv-accent-bg' : (isDark ? 'bg-slate-700' : 'bg-gray-200')}`}></div>))}</div></div>))}</div></div>);
+    return (<div className="snippet-anim w-full cv-section"><Title titleKey="skills" /><div className="grid grid-cols-1 gap-y-2 gap-x-4 cv-gap-sm">{allSkills.map((skill: any, i: number) => (<div key={i} className={`flex justify-between items-center ${TYPOGRAPHY.body} cv-item-avoid`}><span className={`truncate font-medium ${isDark ? 'text-gray-200' : 'text-gray-800'}`}><Editable path={skill.pathSkills} overrideValue={skill.label} arrayIndex={skill.skillIndex} nowrap /></span><div className="flex gap-1.5">{[...Array(5)].map((_, dotIdx) => (<div key={dotIdx} className={`w-2 h-2 rounded-full ${dotIdx < skill.rating ? 'cv-accent-bg' : (isDark ? 'bg-slate-700' : 'bg-gray-200')}`}></div>))}</div></div>))}</div></div>);
   }},
   'skills-category-inline': { id: 'skills-category-inline', name: 'Category Inline', category: 'Skills', render: ({ data, Editable, isDark, Title }: any) => {
     const groups = normalizeSkillGroups(data?.skills);

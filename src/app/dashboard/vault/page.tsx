@@ -55,10 +55,10 @@ function VaultLockedContent({ user, onMobileMenuToggle, isMobileMenuOpen }: {
                         <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-400/20 to-orange-500/10 border border-amber-500/20 mb-5">
                             <Crown className="w-7 h-7 text-amber-400" />
                         </div>
-                        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
+                        <h1 className="text-h2 font-bold text-gray-900 dark:text-white mb-3">
                             Career Vault
                         </h1>
-                        <p className="text-gray-500 dark:text-white/50 text-sm max-w-md mx-auto">
+                        <p className="text-gray-500 dark:text-white/50 text-small max-w-md mx-auto">
                             A permanent home for your most valuable career assets — exclusively for Lifetime members.
                         </p>
                     </div>
@@ -74,8 +74,8 @@ function VaultLockedContent({ user, onMobileMenuToggle, isMobileMenuOpen }: {
                                     <Icon className="w-4 h-4 text-amber-500" />
                                 </div>
                                 <div>
-                                    <p className="text-sm font-semibold text-gray-800 dark:text-white">{label}</p>
-                                    <p className="text-xs text-gray-500 dark:text-white/40 mt-0.5">{desc}</p>
+                                    <p className="text-small font-semibold text-gray-800 dark:text-white">{label}</p>
+                                    <p className="text-small text-gray-500 dark:text-white/40 mt-0.5">{desc}</p>
                                 </div>
                             </div>
                         ))}
@@ -83,19 +83,19 @@ function VaultLockedContent({ user, onMobileMenuToggle, isMobileMenuOpen }: {
 
                     {/* Upgrade CTA */}
                     <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-500/10 dark:to-orange-500/5 border border-amber-200 dark:border-amber-500/20 rounded-2xl p-6 text-center">
-                        <div className="inline-flex items-center gap-2 text-xs font-semibold text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-500/10 px-3 py-1.5 rounded-full mb-4">
+                        <div className="inline-flex items-center gap-2 text-small font-semibold text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-500/10 px-3 py-1.5 rounded-full mb-4">
                             <Lock className="w-3 h-3" />
                             Pro Lifetime Exclusive
                         </div>
-                        <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+                        <h2 className="text-h3 font-bold text-gray-900 dark:text-white mb-2">
                             One-Time Purchase. Lifetime Access.
                         </h2>
-                        <p className="text-sm text-gray-500 dark:text-white/50 mb-5">
+                        <p className="text-small text-gray-500 dark:text-white/50 mb-5">
                             Career Vault is included with Pro Lifetime — pay once, own it forever. Plus every future feature we ship.
                         </p>
                         <button
                             onClick={handleUpgrade}
-                            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-amber-400 to-orange-400 hover:from-amber-500 hover:to-orange-500 text-white font-semibold text-sm transition-all duration-200 shadow-md hover:shadow-lg"
+                            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-amber-400 to-orange-400 hover:from-amber-500 hover:to-orange-500 text-white font-semibold text-small transition-all duration-200 shadow-md hover:shadow-lg"
                         >
                             <Crown className="w-4 h-4" />
                             Get Lifetime Access
@@ -153,9 +153,9 @@ const VaultPage: React.FC = () => {
                 <div className="w-16 h-16 bg-gradient-to-br from-amber-400/20 to-amber-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Archive size={24} className="text-amber-400" />
                 </div>
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Career Vault</h2>
+                <h2 className="text-h2 font-bold text-gray-900 dark:text-white mb-2">Career Vault</h2>
                 <p className="text-gray-600 dark:text-white/60">Your career assets will appear here</p>
-                <p className="text-gray-500 dark:text-white/40 text-sm mt-4">Coming soon — we&apos;re building this for you!</p>
+                <p className="text-gray-500 dark:text-white/40 text-small mt-4">Coming soon — we&apos;re building this for you!</p>
             </div>
         </div>
     );

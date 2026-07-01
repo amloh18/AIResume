@@ -48,12 +48,12 @@ export default function MatchScoreTable({ matches = defaultMatches, loading = fa
             {matches.map((match, i) => (
               <tr key={i} className="group hover:bg-gray-50/50 dark:hover:bg-white/[0.01] transition-colors">
                 <td className="py-4 pr-4">
-                  <div className="text-xs font-black text-gray-800 dark:text-gray-200">{match.job}</div>
+                  <div className="text-small font-black text-gray-800 dark:text-gray-200">{match.job}</div>
                   <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{match.company}</div>
                 </td>
                 <td className="py-4 pr-4">
                   <div className={cn(
-                    "text-sm font-black",
+                    "text-small font-black",
                     match.match >= 90 ? "text-[#83d60d]" : "text-amber-500"
                   )}>
                     {match.match}%

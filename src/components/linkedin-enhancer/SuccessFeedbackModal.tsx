@@ -38,23 +38,23 @@ export default function SuccessFeedbackModal({ isOpen, onClose, onUndo, appliedS
                             </motion.div>
                         </div>
                         
-                        <h2 className="text-2xl font-bold text-gray-900 mb-2">🎉 Profile Updated!</h2>
+                        <h2 className="text-h2 font-bold text-gray-900 mb-2">🎉 Profile Updated!</h2>
                         <p className="text-gray-600 mb-8">
                             Successfully applied enhancements to {appliedSectionsCount} section{appliedSectionsCount === 1 ? '' : 's'} on your LinkedIn profile.
                         </p>
 
                         <div className="bg-gray-50 rounded-xl p-4 mb-8 text-left">
-                            <h3 className="text-sm font-semibold text-gray-900 mb-3">Summary of Improvements:</h3>
+                            <h3 className="text-small font-semibold text-gray-900 mb-3">Summary of Improvements:</h3>
                             <ul className="space-y-2">
-                                <li className="flex items-start gap-2 text-sm text-gray-600">
+                                <li className="flex items-start gap-2 text-small text-gray-600">
                                     <FileText className="w-4 h-4 text-blue-500 mt-0.5" />
                                     <span>Keywords optimized for ATS</span>
                                 </li>
-                                <li className="flex items-start gap-2 text-sm text-gray-600">
+                                <li className="flex items-start gap-2 text-small text-gray-600">
                                     <FileText className="w-4 h-4 text-blue-500 mt-0.5" />
                                     <span>Action-oriented bullet points added</span>
                                 </li>
-                                <li className="flex items-start gap-2 text-sm text-gray-600">
+                                <li className="flex items-start gap-2 text-small text-gray-600">
                                     <FileText className="w-4 h-4 text-blue-500 mt-0.5" />
                                     <span>Tone adjusted to match your professional brand</span>
                                 </li>

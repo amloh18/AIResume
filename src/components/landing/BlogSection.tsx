@@ -50,16 +50,33 @@ export default function BlogSection() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
-          className="text-center mb-14"
+          className="text-left mb-14"
         >
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#81ff00]/10 border border-[#81ff00]/20 rounded-full text-[#81ff00] text-sm font-semibold mb-5">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#81ff00]/10 border border-[#81ff00]/20 rounded-full text-[#81ff00] text-small font-semibold mb-5">
             <BookOpen className="w-4 h-4" />
             CVCircle Career Journal
           </div>
-          <MotionH2 className="text-3xl md:text-5xl font-bold text-white mb-4 leading-tight">
+          {/* Decorative squiggle */}
+          <MotionDiv
+            className="mb-6 flex justify-start"
+            initial={{ opacity: 0, x: -20 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+          >
+            <svg width="48" height="24" viewBox="0 0 48 24" fill="none" className="text-[#81ff00]">
+              <path
+                d="M2 12C6 6 10 18 14 12C18 6 22 18 26 12C30 6 34 18 38 12C42 6 46 12 46 12"
+                stroke="currentColor"
+                strokeWidth="3"
+                strokeLinecap="round"
+              />
+            </svg>
+          </MotionDiv>
+          <MotionH2 className="!text-[2rem] tablet:!text-[2.5rem] desktop:!text-[3rem] font-extrabold text-white mb-4 tracking-tighter !leading-[1.05]">
             Outsmart the ATS. <span className="text-[#81ff00]">Get the Interview.</span>
           </MotionH2>
-          <p className="text-lg text-gray-400 max-w-2xl mx-auto leading-relaxed">
+          <p className="text-h3 text-gray-400 max-w-2xl leading-relaxed text-left">
             Expert guides on CV building, ATS optimization, and job search strategy — written by the CVCircle research team.
           </p>
         </MotionDiv>
@@ -90,7 +107,7 @@ export default function BlogSection() {
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-[#141a14]/50 to-transparent" />
                     <div className="absolute top-3 left-3">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border backdrop-blur-sm ${categoryColor}`}>
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-small font-semibold border backdrop-blur-sm ${categoryColor}`}>
                         <Tag className="w-3 h-3" />
                         {article.category}
                       </span>
@@ -99,17 +116,17 @@ export default function BlogSection() {
 
                   {/* Content */}
                   <div className="p-5 flex flex-col flex-1">
-                    <h3 className="text-base font-bold text-white mb-2 group-hover:text-[#81ff00] transition-colors line-clamp-2 leading-snug">
+                    <h3 className="text-body font-bold text-white mb-2 group-hover:text-[#81ff00] transition-colors line-clamp-2 leading-snug">
                       {article.title}
                     </h3>
-                    <p className="text-gray-500 text-sm mb-4 line-clamp-2 flex-1 leading-relaxed">{article.excerpt}</p>
+                    <p className="text-gray-500 text-small mb-4 line-clamp-2 flex-1 leading-relaxed">{article.excerpt}</p>
 
                     <div className="flex items-center justify-between pt-4 border-t border-white/5">
-                      <div className="flex items-center gap-3 text-xs text-gray-500">
+                      <div className="flex items-center gap-3 text-small text-gray-500">
                         <span className="flex items-center gap-1.5"><Calendar className="w-3 h-3" />{article.date}</span>
                         <span className="flex items-center gap-1.5"><Clock className="w-3 h-3" />{article.readTime}</span>
                       </div>
-                      <span className="text-[#81ff00] text-xs font-semibold flex items-center gap-1 group-hover:gap-1.5 transition-all">
+                      <span className="text-[#81ff00] text-small font-semibold flex items-center gap-1 group-hover:gap-1.5 transition-all">
                         Read <ArrowRight className="w-3.5 h-3.5" />
                       </span>
                     </div>
@@ -130,7 +147,7 @@ export default function BlogSection() {
         >
           <Link
             href="/blog"
-            className="inline-flex items-center gap-2.5 px-7 py-3.5 bg-[#1a1f1a] text-white border border-white/10 rounded-full text-sm font-semibold hover:border-[#81ff00]/40 hover:text-[#81ff00] hover:bg-[#1f2a1f] transition-all duration-300 group"
+            className="inline-flex items-center gap-2.5 px-7 py-3.5 bg-[#1a1f1a] text-white border border-white/10 rounded-full text-small font-semibold hover:border-[#81ff00]/40 hover:text-[#81ff00] hover:bg-[#1f2a1f] transition-all duration-300 group"
           >
             <BookOpen className="w-4 h-4 text-[#81ff00]" />
             Explore the Career Journal

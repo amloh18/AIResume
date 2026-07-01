@@ -135,7 +135,7 @@ const FontSizeDropdown: React.FC<{
               type="button"
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => { onSelect(size); setIsOpen(false); }}
-              className="w-full px-3 py-1 text-left text-sm text-[color:var(--text-primary)] hover:bg-[var(--bg-tertiary)] transition-colors"
+              className="w-full px-3 py-1 text-left text-small text-[color:var(--text-primary)] hover:bg-[var(--bg-tertiary)] transition-colors"
             >
               {size}px
             </button>
@@ -176,7 +176,7 @@ const TextColorPicker: React.FC<{
       </button>
       {isOpen && (
         <div className="absolute top-full left-0 mt-1 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg shadow-xl z-50 p-2 min-w-[140px]">
-          <div className="text-xs text-[color:var(--text-tertiary)] mb-2 font-medium">Text Color</div>
+          <div className="text-small text-[color:var(--text-tertiary)] mb-2 font-medium">Text Color</div>
           <div className="grid grid-cols-3 gap-1">
             {TEXT_COLORS.map(({ label, value }) => (
               <button
@@ -619,7 +619,7 @@ export const WYSIWYGToolbar: React.FC<WYSIWYGToolbarProps> = ({
             size={15}
             className={`${isValueEmpty ? 'text-[#80FF00]' : 'text-[color:var(--text-secondary)]'} ${isGenerating ? 'animate-pulse' : ''}`}
           />
-          {isValueEmpty && <span className="text-xs font-semibold">Suggest</span>}
+          {isValueEmpty && <span className="text-small font-semibold">Suggest</span>}
         </button>
       )}
     </div>

@@ -64,7 +64,7 @@ const Hero = () => {
                   <Star key={i} className="w-3 h-3 fill-[#81ff00] text-[#81ff00]" />
                 ))}
               </div>
-              <p className="text-xs tablet:text-sm font-semibold text-white/90">
+              <p className="text-small tablet:text-small font-semibold text-white/90">
                 <span className="text-[#81ff00]">15,000+</span> professionals celebrating new jobs
               </p>
             </div>
@@ -72,7 +72,7 @@ const Hero = () => {
 
           {/* Headline & CTAs */}
           <motion.h1
-            className="text-2xl tablet:text-4xl desktop:text-6xl font-bold text-white mb-12 tracking-tight leading-[1.3] max-w-7xl mx-auto text-center px-4"
+            className="!text-[2rem] tablet:!text-[2.5rem] desktop:!text-[3rem] font-extrabold text-white mb-12 tracking-tighter !leading-none w-full text-center px-4"
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, ease: "easeOut" }}
@@ -106,7 +106,7 @@ const Hero = () => {
           </motion.h1>
 
           <motion.p
-            className="text-base tablet:text-lg desktop:text-xl text-gray-400 mb-8 tablet:mb-10 max-w-3xl mx-auto leading-relaxed text-center"
+            className="text-body tablet:text-h3 desktop:text-h3 text-gray-400 mb-8 tablet:mb-10 max-w-3xl mx-auto leading-relaxed text-center"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.3, ease: "easeOut" }}
@@ -122,7 +122,7 @@ const Hero = () => {
           >
             <button
               onClick={() => router.push('/welcome')}
-              className="group w-full tablet:w-auto inline-flex items-center justify-center gap-3 bg-[#81ff00] hover:bg-[#6dd600] text-black px-6 py-3 tablet:px-8 tablet:py-3.5 rounded-full font-bold text-xs tablet:text-sm shadow-[0_0_20px_rgba(129,255,0,0.3)] transition-all hover:scale-105 uppercase tracking-wide"
+              className="group w-full tablet:w-auto inline-flex items-center justify-center gap-3 bg-[#81ff00] hover:bg-[#6dd600] text-black px-6 py-3 tablet:px-8 tablet:py-3.5 rounded-full font-bold text-small tablet:text-small shadow-[0_0_20px_rgba(129,255,0,0.3)] transition-all hover:scale-105 uppercase tracking-wide"
             >
               START FREE
               <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
@@ -130,7 +130,7 @@ const Hero = () => {
             
             <button
               onClick={() => window.open('https://chromewebstore.google.com/detail/fphkljfgefkfemmlfbpnjdojnfeadaii?utm_source=item-share-cb', '_blank')}
-              className="w-full tablet:w-auto inline-flex items-center justify-center gap-3 bg-white/5 hover:bg-white/10 text-white px-6 py-3 tablet:px-8 tablet:py-3.5 rounded-full font-bold text-xs tablet:text-sm backdrop-blur-md border border-white/10 transition-all hover:scale-105 uppercase tracking-wide"
+              className="w-full tablet:w-auto inline-flex items-center justify-center gap-3 bg-white/5 hover:bg-white/10 text-white px-6 py-3 tablet:px-8 tablet:py-3.5 rounded-full font-bold text-small tablet:text-small backdrop-blur-md border border-white/10 transition-all hover:scale-105 uppercase tracking-wide"
             >
               Download Extension
             </button>
@@ -185,7 +185,7 @@ const Hero = () => {
           background: 'linear-gradient(to bottom, transparent, rgba(0,0,0,0.4))'
         }}
       >
-        <p className="text-[10px] tablet:text-xs font-bold text-white/50 uppercase tracking-[0.3em] mb-4 text-center">Works seamlessly on your favorite platforms</p>
+        <p className="text-[10px] tablet:text-small font-bold text-white/50 uppercase tracking-[0.3em] mb-4 text-center">Works seamlessly on your favorite platforms</p>
         <div className="flex items-center space-x-16 whitespace-nowrap animate-scroll">
           {[...JOB_SITES, ...JOB_SITES].map((site, index) => (
             <div
@@ -199,7 +199,7 @@ const Hero = () => {
                   className="w-full h-full object-contain"
                 />
               </div>
-              <span className="text-xs tablet:text-sm font-bold tracking-widest">{site.name}</span>
+              <span className="text-small tablet:text-small font-bold tracking-widest">{site.name}</span>
             </div>
           ))}
         </div>

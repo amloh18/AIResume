@@ -383,12 +383,12 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
                 <div className="w-8 h-8 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center text-purple-600 dark:text-purple-400">
                   <Briefcase className="w-4 h-4" />
                 </div>
-                <h2 className="text-lg font-bold text-gray-900 dark:text-white">Smart Job Analysis</h2>
+                <h2 className="text-h3 font-bold text-gray-900 dark:text-white">Smart Job Analysis</h2>
                 <span className="px-2 py-0.5 text-[9px] font-bold text-purple-700 bg-purple-100 dark:bg-purple-900/30 dark:text-purple-400 rounded-full">
                   BETA
                 </span>
               </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
+              <p className="text-small text-gray-500 dark:text-gray-400">
                 Let AI extract key details, skills, and insights from the job description.
               </p>
             </div>
@@ -400,7 +400,7 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
               <div className="flex bg-gray-100 dark:bg-white/5 rounded-full p-1 border border-gray-200/50 dark:border-white/5 shrink-0">
                 <button
                   onClick={() => setActiveTab('paste')}
-                  className={`flex-1 py-1.5 text-xs font-semibold rounded-full transition-all flex items-center justify-center gap-1.5 ${
+                  className={`flex-1 py-1.5 text-small font-semibold rounded-full transition-all flex items-center justify-center gap-1.5 ${
                     activeTab === 'paste'
                       ? 'bg-white dark:bg-white/10 shadow-sm text-lime-600 dark:text-lime-400'
                       : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
@@ -411,7 +411,7 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
                 </button>
                 <button
                   onClick={() => setActiveTab('upload')}
-                  className={`flex-1 py-1.5 text-xs font-semibold rounded-full transition-all flex items-center justify-center gap-1.5 ${
+                  className={`flex-1 py-1.5 text-small font-semibold rounded-full transition-all flex items-center justify-center gap-1.5 ${
                     activeTab === 'upload'
                       ? 'bg-white dark:bg-white/10 shadow-sm text-lime-600 dark:text-lime-400'
                       : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
@@ -422,7 +422,7 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
                 </button>
                 <button
                   onClick={() => setActiveTab('url')}
-                  className={`flex-1 py-1.5 text-xs font-semibold rounded-full transition-all flex items-center justify-center gap-1.5 ${
+                  className={`flex-1 py-1.5 text-small font-semibold rounded-full transition-all flex items-center justify-center gap-1.5 ${
                     activeTab === 'url'
                       ? 'bg-white dark:bg-white/10 shadow-sm text-lime-600 dark:text-lime-400'
                       : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
@@ -449,13 +449,13 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
                             value={inputText}
                             onChange={(e) => setInputText(e.target.value)}
                             placeholder="Paste the full job description here..."
-                            className="w-full h-44 bg-transparent text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none resize-none text-xs leading-relaxed"
+                            className="w-full h-44 bg-transparent text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none resize-none text-small leading-relaxed"
                             disabled={isParsing}
                           />
                           {!inputText && (
                             <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center text-center p-4">
                               <FileText className="w-8 h-8 text-gray-400 dark:text-gray-600 mb-2" />
-                              <p className="text-xs font-medium text-gray-700 dark:text-gray-300">Paste job description here</p>
+                              <p className="text-small font-medium text-gray-700 dark:text-gray-300">Paste job description here</p>
                               <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">or drag and drop a file</p>
                             </div>
                           )}
@@ -475,14 +475,14 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
                         <div className="grid grid-cols-2 gap-3">
                           <button
                             onClick={() => handleClipboardPaste('LinkedIn')}
-                            className="flex items-center justify-center gap-2 py-2 px-3 bg-blue-50 dark:bg-blue-950/20 hover:bg-blue-100 dark:hover:bg-blue-950/40 text-blue-700 dark:text-blue-400 border border-blue-200/50 dark:border-blue-900/30 rounded-xl text-xs font-medium transition-colors"
+                            className="flex items-center justify-center gap-2 py-2 px-3 bg-blue-50 dark:bg-blue-950/20 hover:bg-blue-100 dark:hover:bg-blue-950/40 text-blue-700 dark:text-blue-400 border border-blue-200/50 dark:border-blue-900/30 rounded-xl text-small font-medium transition-colors"
                           >
                             <span className="font-bold text-[11px] bg-blue-700 text-white rounded px-1 py-0.5">in</span>
                             Paste from LinkedIn
                           </button>
                           <button
                             onClick={() => handleClipboardPaste('Indeed')}
-                            className="flex items-center justify-center gap-2 py-2 px-3 bg-indigo-50 dark:bg-indigo-950/20 hover:bg-indigo-100 dark:hover:bg-indigo-950/40 text-indigo-700 dark:text-indigo-400 border border-indigo-200/50 dark:border-indigo-900/30 rounded-xl text-xs font-medium transition-colors"
+                            className="flex items-center justify-center gap-2 py-2 px-3 bg-indigo-50 dark:bg-indigo-950/20 hover:bg-indigo-100 dark:hover:bg-indigo-950/40 text-indigo-700 dark:text-indigo-400 border border-indigo-200/50 dark:border-indigo-900/30 rounded-xl text-small font-medium transition-colors"
                           >
                             <span className="font-bold text-[11px] bg-indigo-700 text-white rounded px-1 py-0.5">i</span>
                             Paste from Indeed
@@ -492,21 +492,21 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
                     ) : activeTab === 'upload' ? (
                       <div className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 dark:border-white/10 rounded-2xl py-12 px-6 bg-gray-50/50 dark:bg-white/5 text-center">
                         <Upload className="w-8 h-8 text-lime-500 mb-3" />
-                        <p className="text-xs font-bold text-gray-900 dark:text-white mb-1">Upload job description file</p>
+                        <p className="text-small font-bold text-gray-900 dark:text-white mb-1">Upload job description file</p>
                         <p className="text-[10px] text-gray-500 dark:text-gray-400 mb-4">PDF, DOCX, or TXT up to 5MB</p>
-                        <Button variant="outline" size="sm" className="rounded-xl border-gray-200 dark:border-white/10 text-xs" disabled>
+                        <Button variant="outline" size="sm" className="rounded-xl border-gray-200 dark:border-white/10 text-small" disabled>
                           Select File
                         </Button>
                       </div>
                     ) : (
                       <div className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 dark:border-white/10 rounded-2xl py-12 px-6 bg-gray-50/50 dark:bg-white/5 text-center">
                         <Link className="w-8 h-8 text-lime-500 mb-3" />
-                        <p className="text-xs font-bold text-gray-900 dark:text-white mb-1">Import Job from URL</p>
+                        <p className="text-small font-bold text-gray-900 dark:text-white mb-1">Import Job from URL</p>
                         <p className="text-[10px] text-gray-500 dark:text-gray-400 mb-4">Automatically scrap JD details from job listings</p>
                         <input
                           type="url"
                           placeholder="https://linkedin.com/jobs/view/..."
-                          className="w-full max-w-xs px-3 py-1.5 text-xs bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl text-gray-900 dark:text-white focus:outline-none mb-3"
+                          className="w-full max-w-xs px-3 py-1.5 text-small bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl text-gray-900 dark:text-white focus:outline-none mb-3"
                           value={urlInput}
                           onChange={(e) => setUrlInput(e.target.value)}
                           disabled={isParsing}
@@ -514,7 +514,7 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
                         <Button
                           variant="outline"
                           size="sm"
-                          className="rounded-xl border-gray-200 dark:border-white/10 text-xs"
+                          className="rounded-xl border-gray-200 dark:border-white/10 text-small"
                           disabled={isParsing || !urlInput}
                           onClick={handleParse}
                         >
@@ -532,7 +532,7 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
                     <div className="flex items-center gap-2.5">
                       <CheckCircle className="w-5 h-5 text-lime-500 shrink-0" />
                       <div>
-                        <p className="text-xs font-bold text-gray-900 dark:text-white">Job Extracted Successfully</p>
+                        <p className="text-small font-bold text-gray-900 dark:text-white">Job Extracted Successfully</p>
                         <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">Original text source cached</p>
                       </div>
                     </div>
@@ -550,7 +550,7 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
               {/* Experience Level Selector */}
               <div className="space-y-2">
                 <div className="flex items-center gap-1">
-                  <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Experience Level</span>
+                  <span className="text-small font-bold text-gray-700 dark:text-gray-300">Experience Level</span>
                   <HelpCircle className="w-3.5 h-3.5 text-gray-400" />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
@@ -560,7 +560,7 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
                       <button
                         key={level}
                         onClick={() => setExperienceLevel(level)}
-                        className={`flex items-center gap-2 px-3 py-2 border rounded-xl text-xs font-medium transition-all ${
+                        className={`flex items-center gap-2 px-3 py-2 border rounded-xl text-small font-medium transition-all ${
                           isActive
                             ? 'border-lime-500 dark:border-lime-400 bg-lime-50/50 dark:bg-lime-950/20 text-lime-700 dark:text-lime-400'
                             : 'border-gray-200 dark:border-white/5 hover:border-gray-300 dark:hover:border-white/10 bg-white dark:bg-transparent text-gray-600 dark:text-gray-400'
@@ -576,7 +576,7 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
 
               {/* Location Selector */}
               <div className="space-y-2">
-                <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Location</span>
+                <span className="text-small font-bold text-gray-700 dark:text-gray-300">Location</span>
                 <div className="relative">
                   <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input
@@ -584,7 +584,7 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
                     value={editedLocation}
                     onChange={(e) => setEditedLocation(e.target.value)}
                     placeholder="Enter location (e.g. United Kingdom)"
-                    className="w-full pl-10 pr-10 py-2.5 bg-white dark:bg-transparent border border-gray-200 dark:border-white/5 rounded-xl text-xs text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-lime-500 focus:ring-1 focus:ring-lime-500 transition-all"
+                    className="w-full pl-10 pr-10 py-2.5 bg-white dark:bg-transparent border border-gray-200 dark:border-white/5 rounded-xl text-small text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-lime-500 focus:ring-1 focus:ring-lime-500 transition-all"
                   />
                   <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 </div>
@@ -595,7 +595,7 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
                 <button
                   onClick={handleParse}
                   disabled={isParsing || (activeTab === 'paste' && !inputText) || (activeTab === 'url' && !urlInput) || activeTab === 'upload'}
-                  className="w-full relative py-3 bg-gradient-to-r from-lime-500 to-emerald-600 hover:brightness-105 transition-all text-white font-bold rounded-xl text-xs shadow-lg shadow-lime-500/10 flex items-center justify-center gap-2"
+                  className="w-full relative py-3 bg-gradient-to-r from-lime-500 to-emerald-600 hover:brightness-105 transition-all text-white font-bold rounded-xl text-small shadow-lg shadow-lime-500/10 flex items-center justify-center gap-2"
                 >
                   {isParsing ? (
                     <>
@@ -630,7 +630,7 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
 
               {/* Error Alert */}
               {error && (
-                <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-950/20 border border-red-200/50 dark:border-red-900/30 rounded-xl text-xs">
+                <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-950/20 border border-red-200/50 dark:border-red-900/30 rounded-xl text-small">
                   <AlertCircle className="w-4.5 h-4.5 text-red-500 flex-shrink-0" />
                   <p className="text-red-700 dark:text-red-400 font-medium">{error}</p>
                 </div>
@@ -731,7 +731,7 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
                         type="text"
                         value={editedJobTitle}
                         onChange={(e) => setEditedJobTitle(e.target.value)}
-                        className="w-full pl-9 pr-3 py-2 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/5 rounded-xl text-xs text-gray-900 dark:text-white focus:outline-none focus:border-lime-500 focus:ring-1 focus:ring-lime-500"
+                        className="w-full pl-9 pr-3 py-2 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/5 rounded-xl text-small text-gray-900 dark:text-white focus:outline-none focus:border-lime-500 focus:ring-1 focus:ring-lime-500"
                         placeholder="Job Title"
                       />
                     </div>
@@ -747,7 +747,7 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
                           type="text"
                           value={editedCompany}
                           onChange={(e) => setEditedCompany(e.target.value)}
-                          className="w-full pl-9 pr-3 py-2 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/5 rounded-xl text-xs text-gray-900 dark:text-white focus:outline-none focus:border-lime-500 focus:ring-1 focus:ring-lime-500"
+                          className="w-full pl-9 pr-3 py-2 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/5 rounded-xl text-small text-gray-900 dark:text-white focus:outline-none focus:border-lime-500 focus:ring-1 focus:ring-lime-500"
                           placeholder="Company"
                         />
                       </div>
@@ -760,7 +760,7 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
                           type="text"
                           value={editedLocation}
                           onChange={(e) => setEditedLocation(e.target.value)}
-                          className="w-full pl-9 pr-3 py-2 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/5 rounded-xl text-xs text-gray-900 dark:text-white focus:outline-none focus:border-lime-500 focus:ring-1 focus:ring-lime-500"
+                          className="w-full pl-9 pr-3 py-2 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/5 rounded-xl text-small text-gray-900 dark:text-white focus:outline-none focus:border-lime-500 focus:ring-1 focus:ring-lime-500"
                           placeholder="Location"
                         />
                       </div>
@@ -774,7 +774,7 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
                       <select
                         value={experienceLevel}
                         onChange={(e) => setExperienceLevel(e.target.value)}
-                        className="w-full py-2 px-3 bg-gray-50 dark:bg-[#1A201A] border border-gray-200 dark:border-white/5 rounded-xl text-xs text-gray-900 dark:text-white focus:outline-none focus:border-lime-500"
+                        className="w-full py-2 px-3 bg-gray-50 dark:bg-[#1A201A] border border-gray-200 dark:border-white/5 rounded-xl text-small text-gray-900 dark:text-white focus:outline-none focus:border-lime-500"
                       >
                         <option value="Entry Level">Entry Level</option>
                         <option value="Mid Level">Mid Level</option>
@@ -787,7 +787,7 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
                       <select
                         value={sponsorship}
                         onChange={(e) => setSponsorship(e.target.value as 'yes' | 'no' | 'unknown')}
-                        className="w-full py-2 px-3 bg-gray-50 dark:bg-[#1A201A] border border-gray-200 dark:border-white/5 rounded-xl text-xs text-gray-900 dark:text-white focus:outline-none focus:border-lime-500"
+                        className="w-full py-2 px-3 bg-gray-50 dark:bg-[#1A201A] border border-gray-200 dark:border-white/5 rounded-xl text-small text-gray-900 dark:text-white focus:outline-none focus:border-lime-500"
                       >
                         <option value="yes">Yes (Sponsored)</option>
                         <option value="no">No</option>
@@ -801,29 +801,29 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
                     <label className="text-[11px] font-bold text-gray-700 dark:text-gray-300">Extracted Salary Insights</label>
                     <div className="grid grid-cols-3 gap-2">
                       <div className="relative col-span-1">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">$</span>
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-small text-gray-400">$</span>
                         <input
                           type="number"
                           value={editedSalary?.min || ''}
                           onChange={(e) => setEditedSalary({ ...editedSalary, min: e.target.value ? Number(e.target.value) : undefined })}
-                          className="w-full pl-6 pr-2 py-2 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/5 rounded-xl text-xs text-gray-900 dark:text-white focus:outline-none focus:border-lime-500"
+                          className="w-full pl-6 pr-2 py-2 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/5 rounded-xl text-small text-gray-900 dark:text-white focus:outline-none focus:border-lime-500"
                           placeholder="Min"
                         />
                       </div>
                       <div className="relative col-span-1">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">$</span>
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-small text-gray-400">$</span>
                         <input
                           type="number"
                           value={editedSalary?.max || ''}
                           onChange={(e) => setEditedSalary({ ...editedSalary, max: e.target.value ? Number(e.target.value) : undefined })}
-                          className="w-full pl-6 pr-2 py-2 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/5 rounded-xl text-xs text-gray-900 dark:text-white focus:outline-none focus:border-lime-500"
+                          className="w-full pl-6 pr-2 py-2 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/5 rounded-xl text-small text-gray-900 dark:text-white focus:outline-none focus:border-lime-500"
                           placeholder="Max"
                         />
                       </div>
                       <select
                         value={editedSalary?.period || 'yearly'}
                         onChange={(e) => setEditedSalary({ ...editedSalary, period: e.target.value as 'hourly' | 'monthly' | 'yearly' })}
-                        className="col-span-1 py-2 px-2 bg-gray-50 dark:bg-[#1A201A] border border-gray-200 dark:border-white/5 rounded-xl text-xs text-gray-900 dark:text-white focus:outline-none"
+                        className="col-span-1 py-2 px-2 bg-gray-50 dark:bg-[#1A201A] border border-gray-200 dark:border-white/5 rounded-xl text-small text-gray-900 dark:text-white focus:outline-none"
                       >
                         <option value="hourly">Hourly</option>
                         <option value="monthly">Monthly</option>
@@ -909,7 +909,7 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
                           <div className="p-3 rounded-xl bg-lime-500/5 dark:bg-lime-500/5 border border-lime-500/20 flex flex-col justify-center">
                             <span className="text-[9px] text-gray-400 uppercase font-bold tracking-wider">Quality Score</span>
                             <div className="flex items-baseline gap-1 mt-0.5">
-                              <span className="text-lg font-extrabold text-lime-600 dark:text-lime-400">
+                              <span className="text-h3 font-extrabold text-lime-600 dark:text-lime-400">
                                 {parsedData.extractedJd.jd_quality.jd_quality_score}%
                               </span>
                               <span className="text-[10px] text-gray-500 font-medium capitalize">
@@ -922,7 +922,7 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
                         {parsedData.extractedJd.application_info?.ats_platform && (
                           <div className="p-3 rounded-xl bg-blue-500/5 dark:bg-blue-500/5 border border-blue-500/20 flex flex-col justify-center">
                             <span className="text-[9px] text-gray-400 uppercase font-bold tracking-wider">ATS Platform</span>
-                            <span className="text-xs font-bold text-blue-600 dark:text-blue-400 mt-1 capitalize">
+                            <span className="text-small font-bold text-blue-600 dark:text-blue-400 mt-1 capitalize">
                               {parsedData.extractedJd.application_info.ats_platform}
                             </span>
                           </div>
@@ -974,14 +974,14 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
               <div className="p-6 border-t border-gray-150 dark:border-white/5 bg-gray-50 dark:bg-[#0c0f0a] flex gap-3 shrink-0">
                 <Button
                   onClick={handleSave}
-                  className={`${showSaveAndTrack && onSaveAndTrack ? 'flex-1' : 'w-full'} bg-lime-500 hover:bg-lime-600 text-[#141810] font-bold rounded-xl text-xs py-5`}
+                  className={`${showSaveAndTrack && onSaveAndTrack ? 'flex-1' : 'w-full'} bg-lime-500 hover:bg-lime-600 text-[#141810] font-bold rounded-xl text-small py-5`}
                 >
                   Save Job
                 </Button>
                 {showSaveAndTrack && onSaveAndTrack && (
                   <Button
                     onClick={handleSaveAndTrack}
-                    className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs py-5"
+                    className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-small py-5"
                   >
                     Save and Track
                   </Button>

@@ -37,7 +37,7 @@ export default function LinkedInAuthModal({ isOpen, onClose }: LinkedInAuthModal
                             <div className="p-2 bg-[#0a66c2]/10 text-[#0a66c2] rounded-lg">
                                 <LinkIcon className="w-5 h-5" />
                             </div>
-                            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Connect LinkedIn</h2>
+                            <h2 className="text-h3 font-bold text-gray-900 dark:text-white">Connect LinkedIn</h2>
                         </div>
                         <button
                             onClick={onClose}
@@ -55,12 +55,12 @@ export default function LinkedInAuthModal({ isOpen, onClose }: LinkedInAuthModal
                             </svg>
                         </div>
                         
-                        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">LinkedIn Account Required</h3>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-6 leading-relaxed">
+                        <h3 className="text-h3 font-bold text-gray-900 dark:text-white mb-2">LinkedIn Account Required</h3>
+                        <p className="text-small text-gray-600 dark:text-gray-400 mb-6 leading-relaxed">
                             To import your profile data and keep your CV-matched summaries up to date, connect your LinkedIn profile securely.
                         </p>
 
-                        <div className="w-full bg-blue-50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/30 rounded-xl p-4 text-left text-sm text-blue-800 dark:text-blue-300 flex gap-3 mb-6">
+                        <div className="w-full bg-blue-50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/30 rounded-xl p-4 text-left text-small text-blue-800 dark:text-blue-300 flex gap-3 mb-6">
                             <ShieldCheck className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
                             <p>
                                 <strong>Secure Connection:</strong> We only import public profile details and will never post on your behalf or share your information.
@@ -72,13 +72,13 @@ export default function LinkedInAuthModal({ isOpen, onClose }: LinkedInAuthModal
                     <div className="px-6 py-4 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-transparent flex justify-end gap-3">
                         <button
                             onClick={onClose}
-                            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                            className="px-4 py-2 text-small font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-lg transition-colors"
                         >
                             Cancel
                         </button>
                         <motion.button
                             onClick={handleConnect}
-                            className="flex items-center gap-2 px-6 py-2 text-sm font-medium text-white rounded-lg shadow-sm bg-[#0a66c2] hover:bg-[#004182]"
+                            className="flex items-center gap-2 px-6 py-2 text-small font-medium text-white rounded-lg shadow-sm bg-[#0a66c2] hover:bg-[#004182]"
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                         >

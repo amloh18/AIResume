@@ -209,15 +209,18 @@ function DashboardContent() {
 
   return (
     <div 
-      ref={containerRef}
-      onWheel={handleWheel}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-      onScroll={handleScroll}
-      className="h-screen bg-[#f3f2ee] dark:bg-[var(--bg-primary)] text-[#0f172a] dark:text-gray-150 font-sans overflow-y-auto overflow-x-hidden selection:bg-[#83d60d]/30 relative scrollbar-hide pb-20"
-      style={{ scrollBehavior: 'smooth' }}
+      className="h-macro bg-[#f3f2ee] dark:bg-[#0a0a0a] text-[#0f172a] dark:text-gray-150 font-sans overflow-hidden selection:bg-[#83d60d]/30 relative flex flex-col"
     >
+      <div
+        ref={containerRef}
+        onWheel={handleWheel}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide pb-20"
+        style={{ scrollBehavior: 'smooth' }}
+      >
       <style jsx global>{`
         /* Hide scrollbar for Chrome, Safari and Opera */
         .scrollbar-hide::-webkit-scrollbar {
@@ -264,7 +267,7 @@ function DashboardContent() {
             className="fixed top-6 right-6 z-50 bg-[#0f172a] text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center space-x-3 border border-slate-800"
           >
             <div className="w-2 h-2 rounded-full bg-[#83d60d] animate-ping" />
-            <span className="text-xs font-bold uppercase tracking-wider">{notification}</span>
+            <span className="text-small font-bold uppercase tracking-wider">{notification}</span>
           </motion.div>
         )}
       </AnimatePresence>
@@ -291,7 +294,7 @@ function DashboardContent() {
               layout
               transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
               className={`font-black tracking-tight text-[#0f172a] dark:text-white leading-tight ${
-                isExpanded ? 'text-4xl' : 'text-5xl md:text-6xl'
+                isExpanded ? 'text-display' : 'text-display md:text-6xl'
               }`}
             >
               Hello, <span className="text-[#83d60d]">{session?.user?.name?.split(' ')[0] || 'Alex'}</span>
@@ -300,7 +303,7 @@ function DashboardContent() {
               layout
               transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
               className={`text-slate-500 font-bold mt-1 ${
-                isExpanded ? 'text-xs' : 'text-sm md:text-base'
+                isExpanded ? 'text-small' : 'text-small md:text-body'
               }`}
             >
               {sublines[currentTier]}
@@ -327,7 +330,7 @@ function DashboardContent() {
             </div>
             <div className="pr-2">
               <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Jobs Matched</h3>
-              <p className="text-xs font-bold text-gray-800 dark:text-gray-300">
+              <p className="text-small font-bold text-gray-800 dark:text-gray-300">
                 {highMatchJobs} / {activeJobs} matched
               </p>
             </div>
@@ -386,6 +389,7 @@ function DashboardContent() {
         </AnimatePresence>
 
       </motion.div>
+      </div>
     </div>
   );
 }

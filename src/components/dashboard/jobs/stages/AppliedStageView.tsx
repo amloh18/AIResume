@@ -92,10 +92,10 @@ const AppliedStageView: React.FC<AppliedStageViewProps> = ({
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
         <CheckCircle className="w-16 h-16 text-gray-400 dark:text-gray-600 mb-4" />
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+        <h3 className="text-h3 font-semibold text-gray-900 dark:text-white mb-2">
           No applied jobs
         </h3>
-        <p className="text-sm text-gray-500 dark:text-gray-400">
+        <p className="text-small text-gray-500 dark:text-gray-400">
           Jobs you've applied to will appear here.
         </p>
       </div>
@@ -108,7 +108,7 @@ const AppliedStageView: React.FC<AppliedStageViewProps> = ({
       <div className="px-6 py-4 border-b border-gray-200 dark:border-white/10 flex items-center justify-end">
         <button
           onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
-          className="flex items-center gap-2 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+          className="flex items-center gap-2 text-small font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
         >
           <TrendingUp size={14} />
           <span>Sort by Most Recent ({sortOrder === 'desc' ? 'Newest First' : 'Oldest First'})</span>
@@ -120,18 +120,18 @@ const AppliedStageView: React.FC<AppliedStageViewProps> = ({
           <thead className="bg-gray-50 dark:bg-[#1c2018]">
             <tr>
               {/* Universal Columns */}
-              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Company</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Role</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Location</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Comp Range</th>
+              <th className="px-6 py-4 text-left text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Company</th>
+              <th className="px-6 py-4 text-left text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Role</th>
+              <th className="px-6 py-4 text-left text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Location</th>
+              <th className="px-6 py-4 text-left text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Comp Range</th>
 
               {/* Stage Specific Columns */}
-              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Applied On</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Elapsed Time</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Platform</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Next Follow-up</th>
+              <th className="px-6 py-4 text-left text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Applied On</th>
+              <th className="px-6 py-4 text-left text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Elapsed Time</th>
+              <th className="px-6 py-4 text-left text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Platform</th>
+              <th className="px-6 py-4 text-left text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Next Follow-up</th>
 
-              <th className="px-6 py-4 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Action</th>
+              <th className="px-6 py-4 text-right text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 dark:divide-white/10">
@@ -156,7 +156,7 @@ const AppliedStageView: React.FC<AppliedStageViewProps> = ({
                   {/* Company */}
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-white/10 flex items-center justify-center text-xs font-bold text-gray-500 dark:text-gray-400 overflow-hidden">
+                      <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-white/10 flex items-center justify-center text-small font-bold text-gray-500 dark:text-gray-400 overflow-hidden">
                         {job.companyLogo ? (
                           <img
                             src={job.companyLogo}
@@ -169,18 +169,18 @@ const AppliedStageView: React.FC<AppliedStageViewProps> = ({
                           {job.company.substring(0, 2).toUpperCase()}
                         </span>
                       </div>
-                      <span className="text-sm font-semibold text-gray-900 dark:text-white">{job.company}</span>
+                      <span className="text-small font-semibold text-gray-900 dark:text-white">{job.company}</span>
                     </div>
                   </td>
 
                   {/* Role */}
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-sm text-gray-900 dark:text-white">{job.jobTitle || job.title}</span>
+                    <span className="text-small text-gray-900 dark:text-white">{job.jobTitle || job.title}</span>
                   </td>
 
                   {/* Location */}
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400">
+                    <div className="flex items-center gap-1.5 text-small text-gray-500 dark:text-gray-400">
                       <MapPin size={14} />
                       <span className="truncate max-w-[150px]">{job.location || '-'}</span>
                     </div>
@@ -188,12 +188,12 @@ const AppliedStageView: React.FC<AppliedStageViewProps> = ({
 
                   {/* Comp Range */}
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-sm text-gray-600 dark:text-gray-300">{getCompRange(job)}</span>
+                    <span className="text-small text-gray-600 dark:text-gray-300">{getCompRange(job)}</span>
                   </td>
 
                   {/* Applied On */}
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400">
+                    <div className="flex items-center gap-1.5 text-small text-gray-500 dark:text-gray-400">
                       <Calendar size={14} />
                       <span>{appliedDate ? appliedDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '-'}</span>
                     </div>
@@ -201,7 +201,7 @@ const AppliedStageView: React.FC<AppliedStageViewProps> = ({
 
                   {/* Elapsed Time */}
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${daysSinceApplication > 14 ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' :
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-small font-medium ${daysSinceApplication > 14 ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' :
                       daysSinceApplication > 7 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' :
                         'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
                       }`}>
@@ -211,7 +211,7 @@ const AppliedStageView: React.FC<AppliedStageViewProps> = ({
 
                   {/* Platform */}
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400">
+                    <div className="flex items-center gap-1.5 text-small text-gray-500 dark:text-gray-400">
                       <Globe size={14} />
                       <span>{job.source || 'Manual'}</span>
                     </div>
@@ -219,7 +219,7 @@ const AppliedStageView: React.FC<AppliedStageViewProps> = ({
 
                   {/* Next Follow-up */}
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className={`flex items-center gap-1.5 text-sm ${needsFollowUp ? 'text-orange-600 dark:text-orange-400 font-medium' : 'text-gray-500 dark:text-gray-400'}`}>
+                    <div className={`flex items-center gap-1.5 text-small ${needsFollowUp ? 'text-orange-600 dark:text-orange-400 font-medium' : 'text-gray-500 dark:text-gray-400'}`}>
                       <Bell size={14} />
                       <span>{followUpDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
                     </div>
@@ -233,7 +233,7 @@ const AppliedStageView: React.FC<AppliedStageViewProps> = ({
                         // Trigger log activity or simply open sidebar for now as requested for "Log Activity"
                         onJobClick(job);
                       }}
-                      className="px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-xs font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors inline-flex items-center gap-1.5"
+                      className="px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-small font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors inline-flex items-center gap-1.5"
                     >
                       Log Activity
                     </button>

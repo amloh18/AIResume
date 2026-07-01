@@ -82,7 +82,7 @@ export default function SidebarNav({ className }: SidebarNavProps) {
           <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-white/5">
             <Link href="/dashboard" className="flex items-center gap-3 overflow-hidden">
               <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-lime-400 to-emerald-500 flex items-center justify-center flex-shrink-0 shadow-sm">
-                <span className="text-white font-black text-sm">C</span>
+                <span className="text-white font-black text-small">C</span>
               </div>
               <AnimatePresence mode="wait">
                 {isDesktopExpanded && (
@@ -90,7 +90,7 @@ export default function SidebarNav({ className }: SidebarNavProps) {
                     initial={{ opacity: 0, width: 0 }}
                     animate={{ opacity: 1, width: 'auto' }}
                     exit={{ opacity: 0, width: 0 }}
-                    className="font-bold text-lg text-gray-900 dark:text-white whitespace-nowrap"
+                    className="font-bold text-h3 text-gray-900 dark:text-white whitespace-nowrap"
                   >
                     Circle
                   </motion.span>
@@ -158,7 +158,7 @@ export default function SidebarNav({ className }: SidebarNavProps) {
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: -10 }}
-                        className="font-medium text-sm whitespace-nowrap"
+                        className="font-medium text-small whitespace-nowrap"
                       >
                         {item.label}
                       </motion.span>
@@ -167,7 +167,7 @@ export default function SidebarNav({ className }: SidebarNavProps) {
 
                   {/* Tooltip for collapsed state */}
                   {!isDesktopExpanded && (
-                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">
+                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-small rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">
                       {item.label}
                     </div>
                   )}
@@ -186,7 +186,7 @@ export default function SidebarNav({ className }: SidebarNavProps) {
                   exit={{ opacity: 0 }}
                   className="px-3 mb-3"
                 >
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                  <p className="text-small font-semibold text-gray-400 uppercase tracking-wider">
                     Quick Actions
                   </p>
                 </motion.div>
@@ -209,7 +209,7 @@ export default function SidebarNav({ className }: SidebarNavProps) {
                           initial={{ opacity: 0, x: -10 }}
                           animate={{ opacity: 1, x: 0 }}
                           exit={{ opacity: 0, x: -10 }}
-                          className="text-sm font-medium whitespace-nowrap"
+                          className="text-small font-medium whitespace-nowrap"
                         >
                           {action.label}
                         </motion.span>
@@ -236,10 +236,10 @@ export default function SidebarNav({ className }: SidebarNavProps) {
                     exit={{ opacity: 0 }}
                     className="flex-1 min-w-0"
                   >
-                    <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                    <p className="text-small font-medium text-gray-900 dark:text-white truncate">
                       Your Name
                     </p>
-                    <p className="text-xs text-gray-500 truncate">Free Plan</p>
+                    <p className="text-small text-gray-500 truncate">Free Plan</p>
                   </motion.div>
                 )}
               </AnimatePresence>

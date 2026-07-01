@@ -44,7 +44,7 @@ export default function DocumentPreviewSidebar({
         className="fixed right-0 top-0 h-screen bg-white dark:bg-[#141810] shadow-2xl z-[9999] flex flex-col w-full md:w-[60vw] lg:w-[50vw]"
       >
         <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-white/10 flex-shrink-0">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+          <h2 className="text-h3 font-semibold text-gray-900 dark:text-white">
             {documentType === 'cv' ? 'CV Preview' : 'Cover Letter Preview'}
           </h2>
           <button

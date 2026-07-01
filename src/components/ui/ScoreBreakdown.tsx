@@ -45,7 +45,7 @@ export const ScoreBreakdown: React.FC<ScoreBreakdownProps> = ({
       {/* Label */}
       <span 
         className={`font-medium text-gray-700 dark:text-gray-300 truncate ${
-          compact ? 'text-[11px] w-20' : 'text-sm w-24'
+          compact ? 'text-[11px] w-20' : 'text-small w-24'
         }`}
         title={label}
       >
@@ -72,7 +72,7 @@ export const ScoreBreakdown: React.FC<ScoreBreakdownProps> = ({
       {/* Value Display */}
       <span 
         className={`font-bold tabular-nums text-right ${
-          compact ? 'text-[10px] w-12' : 'text-sm w-16'
+          compact ? 'text-[10px] w-12' : 'text-small w-16'
         } ${
           colorVariant === 'dynamic' 
             ? percentage >= 80 ? 'text-emerald-500 dark:text-emerald-400' : percentage >= 60 ? 'text-yellow-500' : 'text-red-500'

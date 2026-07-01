@@ -196,7 +196,7 @@ export default function CalendarSyncSettings({ userSettings, onUpdateSettings }:
                   {calendarSettings.connected ? 'Connected to Google Calendar' : 'Not Connected'}
                 </p>
                 {calendarSettings.connected && lastSyncTime && (
-                  <p className="text-sm text-gray-500">
+                  <p className="text-small text-gray-500">
                     Last synced: {formatLastSync(lastSyncTime)}
                   </p>
                 )}
@@ -245,10 +245,10 @@ export default function CalendarSyncSettings({ userSettings, onUpdateSettings }:
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <Label htmlFor="sync-enabled" className="text-base font-medium">
+                    <Label htmlFor="sync-enabled" className="text-body font-medium">
                       Enable Calendar Sync
                     </Label>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-small text-gray-500">
                       Automatically sync job applications to your calendar
                     </p>
                   </div>
@@ -269,7 +269,7 @@ export default function CalendarSyncSettings({ userSettings, onUpdateSettings }:
                       
                       <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4">
                         <div className="flex items-center justify-between">
-                          <Label htmlFor="include-interviews" className="text-sm">
+                          <Label htmlFor="include-interviews" className="text-small">
                             Include Interviews
                           </Label>
                           <Switch
@@ -280,7 +280,7 @@ export default function CalendarSyncSettings({ userSettings, onUpdateSettings }:
                         </div>
                         
                         <div className="flex items-center justify-between">
-                          <Label htmlFor="include-followups" className="text-sm">
+                          <Label htmlFor="include-followups" className="text-small">
                             Include Follow-ups
                           </Label>
                           <Switch
@@ -291,7 +291,7 @@ export default function CalendarSyncSettings({ userSettings, onUpdateSettings }:
                         </div>
                         
                         <div className="flex items-center justify-between">
-                          <Label htmlFor="include-deadlines" className="text-sm">
+                          <Label htmlFor="include-deadlines" className="text-small">
                             Include Deadlines
                           </Label>
                           <Switch
@@ -302,7 +302,7 @@ export default function CalendarSyncSettings({ userSettings, onUpdateSettings }:
                         </div>
                         
                         <div className="flex items-center justify-between">
-                          <Label htmlFor="color-coding" className="text-sm">
+                          <Label htmlFor="color-coding" className="text-small">
                             Color Coding
                           </Label>
                           <Switch
@@ -314,7 +314,7 @@ export default function CalendarSyncSettings({ userSettings, onUpdateSettings }:
                       </div>
                       
                       <div className="space-y-2">
-                        <Label className="text-sm flex items-center gap-2">
+                        <Label className="text-small flex items-center gap-2">
                           <Bell className="h-4 w-4" />
                           Reminder Time (minutes before event)
                         </Label>
@@ -327,7 +327,7 @@ export default function CalendarSyncSettings({ userSettings, onUpdateSettings }:
                             step={15}
                             className="w-full"
                           />
-                          <div className="flex justify-between text-xs text-gray-500 mt-1">
+                          <div className="flex justify-between text-small text-gray-500 mt-1">
                             <span>0 min</span>
                             <span>{calendarSettings.syncSettings.reminderMinutes} min</span>
                             <span>24 hours</span>
@@ -346,10 +346,10 @@ export default function CalendarSyncSettings({ userSettings, onUpdateSettings }:
                     <Calendar className="h-4 w-4 text-blue-600" />
                   </div>
                   <div className="space-y-1">
-                    <p className="text-sm font-medium text-blue-900">
+                    <p className="text-small font-medium text-blue-900">
                       What gets synced to your calendar:
                     </p>
-                    <ul className="text-sm text-blue-700 space-y-1">
+                    <ul className="text-small text-blue-700 space-y-1">
                       <li>• Job applications (excluding "created" status)</li>
                       <li>• Interview schedules and details</li>
                       <li>• Follow-up reminders</li>

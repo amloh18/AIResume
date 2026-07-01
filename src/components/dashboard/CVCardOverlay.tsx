@@ -351,8 +351,8 @@ const CVCardOverlayComponent: React.FC<CVCardOverlayProps> = ({
             >
               <div className="text-center text-gray-500">
                 <Loader2 size={32} className="mx-auto mb-2 animate-spin opacity-50" />
-                <p className="text-sm font-medium">Generating preview...</p>
-                <p className="text-xs opacity-75">Please wait</p>
+                <p className="text-small font-medium">Generating preview...</p>
+                <p className="text-small opacity-75">Please wait</p>
               </div>
             </div>
           ) : (
@@ -369,8 +369,8 @@ const CVCardOverlayComponent: React.FC<CVCardOverlayProps> = ({
             >
               <div className="text-center text-gray-500 px-2">
                 <FileText size={48} className="mx-auto mb-2 opacity-50" />
-                <p className="text-sm font-medium truncate">{cv.title}</p>
-                <p className="text-xs opacity-75">No preview available</p>
+                <p className="text-small font-medium truncate">{cv.title}</p>
+                <p className="text-small opacity-75">No preview available</p>
               </div>
             </div>
           )}
@@ -392,7 +392,7 @@ const CVCardOverlayComponent: React.FC<CVCardOverlayProps> = ({
 
             return (
               <div className="absolute top-3 right-3">
-                <span className={`px-2 py-1 rounded text-xs font-medium ${config.bgColor} ${config.textColor} border ${config.borderColor}`}>
+                <span className={`px-2 py-1 rounded text-small font-medium ${config.bgColor} ${config.textColor} border ${config.borderColor}`}>
                   {config.label}
                 </span>
               </div>
@@ -411,7 +411,7 @@ const CVCardOverlayComponent: React.FC<CVCardOverlayProps> = ({
                 type="text"
                 value={editingTitle || ''}
                 onChange={(e) => onTitleEdit?.(cv.id, e.target.value)}
-                className="flex-1 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-gray-900 dark:text-white text-base font-medium focus:outline-none focus:ring-2 focus:ring-lime-400"
+                className="flex-1 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-gray-900 dark:text-white text-body font-medium focus:outline-none focus:ring-2 focus:ring-lime-400"
                 autoFocus
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
@@ -445,14 +445,14 @@ const CVCardOverlayComponent: React.FC<CVCardOverlayProps> = ({
               </motion.button>
             </div>
           ) : (
-            <p className="text-gray-800 dark:text-white text-base font-medium leading-normal truncate">
+            <p className="text-gray-800 dark:text-white text-body font-medium leading-normal truncate">
               {cv.title}
             </p>
           )}
         </div>
 
         {/* Last Modified */}
-        <p className="text-gray-500 dark:text-[#aebb9b] text-sm font-normal leading-normal">
+        <p className="text-gray-500 dark:text-[#aebb9b] text-small font-normal leading-normal">
           Last modified: {formatDate(cv.lastModified)}
         </p>
 
@@ -549,7 +549,7 @@ const CVCardOverlayComponent: React.FC<CVCardOverlayProps> = ({
               className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-sm mx-4 shadow-xl"
               onClick={(e) => e.stopPropagation()}
             >
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              <h3 className="text-h3 font-semibold text-gray-900 dark:text-white mb-2">
                 Delete CV
               </h3>
               <p className="text-gray-600 dark:text-gray-400 mb-4">

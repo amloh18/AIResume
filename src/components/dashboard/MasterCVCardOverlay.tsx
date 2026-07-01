@@ -189,8 +189,8 @@ const MasterCVCardOverlayComponent: React.FC<MasterCVCardOverlayProps> = ({
           <div className="w-16 h-16 bg-gradient-to-br from-lime-400/20 to-lime-500/20 rounded-full flex items-center justify-center mb-4 mx-auto">
             <Loader2 className="h-6 w-6 animate-spin text-lime-400" />
           </div>
-          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Loading Master CV...</h3>
-          <p className="text-gray-600 dark:text-gray-400 text-sm">Please wait while we fetch your master CV</p>
+          <h3 className="text-h3 font-bold text-gray-900 dark:text-white mb-2">Loading Master CV...</h3>
+          <p className="text-gray-600 dark:text-gray-400 text-small">Please wait while we fetch your master CV</p>
         </div>
       </motion.div>
     );
@@ -209,8 +209,8 @@ const MasterCVCardOverlayComponent: React.FC<MasterCVCardOverlayProps> = ({
           <div className="w-16 h-16 bg-gradient-to-br from-red-400/20 to-orange-400/20 rounded-full flex items-center justify-center mb-4 mx-auto">
             <AlertCircle className="h-6 w-6 text-red-400" />
           </div>
-          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Master CV Not Found</h3>
-          <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">{error}</p>
+          <h3 className="text-h3 font-bold text-gray-900 dark:text-white mb-2">Master CV Not Found</h3>
+          <p className="text-gray-600 dark:text-gray-400 text-small mb-4">{error}</p>
           <motion.button
             className="px-4 py-2 bg-gradient-to-r from-lime-400 to-lime-500 text-black font-semibold rounded-xl hover:from-lime-300 hover:to-lime-400 transition-all duration-300 flex items-center gap-2 mx-auto"
             whileHover={{ scale: 1.05 }}
@@ -238,8 +238,8 @@ const MasterCVCardOverlayComponent: React.FC<MasterCVCardOverlayProps> = ({
           <div className="w-16 h-16 bg-gradient-to-br from-gray-400/20 to-slate-400/20 rounded-full flex items-center justify-center mb-4 mx-auto">
             <Crown className="h-6 w-6 text-gray-400" />
           </div>
-          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">No Master CV</h3>
-          <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">Create a master CV to get started</p>
+          <h3 className="text-h3 font-bold text-gray-900 dark:text-white mb-2">No Master CV</h3>
+          <p className="text-gray-600 dark:text-gray-400 text-small mb-4">Create a master CV to get started</p>
           <motion.button
             className="px-4 py-2 bg-gradient-to-r from-lime-400 to-lime-500 text-black font-semibold rounded-xl hover:from-lime-300 hover:to-lime-400 transition-all duration-300 flex items-center gap-2 mx-auto"
             whileHover={{ scale: 1.05 }}
@@ -339,8 +339,8 @@ const MasterCVCardOverlayComponent: React.FC<MasterCVCardOverlayProps> = ({
             >
               <div className="text-center text-gray-500">
                 <Loader2 size={32} className="mx-auto mb-2 animate-spin opacity-50" />
-                <p className="text-sm font-medium">Generating preview...</p>
-                <p className="text-xs opacity-75">Please wait</p>
+                <p className="text-small font-medium">Generating preview...</p>
+                <p className="text-small opacity-75">Please wait</p>
               </div>
             </div>
           ) : (
@@ -357,15 +357,15 @@ const MasterCVCardOverlayComponent: React.FC<MasterCVCardOverlayProps> = ({
             >
               <div className="text-center text-gray-500">
                 <Crown size={48} className="mx-auto mb-2 opacity-50" />
-                <p className="text-sm font-medium">{masterCV.title}</p>
-                <p className="text-xs opacity-75">Master CV Template</p>
+                <p className="text-small font-medium">{masterCV.title}</p>
+                <p className="text-small opacity-75">Master CV Template</p>
               </div>
             </div>
           )}
 
           {/* Master Badge - Top right corner */}
           <div className="absolute top-3 right-3">
-            <span className="px-2 py-1 rounded text-xs font-medium bg-lime-400 text-black border border-lime-400">
+            <span className="px-2 py-1 rounded text-small font-medium bg-lime-400 text-black border border-lime-400">
               Master
             </span>
           </div>
@@ -378,14 +378,14 @@ const MasterCVCardOverlayComponent: React.FC<MasterCVCardOverlayProps> = ({
         <div className="mb-2">
           <div className="flex items-center gap-2">
             <Crown size={14} className="text-lime-400" />
-            <p className="text-gray-800 dark:text-white text-base font-medium leading-normal flex-1">
+            <p className="text-gray-800 dark:text-white text-body font-medium leading-normal flex-1">
               {masterCV.title}
             </p>
           </div>
         </div>
 
         {/* Last Modified */}
-        <p className="text-gray-500 dark:text-[#aebb9b] text-sm font-normal leading-normal">
+        <p className="text-gray-500 dark:text-[#aebb9b] text-small font-normal leading-normal">
           Last modified: {formatDate(masterCV.lastModified)}
         </p>
 

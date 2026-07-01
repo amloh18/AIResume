@@ -61,13 +61,13 @@ const JobsFilters: React.FC<JobsFiltersProps> = ({
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Filter size={18} className="text-gray-600 dark:text-gray-400" />
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Filters & Sorting</h3>
+          <h3 className="text-h3 font-semibold text-gray-900 dark:text-white">Filters & Sorting</h3>
         </div>
         <div className="flex items-center gap-2">
           {hasActiveFilters && (
             <button
               onClick={clearAllFilters}
-              className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+              className="text-small text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
             >
               Clear All
             </button>
@@ -85,11 +85,11 @@ const JobsFilters: React.FC<JobsFiltersProps> = ({
       <div className="grid grid-cols-1 tablet:grid-cols-2 desktop:grid-cols-3 gap-4">
         {/* Status Filter */}
         <div className="space-y-2">
-          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
+          <label className="text-small font-medium text-gray-700 dark:text-gray-300">Status</label>
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-lime-500/20 rounded-lg bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-lime-500/20 rounded-lg bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white text-small focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="all">All Statuses</option>
             <option value="draft">Draft</option>
@@ -103,14 +103,14 @@ const JobsFilters: React.FC<JobsFiltersProps> = ({
 
         {/* Sort By */}
         <div className="space-y-2">
-          <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
+          <label className="text-small font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
             <Clock size={14} />
             Sort By
           </label>
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as 'lastUpdated' | 'followUpDate' | 'salaryRange' | 'priority')}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-lime-500/20 rounded-lg bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-lime-500/20 rounded-lg bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white text-small focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="lastUpdated">Last Updated</option>
             <option value="followUpDate">Follow-up Date</option>
@@ -121,14 +121,14 @@ const JobsFilters: React.FC<JobsFiltersProps> = ({
 
         {/* Priority Filter */}
         <div className="space-y-2">
-          <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
+          <label className="text-small font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
             <Star size={14} />
             Priority
           </label>
           <select
             value={priorityFilter}
             onChange={(e) => setPriorityFilter(e.target.value as 'high' | 'medium' | 'low' | 'all')}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-lime-500/20 rounded-lg bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-lime-500/20 rounded-lg bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white text-small focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="all">All Priorities</option>
             <option value="high">High</option>
@@ -139,14 +139,14 @@ const JobsFilters: React.FC<JobsFiltersProps> = ({
 
         {/* Last Updated Filter */}
         <div className="space-y-2">
-          <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
+          <label className="text-small font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
             <Calendar size={14} />
             Last Updated
           </label>
           <select
             value={lastUpdatedFilter}
             onChange={(e) => setLastUpdatedFilter(e.target.value as 'today' | 'last7days' | 'last30days' | 'all')}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-lime-500/20 rounded-lg bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-lime-500/20 rounded-lg bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white text-small focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="all">All Time</option>
             <option value="today">Today</option>
@@ -157,11 +157,11 @@ const JobsFilters: React.FC<JobsFiltersProps> = ({
 
         {/* Follow-up Filter */}
         <div className="space-y-2">
-          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Follow-up</label>
+          <label className="text-small font-medium text-gray-700 dark:text-gray-300">Follow-up</label>
           <select
             value={followUpFilter}
             onChange={(e) => setFollowUpFilter(e.target.value as 'upcoming' | 'overdue' | 'all')}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-lime-500/20 rounded-lg bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-lime-500/20 rounded-lg bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white text-small focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="all">All</option>
             <option value="upcoming">Upcoming</option>
@@ -171,14 +171,14 @@ const JobsFilters: React.FC<JobsFiltersProps> = ({
 
         {/* Salary Range Filter */}
         <div className="space-y-2">
-          <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
+          <label className="text-small font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
             <DollarSign size={14} />
             Salary Range
           </label>
           <select
             value={salaryRangeFilter}
             onChange={(e) => setSalaryRangeFilter(e.target.value as 'all' | 'under50k' | '50k-75k' | '75k-100k' | '100k-150k' | '150k-200k' | 'over200k')}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-lime-500/20 rounded-lg bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-lime-500/20 rounded-lg bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white text-small focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="all">All Ranges</option>
             <option value="under50k">Under $50k</option>
@@ -196,7 +196,7 @@ const JobsFilters: React.FC<JobsFiltersProps> = ({
         <div className="mt-4 pt-4 border-t border-gray-200 dark:border-lime-500/20">
           <div className="flex flex-wrap gap-2">
             {filterStatus !== 'all' && (
-              <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-full text-xs">
+              <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-full text-small">
                 Status: {filterStatus}
                 <button
                   onClick={() => setFilterStatus('all')}
@@ -207,7 +207,7 @@ const JobsFilters: React.FC<JobsFiltersProps> = ({
               </span>
             )}
             {priorityFilter !== 'all' && (
-              <span className="inline-flex items-center gap-1 px-2 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 rounded-full text-xs">
+              <span className="inline-flex items-center gap-1 px-2 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 rounded-full text-small">
                 Priority: {priorityFilter}
                 <button
                   onClick={() => setPriorityFilter('all')}
@@ -218,7 +218,7 @@ const JobsFilters: React.FC<JobsFiltersProps> = ({
               </span>
             )}
             {lastUpdatedFilter !== 'all' && (
-              <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full text-xs">
+              <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full text-small">
                 Updated: {lastUpdatedFilter}
                 <button
                   onClick={() => setLastUpdatedFilter('all')}
@@ -229,7 +229,7 @@ const JobsFilters: React.FC<JobsFiltersProps> = ({
               </span>
             )}
             {followUpFilter !== 'all' && (
-              <span className="inline-flex items-center gap-1 px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 rounded-full text-xs">
+              <span className="inline-flex items-center gap-1 px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 rounded-full text-small">
                 Follow-up: {followUpFilter}
                 <button
                   onClick={() => setFollowUpFilter('all')}
@@ -240,7 +240,7 @@ const JobsFilters: React.FC<JobsFiltersProps> = ({
               </span>
             )}
             {salaryRangeFilter !== 'all' && (
-              <span className="inline-flex items-center gap-1 px-2 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 rounded-full text-xs">
+              <span className="inline-flex items-center gap-1 px-2 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 rounded-full text-small">
                 Salary: {salaryRangeFilter}
                 <button
                   onClick={() => setSalaryRangeFilter('all')}

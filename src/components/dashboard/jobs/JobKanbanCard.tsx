@@ -279,14 +279,14 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
 
     if (isExpired || diffDays < 0) {
       return (
-        <div className="flex items-center gap-1.5 mt-2 text-xs text-red-600 dark:text-red-400 font-medium bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded">
+        <div className="flex items-center gap-1.5 mt-2 text-small text-red-600 dark:text-red-400 font-medium bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded">
           <AlertCircle size={12} />
           <span>Expired on {formatDate(targetDate)}</span>
         </div>
       );
     } else if (diffDays <= 3) {
       return (
-        <div className="flex items-center gap-1.5 mt-2 text-xs text-orange-600 dark:text-orange-400 font-medium bg-orange-50 dark:bg-orange-900/20 px-2 py-1 rounded">
+        <div className="flex items-center gap-1.5 mt-2 text-small text-orange-600 dark:text-orange-400 font-medium bg-orange-50 dark:bg-orange-900/20 px-2 py-1 rounded">
           <AlertCircle size={12} />
           <span>
             Expires in {diffDays} {diffDays === 1 ? "day" : "days"}
@@ -305,7 +305,7 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
       {/* Compact View */}
       <div className="flex justify-between items-center mt-2">
         <div
-          className={`px-2 py-1 text-xs font-bold rounded-full ${job.matchScore !== undefined ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400" : "bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-400"}`}
+          className={`px-2 py-1 text-small font-bold rounded-full ${job.matchScore !== undefined ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400" : "bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-400"}`}
         >
           {job.matchScore !== undefined
             ? `${job.matchScore}% Match`
@@ -332,7 +332,7 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
             className="overflow-hidden"
           >
             <div className="pt-3 mt-2 border-t border-gray-100 dark:border-white/10 space-y-2">
-              <div className="flex gap-3 text-xs text-gray-500 dark:text-gray-400">
+              <div className="flex gap-3 text-small text-gray-500 dark:text-gray-400">
                 {job.salary && (
                   <span className="flex items-center gap-1">
                     <DollarSign size={10} />
@@ -352,7 +352,7 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
                   e.stopPropagation();
                   onAction?.("generate_docs", job, e);
                 }}
-                className="w-full py-1.5 bg-lime-500 text-[#141810] text-xs font-bold rounded-lg hover:bg-lime-400 transition-colors"
+                className="w-full py-1.5 bg-lime-500 text-[#141810] text-small font-bold rounded-lg hover:bg-lime-400 transition-colors"
               >
                 Generate Docs
               </button>
@@ -374,7 +374,7 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
           {/* Compact View */}
           <div className="flex justify-between items-center mt-2">
             <div className="flex-1 mr-3">
-              <div className="flex items-center justify-between text-xs mb-1">
+              <div className="flex items-center justify-between text-small mb-1">
                 <span className="font-medium text-gray-600 dark:text-gray-300 animate-pulse">
                   Generating Documents...
                 </span>
@@ -432,7 +432,7 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
       <>
         {/* Compact View */}
         <div className="flex justify-between items-center mt-2">
-          <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+          <div className="flex items-center gap-1.5 text-small text-gray-500 dark:text-gray-400">
             <span>Documents ready</span>
           </div>
           <div className="flex gap-1.5">
@@ -463,7 +463,7 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
               className="overflow-hidden"
             >
               <div className="pt-3 mt-2 border-t border-gray-100 dark:border-white/10 space-y-2">
-                <div className="flex items-center gap-2 text-xs">
+                <div className="flex items-center gap-2 text-small">
                   <Shield size={12} className="text-blue-500" />
                   <span className="text-gray-600 dark:text-gray-300">
                     {job.trustSnapshot?.ghostRiskLevel === "low"
@@ -477,7 +477,7 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
                       e.stopPropagation();
                       onAction?.("inject_data", job, e);
                     }}
-                    className="py-1.5 bg-lime-500/10 text-lime-600 dark:text-lime-400 border border-lime-500/20 rounded-lg text-xs font-medium hover:bg-lime-500/20 transition-colors"
+                    className="py-1.5 bg-lime-500/10 text-lime-600 dark:text-lime-400 border border-lime-500/20 rounded-lg text-small font-medium hover:bg-lime-500/20 transition-colors"
                   >
                     Improve ATS
                   </button>
@@ -486,7 +486,7 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
                       e.stopPropagation();
                       onAction?.("download", job, e);
                     }}
-                    className="py-1.5 bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 rounded-lg text-xs font-medium hover:bg-gray-200 dark:hover:bg-white/20 transition-colors"
+                    className="py-1.5 bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 rounded-lg text-small font-medium hover:bg-gray-200 dark:hover:bg-white/20 transition-colors"
                   >
                     Download
                   </button>
@@ -503,11 +503,11 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
     <>
       {/* Compact View */}
       <div className="flex justify-between items-center mt-2">
-        <div className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400">
+        <div className="flex items-center gap-1.5 text-small text-gray-600 dark:text-gray-400">
           <Clock size={12} />
           <span>Applied {getDaysAgo(job.applicationDate)}</span>
         </div>
-        <div className="text-xs text-gray-400 font-medium">
+        <div className="text-small text-gray-400 font-medium">
           {job.source || "Manual"}
         </div>
       </div>
@@ -524,7 +524,7 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
             className="overflow-hidden"
           >
             <div className="pt-3 mt-2 border-t border-gray-100 dark:border-white/10 space-y-2">
-              <div className="flex items-center gap-2 text-xs text-orange-600 bg-orange-50 dark:bg-orange-900/20 px-2 py-1 rounded">
+              <div className="flex items-center gap-2 text-small text-orange-600 bg-orange-50 dark:bg-orange-900/20 px-2 py-1 rounded">
                 <AlertCircle size={12} />
                 <span>Follow up in 3 days</span>
               </div>
@@ -534,7 +534,7 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
                     e.stopPropagation();
                     onAction?.("move_interview", job, e);
                   }}
-                  className="py-1.5 bg-lime-500 text-[#141810] rounded-lg text-xs font-bold hover:bg-lime-400 transition-colors"
+                  className="py-1.5 bg-lime-500 text-[#141810] rounded-lg text-small font-bold hover:bg-lime-400 transition-colors"
                 >
                   Move Stage
                 </button>
@@ -543,13 +543,13 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
                     e.stopPropagation();
                     onAction?.("log_activity", job, e);
                   }}
-                  className="py-1.5 bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 rounded-lg text-xs font-medium hover:bg-gray-200 dark:hover:bg-white/20 transition-colors"
+                  className="py-1.5 bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 rounded-lg text-small font-medium hover:bg-gray-200 dark:hover:bg-white/20 transition-colors"
                 >
                   Log Activity
                 </button>
                 <button
                   onClick={handlePracticeClick}
-                  className="col-span-2 mt-2 py-1.5 bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 rounded-lg text-xs font-medium hover:text-lime-500 dark:hover:text-[#80FF00] transition-colors flex items-center justify-center gap-2"
+                  className="col-span-2 mt-2 py-1.5 bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 rounded-lg text-small font-medium hover:text-lime-500 dark:hover:text-[#80FF00] transition-colors flex items-center justify-center gap-2"
                 >
                   <GraduationCap size={12} />
                   Practice
@@ -570,7 +570,7 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
         {/* Compact View */}
         <div className="flex justify-between items-center mt-2">
           <div
-            className={`flex items-center gap-1.5 text-xs px-2 py-1 rounded-md ${
+            className={`flex items-center gap-1.5 text-small px-2 py-1 rounded-md ${
               !nextInterview
                 ? "bg-gray-100 text-gray-500"
                 : "bg-amber-100 text-amber-700 font-medium"
@@ -584,7 +584,7 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
             </span>
           </div>
           {nextInterview && (
-            <div className="text-xs text-gray-500">{nextInterview.type}</div>
+            <div className="text-small text-gray-500">{nextInterview.type}</div>
           )}
         </div>
 
@@ -601,7 +601,7 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
             >
               <div className="pt-3 mt-2 border-t border-gray-100 dark:border-white/10 space-y-2">
                 {nextInterview?.interviewer && (
-                  <div className="flex items-center gap-2 text-xs text-gray-600">
+                  <div className="flex items-center gap-2 text-small text-gray-600">
                     <Target size={12} />
                     <span>with {nextInterview.interviewer}</span>
                   </div>
@@ -612,7 +612,7 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
                       e.stopPropagation();
                       onAction?.("view_notes", job, e);
                     }}
-                    className="py-1.5 bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 rounded-lg text-xs font-medium hover:bg-gray-200 dark:hover:bg-white/20 transition-colors"
+                    className="py-1.5 bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 rounded-lg text-small font-medium hover:bg-gray-200 dark:hover:bg-white/20 transition-colors"
                   >
                     View Notes
                   </button>
@@ -621,14 +621,14 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
                       e.stopPropagation();
                       onAction?.("add_feedback", job, e);
                     }}
-                    className="py-1.5 bg-lime-500 text-[#141810] rounded-lg text-xs font-bold hover:bg-lime-400 transition-colors"
+                    className="py-1.5 bg-lime-500 text-[#141810] rounded-lg text-small font-bold hover:bg-lime-400 transition-colors"
                   >
                     Add Feedback
                   </button>
                 </div>
                 <button
                   onClick={handlePracticeClick}
-                  className="w-full mt-2 py-1.5 bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 rounded-lg text-xs font-medium hover:text-lime-500 dark:hover:text-[#80FF00] transition-colors flex items-center justify-center gap-2"
+                  className="w-full mt-2 py-1.5 bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 rounded-lg text-small font-medium hover:text-lime-500 dark:hover:text-[#80FF00] transition-colors flex items-center justify-center gap-2"
                 >
                   <GraduationCap size={12} />
                   Practice
@@ -645,7 +645,7 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
     <>
       {/* Compact View */}
       <div className="flex justify-between items-center mt-2">
-        <div className="flex items-center gap-1 text-sm font-bold text-green-600 dark:text-green-400">
+        <div className="flex items-center gap-1 text-small font-bold text-green-600 dark:text-green-400">
           <DollarSign size={14} />
           {job.offerDetails?.salary
             ? formatSalary(job.offerDetails.salary, "")
@@ -668,7 +668,7 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
             <div className="pt-3 mt-2 border-t border-gray-100 dark:border-white/10 space-y-2">
               {/* Equity/Bonus */}
               {(job.offerDetails?.equity || job.offerDetails?.bonus) && (
-                <div className="flex gap-3 text-xs text-gray-600">
+                <div className="flex gap-3 text-small text-gray-600">
                   {job.offerDetails.bonus && (
                     <span>+{job.offerDetails.bonus} Bonus</span>
                   )}
@@ -684,7 +684,7 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
                     e.stopPropagation();
                     onAction?.("accept_offer", job, e);
                   }}
-                  className="py-1.5 bg-green-500 text-white rounded-lg text-xs font-bold hover:bg-green-600 transition-colors"
+                  className="py-1.5 bg-green-500 text-white rounded-lg text-small font-bold hover:bg-green-600 transition-colors"
                 >
                   Accept
                 </button>
@@ -693,7 +693,7 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
                     e.stopPropagation();
                     onAction?.("decline_offer", job, e);
                   }}
-                  className="py-1.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg text-xs font-medium hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
+                  className="py-1.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg text-small font-medium hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
                 >
                   Decline
                 </button>
@@ -728,7 +728,7 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
     >
       <div className="p-4">
         {isStale && (
-          <div className="mb-3 flex items-center justify-between bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 px-2 py-1.5 rounded text-xs font-medium border border-red-100 dark:border-red-900/30">
+          <div className="mb-3 flex items-center justify-between bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 px-2 py-1.5 rounded text-small font-medium border border-red-100 dark:border-red-900/30">
             <div className="flex items-center gap-1.5">
               <AlertCircle size={12} />
               <span>Stale Application</span>
@@ -747,7 +747,7 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
         )}
         
         {nudge && !isStale && (
-          <div className="mb-3 flex items-start gap-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 px-2 py-1.5 rounded text-xs font-medium border border-blue-100 dark:border-blue-900/30">
+          <div className="mb-3 flex items-start gap-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 px-2 py-1.5 rounded text-small font-medium border border-blue-100 dark:border-blue-900/30">
             <Zap size={12} className="mt-0.5 flex-shrink-0" />
             <span>{nudge}</span>
           </div>
@@ -755,7 +755,7 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
 
         {/* Visual Anchor: Logo & Title */}
         <div className="flex gap-3">
-          <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-white/5 flex items-center justify-center text-xs font-bold text-gray-500 overflow-hidden flex-shrink-0">
+          <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-white/5 flex items-center justify-center text-small font-bold text-gray-500 overflow-hidden flex-shrink-0">
             {job.companyLogo ? (
               <img
                 src={job.companyLogo}
@@ -772,7 +772,7 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex justify-between items-start">
-              <h4 className="font-bold text-sm text-gray-900 dark:text-white truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+              <h4 className="font-bold text-small text-gray-900 dark:text-white truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                 {job.jobTitle || job.title}
               </h4>
               <div className={`ml-2 px-1.5 py-0.5 rounded text-[10px] font-bold whitespace-nowrap ${
@@ -784,7 +784,7 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
                  {successProb}% Win
               </div>
             </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+            <p className="text-small text-gray-500 dark:text-gray-400 truncate">
               {job.company}
             </p>
           </div>
@@ -798,7 +798,7 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
           {stage === "interview" && renderInterviewContent()}
           {stage === "offer" && renderOfferContent()}
           {stage === "rejected" && (
-            <div className="mt-2 text-xs text-red-500 font-medium">
+            <div className="mt-2 text-small text-red-500 font-medium">
               Application Rejected
             </div>
           )}

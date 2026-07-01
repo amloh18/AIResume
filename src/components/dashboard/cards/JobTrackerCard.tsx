@@ -46,10 +46,10 @@ export default function JobTrackerCard({ className }: JobTrackerCardProps) {
 
         {/* Card Header */}
         <div className="flex items-center justify-between relative z-10">
-          <span className="text-sm font-semibold text-blue-100">
+          <span className="text-small font-semibold text-blue-100">
             Job Tracker
           </span>
-          <div className="flex items-center px-3 py-1.5 bg-blue-500/30 backdrop-blur-md rounded-full text-xs font-medium text-white border border-blue-400/20">
+          <div className="flex items-center px-3 py-1.5 bg-blue-500/30 backdrop-blur-md rounded-full text-small font-medium text-white border border-blue-400/20">
             <Briefcase size={14} className="mr-1.5" />
             <span className="hidden sm:inline">Track</span>
           </div>
@@ -57,10 +57,10 @@ export default function JobTrackerCard({ className }: JobTrackerCardProps) {
 
         {/* Main Count */}
         <div className="my-4 flex items-end gap-3 relative z-10">
-          <h2 className="text-5xl font-black tracking-tighter text-white leading-none">
+          <h2 className="text-display font-black tracking-tighter text-white leading-none">
             {jobs?.length || 0}
           </h2>
-          <span className="text-xs font-medium text-lime-300 mb-1 flex items-center">
+          <span className="text-small font-medium text-lime-300 mb-1 flex items-center">
             ↑ Saved
           </span>
         </div>
@@ -88,7 +88,7 @@ export default function JobTrackerCard({ className }: JobTrackerCardProps) {
               <div className="w-1.5 h-1.5 rounded-full bg-lime-400 shadow-[0_0_8px_rgba(163,230,53,0.8)] flex-shrink-0" />
               <div className="flex-1 min-w-0 flex justify-between items-center gap-2">
                 <div className="min-w-0">
-                  <p className="text-xs font-bold text-white truncate">
+                  <p className="text-small font-bold text-white truncate">
                     {job.jobTitle || job.title || 'Untitled Role'}
                   </p>
                   <p className="text-[10px] text-blue-200 truncate mt-0.5">
@@ -113,7 +113,7 @@ export default function JobTrackerCard({ className }: JobTrackerCardProps) {
             </div>
           ))}
           {(!jobs || jobs.length === 0) && (
-            <div className="text-xs text-blue-100/70 italic py-2 text-center">
+            <div className="text-small text-blue-100/70 italic py-2 text-center">
               No saved jobs. Add one!
             </div>
           )}
@@ -121,7 +121,7 @@ export default function JobTrackerCard({ className }: JobTrackerCardProps) {
 
         {/* Footer CTA */}
         <div className="mt-3 pt-3 border-t border-blue-500/20 relative z-10 text-right">
-          <span className="text-xs font-medium text-blue-100 group-hover:text-white transition-colors">
+          <span className="text-small font-medium text-blue-100 group-hover:text-white transition-colors">
             View All Jobs →
           </span>
         </div>

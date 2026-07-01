@@ -174,7 +174,7 @@ const ExpiredJobsAccordion: React.FC<{
     <div className="mt-4">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between p-2 text-sm font-medium text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-[#141810] border border-gray-200 dark:border-gray-800 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors"
+        className="w-full flex items-center justify-between p-2 text-small font-medium text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-[#141810] border border-gray-200 dark:border-gray-800 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors"
       >
         <span>Expired ({jobs.length})</span>
         <ChevronDown
@@ -394,10 +394,10 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
                     }}
                   >
                     <div className="flex items-center justify-between w-full">
-                      <h3 className="text-xs font-medium text-black dark:text-white tracking-tight">
+                      <h3 className="text-small font-medium text-black dark:text-white tracking-tight">
                         {stage.title}
                       </h3>
-                      <span className="text-sm">{stageJobs.length}</span>
+                      <span className="text-small">{stageJobs.length}</span>
                     </div>
                   </div>
 
@@ -490,10 +490,10 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
                   }}
                 >
                   <div className="flex items-center justify-between w-full">
-                    <h3 className="text-xs font-medium text-black dark:text-white tracking-tight">
+                    <h3 className="text-small font-medium text-black dark:text-white tracking-tight">
                       {stage.title}
                     </h3>
-                    <span className="text-sm">{stageJobs.length}</span>
+                    <span className="text-small">{stageJobs.length}</span>
                   </div>
                 </div>
 

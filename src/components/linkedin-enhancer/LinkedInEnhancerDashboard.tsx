@@ -23,7 +23,7 @@ export default function LinkedInEnhancerDashboard({ onStartEnhancing }: { onStar
 
                 <div className="flex justify-between items-end mb-8">
                     <div>
-                        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">LinkedIn Dashboard</h1>
+                        <h1 className="text-h1 font-bold text-gray-900 dark:text-white mb-2">LinkedIn Dashboard</h1>
                         <p className="text-gray-600 dark:text-gray-400">Overview of your profile strength and next best actions.</p>
                     </div>
                     <button 

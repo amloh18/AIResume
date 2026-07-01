@@ -178,10 +178,10 @@ export default function SalaryInsightsWidget({ className }: SalaryInsightsWidget
       {/* Header */}
       <div className="relative z-10 flex items-center justify-between mb-4">
         <div>
-          <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+          <h3 className="text-h3 font-bold text-gray-900 dark:text-white">
             Salary Insights
           </h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <p className="text-small text-gray-500 dark:text-gray-400">
             Market intelligence
           </p>
         </div>
@@ -198,29 +198,29 @@ export default function SalaryInsightsWidget({ className }: SalaryInsightsWidget
         <>
           {/* Main figure */}
           <div className="relative z-10">
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+            <p className="text-small text-gray-500 dark:text-gray-400 mb-1">
               {data.role} - Median Salary
             </p>
             <div className="flex items-baseline gap-3">
-              <span className="text-4xl font-black text-gray-900 dark:text-white">
+              <span className="text-display font-black text-gray-900 dark:text-white">
                 {formatCurrency(data.median)}
               </span>
               <div className={cn(
-                'flex items-center gap-1 text-sm font-bold',
+                'flex items-center gap-1 text-small font-bold',
                 data.trend === 'up' ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
               )}>
                 <TrendIcon size={16} />
                 {data.trendPercent}%
               </div>
             </div>
-            <p className="text-xs text-gray-400 mt-1">
+            <p className="text-small text-gray-400 mt-1">
               Year-over-year trend
             </p>
           </div>
 
           {/* Range visualization */}
           <div className="relative z-10 mt-6">
-            <div className="mb-2 flex items-center justify-between text-xs">
+            <div className="mb-2 flex items-center justify-between text-small">
               <span className="text-gray-500 dark:text-gray-400">Salary Range</span>
               {data.location && (
                 <span className="flex items-center gap-1 text-gray-500 dark:text-gray-400">
@@ -255,15 +255,15 @@ export default function SalaryInsightsWidget({ className }: SalaryInsightsWidget
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <BarChart3 size={14} className="text-violet-600 dark:text-violet-400" />
-                  <span className="text-sm font-medium text-gray-900 dark:text-white">
+                  <span className="text-small font-medium text-gray-900 dark:text-white">
                     Your Position
                   </span>
                 </div>
-                <span className="text-sm font-bold text-violet-600 dark:text-violet-400">
+                <span className="text-small font-bold text-violet-600 dark:text-violet-400">
                   {data.percentile}th percentile
                 </span>
               </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              <p className="text-small text-gray-500 dark:text-gray-400 mt-1">
                 Above {data.percentile}% of similar profiles
               </p>
             </div>
@@ -280,7 +280,7 @@ export default function SalaryInsightsWidget({ className }: SalaryInsightsWidget
                   data.trend === 'up' ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
                 )} />
               </div>
-              <span className="text-xs text-gray-600 dark:text-gray-300">
+              <span className="text-small text-gray-600 dark:text-gray-300">
                 <span className="font-semibold">
                   {data.trend === 'up' ? 'Rising' : 'Declining'}
                 </span>{' '}

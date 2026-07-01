@@ -110,7 +110,7 @@ const PerformanceMonitor: React.FC = () => {
   };
 
   return (
-    <div className="fixed top-4 right-4 z-[9999] bg-black/80 backdrop-blur-sm border border-white/20 rounded-lg p-4 text-white text-sm font-mono">
+    <div className="fixed top-4 right-4 z-[9999] bg-black/80 backdrop-blur-sm border border-white/20 rounded-lg p-4 text-white text-small font-mono">
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <span>FPS:</span>
@@ -129,7 +129,7 @@ const PerformanceMonitor: React.FC = () => {
           <span>{Math.round(metrics.renderTime)}ms</span>
         </div>
       </div>
-      <div className="mt-2 text-xs text-white/60">
+      <div className="mt-2 text-small text-white/60">
         Press Ctrl+Shift+P to toggle
       </div>
     </div>

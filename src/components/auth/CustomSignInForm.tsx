@@ -64,20 +64,20 @@ export default function CustomSignInForm() {
     <div className="min-h-screen flex items-center justify-center bg-[#141810] py-12 px-4 tablet:px-6 desktop:px-8">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
-          <h2 className="mt-6 text-3xl font-extrabold text-white">
+          <h2 className="mt-6 text-h1 font-extrabold text-white">
             Sign In
           </h2>
-          <p className="mt-2 text-sm text-gray-300">
+          <p className="mt-2 text-small text-gray-300">
             Access your account
           </p>
         </div>
         
         <div className="rounded-none border text-card-foreground shadow-sm bg-gray-800 border-gray-700">
           <div className="flex flex-col space-y-1.5 p-6">
-            <div className="text-2xl font-semibold leading-none tracking-tight text-white">
+            <div className="text-h2 font-semibold leading-none tracking-tight text-white">
               User Access
             </div>
-            <div className="text-sm text-gray-300">
+            <div className="text-small text-gray-300">
               Enter your credentials to access your account
             </div>
           </div>
@@ -86,7 +86,7 @@ export default function CustomSignInForm() {
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-4">
                 <div>
-                  <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-white" htmlFor="email">
+                  <label className="text-small font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-white" htmlFor="email">
                     Email
                   </label>
                   <input
@@ -97,12 +97,12 @@ export default function CustomSignInForm() {
                     onChange={handleChange}
                     required
                     placeholder="user@cvcircle.io"
-                    className="flex h-10 w-full rounded-none px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground outline-none focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 mt-1 bg-gray-700 border border-[#80FF00]/50 text-white placeholder-gray-400 focus:border-2 focus:border-[#80FF00] transition-all duration-200"
+                    className="flex h-10 w-full rounded-none px-3 py-2 text-small file:border-0 file:bg-transparent file:text-small file:font-medium placeholder:text-muted-foreground outline-none focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 mt-1 bg-gray-700 border border-[#80FF00]/50 text-white placeholder-gray-400 focus:border-2 focus:border-[#80FF00] transition-all duration-200"
                   />
                 </div>
                 
                 <div>
-                  <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-white" htmlFor="password">
+                  <label className="text-small font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-white" htmlFor="password">
                     Password
                   </label>
                   <input
@@ -113,19 +113,19 @@ export default function CustomSignInForm() {
                     onChange={handleChange}
                     required
                     placeholder="Enter your password"
-                    className="flex h-10 w-full rounded-none px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground outline-none focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 mt-1 bg-gray-700 border border-[#80FF00]/50 text-white placeholder-gray-400 focus:border-2 focus:border-[#80FF00] transition-all duration-200"
+                    className="flex h-10 w-full rounded-none px-3 py-2 text-small file:border-0 file:bg-transparent file:text-small file:font-medium placeholder:text-muted-foreground outline-none focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 mt-1 bg-gray-700 border border-[#80FF00]/50 text-white placeholder-gray-400 focus:border-2 focus:border-[#80FF00] transition-all duration-200"
                   />
                 </div>
               </div>
               
               {error && (
-                <div className="text-red-400 text-sm text-center">
+                <div className="text-red-400 text-small text-center">
                   {error}
                 </div>
               )}
               
               {success && (
-                <div className="text-green-400 text-sm text-center">
+                <div className="text-green-400 text-small text-center">
                   {success}
                 </div>
               )}
@@ -133,18 +133,18 @@ export default function CustomSignInForm() {
               <button
                 type="submit"
                 disabled={loading}
-                className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-none text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-10 px-4 py-2 w-full bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
+                className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-none text-small font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-10 px-4 py-2 w-full bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
               >
                 {loading ? 'Signing in...' : 'Sign In'}
               </button>
             </form>
             
             <div className="mt-6 text-center">
-              <p className="text-sm text-gray-300">
+              <p className="text-small text-gray-300">
                 Test credentials: <br />
                 <span className="text-blue-400">user@cvcircle.io</span> / <span className="text-blue-400">user123</span>
               </p>
-              <p className="text-sm text-gray-300 mt-2">
+              <p className="text-small text-gray-300 mt-2">
                 Admin access? <a href="/sign-in" className="font-medium text-red-400 hover:text-red-300">Admin sign in</a>
               </p>
             </div>

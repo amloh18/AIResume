@@ -128,7 +128,7 @@ class ErrorBoundary extends Component<Props, State> {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
-              className="text-2xl font-bold text-gray-900 dark:text-white mb-4"
+              className="text-h2 font-bold text-gray-900 dark:text-white mb-4"
             >
               Something went wrong
             </motion.h1>
@@ -151,18 +151,18 @@ class ErrorBoundary extends Component<Props, State> {
                 transition={{ delay: 0.5 }}
                 className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-left"
               >
-                <h3 className="text-sm font-semibold text-red-800 dark:text-red-200 mb-2">
+                <h3 className="text-small font-semibold text-red-800 dark:text-red-200 mb-2">
                   Error Details:
                 </h3>
-                <p className="text-xs text-red-700 dark:text-red-300 font-mono break-all">
+                <p className="text-small text-red-700 dark:text-red-300 font-mono break-all">
                   {this.state.error.message}
                 </p>
                 {this.state.errorInfo && (
                   <details className="mt-2">
-                    <summary className="text-xs text-red-600 dark:text-red-400 cursor-pointer">
+                    <summary className="text-small text-red-600 dark:text-red-400 cursor-pointer">
                       Stack Trace
                     </summary>
-                    <pre className="text-xs text-red-700 dark:text-red-300 mt-2 whitespace-pre-wrap">
+                    <pre className="text-small text-red-700 dark:text-red-300 mt-2 whitespace-pre-wrap">
                       {this.state.errorInfo.componentStack}
                     </pre>
                   </details>
@@ -203,7 +203,7 @@ class ErrorBoundary extends Component<Props, State> {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.7 }}
-              className="text-xs text-gray-500 dark:text-gray-400 mt-6"
+              className="text-small text-gray-500 dark:text-gray-400 mt-6"
             >
               If this problem persists, please contact support.
             </motion.p>
