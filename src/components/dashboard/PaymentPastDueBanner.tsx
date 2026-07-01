@@ -58,25 +58,25 @@ export default function PaymentPastDueBanner({
             <AlertCircle className="w-6 h-6 text-red-600 dark:text-red-400" />
           </div>
           <div className="flex-1">
-            <h3 className="text-lg font-semibold text-red-900 dark:text-red-200 mb-1">
+            <h3 className="text-h3 font-semibold text-red-900 dark:text-red-200 mb-1">
               Payment Past Due
             </h3>
-            <p className="text-sm text-red-700 dark:text-red-300 mb-2">
+            <p className="text-small text-red-700 dark:text-red-300 mb-2">
               Your subscription payment could not be processed. Please update your payment method to continue using the service.
             </p>
             {amount && (
-              <p className="text-sm font-medium text-red-900 dark:text-red-200 mb-1">
+              <p className="text-small font-medium text-red-900 dark:text-red-200 mb-1">
                 Amount Due: {formatCurrency(amount, currency)}
               </p>
             )}
             {dueDate && (
-              <p className="text-sm text-red-700 dark:text-red-300 mb-3">
+              <p className="text-small text-red-700 dark:text-red-300 mb-3">
                 Due Date: {formatDate(dueDate)}
               </p>
             )}
             <button
               onClick={handleUpdatePayment}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors text-sm font-medium"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors text-small font-medium"
             >
               <CreditCard className="w-4 h-4" />
               Update Payment Method

@@ -54,7 +54,7 @@ function OfferRateDonut({ percentage }: { percentage: number }) {
         />
       </svg>
       <div className="absolute inset-0 flex items-center justify-center">
-        <span className="text-sm font-bold text-gray-900 dark:text-white">
+        <span className="text-small font-bold text-gray-900 dark:text-white">
           {percentage}%
         </span>
       </div>
@@ -116,17 +116,17 @@ export default function ApplicationFunnel({ className, stages: propStages }: App
       {/* Header */}
       <div className="relative z-10 flex items-center justify-between mb-6">
         <div>
-          <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+          <h3 className="text-h3 font-bold text-gray-900 dark:text-white">
             Application Funnel
           </h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <p className="text-small text-gray-500 dark:text-gray-400">
             Conversion tracking
           </p>
         </div>
 
         {!isLoading && total > 0 && (
           <div className="text-right">
-            <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
+            <span className="text-h2 font-black text-emerald-600 dark:text-emerald-400">
               {offerRate}%
             </span>
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
@@ -144,7 +144,7 @@ export default function ApplicationFunnel({ className, stages: propStages }: App
           </div>
         ) : total === 0 ? (
           <div className="text-center py-10">
-            <p className="text-sm text-gray-500">No application data yet.</p>
+            <p className="text-small text-gray-500">No application data yet.</p>
           </div>
         ) : (
           stages.map((stage, idx) => {
@@ -156,7 +156,7 @@ export default function ApplicationFunnel({ className, stages: propStages }: App
               <div key={stage.name} className="flex items-center gap-4">
                 {/* Stage label */}
                 <div className="w-20 flex-shrink-0">
-                  <span className="text-xs font-medium text-gray-600 dark:text-gray-300">
+                  <span className="text-small font-medium text-gray-600 dark:text-gray-300">
                     {stage.name}
                   </span>
                 </div>
@@ -172,7 +172,7 @@ export default function ApplicationFunnel({ className, stages: propStages }: App
                       stage.color
                     )}
                   />
-                  <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-gray-700 dark:text-gray-200">
+                  <span className="absolute inset-0 flex items-center justify-center text-small font-bold text-gray-700 dark:text-gray-200">
                     {stage.count}
                   </span>
                 </div>

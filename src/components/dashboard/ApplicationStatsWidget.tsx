@@ -176,7 +176,7 @@ const ApplicationStatsWidget: React.FC<ApplicationStatsWidgetProps> = ({ userId 
             <Target className="h-4 w-4 text-purple-400" />
           </div>
           <div>
-            <h2 className="text-base font-bold text-gray-900 dark:text-white">Application Stats</h2>
+            <h2 className="text-body font-bold text-gray-900 dark:text-white">Application Stats</h2>
             <p className="text-[11px] text-gray-600 dark:text-white/60">Success metrics</p>
           </div>
         </div>

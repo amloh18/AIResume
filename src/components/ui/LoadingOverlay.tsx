@@ -33,7 +33,7 @@ const LoadingOverlay: React.FC<LoadingOverlayProps> = ({ message = 'Initializing
       </div>
       
       <div className="mt-12 flex flex-col items-center gap-3">
-        <h3 className="text-sm font-black text-gray-800 dark:text-gray-200 uppercase tracking-[0.25em] animate-pulse">
+        <h3 className="text-small font-black text-gray-800 dark:text-gray-200 uppercase tracking-[0.25em] animate-pulse">
           {message}
         </h3>
         <div className="flex gap-2">

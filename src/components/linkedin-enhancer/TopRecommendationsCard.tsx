@@ -62,29 +62,29 @@ export default function TopRecommendationsCard({ onActionClick }: { onActionClic
                 <svg className="w-5 h-5 text-green-600 dark:text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Next Best Actions</h3>
+                <h3 className="text-h3 font-semibold text-gray-900 dark:text-white">Next Best Actions</h3>
             </div>
 
             <div className="flex-1 overflow-y-auto pr-2 z-10 relative space-y-4">
                 {recommendations.slice(0, 3).map((rec) => (
                     <div key={rec.id} className="group bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 hover:border-blue-300 dark:hover:border-blue-500 hover:shadow-md transition-all duration-200 cursor-pointer" onClick={() => onActionClick(rec.sectionId)}>
                         <div className="flex items-start">
-                            <div className="text-xl mr-3 flex-shrink-0">{rec.icon}</div>
+                            <div className="text-h3 mr-3 flex-shrink-0">{rec.icon}</div>
                             <div className="flex-1">
                                 <div className="flex items-center justify-between mb-1">
-                                    <h4 className="text-sm font-semibold text-gray-900 dark:text-white group-hover:text-blue-700 dark:group-hover:text-blue-400 transition-colors">
+                                    <h4 className="text-small font-semibold text-gray-900 dark:text-white group-hover:text-blue-700 dark:group-hover:text-blue-400 transition-colors">
                                         {rec.title}
                                     </h4>
                                     {rec.priority === 'high' && (
-                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border border-red-100 dark:border-red-800/30">
+                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-small font-medium bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border border-red-100 dark:border-red-800/30">
                                             High Impact
                                         </span>
                                     )}
                                 </div>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mb-3 leading-relaxed">
+                                <p className="text-small text-gray-500 dark:text-gray-400 mb-3 leading-relaxed">
                                     {rec.description}
                                 </p>
-                                <button className="inline-flex items-center text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors">
+                                <button className="inline-flex items-center text-small font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors">
                                     Fix Now
                                     <svg className="ml-1 w-3 h-3 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />

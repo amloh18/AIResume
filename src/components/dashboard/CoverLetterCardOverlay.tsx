@@ -273,7 +273,7 @@ const CoverLetterCardOverlayComponent: React.FC<CoverLetterCardOverlayProps> = (
                 type="text"
                 value={editingTitle || ''}
                 onChange={(e) => onTitleEdit?.(coverLetter.id, e.target.value)}
-                className="flex-1 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-gray-900 dark:text-white text-base font-semibold focus:outline-none focus:ring-2 focus:ring-purple-400"
+                className="flex-1 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-gray-900 dark:text-white text-body font-semibold focus:outline-none focus:ring-2 focus:ring-purple-400"
                 autoFocus
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
@@ -307,14 +307,14 @@ const CoverLetterCardOverlayComponent: React.FC<CoverLetterCardOverlayProps> = (
               </motion.button>
             </div>
           ) : (
-            <p className="text-gray-800 dark:text-white text-base font-medium leading-normal">
+            <p className="text-gray-800 dark:text-white text-body font-medium leading-normal">
               {coverLetter.title}
             </p>
           )}
         </div>
 
         {/* Last Modified */}
-        <p className="text-gray-500 dark:text-[#aebb9b] text-sm font-normal leading-normal">
+        <p className="text-gray-500 dark:text-[#aebb9b] text-small font-normal leading-normal">
           Last modified: {formatDate(coverLetter.lastModified)}
         </p>
 
@@ -389,10 +389,10 @@ const CoverLetterCardOverlayComponent: React.FC<CoverLetterCardOverlayProps> = (
               exit={{ scale: 0.8, opacity: 0 }}
               className="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-sm mx-4 shadow-2xl"
             >
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              <h3 className="text-h3 font-semibold text-gray-900 dark:text-white mb-2">
                 Delete Cover Letter?
               </h3>
-              <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
+              <p className="text-gray-600 dark:text-gray-400 text-small mb-4">
                 This action cannot be undone. The cover letter "{coverLetter.title}" will be permanently deleted.
               </p>
               <div className="flex gap-3">

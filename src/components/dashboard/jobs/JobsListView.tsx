@@ -100,25 +100,25 @@ const JobsListView: React.FC<JobsListViewProps> = ({
                   className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 />
               </th>
-              <th className="px-6 py-4 text-left text-gray-900 dark:text-white font-semibold text-sm uppercase tracking-wide">
+              <th className="px-6 py-4 text-left text-gray-900 dark:text-white font-semibold text-small uppercase tracking-wide">
                 Company Name
               </th>
-              <th className="px-6 py-4 text-left text-gray-900 dark:text-white font-semibold text-sm uppercase tracking-wide">
+              <th className="px-6 py-4 text-left text-gray-900 dark:text-white font-semibold text-small uppercase tracking-wide">
                 Job Title
               </th>
-              <th className="px-6 py-4 text-left text-gray-900 dark:text-white font-semibold text-sm uppercase tracking-wide">
+              <th className="px-6 py-4 text-left text-gray-900 dark:text-white font-semibold text-small uppercase tracking-wide">
                 Application Date
               </th>
-              <th className="px-6 py-4 text-left text-gray-900 dark:text-white font-semibold text-sm uppercase tracking-wide">
+              <th className="px-6 py-4 text-left text-gray-900 dark:text-white font-semibold text-small uppercase tracking-wide">
                 Stage
               </th>
-              <th className="px-6 py-4 text-left text-gray-900 dark:text-white font-semibold text-sm uppercase tracking-wide">
+              <th className="px-6 py-4 text-left text-gray-900 dark:text-white font-semibold text-small uppercase tracking-wide">
                 Priority
               </th>
-              <th className="px-6 py-4 text-left text-gray-900 dark:text-white font-semibold text-sm uppercase tracking-wide">
+              <th className="px-6 py-4 text-left text-gray-900 dark:text-white font-semibold text-small uppercase tracking-wide">
                 ATS Score
               </th>
-              <th className="px-6 py-4 text-left text-gray-900 dark:text-white font-semibold text-sm uppercase tracking-wide">
+              <th className="px-6 py-4 text-left text-gray-900 dark:text-white font-semibold text-small uppercase tracking-wide">
                 Actions
               </th>
             </tr>
@@ -198,7 +198,7 @@ const JobsListView: React.FC<JobsListViewProps> = ({
                           : '-'}
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-small font-medium ${
                         job.status === 'applied' ? 'bg-blue-100 dark:bg-blue-600 text-blue-700 dark:text-white' :
                         job.status === 'interview' ? 'bg-purple-100 dark:bg-purple-600 text-purple-700 dark:text-white' :
                         job.status === 'offer' ? 'bg-green-100 dark:bg-green-600 text-green-700 dark:text-white' :
@@ -210,7 +210,7 @@ const JobsListView: React.FC<JobsListViewProps> = ({
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-small font-medium ${
                         job.priority === 'high' ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400' :
                         job.priority === 'medium' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400' :
                         'bg-gray-100 dark:bg-gray-900/30 text-gray-700 dark:text-gray-400'
@@ -222,7 +222,7 @@ const JobsListView: React.FC<JobsListViewProps> = ({
                       {job.atsScore !== undefined && job.atsScore !== null ? (
                         <div className="flex items-center gap-2">
                           <div className="flex items-center gap-1">
-                            <span className={`text-sm font-semibold ${
+                            <span className={`text-small font-semibold ${
                               job.atsScore >= 80 ? 'text-green-600 dark:text-green-400' :
                               job.atsScore >= 60 ? 'text-yellow-600 dark:text-yellow-400' :
                               'text-red-600 dark:text-red-400'
@@ -242,7 +242,7 @@ const JobsListView: React.FC<JobsListViewProps> = ({
                           </div>
                         </div>
                       ) : (
-                        <span className="text-xs text-gray-500 dark:text-gray-400">-</span>
+                        <span className="text-small text-gray-500 dark:text-gray-400">-</span>
                       )}
                     </td>
                     <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
@@ -257,11 +257,11 @@ const JobsListView: React.FC<JobsListViewProps> = ({
                                 <>
                                   <div className={`flex items-center gap-1 ${hasCV ? 'text-green-500' : 'text-red-500'}`}>
                                     {hasCV ? <CheckCircle size={14} /> : <X size={14} />}
-                                    <span className="text-xs">CV</span>
+                                    <span className="text-small">CV</span>
                                   </div>
                                   <div className={`flex items-center gap-1 ${hasCoverLetter ? 'text-green-500' : 'text-red-500'}`}>
                                     {hasCoverLetter ? <CheckCircle size={14} /> : <X size={14} />}
-                                    <span className="text-xs">CL</span>
+                                    <span className="text-small">CL</span>
                                   </div>
                                 </>
                               );

@@ -163,14 +163,14 @@ export default function JobsDashboard() {
           <div className="w-16 h-16 bg-[#80FF00]/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
             <Zap className="w-8 h-8 text-[#80FF00]" />
           </div>
-          <h2 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white uppercase tracking-tighter italic mb-3">
+          <h2 className="text-h2 md:text-h1 font-black text-gray-900 dark:text-white uppercase tracking-tighter italic mb-3">
             Jobs Hub Coming Soon
           </h2>
-          <p className="text-gray-600 dark:text-gray-400 text-base md:text-lg font-medium leading-relaxed mb-8">
+          <p className="text-gray-600 dark:text-gray-400 text-body md:text-h3 font-medium leading-relaxed mb-8">
             Automated job applications for power users. We're building the ultimate automation engine to land your dream role while you sleep.
           </p>
           <div className="flex flex-col gap-3">
-            <div className="px-4 py-3 bg-[#80FF00]/10 border border-[#80FF00]/20 rounded-xl text-[#80FF00] text-xs font-black uppercase tracking-widest italic animate-pulse">
+            <div className="px-4 py-3 bg-[#80FF00]/10 border border-[#80FF00]/20 rounded-xl text-[#80FF00] text-small font-black uppercase tracking-widest italic animate-pulse">
               Exclusive for Pro Users
             </div>
             <p className="text-[10px] text-gray-500 dark:text-gray-500 font-bold uppercase tracking-widest">
@@ -184,12 +184,12 @@ export default function JobsDashboard() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+            <h1 className="text-h1 font-bold text-gray-900 dark:text-white">
               Jobs Hub
             </h1>
-            <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+            <p className="mt-1 text-small text-gray-600 dark:text-gray-400">
               AI-powered job matching and automation
-              <span className="ml-2 inline-flex items-center rounded-full bg-lime-500/20 px-2.5 py-0.5 text-xs font-medium text-lime-600 dark:text-lime-400">
+              <span className="ml-2 inline-flex items-center rounded-full bg-lime-500/20 px-2.5 py-0.5 text-small font-medium text-lime-600 dark:text-lime-400">
                 BETA
               </span>
             </p>
@@ -213,7 +213,7 @@ export default function JobsDashboard() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                className={`flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 outline-none hover:bg-transparent focus:ring-0 focus-visible:ring-0 focus:outline-none focus-visible:outline-none !shadow-none !outline-none hover:!shadow-none focus:!shadow-none group ${activeTab === tab.id
+                className={`flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-small transition-all duration-200 outline-none hover:bg-transparent focus:ring-0 focus-visible:ring-0 focus:outline-none focus-visible:outline-none !shadow-none !outline-none hover:!shadow-none focus:!shadow-none group ${activeTab === tab.id
                   ? 'border-lime-500 text-lime-600 dark:text-lime-400'
                   : 'border-transparent text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200'
                   }`}
@@ -262,10 +262,10 @@ export default function JobsDashboard() {
                           <h3 className="font-semibold text-gray-900 dark:text-white truncate">
                             {job.title}
                           </h3>
-                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                          <p className="text-small text-gray-600 dark:text-gray-400 mt-1">
                             {job.company}
                           </p>
-                          <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-500 mt-2">
+                          <div className="flex items-center gap-2 text-small text-gray-500 dark:text-gray-500 mt-2">
                             <span className="flex items-center gap-1">
                               <MapPin className="w-3 h-3" />
                               {job.location}
@@ -273,7 +273,7 @@ export default function JobsDashboard() {
                           </div>
                         </div>
                         {job.matchScore && (
-                          <div className={`ml-3 flex-shrink-0 px-2 py-1 rounded-full text-xs font-bold ${job.matchScore >= 80 ? 'bg-lime-100 text-lime-700 dark:bg-lime-900/30 dark:text-lime-300' :
+                          <div className={`ml-3 flex-shrink-0 px-2 py-1 rounded-full text-small font-bold ${job.matchScore >= 80 ? 'bg-lime-100 text-lime-700 dark:bg-lime-900/30 dark:text-lime-300' :
                             job.matchScore >= 60 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300' :
                               'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
                             }`}>
@@ -282,8 +282,8 @@ export default function JobsDashboard() {
                         )}
                       </div>
                       <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
-                        <span className="text-xs text-gray-400 capitalize">{job.source}</span>
-                        <button className="text-sm text-lime-600 dark:text-lime-400 font-medium hover:underline">
+                        <span className="text-small text-gray-400 capitalize">{job.source}</span>
+                        <button className="text-small text-lime-600 dark:text-lime-400 font-medium hover:underline">
                           Apply
                         </button>
                       </div>
@@ -292,7 +292,7 @@ export default function JobsDashboard() {
                 ) : (
                   <div className="text-center py-12 bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-xl">
                     <Briefcase className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                    <h3 className="text-h3 font-semibold text-gray-900 dark:text-white mb-2">
                       No jobs found
                     </h3>
                     <p className="text-gray-500 dark:text-gray-400">
@@ -304,24 +304,24 @@ export default function JobsDashboard() {
 
               {/* Pagination */}
               <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
-                <div className="text-sm text-gray-500 dark:text-gray-400">
+                <div className="text-small text-gray-500 dark:text-gray-400">
                   Showing {jobs.length} of {total} jobs
                 </div>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setPage(Math.max(1, page - 1))}
                     disabled={page === 1}
-                    className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-800"
+                    className="px-3 py-1 text-small border border-gray-300 dark:border-gray-600 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-800"
                   >
                     Previous
                   </button>
-                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                  <span className="text-small text-gray-600 dark:text-gray-400">
                     Page {page}
                   </span>
                   <button
                     onClick={() => setPage(page + 1)}
                     disabled={!hasMore}
-                    className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-800"
+                    className="px-3 py-1 text-small border border-gray-300 dark:border-gray-600 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-800"
                   >
                     Next
                   </button>
@@ -335,15 +335,15 @@ export default function JobsDashboard() {
                 <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-xl p-6 sticky top-6">
                   <div className="flex items-start justify-between mb-4">
                     <div>
-                      <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                      <h2 className="text-h3 font-bold text-gray-900 dark:text-white">
                         {selectedJob.title}
                       </h2>
-                      <p className="text-lg text-gray-600 dark:text-gray-400 mt-1">
+                      <p className="text-h3 text-gray-600 dark:text-gray-400 mt-1">
                         {selectedJob.company}
                       </p>
                     </div>
                     {selectedJob.matchScore && (
-                      <div className={`px-3 py-2 rounded-full text-lg font-bold ${selectedJob.matchScore >= 80 ? 'bg-lime-100 text-lime-700 dark:bg-lime-900/30 dark:text-lime-300' :
+                      <div className={`px-3 py-2 rounded-full text-h3 font-bold ${selectedJob.matchScore >= 80 ? 'bg-lime-100 text-lime-700 dark:bg-lime-900/30 dark:text-lime-300' :
                         selectedJob.matchScore >= 60 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300' :
                           'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
                         }`}>
@@ -365,7 +365,7 @@ export default function JobsDashboard() {
 
                   <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mb-4">
                     <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Description</h3>
-                    <p className="text-gray-600 dark:text-gray-400 text-sm">
+                    <p className="text-gray-600 dark:text-gray-400 text-small">
                       {selectedJob.description || 'No description available. Click to view full details on the job posting.'}
                     </p>
                   </div>
@@ -383,7 +383,7 @@ export default function JobsDashboard() {
                 <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-xl p-6 text-center h-full flex items-center justify-center min-h-[400px]">
                   <div>
                     <Sparkles className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                    <h3 className="text-h3 font-semibold text-gray-900 dark:text-white mb-2">
                       Select a job to preview
                     </h3>
                     <p className="text-gray-500 dark:text-gray-400">
@@ -416,12 +416,12 @@ export default function JobsDashboard() {
 
         {activeTab === 'settings' && (
           <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-xl p-6">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+            <h2 className="text-h3 font-semibold text-gray-900 dark:text-white mb-4">
               Auto-Apply Settings
             </h2>
             <div className="space-y-4 max-w-xl">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-small font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Maximum Applications per Hour
                 </label>
                 <input
@@ -431,12 +431,12 @@ export default function JobsDashboard() {
                   defaultValue="25"
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-[#1a230f] text-gray-900 dark:text-white"
                 />
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                <p className="mt-1 text-small text-gray-500 dark:text-gray-400">
                   Maximum 50 applications per hour (system limit)
                 </p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-small font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Maximum Applications per Day
                 </label>
                 <input
@@ -446,7 +446,7 @@ export default function JobsDashboard() {
                   defaultValue="50"
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-[#1a230f] text-gray-900 dark:text-white"
                 />
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                <p className="mt-1 text-small text-gray-500 dark:text-gray-400">
                   Maximum 100 applications per day (system limit)
                 </p>
               </div>

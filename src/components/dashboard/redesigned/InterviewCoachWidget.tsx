@@ -38,13 +38,13 @@ export default function InterviewCoachWidget({ loading = false, empty = false }:
             />
           </svg>
           <div className="absolute flex flex-col items-center">
-            <span className="text-sm font-black text-gray-900 dark:text-white">60%</span>
+            <span className="text-small font-black text-gray-900 dark:text-white">60%</span>
           </div>
         </div>
         
         <div className="flex-1">
-          <h4 className="text-sm font-black text-gray-800 dark:text-gray-200">React Interview Prep</h4>
-          <p className="text-xs text-gray-500 font-medium mt-1">Next: Advanced Hooks & SSR</p>
+          <h4 className="text-small font-black text-gray-800 dark:text-gray-200">React Interview Prep</h4>
+          <p className="text-small text-gray-500 font-medium mt-1">Next: Advanced Hooks & SSR</p>
           <div className="flex items-center gap-4 mt-3">
             <div className="flex items-center gap-1.5">
               <Trophy size={14} className="text-amber-500" />

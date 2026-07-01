@@ -29,7 +29,7 @@ export default function RedesignedDashboard() {
             {/* Greeting Header */}
             <div className="mb-10">
               <GreetingHeader />
-              <p className="text-slate-500 font-bold mt-2 text-sm">
+              <p className="text-slate-500 font-bold mt-2 text-small">
                 Explore the redesigned {tier} dashboard experience.
               </p>
             </div>

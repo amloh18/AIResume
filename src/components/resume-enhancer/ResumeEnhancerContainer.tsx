@@ -3175,7 +3175,7 @@ export default function ResumeEnhancerContainer({
   }
 
   return (
-    <div className="min-h-screen bg-[#f3f2ee] dark:bg-[#1a230f] flex overflow-hidden w-full">
+    <div className="h-macro bg-[#f3f2ee] dark:bg-[#1a230f] flex overflow-hidden w-full">
       {/* Desktop Sidebar - Hidden on sm/md, visible on lg and up */}
       {state.currentStep === 1 && (
         <div

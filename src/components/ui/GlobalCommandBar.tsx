@@ -305,12 +305,12 @@ export default function GlobalCommandBar() {
                                     autoFocus
                                     value={search}
                                     onChange={(e) => setSearch(e.target.value)}
-                                    className="w-full bg-transparent px-4 py-4 outline-none text-gray-900 dark:text-white placeholder-gray-400 text-sm md:text-base"
+                                    className="w-full bg-transparent px-4 py-4 outline-none text-gray-900 dark:text-white placeholder-gray-400 text-small md:text-body"
                                     placeholder="Type a command or search jobs, CVs, cover letters..."
                                 />
                                 <button 
                                     onClick={() => setIsOpen(false)}
-                                    className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded shrink-0"
+                                    className="text-small text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded shrink-0"
                                 >
                                     ESC
                                 </button>
@@ -319,12 +319,12 @@ export default function GlobalCommandBar() {
                             {/* Options & Results List */}
                             <div className="max-h-[60vh] overflow-y-auto p-2 scrollbar-thin">
                                 {isLoading ? (
-                                    <div className="p-8 text-center text-gray-500 dark:text-gray-400 text-sm">
+                                    <div className="p-8 text-center text-gray-500 dark:text-gray-400 text-small">
                                         <div className="inline-block animate-spin rounded-full h-5 w-5 border-2 border-lime-500 border-t-transparent mr-2 align-middle"></div>
                                         Searching...
                                     </div>
                                 ) : (filteredCommands.length === 0 && !hasSearchResults) ? (
-                                    <div className="p-8 text-center text-gray-500 text-sm">No results found.</div>
+                                    <div className="p-8 text-center text-gray-500 text-small">No results found.</div>
                                 ) : (
                                     <div className="space-y-4">
                                         {/* Navigation/Commands Section */}
@@ -345,7 +345,7 @@ export default function GlobalCommandBar() {
                                                                 <div className="p-1.5 bg-gray-100 dark:bg-gray-800 rounded-lg group-hover:bg-white dark:group-hover:bg-gray-700 transition-colors">
                                                                     <Icon className="w-3.5 h-3.5 text-gray-600 dark:text-gray-300" />
                                                                 </div>
-                                                                <span className="font-medium text-sm text-gray-900 dark:text-white">{cmd.title}</span>
+                                                                <span className="font-medium text-small text-gray-900 dark:text-white">{cmd.title}</span>
                                                             </button>
                                                         );
                                                     })}
@@ -371,8 +371,8 @@ export default function GlobalCommandBar() {
                                                                     <Briefcase className="w-3.5 h-3.5 text-gray-600 dark:text-gray-300" />
                                                                 </div>
                                                                 <div className="min-w-0">
-                                                                    <span className="font-medium text-sm text-gray-900 dark:text-white block truncate">{job.title}</span>
-                                                                    <span className="text-xs text-gray-500 dark:text-gray-400 block truncate">{job.company}{job.location && ` • ${job.location}`}</span>
+                                                                    <span className="font-medium text-small text-gray-900 dark:text-white block truncate">{job.title}</span>
+                                                                    <span className="text-small text-gray-500 dark:text-gray-400 block truncate">{job.company}{job.location && ` • ${job.location}`}</span>
                                                                 </div>
                                                             </div>
                                                             <span className={`text-[10px] px-2 py-0.5 rounded-full shrink-0 font-medium ${
@@ -407,7 +407,7 @@ export default function GlobalCommandBar() {
                                                                     <FileText className="w-3.5 h-3.5 text-gray-600 dark:text-gray-300" />
                                                                 </div>
                                                                 <div className="min-w-0">
-                                                                    <span className="font-medium text-sm text-gray-900 dark:text-white block truncate">{cv.title}</span>
+                                                                    <span className="font-medium text-small text-gray-900 dark:text-white block truncate">{cv.title}</span>
                                                                 </div>
                                                             </div>
                                                             {cv.isMaster && (
@@ -438,9 +438,9 @@ export default function GlobalCommandBar() {
                                                                 <Mail className="w-3.5 h-3.5 text-gray-600 dark:text-gray-300" />
                                                             </div>
                                                             <div className="min-w-0">
-                                                                <span className="font-medium text-sm text-gray-900 dark:text-white block truncate">{cl.title}</span>
+                                                                <span className="font-medium text-small text-gray-900 dark:text-white block truncate">{cl.title}</span>
                                                                 {cl.targetCompany && (
-                                                                    <span className="text-xs text-gray-500 dark:text-gray-400 block truncate">For: {cl.targetCompany}</span>
+                                                                    <span className="text-small text-gray-500 dark:text-gray-400 block truncate">For: {cl.targetCompany}</span>
                                                                 )}
                                                             </div>
                                                         </button>
@@ -486,7 +486,7 @@ export default function GlobalCommandBar() {
                 }}>
                     <div className="bg-white dark:bg-[#141810] rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-white/10">
-                            <h2 className="text-xl font-bold text-gray-900 dark:text-white">CV Preview</h2>
+                            <h2 className="text-h3 font-bold text-gray-900 dark:text-white">CV Preview</h2>
                             <button
                                 onClick={() => {
                                     setShowCVModal(false);

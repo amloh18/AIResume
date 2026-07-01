@@ -108,7 +108,7 @@ export default function PublicJobPage() {
           {branding.logoUrl ? (
             <img src={branding.logoUrl} alt="Logo" className="h-8 w-auto object-contain" />
           ) : (
-            <div className="font-bold text-lg" style={{ color: branding.brandColor || '#4C9900' }}>
+            <div className="font-bold text-h3" style={{ color: branding.brandColor || '#4C9900' }}>
               {slug.charAt(0).toUpperCase() + slug.slice(1)}
             </div>
           )}
@@ -119,10 +119,10 @@ export default function PublicJobPage() {
       <div className="bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800 pt-12 pb-16 px-6 relative overflow-hidden">
         <div className="absolute inset-0 opacity-5 pointer-events-none" style={{ backgroundColor: branding.brandColor || '#4C9900' }}></div>
         <div className="max-w-4xl mx-auto relative z-10 text-center">
-          <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-gray-900 dark:text-white mb-6">
+          <h1 className="text-display md:text-display font-extrabold tracking-tight text-gray-900 dark:text-white mb-6">
             {job.jobTitle}
           </h1>
-          <div className="flex flex-wrap items-center justify-center gap-6 text-base font-medium text-gray-600 dark:text-gray-400">
+          <div className="flex flex-wrap items-center justify-center gap-6 text-body font-medium text-gray-600 dark:text-gray-400">
             <span className="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 px-4 py-2 rounded-full"><Briefcase className="w-5 h-5" /> {job.company}</span>
             <span className="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 px-4 py-2 rounded-full"><MapPin className="w-5 h-5" /> {job.location || 'Remote'}</span>
           </div>
@@ -133,7 +133,7 @@ export default function PublicJobPage() {
         {/* Job Description */}
         <div className="md:col-span-2 space-y-8">
           <div className="bg-white dark:bg-gray-950 rounded-2xl p-8 border border-gray-200 dark:border-gray-800 shadow-sm">
-            <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
+            <h3 className="text-h2 font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
               <FileText className="w-6 h-6 text-primary" style={{ color: branding.brandColor || '#4C9900' }} />
               About the Role
             </h3>
@@ -154,8 +154,8 @@ export default function PublicJobPage() {
                     <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
                       <CheckCircle className="w-8 h-8" />
                     </div>
-                    <h3 className="text-xl font-bold text-gray-900 dark:text-white">Application Received!</h3>
-                    <p className="text-gray-500 text-sm">Thank you for applying. Our team will review your profile shortly.</p>
+                    <h3 className="text-h3 font-bold text-gray-900 dark:text-white">Application Received!</h3>
+                    <p className="text-gray-500 text-small">Thank you for applying. Our team will review your profile shortly.</p>
                     <Button className="w-full mt-6" variant="outline" onClick={() => router.push(`/careers/${slug}`)}>
                       Browse More Jobs
                     </Button>
@@ -163,8 +163,8 @@ export default function PublicJobPage() {
                 ) : (
                   <div className="space-y-6">
                     <div>
-                      <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Apply Now</h3>
-                      <p className="text-sm text-gray-500">Upload your CV and let our AI do the rest.</p>
+                      <h3 className="text-h3 font-bold text-gray-900 dark:text-white mb-2">Apply Now</h3>
+                      <p className="text-small text-gray-500">Upload your CV and let our AI do the rest.</p>
                     </div>
 
                     <div className={`border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center text-center transition-all ${file ? 'border-primary bg-primary/5' : 'border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900 cursor-pointer'}`} style={file ? { borderColor: branding.brandColor || '#4C9900', backgroundColor: `${branding.brandColor}10` || '#f0fdf4' } : {}}>
@@ -172,16 +172,16 @@ export default function PublicJobPage() {
                       
                       {file ? (
                         <div className="space-y-1 w-full">
-                          <p className="text-sm font-bold text-gray-900 dark:text-white truncate px-2">{file.name}</p>
-                          <p className="text-xs text-gray-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
-                          <button onClick={(e) => { e.stopPropagation(); setFile(null); }} className="text-xs text-red-500 hover:underline mt-2">Remove File</button>
+                          <p className="text-small font-bold text-gray-900 dark:text-white truncate px-2">{file.name}</p>
+                          <p className="text-small text-gray-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                          <button onClick={(e) => { e.stopPropagation(); setFile(null); }} className="text-small text-red-500 hover:underline mt-2">Remove File</button>
                         </div>
                       ) : (
                         <div className="space-y-2">
-                          <label htmlFor="resume-upload" className="cursor-pointer text-sm font-bold hover:underline block" style={{ color: branding.brandColor || '#4C9900' }}>
+                          <label htmlFor="resume-upload" className="cursor-pointer text-small font-bold hover:underline block" style={{ color: branding.brandColor || '#4C9900' }}>
                             Choose a file
                           </label>
-                          <p className="text-xs text-gray-500">PDF or DOCX (Max 5MB)</p>
+                          <p className="text-small text-gray-500">PDF or DOCX (Max 5MB)</p>
                           <input 
                             id="resume-upload" 
                             type="file" 
@@ -194,7 +194,7 @@ export default function PublicJobPage() {
                     </div>
 
                     <Button 
-                      className="w-full h-12 text-base font-bold shadow-md hover:shadow-lg transition-all" 
+                      className="w-full h-12 text-body font-bold shadow-md hover:shadow-lg transition-all" 
                       style={{ backgroundColor: branding.brandColor || '#4C9900', color: '#fff' }}
                       onClick={handleApply}
                       disabled={submitting || !file}
@@ -202,7 +202,7 @@ export default function PublicJobPage() {
                       {submitting ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : null}
                       {submitting ? 'Submitting...' : 'Submit Application'}
                     </Button>
-                    <p className="text-xs text-center text-gray-400">By applying, you agree to our privacy policy.</p>
+                    <p className="text-small text-center text-gray-400">By applying, you agree to our privacy policy.</p>
                   </div>
                 )}
               </CardContent>

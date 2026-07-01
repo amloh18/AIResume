@@ -125,29 +125,29 @@ export default function ResumeMistakesPage() {
 
         <article className="max-w-4xl mx-auto px-4 pt-32 pb-16">
           <header className="mb-12 text-center">
-            <MotionDiv initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="inline-block px-4 py-2 bg-red-500/20 text-red-400 rounded-full text-sm font-medium mb-6">
+            <MotionDiv initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="inline-block px-4 py-2 bg-red-500/20 text-red-400 rounded-full text-small font-medium mb-6">
               Avoid These Mistakes
             </MotionDiv>
-            <MotionDiv initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="text-4xl md:text-5xl font-bold text-white mb-6">
+            <MotionDiv initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="text-display md:text-display font-bold text-white mb-6">
               Resume Mistakes to Avoid in 2026
             </MotionDiv>
-            <MotionDiv initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="text-xl text-gray-400">
+            <MotionDiv initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="text-h3 text-gray-400">
               These common errors could be costing you interviews
             </MotionDiv>
           </header>
 
           <section className="mb-12">
-            <h2 className="text-2xl font-bold text-white mb-6">Critical Mistakes That Kill Your Chances</h2>
+            <h2 className="text-h2 font-bold text-white mb-6">Critical Mistakes That Kill Your Chances</h2>
             <div className="space-y-4">
               {criticalMistakes.map((mistake, i) => (
                 <MotionDiv key={i} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }} viewport={{ once: true }}
                   className="bg-[#1a1f1a] rounded-xl p-6 border border-white/5">
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <h3 className="text-lg font-semibold text-white mb-2">{mistake.title}</h3>
+                      <h3 className="text-h3 font-semibold text-white mb-2">{mistake.title}</h3>
                       <p className="text-gray-400">{mistake.desc}</p>
                     </div>
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium shrink-0 ${mistake.impact === 'High' ? 'bg-red-500/20 text-red-400' : 'bg-yellow-500/20 text-yellow-400'}`}>
+                    <span className={`px-3 py-1 rounded-full text-small font-medium shrink-0 ${mistake.impact === 'High' ? 'bg-red-500/20 text-red-400' : 'bg-yellow-500/20 text-yellow-400'}`}>
                       {mistake.impact} Impact
                     </span>
                   </div>
@@ -157,10 +157,10 @@ export default function ResumeMistakesPage() {
           </section>
 
           <section className="mb-12">
-            <h2 className="text-2xl font-bold text-white mb-6">Quick Dos and Don&apos;ts</h2>
+            <h2 className="text-h2 font-bold text-white mb-6">Quick Dos and Don&apos;ts</h2>
             <div className="grid md:grid-cols-2 gap-6">
               <div className="bg-green-900/20 border border-green-800 rounded-xl p-6">
-                <h3 className="text-lg font-semibold text-green-400 mb-4 flex items-center gap-2">
+                <h3 className="text-h3 font-semibold text-green-400 mb-4 flex items-center gap-2">
                   <CheckCircle className="w-5 h-5" /> Do This
                 </h3>
                 <ul className="space-y-2 text-gray-300">
@@ -173,7 +173,7 @@ export default function ResumeMistakesPage() {
                 </ul>
               </div>
               <div className="bg-red-900/20 border border-red-800 rounded-xl p-6">
-                <h3 className="text-lg font-semibold text-red-400 mb-4 flex items-center gap-2">
+                <h3 className="text-h3 font-semibold text-red-400 mb-4 flex items-center gap-2">
                   <XCircle className="w-5 h-5" /> Avoid This
                 </h3>
                 <ul className="space-y-2 text-gray-300">
@@ -189,7 +189,7 @@ export default function ResumeMistakesPage() {
           </section>
 
           <section className="mb-12">
-            <h2 className="text-2xl font-bold text-white mb-4">The Resume Red Flags Recruiters Hate</h2>
+            <h2 className="text-h2 font-bold text-white mb-4">The Resume Red Flags Recruiters Hate</h2>
             <div className="bg-red-900/10 border border-red-800/50 rounded-xl p-6">
               <ul className="space-y-3 text-gray-300">
                 {['Spelling errors', 'Wrong contact information', 'Inconsistent dates', 'Unprofessional email address', 'Gaps without explanation', 'Too many buzzwords', 'Old or irrelevant experience', 'No quantifiable results'].map((item, i) => (
@@ -202,7 +202,7 @@ export default function ResumeMistakesPage() {
           </section>
 
           <section className="mt-16 bg-gradient-to-r from-red-600 to-rose-600 rounded-2xl p-8 text-center">
-            <h2 className="text-2xl font-bold text-white mb-4">Create a Perfect Resume</h2>
+            <h2 className="text-h2 font-bold text-white mb-4">Create a Perfect Resume</h2>
             <p className="text-red-100 mb-6">Avoid these mistakes with our AI-powered resume builder.</p>
             <Link href="/sign-up?callbackUrl=/resume-enhancer" className="inline-flex items-center gap-2 bg-white text-red-700 px-8 py-4 rounded-full font-bold hover:bg-gray-100 transition">
               Build Perfect Resume Free <ArrowRight className="w-5 h-5" />
@@ -210,7 +210,7 @@ export default function ResumeMistakesPage() {
           </section>
 
           <section className="mt-12">
-            <h3 className="text-xl font-bold text-white mb-4">Related Pages</h3>
+            <h3 className="text-h3 font-bold text-white mb-4">Related Pages</h3>
             <div className="flex flex-wrap gap-3">
               <Link href="/ai-resume-builder" className="px-4 py-2 bg-[#1a1f1a] text-gray-300 rounded-lg hover:bg-[#2a2f2a] transition">AI Resume Builder</Link>
               <Link href="/ats-resume-checker" className="px-4 py-2 bg-[#1a1f1a] text-gray-300 rounded-lg hover:bg-[#2a2f2a] transition">ATS Checker</Link>
@@ -223,13 +223,13 @@ export default function ResumeMistakesPage() {
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 bg-[#81ff00] rounded flex items-center justify-center">
-              <span className="text-black font-bold text-xs">CV</span>
+              <span className="text-black font-bold text-small">CV</span>
             </div>
-            <span className="text-gray-500 text-sm">© 2026 CVCircle</span>
+            <span className="text-gray-500 text-small">© 2026 CVCircle</span>
           </div>
           <div className="flex gap-6">
-            <Link href="/privacy-policy" className="text-gray-500 text-sm">Privacy</Link>
-            <Link href="/terms" className="text-gray-500 text-sm">Terms</Link>
+            <Link href="/privacy-policy" className="text-gray-500 text-small">Privacy</Link>
+            <Link href="/terms" className="text-gray-500 text-small">Terms</Link>
           </div>
         </div>
       </footer>

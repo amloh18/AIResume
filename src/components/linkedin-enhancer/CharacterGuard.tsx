@@ -58,7 +58,7 @@ export default function CharacterGuard({
         <div className="flex items-center gap-3">
             {/* Main Character Counter */}
             <div
-                className="flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-medium"
+                className="flex items-center gap-2 px-2.5 py-1 rounded-full text-small font-medium"
                 style={{
                     backgroundColor: colors.bg,
                     color: colors.text,
@@ -89,7 +89,7 @@ export default function CharacterGuard({
             {/* Hook Warning (for About section) */}
             {hookLimit && hookColors && current > 0 && (
                 <div
-                    className="text-xs px-2 py-0.5 rounded-full"
+                    className="text-small px-2 py-0.5 rounded-full"
                     style={{
                         backgroundColor: hookColors.bg,
                         color: hookColors.text,

@@ -1423,10 +1423,10 @@ const JobsTracker: React.FC = () => {
                   <div className="flex items-center gap-3 min-w-0 flex-1 overflow-hidden">
                     <FileText size={20} className="text-blue-600 dark:text-blue-400 flex-shrink-0" />
                     <div className="min-w-0 flex-1">
-                      <h3 className="text-sm font-medium text-blue-900 dark:text-blue-100 truncate">
+                      <h3 className="text-small font-medium text-blue-900 dark:text-blue-100 truncate">
                         Working with CV: {cvContext.title}
                       </h3>
-                      <p className="text-xs text-blue-700 dark:text-blue-300 truncate">
+                      <p className="text-small text-blue-700 dark:text-blue-300 truncate">
                         Create or continue application journeys for this CV
                       </p>
                     </div>
@@ -1436,7 +1436,7 @@ const JobsTracker: React.FC = () => {
                       setCvContext(null);
                       window.history.replaceState({}, '', '/dashboard/tracker');
                     }}
-                    className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 text-sm font-medium flex-shrink-0 whitespace-nowrap"
+                    className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 text-small font-medium flex-shrink-0 whitespace-nowrap"
                   >
                     Clear Context
                   </button>
@@ -1480,7 +1480,7 @@ const JobsTracker: React.FC = () => {
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <span className="text-sm font-medium text-blue-400">
+                      <span className="text-small font-medium text-blue-400">
                         {selectedJobs.size} job{selectedJobs.size !== 1 ? 's' : ''} selected
                       </span>
                       <button
@@ -1488,7 +1488,7 @@ const JobsTracker: React.FC = () => {
                           setSelectedJobs(new Set());
                           setShowBulkActions(false);
                         }}
-                        className="text-blue-400 hover:text-blue-300 text-sm"
+                        className="text-blue-400 hover:text-blue-300 text-small"
                       >
                         Clear selection
                       </button>
@@ -1510,7 +1510,7 @@ const JobsTracker: React.FC = () => {
                             setShowBulkActions(false);
                           });
                         }}
-                        className="px-3 py-1 border border-gray-300 dark:border-lime-500/20 rounded-full bg-gray-100 dark:bg-[#232f1c] text-gray-900 dark:text-white text-sm"
+                        className="px-3 py-1 border border-gray-300 dark:border-lime-500/20 rounded-full bg-gray-100 dark:bg-[#232f1c] text-gray-900 dark:text-white text-small"
                         defaultValue=""
                       >
                         <option value="" disabled>Update Status</option>
@@ -1534,7 +1534,7 @@ const JobsTracker: React.FC = () => {
                           setSelectedJobs(new Set());
                           setShowBulkActions(false);
                         }}
-                        className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded-full text-sm font-medium transition-colors flex items-center gap-1"
+                        className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded-full text-small font-medium transition-colors flex items-center gap-1"
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                       >

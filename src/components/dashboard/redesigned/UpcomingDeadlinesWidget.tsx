@@ -56,7 +56,7 @@ export default function UpcomingDeadlinesWidget({ deadlines = defaultDeadlines, 
               <ArrowRight size={14} className="text-gray-300 group-hover:text-[#83d60d] transition-colors" />
             </div>
             
-            <h4 className="text-xs font-black text-gray-800 dark:text-gray-200 mb-1">{deadline.title}</h4>
+            <h4 className="text-small font-black text-gray-800 dark:text-gray-200 mb-1">{deadline.title}</h4>
             <div className="flex items-center gap-1.5 text-[10px] font-medium text-gray-400">
               <Calendar size={10} />
               <span>{deadline.date}</span>

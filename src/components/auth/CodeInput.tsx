@@ -143,7 +143,7 @@ export default function CodeInput({
             onFocus={() => handleFocus(index)}
             disabled={disabled}
             className={`
-              w-16 h-16 text-2xl font-bold text-center
+              w-16 h-16 text-h2 font-bold text-center
               bg-white dark:bg-transparent rounded-none
               text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500
               outline-none focus:outline-none
@@ -165,12 +165,12 @@ export default function CodeInput({
           animate={{ opacity: 1, y: 0 }}
           className="text-center"
         >
-          <p className="text-red-500 dark:text-red-400 text-sm">{error}</p>
+          <p className="text-red-500 dark:text-red-400 text-small">{error}</p>
         </motion.div>
       )}
 
       <div className="text-center">
-        <p className="text-gray-500 dark:text-gray-400 text-sm">
+        <p className="text-gray-500 dark:text-gray-400 text-small">
           Enter the 4-digit code sent to your email
         </p>
       </div>

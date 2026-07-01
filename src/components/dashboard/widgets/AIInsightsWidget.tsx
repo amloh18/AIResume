@@ -93,10 +93,10 @@ export default function AIInsightsWidget({ className }: AIInsightsWidgetProps) {
           <Sparkles size={16} className="text-white" />
         </div>
         <div>
-          <h3 className="text-base font-bold text-gray-900 dark:text-white">
+          <h3 className="text-body font-bold text-gray-900 dark:text-white">
             AI Insights
           </h3>
-          <p className="text-xs text-gray-500 dark:text-gray-400">
+          <p className="text-small text-gray-500 dark:text-gray-400">
             Personalized recommendations
           </p>
         </div>
@@ -141,15 +141,15 @@ export default function AIInsightsWidget({ className }: AIInsightsWidgetProps) {
                       <Icon size={14} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
+                      <p className="text-small font-semibold text-gray-900 dark:text-white mb-1">
                         {insight.title}
                       </p>
-                      <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+                      <p className="text-small text-gray-600 dark:text-gray-300 leading-relaxed">
                         {insight.description}
                       </p>
                       
                       {insight.actionable && (
-                        <button className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors">
+                        <button className="mt-2 inline-flex items-center gap-1 text-small font-medium text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors">
                           {insight.cta}
                           <ArrowRight size={12} />
                         </button>
@@ -163,7 +163,7 @@ export default function AIInsightsWidget({ className }: AIInsightsWidgetProps) {
         )}
 
         {!isLoading && visibleInsights.length === 0 && (
-          <div className="py-6 text-center text-sm text-gray-500 dark:text-gray-400">
+          <div className="py-6 text-center text-small text-gray-500 dark:text-gray-400">
             No new insights. Check back later!
           </div>
         )}
@@ -171,7 +171,7 @@ export default function AIInsightsWidget({ className }: AIInsightsWidgetProps) {
 
       {/* Footer link */}
       <div className="mt-3 pt-3 border-t border-gray-100 dark:border-white/5 text-right">
-        <span className="text-xs font-medium text-gray-600 dark:text-gray-300 hover:text-lime-600 dark:hover:text-lime-400 transition-colors cursor-pointer">
+        <span className="text-small font-medium text-gray-600 dark:text-gray-300 hover:text-lime-600 dark:hover:text-lime-400 transition-colors cursor-pointer">
           View All Insights →
         </span>
       </div>

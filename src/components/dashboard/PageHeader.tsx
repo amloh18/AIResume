@@ -45,7 +45,7 @@ export default function PageHeader(props: PageHeaderProps) {
   return (
     <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 mb-4">
       {/* Left: Breadcrumbs */}
-      <div className="flex items-center gap-1.5 text-base text-gray-500 dark:text-gray-400 font-medium">
+      <div className="flex items-center gap-1.5 text-body text-gray-500 dark:text-gray-400 font-medium">
         <span 
           onClick={() => router.push('/dashboard')}
           className="hover:text-lime-600 dark:hover:text-lime-400 cursor-pointer transition-colors"

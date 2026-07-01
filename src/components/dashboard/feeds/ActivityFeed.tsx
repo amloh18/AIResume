@@ -88,10 +88,10 @@ export default function ActivityFeed({ className }: ActivityFeedProps) {
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+          <h3 className="text-h3 font-bold text-gray-900 dark:text-white">
             Recent Activity
           </h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <p className="text-small text-gray-500 dark:text-gray-400">
             Timeline of your career journey
           </p>
         </div>
@@ -108,7 +108,7 @@ export default function ActivityFeed({ className }: ActivityFeedProps) {
           </div>
         ) : activities.length === 0 ? (
           <div className="text-center py-10">
-            <p className="text-sm text-gray-500">No recent activities found.</p>
+            <p className="text-small text-gray-500">No recent activities found.</p>
           </div>
         ) : (
           activities.map((activity, idx) => {
@@ -135,7 +135,7 @@ export default function ActivityFeed({ className }: ActivityFeedProps) {
                     <Icon size={14} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-900 dark:text-white leading-snug">
+                    <p className="text-small text-gray-900 dark:text-white leading-snug">
                       {activity.message.split(': ').length > 1 ? (
                         <>
                           <span className="font-bold text-emerald-600 dark:text-emerald-400 mr-1">
@@ -147,7 +147,7 @@ export default function ActivityFeed({ className }: ActivityFeedProps) {
                         activity.message
                       )}
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                    <p className="text-small text-gray-500 dark:text-gray-400 mt-0.5">
                       {formatTimeAgo(activity.timestamp)}
                     </p>
                   </div>
@@ -155,7 +155,7 @@ export default function ActivityFeed({ className }: ActivityFeedProps) {
 
                 {/* Hover action */}
                 <div className="absolute right-0 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button className="text-xs text-emerald-600 dark:text-emerald-400 font-medium hover:underline">
+                  <button className="text-small text-emerald-600 dark:text-emerald-400 font-medium hover:underline">
                     View
                   </button>
                 </div>
@@ -167,7 +167,7 @@ export default function ActivityFeed({ className }: ActivityFeedProps) {
 
       {/* Load more */}
       <div className="pt-3 border-t border-gray-100 dark:border-white/5 mt-2">
-        <button className="text-xs font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors w-full text-center py-1">
+        <button className="text-small font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors w-full text-center py-1">
           Load more activity →
         </button>
       </div>

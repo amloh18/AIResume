@@ -60,7 +60,7 @@ export default function BotActivityFeed({ activities = defaultActivities, loadin
               {activity.type === 'system' && <Zap size={10} />}
             </div>
             <div className="flex-1 pb-4 border-b border-gray-50 dark:border-white/[0.02]">
-              <p className="text-xs font-bold text-gray-700 dark:text-gray-300 leading-snug">
+              <p className="text-small font-bold text-gray-700 dark:text-gray-300 leading-snug">
                 {activity.text}
               </p>
               <p className="text-[10px] font-medium text-gray-400 mt-1">{activity.time}</p>

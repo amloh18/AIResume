@@ -110,7 +110,7 @@ export default function LinkedInProfileSync({
           </div>
           <div>
             <h3 className="font-bold text-gray-900 dark:text-white">LinkedIn Profile Sync</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Compare and sync your profiles</p>
+            <p className="text-small text-gray-500 dark:text-gray-400">Compare and sync your profiles</p>
           </div>
         </div>
         
@@ -118,7 +118,7 @@ export default function LinkedInProfileSync({
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
-            className="flex items-center gap-1 text-green-600 text-sm"
+            className="flex items-center gap-1 text-green-600 text-small"
           >
             <CheckCircle className="w-4 h-4" />
             Synced
@@ -129,7 +129,7 @@ export default function LinkedInProfileSync({
       {/* Differences Summary */}
       {differences.length > 0 ? (
         <div className="mb-6">
-          <p className="text-sm font-medium text-gray-900 dark:text-white mb-3">
+          <p className="text-small font-medium text-gray-900 dark:text-white mb-3">
             Differences Found ({differences.length})
           </p>
           <div className="space-y-2">
@@ -143,11 +143,11 @@ export default function LinkedInProfileSync({
               >
                 <div className="flex items-center gap-2 mb-1">
                   <AlertCircle className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />
-                  <span className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                  <span className="text-small font-medium text-yellow-800 dark:text-yellow-200">
                     {diff.field}
                   </span>
                 </div>
-                <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="grid grid-cols-2 gap-2 text-small">
                   <div>
                     <span className="text-gray-500 dark:text-gray-400">CV: </span>
                     <span className="text-gray-900 dark:text-white">{diff.cv}</span>
@@ -164,7 +164,7 @@ export default function LinkedInProfileSync({
       ) : (
         <div className="mb-6 flex items-center gap-2 text-green-600 dark:text-green-400">
           <CheckCircle className="w-5 h-5" />
-          <span className="text-sm">Your profiles are in sync!</span>
+          <span className="text-small">Your profiles are in sync!</span>
         </div>
       )}
 
@@ -188,14 +188,14 @@ export default function LinkedInProfileSync({
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="mt-4 flex items-center gap-2 text-red-600 text-sm"
+          className="mt-4 flex items-center gap-2 text-red-600 text-small"
         >
           <AlertCircle className="w-4 h-4" />
           Failed to sync. Please try again.
         </motion.div>
       )}
 
-      <p className="mt-4 text-xs text-gray-400 dark:text-gray-500 text-center">
+      <p className="mt-4 text-small text-gray-400 dark:text-gray-500 text-center">
         This will overwrite your CV data with LinkedIn information
       </p>
     </motion.div>

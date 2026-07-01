@@ -111,14 +111,14 @@ const FloatingAICard = ({ pointSuggestion, setPointSuggestion, handleFetchSugges
         <div className="flex px-5 pt-4 gap-4 border-b border-white/5">
           <button 
             onClick={() => setActiveTab('improvement')}
-            className={`pb-3 text-xs font-bold tracking-wide transition-all relative ${activeTab === 'improvement' ? 'text-emerald-400' : 'text-gray-500 hover:text-gray-300'}`}
+            className={`pb-3 text-small font-bold tracking-wide transition-all relative ${activeTab === 'improvement' ? 'text-emerald-400' : 'text-gray-500 hover:text-gray-300'}`}
           >
             IMPROVEMENT
             {activeTab === 'improvement' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-400 rounded-full" />}
           </button>
           <button 
             onClick={() => setActiveTab('original')}
-            className={`pb-3 text-xs font-bold tracking-wide transition-all relative ${activeTab === 'original' ? 'text-emerald-400' : 'text-gray-500 hover:text-gray-300'}`}
+            className={`pb-3 text-small font-bold tracking-wide transition-all relative ${activeTab === 'original' ? 'text-emerald-400' : 'text-gray-500 hover:text-gray-300'}`}
           >
             ORIGINAL
             {activeTab === 'original' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-400 rounded-full" />}
@@ -138,7 +138,7 @@ const FloatingAICard = ({ pointSuggestion, setPointSuggestion, handleFetchSugges
         ) : pointSuggestion.error === 'usage_limit_reached' ? (
           <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 flex gap-3">
             <AlertCircle className="text-red-400 shrink-0" size={20} />
-            <div className="text-sm text-red-100 leading-relaxed">
+            <div className="text-small text-red-100 leading-relaxed">
               <span className="font-bold block mb-1">Limit Reached</span>
               Upgrade to Pro for unlimited AI-powered contextual suggestions and career coaching.
               <button
@@ -157,7 +157,7 @@ const FloatingAICard = ({ pointSuggestion, setPointSuggestion, handleFetchSugges
             </div>
           </div>
         ) : pointSuggestion.error ? (
-          <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 text-sm text-red-400 flex items-center gap-2">
+          <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 text-small text-red-400 flex items-center gap-2">
             <AlertCircle size={16} /> {pointSuggestion.error}
           </div>
         ) : (
@@ -184,15 +184,15 @@ const FloatingAICard = ({ pointSuggestion, setPointSuggestion, handleFetchSugges
           <div className="flex flex-col gap-2">
             <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Targeted Refinement</p>
             <div className="flex flex-wrap gap-2">
-              <button onClick={() => handleFetchSuggestion('star')} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 rounded-lg text-xs font-bold transition-all border border-blue-500/20"><Sparkles size={12}/> STAR Method</button>
-              <button onClick={() => handleFetchSuggestion('quantify')} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 rounded-lg text-xs font-bold transition-all border border-purple-500/20"># Quantify</button>
-              <button onClick={() => handleFetchSuggestion('concise')} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 rounded-lg text-xs font-bold transition-all border border-orange-500/20">✂️ Concise</button>
-              <button onClick={() => handleFetchSuggestion('action_verbs')} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-lg text-xs font-bold transition-all border border-emerald-500/20">🚀 Power Verbs</button>
+              <button onClick={() => handleFetchSuggestion('star')} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 rounded-lg text-small font-bold transition-all border border-blue-500/20"><Sparkles size={12}/> STAR Method</button>
+              <button onClick={() => handleFetchSuggestion('quantify')} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 rounded-lg text-small font-bold transition-all border border-purple-500/20"># Quantify</button>
+              <button onClick={() => handleFetchSuggestion('concise')} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 rounded-lg text-small font-bold transition-all border border-orange-500/20">✂️ Concise</button>
+              <button onClick={() => handleFetchSuggestion('action_verbs')} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-lg text-small font-bold transition-all border border-emerald-500/20">🚀 Power Verbs</button>
               
               <div className="relative inline-block">
                 <select 
                   onChange={(e) => handleFetchSuggestion('tone', e.target.value)} 
-                  className="bg-white/5 hover:bg-white/10 text-xs text-gray-300 border border-white/10 rounded-lg px-2.5 py-1.5 outline-none focus:border-emerald-500/50 appearance-none cursor-pointer pr-7 font-bold transition-all"
+                  className="bg-white/5 hover:bg-white/10 text-small text-gray-300 border border-white/10 rounded-lg px-2.5 py-1.5 outline-none focus:border-emerald-500/50 appearance-none cursor-pointer pr-7 font-bold transition-all"
                 >
                   <option value="">🎭 Tone...</option>
                   <option value="Professional">Professional</option>
@@ -206,7 +206,7 @@ const FloatingAICard = ({ pointSuggestion, setPointSuggestion, handleFetchSugges
           </div>
 
           <div className="flex gap-3 pt-4 border-t border-white/5">
-            <button onClick={() => setPointSuggestion(null)} className="flex-1 px-4 py-2.5 text-sm font-bold rounded-xl bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white transition-all">Cancel</button>
+            <button onClick={() => setPointSuggestion(null)} className="flex-1 px-4 py-2.5 text-small font-bold rounded-xl bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white transition-all">Cancel</button>
             <button 
               onClick={() => { 
                 const currentHtml = getNestedValue(cvData, pointSuggestion.path) || ''; 
@@ -219,7 +219,7 @@ const FloatingAICard = ({ pointSuggestion, setPointSuggestion, handleFetchSugges
                 handleDataChange(pointSuggestion.path, newHtml); 
                 setPointSuggestion(null); 
               }} 
-              className="flex-[1.5] px-4 py-2.5 text-sm font-bold rounded-xl shadow-[0_4px_20px_rgba(126,231,135,0.2)] bg-emerald-400 text-[#0a0a0a] hover:bg-emerald-300 active:scale-[0.98] transition-all"
+              className="flex-[1.5] px-4 py-2.5 text-small font-bold rounded-xl shadow-[0_4px_20px_rgba(126,231,135,0.2)] bg-emerald-400 text-[#0a0a0a] hover:bg-emerald-300 active:scale-[0.98] transition-all"
             >
               Accept & Add Bullet
             </button>
@@ -1037,12 +1037,12 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
 
   const handleTogglePhoto = () => {
     if (!cvData.basics?.showAvatar) {
-      // Enable avatar and open file picker
       handleDataChange('basics.showAvatar', true);
-      setTimeout(() => photoInputRef.current?.click(), 50);
+      if (!cvData.basics?.avatar) {
+        setTimeout(() => photoInputRef.current?.click(), 50);
+      }
     } else {
-      // When avatar is already shown, open file picker to change it
-      photoInputRef.current?.click();
+      handleDataChange('basics.showAvatar', false);
     }
   };
 
@@ -1450,18 +1450,18 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
               <button onClick={() => setActiveSidebar(null)} className={textMuted}><X size={18}/></button>
             </div>
             <div className="p-5 flex flex-col gap-6 overflow-y-auto custom-scrollbar">
-              <div><label className={`text-xs font-bold uppercase tracking-widest mb-2 block ${textMuted}`}>Typography</label><div className="grid grid-cols-2 gap-2">{['Inter', 'Merriweather', 'Roboto Mono', 'Playfair Display'].map(f => (<button key={f} onClick={() => setDesign({...design, font: f})} className={`py-2 px-1 text-xs rounded border transition-colors ${design.font === f ? 'bg-emerald-500/20 border-emerald-500 ' + brandGreen : (isDarkUI ? 'bg-[#222] border-[#333] text-gray-300' : 'bg-white border-gray-200 text-gray-700')}`} style={{ fontFamily: f }}>{f.split(' ')[0]}</button>))}</div></div>
-              <div><label className={`text-xs font-bold uppercase tracking-widest mb-2 flex justify-between ${textMuted}`}><span>Font Size</span><span className={brandGreen}>{design.fontSize}px</span></label><input type="range" min="10" max="16" step="0.5" value={design.fontSize} onChange={(e) => setDesign({...design, fontSize: parseFloat(e.target.value)})} className="w-full accent-emerald-500" /></div>
-              <div><label className={`text-xs font-bold uppercase tracking-widest mb-2 flex justify-between ${textMuted}`}><span>Line Spacing</span><span className={brandGreen}>{design.spacing.toFixed(1)}x</span></label><input type="range" min="0.5" max="2" step="0.1" value={design.spacing} onChange={(e) => setDesign({...design, spacing: parseFloat(e.target.value)})} className="w-full accent-emerald-500" /></div>
-              <div><label className={`text-xs font-bold uppercase tracking-widest mb-2 flex justify-between ${textMuted}`}><span>Page Margin</span><span className={brandGreen}>{design.pageMargin}px</span></label><input type="range" min="0" max="80" step="1" value={design.pageMargin} onChange={(e) => setDesign({...design, pageMargin: parseInt(e.target.value)})} className="w-full accent-emerald-500" /></div>
-              <div><label className={`text-xs font-bold uppercase tracking-widest mb-2 block ${textMuted}`}>Accent Color</label><div className="flex gap-3 flex-wrap">{['#7EE787', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#1f2937', '#000000', '#ffffff'].map(c => (<button key={c} onClick={() => setDesign({...design, accentColor: c})} className={`w-7 h-7 rounded-full border-2 transition-transform ${design.accentColor === c ? 'border-white scale-125 shadow-lg' : 'border-transparent hover:scale-110'}`} style={{ backgroundColor: c }} />))}</div></div>
-              <div><label className={`text-xs font-bold uppercase tracking-widest mb-2 block ${textMuted}`}>Sidebar Background</label><div className="flex gap-3 flex-wrap">{['#ffffff', '#f8fafc', '#f3f4f6', '#fafaf9', '#f0fdf4', '#f0f9ff', '#fff1f2', '#1e293b', '#0f172a', '#111827', '#1a0f0f', '#0d233a', '#0c2511', '#2a1428'].map(c => (<button key={c} onClick={() => setDesign({...design, sidebarBgColor: c})} className={`w-7 h-7 rounded-full border-2 transition-transform ${design.sidebarBgColor === c ? 'border-emerald-500 scale-125 shadow-lg' : 'border-gray-300 dark:border-gray-600 hover:scale-110'}`} style={{ backgroundColor: c }} />))}</div></div>
-              <div><label className={`text-xs font-bold uppercase tracking-widest mb-2 flex justify-between ${textMuted}`}><span>Section Gap</span><span className={brandGreen}>{design.sectionGap}px</span></label><input type="range" min="0" max="60" step="1" value={design.sectionGap} onChange={(e) => setDesign({...design, sectionGap: parseInt(e.target.value)})} className="w-full accent-emerald-500" /></div>
-              <div className="mt-4"><label className={`flex items-center justify-between cursor-pointer`}><span className={`text-xs font-bold uppercase tracking-widest ${textMuted}`}>Header Icons</span><div className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors ${design.showHeaderIcons ? brandGreenBg : (isDarkUI ? 'bg-[#333]' : 'bg-gray-300')}`} onClick={() => setDesign({...design, showHeaderIcons: !design.showHeaderIcons})}><span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${design.showHeaderIcons ? 'translate-x-6' : 'translate-x-1'}`} /></div></label></div>
-              <div className="mt-4"><label className={`flex items-center justify-between cursor-pointer`}><span className={`text-xs font-bold uppercase tracking-widest ${textMuted}`}>Contact Icons</span><div className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors ${design.showContactIcons ? brandGreenBg : (isDarkUI ? 'bg-[#333]' : 'bg-gray-300')}`} onClick={() => setDesign({...design, showContactIcons: !design.showContactIcons})}><span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${design.showContactIcons ? 'translate-x-6' : 'translate-x-1'}`} /></div></label></div>
+              <div><label className={`text-small font-bold uppercase tracking-widest mb-2 block ${textMuted}`}>Typography</label><div className="grid grid-cols-2 gap-2">{['Inter', 'Merriweather', 'Roboto Mono', 'Playfair Display'].map(f => (<button key={f} onClick={() => setDesign({...design, font: f})} className={`py-2 px-1 text-small rounded border transition-colors ${design.font === f ? 'bg-emerald-500/20 border-emerald-500 ' + brandGreen : (isDarkUI ? 'bg-[#222] border-[#333] text-gray-300' : 'bg-white border-gray-200 text-gray-700')}`} style={{ fontFamily: f }}>{f.split(' ')[0]}</button>))}</div></div>
+              <div><label className={`text-small font-bold uppercase tracking-widest mb-2 flex justify-between ${textMuted}`}><span>Font Size</span><span className={brandGreen}>{design.fontSize}px</span></label><input type="range" min="10" max="16" step="0.5" value={design.fontSize} onChange={(e) => setDesign({...design, fontSize: parseFloat(e.target.value)})} className="w-full accent-emerald-500" /></div>
+              <div><label className={`text-small font-bold uppercase tracking-widest mb-2 flex justify-between ${textMuted}`}><span>Line Spacing</span><span className={brandGreen}>{design.spacing.toFixed(1)}x</span></label><input type="range" min="0.5" max="2" step="0.1" value={design.spacing} onChange={(e) => setDesign({...design, spacing: parseFloat(e.target.value)})} className="w-full accent-emerald-500" /></div>
+              <div><label className={`text-small font-bold uppercase tracking-widest mb-2 flex justify-between ${textMuted}`}><span>Page Margin</span><span className={brandGreen}>{design.pageMargin}px</span></label><input type="range" min="0" max="80" step="1" value={design.pageMargin} onChange={(e) => setDesign({...design, pageMargin: parseInt(e.target.value)})} className="w-full accent-emerald-500" /></div>
+              <div><label className={`text-small font-bold uppercase tracking-widest mb-2 block ${textMuted}`}>Accent Color</label><div className="flex gap-3 flex-wrap">{['#7EE787', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#1f2937', '#000000', '#ffffff'].map(c => (<button key={c} onClick={() => setDesign({...design, accentColor: c})} className={`w-7 h-7 rounded-full border-2 transition-transform ${design.accentColor === c ? 'border-white scale-125 shadow-lg' : 'border-transparent hover:scale-110'}`} style={{ backgroundColor: c }} />))}</div></div>
+              <div><label className={`text-small font-bold uppercase tracking-widest mb-2 block ${textMuted}`}>Sidebar Background</label><div className="flex gap-3 flex-wrap">{['#ffffff', '#f8fafc', '#f3f4f6', '#fafaf9', '#f0fdf4', '#f0f9ff', '#fff1f2', '#1e293b', '#0f172a', '#111827', '#1a0f0f', '#0d233a', '#0c2511', '#2a1428'].map(c => (<button key={c} onClick={() => setDesign({...design, sidebarBgColor: c})} className={`w-7 h-7 rounded-full border-2 transition-transform ${design.sidebarBgColor === c ? 'border-emerald-500 scale-125 shadow-lg' : 'border-gray-300 dark:border-gray-600 hover:scale-110'}`} style={{ backgroundColor: c }} />))}</div></div>
+              <div><label className={`text-small font-bold uppercase tracking-widest mb-2 flex justify-between ${textMuted}`}><span>Section Gap</span><span className={brandGreen}>{design.sectionGap}px</span></label><input type="range" min="0" max="60" step="1" value={design.sectionGap} onChange={(e) => setDesign({...design, sectionGap: parseInt(e.target.value)})} className="w-full accent-emerald-500" /></div>
+              <div className="mt-4"><label className={`flex items-center justify-between cursor-pointer`}><span className={`text-small font-bold uppercase tracking-widest ${textMuted}`}>Header Icons</span><div className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors ${design.showHeaderIcons ? brandGreenBg : (isDarkUI ? 'bg-[#333]' : 'bg-gray-300')}`} onClick={() => setDesign({...design, showHeaderIcons: !design.showHeaderIcons})}><span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${design.showHeaderIcons ? 'translate-x-6' : 'translate-x-1'}`} /></div></label></div>
+              <div className="mt-4"><label className={`flex items-center justify-between cursor-pointer`}><span className={`text-small font-bold uppercase tracking-widest ${textMuted}`}>Contact Icons</span><div className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors ${design.showContactIcons ? brandGreenBg : (isDarkUI ? 'bg-[#333]' : 'bg-gray-300')}`} onClick={() => setDesign({...design, showContactIcons: !design.showContactIcons})}><span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${design.showContactIcons ? 'translate-x-6' : 'translate-x-1'}`} /></div></label></div>
               
               <div className="mt-6 border-t pt-5 border-gray-200 dark:border-[#333]">
-                <label className={`text-xs font-bold uppercase tracking-widest mb-2.5 block ${textMuted}`}>Description Layout</label>
+                <label className={`text-small font-bold uppercase tracking-widest mb-2.5 block ${textMuted}`}>Description Layout</label>
                 <div className="grid grid-cols-3 gap-2">
                   {[
                     { id: 'hybrid', label: 'Hybrid' },
@@ -1471,7 +1471,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
                     <button
                       key={opt.id}
                       onClick={() => setDesign({ ...design, formatOption: opt.id })}
-                      className={`py-2 px-1 text-xs font-bold rounded border transition-colors ${
+                      className={`py-2 px-1 text-small font-bold rounded border transition-colors ${
                         (design.formatOption || 'hybrid') === opt.id
                           ? 'bg-emerald-500/20 border-emerald-500 ' + brandGreen
                           : (isDarkUI ? 'bg-[#222] border-[#333] text-gray-300 hover:bg-[#2e2e2e]' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50')
@@ -1484,8 +1484,8 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
               </div>
 
               <div className="mt-6 border-t pt-5 border-gray-200 dark:border-[#333]">
-                <label className={`text-xs font-bold uppercase tracking-widest mb-3 block ${textMuted}`}>Date Format</label>
-                <select value={design.dateFormat || 'MMM YYYY'} onChange={(e) => setDesign({...design, dateFormat: e.target.value})} className={`w-full p-2.5 rounded-lg border text-sm appearance-none cursor-pointer focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all ${isDarkUI ? 'bg-[#1e1e1e] border-gray-700 text-gray-200 hover:border-gray-600' : 'bg-white border-gray-200 text-gray-800 hover:border-gray-300 shadow-sm'}`}>
+                <label className={`text-small font-bold uppercase tracking-widest mb-3 block ${textMuted}`}>Date Format</label>
+                <select value={design.dateFormat || 'MMM YYYY'} onChange={(e) => setDesign({...design, dateFormat: e.target.value})} className={`w-full p-2.5 rounded-lg border text-small appearance-none cursor-pointer focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all ${isDarkUI ? 'bg-[#1e1e1e] border-gray-700 text-gray-200 hover:border-gray-600' : 'bg-white border-gray-200 text-gray-800 hover:border-gray-300 shadow-sm'}`}>
                   <option value="MMM YYYY">Short Text (Jan 2024)</option>
                   <option value="MMMM YYYY">Long Text (January 2024)</option>
                   <option value="MM/YYYY">US Numeric (01/2024)</option>
@@ -1495,13 +1495,13 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
               </div>
 
               <div className="mt-6 border-t pt-5 border-gray-200 dark:border-[#333]">
-                <label className={`text-xs font-bold uppercase tracking-widest mb-3 block ${textMuted}`}>Header Links</label>
+                <label className={`text-small font-bold uppercase tracking-widest mb-3 block ${textMuted}`}>Header Links</label>
                 <div className="flex flex-col gap-3">
                   {['location', 'phone', 'email', 'linkedin', 'website', ...(cvData?.basics?.profiles?.map((p: any) => p.network?.toLowerCase()) || [])]
                     .filter((v, i, a) => a.indexOf(v) === i && v)
                     .map(linkType => (
                     <label key={linkType} className="flex items-center justify-between cursor-pointer group">
-                      <span className={`text-xs capitalize font-medium transition-colors ${design.headerLinks?.[linkType] !== false ? textPrimary : textMuted}`}>{linkType}</span>
+                      <span className={`text-small capitalize font-medium transition-colors ${design.headerLinks?.[linkType] !== false ? textPrimary : textMuted}`}>{linkType}</span>
                       <div className={`relative inline-flex items-center h-5 rounded-full w-9 transition-colors ${design.headerLinks?.[linkType] !== false ? brandGreenBg : (isDarkUI ? 'bg-[#333]' : 'bg-gray-300')}`} onClick={() => setDesign({...design, headerLinks: {...(design.headerLinks || {}), [linkType]: design.headerLinks?.[linkType] === false}})}>
                         <span className={`inline-block w-3 h-3 transform bg-white rounded-full transition-transform ${design.headerLinks?.[linkType] !== false ? 'translate-x-5' : 'translate-x-1'}`} />
                       </div>
@@ -1523,7 +1523,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
                 <button
                   onClick={handleCopyJsonTemplate}
                   title="Copy JSON Template"
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${brandGreenBg} hover:opacity-90`}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-small font-semibold transition-all ${brandGreenBg} hover:opacity-90`}
                 >
                   <Copy size={13} />
                   Copy JSON Template
@@ -1649,8 +1649,8 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
           <div className={`w-full max-w-3xl rounded-2xl border shadow-2xl overflow-hidden ${bgPanel}`}>
             <div className={`px-5 py-4 border-b flex items-center justify-between ${bgNav}`}>
               <div>
-                <h3 className={`text-lg font-bold ${textPrimary}`}>AI Skill Suggestions</h3>
-                <p className={`text-sm ${textMuted}`}>Personalized recommendations for {skillsSuggestionState.meta?.role || role || 'your target role'}.</p>
+                <h3 className={`text-h3 font-bold ${textPrimary}`}>AI Skill Suggestions</h3>
+                <p className={`text-small ${textMuted}`}>Personalized recommendations for {skillsSuggestionState.meta?.role || role || 'your target role'}.</p>
               </div>
               <button
                 type="button"
@@ -1664,15 +1664,15 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
               <div className={`grid grid-cols-1 sm:grid-cols-3 gap-3`}>
                 <div className={`rounded-xl border p-4 ${isDarkUI ? 'border-[#2a2a2a] bg-[#111111]' : 'border-gray-200 bg-white'}`}>
                   <div className={`text-[11px] uppercase tracking-[0.22em] ${textMuted}`}>Potential Adds</div>
-                  <div className={`mt-2 text-2xl font-black ${textPrimary}`}>{skillsSuggestionState.categories.reduce((total, category) => total + category.skills.length, 0)}</div>
+                  <div className={`mt-2 text-h2 font-black ${textPrimary}`}>{skillsSuggestionState.categories.reduce((total, category) => total + category.skills.length, 0)}</div>
                 </div>
                 <div className={`rounded-xl border p-4 ${isDarkUI ? 'border-[#2a2a2a] bg-[#111111]' : 'border-gray-200 bg-white'}`}>
                   <div className={`text-[11px] uppercase tracking-[0.22em] ${textMuted}`}>Skill Groups</div>
-                  <div className={`mt-2 text-2xl font-black ${textPrimary}`}>{skillsSuggestionState.categories.length}</div>
+                  <div className={`mt-2 text-h2 font-black ${textPrimary}`}>{skillsSuggestionState.categories.length}</div>
                 </div>
                 <div className={`rounded-xl border p-4 ${isDarkUI ? 'border-[#2a2a2a] bg-[#111111]' : 'border-gray-200 bg-white'}`}>
                   <div className={`text-[11px] uppercase tracking-[0.22em] ${textMuted}`}>Impact Preview</div>
-                  <div className={`mt-2 text-sm font-semibold ${textPrimary}`}>Adds targeted keywords with one click.</div>
+                  <div className={`mt-2 text-small font-semibold ${textPrimary}`}>Adds targeted keywords with one click.</div>
                 </div>
               </div>
 
@@ -1686,7 +1686,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
               )}
 
               {skillsSuggestionState.error && !skillsSuggestionState.loading && (
-                <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-small text-red-700">
                   {skillsSuggestionState.error}
                 </div>
               )}
@@ -1697,8 +1697,8 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
                     <div key={`${category.category}-${index}`} className={`rounded-2xl border p-4 ${isDarkUI ? 'border-[#2a2a2a] bg-[#111111]' : 'border-gray-200 bg-white'}`}>
                       <div className="flex items-start justify-between gap-4">
                         <div>
-                          <div className={`text-base font-bold ${textPrimary}`}>{category.category}</div>
-                          <div className={`mt-1 text-sm ${textMuted}`}>Preview impact: +{category.skills.length} relevant skills</div>
+                          <div className={`text-body font-bold ${textPrimary}`}>{category.category}</div>
+                          <div className={`mt-1 text-small ${textMuted}`}>Preview impact: +{category.skills.length} relevant skills</div>
                         </div>
                         <button
                           type="button"
@@ -1710,7 +1710,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
                       </div>
                       <div className="mt-4 flex flex-wrap gap-2">
                         {category.skills.map((skill) => (
-                          <span key={`${category.category}-${skill}`} className={`px-3 py-1.5 rounded-full text-sm font-medium border ${isDarkUI ? 'border-emerald-900/60 bg-emerald-950/40 text-emerald-200' : 'border-emerald-200 bg-emerald-50 text-emerald-800'}`}>
+                          <span key={`${category.category}-${skill}`} className={`px-3 py-1.5 rounded-full text-small font-medium border ${isDarkUI ? 'border-emerald-900/60 bg-emerald-950/40 text-emerald-200' : 'border-emerald-200 bg-emerald-50 text-emerald-800'}`}>
                             {skill}
                           </span>
                         ))}
@@ -1721,7 +1721,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
               )}
             </div>
             <div className={`px-5 py-4 border-t flex items-center justify-between ${bgNav}`}>
-              <p className={`text-sm ${textMuted}`}>Review the recommendation preview, then add a category or apply everything at once.</p>
+              <p className={`text-small ${textMuted}`}>Review the recommendation preview, then add a category or apply everything at once.</p>
               <div className="flex items-center gap-3">
                 <button
                   type="button"
@@ -1749,7 +1749,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
           <div className={`rounded-2xl shadow-2xl w-full max-w-7xl overflow-hidden flex flex-col h-[90vh] border ${bgPanel}`}>
             <div className={`p-5 border-b flex justify-between items-center shrink-0 ${bgNav}`}>
-              <div className="flex items-center gap-3"><LayoutTemplate size={24} className="text-emerald-500"/><div><h3 className={`font-black text-xl ${textPrimary}`}>Template Library</h3><p className={`text-xs ${textMuted}`}>Select a layout. All sections can be customized.</p></div></div>
+              <div className="flex items-center gap-3"><LayoutTemplate size={24} className="text-emerald-500"/><div><h3 className={`font-black text-h3 ${textPrimary}`}>Template Library</h3><p className={`text-small ${textMuted}`}>Select a layout. All sections can be customized.</p></div></div>
               <button onClick={() => setIsTemplateModalOpen(false)} className={`p-2 rounded-full ${btnSecondary}`}><X size={20}/></button>
             </div>
             <div className={`p-6 overflow-y-auto flex-1 custom-scrollbar ${isDarkUI ? 'bg-[#0a0a0a]' : 'bg-gray-100'}`}>
@@ -1757,11 +1757,11 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
                 {TEMPLATE_CATEGORIES.map(cat => {
                   const catTemplates = CANVAS_TEMPLATES.filter(tpl => cat.types.includes(tpl.type));
                   if (catTemplates.length === 0) return null;
-                  return (<div key={cat.id}><div className={`py-3 mb-5 flex items-center gap-3 border-b ${isDarkUI ? 'border-[#222] text-white' : 'border-gray-200 text-gray-900'}`}><span className="text-emerald-500">{cat.icon}</span><h2 className="text-lg font-bold">{cat.name}</h2><span className={`text-xs ${textMuted}`}>- {cat.desc}</span></div>
+                  return (<div key={cat.id}><div className={`py-3 mb-5 flex items-center gap-3 border-b ${isDarkUI ? 'border-[#222] text-white' : 'border-gray-200 text-gray-900'}`}><span className="text-emerald-500">{cat.icon}</span><h2 className="text-h3 font-bold">{cat.name}</h2><span className={`text-small ${textMuted}`}>- {cat.desc}</span></div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">{catTemplates.map(tpl => {
                       const isActive = activeTemplate.id === tpl.id;
                       return (<div key={tpl.id} onClick={() => loadTemplate(tpl)} className={`group relative rounded-xl border-2 cursor-pointer transition-all overflow-hidden flex flex-col hover:-translate-y-1 hover:shadow-2xl ${bgPanel} ${isActive ? 'border-emerald-500 ring-4 ring-emerald-500/20' : (isDarkUI ? 'border-[#333]' : 'border-gray-200')}`}>
-                        <div className={`p-2.5 border-b flex justify-between items-center z-10 shrink-0 ${bgNav}`}><div className={`font-bold text-xs ${textPrimary}`}>{tpl.name}</div>{isActive && <span className="bg-emerald-500/20 text-emerald-500 text-[9px] px-1.5 py-0.5 rounded font-bold">ACTIVE</span>}</div>
+                        <div className={`p-2.5 border-b flex justify-between items-center z-10 shrink-0 ${bgNav}`}><div className={`font-bold text-small ${textPrimary}`}>{tpl.name}</div>{isActive && <span className="bg-emerald-500/20 text-emerald-500 text-[9px] px-1.5 py-0.5 rounded font-bold">ACTIVE</span>}</div>
                         <div className={`relative w-full flex justify-center items-center p-4 flex-1 overflow-hidden pointer-events-none ${isDarkUI ? 'bg-[#141414]' : 'bg-gray-50'}`}><div className="relative w-[180px] h-[255px] bg-white shadow-md overflow-hidden rounded-sm ring-1 ring-gray-300"><div className="absolute top-0 left-0 w-[794px] h-[1123px] origin-top-left text-gray-900" style={{ transform: 'scale(0.2265)' }}><StaticLayoutRenderer template={tpl} cvData={cvData} ReadOnlyWrapper={ReadOnlyWrapper} design={design} /></div></div></div>
                       </div>);
                     })}</div>
@@ -1875,7 +1875,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
           <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
             <div className={`rounded-2xl shadow-2xl w-full max-w-6xl overflow-hidden flex flex-col max-h-[90vh] border ${isDarkUI ? 'bg-[#141414] border-[#2a2a2a]' : 'bg-white border-gray-200'}`}>
               <div className={`p-4 border-b flex justify-between items-center ${isDarkUI ? 'bg-[#111] border-[#2a2a2a]' : 'bg-white border-gray-200'}`}>
-                <h3 className={`font-bold text-base flex items-center gap-2 ${textPrimary}`}>{replacingSnippet.isAdd ? <PlusCircle size={18} className="text-emerald-500"/> : <RefreshCw size={18} className="text-blue-500"/>}{replacingSnippet.isAdd ? 'Add Snippet' : `Replace ${replacingSnippet.category}`}</h3>
+                <h3 className={`font-bold text-body flex items-center gap-2 ${textPrimary}`}>{replacingSnippet.isAdd ? <PlusCircle size={18} className="text-emerald-500"/> : <RefreshCw size={18} className="text-blue-500"/>}{replacingSnippet.isAdd ? 'Add Snippet' : `Replace ${replacingSnippet.category}`}</h3>
                 <button onClick={() => setReplacingSnippet(null)} className={`p-1.5 rounded-full ${isDarkUI ? 'bg-[#222] text-gray-300 hover:bg-[#333]' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'} transition-colors`}><X size={18}/></button>
               </div>
               {replacingSnippet.isAdd && (
@@ -1883,13 +1883,13 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
                   {['All', 'Header', 'Summary', 'Experience', 'Education', 'Projects', 'Certifications', 'Awards', 'Skills', 'Languages', 'Interests', 'Publications', 'Volunteer', 'References', 'Sidebar']
                     .filter(cat => cat === 'All' || !currentCategories.includes(cat))
                     .map(cat => (
-                    <button key={cat} onClick={() => setReplacingSnippet({...replacingSnippet, filterCategory: cat === 'All' ? null : cat})} className={`px-3 py-1.5 text-xs font-bold rounded-full uppercase tracking-wider border ${replacingSnippet.filterCategory === cat || (!replacingSnippet.filterCategory && cat === 'All') ? 'bg-emerald-500/20 text-emerald-500 border-emerald-500/50' : (isDarkUI ? 'bg-[#222] text-gray-400 border-[#333]' : 'bg-white text-gray-600 border-gray-200')}`}>{cat}</button>
+                    <button key={cat} onClick={() => setReplacingSnippet({...replacingSnippet, filterCategory: cat === 'All' ? null : cat})} className={`px-3 py-1.5 text-small font-bold rounded-full uppercase tracking-wider border ${replacingSnippet.filterCategory === cat || (!replacingSnippet.filterCategory && cat === 'All') ? 'bg-emerald-500/20 text-emerald-500 border-emerald-500/50' : (isDarkUI ? 'bg-[#222] text-gray-400 border-[#333]' : 'bg-white text-gray-600 border-gray-200')}`}>{cat}</button>
                   ))}
                   {(!replacingSnippet.filterCategory || replacingSnippet.filterCategory === 'Skills') && (
                     <button
                       type="button"
                       onClick={() => void openSkillsSuggestions()}
-                      className="ml-auto px-3 py-1.5 text-xs font-bold rounded-full uppercase tracking-wider border border-emerald-400/50 bg-emerald-500/10 text-emerald-500 flex items-center gap-1.5"
+                      className="ml-auto px-3 py-1.5 text-small font-bold rounded-full uppercase tracking-wider border border-emerald-400/50 bg-emerald-500/10 text-emerald-500 flex items-center gap-1.5"
                     >
                       <Sparkles size={12} />
                       AI Skill Recommendations

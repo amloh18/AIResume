@@ -50,7 +50,7 @@ const JobsHeader: React.FC<JobsHeaderProps> = ({
         <div className="flex items-center flex-wrap gap-2 sm:gap-3 justify-end">
           {/* Job Limit Indicator */}
           {limitInfo && !limitInfo.isUnlimited && (
-            <div className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl border h-[36px] ${
+            <div className={`flex items-center gap-1.5 text-small px-3 py-1.5 rounded-xl border h-[36px] ${
               limitInfo.remaining === 0
                 ? 'bg-red-500/10 text-red-500 border-red-500/20'
                 : limitInfo.remaining <= 1
@@ -77,7 +77,7 @@ const JobsHeader: React.FC<JobsHeaderProps> = ({
             <motion.button
               onClick={onQuickAdd}
               disabled={limitInfo && !limitInfo.isUnlimited && limitInfo.remaining === 0}
-              className={`h-[36px] flex items-center justify-center gap-2 px-3 sm:px-4 text-sm font-bold rounded-xl transition-all duration-200 shadow-sm hover:shadow-md cursor-pointer flex-shrink-0 ${
+              className={`h-[36px] flex items-center justify-center gap-2 px-3 sm:px-4 text-small font-bold rounded-xl transition-all duration-200 shadow-sm hover:shadow-md cursor-pointer flex-shrink-0 ${
                 limitInfo && !limitInfo.isUnlimited && limitInfo.remaining === 0
                   ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed opacity-50'
                   : 'bg-[#80FF00] hover:bg-[#70DF00] text-black active:scale-95'
@@ -97,7 +97,7 @@ const JobsHeader: React.FC<JobsHeaderProps> = ({
           {/* Kanban/List View Mode Toggle */}
           <motion.button
             onClick={() => onViewModeChange(viewMode === 'kanban' ? 'list' : 'kanban')}
-            className="h-[36px] flex items-center justify-center gap-2 px-3 sm:px-4 text-sm font-medium rounded-xl border border-gray-300 dark:border-white/10 text-gray-700 dark:text-gray-200 bg-white dark:bg-black/20 hover:bg-gray-50 dark:hover:bg-white/5 transition-all duration-200 cursor-pointer flex-shrink-0"
+            className="h-[36px] flex items-center justify-center gap-2 px-3 sm:px-4 text-small font-medium rounded-xl border border-gray-300 dark:border-white/10 text-gray-700 dark:text-gray-200 bg-white dark:bg-black/20 hover:bg-gray-50 dark:hover:bg-white/5 transition-all duration-200 cursor-pointer flex-shrink-0"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             title={viewMode === 'kanban' ? 'Switch to List View' : 'Switch to Kanban View'}
@@ -118,7 +118,7 @@ const JobsHeader: React.FC<JobsHeaderProps> = ({
           {/* Filters & Sorting Button */}
           <motion.button
             onClick={onToggleFilters}
-            className={`h-[36px] flex items-center justify-center gap-2 px-3 sm:px-4 text-sm rounded-xl border transition-all duration-200 cursor-pointer flex-shrink-0 ${
+            className={`h-[36px] flex items-center justify-center gap-2 px-3 sm:px-4 text-small rounded-xl border transition-all duration-200 cursor-pointer flex-shrink-0 ${
               showFilters
                 ? 'text-lime-600 dark:text-[#80FF00] font-semibold bg-lime-500/5 dark:bg-lime-500/10 border-lime-500/30 dark:border-lime-500/30'
                 : 'bg-white dark:bg-black/20 border-gray-300 dark:border-white/10 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5 font-medium'

@@ -309,11 +309,11 @@ export default function LinkedInMoriChatPanel({ cvId, cvType, onCvUpdated, onClo
     return (
       <div className="flex flex-col h-full bg-transparent text-center items-center justify-center p-6">
         <Sparkles className="w-10 h-10 text-emerald-500 mb-4 animate-pulse" />
-        <h3 className="text-base font-bold text-gray-900 dark:text-white">Mori Assistant</h3>
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Sign in to unlock interactive profile edits using AI.</p>
+        <h3 className="text-body font-bold text-gray-900 dark:text-white">Mori Assistant</h3>
+        <p className="text-small text-gray-500 dark:text-gray-400 mt-2">Sign in to unlock interactive profile edits using AI.</p>
         <button
           onClick={() => openModal({ view: 'signup', callbackUrl: window.location.href })}
-          className="mt-4 px-4 py-2 bg-emerald-500 text-white text-xs font-bold rounded-lg hover:bg-emerald-600 transition-colors"
+          className="mt-4 px-4 py-2 bg-emerald-500 text-white text-small font-bold rounded-lg hover:bg-emerald-600 transition-colors"
         >
           Sign Up Now
         </button>
@@ -326,7 +326,7 @@ export default function LinkedInMoriChatPanel({ cvId, cvType, onCvUpdated, onClo
       
       {/* Header Bar */}
       <div className="px-4 py-2 border-b border-slate-200 dark:border-gray-800 flex items-center justify-between bg-white dark:bg-transparent shrink-0">
-        <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
+        <div className="flex items-center gap-2 text-small font-bold text-slate-700 dark:text-slate-300">
           <MessageSquare className="w-4 h-4 text-emerald-500" />
           {chatId ? chatHistory.find(c => c._id === chatId)?.title || 'Current Chat' : 'New Chat'}
         </div>
@@ -363,12 +363,12 @@ export default function LinkedInMoriChatPanel({ cvId, cvType, onCvUpdated, onClo
               className="absolute inset-0 z-20 bg-white dark:bg-[#141810] flex flex-col"
             >
               <div className="p-3 border-b border-slate-200 dark:border-gray-800 bg-gray-50 dark:bg-transparent flex justify-between items-center">
-                <span className="text-xs font-bold text-slate-600 dark:text-slate-400">Previous Conversations</span>
+                <span className="text-small font-bold text-slate-600 dark:text-slate-400">Previous Conversations</span>
                 <button onClick={() => setShowHistory(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-white"><X className="w-4 h-4" /></button>
               </div>
               <div className="flex-1 overflow-y-auto p-2 space-y-1">
                 {chatHistory.length === 0 ? (
-                  <div className="text-center p-6 text-xs text-slate-400 italic">No previous chats found.</div>
+                  <div className="text-center p-6 text-small text-slate-400 italic">No previous chats found.</div>
                 ) : (
                   chatHistory.map((chat) => (
                     <div 
@@ -383,14 +383,14 @@ export default function LinkedInMoriChatPanel({ cvId, cvType, onCvUpdated, onClo
                             value={editTitle}
                             onChange={e => setEditTitle(e.target.value)}
                             onKeyDown={e => handleRenameChat(e, chat._id)}
-                            className="flex-1 text-xs px-2 py-1 bg-white dark:bg-gray-800 border border-emerald-500 outline-none rounded"
+                            className="flex-1 text-small px-2 py-1 bg-white dark:bg-gray-800 border border-emerald-500 outline-none rounded"
                           />
                           <button onClick={(e) => handleRenameChat(e, chat._id)} className="text-emerald-600 hover:text-emerald-700">Save</button>
                         </div>
                       ) : (
                         <>
                           <div className="flex-1 min-w-0 pr-3">
-                            <h4 className={`text-xs font-semibold truncate ${chatId === chat._id ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-700 dark:text-slate-300'}`}>
+                            <h4 className={`text-small font-semibold truncate ${chatId === chat._id ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-700 dark:text-slate-300'}`}>
                               {chat.title}
                             </h4>
                             <p className="text-[10px] text-slate-400 mt-0.5">

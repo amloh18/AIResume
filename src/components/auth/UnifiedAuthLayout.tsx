@@ -55,7 +55,7 @@ export default function UnifiedAuthLayout({
           <div className="relative z-10 flex flex-col w-full p-12 max-w-2xl">
             <div className="flex items-center gap-3 mb-16 drop-shadow-sm">
               <Logo size="lg" />
-              <span className="px-2.5 py-1 text-xs font-semibold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-full border border-indigo-500/20">
+              <span className="px-2.5 py-1 text-small font-semibold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-full border border-indigo-500/20">
                 System Admin
               </span>
             </div>
@@ -65,11 +65,11 @@ export default function UnifiedAuthLayout({
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.2 }}
             >
-              <h1 className="text-5xl font-bold tracking-tight text-gray-900 dark:text-white mb-6">
+              <h1 className="text-display font-bold tracking-tight text-gray-900 dark:text-white mb-6">
                 Central <br/>
                 <span className="text-indigo-600 dark:text-indigo-400">Command Center.</span>
               </h1>
-              <p className="text-xl text-gray-600 dark:text-gray-400 font-medium">
+              <p className="text-h3 text-gray-600 dark:text-gray-400 font-medium">
                 Manage users, monitor metrics, and control system health.
               </p>
             </motion.div>
@@ -126,7 +126,7 @@ export default function UnifiedAuthLayout({
                 INFRASTRUCTURE <br/>
                 FOR <span className="text-[#80FF00]">TALENT.</span>
               </h1>
-              <p className="text-xl text-gray-500 font-medium leading-relaxed">
+              <p className="text-h3 text-gray-500 font-medium leading-relaxed">
                 Visual dashboard and API-first screening infrastructure for modern recruitment platforms.
               </p>
             </motion.div>
@@ -199,7 +199,7 @@ export default function UnifiedAuthLayout({
               transition={{ duration: 0.8, delay: 0.2 }}
               className="max-w-2xl"
             >
-              <h1 className={`text-9xl font-bold leading-tight mb-6 tracking-tight ${anton.className}`}>
+              <h1 className={`!text-[6rem] tablet:!text-[7rem] desktop:!text-[8rem] font-bold leading-tight mb-6 tracking-tight ${anton.className}`}>
                 <span className="text-black">MASTER</span>
                 <br />
                 <span className="text-black">YOUR</span>
@@ -210,7 +210,7 @@ export default function UnifiedAuthLayout({
                   <span className="text-black">JOURNEY.</span>
                 </span>
               </h1>
-              <p className="text-xl text-black/80 font-medium">
+              <p className="text-h3 text-black/80 font-medium">
                 Your first step to land your dream job... or at least pay the bills
               </p>
             </motion.div>
@@ -228,7 +228,7 @@ export default function UnifiedAuthLayout({
               className="flex items-center gap-2 text-gray-500 hover:text-gray-900 dark:text-white/60 dark:hover:text-white transition-colors duration-200"
             >
               <ArrowLeft className="w-4 h-4" />
-              <span className="text-sm">{backText}</span>
+              <span className="text-small">{backText}</span>
             </Link>
           </div>
         )}

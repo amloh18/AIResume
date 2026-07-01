@@ -52,7 +52,7 @@ export default function ChartsRow({ metrics, loading }: ChartsRowProps) {
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
       {/* Match Score Distribution */}
       <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-xl p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+        <h3 className="text-h3 font-semibold text-gray-900 dark:text-white mb-4">
           Match Score Distribution
         </h3>
         <ResponsiveContainer width="100%" height={280}>
@@ -83,7 +83,7 @@ export default function ChartsRow({ metrics, loading }: ChartsRowProps) {
 
       {/* Source Breakdown */}
       <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-xl p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+        <h3 className="text-h3 font-semibold text-gray-900 dark:text-white mb-4">
           Source Breakdown
         </h3>
         <ResponsiveContainer width="100%" height={280}>
@@ -121,21 +121,21 @@ export default function ChartsRow({ metrics, loading }: ChartsRowProps) {
 
       {/* Top Companies */}
       <div className="glass-widget-premium rounded-xl p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+        <h3 className="text-h3 font-semibold text-gray-900 dark:text-white mb-4">
           Top Companies
         </h3>
         <div className="space-y-3">
           {metrics.topCompanies.slice(0, 8).map((company, index) => (
             <div key={company.company} className="flex items-center gap-3">
-              <div className="text-sm font-medium text-gray-600 dark:text-gray-400 w-6">
+              <div className="text-small font-medium text-gray-600 dark:text-gray-400 w-6">
                 #{index + 1}
               </div>
               <div className="flex-1">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm font-medium text-gray-900 dark:text-white">
+                  <span className="text-small font-medium text-gray-900 dark:text-white">
                     {company.company}
                   </span>
-                  <span className="text-xs text-gray-600 dark:text-gray-400">
+                  <span className="text-small text-gray-600 dark:text-gray-400">
                     {company.count} jobs
                   </span>
                 </div>
@@ -155,7 +155,7 @@ export default function ChartsRow({ metrics, loading }: ChartsRowProps) {
 
       {/* Applications Trend */}
       <div className="glass-widget-premium rounded-xl p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+        <h3 className="text-h3 font-semibold text-gray-900 dark:text-white mb-4">
           Applications Trend (30 Days)
         </h3>
         <ResponsiveContainer width="100%" height={280}>

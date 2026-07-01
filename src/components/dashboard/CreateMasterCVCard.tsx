@@ -62,8 +62,8 @@ const CreateMasterCVCard: React.FC<CreateMasterCVCardProps> = ({ userId, onClose
               <Plus className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-white">Create Master CV</h2>
-              <p className="text-lime-400 font-medium text-sm">Your Career Foundation</p>
+              <h2 className="text-h3 font-bold text-white">Create Master CV</h2>
+              <p className="text-lime-400 font-medium text-small">Your Career Foundation</p>
             </div>
           </div>
           <button
@@ -91,7 +91,7 @@ const CreateMasterCVCard: React.FC<CreateMasterCVCardProps> = ({ userId, onClose
                 className="flex items-center gap-3"
               >
                 <CheckCircle className="w-5 h-5 text-lime-400 flex-shrink-0" />
-                <span className="text-white/70 text-sm">{feature}</span>
+                <span className="text-white/70 text-small">{feature}</span>
               </motion.div>
             ))}
           </div>

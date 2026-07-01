@@ -1000,7 +1000,7 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
       case 'signin':
         return (
           <div className="space-y-3">
-            <p className="text-gray-600 dark:text-white/70 text-sm text-center">
+            <p className="text-gray-600 dark:text-white/70 text-small text-center">
               Forgot Password?{' '}
               <button
                 onClick={() => switchMode('reset')}
@@ -1018,7 +1018,7 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
       case 'reset':
         return (
           <div className="space-y-3">
-            <p className="text-gray-600 dark:text-white/70 text-sm text-center">
+            <p className="text-gray-600 dark:text-white/70 text-small text-center">
               Remember your password?{' '}
               <button
                 onClick={() => switchMode('signin')}
@@ -1028,7 +1028,7 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
               </button>
             </p>
             {layoutVariant === 'default' && (
-              <p className="text-gray-500 text-sm text-center">
+              <p className="text-gray-500 text-small text-center">
                 Don't have an account?{' '}
                 <button
                   onClick={() => switchMode('signup')}
@@ -1044,7 +1044,7 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
       case 'magic-link':
         return (
           <div className="space-y-3">
-            <p className="text-gray-500 text-sm text-center">
+            <p className="text-gray-500 text-small text-center">
               Prefer password?{' '}
               <button
                 onClick={() => switchMode('signin')}
@@ -1054,7 +1054,7 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
               </button>
             </p>
             {layoutVariant === 'default' && (
-              <p className="text-gray-500 text-sm text-center">
+              <p className="text-gray-500 text-small text-center">
                 Don't have an account?{' '}
                 <button
                   onClick={() => switchMode('signup')}
@@ -1180,7 +1180,7 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
             <motion.button
               type="button"
               onClick={() => switchMode('signin')}
-              className={`relative px-8 py-3 text-base font-medium rounded-sm transition-all duration-300 z-10 ${mode === 'signin'
+              className={`relative px-8 py-3 text-body font-medium rounded-sm transition-all duration-300 z-10 ${mode === 'signin'
                 ? 'text-black dark:text-black'
                 : 'text-gray-500 hover:text-gray-800 dark:text-white/70 dark:hover:text-white'
                 }`}
@@ -1190,7 +1190,7 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
             <motion.button
               type="button"
               onClick={() => switchMode('signup')}
-              className={`relative px-8 py-3 text-base font-medium rounded-sm transition-all duration-300 z-10 ${mode === 'signup'
+              className={`relative px-8 py-3 text-body font-medium rounded-sm transition-all duration-300 z-10 ${mode === 'signup'
                 ? 'text-black dark:text-black'
                 : 'text-gray-500 hover:text-gray-800 dark:text-white/70 dark:hover:text-white'
                 }`}
@@ -1215,13 +1215,13 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
       {!isModal && getIcon()}
 
       {/* Title */}
-      <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2 text-center">
+      <h2 className="text-h2 font-bold text-gray-900 dark:text-white mb-2 text-center">
         {getTitle()}
       </h2>
 
       {/* Subtitle */}
       {!isModal && (
-        <p className="text-gray-600 dark:text-white/70 text-base mb-6 text-center">
+        <p className="text-gray-600 dark:text-white/70 text-body mb-6 text-center">
           {getSubtitle()}
         </p>
       )}
@@ -1279,7 +1279,7 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
 
             {/* Privacy Policy and Terms */}
             <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-600/30">
-              <div className="flex justify-center space-x-4 text-xs text-gray-500 dark:text-gray-400">
+              <div className="flex justify-center space-x-4 text-small text-gray-500 dark:text-gray-400">
                 <a
                   href="/legal#privacy"
                   target="_blank"

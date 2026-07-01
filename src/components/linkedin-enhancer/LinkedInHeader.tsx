@@ -58,10 +58,10 @@ export default function LinkedInHeader({
                         { step: 3, label: 'Apply to LinkedIn', active: false },
                     ].map((s, idx, arr) => (
                         <div key={s.step} className="flex items-center gap-2">
-                            <div className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-semibold ${s.active ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-800 text-gray-500 dark:text-gray-400'}`}>
+                            <div className={`flex items-center justify-center w-6 h-6 rounded-full text-small font-semibold ${s.active ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-800 text-gray-500 dark:text-gray-400'}`}>
                                 {s.step}
                             </div>
-                            <span className={`text-sm font-medium ${s.active ? 'text-gray-950 dark:text-gray-50' : 'text-gray-500 dark:text-gray-400'}`}>
+                            <span className={`text-small font-medium ${s.active ? 'text-gray-950 dark:text-gray-50' : 'text-gray-500 dark:text-gray-400'}`}>
                                 {s.label}
                             </span>
                             {idx < arr.length - 1 && (
@@ -78,7 +78,7 @@ export default function LinkedInHeader({
                         <div className="relative">
                             <motion.button
                                 onClick={() => canSelectCv ? setShowCvDropdown(!showCvDropdown) : (onUpgradeClick?.())}
-                                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border ${!canSelectCv ? 'border-amber-200 bg-amber-50 dark:bg-amber-950/20' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'} hover:border-gray-300 dark:hover:border-gray-600 text-sm transition-colors`}
+                                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border ${!canSelectCv ? 'border-amber-200 bg-amber-50 dark:bg-amber-950/20' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'} hover:border-gray-300 dark:hover:border-gray-600 text-small transition-colors`}
                                 whileHover={{ scale: 1.02 }}
                                 whileTap={{ scale: 0.98 }}
                             >
@@ -87,7 +87,7 @@ export default function LinkedInHeader({
                                     {selectedCv ? selectedCv.name : 'Master CV'}
                                 </span>
                                 {canSelectCv && <ChevronDown className="w-4 h-4 text-gray-500 dark:text-gray-400" />}
-                                {!canSelectCv && <span className="text-xs text-amber-600 font-medium">PRO</span>}
+                                {!canSelectCv && <span className="text-small text-amber-600 font-medium">PRO</span>}
                             </motion.button>
 
                             {showCvDropdown && canSelectCv && (
@@ -104,10 +104,10 @@ export default function LinkedInHeader({
                                                 onCvSelect(cv.id, cv.type);
                                                 setShowCvDropdown(false);
                                             }}
-                                            className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-between transition-colors ${cv.id === selectedCvId ? 'bg-blue-50 dark:bg-blue-900/30' : ''}`}
+                                            className={`w-full text-left px-4 py-2 text-small hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-between transition-colors ${cv.id === selectedCvId ? 'bg-blue-50 dark:bg-blue-900/30' : ''}`}
                                         >
                                             <span className="text-gray-700 dark:text-gray-200">{cv.name}</span>
-                                            <span className="text-xs text-gray-400 dark:text-gray-400 uppercase">{cv.type}</span>
+                                            <span className="text-small text-gray-400 dark:text-gray-400 uppercase">{cv.type}</span>
                                         </button>
                                     ))}
                                 </motion.div>
@@ -120,7 +120,7 @@ export default function LinkedInHeader({
                         <motion.button
                             onClick={onFetchFromLinkedIn}
                             disabled={isFetchingFromLinkedIn}
-                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-white text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed ${isFetchingFromLinkedIn ? 'bg-blue-400' : 'bg-[#0a66c2] hover:bg-[#004182]'}`}
+                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-white text-small font-medium disabled:opacity-50 disabled:cursor-not-allowed ${isFetchingFromLinkedIn ? 'bg-blue-400' : 'bg-[#0a66c2] hover:bg-[#004182]'}`}
                             whileHover={{ scale: isFetchingFromLinkedIn ? 1 : 1.02 }}
                             whileTap={{ scale: isFetchingFromLinkedIn ? 1 : 0.98 }}
                         >
@@ -135,7 +135,7 @@ export default function LinkedInHeader({
                     <div className="relative">
                         <motion.button
                             onClick={() => canChangeTone ? setShowToneDropdown(!showToneDropdown) : (onUpgradeClick?.())}
-                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border ${!canChangeTone ? 'border-amber-200 bg-amber-50 dark:bg-amber-950/20' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'} hover:border-gray-300 dark:hover:border-gray-600 text-sm transition-colors`}
+                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border ${!canChangeTone ? 'border-amber-200 bg-amber-50 dark:bg-amber-950/20' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'} hover:border-gray-300 dark:hover:border-gray-600 text-small transition-colors`}
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                         >
@@ -143,7 +143,7 @@ export default function LinkedInHeader({
                             <Sparkles className="w-4 h-4 text-amber-500" />
                             <span className="text-gray-700 dark:text-gray-200">{currentTone}</span>
                             {canChangeTone && <ChevronDown className="w-4 h-4 text-gray-500 dark:text-gray-400" />}
-                            {!canChangeTone && <span className="text-xs text-amber-600 font-medium">PRO</span>}
+                            {!canChangeTone && <span className="text-small text-amber-600 font-medium">PRO</span>}
                         </motion.button>
 
                         {showToneDropdown && canChangeTone && (
@@ -164,7 +164,7 @@ export default function LinkedInHeader({
                                             }
                                             setShowToneDropdown(false);
                                         }}
-                                        className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${tone === currentTone ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' : 'text-gray-700 dark:text-gray-200'}`}
+                                        className={`w-full text-left px-4 py-2 text-small hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${tone === currentTone ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' : 'text-gray-700 dark:text-gray-200'}`}
                                     >
                                         {tone}
                                     </button>
@@ -177,7 +177,7 @@ export default function LinkedInHeader({
                     <motion.button
                         onClick={onRegenerate}
                         disabled={isEnhancing || !selectedCvId}
-                        className="flex items-center gap-2 px-4 py-1.5 rounded-lg text-white text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className="flex items-center gap-2 px-4 py-1.5 rounded-lg text-white text-small font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         style={{ backgroundColor: '#0a66c2' }}
                         whileHover={{ scale: isEnhancing ? 1 : 1.02 }}
                         whileTap={{ scale: isEnhancing ? 1 : 0.98 }}
@@ -188,7 +188,7 @@ export default function LinkedInHeader({
 
                     {/* Quick Mode Toggle */}
                     <div className="flex items-center gap-2 ml-2">
-                        <span className="text-xs font-medium text-gray-600 dark:text-gray-300 flex items-center gap-1">
+                        <span className="text-small font-medium text-gray-600 dark:text-gray-300 flex items-center gap-1">
                             <span className="text-amber-500">⚡</span> Optimize
                         </span>
                         <button

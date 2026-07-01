@@ -143,7 +143,7 @@ export default function GoalsWidget({ className }: GoalsWidgetProps) {
             />
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-lg font-black dark:text-white">
+            <span className="text-h3 font-black dark:text-white">
               {goal.count}
             </span>
             <span className="text-[9px] font-bold text-gray-400 uppercase">
@@ -175,7 +175,7 @@ export default function GoalsWidget({ className }: GoalsWidgetProps) {
             <Target size={18} className="text-white" />
           </div>
           <div>
-            <h3 className="text-base font-bold text-gray-900 dark:text-white">
+            <h3 className="text-body font-bold text-gray-900 dark:text-white">
               Monthly Goals
             </h3>
             <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-widest">
@@ -227,7 +227,7 @@ export default function GoalsWidget({ className }: GoalsWidgetProps) {
                         type="number"
                         value={targets[goal.type]}
                         onChange={(e) => setTargets({...targets, [goal.type]: parseInt(e.target.value) || 0})}
-                        className="w-10 bg-transparent text-center text-xs font-black dark:text-white outline-none"
+                        className="w-10 bg-transparent text-center text-small font-black dark:text-white outline-none"
                       />
                     </motion.div>
                   )}

@@ -106,7 +106,7 @@ const CompetitorComparison: React.FC = () => {
           </motion.div>
 
           <motion.h2
-            className="text-2xl tablet:text-3xl desktop:text-4xl font-bold text-white mb-4 leading-tight"
+            className="!text-[2rem] tablet:!text-[2.5rem] desktop:!text-[3rem] font-extrabold text-white mb-4 tracking-tighter !leading-[1.05]"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -147,11 +147,11 @@ const CompetitorComparison: React.FC = () => {
                     Best
                   </span>
                 )}
-                <p className={`text-xs font-semibold mb-2 ${comp.highlight ? 'text-[#81ff00]' : 'text-gray-400'}`}>
+                <p className={`text-small font-semibold mb-2 ${comp.highlight ? 'text-[#81ff00]' : 'text-gray-400'}`}>
                   {comp.label}
                 </p>
-                <p className={`text-3xl font-extrabold leading-none ${comp.highlight ? 'text-[#81ff00]' : 'text-white/30'}`}>
-                  {pct}<span className="text-sm font-bold">%</span>
+                <p className={`text-h1 font-extrabold leading-none ${comp.highlight ? 'text-[#81ff00]' : 'text-white/30'}`}>
+                  {pct}<span className="text-small font-bold">%</span>
                 </p>
                 <div className="w-full h-1 rounded-full bg-white/10 mt-3">
                   <motion.div
@@ -198,7 +198,7 @@ const CompetitorComparison: React.FC = () => {
                             Us
                           </span>
                         )}
-                        <span className={`text-xs font-bold ${comp.highlight ? 'text-[#81ff00]' : 'text-white/40'}`}>
+                        <span className={`text-small font-bold ${comp.highlight ? 'text-[#81ff00]' : 'text-white/40'}`}>
                           {comp.label}
                         </span>
                       </div>
@@ -237,7 +237,7 @@ const CompetitorComparison: React.FC = () => {
                         >
                           {/* Feature name */}
                           <td
-                            className={`px-4 py-3.5 text-sm font-medium text-gray-300 sticky left-0 bg-[#141810] group-hover:bg-[#1a2015] transition-colors z-10 border-r border-white/[0.06] ${
+                            className={`px-4 py-3.5 text-small font-medium text-gray-300 sticky left-0 bg-[#141810] group-hover:bg-[#1a2015] transition-colors z-10 border-r border-white/[0.06] ${
                               isLast ? 'border-b border-white/[0.08]' : 'border-b border-white/[0.04]'
                             }`}
                           >
@@ -274,7 +274,7 @@ const CompetitorComparison: React.FC = () => {
               {/* tfoot — totals */}
               <tfoot>
                 <tr className="border-t border-white/[0.08] bg-white/[0.03]">
-                  <td className="px-4 py-4 text-sm font-bold text-white/60 sticky left-0 bg-[#1a2015] border-r border-white/[0.06]">
+                  <td className="px-4 py-4 text-small font-bold text-white/60 sticky left-0 bg-[#1a2015] border-r border-white/[0.06]">
                     Features Covered
                   </td>
                   {competitors.map((comp) => {
@@ -287,7 +287,7 @@ const CompetitorComparison: React.FC = () => {
                           comp.highlight ? 'bg-[#81ff00]/[0.07] border-x border-[#81ff00]/20' : ''
                         }`}
                       >
-                        <span className={`text-lg font-extrabold ${comp.highlight ? 'text-[#81ff00]' : 'text-white/25'}`}>
+                        <span className={`text-h3 font-extrabold ${comp.highlight ? 'text-[#81ff00]' : 'text-white/25'}`}>
                           {pct}%
                         </span>
                         <p className="text-[10px] text-white/25 mt-0.5">{score}/{features.length}</p>

@@ -5,6 +5,48 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer utilities {
+  .text-display {
+    font-size: var(--font-size-display);
+    line-height: 1.1;
+    font-weight: var(--weight-semibold, 600);
+    letter-spacing: -0.04em;
+  }
+  
+  .text-h1 {
+    font-size: var(--font-size-h1);
+    line-height: 1.2;
+    font-weight: var(--weight-semibold, 600);
+    letter-spacing: -0.03em;
+  }
+  
+  .text-h2 {
+    font-size: var(--font-size-h2);
+    line-height: 1.3;
+    font-weight: var(--weight-semibold, 600);
+    letter-spacing: -0.02em;
+  }
+  
+  .text-h3 {
+    font-size: var(--font-size-h3);
+    line-height: 1.4;
+    font-weight: var(--weight-medium, 500);
+    letter-spacing: -0.01em;
+  }
+  
+  .text-body {
+    font-size: var(--font-size-body);
+    line-height: 1.6;
+    font-weight: var(--weight-regular, 400);
+  }
+  
+  .text-small {
+    font-size: var(--font-size-small);
+    line-height: 1.5;
+    font-weight: var(--weight-medium, 500);
+  }
+}
+
 /* ==========================================================================
    GEIST TYPOGRAPHY SYSTEM
    Scoped to .geist-ui — applied only on dashboard, editor & auth pages.
@@ -14,6 +56,14 @@
 .geist-ui {
   /* Font stack — Geist variable loaded via next/font, falls back gracefully */
   --font-sans: var(--font-geist, 'Geist', 'Inter', system-ui, -apple-system, sans-serif);
+
+  /* Phase 1: 6-Tier Fluid Typography Scale */
+  --font-size-display: clamp(2.5rem, 2rem + 2.5vw, 4rem);     /* 40px - 64px */
+  --font-size-h1:      clamp(1.75rem, 1.5rem + 1.25vw, 2.5rem);  /* 28px - 40px */
+  --font-size-h2:      clamp(1.25rem, 1.1rem + 0.75vw, 1.75rem); /* 20px - 28px */
+  --font-size-h3:      clamp(1.125rem, 1rem + 0.5vw, 1.35rem);   /* 18px - 22px */
+  --font-size-body:    clamp(0.9375rem, 0.9rem + 0.25vw, 1.0625rem); /* 15px - 17px */
+  --font-size-small:   clamp(0.75rem, 0.7rem + 0.15vw, 0.875rem);    /* 12px - 14px */
 
   /* Modern type scale (px values match the spec) */
   --text-xs:   0.75rem;   /* 12px */

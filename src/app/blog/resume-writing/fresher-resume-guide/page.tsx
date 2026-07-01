@@ -116,20 +116,20 @@ export default function FresherResumeGuidePage() {
 
         <article className="max-w-4xl mx-auto px-4 pt-32 pb-16">
           <header className="mb-12 text-center">
-            <MotionDiv initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="inline-block px-4 py-2 bg-green-500/20 text-green-400 rounded-full text-sm font-medium mb-6">
+            <MotionDiv initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="inline-block px-4 py-2 bg-green-500/20 text-green-400 rounded-full text-small font-medium mb-6">
               Resume Writing Guide
             </MotionDiv>
-            <MotionDiv initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="text-4xl md:text-5xl font-bold text-white mb-6">
+            <MotionDiv initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="text-display md:text-display font-bold text-white mb-6">
               How to Write a Resume for Freshers in 2026
             </MotionDiv>
-            <MotionDiv initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="text-xl text-gray-400">
+            <MotionDiv initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="text-h3 text-gray-400">
               Complete guide to creating a compelling resume without work experience
             </MotionDiv>
           </header>
 
           <div className="prose prose-invert max-w-none">
             <section className="mb-12">
-              <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-3">
+              <h2 className="text-h2 font-bold text-white mb-4 flex items-center gap-3">
                 <span className="w-8 h-8 bg-[#81ff00]/20 rounded-full flex items-center justify-center text-[#81ff00]">1</span>
                 Why Freshers Struggle with Resumes
               </h2>
@@ -142,7 +142,7 @@ export default function FresherResumeGuidePage() {
             </section>
 
             <section className="mb-12">
-              <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-3">
+              <h2 className="text-h2 font-bold text-white mb-4 flex items-center gap-3">
                 <span className="w-8 h-8 bg-[#81ff00]/20 rounded-full flex items-center justify-center text-[#81ff00]">2</span>
                 What to Include in Your Fresher Resume
               </h2>
@@ -158,19 +158,19 @@ export default function FresherResumeGuidePage() {
                   <MotionDiv key={i} initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} viewport={{ once: true }}
                     className="bg-[#1a1f1a] p-4 rounded-lg border border-white/5">
                     <h4 className="font-semibold text-white mb-1">{item.name}</h4>
-                    <p className="text-gray-400 text-sm">{item.desc}</p>
+                    <p className="text-gray-400 text-small">{item.desc}</p>
                   </MotionDiv>
                 ))}
               </div>
             </section>
 
             <section className="mb-12">
-              <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-3">
+              <h2 className="text-h2 font-bold text-white mb-4 flex items-center gap-3">
                 <span className="w-8 h-8 bg-[#81ff00]/20 rounded-full flex items-center justify-center text-[#81ff00]">3</span>
                 How to Highlight Skills Without Experience
               </h2>
               <div className="bg-[#1a1f1a] rounded-xl p-6 border border-green-800/50">
-                <h3 className="text-lg font-semibold text-white mb-3">Focus on Transferable Skills</h3>
+                <h3 className="text-h3 font-semibold text-white mb-3">Focus on Transferable Skills</h3>
                 <p className="text-gray-300 mb-4">Even without a job, you&apos;ve developed skills through coursework, projects, and daily activities:</p>
                 <ul className="space-y-2 text-gray-300">
                   <li className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-green-400" /> <strong>Communication:</strong> Presentations, group projects</li>
@@ -182,11 +182,11 @@ export default function FresherResumeGuidePage() {
             </section>
 
             <section className="mb-12">
-              <h2 className="text-2xl font-bold text-white mb-4">Pro Tips for Freshers</h2>
+              <h2 className="text-h2 font-bold text-white mb-4">Pro Tips for Freshers</h2>
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="bg-green-900/20 border border-green-800 rounded-lg p-4">
                   <h3 className="font-semibold text-green-400 mb-2">Do This</h3>
-                  <ul className="text-gray-300 text-sm space-y-1">
+                  <ul className="text-gray-300 text-small space-y-1">
                     <li>Use action verbs</li>
                     <li>Quantify achievements</li>
                     <li>Include relevant keywords</li>
@@ -196,7 +196,7 @@ export default function FresherResumeGuidePage() {
                 </div>
                 <div className="bg-red-900/20 border border-red-800 rounded-lg p-4">
                   <h3 className="font-semibold text-red-400 mb-2">Avoid This</h3>
-                  <ul className="text-gray-300 text-sm space-y-1">
+                  <ul className="text-gray-300 text-small space-y-1">
                     <li>Generic objectives</li>
                     <li>Listing every subject</li>
                     <li>Unprofessional email</li>
@@ -209,7 +209,7 @@ export default function FresherResumeGuidePage() {
           </div>
 
           <section className="mt-16 bg-gradient-to-r from-green-600 to-emerald-600 rounded-2xl p-8 text-center">
-            <h2 className="text-2xl font-bold text-white mb-4">Create Your Fresher Resume Now</h2>
+            <h2 className="text-h2 font-bold text-white mb-4">Create Your Fresher Resume Now</h2>
             <p className="text-green-100 mb-6">Our AI helps you create a professional fresher resume.</p>
             <Link href="/sign-up?callbackUrl=/resume-enhancer" className="inline-flex items-center gap-2 bg-white text-green-700 px-8 py-4 rounded-full font-bold hover:bg-gray-100 transition">
               Build Fresher Resume Free <ArrowRight className="w-5 h-5" />
@@ -217,7 +217,7 @@ export default function FresherResumeGuidePage() {
           </section>
 
           <section className="mt-12">
-            <h3 className="text-xl font-bold text-white mb-4">Related Resume Pages</h3>
+            <h3 className="text-h3 font-bold text-white mb-4">Related Resume Pages</h3>
             <div className="flex flex-wrap gap-3">
               <Link href="/resume/data-analyst" className="px-4 py-2 bg-[#1a1f1a] text-gray-300 rounded-lg hover:bg-[#2a2f2a] transition">Data Analyst Resume</Link>
               <Link href="/resume/software-engineer" className="px-4 py-2 bg-[#1a1f1a] text-gray-300 rounded-lg hover:bg-[#2a2f2a] transition">Software Engineer Resume</Link>
@@ -229,12 +229,12 @@ export default function FresherResumeGuidePage() {
         <footer className="py-8 px-4 border-t border-white/5">
           <div className="max-w-7xl mx-auto flex justify-between items-center">
             <div className="flex items-center gap-2">
-              <div className="w-6 h-6 bg-[#81ff00] rounded"><span className="text-black font-bold text-xs">CV</span></div>
-              <span className="text-gray-500 text-sm">© 2026 CVCircle</span>
+              <div className="w-6 h-6 bg-[#81ff00] rounded"><span className="text-black font-bold text-small">CV</span></div>
+              <span className="text-gray-500 text-small">© 2026 CVCircle</span>
             </div>
             <div className="flex gap-6">
-              <Link href="/privacy-policy" className="text-gray-500 text-sm">Privacy</Link>
-              <Link href="/terms" className="text-gray-500 text-sm">Terms</Link>
+              <Link href="/privacy-policy" className="text-gray-500 text-small">Privacy</Link>
+              <Link href="/terms" className="text-gray-500 text-small">Terms</Link>
             </div>
           </div>
         </footer>

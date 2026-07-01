@@ -84,11 +84,11 @@ const CoverLetterListView: React.FC<CoverLetterListViewProps> = ({
                 <table className="w-full text-left border-collapse">
                     <thead>
                         <tr className="bg-gray-50 dark:bg-[#141810] border-b border-gray-200 dark:border-white/10">
-                            <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-white uppercase tracking-wider">Document Name</th>
-                            <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-white uppercase tracking-wider">Status</th>
-                            <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-white uppercase tracking-wider">Words</th>
-                            <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-white uppercase tracking-wider">Last Modified</th>
-                            <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-white uppercase tracking-wider text-right">Actions</th>
+                            <th className="px-6 py-3 text-small font-semibold text-gray-500 dark:text-white uppercase tracking-wider">Document Name</th>
+                            <th className="px-6 py-3 text-small font-semibold text-gray-500 dark:text-white uppercase tracking-wider">Status</th>
+                            <th className="px-6 py-3 text-small font-semibold text-gray-500 dark:text-white uppercase tracking-wider">Words</th>
+                            <th className="px-6 py-3 text-small font-semibold text-gray-500 dark:text-white uppercase tracking-wider">Last Modified</th>
+                            <th className="px-6 py-3 text-small font-semibold text-gray-500 dark:text-white uppercase tracking-wider text-right">Actions</th>
                         </tr>
                     </thead>
                     <tbody className="dark:divide-white/10">
@@ -109,7 +109,7 @@ const CoverLetterListView: React.FC<CoverLetterListViewProps> = ({
                                                     type="text"
                                                     value={editingTitle || ''}
                                                     onChange={(e) => onTitleEdit?.(cl.id, e.target.value)}
-                                                    className="w-full bg-white dark:bg-[#1a2016] border border-gray-300 dark:border-lime-500/20 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-lime-500 dark:text-white"
+                                                    className="w-full bg-white dark:bg-[#1a2016] border border-gray-300 dark:border-lime-500/20 rounded px-2 py-1 text-small focus:outline-none focus:ring-2 focus:ring-lime-500 dark:text-white"
                                                     autoFocus
                                                     onKeyDown={(e) => {
                                                         if (e.key === 'Enter') {
@@ -124,7 +124,7 @@ const CoverLetterListView: React.FC<CoverLetterListViewProps> = ({
                                             </div>
                                         ) : (
                                             <div className="flex items-center gap-2">
-                                                <span className="font-medium text-sm text-gray-900 dark:text-white truncate" title={cl.title}>{cl.title}</span>
+                                                <span className="font-medium text-small text-gray-900 dark:text-white truncate" title={cl.title}>{cl.title}</span>
                                                 {onStartEditing && (
                                                     <button
                                                         onClick={(e) => {
@@ -149,7 +149,7 @@ const CoverLetterListView: React.FC<CoverLetterListViewProps> = ({
                                             </div>
                                         )}
                                         {(cl.metadata?.targetCompany || cl.metadata?.targetPosition) && (
-                                            <span className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
+                                            <span className="text-small text-gray-500 dark:text-gray-400 truncate mt-0.5">
                                                 {cl.metadata.targetPosition ? `${cl.metadata.targetPosition} at ` : ''}
                                                 {cl.metadata.targetCompany || ''}
                                             </span>
@@ -165,12 +165,12 @@ const CoverLetterListView: React.FC<CoverLetterListViewProps> = ({
                                 </td>
 
                                 {/* Words */}
-                                <td className="px-6 py-3 text-xs text-gray-500 dark:text-gray-400">
+                                <td className="px-6 py-3 text-small text-gray-500 dark:text-gray-400">
                                     {getWordCount(cl)} words
                                 </td>
 
                                 {/* Last Modified */}
-                                <td className="px-6 py-3 text-xs text-gray-500 dark:text-gray-400">
+                                <td className="px-6 py-3 text-small text-gray-500 dark:text-gray-400">
                                     {typeof cl.lastModified === 'string' ? cl.lastModified : formatDetailedTime(cl.lastModified)}
                                 </td>
 

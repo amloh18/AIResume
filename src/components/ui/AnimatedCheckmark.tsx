@@ -68,7 +68,7 @@ export const SaveIndicator: React.FC<SaveIndicatorProps> = ({
   className = ''
 }) => {
   return (
-    <div className={`flex items-center gap-1.5 text-xs ${className}`}>
+    <div className={`flex items-center gap-1.5 text-small ${className}`}>
       <AnimatePresence mode="wait">
         {status === 'saving' && (
           <motion.div

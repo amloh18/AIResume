@@ -334,7 +334,7 @@ const CVManagementSection: React.FC<{
         data-analytics-widget="cv-management"
       >
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold text-gray-900 dark:text-white">CV Management</h2>
+          <h2 className="text-h3 font-bold text-gray-900 dark:text-white">CV Management</h2>
           <div className="flex items-center gap-2">
             <MasterCVBadge />
           </div>
@@ -346,10 +346,10 @@ const CVManagementSection: React.FC<{
           </div>
 
           <div className="space-y-2">
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+            <h3 className="text-h3 font-bold text-gray-900 dark:text-white">
               Create Your Master CV
             </h3>
-            <p className="text-gray-600 dark:text-white/70 text-sm max-w-md mx-auto leading-relaxed">
+            <p className="text-gray-600 dark:text-white/70 text-small max-w-md mx-auto leading-relaxed">
               Your Master CV acts as the foundation for all your tailored CVs and job tracking. Create it once, and we'll use it as a base for every job application you track.
             </p>
           </div>
@@ -364,7 +364,7 @@ const CVManagementSection: React.FC<{
               <Plus size={18} />
               Create Master CV
             </motion.button>
-            <p className="text-xs text-gray-500 dark:text-white/50">
+            <p className="text-small text-gray-500 dark:text-white/50">
               Required for tailored CVs and job tracking
             </p>
           </div>
@@ -379,7 +379,7 @@ const CVManagementSection: React.FC<{
       data-analytics-widget="cv-management"
     >
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-bold text-gray-900 dark:text-white">CV Management</h2>
+        <h2 className="text-h3 font-bold text-gray-900 dark:text-white">CV Management</h2>
         <div className="flex items-center gap-2">
           <MasterCVBadge />
         </div>
@@ -404,11 +404,11 @@ const CVManagementSection: React.FC<{
                     className="transition-all duration-1000 ease-out" strokeLinecap="round" />
                 </svg>
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-lg font-bold text-gray-900 dark:text-white">{cvHealthScore}%</span>
+                  <span className="text-h3 font-bold text-gray-900 dark:text-white">{cvHealthScore}%</span>
                 </div>
               </div>
               <div className="flex items-center justify-center gap-2 mb-1">
-                <p className="text-gray-600 dark:text-white/60 text-xs">{masterCV?.title || 'Master CV Health'}</p>
+                <p className="text-gray-600 dark:text-white/60 text-small">{masterCV?.title || 'Master CV Health'}</p>
                 <motion.button
                   onClick={handleEditMasterCV}
                   className="text-gray-600 dark:text-white/60 hover:text-gray-900 dark:hover:text-white transition-colors"
@@ -419,7 +419,7 @@ const CVManagementSection: React.FC<{
                   <Edit size={14} />
                 </motion.button>
               </div>
-              <p className={`text-xs font-medium ${status.color}`}>{status.label}</p>
+              <p className={`text-small font-medium ${status.color}`}>{status.label}</p>
 
             </div>
           </div>
@@ -432,10 +432,10 @@ const CVManagementSection: React.FC<{
               <div className="glass-card-premium rounded-lg p-4 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border border-purple-200 dark:border-purple-400/20">
                 <div className="flex items-center gap-3">
                   <div className="flex-1">
-                    <h4 className="text-gray-900 dark:text-white font-bold text-lg">
+                    <h4 className="text-gray-900 dark:text-white font-bold text-h3">
                       {profile.experienceLevel}
                     </h4>
-                    <p className="text-gray-600 dark:text-white/60 text-sm">
+                    <p className="text-gray-600 dark:text-white/60 text-small">
                       {profile.yearsExperience > 0
                         ? `${profile.yearsExperience} ${profile.yearsExperience === 1 ? 'year' : 'years'} experience`
                         : 'No experience listed'
@@ -450,20 +450,20 @@ const CVManagementSection: React.FC<{
 
             {/* Bottom Row: Quick Actions */}
             <div className="space-y-3">
-              <h3 className="text-gray-900 dark:text-white font-medium text-sm flex items-center gap-2">
+              <h3 className="text-gray-900 dark:text-white font-medium text-small flex items-center gap-2">
                 <Zap size={14} className="text-yellow-400" />
                 Quick Actions
               </h3>
               <div className="space-y-2">
                 <motion.button
                   onClick={handleShowATSAnalysis}
-                  className="w-full p-3 bg-purple-400/20 text-purple-400 rounded-lg text-sm font-medium hover:bg-purple-400/30 transition-all duration-300 flex items-center gap-2"
+                  className="w-full p-3 bg-purple-400/20 text-purple-400 rounded-lg text-small font-medium hover:bg-purple-400/30 transition-all duration-300 flex items-center gap-2"
                   whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                   <Target size={16} /> Show ATS Analysis
                 </motion.button>
                 <motion.button
                   onClick={onCreateJob}
-                  className="w-full p-3 bg-blue-400/20 text-blue-400 rounded-lg text-sm font-medium hover:bg-blue-400/30 transition-all duration-300 flex items-center gap-2"
+                  className="w-full p-3 bg-blue-400/20 text-blue-400 rounded-lg text-small font-medium hover:bg-blue-400/30 transition-all duration-300 flex items-center gap-2"
                   whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                   <Briefcase size={16} /> Add Job Application
                 </motion.button>
@@ -587,7 +587,7 @@ export const ApplicationCalendarWidget: React.FC<{
         </motion.button>
 
         <div className="text-center">
-          <h2 className="text-base font-bold text-gray-900 dark:text-white">Application Calendar</h2>
+          <h2 className="text-body font-bold text-gray-900 dark:text-white">Application Calendar</h2>
           <p className="text-[11px] text-gray-500 dark:text-white/50">{dateRange.start} - {dateRange.end}</p>
         </div>
 
@@ -606,7 +606,7 @@ export const ApplicationCalendarWidget: React.FC<{
       {weekOffset !== 0 && (
         <motion.button
           onClick={() => setWeekOffset(0)}
-          className="mb-2 text-xs text-blue-400 hover:text-blue-300 transition-colors flex items-center justify-center gap-1"
+          className="mb-2 text-small text-blue-400 hover:text-blue-300 transition-colors flex items-center justify-center gap-1"
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
         >
@@ -623,7 +623,7 @@ export const ApplicationCalendarWidget: React.FC<{
             <div className="grid grid-cols-7 gap-1 mb-4">
               {/* Day headers */}
               {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
-                <div key={day} className="text-center text-xs font-medium text-gray-600 dark:text-white/60 py-1">
+                <div key={day} className="text-center text-small font-medium text-gray-600 dark:text-white/60 py-1">
                   {day}
                 </div>
               ))}
@@ -678,7 +678,7 @@ export const ApplicationCalendarWidget: React.FC<{
                       key={i}
                       onClick={handleDateClick}
                       className={`
-                        aspect-square flex flex-col items-center justify-center text-xs rounded transition-all duration-200
+                        aspect-square flex flex-col items-center justify-center text-small rounded transition-all duration-200
                         ${isToday ? 'bg-blue-400/20 dark:bg-blue-400/20 text-blue-400 font-medium ring-2 ring-blue-400/50' :
                           isPast ? 'text-gray-600 dark:text-white/60' :
                             'text-gray-400 dark:text-white/40'}
@@ -689,7 +689,7 @@ export const ApplicationCalendarWidget: React.FC<{
                       whileHover={isClickable ? { scale: 1.1 } : {}}
                       whileTap={isClickable ? { scale: 0.95 } : {}}
                     >
-                      <div className="font-medium text-xs">{currentDate.getDate()}</div>
+                      <div className="font-medium text-small">{currentDate.getDate()}</div>
                       <div className="flex gap-0.5 mt-0.5">
                         {dayApplications > 0 && (
                           <div className="w-1 h-1 bg-green-400 rounded-full"></div>
@@ -723,7 +723,7 @@ export const ApplicationCalendarWidget: React.FC<{
 
             {/* Summary */}
             {(upcomingDeadlines.length > 0 || jobs.length > 0) && (
-              <div className="text-center text-xs text-gray-500 dark:text-white/50">
+              <div className="text-center text-small text-gray-500 dark:text-white/50">
                 {upcomingDeadlines.length > 0 && (
                   <><span className="text-red-400 font-medium">{upcomingDeadlines.length}</span> deadline{upcomingDeadlines.length !== 1 ? 's' : ''}</>
                 )}
@@ -747,14 +747,14 @@ export const ApplicationCalendarWidget: React.FC<{
             <div className="flex items-center justify-between mb-3">
               <motion.button
                 onClick={() => { setSelectedDate(null); setSelectedType(null); }}
-                className="flex items-center gap-1 text-xs text-gray-500 dark:text-white/60 hover:text-gray-700 dark:hover:text-white transition-colors"
+                className="flex items-center gap-1 text-small text-gray-500 dark:text-white/60 hover:text-gray-700 dark:hover:text-white transition-colors"
                 whileHover={{ x: -2 }}
               >
                 <ChevronLeft className="w-4 h-4" />
                 Back
               </motion.button>
 
-              <h3 className={`text-sm font-semibold flex items-center gap-1 ${selectedType === 'deadlines' ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+              <h3 className={`text-small font-semibold flex items-center gap-1 ${selectedType === 'deadlines' ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
                 {selectedType === 'deadlines' ? <Clock className="w-4 h-4" /> : <Briefcase className="w-4 h-4" />}
                 {selectedDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
               </h3>
@@ -764,13 +764,13 @@ export const ApplicationCalendarWidget: React.FC<{
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => setSelectedType('applications')}
-                    className={`px-2 py-1 rounded text-xs transition-colors ${selectedType === 'applications' ? 'bg-green-400 text-white' : 'bg-gray-200 dark:bg-white/10 text-gray-500 dark:text-white/50'}`}
+                    className={`px-2 py-1 rounded text-small transition-colors ${selectedType === 'applications' ? 'bg-green-400 text-white' : 'bg-gray-200 dark:bg-white/10 text-gray-500 dark:text-white/50'}`}
                   >
                     Apps ({selectedDateApplications.length})
                   </button>
                   <button
                     onClick={() => setSelectedType('deadlines')}
-                    className={`px-2 py-1 rounded text-xs transition-colors ${selectedType === 'deadlines' ? 'bg-red-400 text-white' : 'bg-gray-200 dark:bg-white/10 text-gray-500 dark:text-white/50'}`}
+                    className={`px-2 py-1 rounded text-small transition-colors ${selectedType === 'deadlines' ? 'bg-red-400 text-white' : 'bg-gray-200 dark:bg-white/10 text-gray-500 dark:text-white/50'}`}
                   >
                     Due ({selectedDateDeadlines.length})
                   </button>
@@ -790,11 +790,11 @@ export const ApplicationCalendarWidget: React.FC<{
                       animate={{ opacity: 1, y: 0 }}
                     >
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-gray-900 dark:text-white truncate text-sm">{job.jobTitle || job.title}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{job.company}</p>
+                        <p className="font-medium text-gray-900 dark:text-white truncate text-small">{job.jobTitle || job.title}</p>
+                        <p className="text-small text-gray-500 dark:text-gray-400 truncate">{job.company}</p>
                       </div>
                       <div className="flex items-center gap-2 ml-2">
-                        <span className="text-xs text-red-500 dark:text-red-400 font-medium">Deadline</span>
+                        <span className="text-small text-red-500 dark:text-red-400 font-medium">Deadline</span>
                         <ChevronRight className="w-4 h-4 text-gray-400" />
                       </div>
                     </motion.div>
@@ -812,11 +812,11 @@ export const ApplicationCalendarWidget: React.FC<{
                       animate={{ opacity: 1, y: 0 }}
                     >
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-gray-900 dark:text-white truncate text-sm">{job.jobTitle || job.title}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{job.company}</p>
+                        <p className="font-medium text-gray-900 dark:text-white truncate text-small">{job.jobTitle || job.title}</p>
+                        <p className="text-small text-gray-500 dark:text-gray-400 truncate">{job.company}</p>
                       </div>
                       <div className="flex items-center gap-2 ml-2">
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${job.status === 'interview' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400' :
+                        <span className={`text-small px-2 py-0.5 rounded-full ${job.status === 'interview' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400' :
                           job.status === 'offer' ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' :
                             'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-400'
                           }`}>
@@ -1050,7 +1050,7 @@ export const IntelligenceDashboard: React.FC<{
             <TrendingUp className="h-4 w-4 text-blue-400" />
           </div>
           <div>
-            <h2 className="text-base font-bold text-gray-900 dark:text-white">AI Insights</h2>
+            <h2 className="text-body font-bold text-gray-900 dark:text-white">AI Insights</h2>
             <p className="text-[11px] text-gray-500 dark:text-white/50">Market & Application Goals</p>
           </div>
         </div>
@@ -1061,21 +1061,21 @@ export const IntelligenceDashboard: React.FC<{
         <div className="w-full md:w-1/2 h-full">
           <div className="bg-white/50 dark:bg-black/20 rounded-lg p-4 border border-gray-100 dark:border-white/5 h-full flex flex-col justify-center">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-medium text-gray-600 dark:text-gray-300">Monthly Goal</span>
+              <span className="text-small font-medium text-gray-600 dark:text-gray-300">Monthly Goal</span>
               {isEditingGoal ? (
                 <div className="flex items-center gap-1">
                   <input
                     type="number"
                     value={newGoal}
                     onChange={(e) => setNewGoal(Number(e.target.value))}
-                    className="w-12 text-xs p-1 bg-transparent border border-gray-300 dark:border-gray-600 rounded text-center text-gray-900 dark:text-white"
+                    className="w-12 text-small p-1 bg-transparent border border-gray-300 dark:border-gray-600 rounded text-center text-gray-900 dark:text-white"
                   />
                   <button onClick={handleUpdateGoal} className="text-green-500 hover:text-green-600"><Check size={14} /></button>
                   <button onClick={() => setIsEditingGoal(false)} className="text-red-500 hover:text-red-600"><X size={14} /></button>
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-gray-900 dark:text-white">
+                  <span className="text-small font-bold text-gray-900 dark:text-white">
                     {predictions?.projectedApplications || jobs.length} / {newGoal}
                   </span>
                   <button onClick={() => setIsEditingGoal(true)} className="text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors">
@@ -1132,7 +1132,7 @@ export const IntelligenceDashboard: React.FC<{
               <span className="text-[11px] text-gray-500 dark:text-gray-400 mb-2 w-full text-left">Time to Offer</span>
               <div className="w-full flex flex-col gap-1 mt-auto">
                 <div className="flex justify-between items-end">
-                  <span className="text-lg font-bold text-gray-900 dark:text-white leading-none">{competitiveData.metrics.timeToOffer}</span>
+                  <span className="text-h3 font-bold text-gray-900 dark:text-white leading-none">{competitiveData.metrics.timeToOffer}</span>
                   <span className="text-[10px] text-gray-500 dark:text-gray-400">days</span>
                 </div>
                 <div className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
@@ -1146,7 +1146,7 @@ export const IntelligenceDashboard: React.FC<{
               </div>
             </div>
           </div>
-          <Link href="/dashboard/tracker" className="w-full flex items-center justify-center gap-2 p-2.5 bg-lime-500/10 text-lime-600 dark:text-lime-400 hover:bg-lime-500/20 transition-colors rounded-lg text-sm font-medium mt-auto">
+          <Link href="/dashboard/tracker" className="w-full flex items-center justify-center gap-2 p-2.5 bg-lime-500/10 text-lime-600 dark:text-lime-400 hover:bg-lime-500/20 transition-colors rounded-lg text-small font-medium mt-auto">
             <Briefcase size={16} /> Track New Application
           </Link>
         </div>
@@ -1220,7 +1220,7 @@ const PerformanceInsights: React.FC<{
       data-analytics-widget="performance-insights"
     >
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-lg font-bold text-gray-900 dark:text-white">Performance Insights</h2>
+        <h2 className="text-h3 font-bold text-gray-900 dark:text-white">Performance Insights</h2>
         <div className="flex items-center gap-2">
           <SegmentedToggle
             value={selectedPeriod}
@@ -1240,65 +1240,65 @@ const PerformanceInsights: React.FC<{
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         {/* Application Conversion Funnel */}
         <div>
-          <h3 className="text-gray-900 dark:text-white font-medium text-sm mb-3 flex items-center gap-2">
+          <h3 className="text-gray-900 dark:text-white font-medium text-small mb-3 flex items-center gap-2">
             <TrendingUp size={14} className="text-blue-400" />
             Application Conversion Funnel
           </h3>
           <div className="grid grid-cols-2 gap-4">
             <div className="glass-card-premium rounded-xl p-4 text-center">
-              <div className="text-2xl font-bold text-blue-400 mb-1">{metrics.applicationFunnel.applied}</div>
-              <div className="text-gray-600 dark:text-white/60 text-xs">Applied</div>
+              <div className="text-h2 font-bold text-blue-400 mb-1">{metrics.applicationFunnel.applied}</div>
+              <div className="text-gray-600 dark:text-white/60 text-small">Applied</div>
             </div>
 
             <div className="glass-card-premium rounded-xl p-4 text-center">
-              <div className="text-2xl font-bold text-purple-400 mb-1">{metrics.applicationFunnel.interview}</div>
-              <div className="text-gray-600 dark:text-white/60 text-xs">Interview</div>
+              <div className="text-h2 font-bold text-purple-400 mb-1">{metrics.applicationFunnel.interview}</div>
+              <div className="text-gray-600 dark:text-white/60 text-small">Interview</div>
             </div>
 
             <div className="glass-card-premium rounded-xl p-4 text-center">
-              <div className="text-2xl font-bold text-green-400 mb-1">{metrics.applicationFunnel.offer}</div>
-              <div className="text-gray-600 dark:text-white/60 text-xs">Offered</div>
+              <div className="text-h2 font-bold text-green-400 mb-1">{metrics.applicationFunnel.offer}</div>
+              <div className="text-gray-600 dark:text-white/60 text-small">Offered</div>
             </div>
 
             <div className="glass-card-premium rounded-xl p-4 text-center">
-              <div className="text-2xl font-bold text-red-400 mb-1">{jobs.filter(job => job.status === 'rejected').length}</div>
-              <div className="text-gray-600 dark:text-white/60 text-xs">Rejection</div>
+              <div className="text-h2 font-bold text-red-400 mb-1">{jobs.filter(job => job.status === 'rejected').length}</div>
+              <div className="text-gray-600 dark:text-white/60 text-small">Rejection</div>
             </div>
           </div>
         </div>
 
         {/* Performance Metrics */}
         <div>
-          <h3 className="text-gray-900 dark:text-white font-medium text-sm mb-3 flex items-center gap-2">
+          <h3 className="text-gray-900 dark:text-white font-medium text-small mb-3 flex items-center gap-2">
             <Target size={14} className="text-green-400" />
             Performance Metrics
           </h3>
           <div className="grid grid-cols-2 gap-4">
             <div className="glass-card-premium rounded-xl p-4 text-center">
-              <div className="text-2xl font-bold text-blue-400 mb-1">{metrics.periodApplications}</div>
-              <div className="text-gray-600 dark:text-white/60 text-xs">Applications This {selectedPeriod}</div>
+              <div className="text-h2 font-bold text-blue-400 mb-1">{metrics.periodApplications}</div>
+              <div className="text-gray-600 dark:text-white/60 text-small">Applications This {selectedPeriod}</div>
             </div>
 
             <div className="glass-card-premium rounded-xl p-4 text-center">
-              <div className="text-2xl font-bold text-green-400 mb-1">{metrics.conversionRates.overallSuccess}%</div>
-              <div className="text-gray-600 dark:text-white/60 text-xs">Overall Success Rate</div>
+              <div className="text-h2 font-bold text-green-400 mb-1">{metrics.conversionRates.overallSuccess}%</div>
+              <div className="text-gray-600 dark:text-white/60 text-small">Overall Success Rate</div>
               {metrics.productivity.improvement > 0 && (
-                <div className="text-xs text-green-400 font-medium">+{metrics.productivity.improvement}% vs Industry</div>
+                <div className="text-small text-green-400 font-medium">+{metrics.productivity.improvement}% vs Industry</div>
               )}
             </div>
 
             <div className="glass-card-premium rounded-xl p-4 text-center">
-              <div className="text-2xl font-bold text-purple-400 mb-1">{metrics.periodResponses}</div>
-              <div className="text-gray-600 dark:text-white/60 text-xs">Responses Received</div>
-              <div className="text-xs text-gray-500 dark:text-white/50">
+              <div className="text-h2 font-bold text-purple-400 mb-1">{metrics.periodResponses}</div>
+              <div className="text-gray-600 dark:text-white/60 text-small">Responses Received</div>
+              <div className="text-small text-gray-500 dark:text-white/50">
                 {metrics.periodApplications > 0 ? Math.round((metrics.periodResponses / metrics.periodApplications) * 100) : 0}% response rate
               </div>
             </div>
 
             <div className="glass-card-premium rounded-xl p-4 text-center">
-              <div className="text-2xl font-bold text-orange-400 mb-1">{metrics.responseTime}</div>
-              <div className="text-gray-600 dark:text-white/60 text-xs">Avg Response Time (days)</div>
-              <div className={`text-xs font-medium ${metrics.responseTime <= 7 ? 'text-green-400' : metrics.responseTime <= 14 ? 'text-yellow-400' : 'text-red-400'}`}>
+              <div className="text-h2 font-bold text-orange-400 mb-1">{metrics.responseTime}</div>
+              <div className="text-gray-600 dark:text-white/60 text-small">Avg Response Time (days)</div>
+              <div className={`text-small font-medium ${metrics.responseTime <= 7 ? 'text-green-400' : metrics.responseTime <= 14 ? 'text-yellow-400' : 'text-red-400'}`}>
                 {metrics.responseTime <= 7 ? 'Excellent' : metrics.responseTime <= 14 ? 'Good' : 'Slow'}
               </div>
             </div>
@@ -1309,7 +1309,7 @@ const PerformanceInsights: React.FC<{
       {/* Actionable Insights */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="p-4 glass-card-premium rounded-lg">
-          <h3 className="text-gray-900 dark:text-white font-medium text-sm mb-3 flex items-center gap-2">
+          <h3 className="text-gray-900 dark:text-white font-medium text-small mb-3 flex items-center gap-2">
             <Lightbulb size={14} className="text-yellow-400" />
             Performance Analysis & AI Insights
           </h3>
@@ -1370,10 +1370,10 @@ const PerformanceInsights: React.FC<{
                   'bg-blue-400/10 border-blue-400'
                 }`}>
                 <div className="flex items-start gap-2">
-                  <span className="text-lg">{insight.icon}</span>
+                  <span className="text-h3">{insight.icon}</span>
                   <div className="flex-1">
-                    <h4 className="text-gray-900 dark:text-white font-medium text-xs mb-1">{insight.title}</h4>
-                    <p className="text-gray-600 dark:text-white/70 text-xs">{insight.message}</p>
+                    <h4 className="text-gray-900 dark:text-white font-medium text-small mb-1">{insight.title}</h4>
+                    <p className="text-gray-600 dark:text-white/70 text-small">{insight.message}</p>
                   </div>
                 </div>
               </div>
@@ -1382,25 +1382,25 @@ const PerformanceInsights: React.FC<{
             {/* Traditional Performance Analysis */}
             <div className="space-y-2">
               {metrics.conversionRates.applyToScreen < 20 && (
-                <div className="flex items-center gap-2 text-gray-700 dark:text-white/70 text-xs">
+                <div className="flex items-center gap-2 text-gray-700 dark:text-white/70 text-small">
                   <div className="w-1 h-1 bg-red-400 rounded-full"></div>
                   <span>Low screening rate - consider improving CV targeting</span>
                 </div>
               )}
               {metrics.conversionRates.screenToInterview < 30 && metrics.applicationFunnel.screening > 0 && (
-                <div className="flex items-center gap-2 text-gray-700 dark:text-white/70 text-xs">
+                <div className="flex items-center gap-2 text-gray-700 dark:text-white/70 text-small">
                   <div className="w-1 h-1 bg-orange-400 rounded-full"></div>
                   <span>Interview conversion needs improvement - optimize phone screening approach</span>
                 </div>
               )}
               {metrics.responseTime > 14 && (
-                <div className="flex items-center gap-2 text-gray-700 dark:text-white/70 text-xs">
+                <div className="flex items-center gap-2 text-gray-700 dark:text-white/70 text-small">
                   <div className="w-1 h-1 bg-yellow-400 rounded-full"></div>
                   <span>Follow up more promptly - faster responses improve success rates</span>
                 </div>
               )}
               {metrics.productivity.improvement > 0 && (
-                <div className="flex items-center gap-2 text-gray-700 dark:text-white/70 text-xs">
+                <div className="flex items-center gap-2 text-gray-700 dark:text-white/70 text-small">
                   <div className="w-1 h-1 bg-green-400 rounded-full"></div>
                   <span>Above industry average - maintain current application quality</span>
                 </div>
@@ -1410,25 +1410,25 @@ const PerformanceInsights: React.FC<{
         </div>
 
         <div className="p-4 glass-card-premium rounded-lg">
-          <h3 className="text-gray-900 dark:text-white font-medium text-sm mb-3">Next Actions</h3>
+          <h3 className="text-gray-900 dark:text-white font-medium text-small mb-3">Next Actions</h3>
           <div className="space-y-2">
             {metrics.periodApplications < 3 && selectedPeriod === 'week' && (
-              <div className="flex items-center gap-2 text-gray-700 dark:text-white/70 text-xs">
+              <div className="flex items-center gap-2 text-gray-700 dark:text-white/70 text-small">
                 <div className="w-1 h-1 bg-blue-400 rounded-full"></div>
                 <span>Increase application volume - aim for 5-7 applications per week</span>
               </div>
             )}
             {metrics.conversionRates.overallSuccess < 15 && (
-              <div className="flex items-center gap-2 text-gray-700 dark:text-white/70 text-xs">
+              <div className="flex items-center gap-2 text-gray-700 dark:text-white/70 text-small">
                 <div className="w-1 h-1 bg-lime-400 rounded-full"></div>
                 <span>Focus on quality over quantity - tailor applications more specifically</span>
               </div>
             )}
-            <div className="flex items-center gap-2 text-gray-700 dark:text-white/70 text-xs">
+            <div className="flex items-center gap-2 text-gray-700 dark:text-white/70 text-small">
               <div className="w-1 h-1 bg-purple-400 rounded-full"></div>
               <span>Track follow-ups systematically for better response rates</span>
             </div>
-            <div className="flex items-center gap-2 text-gray-700 dark:text-white/70 text-xs">
+            <div className="flex items-center gap-2 text-gray-700 dark:text-white/70 text-small">
               <div className="w-1 h-1 bg-green-400 rounded-full"></div>
               <span>Continue building your professional network</span>
             </div>
@@ -1511,8 +1511,8 @@ const RecentJobsWidget: React.FC<{
     >
       {/* Header */}
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-lg font-bold text-gray-900 dark:text-white">Recent Jobs</h2>
-        <span className="text-xs text-gray-500 dark:text-gray-400">
+        <h2 className="text-h3 font-bold text-gray-900 dark:text-white">Recent Jobs</h2>
+        <span className="text-small text-gray-500 dark:text-gray-400">
           {displayedJobs.length}{hasMoreJobs ? `/${sortedJobs.length}` : ''} jobs
         </span>
       </div>
@@ -1522,8 +1522,8 @@ const RecentJobsWidget: React.FC<{
         // Empty State
         <div className="flex-1 flex flex-col items-center justify-center py-8">
           <SearchX className="w-16 h-16 text-gray-300 dark:text-gray-500 mb-4" />
-          <p className="text-base font-semibold text-gray-900 dark:text-white mb-1">No Recent Jobs</p>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">You haven't saved any jobs yet.</p>
+          <p className="text-body font-semibold text-gray-900 dark:text-white mb-1">No Recent Jobs</p>
+          <p className="text-small text-gray-500 dark:text-gray-400 mb-6">You haven't saved any jobs yet.</p>
           {onCreateJob && (
             <button
               onClick={onCreateJob}
@@ -1545,22 +1545,22 @@ const RecentJobsWidget: React.FC<{
               >
                 {/* Job Title - Company inline */}
                 <div className="flex-1 min-w-0 flex items-center gap-1.5">
-                  <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                  <span className="text-small font-medium text-gray-900 dark:text-white truncate">
                     {job.jobTitle || job.title || 'Untitled'}
                   </span>
                   <span className="text-gray-400 dark:text-gray-500 flex-shrink-0">•</span>
-                  <span className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                  <span className="text-small text-gray-500 dark:text-gray-400 truncate">
                     {job.companyName || job.company || 'Unknown'}
                   </span>
                 </div>
 
                 {/* Days since added */}
-                <span className="text-xs text-gray-400 dark:text-gray-500 flex-shrink-0 whitespace-nowrap">
+                <span className="text-small text-gray-400 dark:text-gray-500 flex-shrink-0 whitespace-nowrap">
                   {getDaysSinceAdded(job.createdAt || job.created_at)}
                 </span>
 
                 {/* Status Badge */}
-                <span className={`px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap flex-shrink-0 ${getStatusStyle(job.status)}`}>
+                <span className={`px-2 py-0.5 rounded text-small font-medium whitespace-nowrap flex-shrink-0 ${getStatusStyle(job.status)}`}>
                   {getStatusLabel(job.status)}
                 </span>
               </div>
@@ -1572,7 +1572,7 @@ const RecentJobsWidget: React.FC<{
             <div className="mt-3 pt-3 border-t border-gray-200 dark:border-white/10 text-center flex-shrink-0">
               <button
                 onClick={() => window.location.href = '/dashboard/tracker'}
-                className="text-red-500 hover:text-red-600 text-sm font-medium transition-colors"
+                className="text-red-500 hover:text-red-600 text-small font-medium transition-colors"
               >
                 View All ({sortedJobs.length}) →
               </button>

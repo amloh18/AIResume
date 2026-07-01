@@ -48,7 +48,7 @@ export default function LinkedInPostPreview({
           </div>
           <div>
             <h3 className="font-bold text-gray-900 dark:text-white">LinkedIn Post Preview</h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400">How your post will appear on LinkedIn</p>
+            <p className="text-small text-gray-500 dark:text-gray-400">How your post will appear on LinkedIn</p>
           </div>
         </div>
         {!isEditing && onContentChange && (
@@ -59,7 +59,7 @@ export default function LinkedInPostPreview({
               setIsEditing(true);
               setEditedContent(postContent);
             }}
-            className="flex items-center gap-1 px-3 py-1.5 text-sm text-[#0a66c2] hover:bg-[#0a66c2]/10 rounded-lg transition-colors"
+            className="flex items-center gap-1 px-3 py-1.5 text-small text-[#0a66c2] hover:bg-[#0a66c2]/10 rounded-lg transition-colors"
           >
             <Edit2 className="w-4 h-4" />
             Edit
@@ -74,11 +74,11 @@ export default function LinkedInPostPreview({
             <textarea
               value={editedContent}
               onChange={(e) => setEditedContent(e.target.value)}
-              className="w-full min-h-[200px] p-4 text-sm border border-gray-200 dark:border-white/10 rounded-lg bg-white dark:bg-black/20 text-gray-900 dark:text-white resize-none focus:outline-none focus:ring-2 focus:ring-[#0a66c2]/20"
+              className="w-full min-h-[200px] p-4 text-small border border-gray-200 dark:border-white/10 rounded-lg bg-white dark:bg-black/20 text-gray-900 dark:text-white resize-none focus:outline-none focus:ring-2 focus:ring-[#0a66c2]/20"
               placeholder="Write your LinkedIn post..."
             />
             <div className="flex items-center justify-between">
-              <span className={`text-sm ${
+              <span className={`text-small ${
                 isOverLimit ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'
               }`}>
                 {charactersRemaining} characters remaining
@@ -88,7 +88,7 @@ export default function LinkedInPostPreview({
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={handleCancel}
-                  className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-colors"
+                  className="px-4 py-2 text-small text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-colors"
                 >
                   Cancel
                 </motion.button>
@@ -97,7 +97,7 @@ export default function LinkedInPostPreview({
                   whileTap={{ scale: 0.95 }}
                   onClick={handleSave}
                   disabled={isOverLimit}
-                  className="px-4 py-2 text-sm bg-[#0a66c2] hover:bg-[#004182] text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 text-small bg-[#0a66c2] hover:bg-[#004182] text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Save Changes
                 </motion.button>
@@ -115,7 +115,7 @@ export default function LinkedInPostPreview({
               </div>
               <div>
                 <p className="font-semibold text-gray-900 dark:text-white">Your Name</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
+                <p className="text-small text-gray-500 dark:text-gray-400">
                   1st • Your Company • 2h
                 </p>
               </div>
@@ -133,7 +133,7 @@ export default function LinkedInPostPreview({
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="flex items-center gap-2 text-red-500 text-sm bg-red-50 dark:bg-red-900/20 p-3 rounded-lg"
+                className="flex items-center gap-2 text-red-500 text-small bg-red-50 dark:bg-red-900/20 p-3 rounded-lg"
               >
                 <AlertCircle className="w-4 h-4" />
                 Post exceeds LinkedIn's {characterLimit} character limit by {Math.abs(charactersRemaining)} characters
@@ -141,7 +141,7 @@ export default function LinkedInPostPreview({
             )}
 
             {/* Post Stats */}
-            <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400 pt-4 border-t border-gray-200 dark:border-white/10">
+            <div className="flex items-center gap-4 text-small text-gray-500 dark:text-gray-400 pt-4 border-t border-gray-200 dark:border-white/10">
               <span>{characterCount.toLocaleString()} characters</span>
               <span>•</span>
               <span>{Math.round((characterCount / characterLimit) * 100)}% of limit</span>
@@ -172,7 +172,7 @@ export default function LinkedInPostPreview({
               </>
             )}
           </motion.button>
-          <p className="text-center text-xs text-gray-400 dark:text-gray-500 mt-3">
+          <p className="text-center text-small text-gray-400 dark:text-gray-500 mt-3">
             This will be shared with your LinkedIn network
           </p>
         </div>

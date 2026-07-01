@@ -119,14 +119,14 @@ export const TestimonialSnippet = ({ index }: { index: number }) => {
         </div>
 
         <div className="flex-1 text-center tablet:text-left relative">
-          <p className="text-white/90 text-base tablet:text-lg italic font-medium leading-relaxed tracking-tight">
+          <p className="text-white/90 text-body tablet:text-h3 italic font-medium leading-relaxed tracking-tight">
             "{testimonial.message}"
           </p>
           <div className="mt-4 flex flex-col tablet:flex-row tablet:items-center gap-1 tablet:gap-3">
             <span className="text-[#81ff00]/90 text-[11px] uppercase tracking-[0.2em] font-black">
               Verified Experience
             </span>
-            <span className="hidden tablet:block text-white/10 text-xs">|</span>
+            <span className="hidden tablet:block text-white/10 text-small">|</span>
             <p className="text-white/40 text-[11px] uppercase tracking-widest font-bold">
               {testimonial.username} • {testimonial.designation}
             </p>
@@ -161,11 +161,28 @@ const Testimonials = () => {
     <section id="testimonials" className="relative pt-32 pb-24 bg-[#141810] overflow-hidden">
       <div className="relative z-10 max-w-7xl mx-auto px-4 tablet:px-6 desktop:px-8">
         {/* Section Header */}
-        <div className="text-center mb-16">
-          <h2 className="text-2xl tablet:text-3xl desktop:text-4xl font-bold text-white mb-4">
+        <div className="text-left mb-16">
+          {/* Decorative squiggle */}
+          <motion.div
+            className="mb-6 flex justify-start"
+            initial={{ opacity: 0, x: -20 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+          >
+            <svg width="48" height="24" viewBox="0 0 48 24" fill="none" className="text-[#81ff00]">
+              <path
+                d="M2 12C6 6 10 18 14 12C18 6 22 18 26 12C30 6 34 18 38 12C42 6 46 12 46 12"
+                stroke="currentColor"
+                strokeWidth="3"
+                strokeLinecap="round"
+              />
+            </svg>
+          </motion.div>
+          <h2 className="!text-[2rem] tablet:!text-[2.5rem] desktop:!text-[3rem] font-extrabold text-white mb-4 tracking-tighter !leading-[1.05] text-left">
             <span className="text-lime-400">15,000+</span> professionals celebrating new jobs
           </h2>
-          <p className="text-white/60 text-sm tablet:text-base max-w-2xl mx-auto">
+          <p className="text-white/60 text-small tablet:text-body max-w-2xl text-left">
             Join thousands of successful job seekers who have landed their dream positions using CVCircle.
           </p>
         </div>
@@ -195,7 +212,7 @@ const Testimonials = () => {
                       <Star key={i} size={16} className="text-[#81ff00] fill-current" />
                     ))}
                   </div>
-                  <p className="text-white/90 text-base tablet:text-lg leading-relaxed mb-8 italic font-medium">
+                  <p className="text-white/90 text-body tablet:text-h3 leading-relaxed mb-8 italic font-medium">
                     "{testimonial.message}"
                   </p>
                 </div>
@@ -208,7 +225,7 @@ const Testimonials = () => {
                     />
                   </div>
                   <div>
-                    <div className="text-white font-bold text-sm tracking-tight">{testimonial.username}</div>
+                    <div className="text-white font-bold text-small tracking-tight">{testimonial.username}</div>
                     <div className="text-white/40 text-[10px] uppercase tracking-[0.15em] font-black">{testimonial.designation}</div>
                   </div>
                 </div>
