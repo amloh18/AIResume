@@ -17,6 +17,37 @@ import { useCanvasFit } from '@/hooks/useCanvasFit';
 const ReadOnlyWrapper = (props: any) => <EditableField {...props} readOnly={true} />;
 const EditableWrapper = EditableField;
 
+const LIST_SNIPPET_CATEGORIES = ['Experience', 'Education', 'Projects', 'Certifications', 'Awards', 'Publications', 'Volunteer', 'References'];
+
+const getCollectionNameForCategory = (category?: string) => {
+  const key = (category || '').toLowerCase();
+  const collectionMap: Record<string, string> = {
+    experience: 'experience',
+    education: 'education',
+    projects: 'projects',
+    certifications: 'certifications',
+    awards: 'awards',
+    publications: 'publications',
+    volunteer: 'volunteer',
+    references: 'references',
+  };
+
+  return collectionMap[key] || key;
+};
+
+const createDefaultListEntry = (category?: string) => {
+  const key = getCollectionNameForCategory(category);
+  if (key === 'experience') return { id: generateId(), company: 'New Company', role: 'Job Title', date: 'Date', description: '<ul><li>Describe your responsibilities and achievements here.</li></ul>' };
+  if (key === 'education') return { id: generateId(), institution: 'Institution Name', degree: 'Degree', date: 'Date', description: 'Additional details.' };
+  if (key === 'projects') return { id: generateId(), name: 'Project Name', role: 'Role', date: 'Date', description: '<ul><li>Project details.</li></ul>' };
+  if (key === 'certifications') return { id: generateId(), name: 'Certification Name', issuer: 'Issuer', date: 'Date' };
+  if (key === 'awards') return { id: generateId(), name: 'Award Name', issuer: 'Issuer', date: 'Date' };
+  if (key === 'publications') return { id: generateId(), title: 'Publication Title', publisher: 'Publisher', date: 'Date', description: 'Brief summary.' };
+  if (key === 'volunteer') return { id: generateId(), organization: 'Org Name', role: 'Role', date: 'Date', description: '<ul><li>Duties here.</li></ul>' };
+  if (key === 'references') return { id: generateId(), name: 'Ref Name', role: 'Role', contact: 'Contact Info' };
+  return null;
+};
+
 // PROPS AND REF INTERFACE
 // ==========================================
 export interface CVCanvasBuilderProps {
@@ -838,7 +869,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
   const handleAddClick = (zoneId: string, insertIndex?: number) => setReplacingSnippet({ zoneId, isAdd: true, insertIndex });
 
   const handleAddListEntry = (type: string) => {
-    const l = type.toLowerCase();
+    const l = getCollectionNameForCategory(type);
     const updated = { ...cvData };
     if (l === 'experience') updated.experience = [...(updated.experience || []), { id: generateId(), company: 'New Company', role: 'Job Title', date: 'Date', description: '<ul><li>Describe your responsibilities and achievements here.</li></ul>' }];
     else if (l === 'education') updated.education = [...(updated.education || []), { id: generateId(), institution: 'Institution Name', degree: 'Degree', date: 'Date', description: 'Additional details.' }];
@@ -853,6 +884,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
 
   const executeReplaceOrAdd = (newType: string) => {
     if (!replacingSnippet) return;
+    const snippetDef = SNIPPETS[newType];
     setZones(prev => {
       const newZones = { ...prev };
       if (!newZones[replacingSnippet.zoneId]) {
@@ -870,6 +902,21 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
       }
       return newZones;
     });
+
+    if (snippetDef && LIST_SNIPPET_CATEGORIES.includes(snippetDef.category)) {
+      const collectionName = getCollectionNameForCategory(snippetDef.category);
+      const collection = cvData?.[collectionName];
+      if (!Array.isArray(collection) || collection.length === 0) {
+        const defaultEntry = createDefaultListEntry(snippetDef.category);
+        if (defaultEntry) {
+          onDataChange({
+            ...cvData,
+            [collectionName]: [...(Array.isArray(collection) ? collection : []), defaultEntry],
+          });
+        }
+      }
+    }
+
     setReplacingSnippet(null);
   };
 
@@ -939,14 +986,16 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
         const blocks = safeZones[zoneId] || [];
         let currentPage = 0;
         let currentHeight = 0;
+        const sectionGap = layoutMetrics.sectionGapPx || 0;
+        const gapBefore = () => (currentHeight > 0 ? sectionGap : 0);
 
         blocks.forEach(block => {
           // Check if this block is a list snippet
           const snippetDef = SNIPPETS[block.type];
-          const isList = snippetDef && ['Experience', 'Education', 'Projects', 'Certifications', 'Awards', 'Publications', 'Volunteer', 'References'].includes(snippetDef.category);
+          const isList = snippetDef && LIST_SNIPPET_CATEGORIES.includes(snippetDef.category);
 
           if (isList) {
-            const collectionName = snippetDef.category.toLowerCase();
+            const collectionName = getCollectionNameForCategory(snippetDef.category);
             const entries = cvData[collectionName] || [];
 
             // 1. Process header unit and 1st entry together
@@ -956,12 +1005,12 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
             const firstEntry = entries[0];
             const firstEntryH = firstEntry ? (unitHeights[`${block.id}_entry_${firstEntry.id}`] || 80) : 0;
 
-            if (currentHeight + headerH + firstEntryH > usableHeight && currentHeight > 0) {
+            if (currentHeight + gapBefore() + headerH + firstEntryH > usableHeight && currentHeight > 0) {
               currentPage++;
               currentHeight = 0;
             }
             newAssignments[headerUnitId] = currentPage;
-            currentHeight += headerH;
+            currentHeight += gapBefore() + headerH;
             if (currentPage > maxPageNum) maxPageNum = currentPage;
 
             // 2. Process each entry unit
@@ -970,24 +1019,24 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
               const entryH = unitHeights[entryUnitId] || 80;
               
               if (entryIdx > 0) {
-                if (currentHeight + entryH > usableHeight && currentHeight > 0) {
+                if (currentHeight + gapBefore() + entryH > usableHeight && currentHeight > 0) {
                   currentPage++;
                   currentHeight = 0;
                 }
               }
               newAssignments[entryUnitId] = currentPage;
-              currentHeight += entryH;
+              currentHeight += (entryIdx > 0 ? gapBefore() : 0) + entryH;
               if (currentPage > maxPageNum) maxPageNum = currentPage;
             });
           } else {
             // Non-list block unit
             const h = unitHeights[block.id] || 80;
-            if (currentHeight + h > usableHeight && currentHeight > 0) {
+            if (currentHeight + gapBefore() + h > usableHeight && currentHeight > 0) {
               currentPage++;
               currentHeight = 0;
             }
             newAssignments[block.id] = currentPage;
-            currentHeight += h;
+            currentHeight += gapBefore() + h;
             if (currentPage > maxPageNum) maxPageNum = currentPage;
           }
         });
@@ -1033,7 +1082,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
       clearTimeout(debounceTimer);
       observer.disconnect();
     };
-  }, [cvData, zones, design, zoom, activeTemplate, layoutMetrics.pageMarginPx]);
+  }, [cvData, zones, design, zoom, activeTemplate, layoutMetrics.pageMarginPx, layoutMetrics.sectionGapPx]);
 
   const handleTogglePhoto = () => {
     if (!cvData.basics?.showAvatar) {
@@ -1136,14 +1185,14 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
       const blocks = safeZones[zoneId] || [];
       return blocks.filter(block => {
         const snippetDef = SNIPPETS[block.type];
-        const isList = snippetDef && ['Experience', 'Education', 'Projects', 'Certifications', 'Awards', 'Publications', 'Volunteer', 'References'].includes(snippetDef.category);
+        const isList = snippetDef && LIST_SNIPPET_CATEGORIES.includes(snippetDef.category);
 
         if (isList) {
           const headerUnitId = `${block.id}_header`;
           if ((pageAssignments[headerUnitId] ?? 0) === pageIdx) {
             return true;
           }
-          const collectionName = snippetDef.category.toLowerCase();
+          const collectionName = getCollectionNameForCategory(snippetDef.category);
           const entries = cvData[collectionName] || [];
           return entries.some((entry: any) => {
             const entryUnitId = `${block.id}_entry_${entry.id}`;
@@ -1166,6 +1215,23 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
           return globalBlocks.findIndex(b => b.id === targetBlock.id);
         }
         return -1;
+      };
+
+      const getGlobalInsertIndex = (pageSpecificInsertIdx?: number) => {
+        const globalBlocks = safeZones[zoneId] || [];
+        if (typeof pageSpecificInsertIdx === 'number' && pageSpecificInsertIdx < pageBlocks.length) {
+          const targetBlock = pageBlocks[pageSpecificInsertIdx];
+          const targetIndex = globalBlocks.findIndex(b => b.id === targetBlock.id);
+          return targetIndex === -1 ? globalBlocks.length : targetIndex;
+        }
+
+        if (pageBlocks.length > 0) {
+          const lastBlock = pageBlocks[pageBlocks.length - 1];
+          const lastIndex = globalBlocks.findIndex(b => b.id === lastBlock.id);
+          return lastIndex === -1 ? globalBlocks.length : lastIndex + 1;
+        }
+
+        return globalBlocks.length;
       };
 
       return (
@@ -1210,7 +1276,9 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
               handleReplaceClick(zoneId, gIdx, type);
             }
           }}
-          onAddSnippet={handleAddClick}
+          onAddSnippet={(targetZoneId: string, pageSpecificInsertIdx?: number) => {
+            handleAddClick(zoneId, getGlobalInsertIndex(pageSpecificInsertIdx));
+          }}
           onTogglePhoto={handleTogglePhoto}
           onAddListEntry={handleAddListEntry}
           moveEntry={moveEntry}
@@ -1260,7 +1328,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
                 return (
                   <div className="h-full w-full flex relative" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingTop: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)' }}>
                     <div className="absolute left-0 top-0 bottom-0 z-0" style={{ backgroundColor: 'var(--cv-sidebar-bg)', width: 'calc(32% + 0.36 * var(--cv-page-margin))' }}></div>
-                    <div className={`w-[32%] min-w-0 border-r border-slate-200 relative z-10 ${isDarkSidebar ? 'cv-dark-sidebar text-white' : ''}`} style={{ paddingRight: '5mm' }}>
+                    <div className={`w-[32%] min-w-0 relative z-10 ${isDarkSidebar ? 'cv-dark-sidebar text-white' : ''}`} style={{ paddingRight: '5mm' }}>
                       {renderPageZone('sidebar', pageIdx, 'h-max', isDarkSidebar)}
                     </div>
                     <div className="w-[68%] min-w-0 relative z-10" style={{ paddingLeft: '5mm' }}>
@@ -1287,7 +1355,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
                     <div className="w-[68%] min-w-0 relative z-10" style={{ paddingRight: '5mm' }}>
                       {renderPageZone('main', pageIdx, 'h-max')}
                     </div>
-                    <div className={`w-[32%] min-w-0 border-l border-slate-200 relative z-10 ${isDarkSidebar ? 'cv-dark-sidebar text-white' : ''}`} style={{ paddingLeft: '5mm' }}>
+                    <div className={`w-[32%] min-w-0 relative z-10 ${isDarkSidebar ? 'cv-dark-sidebar text-white' : ''}`} style={{ paddingLeft: '5mm' }}>
                       {renderPageZone('sidebar', pageIdx, 'h-max', isDarkSidebar)}
                     </div>
                   </div>
@@ -1301,8 +1369,8 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
                       </div>
                     )}
                     <div className="flex flex-1 relative z-10 items-start gap-[var(--cv-column-gap)]" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)', paddingTop: pageIdx === 0 && safeZones['header'] ? 'var(--cv-section-gap, 16px)' : 'var(--cv-page-margin)' }}>
-                      <div className="absolute left-[var(--cv-page-margin)] top-[var(--cv-section-gap,16px)] bottom-[var(--cv-page-margin)] w-[calc(32%-1rem)] rounded-lg z-[-1]" style={{ backgroundColor: 'var(--cv-sidebar-bg)' }}></div>
-                      <div className={`w-[32%] min-w-0 border-r border-slate-200 ${isDarkSidebar ? 'cv-dark-sidebar text-white' : ''}`} style={{ paddingRight: '5mm' }}>
+                      <div className="absolute left-[var(--cv-page-margin)] top-[var(--cv-section-gap,16px)] bottom-0 rounded-lg z-[-1]" style={{ backgroundColor: 'var(--cv-sidebar-bg)', width: 'calc(32% - 1rem)' }}></div>
+                      <div className={`w-[32%] min-w-0 ${isDarkSidebar ? 'cv-dark-sidebar text-white' : ''}`} style={{ paddingRight: '5mm' }}>
                         {renderPageZone('sidebar', pageIdx, 'h-max', isDarkSidebar)}
                       </div>
                       <div className="w-[68%] min-w-0">
@@ -1323,8 +1391,8 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
                       <div className="w-[68%] min-w-0">
                         {renderPageZone('main', pageIdx, 'h-max')}
                       </div>
-                      <div className="absolute right-[var(--cv-page-margin)] top-[var(--cv-section-gap,16px)] bottom-[var(--cv-page-margin)] w-[calc(32%-1rem)] rounded-lg z-[-1]" style={{ backgroundColor: 'var(--cv-sidebar-bg)' }}></div>
-                      <div className={`w-[32%] min-w-0 border-l border-slate-200 ${isDarkSidebar ? 'cv-dark-sidebar text-white' : ''}`} style={{ paddingLeft: '5mm' }}>
+                      <div className="absolute right-[var(--cv-page-margin)] top-[var(--cv-section-gap,16px)] bottom-0 rounded-lg z-[-1]" style={{ backgroundColor: 'var(--cv-sidebar-bg)', width: 'calc(32% - 1rem)' }}></div>
+                      <div className={`w-[32%] min-w-0 ${isDarkSidebar ? 'cv-dark-sidebar text-white' : ''}`} style={{ paddingLeft: '5mm' }}>
                         {renderPageZone('sidebar', pageIdx, 'h-max', isDarkSidebar)}
                       </div>
                     </div>

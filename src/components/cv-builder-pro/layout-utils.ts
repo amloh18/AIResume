@@ -72,7 +72,7 @@ export function computeCanvasLayoutMetrics({
     dpr
   );
 
-  const safeMargin = clamp(pageMargin, 24, 96);
+  const safeMargin = clamp(pageMargin, 0, 96);
   const pageMarginPx = roundToDevicePixel(safeMargin, dpr);
   const normalizedSectionGap = roundToDevicePixel(clamp(sectionGap, 8, 64), dpr);
   const pageHeightPx = roundToDevicePixel(dims.heightPx, dpr);

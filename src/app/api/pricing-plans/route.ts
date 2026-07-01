@@ -67,7 +67,12 @@ export async function GET(request: NextRequest) {
     try {
       const polarRes = await PolarService.listProducts();
       if (polarRes.success && polarRes.products) {
-        const polarProducts = Array.isArray(polarRes.products) ? polarRes.products : polarRes.products.items || [];
+        const productsPayload = polarRes.products as any;
+        const polarProducts = Array.isArray(productsPayload)
+          ? productsPayload
+          : Array.isArray(productsPayload?.items)
+            ? productsPayload.items
+            : [];
         for (const plan of plans) {
           const matchedProduct = polarProducts.find((p: any) => 
             p.metadata?.planKey === plan.key || 

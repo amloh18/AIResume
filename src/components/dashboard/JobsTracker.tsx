@@ -12,7 +12,6 @@ import { useUnifiedAuth, getUserIdForAPI } from '@/lib/hooks/useUnifiedAuth';
 import { useMembership } from '@/lib/hooks/useMembership';
 import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
 import toast from 'react-hot-toast';
-import { ApplicationTrackerSkeleton } from '@/components/ui/OptimizedSkeletons';
 import { CVJourney } from '@/types/cv';
 import JobSidebar from './jobs/JobSidebar';
 import EditJobSidebar from './jobs/EditJobSidebar';
@@ -321,8 +320,11 @@ const JobsTracker: React.FC = () => {
 
 
   const loadData = async () => {
+    const shouldShowInitialLoading = jobs.length === 0;
     try {
-      setLoading(true);
+      if (shouldShowInitialLoading) {
+        setLoading(true);
+      }
 
       // Load jobs and journeys in parallel
       const [jobsResponse, journeysResponse] = await Promise.all([
@@ -431,7 +433,9 @@ const JobsTracker: React.FC = () => {
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
-      setLoading(false);
+      if (shouldShowInitialLoading) {
+        setLoading(false);
+      }
     }
   };
 
@@ -1375,11 +1379,7 @@ const JobsTracker: React.FC = () => {
       });
   };
 
-  if (authLoading || userLoading) {
-    return <ApplicationTrackerSkeleton />;
-  }
-
-  if (!isAuthenticated) {
+  if (!authLoading && !isAuthenticated) {
     return null;
   }
 
@@ -1556,7 +1556,7 @@ const JobsTracker: React.FC = () => {
                   <JobsKanbanView
                     jobs={filteredJobsForView}
                     jobsByStatus={jobsByStatus}
-                    loading={loading}
+                    loading={loading || userLoading}
                     selectedJobs={selectedJobs}
                     setSelectedJobs={setSelectedJobs}
                     setShowBulkActions={setShowBulkActions}
@@ -1586,7 +1586,7 @@ const JobsTracker: React.FC = () => {
                 <div className="h-full w-full overflow-y-auto overflow-x-hidden rounded-lg">
                   <JobsListView
                     jobs={filteredJobsForView}
-                    loading={loading}
+                    loading={loading || userLoading}
                     selectedJobs={selectedJobs}
                     setSelectedJobs={setSelectedJobs}
                     setShowBulkActions={setShowBulkActions}

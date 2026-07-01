@@ -1,8 +1,9 @@
 'use client';
 
-import React, { Suspense, useState, useEffect, useRef } from 'react';
+import React, { Suspense, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
+import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Zap, 
@@ -32,8 +33,22 @@ import RedesignedDashboardView from '@/components/dashboard/redesigned/Redesigne
 import { UserTier } from '@/types/dashboard-widgets';
 import { authenticatedFetch } from '@/lib/utils/apiUtils';
 import { useMembership } from '@/lib/hooks/useMembership';
+import { useDashboardData } from '@/contexts/DashboardDataContext';
 
 // --- Specialized Hero Widgets (Legacy removed or moved if needed) ---
+
+function TextSkeleton({ width = 'w-24', height = 'h-4' }: { width?: string; height?: string }) {
+  return <span className={`inline-block animate-pulse rounded bg-slate-200 dark:bg-white/10 ${width} ${height}`} />;
+}
+
+async function fetchOnboardingData() {
+  const res = await authenticatedFetch('/api/user/onboarding');
+  const result = await res.json();
+  if (result.success && result.data) {
+    return result.data.onboarding || {};
+  }
+  return null;
+}
 
 export default function DashboardPage() {
   return (
@@ -52,15 +67,17 @@ function DashboardContent() {
   
   // --- All Hooks must be at the top ---
   const { membership, loading: membershipLoading } = useMembership();
-  const [onboardingData, setOnboardingData] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { jobs, secondaryLoading } = useDashboardData();
+  const { data: onboardingData } = useQuery({
+    queryKey: ['dashboard', 'onboarding', session?.user?.id],
+    queryFn: fetchOnboardingData,
+    enabled: status === 'authenticated',
+    staleTime: 5 * 60 * 1000,
+  });
   const [isExpanded, setIsExpanded] = useState(false);
   
-  const [cvScore, setCvScore] = useState(68);
   const [notification, setNotification] = useState<string | null>(null);
   const [demoLayoutType, setDemoLayoutType] = useState<'cv' | 'tracker' | 'auto_apply' | null>(null);
-  const [jobs, setJobs] = useState<any[]>([]);
-  const [jobsLoading, setJobsLoading] = useState(false);
 
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
@@ -72,59 +89,10 @@ function DashboardContent() {
     setTimeout(() => setNotification(null), 4000);
   };
 
-  useEffect(() => {
-    // Only fetching onboarding status for non-redirect purposes if needed.
-    // The actual redirection is now handled in the server-side layout.
-    const fetchStatus = async () => {
-      try {
-        const res = await authenticatedFetch('/api/user/onboarding');
-        const result = await res.json();
-        if (result.success && result.data) {
-          const onboarding = result.data.onboarding || {};
-          setOnboardingData(onboarding);
-          
-          if (onboarding.confidence_score) {
-            setCvScore(onboarding.confidence_score);
-          }
-        }
-      } catch (err) {
-        console.error('Failed to load onboarding status:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    if (status === 'authenticated') {
-      fetchStatus();
-    } else if (status === 'unauthenticated') {
-      setIsLoading(false);
-    }
-  }, [status]);
-
-  useEffect(() => {
-    const fetchJobs = async () => {
-      try {
-        setJobsLoading(true);
-        const res = await authenticatedFetch('/api/jobs');
-        const result = await res.json();
-        if (result.success && Array.isArray(result.data)) {
-          setJobs(result.data);
-        }
-      } catch (err) {
-        console.error('Failed to load jobs:', err);
-      } finally {
-        setJobsLoading(false);
-      }
-    };
-
-    if (status === 'authenticated') {
-      fetchJobs();
-    }
-  }, [status]);
-
   // Calculate matched jobs stats
   const activeJobs = jobs.filter((j: any) => !['draft', 'archived'].includes(j.status)).length;
   const highMatchJobs = jobs.filter((j: any) => (j.atsScore || 0) >= 80).length;
+  const jobsLoading = secondaryLoading.jobs;
 
   const handleTouchStart = (e: React.TouchEvent) => {
     setTouchStart(e.targetTouches[0].clientY);
@@ -306,7 +274,7 @@ function DashboardContent() {
                 isExpanded ? 'text-small' : 'text-small md:text-body'
               }`}
             >
-              {sublines[currentTier]}
+              {jobsLoading ? <TextSkeleton width="w-48" height="h-5" /> : sublines[currentTier]}
             </motion.p>
           </motion.div>
  
@@ -326,12 +294,14 @@ function DashboardContent() {
                   strokeLinecap="round" stroke="currentColor" fill="none" cx="18" cy="18" r="16" 
                 />
               </svg>
-              <span className="absolute text-[10px] font-black dark:text-white">{highMatchJobs}</span>
+              <span className="absolute text-[10px] font-black dark:text-white">
+                {jobsLoading ? <TextSkeleton width="w-4" height="h-3" /> : highMatchJobs}
+              </span>
             </div>
             <div className="pr-2">
               <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Jobs Matched</h3>
               <p className="text-small font-bold text-gray-800 dark:text-gray-300">
-                {highMatchJobs} / {activeJobs} matched
+                {jobsLoading ? <TextSkeleton width="w-20" height="h-4" /> : `${highMatchJobs} / ${activeJobs} matched`}
               </p>
             </div>
           </motion.div>

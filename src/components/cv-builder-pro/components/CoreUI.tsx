@@ -124,7 +124,20 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
   };
   const handleKeyDown = (e: React.KeyboardEvent) => { if (!multiline && e.key === 'Enter') e.preventDefault(); };
   const handleFocus = () => { if (!isEditable) return; setIsEditing(true); if (setFocusedRef) setFocusedRef(contentRef.current); };
-  const handleBlur = () => { if (!isEditable) return; setIsEditing(false); if (setFocusedRef) setTimeout(() => setFocusedRef(null), 200); };
+  const handleBlur = () => {
+    if (!isEditable) return;
+    setIsEditing(false);
+    if (setFocusedRef) {
+      const blurredNode = contentRef.current;
+      window.setTimeout(() => {
+        const activeElement = document.activeElement as HTMLElement | null;
+        const activeEditable = activeElement?.closest?.('[contenteditable="true"]');
+        if (!activeEditable || activeEditable === blurredNode) {
+          setFocusedRef(null);
+        }
+      }, 120);
+    }
+  };
   const handleClick = (e: React.MouseEvent) => {
     if (moriChatMode) {
       e.preventDefault();
@@ -202,7 +215,7 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
   const editHoverClass = isEditable ? 'hover:bg-emerald-50/30 focus:bg-white focus:ring-2 focus:ring-emerald-500/50 focus:shadow-md border-b border-transparent hover:border-gray-300 focus:border-emerald-400 focus:text-gray-900 rounded-sm px-1.5 py-0.5 -mx-1.5 -my-0.5' : '';
 
   return (
-      <span ref={contentRef} data-path={path} data-empty-text={emptyText} contentEditable={isEditable} suppressContentEditableWarning onPaste={handlePaste} onInput={handleInput} onKeyDown={handleKeyDown} onFocus={handleFocus} onBlur={handleBlur} onClick={handleClick} className={`outline-none transition-all duration-200 ${multiline ? 'block w-full' : 'inline-block max-w-full'} ${wrapClass} ${moriHoverClass} ${editHoverClass} z-40 relative empty:min-w-[60px] ${multiline ? 'empty:block' : 'empty:inline-block'} empty:border-dashed empty:border-gray-300 empty:after:content-[attr(data-empty-text)] empty:after:text-gray-400 empty:after:text-small empty:after:italic`} style={{ minHeight: '1.2em' }} />
+      <span ref={contentRef} data-path={path} data-empty-text={emptyText} contentEditable={isEditable} suppressContentEditableWarning onPaste={handlePaste} onInput={handleInput} onKeyDown={handleKeyDown} onFocus={handleFocus} onBlur={handleBlur} onClick={handleClick} className={`outline-none transition-all duration-200 ${multiline ? 'block w-full' : 'inline-block max-w-full'} ${wrapClass} ${moriHoverClass} ${editHoverClass} z-40 relative empty:min-w-[60px] ${multiline ? 'empty:block' : 'empty:inline-block'} empty:border-dashed empty:border-gray-300 empty:after:content-[attr(data-empty-text)] empty:after:text-gray-400 empty:after:italic`} style={{ minHeight: '1.2em' }} />
     );
   };
   
@@ -437,7 +450,7 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
   const showInlineControls = !readOnly && !ctx?.moriChatMode && primaryTitleKey;
   const canAddListEntry = SnippetComponent && ['Experience', 'Education', 'Projects', 'Certifications', 'Awards', 'Publications', 'Volunteer', 'References'].includes(SnippetComponent.category);
   const controls = showInlineControls ? (
-    <div className="absolute -top-[28px] right-0 opacity-0 group-hover/inner:opacity-100 transition-all duration-200 flex items-center gap-0 z-[200] no-print">
+    <div className="absolute top-1 right-1 opacity-0 group-hover/inner:opacity-100 transition-all duration-200 flex items-center gap-0 z-[200] no-print">
       {/* Action icons group */}
       {isHeader && instance.type !== 'header-accent' && (
         <button
@@ -588,14 +601,14 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
   );
 };
 
-const InsertSnippetHandle = ({ onAddSnippet, zoneId, index }: any) => {
+const InsertSnippetHandle = ({ onAddSnippet, zoneId, index, alwaysVisible = false }: any) => {
   return (
     <div className="group/insert relative w-full h-[6px] my-[-3px] flex items-center justify-center z-40 transition-all no-print">
       <div className="absolute inset-0 cursor-pointer" />
-      <div className="w-full h-[2px] bg-emerald-400 opacity-0 group-hover/insert:opacity-100 transition-opacity pointer-events-none absolute left-0 right-0" />
+      <div className={`w-full h-[2px] bg-emerald-400 ${alwaysVisible ? 'opacity-100' : 'opacity-0 group-hover/insert:opacity-100'} transition-opacity pointer-events-none absolute left-0 right-0`} />
       <button
         onClick={() => onAddSnippet(zoneId, index)}
-        className="opacity-0 scale-90 group-hover/insert:opacity-100 group-hover/insert:scale-100 transition-all flex items-center gap-1 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-2.5 py-1 rounded-full text-[10px] shadow-md hover:shadow-lg font-sans absolute left-1/2 -translate-x-1/2 cursor-pointer pointer-events-auto"
+        className={`${alwaysVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-90 group-hover/insert:opacity-100 group-hover/insert:scale-100'} transition-all flex items-center gap-1 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-2.5 py-1 rounded-full text-[10px] shadow-md hover:shadow-lg font-sans absolute left-1/2 -translate-x-1/2 cursor-pointer pointer-events-auto`}
       >
         <Plus size={11} /> Add Section
       </button>
@@ -665,13 +678,6 @@ export const CanvasZone = ({ readOnly = false, zoneId, blocks, cvData, EditableW
           <AnimatePresence mode="popLayout">
             {blocks.map((instance: any, index: number) => (
               <React.Fragment key={instance?.id || `snippet-${index}`}>
-                {index > 0 && !readOnly && (
-                  <InsertSnippetHandle
-                    onAddSnippet={onAddSnippet}
-                    zoneId={zoneId}
-                    index={index}
-                  />
-                )}
                 <CanvasSnippet
                   readOnly={readOnly}
                   instance={instance}
@@ -693,17 +699,20 @@ export const CanvasZone = ({ readOnly = false, zoneId, blocks, cvData, EditableW
                   onOpenSkillsSuggestions={onOpenSkillsSuggestions}
                   isDropAllowed={isDropAllowed}
                 />
+                {!readOnly && (
+                  <InsertSnippetHandle
+                    onAddSnippet={onAddSnippet}
+                    zoneId={zoneId}
+                    index={index + 1}
+                    alwaysVisible={index === blocks.length - 1}
+                  />
+                )}
               </React.Fragment>
             ))}
           </AnimatePresence>
         </div>
         {showAppendLine && <div className="w-full min-h-[34px] bg-emerald-50/95 border-2 border-dashed border-emerald-400 rounded-xl mt-4 pointer-events-none shadow-[0_10px_30px_rgba(16,185,129,0.12)] flex items-center justify-center"><span className="px-3 py-1 rounded-full bg-white text-[10px] font-bold uppercase tracking-[0.22em] text-emerald-700">Insert Here</span></div>}
       </div>
-      {!readOnly && (
-        <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 opacity-0 group-hover/zone:opacity-100 transition-opacity flex justify-center z-50 no-print pointer-events-none">
-          <button onClick={() => onAddSnippet(zoneId)} className="pointer-events-auto flex items-center gap-1.5 bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-4 py-2 rounded-full text-[11px] shadow-md hover:shadow-lg transition-all transform hover:scale-105 font-sans"><PlusCircle size={14} /> Add Section</button>
-        </div>
-      )}
     </div>
   );
 };
