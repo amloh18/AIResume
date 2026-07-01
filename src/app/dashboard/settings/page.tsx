@@ -3,6 +3,7 @@
 
 import React, { useState, Suspense, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useUnifiedAuth, getUserIdForAPI } from '@/lib/hooks/useUnifiedAuth';
 import { usePricingPlans } from '@/lib/hooks/usePricingPlans';
 import { useBillingData } from '@/lib/hooks/useBillingData';
@@ -52,6 +53,20 @@ import { useUserData } from '@/lib/hooks/useUserData';
 import { getPlanName } from '@/lib/utils/userPlanUtils';
 import toast from 'react-hot-toast';
 import EmailConnectModal from '@/components/dashboard/jobs/EmailConnectModal';
+
+const fetchSettingsUserData = async (): Promise<User> => {
+  const response = await fetch('/api/user');
+  if (!response.ok) {
+    throw new Error('Failed to fetch user data');
+  }
+
+  const data = await response.json();
+  if (!data.success || !data.user) {
+    throw new Error(data.error || 'Failed to fetch user data');
+  }
+
+  return data.user;
+};
 
 // --- TYPES ---
 
@@ -161,14 +176,27 @@ interface Invoice {
 // Skeleton components for better loading UX (no full-page spinners)
 
 const AccountProfileSkeleton = () => (
-  <div className="p-8">
-    <div className="space-y-8 animate-pulse">
-      <div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded"></div>
+  <div className="p-4 sm:p-6 lg:p-8 min-w-0 max-w-full overflow-x-hidden">
+    <div className="space-y-8">
+      <div>
+        <h3 className="text-h3 font-semibold text-gray-900 dark:text-white">Account & Profile</h3>
+        <div className="mt-2 h-3 w-64 max-w-full bg-gray-200 dark:bg-white/10 rounded animate-pulse"></div>
+      </div>
+      <div className="flex flex-col sm:flex-row gap-6">
+        <div className="w-24 h-24 bg-gray-200 dark:bg-white/10 rounded-full animate-pulse"></div>
+        <div className="flex-1 space-y-3">
+          <div className="h-5 w-40 bg-gray-200 dark:bg-white/10 rounded animate-pulse"></div>
+          <div className="h-4 w-72 max-w-full bg-gray-200 dark:bg-white/10 rounded animate-pulse"></div>
+          <div className="h-10 w-36 bg-gray-200 dark:bg-white/10 rounded-lg animate-pulse"></div>
+        </div>
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {[...Array(6)].map((_, i) => (
           <div key={i} className="space-y-2">
-            <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded"></div>
-            <div className="h-10 w-full bg-gray-200 dark:bg-gray-700 rounded"></div>
+            <div className="h-4 w-24 bg-gray-200 dark:bg-white/10 rounded animate-pulse"></div>
+            <div className="h-10 w-full bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-lg">
+              <div className="h-full w-2/3 bg-gray-100 dark:bg-white/5 rounded-lg animate-pulse"></div>
+            </div>
           </div>
         ))}
       </div>
@@ -177,12 +205,23 @@ const AccountProfileSkeleton = () => (
 );
 
 const SecuritySkeleton = () => (
-  <div className="p-8">
-    <div className="space-y-8 animate-pulse">
-      <div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded"></div>
+  <div className="p-4 sm:p-6 lg:p-8 min-w-0 max-w-full overflow-x-hidden">
+    <div className="space-y-8">
+      <div className="space-y-2">
+        <h3 className="text-h3 font-semibold text-gray-900 dark:text-white">Security</h3>
+        <div className="h-3 w-72 max-w-full bg-gray-200 dark:bg-white/10 rounded animate-pulse"></div>
+      </div>
       <div className="space-y-4">
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="h-16 w-full bg-gray-200 dark:bg-gray-700 rounded"></div>
+        {['Two-Factor Authentication', 'Change Password', 'Email Notifications', 'Push Notifications'].map((label) => (
+          <div key={label} className="flex items-center justify-between py-4 border-b border-gray-200 dark:border-gray-700">
+            <div className="space-y-2">
+              <div className="text-small font-medium text-gray-900 dark:text-white">{label}</div>
+              <div className="h-3 w-64 max-w-full bg-gray-200 dark:bg-white/10 rounded animate-pulse"></div>
+            </div>
+            <div className="w-12 h-6 rounded-full bg-gray-300 dark:bg-gray-600 animate-pulse">
+              <div className="w-5 h-5 bg-white rounded-full translate-x-0.5 mt-0.5" />
+            </div>
+          </div>
         ))}
       </div>
     </div>
@@ -2409,15 +2448,50 @@ const getTabDescription = (tab: string) => {
   }
 };
 
+const SettingsPageShell = () => (
+  <div className="w-full min-w-0 overflow-x-hidden pb-20">
+    <div className="max-w-6xl mx-auto px-4 md:px-6 w-full min-w-0">
+      <div className="py-5">
+        <h1 className="text-h1 font-black text-gray-900 dark:text-white">Settings</h1>
+        <div className="mt-2 h-3 w-80 max-w-full rounded bg-gray-200 dark:bg-white/10 animate-pulse" />
+      </div>
+      <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
+        <div className="flex gap-6 overflow-hidden">
+          {settingsTabs.map((tab) => {
+            const IconComponent = tab.icon;
+            return (
+              <div key={tab.id} className="flex items-center gap-2 px-4 py-3 text-gray-600 dark:text-gray-300">
+                <IconComponent className="h-4 w-4" />
+                <span className="hidden sm:inline text-small font-medium">{tab.name}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      <AccountProfileSkeleton />
+    </div>
+  </div>
+);
+
 // Main Settings Content Component
 const SettingsContent = () => {
   const { user, loading: authLoading, isAuthenticated } = useUnifiedAuth();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { toggleSidebar, isOpen } = useMobileSidebar();
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState('account');
-  const [userData, setUserData] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const {
+    data: userData = null,
+    isPending: loading,
+    refetch: fetchUserData
+  } = useQuery({
+    queryKey: ['settings-user', user?.id || user?.email],
+    queryFn: fetchSettingsUserData,
+    enabled: !!user,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
+  });
 
   // Handle URL tab parameter
   useEffect(() => {
@@ -2426,32 +2500,6 @@ const SettingsContent = () => {
       setActiveTab(tab);
     }
   }, [searchParams]);
-
-  // Fetch user data from database
-  const fetchUserData = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch('/api/user');
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success && data.user) {
-          setUserData(data.user);
-        }
-      } else {
-        console.error('Failed to fetch user data');
-      }
-    } catch (error) {
-      console.error('Error fetching user data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (user) {
-      fetchUserData();
-    }
-  }, [user]);
 
   // Listen for user profile updates from other components
   useEffect(() => {
@@ -2464,7 +2512,7 @@ const SettingsContent = () => {
         fetchUserData();
       } else if (updatedUser) {
         console.log('🔄 Settings - Received user profile update:', updatedUser);
-        setUserData(prev => ({
+        queryClient.setQueryData(['settings-user', user?.id || user?.email], (prev: User | null) => ({
           ...prev,
           ...updatedUser,
         }));
@@ -2476,11 +2524,11 @@ const SettingsContent = () => {
     return () => {
       window.removeEventListener('userProfileUpdated', handleUserProfileUpdate as EventListener);
     };
-  }, []);
+  }, [fetchUserData, queryClient, user?.email, user?.id]);
 
   const handleSaveUser = (updatedUser: User) => {
     console.log('🔄 Settings - Updating local state with saved user data');
-    setUserData(updatedUser);
+    queryClient.setQueryData(['settings-user', user?.id || user?.email], updatedUser);
 
     // Dispatch custom event to notify other components of user data update
     window.dispatchEvent(new CustomEvent('userProfileUpdated', {
@@ -2494,11 +2542,11 @@ const SettingsContent = () => {
 
     switch (activeTab) {
       case 'account':
-        return loading || !userData ? <AccountProfileSkeleton /> : <AccountProfile user={userData} onSave={handleSaveUser} />;
+        return !userData ? <AccountProfileSkeleton /> : <AccountProfile user={userData} onSave={handleSaveUser} />;
       case 'security':
-        return loading || !userData ? <SecuritySkeleton /> : <SecurityAndNotifications user={userData} />;
+        return !userData ? <SecuritySkeleton /> : <SecurityAndNotifications user={userData} />;
       case 'membership':
-        return loading || !userData ? <MembershipSkeleton /> : <MembershipBilling user={userData} />;
+        return <MembershipBilling user={userData || user || { id: '', firstName: '', lastName: '', email: '' }} />;
       default:
         return (
           <div className="p-4 sm:p-6 lg:p-8 h-full min-w-0 max-w-full overflow-x-hidden">
@@ -2577,7 +2625,7 @@ const SettingsContent = () => {
 export default function SettingsPage() {
   return (
     <ErrorBoundary>
-      <Suspense fallback={null}>
+      <Suspense fallback={<SettingsPageShell />}>
         <RouteGuard requireAuth={true}>
           <SettingsContent />
         </RouteGuard>

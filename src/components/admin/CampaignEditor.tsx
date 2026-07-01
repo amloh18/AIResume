@@ -504,7 +504,7 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
     const updatedCsv = (formData.csvRecipients || []).filter(r => r.email !== email);
     setFormData(prev => ({ ...prev, csvRecipients: updatedCsv }));
     handlePreviewTargets(updatedCsv);
-    toast({ title: "Recipient Removed", description: `Removed ${email} from manual list.`, variant: "info" });
+    toast({ title: "Recipient Removed", description: `Removed ${email} from manual list.`, variant: "default" });
   };
 
   const handleSendTest = async () => {

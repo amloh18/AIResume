@@ -33,6 +33,9 @@ interface ParsedJobData {
   tags?: string[];
   notes?: string;
   experienceLevel?: string;
+  sponsorship?: string;
+  benefits?: string[];
+  extractedJd?: any;
 }
 
 interface JobParserSidebarProps {
@@ -494,7 +497,7 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
                         <Upload className="w-8 h-8 text-lime-500 mb-3" />
                         <p className="text-small font-bold text-gray-900 dark:text-white mb-1">Upload job description file</p>
                         <p className="text-[10px] text-gray-500 dark:text-gray-400 mb-4">PDF, DOCX, or TXT up to 5MB</p>
-                        <Button variant="outline" size="sm" className="rounded-xl border-gray-200 dark:border-white/10 text-small" disabled>
+                        <Button variant="outline" size="tablet" className="rounded-xl border-gray-200 dark:border-white/10 text-small" disabled>
                           Select File
                         </Button>
                       </div>
@@ -513,7 +516,7 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
                         />
                         <Button
                           variant="outline"
-                          size="sm"
+                          size="tablet"
                           className="rounded-xl border-gray-200 dark:border-white/10 text-small"
                           disabled={isParsing || !urlInput}
                           onClick={handleParse}
