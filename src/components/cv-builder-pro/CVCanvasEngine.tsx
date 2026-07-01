@@ -13,7 +13,7 @@ import { analyzeText } from '@/lib/grammar/engine';
 import { computeCanvasLayoutMetrics } from './layout-utils';
 import { DEFAULT_UNIFIED_CV_DATA } from '@/types/unified-cv-schema';
 import { useUserData } from '@/lib/hooks/useUserData';
-
+import { useCanvasFit } from '@/hooks/useCanvasFit';
 const ReadOnlyWrapper = (props: any) => <EditableField {...props} readOnly={true} />;
 const EditableWrapper = EditableField;
 
@@ -353,7 +353,15 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
   const [dragState, setDragState] = useState<any>({ isDragging: false, sourceZoneId: null, sourceIndex: null, overZoneId: null, overIndex: null });
   const [dragPreview, setDragPreview] = useState<any>(null);
   const [scanning, setScanning] = useState(false);
-  const [zoom, setZoom] = useState(100);
+  
+  // Use the new smart auto-scaling hook
+  const { containerRef: workspaceRef, zoom, setZoom, isAutoFit, triggerAutoFit } = useCanvasFit({
+    documentPixelWidth: 794, // Standard A4 width in pixels
+    paddingPx: 64, // 32px padding per side
+    maxScale: 2.0,
+    minScale: 0.5
+  });
+
   const [totalPagesCount, setTotalPagesCount] = useState(1);
   const [pageAssignments, setPageAssignments] = useState<Record<string, number>>({});
   const [viewport, setViewport] = useState(() => ({
@@ -361,68 +369,6 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     height: typeof window === 'undefined' ? 1080 : window.innerHeight,
     devicePixelRatio: typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1,
   }));
-
-  const workspaceRef = React.useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const workspace = workspaceRef.current;
-    if (!workspace) return;
-
-    const handleWheel = (e: WheelEvent) => {
-      if (e.ctrlKey) {
-        e.preventDefault();
-        setZoom(prev => {
-          const delta = -e.deltaY * 0.5;
-          const newZoom = Math.min(200, Math.max(50, prev + delta));
-          return Math.round(newZoom);
-        });
-      }
-    };
-
-    let initialDistance = 0;
-    let initialZoom = 100;
-
-    const getDistance = (touches: TouchList) => {
-      if (touches.length < 2) return 0;
-      const dx = touches[0].clientX - touches[1].clientX;
-      const dy = touches[0].clientY - touches[1].clientY;
-      return Math.sqrt(dx * dx + dy * dy);
-    };
-
-    const handleTouchStart = (e: TouchEvent) => {
-      if (e.touches.length === 2) {
-        e.preventDefault();
-        initialDistance = getDistance(e.touches);
-        initialZoom = zoom;
-      }
-    };
-
-    const handleTouchMove = (e: TouchEvent) => {
-      if (e.touches.length === 2 && initialDistance > 0) {
-        e.preventDefault();
-        const currentDistance = getDistance(e.touches);
-        const ratio = currentDistance / initialDistance;
-        const newZoom = Math.min(200, Math.max(50, initialZoom * ratio));
-        setZoom(Math.round(newZoom));
-      }
-    };
-
-    const handleTouchEnd = () => {
-      initialDistance = 0;
-    };
-
-    workspace.addEventListener('wheel', handleWheel, { passive: false });
-    workspace.addEventListener('touchstart', handleTouchStart, { passive: false });
-    workspace.addEventListener('touchmove', handleTouchMove, { passive: false });
-    workspace.addEventListener('touchend', handleTouchEnd);
-
-    return () => {
-      workspace.removeEventListener('wheel', handleWheel);
-      workspace.removeEventListener('touchstart', handleTouchStart);
-      workspace.removeEventListener('touchmove', handleTouchMove);
-      workspace.removeEventListener('touchend', handleTouchEnd);
-    };
-  }, [zoom]);
 
   useEffect(() => {
     if (template && template.id !== activeTemplate.id && !cvData?.metadata?.canvasTemplate) {
@@ -1594,7 +1540,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
         <div className="flex-1 flex flex-col relative min-w-0">
           <div
             ref={workspaceRef}
-            className={readOnly ? 'w-full' : `flex-1 overflow-auto relative flex justify-center custom-scrollbar transition-colors ${bgWorkspace}`}
+            className={readOnly ? 'w-full @container' : `flex-1 overflow-auto relative flex justify-center custom-scrollbar transition-colors @container ${bgWorkspace}`}
             style={readOnly ? undefined : {
               paddingTop: layoutMetrics.workspacePaddingY,
               paddingBottom: layoutMetrics.workspacePaddingY,
@@ -1660,9 +1606,15 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
                 
                 <button 
                   onClick={() => setZoom(100)}
-                  className={`min-w-[42px] px-1.5 py-1 text-[9px] font-black rounded-md transition-all border ${zoom === 100 ? 'bg-emerald-500/20 border-emerald-500/50 ' + brandGreen : 'bg-transparent border-gray-500/20 hover:border-emerald-500/50 ' + textMuted}`}
+                  className={`min-w-[42px] px-1.5 py-1 text-[9px] font-black rounded-md transition-all border ${zoom === 100 && !isAutoFit ? 'bg-emerald-500/20 border-emerald-500/50 ' + brandGreen : 'bg-transparent border-gray-500/20 hover:border-emerald-500/50 ' + textMuted}`}
                 >
                   {zoom}%
+                </button>
+                <button 
+                  onClick={triggerAutoFit}
+                  className={`min-w-[42px] px-1.5 py-1 text-[9px] font-black rounded-md transition-all border ${isAutoFit ? 'bg-emerald-500/20 border-emerald-500/50 ' + brandGreen : 'bg-transparent border-gray-500/20 hover:border-emerald-500/50 ' + textMuted}`}
+                >
+                  FIT
                 </button>
               </div>
             </div>

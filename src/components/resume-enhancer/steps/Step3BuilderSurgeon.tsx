@@ -1250,9 +1250,9 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
     }
 
     return (
-      <div className="flex flex-col h-[calc(100vh-64px)] min-h-0 relative overflow-hidden bg-gray-50 dark:bg-[var(--bg-primary)]">
+      <div className="h-macro min-h-0 relative overflow-hidden bg-gray-50 dark:bg-[#0a0a0a]">
         {/* Main Container */}
-        <div className="flex-1 h-full flex overflow-hidden relative px-3 pb-3 pt-3 gap-3">
+        <div className="h-full w-full grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_426px] overflow-hidden relative p-3 gap-3">
           {/* CV Canvas Builder — full drag-drop snippet-based builder with inline editing */}
           <div className="flex-1 min-h-0 relative flex flex-col rounded-xl overflow-hidden shadow-sm shadow-black/10 dark:shadow-black/30">
             <div ref={cvPreviewRef} className="flex-1 min-h-0 overflow-hidden">
@@ -1279,7 +1279,7 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
           </div>
           
           {/* Right rail: onboarding setup checklist and AI analysis (always open) */}
-          <div className="hidden lg:flex flex-col shrink-0 h-full relative z-10 gap-3 min-h-0 w-[426px]">
+          <div className="hidden lg:flex flex-col h-full relative z-10 gap-3 min-h-0 panel-glass rounded-xl border border-white/20 dark:border-white/10 p-0 overflow-hidden">
             {isImproveMode && (() => {
               const isPersonalInfoVerified = !!(state.cvData?.basics?.name?.trim() && state.cvData?.basics?.email?.trim());
               const isQualityScoreReviewed = !!(state.surgeonAnalysis || atsScore);

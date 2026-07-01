@@ -3112,3 +3112,15 @@ mark[data-type="highlight"] {
   animation: mori-pulse-highlight-kf 1.5s ease-out;
   border-radius: 4px;
 }
+
+@layer utilities {
+  .fluid-h1 { font-size: clamp(1.5rem, 5cqi, 3rem); }
+  .fluid-h2 { font-size: clamp(1.25rem, 4cqi, 2rem); }
+  .fluid-p  { font-size: clamp(0.875rem, 2.5cqi, 1.125rem); }
+  
+  /* Glassmorphism Panel Base */
+  .panel-glass {
+    @apply bg-white/70 dark:bg-[#141414]/70 backdrop-blur-glass border border-white/20 dark:border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.05)];
+  }
+}
+
