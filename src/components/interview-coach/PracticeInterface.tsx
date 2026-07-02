@@ -322,7 +322,7 @@ const PracticeInterface: React.FC<PracticeInterfaceProps> = ({ userId, jobId, mo
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-[#f3f2ee] dark:bg-[#1a230f] flex items-center justify-center">
+            <div className="min-h-screen app-page-bg flex items-center justify-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
             </div>
         );
@@ -330,7 +330,7 @@ const PracticeInterface: React.FC<PracticeInterfaceProps> = ({ userId, jobId, mo
 
     if (!questions.length) {
         return (
-            <div className="min-h-screen bg-[#f3f2ee] dark:bg-[#1a230f] flex flex-col items-center justify-center p-6 text-center">
+            <div className="min-h-screen app-page-bg flex flex-col items-center justify-center p-6 text-center">
                 <h2 className="text-h2 font-bold text-gray-900 dark:text-white mb-4">No Questions Found</h2>
                 <button onClick={() => router.push(`/dashboard/interview/${jobId}`)} className="px-6 py-3 bg-purple-600 text-white rounded-xl font-medium hover:bg-purple-700 transition-colors">
                     Back to Plan
@@ -340,7 +340,7 @@ const PracticeInterface: React.FC<PracticeInterfaceProps> = ({ userId, jobId, mo
     }
 
     return (
-        <div className="h-macro bg-[#f3f2ee] dark:bg-[#1a230f] flex flex-col font-sans overflow-hidden">
+        <div className="h-macro app-page-bg flex flex-col font-sans overflow-hidden">
             {/* Header matching Image 2 */}
             <div className="bg-white dark:bg-[#141810] border-b border-gray-200 dark:border-gray-800 px-4 sm:px-6 py-3 flex items-center justify-between shrink-0 shadow-sm sticky top-0 z-10">
                 <button
@@ -353,7 +353,7 @@ const PracticeInterface: React.FC<PracticeInterfaceProps> = ({ userId, jobId, mo
                 
                 {/* Progress Dots / Steps */}
                 <div className="flex-1 flex items-center justify-center max-w-3xl mx-auto px-4 overflow-hidden">
-                    <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto custom-scrollbar pb-1 pt-1 px-2 mask-edges">
+                    <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto scrollbar-hide pb-1 pt-1 px-2 mask-edges">
                         {questions.map((q, i) => {
                             const isCompleted = q.userAnswer?.status === 'analyzed';
                             const isCurrent = i === currentIndex;
@@ -403,7 +403,7 @@ const PracticeInterface: React.FC<PracticeInterfaceProps> = ({ userId, jobId, mo
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 h-full min-h-[600px]">
                     
                     {/* LEFT COLUMN: Question + Input */}
-                    <div className="col-span-1 lg:col-span-7 flex flex-col gap-6 h-full overflow-y-auto pr-2 custom-scrollbar pb-20 lg:pb-0">
+                    <div className="col-span-1 lg:col-span-7 flex flex-col gap-6 h-full overflow-y-auto pr-2 scrollbar-hide pb-20 lg:pb-0">
                         
                         {isLocked ? (
                             <motion.div
@@ -648,7 +648,7 @@ const PracticeInterface: React.FC<PracticeInterfaceProps> = ({ userId, jobId, mo
                     </div>
 
                     {/* RIGHT COLUMN: Insights & Feedback */}
-                    <div className="col-span-1 lg:col-span-5 flex flex-col gap-6 h-full overflow-y-auto pr-2 custom-scrollbar pb-20 lg:pb-0">
+                    <div className="col-span-1 lg:col-span-5 flex flex-col gap-6 h-full overflow-y-auto pr-2 scrollbar-hide pb-20 lg:pb-0">
                         
                         {/* Overall Score Card */}
                         <div className="bg-white dark:bg-[#141810] rounded-3xl p-6 sm:p-8 shadow-sm border border-gray-100 dark:border-gray-800">

@@ -121,8 +121,8 @@ const InterviewCoachContainer: React.FC<InterviewCoachContainerProps> = ({ userI
     };
 
     return (
-        <div className="h-macro bg-[#f3f2ee] dark:bg-[#1a230f] flex flex-col font-sans overflow-hidden">
-            <div className="flex-1 max-w-[1400px] mx-auto px-4 sm:px-8 py-8 w-full overflow-y-auto overflow-x-hidden custom-scrollbar">
+        <div className="h-macro app-page-bg flex flex-col font-sans overflow-hidden">
+            <div className="flex-1 max-w-[1400px] mx-auto px-4 sm:px-8 py-8 w-full overflow-y-auto overflow-x-hidden scrollbar-hide">
                 
                 {/* Breadcrumbs & Header */}
                 <div className="mb-8">

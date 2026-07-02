@@ -11,7 +11,7 @@ import TopRecommendationsCard from './TopRecommendationsCard';
 export default function LinkedInEnhancerDashboard({ onStartEnhancing }: { onStartEnhancing: (sectionId?: string) => void }) {
     const router = useRouter();
     return (
-        <div className="flex flex-col h-full bg-gray-50/50 dark:bg-[#1a230f] min-h-screen">
+        <div className="flex flex-col h-full app-page-bg min-h-screen">
             <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
                 <button 
                     onClick={() => router.push('/dashboard')}

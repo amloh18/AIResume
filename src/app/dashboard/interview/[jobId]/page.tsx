@@ -79,7 +79,7 @@ const InterviewHubPage = () => {
 
     if (loading) {
         return (
-            <div className="flex flex-col items-center justify-center h-screen bg-[#f3f2ee] dark:bg-[#1a230f]">
+            <div className="flex flex-col items-center justify-center h-screen app-page-bg">
                 <Loader2 className="w-10 h-10 animate-spin text-purple-500 mb-4" />
                 <p className="text-gray-500 font-medium">Preparing your interview plan...</p>
                 <p className="text-small text-gray-400 mt-2">This may take a moment while the AI analyzes your profile.</p>
@@ -89,7 +89,7 @@ const InterviewHubPage = () => {
 
     if (error || !data?.session) {
         return (
-            <div className="flex flex-col items-center justify-center h-screen bg-[#f3f2ee] dark:bg-[#1a230f]">
+            <div className="flex flex-col items-center justify-center h-screen app-page-bg">
                 <AlertTriangle className="w-12 h-12 text-yellow-500 mb-4" />
                 <h2 className="text-h3 font-bold text-gray-900 dark:text-white mb-2">Could not load session</h2>
                 <div className="bg-red-50 dark:bg-red-900/10 p-4 rounded-lg mb-6 max-w-md w-full">

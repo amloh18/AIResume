@@ -332,7 +332,7 @@ export default function LinkedInEnhancementFlow({ onBackToDashboard }: { onBackT
     if (!initialLoadComplete) {
         return (
             <div
-                className="min-h-screen flex flex-col bg-[#f3f2ee] dark:bg-[#1a230f]"
+                className="min-h-screen flex flex-col app-page-bg"
             >
                 <LinkedInHeader
                     availableCvs={[]}
@@ -379,7 +379,7 @@ export default function LinkedInEnhancementFlow({ onBackToDashboard }: { onBackT
     if (initialLoadComplete && availableCvs.length === 0) {
         return (
             <div
-                className="min-h-screen flex flex-col bg-[#f3f2ee] dark:bg-[#1a230f]"
+                className="min-h-screen flex flex-col app-page-bg"
             >
                 <LinkedInHeader
                     availableCvs={[]}
@@ -418,7 +418,7 @@ export default function LinkedInEnhancementFlow({ onBackToDashboard }: { onBackT
 
     return (
         <div
-            className="h-macro flex flex-col bg-[#f3f2ee] dark:bg-[#1a230f] overflow-hidden"
+            className="h-macro flex flex-col app-page-bg overflow-hidden"
         >
              {/* Header */}
             <LinkedInHeader

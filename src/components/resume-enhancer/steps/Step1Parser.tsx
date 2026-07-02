@@ -1035,7 +1035,7 @@ export default function Step1Parser({
 
 
         {/* Top Section */}
-        <div ref={topSectionRef} className="step-one-hero w-full flex flex-col min-h-[30vh] pt-6 sm:pt-8 pb-4 sm:pb-6">
+        <div ref={topSectionRef} className="step-one-hero relative z-10 w-full flex flex-col min-h-[30vh] pt-6 sm:pt-8 pb-4 sm:pb-6">
           <div className="w-full max-w-7xl mx-auto px-4 sm:px-8">
             <div
               className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 sm:gap-6 mb-5 sm:mb-7 origin-bottom w-full px-1 lg:relative"
@@ -1118,8 +1118,8 @@ export default function Step1Parser({
             </div>
 
 {/* Action Cards Grid - horizontal scroll on mobile, grid on sm+ */}
-            <div 
-              className="flex sm:grid gap-3 sm:gap-4 origin-top sm:grid-cols-2 lg:grid-cols-3 w-full overflow-x-auto sm:overflow-x-visible pb-2 sm:pb-0 snap-x snap-mandatory sm:snap-none scroll-pl-4 -mx-4 px-4 sm:mx-0 sm:px-0"
+            <div
+              className="relative z-20 flex sm:grid gap-3 sm:gap-4 origin-top sm:grid-cols-2 lg:grid-cols-3 w-full overflow-x-auto sm:overflow-x-visible pb-4 sm:pb-20 snap-x snap-mandatory sm:snap-none scroll-pl-4 -mx-4 px-4 sm:mx-0 sm:px-0"
               style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
             {activeTab === 'cvs' ? (
