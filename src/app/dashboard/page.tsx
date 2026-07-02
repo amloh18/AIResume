@@ -177,7 +177,7 @@ function DashboardContent() {
 
   return (
     <div 
-      className="h-macro bg-[#f3f2ee] dark:bg-[#0a0a0a] text-[#0f172a] dark:text-gray-150 font-sans overflow-hidden selection:bg-[#83d60d]/30 relative flex flex-col"
+      className="h-macro app-page-bg text-[#0f172a] dark:text-gray-150 font-sans overflow-hidden selection:bg-[#83d60d]/30 relative flex flex-col"
     >
       <div
         ref={containerRef}
@@ -282,7 +282,7 @@ function DashboardContent() {
             layout
             animate={{ scale: isExpanded ? 0.9 : 1, opacity: isExpanded ? 0.8 : 1 }}
             transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-            className="bg-white dark:bg-[#121317] border border-gray-200 dark:border-gray-800 rounded-3xl shadow-sm p-4 flex items-center gap-4"
+            className="bg-white dark:bg-[#191c1b] border border-gray-200 dark:border-gray-800 rounded-3xl shadow-sm p-4 flex items-center gap-4"
           >
             <div className="relative w-12 h-12 flex items-center justify-center">
               <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">

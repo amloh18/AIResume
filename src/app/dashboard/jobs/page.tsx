@@ -10,7 +10,7 @@ export const metadata = {
 
 export default function JobsPage() {
   return (
-    <div className="min-h-screen bg-[#f3f2ee] dark:bg-[#1a230f] p-4 lg:p-6">
+    <div className="min-h-screen app-page-bg p-4 lg:p-6">
       <Suspense fallback={<JobsLoadingState />}>
         <RouteGuard requireAuth={true}>
           <JobsDashboard />

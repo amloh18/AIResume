@@ -326,7 +326,7 @@
 
 .dark {
   /* Dark theme colors - Updated specifications */
-  --bg-primary: #1a230f;
+  --bg-primary: #191c1b;
   --bg-secondary: #141810;
   --bg-tertiary: #313a28;
   --text-primary: #ffffff;
@@ -354,7 +354,7 @@
   --modal-bg: #141810;
   --modal-border: rgba(255, 255, 255, 0.08);
 
-  --background: 82 38% 9%;
+  --background: 160 6% 10%;
   --foreground: 0 0% 98%;
   --card: 82 30% 11%;
   --card-foreground: 0 0% 98%;
@@ -716,7 +716,7 @@ body:not(.dark) {
 
 /* Dark theme solid background */
 body.dark {
-  background: #1a230f;
+  background: #191c1b;
   background-attachment: fixed;
 }
 
@@ -728,8 +728,16 @@ body.dark {
 }
 
 .dark .dashboard-page {
-  background: #1a230f;
-  /* Matches dark:bg-[#1a230f] from layout */
+  background: #191c1b;
+  /* Matches dark:bg-[#191c1b] from layout */
+}
+
+/* Application-wide page background class to ensure visual consistency */
+.app-page-bg {
+  background-color: #f3f2ee;
+}
+.dark .app-page-bg {
+  background-color: #191c1b !important;
 }
 
 /*
@@ -778,7 +786,7 @@ html:not(.dark) .cover-letter-editor-page {
 }
 
 .dark .cover-letter-editor-page {
-  background: #1a230f;
+  background: #191c1b;
 }
 
 /* Dashboard text colors to match design - Dark theme only */

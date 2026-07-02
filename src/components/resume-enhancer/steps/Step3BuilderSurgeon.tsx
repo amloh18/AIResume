@@ -605,6 +605,49 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
       }
     }, [state.cvType, state.journeyId, state.jobData, jdText]);
 
+    const [activeUtilityPanel, setActiveUtilityPanel] = React.useState<'mori' | 'design' | 'json' | 'layout' | null>(null);
+
+    React.useEffect(() => {
+      const handleSidebar = (e: Event) => {
+        const detail = (e as CustomEvent).detail;
+        if (detail === 'design') {
+          setActiveUtilityPanel(curr => curr === 'design' ? null : 'design');
+        } else if (detail === 'data') {
+          setActiveUtilityPanel(curr => curr === 'json' ? null : 'json');
+        }
+      };
+      const handleTemplates = () => {
+        setActiveUtilityPanel(curr => curr === 'layout' ? null : 'layout');
+      };
+      const handleClose = () => {
+        setActiveUtilityPanel(null);
+      };
+      window.addEventListener('set-builder-sidebar', handleSidebar);
+      window.addEventListener('open-templates', handleTemplates);
+      window.addEventListener('close-utility-panel', handleClose);
+      return () => {
+        window.removeEventListener('set-builder-sidebar', handleSidebar);
+        window.removeEventListener('open-templates', handleTemplates);
+        window.removeEventListener('close-utility-panel', handleClose);
+      };
+    }, []);
+
+    React.useEffect(() => {
+      if (state.moriChatMode) {
+        setActiveUtilityPanel('mori');
+      } else if (activeUtilityPanel === 'mori') {
+        setActiveUtilityPanel(null);
+      }
+    }, [state.moriChatMode]);
+
+    React.useEffect(() => {
+      if (activeUtilityPanel === 'mori') {
+        if (!state.moriChatMode) dispatch({ type: 'SET_MORI_CHAT_MODE', payload: true });
+      } else {
+        if (state.moriChatMode) dispatch({ type: 'SET_MORI_CHAT_MODE', payload: false });
+      }
+    }, [activeUtilityPanel, dispatch]);
+
     React.useEffect(() => {
       const handleOpenMoriChat = () => {
         dispatch({ type: 'SET_MORI_CHAT_MODE', payload: true });
@@ -619,16 +662,8 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
 
     const handleRunAnalysis = async () => {
       if (!isRoleReady) {
-        const inferred = inferRoleContextFromCVData(state.cvData);
-        if (inferred.targetRole && inferred.seniorityLevel) {
-          dispatch({
-            type: 'SET_ROLE_CONTEXT',
-            payload: { targetRole: inferred.targetRole, seniorityLevel: inferred.seniorityLevel }
-          });
-        } else {
-          setShowRoleProfiler(true);
-          return;
-        }
+        toast.error("Please configure your target position in the Analysis rail first.");
+        return;
       }
 
       setIsAnalyzing(true);
@@ -1252,7 +1287,7 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
     return (
       <div className="h-macro min-h-0 relative overflow-hidden bg-gray-50 dark:bg-[#0a0a0a]">
         {/* Main Container */}
-        <div className="h-full w-full grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_426px] overflow-hidden relative p-3 gap-3">
+        <div className="h-full w-full flex overflow-hidden relative p-3 gap-3">
           {/* CV Canvas Builder — full drag-drop snippet-based builder with inline editing */}
           <div className="flex-1 min-h-0 relative flex flex-col rounded-xl overflow-hidden shadow-sm shadow-black/10 dark:shadow-black/30">
             <div ref={cvPreviewRef} className="flex-1 min-h-0 overflow-hidden">
@@ -1279,7 +1314,7 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
           </div>
           
           {/* Right rail: onboarding setup checklist and AI analysis (always open) */}
-          <div className="hidden lg:flex flex-col h-full relative z-10 gap-3 min-h-0 panel-glass rounded-xl border border-white/20 dark:border-white/10 p-0 overflow-hidden">
+          <div className="hidden lg:flex flex-col h-full relative z-10 gap-3 min-h-0 w-[426px] shrink-0 panel-glass rounded-xl border border-white/20 dark:border-white/10 p-0 overflow-hidden">
             {isImproveMode && (() => {
               const isPersonalInfoVerified = !!(state.cvData?.basics?.name?.trim() && state.cvData?.basics?.email?.trim());
               const isQualityScoreReviewed = !!(state.surgeonAnalysis || atsScore);
@@ -1400,28 +1435,34 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
             </div>
           </div>
 
-          {/* Mori Chat Panel (open/close next to it) */}
-          {state.moriChatMode && (
+          {/* Unified Utility Panel (Mori Chat, Design, JSON, Layout) */}
+          {activeUtilityPanel && (
             <div className="hidden lg:flex flex-col shrink-0 h-full relative z-10 gap-3 min-h-0 w-[426px] bg-white dark:bg-[var(--bg-secondary)] rounded-xl border border-gray-200 dark:border-white/[0.06] overflow-hidden shadow-sm shadow-black/10 dark:shadow-black/30">
-              {/* Mori Chat Header */}
-              <div className="sticky top-0 z-20 flex items-center justify-between px-4 py-3 bg-white/95 dark:bg-[var(--bg-secondary)] backdrop-blur-sm border-b border-gray-100 dark:border-white/[0.04]">
-                <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <h3 className="text-xs font-extrabold uppercase tracking-wider">Mori Chat</h3>
+              {activeUtilityPanel === 'mori' ? (
+                <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+                  {/* Mori Chat Header */}
+                  <div className="sticky top-0 z-20 flex items-center justify-between px-4 py-3 bg-white/95 dark:bg-[var(--bg-secondary)] backdrop-blur-sm border-b border-gray-100 dark:border-white/[0.04]">
+                    <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <h3 className="text-xs font-extrabold uppercase tracking-wider">Mori Chat</h3>
+                    </div>
+                    <button
+                      onClick={() => dispatch({ type: 'SET_MORI_CHAT_MODE', payload: false })}
+                      className="p-1 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-white hover:bg-gray-150 dark:hover:bg-white/5 transition-colors"
+                      title="Close Mori Chat"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                  
+                  {/* Mori Chat Interface */}
+                  <div className="flex-1 min-h-0 overflow-hidden">
+                    <MoriChatInterface />
+                  </div>
                 </div>
-                <button
-                  onClick={() => dispatch({ type: 'SET_MORI_CHAT_MODE', payload: false })}
-                  className="p-1 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-white hover:bg-gray-150 dark:hover:bg-white/5 transition-colors"
-                  title="Close Mori Chat"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-              
-              {/* Mori Chat Interface */}
-              <div className="flex-1 min-h-0 overflow-hidden">
-                <MoriChatInterface />
-              </div>
+              ) : (
+                <div id="builder-utility-panel-portal" className="flex-grow flex flex-col h-full overflow-hidden" />
+              )}
             </div>
           )}
 
@@ -1456,22 +1497,7 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
           }}
         />
 
-        {/* Role Profiler Modal (used when editing existing CVs or when role context is missing) */}
-        <RoleProfilerModal
-          isOpen={state.showProfilerModal || showRoleProfiler}
-          onClose={() => {
-            setShowRoleProfiler(false);
-            dispatch({ type: 'SET_SHOW_PROFILER_MODAL', payload: false });
-          }}
-          onComplete={(role, seniority) => {
-            dispatch({
-              type: 'SET_ROLE_CONTEXT',
-              payload: { targetRole: role, seniorityLevel: seniority as any }
-            });
-            setShowRoleProfiler(false);
-            dispatch({ type: 'SET_SHOW_PROFILER_MODAL', payload: false });
-          }}
-        />
+
 
         {/* Smart JD Modal for standalone CVs */}
         <SmartJDModal
