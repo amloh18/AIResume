@@ -120,6 +120,60 @@ const MoriChatInterface: React.FC = () => {
     const textToSend = overrideInput || input;
     if (!textToSend.trim() || isLoading) return;
 
+    if (textToSend === 'Cancel') {
+      setInput('');
+      const userMsg: Message = {
+        id: Date.now().toString(),
+        role: 'user',
+        content: 'Cancel',
+        timestamp: Date.now()
+      };
+      const assistantMsg: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: 'Action cancelled. Please select a section in the CV preview to edit, or ask a question.',
+        timestamp: Date.now()
+      };
+      setMessages(prev => [...prev, userMsg, assistantMsg]);
+      return;
+    }
+
+    const editKeywords = ['change', 'edit', 'rewrite', 'make', 'fix', 'improve', 'add', 'remove', 'update', 'refine', 'modify', 'bullet', 'bulletpoint', 'word', 'phrase', 'cv', 'resume'];
+    const textLower = textToSend.toLowerCase();
+    const isEditIntent = editKeywords.some(kw => textLower.includes(kw));
+
+    if (!currentSelection && isEditIntent) {
+      const isConfirmWholeCV = textLower.includes('apply to whole') || textLower.includes('apply to the whole') || textLower.includes('entire cv') || textLower.includes('proceed');
+      
+      if (!isConfirmWholeCV) {
+        const userMsg: Message = {
+          id: Date.now().toString(),
+          role: 'user',
+          content: textToSend,
+          timestamp: Date.now()
+        };
+        setMessages(prev => [...prev, userMsg]);
+        setInput('');
+        setIsLoading(true);
+        
+        setTimeout(() => {
+          const warningMsg: Message = {
+            id: (Date.now() + 1).toString(),
+            role: 'assistant',
+            content: "You are asking to make changes, but no CV section is currently selected. Please select a section in the CV preview to focus the edits, or choose below to apply changes to the entire CV.",
+            timestamp: Date.now(),
+            options: [
+              { label: "Apply changes to the entire CV", prompt: `${textToSend} (Apply to whole CV)` },
+              { label: "Cancel", prompt: "Cancel" }
+            ]
+          };
+          setMessages(prev => [...prev, warningMsg]);
+          setIsLoading(false);
+        }, 400);
+        return;
+      }
+    }
+
     const userMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
@@ -652,7 +706,7 @@ const MoriChatInterface: React.FC = () => {
             >
               <div className="flex items-center gap-2 overflow-hidden flex-1 mr-2">
                 <MousePointer2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                <div className="text-[11px] font-medium text-emerald-800 dark:text-emerald-300 truncate">
+                <div className="text-[11px] font-medium text-emerald-800 dark:text-emerald-300 line-clamp-2 leading-relaxed">
                   <span className="opacity-70 mr-1">Targeting:</span>
                   "{currentSelection.text}"
                 </div>
@@ -701,7 +755,7 @@ const MoriChatInterface: React.FC = () => {
               }}
               placeholder={currentSelection ? "Instruct Mori to update selection or whole CV..." : "Ask Mori to edit your CV..."}
               rows={1}
-              className="w-full bg-transparent px-4 py-3.5 pr-12 text-[13px] focus:outline-none resize-none dark:text-white dark:placeholder-slate-500"
+              className="w-full bg-transparent px-4 py-3.5 pr-12 text-[11.5px] placeholder:text-[11.5px] placeholder:text-slate-400 dark:placeholder-slate-500 focus:outline-none resize-none dark:text-white"
               style={{ minHeight: '48px', maxHeight: '120px' }}
             />
             <button

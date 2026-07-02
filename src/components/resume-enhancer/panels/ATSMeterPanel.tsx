@@ -432,6 +432,10 @@ export const ATSMeterPanel: React.FC = () => {
     setExpanded(prev => ({ ...prev, [panel]: !prev[panel] }));
   };
 
+  if (!state.cvData) {
+    return <AnalysisSkeleton />;
+  }
+
   const report = state.scoreReport;
   const isMasterCV = state.cvType === 'master';
 
@@ -776,30 +780,43 @@ export const ATSMeterPanel: React.FC = () => {
   }, [report]);
 
   return (
-    <div className="h-full flex flex-col bg-[#F9FAFB] dark:bg-[var(--bg-secondary)] rounded-xl border border-gray-200 dark:border-white/[0.06] overflow-y-auto hide-scrollbar text-gray-900 dark:text-white">
+    <div className="h-full flex flex-col bg-[#F9FAFB] dark:bg-[var(--bg-secondary)] rounded-xl border border-gray-200 dark:border-white/[0.06] overflow-y-auto hide-scrollbar text-gray-900 dark:text-white snap-y snap-mandatory scroll-smooth">
 
       {/* ── Header ── */}
       <div className="sticky top-0 z-20 flex items-center justify-between px-4 py-3 bg-white/95 dark:bg-[var(--bg-secondary)] backdrop-blur-sm border-b border-gray-100 dark:border-white/[0.04]">
         <div className="flex items-center gap-2">
           <h3 className="text-xs font-extrabold uppercase tracking-wider text-gray-700 dark:text-gray-200">Analysis</h3>
+          {/* Refresh Analysis next to text */}
+          <button
+            onClick={runAnalysis}
+            disabled={isAnalyzing}
+            onMouseEnter={() => setHoveredIcon('refresh')}
+            onMouseLeave={() => setHoveredIcon(null)}
+            className="p-1 rounded-full text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-200/50 dark:hover:bg-white/10 transition-all disabled:opacity-40 hover:scale-110 active:scale-95 duration-150 cursor-pointer shrink-0 animate-fadeIn"
+            title="Refresh Analysis"
+          >
+            {isAnalyzing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+          </button>
         </div>
         
         <div className="flex items-center gap-1 bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-full p-1.5">
-          {/* Briefcase Job Icon */}
-          <button 
-            onClick={() => {
-              if (state.journeyId || state.cvType === 'journey') {
-                window.dispatchEvent(new CustomEvent('open-job-sidebar'));
-              } else {
-                dispatch({ type: 'SET_SHOW_PROFILER_MODAL', payload: true });
-              }
-            }}
-            onMouseEnter={() => setHoveredIcon('role')}
-            onMouseLeave={() => setHoveredIcon(null)}
-            className="p-1.5 rounded-full text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-200/50 dark:hover:bg-white/10 transition-all cursor-pointer shrink-0 hover:scale-110 active:scale-95 duration-150"
-          >
-            <Briefcase className="w-4 h-4" />
-          </button>
+          {/* Briefcase Job Icon — Only show for journey-based CVs */}
+          {state.cvType === 'journey' && (
+            <button 
+              onClick={() => {
+                if (state.journeyId || state.cvType === 'journey') {
+                  window.dispatchEvent(new CustomEvent('open-job-sidebar'));
+                } else {
+                  dispatch({ type: 'SET_SHOW_PROFILER_MODAL', payload: true });
+                }
+              }}
+              onMouseEnter={() => setHoveredIcon('role')}
+              onMouseLeave={() => setHoveredIcon(null)}
+              className="p-1.5 rounded-full text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-200/50 dark:hover:bg-white/10 transition-all cursor-pointer shrink-0 hover:scale-110 active:scale-95 duration-150"
+            >
+              <Briefcase className="w-4 h-4" />
+            </button>
+          )}
 
           {/* Mori AI (Sparkles only, no name) */}
           <button 
@@ -844,17 +861,6 @@ export const ATSMeterPanel: React.FC = () => {
           >
             <FileJson className="w-4 h-4" />
           </button>
-          
-          {/* Refresh Analysis */}
-          <button
-            onClick={runAnalysis}
-            disabled={isAnalyzing}
-            onMouseEnter={() => setHoveredIcon('refresh')}
-            onMouseLeave={() => setHoveredIcon(null)}
-            className="p-1.5 rounded-full text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-200/50 dark:hover:bg-white/10 transition-all disabled:opacity-40 hover:scale-110 active:scale-95 duration-150"
-          >
-            {isAnalyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-          </button>
         </div>
 
         {/* Floating rich hover info card with animated step-by-step motion graphics */}
@@ -868,7 +874,7 @@ export const ATSMeterPanel: React.FC = () => {
       <div className="flex-1 p-4 space-y-4">
         {/* ── Inline Target Role Profiler (for non-journey CVs) ── */}
         {state.cvType !== 'journey' && (
-          <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/[0.05] rounded-2xl p-4 shadow-sm space-y-4">
+          <div className="snap-start scroll-mt-14 bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/[0.05] rounded-2xl p-4 shadow-sm space-y-4">
             <div className="flex items-center justify-between border-b border-gray-150 dark:border-white/5 pb-2">
               <div className="flex items-center gap-2">
                 <Briefcase className="h-4 w-4 text-[color:var(--accent-primary)]" />
@@ -988,7 +994,7 @@ export const ATSMeterPanel: React.FC = () => {
           <div className="space-y-4 animate-fadeIn">
             
             {/* ── 1. MAIN SCORE HEADER ── */}
-            <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/[0.05] rounded-2xl p-4 flex items-center gap-4 shadow-sm">
+            <div className="snap-start scroll-mt-14 bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/[0.05] rounded-2xl p-4 flex items-center gap-4 shadow-sm">
               {/* Radial Score Gauge */}
               <div className="relative w-16 h-16 shrink-0 flex items-center justify-center">
                 <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
@@ -1053,7 +1059,7 @@ export const ATSMeterPanel: React.FC = () => {
 
             {/* ── 2. CATEGORY SCORES PANEL ── */}
             {categoryScores.length > 0 && (
-              <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/[0.05] rounded-2xl overflow-hidden shadow-sm">
+              <div className="snap-start scroll-mt-14 bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/[0.05] rounded-2xl overflow-hidden shadow-sm">
                 <button
                   onClick={() => togglePanel('categories')}
                   className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50/50 dark:hover:bg-white/[0.01] transition-colors border-b border-gray-100 dark:border-white/5"
@@ -1105,7 +1111,7 @@ export const ATSMeterPanel: React.FC = () => {
 
             {/* ── 3. KEYWORD AUDIT PANEL ── */}
             {keywordsList.length > 0 && (
-              <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/[0.05] rounded-2xl overflow-hidden shadow-sm">
+              <div className="snap-start scroll-mt-14 bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/[0.05] rounded-2xl overflow-hidden shadow-sm">
                 <button
                   onClick={() => togglePanel('keywords')}
                   className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50/50 dark:hover:bg-white/[0.01] transition-colors border-b border-gray-100 dark:border-white/5"
@@ -1169,7 +1175,7 @@ export const ATSMeterPanel: React.FC = () => {
 
             {/* ── 4. WHAT'S WORKING FOR YOU PANEL ── */}
             {strengthsList.length > 0 && (
-              <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/[0.05] rounded-2xl overflow-hidden shadow-sm">
+              <div className="snap-start scroll-mt-14 bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/[0.05] rounded-2xl overflow-hidden shadow-sm">
                 <button
                   onClick={() => togglePanel('strengths')}
                   className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50/50 dark:hover:bg-white/[0.01] transition-colors border-b border-gray-100 dark:border-white/5"
@@ -1219,7 +1225,7 @@ export const ATSMeterPanel: React.FC = () => {
 
             {/* ── 5. CRITICAL GAPS PANEL ── */}
             {gapsList.length > 0 && (
-              <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/[0.05] rounded-2xl overflow-hidden shadow-sm">
+              <div className="snap-start scroll-mt-14 bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/[0.05] rounded-2xl overflow-hidden shadow-sm">
                 <button
                   onClick={() => togglePanel('gaps')}
                   className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50/50 dark:hover:bg-white/[0.01] transition-colors border-b border-gray-100 dark:border-white/5"
@@ -1269,7 +1275,7 @@ export const ATSMeterPanel: React.FC = () => {
 
             {/* ── 6. PRIORITY ACTIONS PANEL ── */}
             {actionsList.length > 0 && (
-              <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/[0.05] rounded-2xl overflow-hidden shadow-sm">
+              <div className="snap-start scroll-mt-14 bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/[0.05] rounded-2xl overflow-hidden shadow-sm">
                 <button
                   onClick={() => togglePanel('actions')}
                   className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50/50 dark:hover:bg-white/[0.01] transition-colors border-b border-gray-100 dark:border-white/5"

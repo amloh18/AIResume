@@ -129,6 +129,10 @@ export interface ResumeEnhancerState {
 
   // Mori Chat Mode
   moriChatMode: boolean;
+
+  // Undo/Redo tracking stacks
+  undoStack: { cvData: UnifiedCVDataStructure; template: ITemplate | null }[];
+  redoStack: { cvData: UnifiedCVDataStructure; template: ITemplate | null }[];
 }
 
 // Action Types
@@ -144,6 +148,8 @@ type ResumeEnhancerAction =
   | { type: 'SET_CV_DATA'; payload: UnifiedCVDataStructure }
   | { type: 'SET_TEMPLATE'; payload: ITemplate | null }
   | { type: 'SET_SELECTED_TEMPLATE'; payload: ITemplate | null }
+  | { type: 'UNDO' }
+  | { type: 'REDO' }
   | { type: 'SET_ROLE_CONTEXT'; payload: { targetRole: string; seniorityLevel: string } }
   | { type: 'SET_TARGET_ROLE'; payload: string }
   | { type: 'SET_SENIORITY_LEVEL'; payload: string }
@@ -337,7 +343,9 @@ const initialState: ResumeEnhancerState = {
   paperSize: 'A4',
   isJobSidebarOpen: false,
   isTemplateOverlayOpen: false,
-  moriChatMode: false
+  moriChatMode: false,
+  undoStack: [],
+  redoStack: []
 };
 
 // Reducer
@@ -384,23 +392,105 @@ function resumeEnhancerReducer(
     case 'SET_CV_TITLE':
       return { ...state, cvTitle: action.payload };
 
-    case 'UPDATE_CV_DATA':
+    case 'UPDATE_CV_DATA': {
+      const nextCvData = cleanAllCvData({
+        ...state.cvData,
+        ...action.payload
+      });
+      if (JSON.stringify(state.cvData) === JSON.stringify(nextCvData)) {
+        return state;
+      }
+      const nextUndoStack = [...state.undoStack];
+      nextUndoStack.push({
+        cvData: JSON.parse(JSON.stringify(state.cvData)),
+        template: state.selectedTemplate
+      });
       return {
         ...state,
-        cvData: cleanAllCvData({
-          ...state.cvData,
-          ...action.payload
-        })
+        cvData: nextCvData,
+        undoStack: nextUndoStack,
+        redoStack: []
       };
+    }
 
-    case 'SET_CV_DATA':
-      return { ...state, cvData: cleanAllCvData(action.payload) };
+    case 'SET_CV_DATA': {
+      const nextCvData = cleanAllCvData(action.payload);
+      if (JSON.stringify(state.cvData) === JSON.stringify(nextCvData)) {
+        return state;
+      }
+      const nextUndoStack = [...state.undoStack];
+      nextUndoStack.push({
+        cvData: JSON.parse(JSON.stringify(state.cvData)),
+        template: state.selectedTemplate
+      });
+      return {
+        ...state,
+        cvData: nextCvData,
+        undoStack: nextUndoStack,
+        redoStack: []
+      };
+    }
 
     case 'SET_TEMPLATE':
       return { ...state, selectedTemplate: action.payload };
 
-    case 'SET_SELECTED_TEMPLATE':
-      return { ...state, selectedTemplate: action.payload };
+    case 'SET_SELECTED_TEMPLATE': {
+      const nextTemplate = action.payload;
+      if (state.selectedTemplate?.id === nextTemplate?.id) {
+        return state;
+      }
+      const nextUndoStack = [...state.undoStack];
+      nextUndoStack.push({
+        cvData: JSON.parse(JSON.stringify(state.cvData)),
+        template: state.selectedTemplate
+      });
+      return {
+        ...state,
+        selectedTemplate: nextTemplate,
+        undoStack: nextUndoStack,
+        redoStack: []
+      };
+    }
+
+    case 'UNDO': {
+      if (state.undoStack.length === 0) return state;
+      const nextUndoStack = [...state.undoStack];
+      const previous = nextUndoStack.pop()!;
+      const nextRedoStack = [
+        {
+          cvData: JSON.parse(JSON.stringify(state.cvData)),
+          template: state.selectedTemplate
+        },
+        ...state.redoStack
+      ];
+      return {
+        ...state,
+        cvData: previous.cvData,
+        selectedTemplate: previous.template,
+        undoStack: nextUndoStack,
+        redoStack: nextRedoStack
+      };
+    }
+
+    case 'REDO': {
+      if (state.redoStack.length === 0) return state;
+      const nextRedoStack = [...state.redoStack];
+      const nextState = nextRedoStack.shift()!;
+      const nextUndoStack = [
+        ...state.undoStack,
+        {
+          cvData: JSON.parse(JSON.stringify(state.cvData)),
+          template: state.selectedTemplate
+        }
+      ];
+      return {
+        ...state,
+        cvData: nextState.cvData,
+        selectedTemplate: nextState.template,
+        undoStack: nextUndoStack,
+        redoStack: nextRedoStack
+      };
+    }
 
     case 'SET_ROLE_CONTEXT':
       return {
@@ -590,7 +680,9 @@ function resumeEnhancerReducer(
         fixAnnotations: [],
         reportOpen: false,
         reviewMode: false,
-        activeFixId: undefined
+        activeFixId: undefined,
+        undoStack: [],
+        redoStack: []
       };
 
     case 'RESET_STATE':
