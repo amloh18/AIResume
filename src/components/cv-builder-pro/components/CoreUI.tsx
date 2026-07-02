@@ -2,7 +2,7 @@
 
 
 import React, { useRef, useEffect, useState } from 'react';
-import { ImageIcon, Plus, RefreshCw, ChevronUp, ChevronDown, Trash2, GripVertical, PlusCircle, Wand2, Bold, Italic, Underline, List, AlignLeft, AlignCenter, AlignRight, AlignJustify } from 'lucide-react';
+import { ImageIcon, Plus, RefreshCw, ChevronUp, ChevronDown, Trash2, PlusCircle, Wand2, Bold, Italic, Underline, List, AlignLeft, AlignCenter, AlignRight, AlignJustify, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
 import { SNIPPETS, TITLE_STYLES } from '../registry';
 import { getNestedValue, escapeRegExp, formatCVDate } from '../helpers';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -357,7 +357,7 @@ const buildSnippetPreviewMarkup = (source: HTMLElement) => {
   return clone.outerHTML;
 };
 
-export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvData, EditableWrapper, moveSnippet, removeSnippet, onReplace, onTogglePhoto, onAddListEntry, moveEntry, deleteEntry, dragState, isDark, activeTemplate, layoutZones, onOpenSkillsSuggestions, isDropAllowed }: any) => {
+export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvData, EditableWrapper, moveSnippet, removeSnippet, onReplace, onTogglePhoto, onAddListEntry, moveEntry, deleteEntry, dragState, isDark, activeTemplate, layoutZones, onOpenSkillsSuggestions, isDropAllowed, onMoveToZone }: any) => {
   const ctx = React.useContext(CanvasContext);
   const [confirmingRemove, setConfirmingRemove] = useState(false);
   if (!instance || !instance.type) return null;
@@ -455,7 +455,7 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
       {isHeader && instance.type !== 'header-accent' && (
         <button
           onClick={onTogglePhoto}
-          className="w-7 h-7 flex items-center justify-center text-blue-500/70 hover:text-blue-600 transition-all duration-150 hover:scale-110 active:scale-95"
+          className="w-7 h-7 flex items-center justify-center text-blue-500 hover:text-blue-600 transition-all duration-150 hover:scale-110 active:scale-95"
           title="Toggle Photo"
         >
           <ImageIcon size={13}/>
@@ -464,7 +464,7 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
       {canAddListEntry && (
         <button
           onClick={() => onAddListEntry(SnippetComponent.category)}
-          className="w-7 h-7 flex items-center justify-center text-emerald-500/70 hover:text-emerald-600 transition-all duration-150 hover:scale-110 active:scale-95"
+          className="w-7 h-7 flex items-center justify-center text-emerald-500 hover:text-emerald-600 transition-all duration-150 hover:scale-110 active:scale-95"
           title={`Add ${SnippetComponent.category} entry`}
         >
           <Plus size={13}/>
@@ -473,10 +473,28 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
       {isSkillsSnippet && (
         <button
           onClick={onOpenSkillsSuggestions}
-          className="w-7 h-7 flex items-center justify-center text-emerald-500/70 hover:text-emerald-600 transition-all duration-150 hover:scale-110 active:scale-95"
+          className="w-7 h-7 flex items-center justify-center text-emerald-500 hover:text-emerald-600 transition-all duration-150 hover:scale-110 active:scale-95"
           title="AI Skill Suggestions"
         >
           <Wand2 size={13}/>
+        </button>
+      )}
+      {/* Mori AI: open mori chat with this section pre-selected */}
+      {!isHeader && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            const text = (e.currentTarget.closest('[data-block-id]') as HTMLElement)?.innerText || '';
+            const path = SnippetComponent.category.toLowerCase();
+            window.dispatchEvent(new CustomEvent('mori-cv-selection', {
+              detail: { path, text: `(Section ${SnippetComponent.category}): ${text.substring(0, 100)}...` }
+            }));
+            window.dispatchEvent(new CustomEvent('open-mori-chat'));
+          }}
+          className="w-7 h-7 flex items-center justify-center text-emerald-500 hover:text-emerald-400 transition-all duration-150 hover:scale-110 active:scale-95"
+          title="Ask Mori AI about this section"
+        >
+          <Sparkles size={13}/>
         </button>
       )}
       {isHeader && (
@@ -484,7 +502,7 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
           <button
             onClick={() => ctx?.setDesign?.({ ...ctx.design, headerAlign: 'left' })}
             className={`w-7 h-7 flex items-center justify-center transition-all duration-150 hover:scale-110 active:scale-95 bg-transparent ${
-              (ctx?.design?.headerAlign || 'left') === 'left' ? 'text-emerald-500' : 'text-slate-400/70 hover:text-slate-600'
+              (ctx?.design?.headerAlign || 'left') === 'left' ? 'text-emerald-500' : 'text-slate-500 hover:text-slate-700'
             }`}
             title="Align text left"
           >
@@ -493,7 +511,7 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
           <button
             onClick={() => ctx?.setDesign?.({ ...ctx.design, headerAlign: 'center' })}
             className={`w-7 h-7 flex items-center justify-center transition-all duration-150 hover:scale-110 active:scale-95 bg-transparent ${
-              ctx?.design?.headerAlign === 'center' ? 'text-emerald-500' : 'text-slate-400/70 hover:text-slate-600'
+              ctx?.design?.headerAlign === 'center' ? 'text-emerald-500' : 'text-slate-500 hover:text-slate-700'
             }`}
             title="Center text"
           >
@@ -502,7 +520,7 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
           <button
             onClick={() => ctx?.setDesign?.({ ...ctx.design, headerAlign: 'right' })}
             className={`w-7 h-7 flex items-center justify-center transition-all duration-150 hover:scale-110 active:scale-95 bg-transparent ${
-              ctx?.design?.headerAlign === 'right' ? 'text-emerald-500' : 'text-slate-400/70 hover:text-slate-600'
+              ctx?.design?.headerAlign === 'right' ? 'text-emerald-500' : 'text-slate-500 hover:text-slate-700'
             }`}
             title="Align text right"
           >
@@ -512,14 +530,14 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
       )}
       <button
         onClick={() => onReplace(zoneId, index, instance.type)}
-        className="w-7 h-7 flex items-center justify-center text-slate-400/70 hover:text-slate-600 transition-all duration-150 hover:scale-110 active:scale-95 bg-transparent"
+        className="w-7 h-7 flex items-center justify-center text-slate-500 hover:text-slate-700 transition-all duration-150 hover:scale-110 active:scale-95 bg-transparent"
         title="Change Style"
       >
         <RefreshCw size={13}/>
       </button>
       <button
         onClick={() => removeSnippet(zoneId, index)}
-        className="w-7 h-7 flex items-center justify-center text-red-400/70 hover:text-red-500 transition-all duration-150 hover:scale-110 active:scale-95 bg-transparent"
+        className="w-7 h-7 flex items-center justify-center text-red-500 hover:text-red-600 transition-all duration-150 hover:scale-110 active:scale-95 bg-transparent"
         title="Delete section"
       >
         <Trash2 size={13}/>
@@ -527,15 +545,91 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
       {!isHeader && (
         <>
           <div className="w-[1.5px] h-4 bg-slate-200 dark:bg-slate-700/50 mx-1" />
-          <div 
-            className="w-7 h-7 flex items-center justify-center text-slate-400/70 hover:text-slate-600 cursor-grab active:cursor-grabbing transition-all duration-150 bg-transparent"
-            title="Drag to reorder"
-            draggable
-            onDragStart={handleDragStart as any}
-            onDragEnd={handleDragEnd as any}
-          >
-            <GripVertical size={13}/>
-          </div>
+          {/* Layout-aware directional arrow controls */}
+          {(() => {
+            const tplType: string = activeTemplate?.type || '1-col';
+            // Determine the bare zoneId (without _page_N suffix)
+            const bareZoneId = (zoneId || '').replace(/_page_\d+$/, '');
+
+            // Determine sibling zones for cross-column movement
+            const getSiblingZone = (dir: 'left' | 'right'): string | null => {
+              // 2-col: left <-> right
+              if (tplType === '2-col') {
+                if (bareZoneId === 'left' && dir === 'right') return 'right';
+                if (bareZoneId === 'right' && dir === 'left') return 'left';
+              }
+              // top-sidebar-right: main -> sidebar (right), sidebar -> main (left)
+              if (tplType === 'top-sidebar-right') {
+                if (bareZoneId === 'main' && dir === 'right') return 'sidebar';
+                if (bareZoneId === 'sidebar' && dir === 'left') return 'main';
+              }
+              // top-sidebar-left: sidebar -> main (right), main -> sidebar (left)
+              if (tplType === 'top-sidebar-left') {
+                if (bareZoneId === 'sidebar' && dir === 'right') return 'main';
+                if (bareZoneId === 'main' && dir === 'left') return 'sidebar';
+              }
+              // sidebar-left / sidebar-left-dark: sidebar -> main (right), main -> sidebar (left)
+              if (tplType === 'sidebar-left' || tplType === 'sidebar-left-dark') {
+                if (bareZoneId === 'sidebar' && dir === 'right') return 'main';
+                if (bareZoneId === 'main' && dir === 'left') return 'sidebar';
+              }
+              // sidebar-right / sidebar-right-dark: main -> sidebar (right), sidebar -> main (left)
+              if (tplType === 'sidebar-right' || tplType === 'sidebar-right-dark') {
+                if (bareZoneId === 'main' && dir === 'right') return 'sidebar';
+                if (bareZoneId === 'sidebar' && dir === 'left') return 'main';
+              }
+              // hybrid-split: left <-> right
+              if (tplType === 'hybrid-split') {
+                if (bareZoneId === 'left' && dir === 'right') return 'right';
+                if (bareZoneId === 'right' && dir === 'left') return 'left';
+              }
+              return null;
+            };
+
+            const leftZone = getSiblingZone('left');
+            const rightZone = getSiblingZone('right');
+            const showLeft = !!leftZone;
+            const showRight = !!rightZone;
+
+            const btnCls = 'w-6 h-6 flex items-center justify-center rounded-md text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 active:scale-90 transition-all duration-150 cursor-pointer select-none';
+
+            return (
+              <div className="flex items-center gap-0">
+                {showLeft && (
+                  <button
+                    onClick={() => onMoveToZone?.(index, leftZone)}
+                    className={btnCls}
+                    title={`Move to ${leftZone} zone`}
+                  >
+                    <ChevronLeft size={12} />
+                  </button>
+                )}
+                <button
+                  onClick={() => moveSnippet(zoneId, index, -1)}
+                  className={btnCls}
+                  title="Move up"
+                >
+                  <ChevronUp size={12} />
+                </button>
+                <button
+                  onClick={() => moveSnippet(zoneId, index, 1)}
+                  className={btnCls}
+                  title="Move down"
+                >
+                  <ChevronDown size={12} />
+                </button>
+                {showRight && (
+                  <button
+                    onClick={() => onMoveToZone?.(index, rightZone)}
+                    className={btnCls}
+                    title={`Move to ${rightZone} zone`}
+                  >
+                    <ChevronRight size={12} />
+                  </button>
+                )}
+              </div>
+            );
+          })()}
         </>
       )}
     </div>
@@ -561,20 +655,19 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
     <SnippetContext.Provider value={{ blockId: instance.id, pageIdx, pageAssignments: ctx?.pageAssignments || {} }}>
       <motion.div
         layout="position"
-        initial={{ opacity: 0, y: 15 }}
-        animate={{ opacity: isBeingDragged ? 0 : 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.96, y: -10 }}
+        layoutId={instance.id}
+        initial={{ opacity: 0, y: 12, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95, y: -8 }}
         transition={{ 
-          type: 'spring', 
-          stiffness: 400, 
-          damping: 35, 
-          opacity: { duration: 0.25 },
-          y: { type: 'spring', stiffness: 350, damping: 30 }
+          layout: { type: 'spring', stiffness: 500, damping: 38 },
+          opacity: { duration: 0.2 },
+          y: { type: 'spring', stiffness: 460, damping: 36 },
+          scale: { duration: 0.18 },
         }}
-        onDragOver={handleDragOver as any}
         data-block-id={instance.id}
         className={`relative group/snippet cv-section-wrapper ${showDropLine ? 'mt-10' : 'mt-0'} ${moriHoverClass}`}
-        style={isHeader ? {} : { marginBottom: isLastSnippetInZone ? 0 : 'var(--cv-section-gap, 16px)', visibility: isBeingDragged ? 'hidden' : 'visible' }}
+        style={isHeader ? {} : { marginBottom: isLastSnippetInZone ? 0 : 'var(--cv-section-gap, 16px)' }}
         onClick={handleMoriClick}
       >
         {showDropLine && (
@@ -616,7 +709,7 @@ const InsertSnippetHandle = ({ onAddSnippet, zoneId, index, alwaysVisible = fals
   );
 };
 
-export const CanvasZone = ({ readOnly = false, zoneId, blocks, cvData, EditableWrapper, handleDrop, moveSnippet, removeSnippet, onReplace, onAddSnippet, onTogglePhoto, onAddListEntry, moveEntry, deleteEntry, dragState, activeTemplate, layoutZones, isDark = false, className = "", onOpenSkillsSuggestions, isDropAllowed }: any) => {
+export const CanvasZone = ({ readOnly = false, zoneId, blocks, cvData, EditableWrapper, handleDrop, moveSnippet, removeSnippet, onReplace, onAddSnippet, onTogglePhoto, onAddListEntry, moveEntry, deleteEntry, dragState, activeTemplate, layoutZones, isDark = false, className = "", onOpenSkillsSuggestions, isDropAllowed, onMoveToZone }: any) => {
   const [isOverZone, setIsOverZone] = useState(false);
   const [dropIntent, setDropIntent] = useState<'valid' | 'invalid' | null>(null);
   const onDragOver = (e: React.DragEvent) => {
@@ -698,13 +791,14 @@ export const CanvasZone = ({ readOnly = false, zoneId, blocks, cvData, EditableW
                   isDark={isDark}
                   onOpenSkillsSuggestions={onOpenSkillsSuggestions}
                   isDropAllowed={isDropAllowed}
+                  onMoveToZone={onMoveToZone}
                 />
                 {!readOnly && (
                   <InsertSnippetHandle
                     onAddSnippet={onAddSnippet}
                     zoneId={zoneId}
                     index={index + 1}
-                    alwaysVisible={index === blocks.length - 1}
+                    alwaysVisible={false}
                   />
                 )}
               </React.Fragment>

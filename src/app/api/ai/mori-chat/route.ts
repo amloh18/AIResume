@@ -389,7 +389,9 @@ Strict Rules for CV updates:
   "updatedCV": <Full CV object structure, or null/omitted if no updates>
 }
 10. Ensure the response conforms strictly to this JSON format and is valid JSON.
-11. Selection Boundary Rule: Do NOT restrict your modifications only to the 'User Selection Context' if the user's request asks to update other sections, multiple sections, or the entire CV. The selection context is merely a focus guide. If they ask to update the whole CV or sections different from the selection, execute the requested broader updates.`;
+11. Selection Boundary Rule: Do NOT restrict your modifications only to the 'User Selection Context' if the user's request asks to update other sections, multiple sections, or the entire CV. The selection context is merely a focus guide. If they ask to update the whole CV or sections different from the selection, execute the requested broader updates.
+12. Section Target Protection Rule: Under NO circumstances should you modify, add, or delete items in other, unrelated CV sections if the selection path points to a specific field or section index (e.g. basics.summary, work[i], education[j], projects[k]). If a specific section path is provided or targeted, strictly limit all your updates to that targeted field/section index only, unless the user's text prompt explicitly asks you to update multiple sections or the entire CV.
+13. Strict Targeting Priorities: Prioritize applying edits directly to the exact field provided in 'User Selection Context' (e.g. work[i].highlights[j]). Never introduce random changes in unrelated sections.`;
 
     const formattedMessages = messages.map((m: any) => `${m.role.toUpperCase()}: ${m.content}`).join('\n\n');
     const prompt = `Chat History:\n${formattedMessages}`;

@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useImperativeHandle, forwardRef, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { GripVertical, Download, Plus, LayoutTemplate, Save, RefreshCw, Layers, Check, Search, Filter, Briefcase, PlusCircle, Trash2, ChevronUp, ChevronDown, ImageIcon, ArrowRight, Loader2, PlayCircle, Eye, MousePointer2, Wand2, Quote, FileText, Palette, FileJson, X, Sparkles, Copy, CopyCheck, AlertCircle } from 'lucide-react';
+import { GripVertical, Download, Plus, LayoutTemplate, Save, RefreshCw, Layers, Check, Search, Filter, Briefcase, PlusCircle, Trash2, ChevronUp, ChevronDown, ImageIcon, ArrowRight, Loader2, PlayCircle, Eye, MousePointer2, Wand2, Quote, FileText, Palette, FileJson, X, Sparkles, Copy, CopyCheck, AlertCircle, Undo, Redo } from 'lucide-react';
 import { CANVAS_TEMPLATES, TEMPLATE_CATEGORIES, SNIPPETS, TITLE_STYLES, SNIPPET_FAMILIES, ATS_SNIPPETS } from './registry';
 import { EditableField, CanvasSnippet, CanvasZone, StaticLayoutRenderer, FloatingToolbar, CanvasContext } from './components/CoreUI';
 import { JSONSidebarViewer } from './components/JSONSidebarViewer';
@@ -15,6 +15,7 @@ import { computeCanvasLayoutMetrics } from './layout-utils';
 import { DEFAULT_UNIFIED_CV_DATA } from '@/types/unified-cv-schema';
 import { useUserData } from '@/lib/hooks/useUserData';
 import { useCanvasFit } from '@/hooks/useCanvasFit';
+import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
 const ReadOnlyWrapper = (props: any) => <EditableField {...props} readOnly={true} />;
 const EditableWrapper = EditableField;
 
@@ -384,8 +385,34 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
   const [replacingSnippet, setReplacingSnippet] = useState<any>(null);
   const [dragState, setDragState] = useState<any>({ isDragging: false, sourceZoneId: null, sourceIndex: null, overZoneId: null, overIndex: null });
   const [dragPreview, setDragPreview] = useState<any>(null);
+  const dragDroppedRef = React.useRef(false); // track if a valid drop occurred
+  const dragPreviewRef = React.useRef<any>(null); // stable ref to dragPreview for closure access
   const [scanning, setScanning] = useState(false);
-  
+  const { state: enhancerState, dispatch: enhancerDispatch } = useResumeEnhancer();
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        if (e.shiftKey) {
+          enhancerDispatch({ type: 'REDO' });
+        } else {
+          enhancerDispatch({ type: 'UNDO' });
+        }
+      } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'y') {
+        e.preventDefault();
+        enhancerDispatch({ type: 'REDO' });
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [enhancerDispatch]);
+
+  // Keep dragPreviewRef in sync with dragPreview state for closure access
+  useEffect(() => {
+    dragPreviewRef.current = dragPreview;
+  }, [dragPreview]);
+
   // Use the new smart auto-scaling hook
   const { containerRef: workspaceRef, zoom, setZoom, isAutoFit, triggerAutoFit } = useCanvasFit({
     documentPixelWidth: 794, // Standard A4 width in pixels
@@ -540,6 +567,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
       loadTemplate(template || CANVAS_TEMPLATES[0]);
     }
     const handleDragStart = (e: any) => {
+      dragDroppedRef.current = false;
       setDragState((prev: any) => ({ ...prev, isDragging: true, sourceZoneId: e.detail.zoneId, sourceIndex: e.detail.index }));
       setDragPreview({
         markup: e.detail.previewMarkup,
@@ -548,25 +576,97 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
         label: e.detail.label || 'Section',
         x: e.detail.pointer?.x || 0,
         y: e.detail.pointer?.y || 0,
+        sourceZoneId: e.detail.zoneId,
+        sourceIndex: e.detail.index,
+        sourceInstance: e.detail.instance,
       });
     };
     const handleDragOver = (e: any) => setDragState((prev: any) => ({ ...prev, overZoneId: e.detail.zoneId, overIndex: e.detail.index }));
     const handleDragEnd = () => {
+      // If no valid drop happened, restore to original position (abandon)
+      if (!dragDroppedRef.current && dragPreviewRef.current) {
+        const { sourceZoneId, sourceIndex, sourceInstance } = dragPreviewRef.current;
+        if (sourceZoneId && sourceIndex !== null && sourceInstance) {
+          setZones(prev => {
+            const newZones = { ...prev };
+            const list = [...(newZones[sourceZoneId] || [])];
+            // Only restore if the item is missing (was removed during drag display)
+            const exists = list.some(b => b.id === sourceInstance.id);
+            if (!exists) {
+              list.splice(sourceIndex, 0, sourceInstance);
+              newZones[sourceZoneId] = list;
+            }
+            return newZones;
+          });
+        }
+      }
       setDragState({ isDragging: false, sourceZoneId: null, sourceIndex: null, overZoneId: null, overIndex: null });
       setDragPreview(null);
+      dragDroppedRef.current = false;
     };
     const handleWindowDragOver = (event: DragEvent) => {
       setDragPreview((prev: any) => prev ? { ...prev, x: event.clientX, y: event.clientY } : prev);
     };
+    // Touch drag support
+    const handleTouchDragOver = (event: TouchEvent) => {
+      if (!dragPreviewRef.current) return;
+      const touch = event.touches[0];
+      setDragPreview((prev: any) => prev ? { ...prev, x: touch.clientX, y: touch.clientY } : prev);
+      // Find which canvas zone is under finger
+      const el = document.elementFromPoint(touch.clientX, touch.clientY);
+      if (el) {
+        const zoneEl = el.closest('[data-zone-id]') as HTMLElement | null;
+        if (zoneEl) {
+          const zoneId = zoneEl.getAttribute('data-zone-id');
+          const blocks = zoneEl.querySelectorAll('[data-block-id]');
+          let overIndex = blocks.length;
+          blocks.forEach((block, i) => {
+            const rect = block.getBoundingClientRect();
+            const mid = rect.top + rect.height / 2;
+            if (touch.clientY < mid && overIndex === blocks.length) overIndex = i;
+          });
+          if (zoneId) document.dispatchEvent(new CustomEvent('snippet-drag-over', { detail: { zoneId, index: overIndex } }));
+        }
+      }
+    };
+    const handleTouchDragEnd = (event: TouchEvent) => {
+      const touch = event.changedTouches[0];
+      const el = document.elementFromPoint(touch.clientX, touch.clientY);
+      if (el) {
+        const zoneEl = el.closest('[data-zone-id]') as HTMLElement | null;
+        if (zoneEl && dragPreviewRef.current) {
+          const zoneId = zoneEl.getAttribute('data-zone-id')!;
+          const { sourceZoneId, sourceIndex, sourceInstance } = dragPreviewRef.current;
+          if (sourceZoneId && sourceInstance) {
+            dragDroppedRef.current = true;
+            document.dispatchEvent(new CustomEvent('snippet-touch-drop', {
+              detail: { zoneId, sourceZoneId, sourceIndex, sourceInstance }
+            }));
+          }
+        }
+      }
+      document.dispatchEvent(new CustomEvent('snippet-drag-end'));
+    };
+    const handleTouchDrop = (e: any) => {
+      const { zoneId: targetZoneId, sourceZoneId, sourceIndex, sourceInstance } = e.detail;
+      const dropIdx = dragState?.overIndex ?? undefined;
+      handleZoneDrop(targetZoneId, { source: 'canvas', zoneId: sourceZoneId, index: sourceIndex, instance: sourceInstance }, dropIdx ?? 9999);
+    };
     document.addEventListener('snippet-drag-start', handleDragStart);
     document.addEventListener('snippet-drag-over', handleDragOver);
     document.addEventListener('snippet-drag-end', handleDragEnd);
+    document.addEventListener('snippet-touch-drop', handleTouchDrop);
     window.addEventListener('dragover', handleWindowDragOver);
+    window.addEventListener('touchmove', handleTouchDragOver, { passive: true });
+    window.addEventListener('touchend', handleTouchDragEnd, { passive: true });
     return () => {
       document.removeEventListener('snippet-drag-start', handleDragStart);
       document.removeEventListener('snippet-drag-over', handleDragOver);
       document.removeEventListener('snippet-drag-end', handleDragEnd);
+      document.removeEventListener('snippet-touch-drop', handleTouchDrop);
       window.removeEventListener('dragover', handleWindowDragOver);
+      window.removeEventListener('touchmove', handleTouchDragOver);
+      window.removeEventListener('touchend', handleTouchDragEnd);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -823,6 +923,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
   }, []);
 
   const handleZoneDrop = (targetZoneId: string, dragData: any, targetIndex: number) => {
+    dragDroppedRef.current = true; // mark as a successful drop
     setZones(prev => {
       if (!isSnippetDropAllowed(targetZoneId, dragData)) {
         return prev;
@@ -1312,6 +1413,13 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
           isDark={isDark}
           onOpenSkillsSuggestions={() => void openSkillsSuggestions()}
           isDropAllowed={isSnippetDropAllowed}
+          onMoveToZone={(pageSpecificIdx: number, targetZoneId: string) => {
+            const gIdx = getGlobalIndex(pageSpecificIdx);
+            if (gIdx === -1) return;
+            const instance = (safeZones[zoneId] || [])[gIdx];
+            if (!instance) return;
+            handleZoneDrop(targetZoneId, { source: 'canvas', zoneId, index: gIdx, instance }, 9999);
+          }}
         />
       );
     };
@@ -1538,7 +1646,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
           {!readOnly && (
             <div className="absolute bottom-6 right-6 z-[40] flex items-center gap-2 pointer-events-none">
               {/* Page Count and Size Info */}
-              <div className={`px-3 py-1.5 rounded-xl border shadow-xl backdrop-blur-md flex items-center gap-3 text-[10px] font-bold uppercase tracking-wider ${bgNav} ${textPrimary} opacity-90 hover:opacity-100 transition-opacity pointer-events-auto`}>
+              <div className={`px-3 h-9 rounded-xl border shadow-xl backdrop-blur-md flex items-center gap-3 text-[10px] font-bold uppercase tracking-wider ${bgNav} ${textPrimary} opacity-90 hover:opacity-100 transition-opacity pointer-events-auto`}>
                 <div className="flex items-center gap-1.5 border-r pr-3 border-gray-500/20">
                   <FileText size={12} className={brandGreen} />
                   <span>{totalPagesCount} {totalPagesCount === 1 ? 'Page' : 'Pages'}</span>
@@ -1553,7 +1661,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
               </div>
 
               {/* Zoom Controls */}
-              <div className={`px-2 py-1.5 rounded-xl border shadow-xl backdrop-blur-md flex items-center gap-2 ${bgNav} ${textPrimary} opacity-90 hover:opacity-100 transition-opacity pointer-events-auto`}>
+              <div className={`px-2 h-9 rounded-xl border shadow-xl backdrop-blur-md flex items-center gap-2 ${bgNav} ${textPrimary} opacity-90 hover:opacity-100 transition-opacity pointer-events-auto`}>
                 <div className="flex items-center gap-0.5">
                   <button 
                     onClick={() => setZoom(Math.max(50, zoom - 10))}
@@ -1589,6 +1697,34 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
                   className={`min-w-[42px] px-1.5 py-1 text-[9px] font-black rounded-md transition-all border ${isAutoFit ? 'bg-emerald-500/20 border-emerald-500/50 ' + brandGreen : 'bg-transparent border-gray-500/20 hover:border-emerald-500/50 ' + textMuted}`}
                 >
                   FIT
+                </button>
+              </div>
+
+              {/* Undo / Redo History Controls */}
+              <div className={`px-2 h-9 rounded-xl border shadow-xl backdrop-blur-md flex items-center gap-1.5 ${bgNav} ${textPrimary} opacity-90 hover:opacity-100 transition-opacity pointer-events-auto`}>
+                <button
+                  onClick={() => enhancerDispatch({ type: 'UNDO' })}
+                  disabled={enhancerState.undoStack.length === 0}
+                  className={`p-1.5 transition-all flex items-center justify-center hover:scale-105 active:scale-95 rounded-lg ${
+                    enhancerState.undoStack.length === 0 
+                      ? 'opacity-30 cursor-not-allowed text-gray-500' 
+                      : 'hover:bg-emerald-500/10 text-emerald-500 hover:text-emerald-400'
+                  }`}
+                  title="Undo (Cmd+Z / Ctrl+Z)"
+                >
+                  <Undo size={14} />
+                </button>
+                <button
+                  onClick={() => enhancerDispatch({ type: 'REDO' })}
+                  disabled={enhancerState.redoStack.length === 0}
+                  className={`p-1.5 transition-all flex items-center justify-center hover:scale-105 active:scale-95 rounded-lg ${
+                    enhancerState.redoStack.length === 0 
+                      ? 'opacity-30 cursor-not-allowed text-gray-500' 
+                      : 'hover:bg-emerald-500/10 text-emerald-500 hover:text-emerald-400'
+                  }`}
+                  title="Redo (Cmd+Shift+Z / Ctrl+Shift+Z)"
+                >
+                  <Redo size={14} />
                 </button>
               </div>
             </div>
@@ -1704,27 +1840,46 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
         })()}
       </div>
 
-      {/* Removed ThinkHard AI contextual suggestion card in favor of Mori Assistant AI panel */}
-      {!readOnly && dragPreview?.markup && (
-        <div
-          className="fixed z-[130] pointer-events-none"
-          style={{
-            left: dragPreview.x + 20,
-            top: dragPreview.y + 20,
-            width: dragPreview.width,
-            maxWidth: 'min(520px, calc(100vw - 48px))',
-            opacity: 0.82,
-            transform: 'translate3d(0,0,0)',
-          }}
-        >
-          <div className="rounded-2xl border border-emerald-300/70 bg-white/96 shadow-[0_24px_64px_rgba(15,23,42,0.26)] backdrop-blur-sm overflow-hidden">
-            <div className="px-3 py-2 border-b border-emerald-100 bg-emerald-50/95 text-[10px] font-bold uppercase tracking-[0.24em] text-emerald-700">
-              {dragPreview.label}
+      {/* Drag preview thumbnail — 16:9 floating card that follows cursor/touch */}
+      {!readOnly && dragPreview?.markup && (() => {
+        const THUMB_W = 280;
+        const THUMB_H = Math.round(THUMB_W * (9 / 16)); // 16:9 aspect ratio = 157.5px
+        return (
+          <div
+            className="fixed z-[9999] pointer-events-none select-none"
+            style={{
+              left: dragPreview.x - THUMB_W / 2,
+              top: dragPreview.y - THUMB_H / 2 - 20,
+              width: THUMB_W,
+              height: THUMB_H,
+              filter: 'drop-shadow(0 20px 40px rgba(0,0,0,0.3))',
+              transform: 'rotate(-1.5deg) scale(1.04)',
+              transition: 'transform 0.1s ease',
+            }}
+          >
+            {/* Label badge */}
+            <div
+              className="absolute -top-6 left-1/2 -translate-x-1/2 bg-emerald-500 text-white text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow-md whitespace-nowrap z-10"
+            >
+              ✦ {dragPreview.label}
             </div>
-            <div className="pointer-events-none [&_.no-print]:hidden" dangerouslySetInnerHTML={{ __html: dragPreview.markup }} />
+            {/* 16:9 card */}
+            <div className="w-full h-full rounded-xl border-2 border-emerald-400/80 bg-white shadow-[0_12px_40px_rgba(0,0,0,0.25)] overflow-hidden relative">
+              {/* Scaled content — scale from actual width to thumbnail width */}
+              <div
+                className="absolute top-0 left-0 origin-top-left pointer-events-none [&_.no-print]:hidden"
+                style={{
+                  width: dragPreview.width || 500,
+                  transform: `scale(${THUMB_W / (dragPreview.width || 500)})`,
+                }}
+                dangerouslySetInnerHTML={{ __html: dragPreview.markup }}
+              />
+              {/* Frosted overlay to soften content edges */}
+              <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-white/60 pointer-events-none" />
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
       {!readOnly && skillsSuggestionState.open && (
         <div className="fixed inset-0 z-[125] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
           <div className={`w-full max-w-3xl rounded-2xl border shadow-2xl overflow-hidden ${bgPanel}`}>

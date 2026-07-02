@@ -651,10 +651,41 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
     React.useEffect(() => {
       const handleOpenMoriChat = () => {
         dispatch({ type: 'SET_MORI_CHAT_MODE', payload: true });
+        setActiveUtilityPanel('mori');
       };
       window.addEventListener('open-mori-chat', handleOpenMoriChat);
       return () => window.removeEventListener('open-mori-chat', handleOpenMoriChat);
     }, [dispatch]);
+
+    const lastSelectedPathRef = React.useRef<string | null>(null);
+    const pathClickCountRef = React.useRef<number>(0);
+
+    React.useEffect(() => {
+      const handleSelection = (e: CustomEvent) => {
+        if (!state.moriChatMode) return;
+        const { path } = e.detail;
+        if (lastSelectedPathRef.current === path) {
+          pathClickCountRef.current += 1;
+          if (pathClickCountRef.current >= 3) {
+            dispatch({ type: 'SET_MORI_CHAT_MODE', payload: false });
+            toast.success("Resuming direct editing mode", {
+              icon: '✍️',
+              duration: 3500
+            });
+            lastSelectedPathRef.current = null;
+            pathClickCountRef.current = 0;
+          }
+        } else {
+          lastSelectedPathRef.current = path;
+          pathClickCountRef.current = 1;
+        }
+      };
+
+      window.addEventListener('mori-cv-selection', handleSelection as EventListener);
+      return () => {
+        window.removeEventListener('mori-cv-selection', handleSelection as EventListener);
+      };
+    }, [state.moriChatMode, dispatch]);
 
 
 
@@ -1273,17 +1304,6 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
 
 
 
-    if (!state.cvData) {
-      return (
-        <div className="flex flex-col h-[calc(100vh-64px)] items-center justify-center bg-gray-50 dark:bg-[var(--bg-primary)]">
-          <div className="flex flex-col items-center gap-4">
-            <div className="w-12 h-12 border-4 border-[#80FF00] border-t-transparent rounded-full animate-spin" />
-            <p className="text-gray-500 dark:text-gray-400 font-medium">Initializing Builder...</p>
-          </div>
-        </div>
-      );
-    }
-
     return (
       <div className="h-macro min-h-0 relative overflow-hidden bg-gray-50 dark:bg-[#0a0a0a]">
         {/* Main Container */}
@@ -1291,25 +1311,60 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
           {/* CV Canvas Builder — full drag-drop snippet-based builder with inline editing */}
           <div className="flex-1 min-h-0 relative flex flex-col rounded-xl overflow-hidden shadow-sm shadow-black/10 dark:shadow-black/30">
             <div ref={cvPreviewRef} className="flex-1 min-h-0 overflow-hidden">
-              <CVBuilderProAdapter
-                ref={canvasBuilderRef}
-                cvData={state.cvData}
-                template={state.selectedTemplate}
-                cvId={state.cvId}
-                jobId={state.jobData?.id || state.jobData?._id || null}
-                role={state.jobData?.jobTitle || state.jobData?.title || state.targetRole || null}
-                onDataChange={(updatedData: any) => {
-                  dispatch({ type: 'SET_CV_DATA', payload: updatedData });
-                  setIsSectionEdited(true);
-                }}
-                onTemplateChange={(newTemplate: any) => {
-                  setTemplate(newTemplate);
-                  dispatch({ type: 'SET_SELECTED_TEMPLATE', payload: newTemplate });
-                }}
-                theme={typeof window !== 'undefined' && document.documentElement.classList.contains('dark') ? 'dark' : 'light'}
-                moriChatMode={state.moriChatMode}
-                isGuestMode={isGuestMode}
-              />
+              {!state.cvData ? (
+                <div className="w-full h-full bg-white dark:bg-[#141810] p-8 flex flex-col gap-6 animate-pulse rounded-xl border border-gray-200 dark:border-white/[0.04]">
+                  {/* Header Skeleton */}
+                  <div className="space-y-3">
+                    <div className="h-6 bg-gray-250 dark:bg-white/10 rounded w-1/3 animate-pulse" />
+                    <div className="h-3.5 bg-gray-200 dark:bg-white/5 rounded w-1/4 animate-pulse" />
+                  </div>
+                  {/* Details Skeletons */}
+                  <div className="flex gap-4">
+                    <div className="h-3 bg-gray-200 dark:bg-white/5 rounded w-20 animate-pulse" />
+                    <div className="h-3 bg-gray-200 dark:bg-white/5 rounded w-20 animate-pulse" />
+                    <div className="h-3 bg-gray-200 dark:bg-white/5 rounded w-20 animate-pulse" />
+                  </div>
+                  <hr className="border-gray-250 dark:border-white/5" />
+                  {/* Summary skeleton */}
+                  <div className="space-y-2.5">
+                    <div className="h-4 bg-gray-250 dark:bg-white/10 rounded w-1/4 animate-pulse" />
+                    <div className="h-3 bg-gray-200 dark:bg-white/5 rounded w-full animate-pulse" />
+                    <div className="h-3 bg-gray-200 dark:bg-white/5 rounded w-5/6 animate-pulse" />
+                  </div>
+                  {/* Experience skeleton */}
+                  <div className="space-y-4 pt-4">
+                    <div className="h-4 bg-gray-250 dark:bg-white/10 rounded w-1/4 animate-pulse" />
+                    <div className="space-y-2.5">
+                      <div className="flex justify-between">
+                        <div className="h-3.5 bg-gray-250 dark:bg-white/10 rounded w-1/3 animate-pulse" />
+                        <div className="h-3 bg-gray-200 dark:bg-white/5 rounded w-16 animate-pulse" />
+                      </div>
+                      <div className="h-3 bg-gray-200 dark:bg-white/5 rounded w-full animate-pulse" />
+                      <div className="h-3 bg-gray-200 dark:bg-white/5 rounded w-full animate-pulse" />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <CVBuilderProAdapter
+                  ref={canvasBuilderRef}
+                  cvData={state.cvData}
+                  template={state.selectedTemplate}
+                  cvId={state.cvId}
+                  jobId={state.jobData?.id || state.jobData?._id || null}
+                  role={state.jobData?.jobTitle || state.jobData?.title || state.targetRole || null}
+                  onDataChange={(updatedData: any) => {
+                    dispatch({ type: 'SET_CV_DATA', payload: updatedData });
+                    setIsSectionEdited(true);
+                  }}
+                  onTemplateChange={(newTemplate: any) => {
+                    setTemplate(newTemplate);
+                    dispatch({ type: 'SET_SELECTED_TEMPLATE', payload: newTemplate });
+                  }}
+                  theme={typeof window !== 'undefined' && document.documentElement.classList.contains('dark') ? 'dark' : 'light'}
+                  moriChatMode={state.moriChatMode}
+                  isGuestMode={isGuestMode}
+                />
+              )}
             </div>
           </div>
           
