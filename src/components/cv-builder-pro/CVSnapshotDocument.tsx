@@ -49,14 +49,36 @@ const SNAPSHOT_STYLES = `
   .cv-snapshot-wrapper .cv-document .text-gray-200 { color: #e5e7eb !important; }
   .cv-snapshot-wrapper .cv-document .text-gray-100 { color: #f3f4f6 !important; }
   .cv-snapshot-wrapper .cv-document .text-white { color: #ffffff !important; }
-  .cv-snapshot-wrapper .cv-name { font-size: calc(var(--cv-base-size) * 2.5); line-height: 1.1; }
-  .cv-snapshot-wrapper .cv-name-narrow { font-size: calc(var(--cv-base-size) * 2); line-height: 1.1; }
-  .cv-snapshot-wrapper .cv-role { font-size: calc(var(--cv-base-size) * 1.15); }
+  .cv-snapshot-wrapper .cv-document,
+  .cv-snapshot-wrapper .cv-document > div,
+  .cv-snapshot-wrapper .cv-document > div > div {
+    container-type: inline-size;
+  }
+
+  .cv-snapshot-wrapper .cv-header-name,
+  .cv-snapshot-wrapper .cv-header-role {
+    display: inline-block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: clip;
+    white-space: nowrap !important;
+    word-break: normal;
+    overflow-wrap: normal;
+  }
+
+  .cv-snapshot-wrapper .cv-name { font-size: min(calc(var(--cv-base-size) * 2.5), 8cqw); line-height: 1.1; }
+  .cv-snapshot-wrapper .cv-name-narrow { font-size: min(calc(var(--cv-base-size) * 2.0), 8cqw); line-height: 1.1; }
+  .cv-snapshot-wrapper .cv-role { font-size: min(calc(var(--cv-base-size) * 1.15), 5.5cqw); }
   .cv-snapshot-wrapper .cv-heading { font-size: calc(var(--cv-base-size) * 1.1); }
   .cv-snapshot-wrapper .cv-title { font-size: calc(var(--cv-base-size) * 1.05); }
   .cv-snapshot-wrapper .cv-subtitle { font-size: calc(var(--cv-base-size) * 0.95); }
   .cv-snapshot-wrapper .cv-date { font-size: calc(var(--cv-base-size) * 0.85); }
   .cv-snapshot-wrapper .cv-contact { font-size: calc(var(--cv-base-size) * 0.85); }
+  .cv-snapshot-wrapper .cv-contact-horizontal {
+    flex-wrap: nowrap !important;
+    overflow: hidden;
+    font-size: min(calc(var(--cv-base-size) * 0.85), 2cqw) !important;
+  }
   .cv-snapshot-wrapper .cv-body { font-size: inherit; line-height: calc(1.6 * var(--cv-spacing)); }
   .cv-snapshot-wrapper .cv-document p,
   .cv-snapshot-wrapper .cv-document ul,

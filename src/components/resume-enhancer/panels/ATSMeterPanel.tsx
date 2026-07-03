@@ -2,12 +2,18 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
+import { UtilityPanelPill } from '../components/UtilityPanelPill';
 import {
   Sparkles, Loader2, RefreshCw, AlertTriangle, CheckCircle2, Award, Zap, FileText, ShieldAlert, ChevronDown, ChevronUp, Check, X, HelpCircle, Briefcase, Palette, LayoutTemplate, FileJson, ArrowRight
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import guestCVService from '@/lib/services/guestCVService';
 import { SENIORITY_LEVELS, filterJobTitles, SeniorityLevel } from '@/lib/data/role-profiler-data';
+
+interface ATSMeterPanelProps {
+  isUtilityPanelOpen?: boolean;
+  onClose?: () => void;
+}
 
 const PanelWorkflowDemo: React.FC<{ panelType: string }> = ({ panelType }) => {
   const [stage, setStage] = useState(0);
@@ -379,7 +385,7 @@ const AnalysisSkeleton: React.FC = () => {
   );
 };
 
-export const ATSMeterPanel: React.FC = () => {
+export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ isUtilityPanelOpen = false, onClose }) => {
   const { state, dispatch, goToStep } = useResumeEnhancer();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isOptimizing, setIsOptimizing] = useState(false);
@@ -780,7 +786,7 @@ export const ATSMeterPanel: React.FC = () => {
   }, [report]);
 
   return (
-    <div className="h-full flex flex-col bg-[#F9FAFB] dark:bg-[var(--bg-secondary)] rounded-xl border border-gray-200 dark:border-white/[0.06] overflow-y-auto hide-scrollbar text-gray-900 dark:text-white snap-y snap-mandatory scroll-smooth">
+    <div className="h-full flex flex-col bg-[#F9FAFB] dark:bg-[var(--bg-secondary)] rounded-xl border border-gray-200 dark:border-white/[0.06] overflow-y-auto scrollbar-hide text-gray-900 dark:text-white snap-y snap-mandatory scroll-smooth">
 
       {/* ── Header ── */}
       <div className="sticky top-0 z-20 flex items-center justify-between px-4 py-3 bg-white/95 dark:bg-[var(--bg-secondary)] backdrop-blur-sm border-b border-gray-100 dark:border-white/[0.04]">
@@ -799,72 +805,23 @@ export const ATSMeterPanel: React.FC = () => {
           </button>
         </div>
         
-        <div className="flex items-center gap-1 bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-full p-1.5">
-          {/* Briefcase Job Icon — Only show for journey-based CVs */}
-          {state.cvType === 'journey' && (
-            <button 
-              onClick={() => {
-                if (state.journeyId || state.cvType === 'journey') {
-                  window.dispatchEvent(new CustomEvent('open-job-sidebar'));
-                } else {
-                  dispatch({ type: 'SET_SHOW_PROFILER_MODAL', payload: true });
-                }
-              }}
-              onMouseEnter={() => setHoveredIcon('role')}
-              onMouseLeave={() => setHoveredIcon(null)}
-              className="p-1.5 rounded-full text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-200/50 dark:hover:bg-white/10 transition-all cursor-pointer shrink-0 hover:scale-110 active:scale-95 duration-150"
+        <div className="flex items-center gap-2">
+          {!isUtilityPanelOpen && (
+            <UtilityPanelPill activePanel={null} />
+          )}
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="p-1 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-white hover:bg-gray-150 dark:hover:bg-white/5 transition-colors lg:hidden border-none bg-transparent"
+              title="Close Analysis"
             >
-              <Briefcase className="w-4 h-4" />
+              <X className="w-4 h-4" />
             </button>
           )}
-
-          {/* Mori AI (Sparkles only, no name) */}
-          <button 
-             onClick={() => dispatch({ type: 'SET_MORI_CHAT_MODE', payload: !state.moriChatMode })}
-             onMouseEnter={() => setHoveredIcon('mori')}
-             onMouseLeave={() => setHoveredIcon(null)}
-             className={`p-1.5 rounded-full transition-all flex items-center justify-center hover:scale-110 active:scale-95 duration-150 ${
-               state.moriChatMode 
-                 ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' 
-                 : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-200/50 dark:hover:bg-white/10'
-             }`}
-          >
-             <Sparkles className="w-4 h-4" />
-          </button>
-
-          {/* Design Panel Toggle */}
-          <button 
-            onClick={() => window.dispatchEvent(new CustomEvent('set-builder-sidebar', { detail: 'design' }))}
-            onMouseEnter={() => setHoveredIcon('design')}
-            onMouseLeave={() => setHoveredIcon(null)}
-            className="p-1.5 rounded-full text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-200/50 dark:hover:bg-white/10 transition-all cursor-pointer hover:scale-110 active:scale-95 duration-150"
-          >
-            <Palette className="w-4 h-4" />
-          </button>
-
-          {/* Templates Modal Toggle */}
-          <button 
-            onClick={() => window.dispatchEvent(new CustomEvent('open-templates'))}
-            onMouseEnter={() => setHoveredIcon('layout')}
-            onMouseLeave={() => setHoveredIcon(null)}
-            className="p-1.5 rounded-full text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-200/50 dark:hover:bg-white/10 transition-all cursor-pointer hover:scale-110 active:scale-95 duration-150"
-          >
-            <LayoutTemplate className="w-4 h-4" />
-          </button>
-
-          {/* Raw JSON Panel Toggle */}
-          <button 
-            onClick={() => window.dispatchEvent(new CustomEvent('set-builder-sidebar', { detail: 'data' }))}
-            onMouseEnter={() => setHoveredIcon('json')}
-            onMouseLeave={() => setHoveredIcon(null)}
-            className="p-1.5 rounded-full text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-200/50 dark:hover:bg-white/10 transition-all cursor-pointer hover:scale-110 active:scale-95 duration-150"
-          >
-            <FileJson className="w-4 h-4" />
-          </button>
         </div>
 
         {/* Floating rich hover info card with animated step-by-step motion graphics */}
-        {hoveredIcon && (
+        {hoveredIcon && !isUtilityPanelOpen && (
           <div className="absolute top-[48px] left-4 right-4 bg-white dark:bg-[#191c1b] border border-gray-200 dark:border-white/[0.08] rounded-2xl p-4 shadow-[0_12px_30px_rgba(0,0,0,0.15)] dark:shadow-[0_12px_30px_rgba(0,0,0,0.5)] z-50 transition-all duration-300 animate-fadeIn pointer-events-none">
             <PanelWorkflowDemo panelType={hoveredIcon} />
           </div>

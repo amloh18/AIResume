@@ -415,49 +415,55 @@ const Canvas: React.FC = () => {
   const [showCareerReportSidebar, setShowCareerReportSidebar] = useState(false);
   const [selectedCVForReport, setSelectedCVForReport] = useState<CV | null>(null);
 
+  // Track the last seen context CVs to avoid redundant processing
+  const lastContextCVsStrRef = useRef<string>('');
+
   // Sync CVs from context to local state (prevents refetching on navigation)
   useEffect(() => {
-    // Only initialize from context if not already loaded and context has data
-    if (!hasInitializedFromContextRef.current && contextCVs && contextCVs.length > 0) {
-      hasInitializedFromContextRef.current = true;
+    if (!contextCVs) return;
 
-      // Process context CVs with completion percentage and type classification
-      const enrichedCVs = contextCVs.map((cv: any) => ({
-        id: cv.id || cv._id,
-        title: cv.title || 'Untitled CV',
-        lastModified: cv.metadata?.lastModified || cv.updatedAt || cv.createdAt,
-        updatedAt: cv.updatedAt || cv.metadata?.lastModified || cv.createdAt || new Date().toISOString(),
-        status: cv.status || 'draft',
-        views: cv.metadata?.viewCount || 0,
-        isStarred: cv.metadata?.starred || false,
-        thumbnail: cv.metadata?.thumbnailUrl || '',
-        description: cv.description || '',
-        cvData: cv.cvData || null,
-        template: cv.template || cv.templateData || null,
-        templateId: cv.templateId,
-        templateName: cv.templateName,
-        templateData: cv.templateData,
-        journeyId: cv.journeyId,
-        cvType: cv.cvType || cv.metadata?.cvType || (cv.journeyId ? 'journey' : cv.metadata?.isMaster ? 'master' : 'standalone'),
-        completionPercentage: cv.completionPercentage || calculateCompletionPercentage(cv),
-        isMaster: cv.metadata?.isMaster === true || cv.isMaster === true,
-        atsScore: cv.metadata?.surgeonAnalysis?.scoreReport?.overall_score ??
-                  cv.scoreReport?.overall_score ??
-                  cv.metadata?.atsScore ??
-                  cv.metadata?.cvScore ??
-                  cv.atsScore,
-        metadata: cv.metadata
-      })) as CV[];
+    const currentContextCVsStr = JSON.stringify(contextCVs.map(c => ({ id: c.id || c._id, updatedAt: c.updatedAt })));
+    if (currentContextCVsStr === lastContextCVsStrRef.current) return;
 
-      // Split into master and regular CVs
-      const masters = filterMasterCVs(enrichedCVs);
-      const regulars = filterRegularCVs(enrichedCVs);
+    lastContextCVsStrRef.current = currentContextCVsStr;
+    hasInitializedFromContextRef.current = true;
 
-      setCvs(regulars);
-      setMasterCVs(masters);
-      setLoading(false);
-      hasLoadedCVsRef.current = true;
-    }
+    // Process context CVs with completion percentage and type classification
+    const enrichedCVs = contextCVs.map((cv: any) => ({
+      id: cv.id || cv._id,
+      title: cv.title || 'Untitled CV',
+      lastModified: cv.metadata?.lastModified || cv.updatedAt || cv.createdAt,
+      updatedAt: cv.updatedAt || cv.metadata?.lastModified || cv.createdAt || new Date().toISOString(),
+      status: cv.status || 'draft',
+      views: cv.metadata?.viewCount || 0,
+      isStarred: cv.metadata?.starred || false,
+      thumbnail: cv.metadata?.thumbnailUrl || '',
+      description: cv.description || '',
+      cvData: cv.cvData || null,
+      template: cv.template || cv.templateData || null,
+      templateId: cv.templateId,
+      templateName: cv.templateName,
+      templateData: cv.templateData,
+      journeyId: cv.journeyId,
+      cvType: cv.cvType || cv.metadata?.cvType || (cv.journeyId ? 'journey' : cv.metadata?.isMaster ? 'master' : 'standalone'),
+      completionPercentage: cv.completionPercentage || calculateCompletionPercentage(cv),
+      isMaster: cv.metadata?.isMaster === true || cv.isMaster === true,
+      atsScore: cv.metadata?.surgeonAnalysis?.scoreReport?.overall_score ??
+                cv.scoreReport?.overall_score ??
+                cv.metadata?.atsScore ??
+                cv.metadata?.cvScore ??
+                cv.atsScore,
+      metadata: cv.metadata
+    })) as CV[];
+
+    // Split into master and regular CVs
+    const masters = filterMasterCVs(enrichedCVs);
+    const regulars = filterRegularCVs(enrichedCVs);
+
+    setCvs(regulars);
+    setMasterCVs(masters);
+    setLoading(false);
+    hasLoadedCVsRef.current = true;
   }, [contextCVs]);
 
   // Update loading state based on context
@@ -1239,7 +1245,7 @@ const Canvas: React.FC = () => {
       );
 
       if (duplicateCV && duplicateCV.id) {
-        // Navigate to resume-enhancer with duplicated CV (standalone mode, ready for job linking)
+        // Navigate to cv-builder-pro with duplicated CV (standalone mode, ready for job linking)
         router.push(`/editor?mode=edit&cvId=${duplicateCV.id}`);
       } else {
         throw new Error('Failed to duplicate master CV');
@@ -1430,8 +1436,8 @@ const Canvas: React.FC = () => {
       // All CV edits should open Resume Enhancer (replaces legacy studio)
       router.push(`/editor?mode=edit&cvId=${cv.id}`);
     } catch (error) {
-      console.error('Error navigating to resume-enhancer:', error);
-      // Fallback: still attempt to open resume-enhancer
+      console.error('Error navigating to cv-builder-pro:', error);
+      // Fallback: still attempt to open cv-builder-pro
       router.push(`/editor?mode=edit&cvId=${cv.id}`);
     }
   };

@@ -8,7 +8,7 @@ import {
   Save, X, Palette, LayoutTemplate, Download, Settings, ChevronDown, Check,
   Baseline, AlignLeft, MoveHorizontal, Zap, MousePointer2, Brain, History,
   RefreshCcw, Eye, Clipboard, Mail, FileJson, Clock, Flame, ShieldCheck,
-  TrendingUp, UserCheck
+  TrendingUp, UserCheck, ZoomIn, ZoomOut
 } from 'lucide-react';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
 import CoverLetterLayoutEngine, { CoverLetterDesignProps } from '../../cover-letter-engine/CoverLetterLayoutEngine';
@@ -69,7 +69,10 @@ export default function Step4CoverLetter({ onComplete }: Step4CoverLetterProps) 
   const [grammarIssues, setGrammarIssues] = useState<any[]>([]);
   const [matchScore, setMatchScore] = useState(82);
   const [showMoriChat, setShowMoriChat] = useState(false);
+  const [showGuidePanel, setShowGuidePanel] = useState(false);
   const [showTemplateSelector, setShowTemplateSelector] = useState(false);
+  const previewRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Design State
   const [design, setDesign] = useState<CoverLetterDesignProps>({
@@ -121,6 +124,37 @@ export default function Step4CoverLetter({ onComplete }: Step4CoverLetterProps) 
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  // Handle Ctrl/Cmd + Wheel to zoom the canvas area specifically, not the window
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    let accumulatedDelta = 0;
+
+    const handleWheel = (e: WheelEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        
+        accumulatedDelta += -e.deltaY;
+
+        if (Math.abs(accumulatedDelta) >= 50) {
+          const direction = Math.sign(accumulatedDelta);
+          setZoom((prev: number) => {
+            const next = prev + (direction * 10);
+            const snapped = Math.round(next / 10) * 10;
+            return Math.min(200, Math.max(50, snapped));
+          });
+          accumulatedDelta = 0;
+        }
+      }
+    };
+
+    container.addEventListener('wheel', handleWheel, { passive: false });
+    return () => {
+      container.removeEventListener('wheel', handleWheel);
     };
   }, []);
 
@@ -203,7 +237,7 @@ export default function Step4CoverLetter({ onComplete }: Step4CoverLetterProps) 
         
         {/* Canvas Wrapper */}
         <div className="flex-1 min-h-0 relative flex flex-col rounded-xl overflow-hidden shadow-sm shadow-black/10 dark:shadow-black/30 border border-gray-200 dark:border-white/5 text-gray-900">
-          <div className="flex-1 min-h-0 overflow-y-auto bg-gray-100/50 dark:bg-[#141810] p-4 lg:p-8 flex justify-center custom-scrollbar">
+          <div ref={containerRef} className="flex-1 min-h-0 overflow-y-auto bg-gray-100/50 dark:bg-[#141810] p-4 lg:p-8 flex justify-center custom-scrollbar">
             <div className="transition-transform duration-300 transform origin-top pb-20" style={{ transform: `scale(${zoom / 100})` }}>
               <CoverLetterLayoutEngine 
                 templateType={templateType}
@@ -231,7 +265,7 @@ export default function Step4CoverLetter({ onComplete }: Step4CoverLetterProps) 
           </div>
 
           {/* Floating Zoom & Page Controls */}
-          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[40] flex items-center gap-2 pointer-events-none">
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[40] hidden md:flex items-center gap-2 pointer-events-none">
             <div className="px-3 py-1.5 rounded-xl border shadow-xl backdrop-blur-md flex items-center gap-3 text-[10px] font-bold uppercase tracking-wider bg-white/90 dark:bg-[#111]/90 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-[#2a2a2a] opacity-90 hover:opacity-100 transition-opacity pointer-events-auto">
               <button 
                 onClick={() => setPageFormat(pageFormat === 'a4' ? 'letter' : 'a4')}
@@ -274,7 +308,14 @@ export default function Step4CoverLetter({ onComplete }: Step4CoverLetterProps) 
         </div>
 
         {/* MIDDLE COLUMN - LETTER GUIDE (radial progress, metrics, context) */}
-        <div className="flex flex-col w-[400px] shrink-0 h-full relative z-10">
+        <div 
+          className={`
+            fixed inset-y-0 right-0 z-50 w-full bg-white dark:bg-[#0a0a0a] flex flex-col h-full gap-3 min-h-0 shadow-2xl transition-all duration-300
+            lg:static lg:w-[400px] lg:shadow-none lg:flex lg:z-10 lg:p-0 lg:overflow-hidden lg:bg-transparent
+            ${showGuidePanel ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}
+          `}
+          style={{ order: (showMoriChat || showGuidePanel) ? 1 : 2 }}
+        >
           <LetterGuidePanel 
             matchScore={matchScore}
             templateType={templateType}
@@ -286,7 +327,10 @@ export default function Step4CoverLetter({ onComplete }: Step4CoverLetterProps) 
             onComplete={onComplete}
             onUpdateTarget={() => setJobSidebarOpen(true)}
             showMoriChat={showMoriChat}
-            onToggleMoriChat={() => setShowMoriChat(!showMoriChat)}
+            onToggleMoriChat={() => {
+              setShowMoriChat(!showMoriChat);
+              setShowGuidePanel(false);
+            }}
           />
         </div>
 
@@ -298,7 +342,8 @@ export default function Step4CoverLetter({ onComplete }: Step4CoverLetterProps) 
               animate={{ opacity: 1, x: 0, width: 360 }}
               exit={{ opacity: 0, x: 20, width: 0 }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="hidden lg:flex flex-col shrink-0 h-full relative z-10 min-h-0 overflow-hidden"
+              className="fixed inset-y-0 right-0 z-50 w-full lg:static lg:w-[360px] flex flex-col shrink-0 h-full relative min-h-0 overflow-hidden shadow-2xl lg:shadow-none bg-white dark:bg-[var(--bg-secondary)]"
+              style={{ order: 3 }}
             >
               <MoriCoverLetterChat 
                 onBodyChange={handleBodyChange} 
@@ -307,6 +352,58 @@ export default function Step4CoverLetter({ onComplete }: Step4CoverLetterProps) 
             </motion.div>
           )}
         </AnimatePresence>
+      </div>
+
+      {/* Mobile unified bottom navigation pill */}
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] md:hidden flex items-center gap-2 bg-white/90 dark:bg-[#141810]/90 backdrop-blur-md border border-lime-200 dark:border-lime-900/30 rounded-2xl p-1.5 shadow-2xl no-print">
+        {/* Zoom & Page Format controls (hidden if a panel is open) */}
+        {!showMoriChat && !showGuidePanel && (
+          <>
+            <button 
+              onClick={() => setPageFormat(pageFormat === 'a4' ? 'letter' : 'a4')}
+              className="p-2 rounded-xl text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-150 dark:hover:bg-white/5 transition-all border-none bg-transparent"
+              title="Toggle Page Format"
+            >
+              <Layout size={16} />
+            </button>
+            <div className="w-px h-5 bg-gray-200 dark:bg-white/10 mx-1" />
+          </>
+        )}
+
+        {/* Panel Buttons */}
+        <div className="flex items-center gap-1">
+          {/* Guide Panel */}
+          <button
+            onClick={() => {
+              setShowGuidePanel(!showGuidePanel);
+              setShowMoriChat(false);
+            }}
+            className={`p-2 rounded-xl transition-all border-none bg-transparent ${
+              showGuidePanel
+                ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+                : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
+            }`}
+            title="Letter Guide"
+          >
+            <Target size={16} />
+          </button>
+
+          {/* Mori Chat */}
+          <button
+            onClick={() => {
+              setShowMoriChat(!showMoriChat);
+              setShowGuidePanel(false);
+            }}
+            className={`p-2 rounded-xl transition-all border-none bg-transparent ${
+              showMoriChat
+                ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+                : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
+            }`}
+            title="Mori Chat"
+          >
+            <Sparkles size={16} />
+          </button>
+        </div>
       </div>
 
       {showTemplateSelector && (

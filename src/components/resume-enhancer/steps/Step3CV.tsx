@@ -12,7 +12,7 @@ import DownloadModal from '@/components/ui/DownloadModal';
 import {
   Sparkles,
   Component, Eye, Target, ZoomIn, ZoomOut, Plus, Shuffle, Palette, X,
-  Check, Info
+  Check, Info, LayoutTemplate, FileJson
 } from 'lucide-react';
 
 // Import CV Builder form components
@@ -41,6 +41,7 @@ import FloatingFormEditor from '@/components/resume-enhancer/FloatingFormEditor'
 import FloatingPulsePill, { type FloatingPulsePillHandle } from '@/components/resume-enhancer/FloatingPulsePill';
 import ATSMeterPanel from '@/components/resume-enhancer/panels/ATSMeterPanel';
 import MoriChatInterface from '@/components/resume-enhancer/panels/MoriChatInterface';
+import UtilityPanelPill from '@/components/resume-enhancer/components/UtilityPanelPill';
 import { usePillEngine } from '@/hooks/usePillEngine';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ITemplate } from '@/types/template';
@@ -67,12 +68,12 @@ const DEFAULT_SECTION_TITLES: Record<string, string> = {
 
 
 
-interface Step3BuilderSurgeonProps {
+interface Step3CVProps {
   onComplete: () => void;
   onActiveSectionChange?: (sectionId: string) => void;
 }
 
-export interface Step3BuilderSurgeonRef {
+export interface Step3CVRef {
   scrollToSection: (sectionId: string) => void;
   handleAddSection: () => void;
   addNewSection: (sectionId: string) => void;
@@ -81,9 +82,7 @@ export interface Step3BuilderSurgeonRef {
   activeSection: string;
 }
 
-
-
-const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurgeonProps>(
+const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
   ({ onComplete, onActiveSectionChange }, ref) => {
     const { data: session } = useSession();
     const isGuestMode = !session;
@@ -233,6 +232,7 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
       masterScore: pillMasterScore,
       atsScore: pillAtsScore,
       issues: pillIssues,
+      isAnalyzing: isPillAnalyzing,
     } = usePillEngine(
       state.cvData,
       state.cvType,
@@ -242,8 +242,7 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
     );
 
     // Auto-Save Effect: persists cvData AND freshly computed scores on every meaningful change.
-    // Scores are computed by usePillEngine (debounced 3 s); this effect fires 2 s after
-    // any of the tracked values change, giving ~5 s total latency to DB write.
+    // We batch content and score updates into a single debounced cycle to prevent thrashing.
     useEffect(() => {
       if (!state.cvData || !state.cvId) return;
 
@@ -267,11 +266,14 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
         clearTimeout(autoSaveTimerRef.current);
       }
 
+      // If we are currently analyzing, we might want to wait a bit longer for scores to stabilize
+      const debounceMs = isPillAnalyzing ? 4000 : 2000;
+
       // Set new debounce timer
       autoSaveTimerRef.current = setTimeout(async () => {
+        // Double-check if still analyzing; if so, we might be saving slightly stale scores, 
+        // but the next score change will trigger another (batched) save anyway.
         try {
-          // Determine which score to store as the ATS score:
-          // Journey CVs -> ATS keyword-match score; standalone/master -> CV quality score
           const scoreForATS = isJourneyCV ? pillAtsScore : pillMasterScore;
 
           const response = await fetch(`/api/cvs/${state.cvId}`, {
@@ -279,7 +281,6 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               cvData: state.cvData,
-              // Persist computed scores so Tracker cards, Canvas, and CVListView stay fresh
               cv_score_master: pillMasterScore,
               cv_score_ats: scoreForATS,
               score_breakdown: {
@@ -293,21 +294,19 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
 
           if (response.ok) {
             lastSavedCvDataStrRef.current = currentSaveKey;
-            console.log('CV Auto-saved successfully (with scores: master=%d, ats=%d)', pillMasterScore, scoreForATS);
+            console.log('CV Auto-saved successfully (batched: master=%d, ats=%d)', pillMasterScore, scoreForATS);
           }
         } catch (err) {
           console.error('CV Auto-save failed:', err);
         }
-      }, 2000); // 2-second debounce
+      }, debounceMs);
 
       return () => {
         if (autoSaveTimerRef.current) {
           clearTimeout(autoSaveTimerRef.current);
         }
       };
-      // Depend on cvData AND pill scores so an updated score triggers a re-save even
-      // when the user has stopped typing.
-    }, [state.cvData, state.cvId, pillMasterScore, pillAtsScore, pillScoreResult, pillIssues, isJourneyCV]);
+    }, [state.cvData, state.cvId, pillMasterScore, pillAtsScore, pillScoreResult, pillIssues, isJourneyCV, isPillAnalyzing]);
 
     useEffect(() => {
       if (hasLoadedUserSectionTitlesRef.current) return;
@@ -605,7 +604,8 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
       }
     }, [state.cvType, state.journeyId, state.jobData, jdText]);
 
-    const [activeUtilityPanel, setActiveUtilityPanel] = React.useState<'mori' | 'design' | 'json' | 'layout' | null>(null);
+    const [activeUtilityPanel, setActiveUtilityPanel] = React.useState<'mori' | 'design' | 'json' | 'layout' | 'analysis' | null>(null);
+    const isControlPanelOpen = activeUtilityPanel && activeUtilityPanel !== 'analysis';
 
     React.useEffect(() => {
       const handleSidebar = (e: Event) => {
@@ -1309,7 +1309,10 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
         {/* Main Container */}
         <div className="h-full w-full flex overflow-hidden relative p-3 gap-3">
           {/* CV Canvas Builder — full drag-drop snippet-based builder with inline editing */}
-          <div className="flex-1 min-h-0 relative flex flex-col rounded-xl overflow-hidden shadow-sm shadow-black/10 dark:shadow-black/30">
+          <div 
+            className="flex-1 min-h-0 relative flex flex-col rounded-xl overflow-hidden shadow-sm shadow-black/10 dark:shadow-black/30"
+            style={{ order: isControlPanelOpen ? 2 : 1 }}
+          >
             <div ref={cvPreviewRef} className="flex-1 min-h-0 overflow-hidden">
               {!state.cvData ? (
                 <div className="w-full h-full bg-white dark:bg-[#141810] p-8 flex flex-col gap-6 animate-pulse rounded-xl border border-gray-200 dark:border-white/[0.04]">
@@ -1368,8 +1371,15 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
             </div>
           </div>
           
-          {/* Right rail: onboarding setup checklist and AI analysis (always open) */}
-          <div className="hidden lg:flex flex-col h-full relative z-10 gap-3 min-h-0 w-[426px] shrink-0 panel-glass rounded-xl border border-white/20 dark:border-white/10 p-0 overflow-hidden">
+          {/* Right rail: onboarding setup checklist and AI analysis */}
+          <div 
+            className={`
+              fixed inset-y-0 right-0 z-50 w-full bg-white dark:bg-[#0a0a0a] flex flex-col h-full gap-3 min-h-0 shadow-2xl transition-all duration-300
+              lg:static lg:w-[426px] lg:shadow-none lg:border lg:border-white/20 lg:dark:border-white/10 lg:rounded-xl lg:flex lg:z-10 lg:p-0 lg:overflow-hidden lg:bg-transparent lg:panel-glass lg:shrink-0 overflow-hidden
+              ${activeUtilityPanel === 'analysis' ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}
+            `}
+            style={{ order: isControlPanelOpen ? 1 : 2 }}
+          >
             {isImproveMode && (() => {
               const isPersonalInfoVerified = !!(state.cvData?.basics?.name?.trim() && state.cvData?.basics?.email?.trim());
               const isQualityScoreReviewed = !!(state.surgeonAnalysis || atsScore);
@@ -1405,7 +1415,7 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
               const isChecklistComplete = completedCount === checklistItems.length;
 
               return (
-                <div className="shrink-0 max-h-[46%] bg-white dark:bg-[var(--bg-secondary)] border border-gray-200 dark:border-gray-800 rounded-xl p-4 shadow-sm select-none overflow-y-auto">
+                <div className="shrink-0 max-h-[46%] bg-white dark:bg-[var(--bg-secondary)] border border-gray-200 dark:border-gray-800 rounded-xl p-4 shadow-sm select-none overflow-y-auto scrollbar-hide">
                   <div className="space-y-3">
                     <div className="flex items-center gap-2 text-teal-600 dark:text-teal-400">
                       <Sparkles className="h-4 w-4 stroke-[2.5]" />
@@ -1486,40 +1496,155 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
               );
             })()}
             <div className="flex-1 min-h-0">
-              <ATSMeterPanel />
+              <ATSMeterPanel isUtilityPanelOpen={!!activeUtilityPanel} onClose={() => setActiveUtilityPanel(null)} />
             </div>
           </div>
 
           {/* Unified Utility Panel (Mori Chat, Design, JSON, Layout) */}
-          {activeUtilityPanel && (
-            <div className="hidden lg:flex flex-col shrink-0 h-full relative z-10 gap-3 min-h-0 w-[426px] bg-white dark:bg-[var(--bg-secondary)] rounded-xl border border-gray-200 dark:border-white/[0.06] overflow-hidden shadow-sm shadow-black/10 dark:shadow-black/30">
-              {activeUtilityPanel === 'mori' ? (
-                <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-                  {/* Mori Chat Header */}
-                  <div className="sticky top-0 z-20 flex items-center justify-between px-4 py-3 bg-white/95 dark:bg-[var(--bg-secondary)] backdrop-blur-sm border-b border-gray-100 dark:border-white/[0.04]">
-                    <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
-                      <Sparkles className="w-3.5 h-3.5" />
-                      <h3 className="text-xs font-extrabold uppercase tracking-wider">Mori Chat</h3>
-                    </div>
-                    <button
-                      onClick={() => dispatch({ type: 'SET_MORI_CHAT_MODE', payload: false })}
-                      className="p-1 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-white hover:bg-gray-150 dark:hover:bg-white/5 transition-colors"
-                      title="Close Mori Chat"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                  
-                  {/* Mori Chat Interface */}
-                  <div className="flex-1 min-h-0 overflow-hidden">
-                    <MoriChatInterface />
-                  </div>
+          <div 
+            className={`
+              fixed inset-y-0 right-0 z-50 w-full bg-white dark:bg-[var(--bg-secondary)] flex flex-col h-full gap-3 min-h-0 shadow-2xl transition-all duration-300
+              ${isControlPanelOpen 
+                ? 'translate-x-0 flex lg:static lg:w-[426px] lg:shadow-sm lg:border lg:border-gray-200 lg:dark:border-white/[0.06] lg:rounded-xl lg:z-10 lg:overflow-hidden lg:shrink-0' 
+                : 'translate-x-full hidden lg:hidden w-0'}
+            `}
+            style={{ order: 3 }}
+          >
+            {/* Mori Chat — always in DOM, visibility toggled via CSS to keep portal target stable */}
+            <div className={`flex-1 flex flex-col min-h-0 overflow-hidden ${activeUtilityPanel === 'mori' ? '' : 'hidden'}`}>
+              {/* Mori Chat Header */}
+              <div className="sticky top-0 z-20 flex items-center justify-between px-4 py-3 bg-white/95 dark:bg-[var(--bg-secondary)] backdrop-blur-sm border-b border-gray-100 dark:border-white/[0.04]">
+                <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <h3 className="text-xs font-extrabold uppercase tracking-wider">Mori Chat</h3>
                 </div>
-              ) : (
-                <div id="builder-utility-panel-portal" className="flex-grow flex flex-col h-full overflow-hidden" />
-              )}
+                <div className="flex items-center gap-2">
+                  <UtilityPanelPill activePanel="mori" />
+                  <button
+                    onClick={() => dispatch({ type: 'SET_MORI_CHAT_MODE', payload: false })}
+                    className="p-1 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-white hover:bg-gray-150 dark:hover:bg-white/5 transition-colors"
+                    title="Close Mori Chat"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+              
+              {/* Mori Chat Interface */}
+              <div className="flex-1 min-h-0 overflow-hidden">
+                <MoriChatInterface />
+              </div>
             </div>
-          )}
+
+            {/* Portal target — always mounted so CVCanvasEngine's React portals never lose their target */}
+            <div
+              id="builder-utility-panel-portal"
+              className={`flex-grow flex flex-col h-full overflow-hidden ${activeUtilityPanel === 'mori' ? 'hidden' : ''}`}
+            />
+          </div>
+
+          {/* Mobile unified bottom navigation pill */}
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] md:hidden flex items-center gap-2 bg-white/90 dark:bg-[#141810]/90 backdrop-blur-md border border-lime-200 dark:border-lime-900/30 rounded-2xl p-1.5 shadow-2xl">
+            {/* Zoom & Page Size controls (hidden if a panel is open) */}
+            {!activeUtilityPanel && (
+              <>
+                <button 
+                  onClick={() => window.dispatchEvent(new CustomEvent('canvas-toggle-page-size'))}
+                  className="p-2 rounded-xl text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-150 dark:hover:bg-white/5 transition-all border-none bg-transparent"
+                  title="Toggle Page Size"
+                >
+                  <LayoutTemplate size={16} />
+                </button>
+                <div className="w-px h-5 bg-gray-200 dark:bg-white/10 mx-1" />
+              </>
+            )}
+
+            {/* Panel Buttons */}
+            <div className="flex items-center gap-1">
+              {/* Analysis Panel */}
+              <button
+                onClick={() => setActiveUtilityPanel(curr => curr === 'analysis' ? null : 'analysis')}
+                className={`p-2 rounded-xl transition-all border-none bg-transparent ${
+                  activeUtilityPanel === 'analysis'
+                    ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+                    : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
+                }`}
+                title="Analysis"
+              >
+                <Target size={16} />
+              </button>
+
+              {/* Mori Chat */}
+              <button
+                onClick={() => setActiveUtilityPanel(curr => curr === 'mori' ? null : 'mori')}
+                className={`p-2 rounded-xl transition-all border-none bg-transparent ${
+                  activeUtilityPanel === 'mori'
+                    ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+                    : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
+                }`}
+                title="Mori Chat"
+              >
+                <Sparkles size={16} />
+              </button>
+
+              {/* Design */}
+              <button
+                onClick={() => {
+                  if (activeUtilityPanel === 'design') {
+                    window.dispatchEvent(new CustomEvent('close-utility-panel'));
+                  } else {
+                    window.dispatchEvent(new CustomEvent('set-builder-sidebar', { detail: 'design' }));
+                  }
+                }}
+                className={`p-2 rounded-xl transition-all border-none bg-transparent ${
+                  activeUtilityPanel === 'design'
+                    ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+                    : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
+                }`}
+                title="Design"
+              >
+                <Palette size={16} />
+              </button>
+
+              {/* Layout */}
+              <button
+                onClick={() => {
+                  if (activeUtilityPanel === 'layout') {
+                    window.dispatchEvent(new CustomEvent('close-utility-panel'));
+                  } else {
+                    window.dispatchEvent(new CustomEvent('open-templates'));
+                  }
+                }}
+                className={`p-2 rounded-xl transition-all border-none bg-transparent ${
+                  activeUtilityPanel === 'layout'
+                    ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+                    : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
+                }`}
+                title="Layout"
+              >
+                <Component size={16} />
+              </button>
+
+              {/* Raw JSON */}
+              <button
+                onClick={() => {
+                  if (activeUtilityPanel === 'json') {
+                    window.dispatchEvent(new CustomEvent('close-utility-panel'));
+                  } else {
+                    window.dispatchEvent(new CustomEvent('set-builder-sidebar', { detail: 'data' }));
+                  }
+                }}
+                className={`p-2 rounded-xl transition-all border-none bg-transparent ${
+                  activeUtilityPanel === 'json'
+                    ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+                    : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
+                }`}
+                title="Raw JSON"
+              >
+                <FileJson size={16} />
+              </button>
+            </div>
+          </div>
 
         </div >
         {/* AI Analysis Chatbot Card - Bottom Right - Only in builder mode */}
@@ -1682,6 +1807,6 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
     );
   });
 
-Step3BuilderSurgeon.displayName = 'Step3BuilderSurgeon';
+Step3CV.displayName = 'Step3CV';
 
-export default Step3BuilderSurgeon;
+export default Step3CV;

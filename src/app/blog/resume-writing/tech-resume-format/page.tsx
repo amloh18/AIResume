@@ -186,7 +186,7 @@ export default function TechResumeFormatPage() {
           <section className="mt-16 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-2xl p-8 text-center">
             <h2 className="text-h2 font-bold text-white mb-4">Build Your Tech Resume</h2>
             <p className="text-blue-100 mb-6">Create a professional tech resume that stands out.</p>
-            <Link href="/sign-up?callbackUrl=/resume-enhancer" className="inline-flex items-center gap-2 bg-white text-blue-700 px-8 py-4 rounded-full font-bold hover:bg-gray-100 transition">
+            <Link href="/sign-up?callbackUrl=/editor" className="inline-flex items-center gap-2 bg-white text-blue-700 px-8 py-4 rounded-full font-bold hover:bg-gray-100 transition">
               Create Tech Resume Free <ArrowRight className="w-5 h-5" />
             </Link>
           </section>

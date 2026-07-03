@@ -377,11 +377,11 @@
 }
 
 /* Editor step one: token-driven dashboard surfaces */
-.resume-enhancer-page,
-.resume-enhancer-page .editor-header,
-.resume-enhancer-page .step-one-shell,
-.resume-enhancer-page .step-one-stat,
-.resume-enhancer-page .step-one-action {
+.cv-builder-pro-page,
+.cv-builder-pro-page .editor-header,
+.cv-builder-pro-page .step-one-shell,
+.cv-builder-pro-page .step-one-stat,
+.cv-builder-pro-page .step-one-action {
   transition-property: background-color, border-color, color, box-shadow;
   transition-duration: 320ms;
   transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
@@ -512,9 +512,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .resume-enhancer-page *,
-  .resume-enhancer-page *::before,
-  .resume-enhancer-page *::after {
+  .cv-builder-pro-page *,
+  .cv-builder-pro-page *::before,
+  .cv-builder-pro-page *::after {
     scroll-behavior: auto !important;
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
@@ -745,7 +745,7 @@ body.dark {
   not like the marketing pages (green gradient background).
   We do this by overriding surface variables ONLY when html is NOT dark.
 */
-html:not(.dark) .resume-enhancer-page {
+html:not(.dark) .cv-builder-pro-page {
   background-color: #f3f2ee;
 
   /* App shell surfaces (light) */
@@ -789,141 +789,30 @@ html:not(.dark) .cover-letter-editor-page {
   background: #191c1b;
 }
 
-/* Dashboard text colors to match design - Dark theme only */
-.dark .dashboard-page h1,
-.dark .dashboard-page h2,
-.dark .dashboard-page h3,
-.dark .dashboard-page h4,
-.dark .dashboard-page h5,
-.dark .dashboard-page h6 {
+/* Dashboard text colors to match design - Dark theme only (excluding CV preview elements to prevent visual leakage) */
+.dark .dashboard-page h1:not(.cv-document *):not(.cv-page *):not(.cv-page-custom *):not(.builder-preview *):not(.cv-container *):not(.live-preview-container *):not(.cover-letter-document *),
+.dark .dashboard-page h2:not(.cv-document *):not(.cv-page *):not(.cv-page-custom *):not(.builder-preview *):not(.cv-container *):not(.live-preview-container *):not(.cover-letter-document *),
+.dark .dashboard-page h3:not(.cv-document *):not(.cv-page *):not(.cv-page-custom *):not(.builder-preview *):not(.cv-container *):not(.live-preview-container *):not(.cover-letter-document *),
+.dark .dashboard-page h4:not(.cv-document *):not(.cv-page *):not(.cv-page-custom *):not(.builder-preview *):not(.cv-container *):not(.live-preview-container *):not(.cover-letter-document *),
+.dark .dashboard-page h5:not(.cv-document *):not(.cv-page *):not(.cv-page-custom *):not(.builder-preview *):not(.cv-container *):not(.live-preview-container *):not(.cover-letter-document *),
+.dark .dashboard-page h6:not(.cv-document *):not(.cv-page *):not(.cv-page-custom *):not(.builder-preview *):not(.cv-container *):not(.live-preview-container *):not(.cover-letter-document *) {
   color: #ffffff;
 }
 
-.dark .dashboard-page .text-gray-900 {
+.dark .dashboard-page .text-gray-900:not(.cv-document *):not(.cv-page *):not(.cv-page-custom *):not(.builder-preview *):not(.cv-container *):not(.live-preview-container *):not(.cover-letter-document *) {
   color: #ffffff !important;
 }
 
-.dark .dashboard-page .text-gray-600 {
+.dark .dashboard-page .text-gray-600:not(.cv-document *):not(.cv-page *):not(.cv-page-custom *):not(.builder-preview *):not(.cv-container *):not(.live-preview-container *):not(.cover-letter-document *) {
   color: #757575 !important;
 }
 
-.dark .dashboard-page .text-gray-500 {
+.dark .dashboard-page .text-gray-500:not(.cv-document *):not(.cv-page *):not(.cv-page-custom *):not(.builder-preview *):not(.cv-container *):not(.live-preview-container *):not(.cover-letter-document *) {
   color: #757575 !important;
 }
 
-.dark .dashboard-page .text-gray-400 {
+.dark .dashboard-page .text-gray-400:not(.cv-document *):not(.cv-page *):not(.cv-page-custom *):not(.builder-preview *):not(.cv-container *):not(.live-preview-container *):not(.cover-letter-document *) {
   color: #757575 !important;
-}
-
-/* ═══════════════════════════════════════════
-   CV PREVIEW TEXT VISIBILITY PROTECTION
-   Ensures CV preview text is always dark/visible
-   even when rendered inside dark-mode dashboard
-   ═══════════════════════════════════════════ */
-.cv-page,
-.cv-page-custom,
-.builder-preview,
-.cv-container,
-.cv-document,
-.live-preview-container {
-  color: #111827 !important;
-}
-
-.dark .cv-page,
-.dark .cv-page-custom,
-.dark .builder-preview,
-.dark .cv-container,
-.dark .cv-document,
-.dark .live-preview-container {
-  color: #111827 !important;
-}
-
-/* Protect headings in CV preview from dark mode overrides */
-.dark .cv-page h1, .dark .cv-page h2, .dark .cv-page h3,
-.dark .cv-page h4, .dark .cv-page h5, .dark .cv-page h6,
-.dark .cv-page-custom h1, .dark .cv-page-custom h2, .dark .cv-page-custom h3,
-.dark .cv-page-custom h4, .dark .cv-page-custom h5, .dark .cv-page-custom h6,
-.dark .builder-preview h1, .dark .builder-preview h2, .dark .builder-preview h3,
-.dark .builder-preview h4, .dark .builder-preview h5, .dark .builder-preview h6,
-.dark .cv-container h1, .dark .cv-container h2, .dark .cv-container h3,
-.dark .cv-container h4, .dark .cv-container h5, .dark .cv-container h6,
-.dark .cv-document h1, .dark .cv-document h2, .dark .cv-document h3,
-.dark .cv-document h4, .dark .cv-document h5, .dark .cv-document h6,
-.dark .live-preview-container h1, .dark .live-preview-container h2, .dark .live-preview-container h3,
-.dark .live-preview-container h4, .dark .live-preview-container h5, .dark .live-preview-container h6,
-.dark .dashboard-page .cv-page h1, .dark .dashboard-page .cv-page h2, .dark .dashboard-page .cv-page h3,
-.dark .dashboard-page .cv-page h4, .dark .dashboard-page .cv-page h5, .dark .dashboard-page .cv-page h6,
-.dark .dashboard-page .cv-page-custom h1, .dark .dashboard-page .cv-page-custom h2, .dark .dashboard-page .cv-page-custom h3,
-.dark .dashboard-page .cv-page-custom h4, .dark .dashboard-page .cv-page-custom h5, .dark .dashboard-page .cv-page-custom h6,
-.dark .dashboard-page .builder-preview h1, .dark .dashboard-page .builder-preview h2, .dark .dashboard-page .builder-preview h3,
-.dark .dashboard-page .builder-preview h4, .dark .dashboard-page .builder-preview h5, .dark .dashboard-page .builder-preview h6,
-.dark .dashboard-page .cv-container h1, .dark .dashboard-page .cv-container h2, .dark .dashboard-page .cv-container h3,
-.dark .dashboard-page .cv-container h4, .dark .dashboard-page .cv-container h5, .dark .dashboard-page .cv-container h6,
-.dark .dashboard-page .cv-document h1, .dark .dashboard-page .cv-document h2, .dark .dashboard-page .cv-document h3,
-.dark .dashboard-page .cv-document h4, .dark .dashboard-page .cv-document h5, .dark .dashboard-page .cv-document h6,
-.dark .dashboard-page .live-preview-container h1, .dark .dashboard-page .live-preview-container h2, .dark .dashboard-page .live-preview-container h3,
-.dark .dashboard-page .live-preview-container h4, .dark .dashboard-page .live-preview-container h5, .dark .dashboard-page .live-preview-container h6 {
-  color: #111827 !important;
-}
-
-.dark .cv-page .text-gray-900,
-.dark .cv-page-custom .text-gray-900,
-.dark .builder-preview .text-gray-900,
-.dark .cv-container .text-gray-900,
-.dark .cv-document .text-gray-900,
-.dark .live-preview-container .text-gray-900,
-.dark .dashboard-page .cv-page .text-gray-900,
-.dark .dashboard-page .cv-page-custom .text-gray-900,
-.dark .dashboard-page .builder-preview .text-gray-900,
-.dark .dashboard-page .cv-container .text-gray-900,
-.dark .dashboard-page .cv-document .text-gray-900,
-.dark .dashboard-page .live-preview-container .text-gray-900 {
-  color: #111827 !important;
-}
-
-.dark .cv-page .text-gray-600,
-.dark .cv-page-custom .text-gray-600,
-.dark .builder-preview .text-gray-600,
-.dark .cv-container .text-gray-600,
-.dark .cv-document .text-gray-600,
-.dark .live-preview-container .text-gray-600,
-.dark .dashboard-page .cv-page .text-gray-600,
-.dark .dashboard-page .cv-page-custom .text-gray-600,
-.dark .dashboard-page .builder-preview .text-gray-600,
-.dark .dashboard-page .cv-container .text-gray-600,
-.dark .dashboard-page .cv-document .text-gray-600,
-.dark .dashboard-page .live-preview-container .text-gray-600 {
-  color: #4b5563 !important;
-}
-
-.dark .cv-page .text-gray-500,
-.dark .cv-page-custom .text-gray-500,
-.dark .builder-preview .text-gray-500,
-.dark .cv-container .text-gray-500,
-.dark .cv-document .text-gray-500,
-.dark .live-preview-container .text-gray-500,
-.dark .dashboard-page .cv-page .text-gray-500,
-.dark .dashboard-page .cv-page-custom .text-gray-500,
-.dark .dashboard-page .builder-preview .text-gray-500,
-.dark .dashboard-page .cv-container .text-gray-500,
-.dark .dashboard-page .cv-document .text-gray-500,
-.dark .dashboard-page .live-preview-container .text-gray-500 {
-  color: #6b7280 !important;
-}
-
-.dark .cv-page .text-gray-400,
-.dark .cv-page-custom .text-gray-400,
-.dark .builder-preview .text-gray-400,
-.dark .cv-container .text-gray-400,
-.dark .cv-document .text-gray-400,
-.dark .live-preview-container .text-gray-400,
-.dark .dashboard-page .cv-page .text-gray-400,
-.dark .dashboard-page .cv-page-custom .text-gray-400,
-.dark .dashboard-page .builder-preview .text-gray-400,
-.dark .dashboard-page .cv-container .text-gray-400,
-.dark .dashboard-page .cv-document .text-gray-400,
-.dark .dashboard-page .live-preview-container .text-gray-400 {
-  color: #9ca3af !important;
 }
 
 /* Dashboard accent colors - Dark theme only */
@@ -1532,7 +1421,11 @@ nav {
 }
 
 @media print {
-  .cl-container {
+  .cl-container,
+  .cv-document,
+  .cv-page,
+  .template-wrapper,
+  .cv-page-wrapper {
     padding: 0 !important;
     margin: 0 !important;
     box-shadow: none !important;

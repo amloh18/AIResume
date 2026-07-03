@@ -316,7 +316,7 @@ const CVPairThumbnail: React.FC<CVPairThumbnailProps> = ({
   );
 };
 
-interface Step1ParserProps {
+interface Step1DashboardProps {
   onComplete: (cvData: UnifiedCVDataStructure, isExistingCV?: boolean) => void;
   /** Check if user already has a Master CV */
   userHasMasterCV?: boolean;
@@ -331,7 +331,7 @@ interface Step1ParserProps {
   onDocumentTabChange?: (tab: 'cvs' | 'cover-letters') => void;
 }
 
-export default function Step1Parser({
+export default function Step1Dashboard({
   onComplete,
   userHasMasterCV = false,
   mode = 'create',
@@ -339,7 +339,7 @@ export default function Step1Parser({
   isGuestMode = false,
   activeDocumentTab,
   onDocumentTabChange,
-}: Step1ParserProps) {
+}: Step1DashboardProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { state, dispatch, setFresherMode, detectFresherMode, determineCVType, setJdText, goToStep, setTemplateOverlayOpen } = useResumeEnhancer();

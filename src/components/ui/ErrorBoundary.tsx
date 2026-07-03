@@ -81,7 +81,7 @@ class ErrorBoundary extends Component<Props, State> {
     // Route to the tool's specific dashboard/entry point if it fails
     if (currentPath.includes('/ai-career-report')) {
       window.location.href = '/ai-career-report?step=1';
-    } else if (currentPath.includes('/editor') || currentPath.includes('/resume-enhancer')) {
+    } else if (currentPath.includes('/editor') || currentPath.includes('/editor')) {
       window.location.href = '/editor'; // The CV list / step 1
     } else if (currentPath.includes('/interview-coach')) {
       window.location.href = '/dashboard/interview'; // Interview Hub

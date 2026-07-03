@@ -208,6 +208,14 @@ export class DOCXService extends BaseService {
     primaryColorHex?: string,
     secondaryColorHex?: string
   ): (Paragraph | Table)[] {
+    // BRIDGE: Check if this is a modern CANVAS_TEMPLATE (has zones)
+    // If it is, we follow the zone/snippet structure for better parity.
+    const zones = template.templateData?.zones || (template as any).zones;
+    
+    if (zones) {
+      return this.buildContentFromZones(cvData, zones, fontFamily, primaryColorHex, secondaryColorHex);
+    }
+
     const content: (Paragraph | Table)[] = [];
     const headingColor = primaryColorHex ? { color: primaryColorHex } : {};
     const bodyColor = secondaryColorHex ? { color: secondaryColorHex } : {};
@@ -879,6 +887,195 @@ export class DOCXService extends BaseService {
     }
 
     return content;
+  }
+
+  /**
+   * BRIDGE: Build content based on modern zone/snippet architecture
+   */
+  private buildContentFromZones(
+    cvData: UnifiedCVDataStructure,
+    zones: Record<string, string[]>,
+    fontFamily: string,
+    primaryColorHex?: string,
+    secondaryColorHex?: string
+  ): (Paragraph | Table)[] {
+    const content: (Paragraph | Table)[] = [];
+    
+    // Order of zones to process for a coherent document flow
+    const zoneOrder = ['header', 'main', 'sidebar', 'left', 'right'];
+    const processedSnippets = new Set<string>();
+
+    zoneOrder.forEach(zoneKey => {
+      const snippets = zones[zoneKey];
+      if (!snippets || !Array.isArray(snippets)) return;
+
+      snippets.forEach(snippetId => {
+        // Avoid duplicate rendering if a snippet appears in multiple zones
+        if (processedSnippets.has(snippetId)) return;
+        processedSnippets.add(snippetId);
+
+        this.renderSnippetToDocx(content, snippetId, cvData, fontFamily, primaryColorHex, secondaryColorHex);
+      });
+    });
+
+    return content;
+  }
+
+  /**
+   * Map snippet IDs to their DOCX rendering logic
+   */
+  private renderSnippetToDocx(
+    content: (Paragraph | Table)[],
+    snippetId: string,
+    cvData: UnifiedCVDataStructure,
+    fontFamily: string,
+    primaryColorHex?: string,
+    secondaryColorHex?: string
+  ): void {
+    // Determine the category of the snippet to call the correct renderer
+    if (snippetId.startsWith('header-')) {
+      this.renderHeaderSnippet(content, cvData, fontFamily, primaryColorHex, secondaryColorHex);
+    } else if (snippetId.startsWith('summary-')) {
+      this.renderSummarySnippet(content, cvData, fontFamily, primaryColorHex, secondaryColorHex);
+    } else if (snippetId.startsWith('experience-')) {
+      this.renderExperienceSnippet(content, cvData, fontFamily, primaryColorHex, secondaryColorHex);
+    } else if (snippetId.startsWith('education-')) {
+      this.renderEducationSnippet(content, cvData, fontFamily, primaryColorHex, secondaryColorHex);
+    } else if (snippetId.startsWith('skills-')) {
+      this.renderSkillsSnippet(content, cvData, fontFamily, primaryColorHex, secondaryColorHex);
+    } else if (snippetId.startsWith('projects-')) {
+      this.renderProjectsSnippet(content, cvData, fontFamily, primaryColorHex, secondaryColorHex);
+    } else if (snippetId.startsWith('certifications-')) {
+      this.renderCertificationsSnippet(content, cvData, fontFamily, primaryColorHex, secondaryColorHex);
+    } else if (snippetId.startsWith('awards-')) {
+      this.renderAwardsSnippet(content, cvData, fontFamily, primaryColorHex, secondaryColorHex);
+    } else if (snippetId.startsWith('publications-')) {
+      this.renderPublicationsSnippet(content, cvData, fontFamily, primaryColorHex, secondaryColorHex);
+    } else if (snippetId.startsWith('languages-')) {
+      this.renderLanguagesSnippet(content, cvData, fontFamily, primaryColorHex, secondaryColorHex);
+    } else if (snippetId.startsWith('interests-')) {
+      this.renderInterestsSnippet(content, cvData, fontFamily, primaryColorHex, secondaryColorHex);
+    } else if (snippetId.startsWith('references-')) {
+      this.renderReferencesSnippet(content, cvData, fontFamily, primaryColorHex, secondaryColorHex);
+    } else if (snippetId.startsWith('sidebar-contact')) {
+      this.renderContactSnippet(content, cvData, fontFamily, primaryColorHex, secondaryColorHex);
+    }
+  }
+
+  // --- SNIPPET RENDERERS ---
+
+  private renderHeaderSnippet(content: any[], data: any, font: string, primary?: string, secondary?: string) {
+    if (data.basics?.name) {
+      content.push(new Paragraph({ text: data.basics.name, heading: HeadingLevel.HEADING_1, alignment: AlignmentType.CENTER }));
+    }
+    if (data.basics?.label) {
+      content.push(new Paragraph({ children: [new TextRun({ text: data.basics.label, font, size: 22, ...(secondary ? { color: secondary } : {}) })], alignment: AlignmentType.CENTER, spacing: { after: 200 } }));
+    }
+    this.renderContactSnippet(content, data, font, primary, secondary);
+    content.push(new Paragraph({ border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: primary || '1E40AF', space: 1 } }, spacing: { after: 200 } }));
+  }
+
+  private renderContactSnippet(content: any[], data: any, font: string, primary?: string, secondary?: string) {
+    const contact: string[] = [];
+    if (data.basics?.email) contact.push(data.basics.email);
+    if (data.basics?.phone) contact.push(data.basics.phone);
+    if (data.basics?.location?.city) contact.push(`${data.basics.location.city}, ${data.basics.location.countryCode || ''}`);
+    if (data.basics?.url) contact.push(data.basics.url);
+    
+    if (contact.length > 0) {
+      content.push(new Paragraph({ children: contact.map((t, i) => new TextRun({ text: t + (i < contact.length - 1 ? ' | ' : ''), size: 20, font, ...(secondary ? { color: secondary } : {}) })), alignment: AlignmentType.CENTER, spacing: { after: 200 } }));
+    }
+  }
+
+  private renderSummarySnippet(content: any[], data: any, font: string, primary?: string, secondary?: string) {
+    if (data.basics?.summary) {
+      content.push(new Paragraph({ text: 'Professional Summary', heading: HeadingLevel.HEADING_2 }), new Paragraph({ children: [new TextRun({ text: stripHtmlTags(data.basics.summary), font, size: 22 })], spacing: { after: 300 } }));
+    }
+  }
+
+  private renderExperienceSnippet(content: any[], data: any, font: string, primary?: string, secondary?: string) {
+    if (data.work?.length) {
+      content.push(new Paragraph({ text: 'Experience', heading: HeadingLevel.HEADING_2 }));
+      data.work.forEach((w: any) => {
+        content.push(new Paragraph({ text: w.position, heading: HeadingLevel.HEADING_3, spacing: { after: 50 } }));
+        content.push(new Paragraph({ children: [new TextRun({ text: w.name, bold: true, font, size: 22 }), new TextRun({ text: ` | ${w.startDate} - ${w.endDate || 'Present'}`, font, size: 22 })], spacing: { after: 100 } }));
+        if (w.summary) content.push(new Paragraph({ children: [new TextRun({ text: stripHtmlTags(w.summary), font, size: 22 })], spacing: { after: 100 } }));
+        (w.highlights || []).forEach((h: string) => content.push(new Paragraph({ children: [new TextRun({ text: `• ${h}`, font, size: 22 })], indent: { left: 720 }, spacing: { after: 50 } })));
+        content.push(new Paragraph({ text: '', spacing: { after: 150 } }));
+      });
+    }
+  }
+
+  private renderEducationSnippet(content: any[], data: any, font: string, primary?: string, secondary?: string) {
+    if (data.education?.length) {
+      content.push(new Paragraph({ text: 'Education', heading: HeadingLevel.HEADING_2 }));
+      data.education.forEach((e: any) => {
+        content.push(new Paragraph({ text: `${e.studyType} in ${e.area}`, heading: HeadingLevel.HEADING_3 }));
+        content.push(new Paragraph({ children: [new TextRun({ text: e.institution, bold: true, font, size: 22 }), new TextRun({ text: ` | ${e.startDate} - ${e.endDate || 'Present'}`, font, size: 22 })], spacing: { after: 100 } }));
+      });
+    }
+  }
+
+  private renderSkillsSnippet(content: any[], data: any, font: string, primary?: string, secondary?: string) {
+    if (data.skills?.length) {
+      content.push(new Paragraph({ text: 'Skills', heading: HeadingLevel.HEADING_2 }));
+      data.skills.forEach((s: any) => {
+        content.push(new Paragraph({ children: [new TextRun({ text: `${s.category}: `, bold: true, font, size: 22, ...(primary ? { color: primary } : {}) }), new TextRun({ text: (s.skills || []).join(', '), font, size: 22 })], spacing: { after: 80 } }));
+      });
+    }
+  }
+
+  private renderProjectsSnippet(content: any[], data: any, font: string, primary?: string, secondary?: string) {
+    if (data.projects?.length) {
+      content.push(new Paragraph({ text: 'Projects', heading: HeadingLevel.HEADING_2 }));
+      data.projects.forEach((p: any) => {
+        content.push(new Paragraph({ text: p.name, heading: HeadingLevel.HEADING_3 }));
+        if (p.description) content.push(new Paragraph({ children: [new TextRun({ text: stripHtmlTags(p.description), font, size: 22 })], spacing: { after: 100 } }));
+        (p.highlights || []).forEach((h: string) => content.push(new Paragraph({ children: [new TextRun({ text: `• ${h}`, font, size: 22 })], indent: { left: 720 }, spacing: { after: 50 } })));
+      });
+    }
+  }
+
+  private renderCertificationsSnippet(content: any[], data: any, font: string, primary?: string, secondary?: string) {
+    if (data.certificates?.length) {
+      content.push(new Paragraph({ text: 'Certifications', heading: HeadingLevel.HEADING_2 }));
+      data.certificates.forEach((c: any) => content.push(new Paragraph({ children: [new TextRun({ text: c.name, bold: true, font, size: 22 }), new TextRun({ text: ` | ${c.issuer || ''} | ${c.date || ''}`, font, size: 22 })], spacing: { after: 80 } })));
+    }
+  }
+
+  private renderAwardsSnippet(content: any[], data: any, font: string, primary?: string, secondary?: string) {
+    if (data.awards?.length) {
+      content.push(new Paragraph({ text: 'Awards', heading: HeadingLevel.HEADING_2 }));
+      data.awards.forEach((a: any) => content.push(new Paragraph({ children: [new TextRun({ text: a.title, bold: true, font, size: 22 }), new TextRun({ text: ` | ${a.awarder || ''} | ${a.date || ''}`, font, size: 22 })], spacing: { after: 80 } })));
+    }
+  }
+
+  private renderPublicationsSnippet(content: any[], data: any, font: string, primary?: string, secondary?: string) {
+    if (data.publications?.length) {
+      content.push(new Paragraph({ text: 'Publications', heading: HeadingLevel.HEADING_2 }));
+      data.publications.forEach((p: any) => content.push(new Paragraph({ text: p.name, heading: HeadingLevel.HEADING_3 })));
+    }
+  }
+
+  private renderLanguagesSnippet(content: any[], data: any, font: string, primary?: string, secondary?: string) {
+    if (data.languages?.length) {
+      content.push(new Paragraph({ text: 'Languages', heading: HeadingLevel.HEADING_2 }));
+      content.push(new Paragraph({ children: data.languages.map((l: any, i: number) => new TextRun({ text: `${l.language}: ${l.fluency}${i < data.languages.length - 1 ? ' • ' : ''}`, font, size: 22 })) }));
+    }
+  }
+
+  private renderInterestsSnippet(content: any[], data: any, font: string, primary?: string, secondary?: string) {
+    if (data.interests?.length) {
+      content.push(new Paragraph({ text: 'Interests', heading: HeadingLevel.HEADING_2 }));
+      content.push(new Paragraph({ children: [new TextRun({ text: data.interests.map((i: any) => typeof i === 'string' ? i : i.name).join(' • '), font, size: 22 })] }));
+    }
+  }
+
+  private renderReferencesSnippet(content: any[], data: any, font: string, primary?: string, secondary?: string) {
+    if (data.references?.length) {
+      content.push(new Paragraph({ text: 'References', heading: HeadingLevel.HEADING_2 }));
+      data.references.forEach((r: any) => content.push(new Paragraph({ children: [new TextRun({ text: r.name, bold: true, font, size: 22 })] })));
+    }
   }
 }
 

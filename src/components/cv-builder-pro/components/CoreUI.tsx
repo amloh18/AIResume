@@ -18,7 +18,7 @@ export const SnippetContext = React.createContext<{
   pageAssignments: Record<string, number>;
 } | null>(null);
 
-export const EditableField = ({ data: explicitData, path, multiline, onChange: explicitOnChange, setFocusedRef: explicitSetFocusedRef, readOnly, nowrap, breakAll, aiIssues: explicitAiIssues, activeIssueId: explicitActiveIssueId, onIssueClick: explicitOnIssueClick, isDate = false, dateFormat: explicitDateFormat, overrideValue, arrayIndex }: any) => {
+export const EditableField = ({ data: explicitData, path, multiline, onChange: explicitOnChange, setFocusedRef: explicitSetFocusedRef, readOnly, nowrap, breakAll, aiIssues: explicitAiIssues, activeIssueId: explicitActiveIssueId, onIssueClick: explicitOnIssueClick, isDate = false, dateFormat: explicitDateFormat, overrideValue, arrayIndex, className = '' }: any) => {
   const ctx = React.useContext(CanvasContext);
   
   const data = explicitData || (readOnly ? ctx?.cvData : ctx?.cvData);
@@ -166,13 +166,18 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
   };
 
   let wrapClass = 'whitespace-normal';
-  if (nowrap) wrapClass = 'whitespace-nowrap';
+  if (nowrap) wrapClass = 'whitespace-normal'; // Force wrap but only at whitespace
   if (breakAll) wrapClass = 'break-all whitespace-normal';
-  if (multiline) wrapClass = 'break-words whitespace-pre-wrap';
+  if (multiline) wrapClass = 'whitespace-pre-wrap';
 
   let emptyText = "Type here...";
   const lowerPath = path?.toLowerCase() || '';
-  
+
+  // Add specific class for header name and role to allow auto-sizing
+  const isNameField = lowerPath === 'basics.name';
+  const isRoleField = lowerPath === 'basics.title';
+  const finalClassName = `${wrapClass} ${isNameField ? 'cv-header-name' : ''} ${isRoleField ? 'cv-header-role' : ''} ${className}`;
+
   // Specific placeholders for contact fields
   if (lowerPath.includes('email')) emptyText = "Email";
   else if (lowerPath.includes('phone')) emptyText = "Phone";
@@ -212,10 +217,10 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
   else if (lowerPath.includes('publisher')) emptyText = "Publisher Name";
 
   const moriHoverClass = moriChatMode ? 'hover:bg-emerald-500/20 hover:shadow-[0_0_0_2px_rgba(16,185,129,0.4)] cursor-pointer rounded-sm' : '';
-  const editHoverClass = isEditable ? 'hover:bg-emerald-50/30 focus:bg-white focus:ring-2 focus:ring-emerald-500/50 focus:shadow-md border-b border-transparent hover:border-gray-300 focus:border-emerald-400 focus:text-gray-900 rounded-sm px-1.5 py-0.5 -mx-1.5 -my-0.5' : '';
+  const editHoverClass = isEditable ? 'hover:bg-emerald-50/30 focus:bg-white focus:ring-2 focus:ring-emerald-500/50 focus:shadow-md border border-transparent hover:border-gray-300 focus:border-emerald-400 focus:text-gray-900 rounded-[3px] px-1 py-0.5 -mx-1 -my-0.5' : '';
 
   return (
-      <span ref={contentRef} data-path={path} data-empty-text={emptyText} contentEditable={isEditable} suppressContentEditableWarning onPaste={handlePaste} onInput={handleInput} onKeyDown={handleKeyDown} onFocus={handleFocus} onBlur={handleBlur} onClick={handleClick} className={`outline-none transition-all duration-200 ${multiline ? 'block w-full' : 'inline-block max-w-full'} ${wrapClass} ${moriHoverClass} ${editHoverClass} z-40 relative empty:min-w-[60px] ${multiline ? 'empty:block' : 'empty:inline-block'} empty:border-dashed empty:border-gray-300 empty:after:content-[attr(data-empty-text)] empty:after:text-gray-400 empty:after:italic`} style={{ minHeight: '1.2em' }} />
+      <span ref={contentRef} data-path={path} data-empty-text={emptyText} contentEditable={isEditable} suppressContentEditableWarning onPaste={handlePaste} onInput={handleInput} onKeyDown={handleKeyDown} onFocus={handleFocus} onBlur={handleBlur} onClick={handleClick} className={`outline-none transition-all duration-200 ${multiline ? 'block w-full' : 'inline-block max-w-full'} ${finalClassName} ${moriHoverClass} ${editHoverClass} z-40 relative empty:min-w-[60px] ${multiline ? 'empty:block' : 'empty:inline-block'} empty:border-dashed empty:border-gray-300 empty:after:content-[attr(data-empty-text)] empty:after:text-gray-400 empty:after:italic`} style={{ minHeight: '1.2em' }} />
     );
   };
   
@@ -431,7 +436,7 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
 
   const Title = ({ titleKey, overrideClass }: any) => {
     const headerUnitId = `${instance.id}_header`;
-    const assignedPage = ctx?.pageAssignments?.[headerUnitId] ?? 0;
+    const assignedPage = ctx?.pageAssignments?.[headerUnitId] ?? ctx?.pageAssignments?.[instance.id] ?? 0;
     if (assignedPage !== pageIdx) {
       return null;
     }
@@ -447,7 +452,11 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
     return <Renderer isDark={isDark} showIcons={ctx?.design?.showHeaderIcons ?? true} titleKey={titleKey}><EditableWrapper path={`sectionTitles.${titleKey}`} nowrap /></Renderer>;
   };
 
-  const showInlineControls = !readOnly && !ctx?.moriChatMode && primaryTitleKey;
+  const headerUnitId = `${instance.id}_header`;
+  const assignedPage = ctx?.pageAssignments?.[headerUnitId] ?? 0;
+  const isHeaderPage = assignedPage === pageIdx;
+
+  const showInlineControls = !readOnly && !ctx?.moriChatMode && primaryTitleKey && isHeaderPage;
   const canAddListEntry = SnippetComponent && ['Experience', 'Education', 'Projects', 'Certifications', 'Awards', 'Publications', 'Volunteer', 'References'].includes(SnippetComponent.category);
   const controls = showInlineControls ? (
     <div className="absolute top-1 right-1 opacity-0 group-hover/inner:opacity-100 transition-all duration-200 flex items-center gap-0 z-[200] no-print">
@@ -752,7 +761,7 @@ export const CanvasZone = ({ readOnly = false, zoneId, blocks, cvData, EditableW
   
   // Highlight empty zones or all zones during drag for hybrid layouts
   const isDragging = dragState?.isDragging;
-  const dragHighlightClass = isDragging && !readOnly ? 'min-h-[120px] border-2 border-dashed rounded-2xl bg-gray-50/40' : 'min-h-[100px]';
+  const dragHighlightClass = isDragging && !readOnly ? 'min-h-[120px] border-2 border-dashed rounded-2xl bg-gray-50/40' : 'min-h-0';
   const dropStateClass = dropIntent === 'invalid'
     ? '!border-red-400 !bg-red-50/70 shadow-[0_0_0_1px_rgba(239,68,68,0.15)]'
     : dropIntent === 'valid'
@@ -766,7 +775,7 @@ export const CanvasZone = ({ readOnly = false, zoneId, blocks, cvData, EditableW
   return (
     <div data-zone-id={zoneId} className="relative group/zone flex flex-col h-full">
       <div className={`${dragHighlightClass} ${dropStateClass} transition-all duration-300 pb-0 ${className}`} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}>
-        {blocks.length === 0 && !readOnly && <div className="absolute inset-0 flex flex-col gap-2 items-center justify-center text-small text-gray-400 pointer-events-none border-2 border-dashed border-gray-200 rounded-2xl m-2 no-print"><span className="font-semibold text-gray-500">Empty Zone</span><span className="text-small uppercase tracking-[0.22em]">{dropIntent === 'invalid' ? 'Not Allowed Here' : 'Drop A Section Here'}</span></div>}
+        
         <div className="flex flex-col gap-0">
           <AnimatePresence mode="popLayout">
             {blocks.map((instance: any, index: number) => (

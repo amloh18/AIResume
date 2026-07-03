@@ -211,7 +211,7 @@ export default function FresherResumeGuidePage() {
           <section className="mt-16 bg-gradient-to-r from-green-600 to-emerald-600 rounded-2xl p-8 text-center">
             <h2 className="text-h2 font-bold text-white mb-4">Create Your Fresher Resume Now</h2>
             <p className="text-green-100 mb-6">Our AI helps you create a professional fresher resume.</p>
-            <Link href="/sign-up?callbackUrl=/resume-enhancer" className="inline-flex items-center gap-2 bg-white text-green-700 px-8 py-4 rounded-full font-bold hover:bg-gray-100 transition">
+            <Link href="/sign-up?callbackUrl=/editor" className="inline-flex items-center gap-2 bg-white text-green-700 px-8 py-4 rounded-full font-bold hover:bg-gray-100 transition">
               Build Fresher Resume Free <ArrowRight className="w-5 h-5" />
             </Link>
           </section>

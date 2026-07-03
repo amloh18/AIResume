@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     const resourceName = (body as any).resourceName as string | undefined;
     const metadata = (body as any).metadata as Record<string, any> | undefined;
 
-    // Safety: only allow resume-enhancer related client events through this endpoint
+    // Safety: only allow cv-builder-pro related client events through this endpoint
     if (!action || !action.startsWith('resume_enhancer_')) {
       return NextResponse.json({ success: false, error: 'Invalid action' }, { status: 400 });
     }
