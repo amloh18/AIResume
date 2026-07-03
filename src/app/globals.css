@@ -740,6 +740,71 @@ body.dark {
   background-color: #191c1b !important;
 }
 
+/* LinkedIn Enhancer theme-aware mappings (applied globally for light/dark theme variables) */
+.linkedin-enhancer {
+  --linkedin-panel-bg: #ffffff;
+  --linkedin-panel-bg-alt: #f9fafb;
+  --linkedin-panel-bg-hover: #f3f4f6;
+}
+
+.dark .linkedin-enhancer {
+  --linkedin-panel-bg: var(--bg-secondary); /* #141810 */
+  --linkedin-panel-bg-alt: var(--bg-primary); /* #191c1b */
+  --linkedin-panel-bg-hover: var(--bg-tertiary); /* #313a28 */
+}
+
+.linkedin-enhancer .bg-white {
+  background-color: var(--linkedin-panel-bg) !important;
+}
+
+.linkedin-enhancer .bg-gray-50,
+.linkedin-enhancer .bg-gray-50\/50,
+.linkedin-enhancer .bg-gray-100\/50,
+.linkedin-enhancer .bg-gray-50\/80 {
+  background-color: var(--linkedin-panel-bg-alt) !important;
+}
+
+.linkedin-enhancer .bg-gray-100 {
+  background-color: var(--linkedin-panel-bg-hover) !important;
+}
+
+.linkedin-enhancer .border-gray-200,
+.linkedin-enhancer .border-gray-100 {
+  border-color: var(--border-primary) !important;
+}
+
+.linkedin-enhancer .divide-gray-100 > * + *,
+.linkedin-enhancer .divide-gray-200 > * + * {
+  border-color: var(--border-primary) !important;
+}
+
+.linkedin-enhancer .text-gray-900,
+.linkedin-enhancer .text-gray-800 {
+  color: var(--text-primary) !important;
+}
+
+.linkedin-enhancer .text-gray-700,
+.linkedin-enhancer .text-gray-600 {
+  color: var(--text-secondary) !important;
+}
+
+.linkedin-enhancer .text-gray-500 {
+  color: var(--text-tertiary) !important;
+}
+
+.linkedin-enhancer input,
+.linkedin-enhancer textarea,
+.linkedin-enhancer select {
+  background-color: var(--linkedin-panel-bg-alt) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-primary) !important;
+}
+
+.linkedin-enhancer .hover\:bg-gray-50:hover,
+.linkedin-enhancer .hover\:bg-gray-100:hover {
+  background-color: var(--linkedin-panel-bg-hover) !important;
+}
+
 /*
   Resume Enhancer should look like the dashboard in LIGHT mode (neutral app shell),
   not like the marketing pages (green gradient background).

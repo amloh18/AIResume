@@ -78,7 +78,7 @@ export default function NotificationCenter({ variant = 'default' }: Notification
   };
 
   return (
-    <div className="relative">
+    <div className="relative font-sans">
       <button
         onClick={() => setIsOpen(!isOpen)}
         className={variant === 'pill' 
@@ -109,13 +109,13 @@ export default function NotificationCenter({ variant = 'default' }: Notification
               initial={{ opacity: 0, y: 10, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 10, scale: 0.95 }}
-              className="absolute right-0 mt-3 w-[380px] md:w-[420px] max-h-[80vh] bg-white dark:bg-[#111317] rounded-3xl shadow-2xl z-[9999] flex flex-col overflow-hidden border border-gray-200 dark:border-white/10"
+              className="absolute right-0 mt-3 w-[380px] md:w-[420px] max-h-[80vh] bg-white dark:bg-[#111317] rounded-xl shadow-2xl z-[9999] flex flex-col overflow-hidden border border-gray-200 dark:border-white/10"
             >
               {/* Header */}
               <div className="p-6 pb-4">
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tighter italic">
-                    Inbox & Activity
+                  <h2 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-wider">
+                    Updates
                   </h2>
                   <button onClick={() => setIsOpen(false)} className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 transition-colors">
                     <X size={18} className="text-gray-400" />
@@ -184,8 +184,8 @@ export default function NotificationCenter({ variant = 'default' }: Notification
                               <Bell size={18} />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <h4 className={`text-sm font-bold truncate ${n.read ? 'text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-white'}`}>{n.title}</h4>
-                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">{n.message}</p>
+                              <h4 className={`text-xs font-bold truncate ${n.read ? 'text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-white'}`}>{n.title}</h4>
+                              <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">{n.message}</p>
                               <div className="flex items-center gap-2 mt-2 text-[9px] font-bold text-gray-400 uppercase tracking-widest">
                                 <span>{formatDistanceToNow(new Date(n.createdAt), { addSuffix: true })}</span>
                                 {n.category && <><span>•</span><span>{n.category}</span></>}
@@ -213,7 +213,7 @@ export default function NotificationCenter({ variant = 'default' }: Notification
                               <Icon size={18} />
                             </div>
                             <div className="flex-1 min-w-0">
-                               <p className="text-sm text-gray-900 dark:text-white font-medium leading-snug">{a.message}</p>
+                               <p className="text-xs text-gray-900 dark:text-white font-medium leading-snug">{a.message}</p>
                                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-2 block">
                                  {formatDistanceToNow(new Date(a.timestamp), { addSuffix: true })}
                                </span>
@@ -247,7 +247,7 @@ const EmptyState = ({ icon: Icon, title, sub }: any) => (
     <div className="w-16 h-16 rounded-3xl bg-gray-100 dark:bg-white/5 flex items-center justify-center mb-4 border border-gray-200 dark:border-white/5">
       <Icon size={32} className="text-gray-300 dark:text-gray-600" />
     </div>
-    <h3 className="text-base font-bold text-gray-900 dark:text-white uppercase tracking-tighter italic">{title}</h3>
+    <h3 className="text-base font-bold text-gray-900 dark:text-white uppercase tracking-tighter">{title}</h3>
     <p className="text-xs text-gray-500 mt-1 font-medium">{sub}</p>
   </div>
 );

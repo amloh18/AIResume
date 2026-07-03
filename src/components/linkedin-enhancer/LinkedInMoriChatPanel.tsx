@@ -325,7 +325,7 @@ export default function LinkedInMoriChatPanel({ cvId, cvType, onCvUpdated, onClo
     <div className="flex flex-col h-full bg-transparent relative overflow-hidden">
       
       {/* Header Bar */}
-      <div className="px-4 py-2 border-b border-slate-200 dark:border-gray-800 flex items-center justify-between bg-white dark:bg-transparent shrink-0">
+      <div className="px-4 py-2 border-b border-slate-200 dark:border-[var(--border-primary)] flex items-center justify-between bg-white dark:bg-transparent shrink-0">
         <div className="flex items-center gap-2 text-small font-bold text-slate-700 dark:text-slate-300">
           <MessageSquare className="w-4 h-4 text-emerald-500" />
           {chatId ? chatHistory.find(c => c._id === chatId)?.title || 'Current Chat' : 'New Chat'}
@@ -338,7 +338,7 @@ export default function LinkedInMoriChatPanel({ cvId, cvType, onCvUpdated, onClo
           >
             <Plus className="w-3.5 h-3.5" /> New
           </button>
-          <div className="w-px h-4 bg-slate-200 dark:bg-gray-800 mx-1"></div>
+          <div className="w-px h-4 bg-slate-200 dark:bg-[var(--border-primary)] mx-1"></div>
           <button 
             onClick={() => setShowHistory(!showHistory)}
             className={`p-1.5 rounded-md transition-all flex items-center gap-1 text-[10px] font-bold ${showHistory ? 'bg-slate-200 dark:bg-gray-800 text-slate-900 dark:text-white' : 'hover:bg-slate-100 dark:hover:bg-white/5 text-slate-600 dark:text-slate-400'}`}
@@ -360,9 +360,9 @@ export default function LinkedInMoriChatPanel({ cvId, cvType, onCvUpdated, onClo
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="absolute inset-0 z-20 bg-white dark:bg-[#141810] flex flex-col"
+              className="absolute inset-0 z-20 bg-white dark:bg-[var(--bg-secondary)] flex flex-col"
             >
-              <div className="p-3 border-b border-slate-200 dark:border-gray-800 bg-gray-50 dark:bg-transparent flex justify-between items-center">
+              <div className="p-3 border-b border-slate-200 dark:border-[var(--border-primary)] bg-gray-50 dark:bg-transparent flex justify-between items-center">
                 <span className="text-small font-bold text-slate-600 dark:text-slate-400">Previous Conversations</span>
                 <button onClick={() => setShowHistory(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-white"><X className="w-4 h-4" /></button>
               </div>
@@ -372,9 +372,9 @@ export default function LinkedInMoriChatPanel({ cvId, cvType, onCvUpdated, onClo
                 ) : (
                   chatHistory.map((chat) => (
                     <div 
-                      key={chat._id}
-                      onClick={() => handleLoadChat(chat._id)}
-                      className={`group flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors border ${chatId === chat._id ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20' : 'bg-transparent border-transparent hover:bg-slate-50 dark:hover:bg-white/5 hover:border-slate-200 dark:hover:border-gray-700'}`}
+                       key={chat._id}
+                       onClick={() => handleLoadChat(chat._id)}
+                       className={`group flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors border ${chatId === chat._id ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20' : 'bg-transparent border-transparent hover:bg-slate-50 dark:hover:bg-white/5 hover:border-slate-200 dark:hover:border-[var(--border-primary)]'}`}
                     >
                       {editingChatId === chat._id ? (
                         <div className="flex items-center gap-2 flex-1" onClick={e => e.stopPropagation()}>
@@ -383,7 +383,7 @@ export default function LinkedInMoriChatPanel({ cvId, cvType, onCvUpdated, onClo
                             value={editTitle}
                             onChange={e => setEditTitle(e.target.value)}
                             onKeyDown={e => handleRenameChat(e, chat._id)}
-                            className="flex-1 text-small px-2 py-1 bg-white dark:bg-gray-800 border border-emerald-500 outline-none rounded"
+                            className="flex-1 text-small px-2 py-1 bg-white dark:bg-[var(--bg-primary)] border border-emerald-500 outline-none rounded"
                           />
                           <button onClick={(e) => handleRenameChat(e, chat._id)} className="text-emerald-600 hover:text-emerald-700">Save</button>
                         </div>
@@ -432,14 +432,14 @@ export default function LinkedInMoriChatPanel({ cvId, cvType, onCvUpdated, onClo
               className={`flex flex-col ${m.role === 'user' ? 'items-end' : 'items-start'}`}
             >
               <div className={`flex gap-2 max-w-[90%] ${m.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
-                <div className={`w-7 h-7 rounded-full shrink-0 flex items-center justify-center mt-1 ${m.role === 'user' ? 'bg-emerald-500' : 'bg-slate-200 dark:bg-gray-800'}`}>
+                <div className={`w-7 h-7 rounded-full shrink-0 flex items-center justify-center mt-1 ${m.role === 'user' ? 'bg-emerald-500' : 'bg-slate-200 dark:bg-[var(--bg-primary)]'}`}>
                   {m.role === 'user' ? <User className="w-4 h-4 text-white" /> : <Sparkles className="w-4 h-4 text-emerald-500" />}
                 </div>
                 <div className="space-y-1">
                   <div className={`px-3.5 py-2.5 rounded-2xl text-[13px] leading-relaxed ${
                     m.role === 'user' 
                       ? 'bg-emerald-500 text-white rounded-tr-none shadow-sm' 
-                      : 'bg-white dark:bg-gray-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-gray-700 rounded-tl-none shadow-sm'
+                      : 'bg-white dark:bg-[var(--bg-primary)] text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-[var(--border-primary)] rounded-tl-none shadow-sm'
                   }`}>
                     {m.selection && (
                       <div className="mb-2 pb-2 border-b border-white/20 opacity-90 text-[11px] font-medium flex items-start gap-1.5">
@@ -492,11 +492,11 @@ export default function LinkedInMoriChatPanel({ cvId, cvType, onCvUpdated, onClo
           {isLoading && (
             <div className="flex flex-col items-start mt-2">
               <div className="flex gap-2 max-w-[90%] flex-row">
-                <div className="w-7 h-7 rounded-full shrink-0 flex items-center justify-center mt-1 bg-slate-200 dark:bg-gray-800 shadow-sm">
+                <div className="w-7 h-7 rounded-full shrink-0 flex items-center justify-center mt-1 bg-slate-200 dark:bg-[var(--bg-primary)] shadow-sm">
                   <Sparkles className="w-4 h-4 text-emerald-500" />
                 </div>
                 <div className="space-y-1">
-                  <div className="px-4 py-3.5 rounded-2xl bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-tl-none shadow-sm flex items-center h-[38px]">
+                  <div className="px-4 py-3.5 rounded-2xl bg-white dark:bg-[var(--bg-primary)] border border-slate-200 dark:border-[var(--border-primary)] rounded-tl-none shadow-sm flex items-center h-[38px]">
                     <div className="flex items-center space-x-1.5">
                       <div className="w-1.5 h-1.5 bg-emerald-400/80 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
                       <div className="w-1.5 h-1.5 bg-emerald-400/80 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
@@ -564,7 +564,7 @@ export default function LinkedInMoriChatPanel({ cvId, cvType, onCvUpdated, onClo
             </button>
           </div>
         ) : (
-          <div className={`pointer-events-auto relative group shadow-xl bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 transition-all ${currentSelection ? 'rounded-b-xl rounded-t-none border-t-0' : 'rounded-2xl'}`}>
+          <div className={`pointer-events-auto relative group shadow-xl bg-white dark:bg-[var(--bg-primary)] border border-slate-200 dark:border-[var(--border-primary)] transition-all ${currentSelection ? 'rounded-b-xl rounded-t-none border-t-0' : 'rounded-2xl'}`}>
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
