@@ -418,7 +418,7 @@ export default function LinkedInEnhancementFlow({ onBackToDashboard }: { onBackT
 
     return (
         <div
-            className="h-macro flex flex-col app-page-bg overflow-hidden"
+            className="h-macro flex flex-col app-page-bg overflow-hidden linkedin-enhancer"
         >
              {/* Header */}
             <LinkedInHeader
@@ -432,6 +432,10 @@ export default function LinkedInEnhancementFlow({ onBackToDashboard }: { onBackT
                 onToneChangeWithRegenerate={handleToneChangeWithRegenerate}
                 onFetchFromLinkedIn={handleFetchFromLinkedIn}
                 isFetchingFromLinkedIn={isFetchingFromLinkedIn}
+                showMoriChat={showMoriChat}
+                setShowMoriChat={setShowMoriChat}
+                showInsights={showInsights}
+                setShowInsights={setShowInsights}
             />
 
             {/* Main Content */}
@@ -547,66 +551,18 @@ export default function LinkedInEnhancementFlow({ onBackToDashboard }: { onBackT
 
                             <div className="flex-1 flex flex-col lg:flex-row gap-6 items-start">
                                 {/* Left Sidebar */}
-                                <div className="w-full lg:w-72 flex-shrink-0 sticky top-[56px]">
+                                <div className="w-full lg:w-72 flex-shrink-0 sticky top-6">
                                     <LinkedInLeftSidebar userProfileImage={userProfileImage} />
                                 </div>
-
                                 {/* Main Content - Cards */}
                                 <div className="flex-1 max-w-[750px] min-w-0 space-y-4">
                                     {/* Toolbar */}
-                                    <div className="flex justify-between items-center bg-white dark:bg-[#141810] rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 p-4 sticky top-[56px] z-30 transition-colors">
+                                    <div className="flex justify-between items-center bg-white dark:bg-[#141810] rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 p-4 transition-colors">
                                         <div className="flex items-center gap-2">
                                             <span className="text-small font-medium text-gray-700 dark:text-gray-300">Preview Changes</span>
                                             <span className="px-2.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-small font-semibold">
                                                 {Object.values(state.sections).filter(s => s.status === 'ACCEPTED').length} accepted
                                             </span>
-                                        </div>
-                                        <div className="flex items-center gap-3">
-                                            <motion.button
-                                                onClick={() => {
-                                                    setShowMoriChat(!showMoriChat);
-                                                    if (showInsights) setShowInsights(false);
-                                                }}
-                                                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-small font-medium transition-colors ${
-                                                    showMoriChat 
-                                                        ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400' 
-                                                        : 'border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
-                                                }`}
-                                                whileHover={{ scale: 1.02 }}
-                                                whileTap={{ scale: 0.98 }}
-                                            >
-                                                <MessageSquare className="w-4 h-4" />
-                                                {showMoriChat ? 'Hide Mori' : 'Mori Chat'}
-                                            </motion.button>
-
-                                            <motion.button
-                                                onClick={() => {
-                                                    setShowInsights(!showInsights);
-                                                    if (showMoriChat) setShowMoriChat(false);
-                                                }}
-                                                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-small font-medium transition-colors ${
-                                                    showInsights 
-                                                        ? 'bg-blue-50 dark:bg-blue-950/20 border-blue-300 dark:border-blue-800 text-blue-700 dark:text-blue-400' 
-                                                        : 'border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
-                                                }`}
-                                                whileHover={{ scale: 1.02 }}
-                                                whileTap={{ scale: 0.98 }}
-                                            >
-                                                {showInsights ? <PanelRightClose className="w-4 h-4" /> : <PanelRightOpen className="w-4 h-4" />}
-                                                {showInsights ? 'Hide Insights' : 'Show Insights'}
-                                            </motion.button>
-                                            
-                                            <motion.a
-                                                href="https://www.linkedin.com/in/me/edit/"
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="flex items-center gap-2 px-4 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-small text-gray-700 dark:text-gray-300 hover:border-blue-400 hover:text-blue-600 transition-colors"
-                                                whileHover={{ scale: 1.02 }}
-                                                whileTap={{ scale: 0.98 }}
-                                            >
-                                                <span>Open LinkedIn</span>
-                                                <ExternalLink className="w-4 h-4" />
-                                            </motion.a>
                                         </div>
                                     </div>
 
@@ -690,7 +646,7 @@ export default function LinkedInEnhancementFlow({ onBackToDashboard }: { onBackT
 
                                 {/* Right Side Panel */}
                                 {(showInsights || showMoriChat) && (
-                                    <div className="w-full lg:w-[400px] flex-shrink-0 sticky top-[56px] h-[calc(100vh-80px)] bg-white dark:bg-[#141810] border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden shadow-sm flex flex-col transition-colors duration-200">
+                                    <div className="w-full lg:w-[400px] flex-shrink-0 sticky top-6 h-[calc(100vh-100px)] bg-white dark:bg-[#141810] border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden shadow-sm flex flex-col transition-colors duration-200">
                                         <div className="p-4 border-b border-gray-150 dark:border-gray-800 flex justify-between items-center bg-gray-50/50 dark:bg-transparent">
                                             <h3 className="text-small font-bold text-gray-900 dark:text-white flex items-center gap-2">
                                                 {showInsights ? (

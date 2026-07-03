@@ -21,9 +21,12 @@ export async function POST(request: NextRequest) {
     const resourceName = (body as any).resourceName as string | undefined;
     const metadata = (body as any).metadata as Record<string, any> | undefined;
 
-    // Safety: only allow cv-builder-pro related client events through this endpoint
-    if (!action || !action.startsWith('resume_enhancer_')) {
-      return NextResponse.json({ success: false, error: 'Invalid action' }, { status: 400 });
+    // Safety: only allow whitelisted client events through this endpoint
+    const allowedPrefixes = ['resume_enhancer_', 'cv_builder_', 'linkedin_enhancer_', 'job_tracker_', 'dashboard_', 'mori_chat_', 'page_view_', 'click_', 'navigation_'];
+    const isValidAction = allowedPrefixes.some(prefix => action.startsWith(prefix));
+    
+    if (!action || !isValidAction) {
+      return NextResponse.json({ success: false, error: 'Invalid action prefix' }, { status: 400 });
     }
 
     await ActivityLogService.logUserAction({

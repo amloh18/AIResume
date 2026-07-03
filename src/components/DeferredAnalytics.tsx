@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
+import { usePathname } from 'next/navigation';
 
 // Dynamically import analytics components only on client side after page is interactive
 const Analytics = dynamic(() => import('@vercel/analytics/next').then(mod => ({ default: mod.Analytics })), {
@@ -18,6 +19,7 @@ const SpeedInsights = dynamic(() => import('@vercel/speed-insights/next').then(m
  */
 export default function DeferredAnalytics() {
   const [shouldLoad, setShouldLoad] = useState(false);
+  const pathname = usePathname();
 
   useEffect(() => {
     // Wait for page to be interactive before loading analytics
@@ -35,6 +37,37 @@ export default function DeferredAnalytics() {
       }
     }
   }, []);
+
+  useEffect(() => {
+    if (!shouldLoad) return;
+
+    // Track page views in the local database
+    const trackPageView = async () => {
+      try {
+        const cleanPathname = pathname || '/';
+        const formattedPath = cleanPathname.replace(/^\/|\/$/g, '').replace(/\//g, '_') || 'home';
+        const actionName = `page_view_${formattedPath}`;
+
+        await fetch('/api/activity-log', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: actionName,
+            metadata: {
+              pathname: cleanPathname,
+              search: typeof window !== 'undefined' ? window.location.search : '',
+              title: typeof document !== 'undefined' ? document.title : '',
+              referrer: typeof document !== 'undefined' ? document.referrer : '',
+            }
+          })
+        });
+      } catch (err) {
+        // Fail silently
+      }
+    };
+
+    trackPageView();
+  }, [pathname, shouldLoad]);
 
   if (!shouldLoad) {
     return null;

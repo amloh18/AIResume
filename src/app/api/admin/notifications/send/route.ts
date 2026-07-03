@@ -75,8 +75,17 @@ export const POST = withAdminAuth(
       enqueued++;
     }
 
+    // Trigger processing immediately in a non-blocking way so notifications arrive instantly
+    if (enqueued > 0) {
+      setTimeout(() => {
+        notificationService.processNotificationQueue(enqueued).catch(err => {
+          console.error('Error processing notification queue after admin send:', err);
+        });
+      }, 500);
+    }
+
     return successResponse({
-      message: `Notification enqueued for ${enqueued} users`,
+      message: `Notification enqueued and sent to ${enqueued} users`,
       enqueued,
     });
   }) as (request: NextRequest) => Promise<NextResponse>

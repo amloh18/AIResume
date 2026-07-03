@@ -16,6 +16,7 @@ export async function GET(request: NextRequest) {
     
     const logType = searchParams.get('logType') as LogType | null;
     const userId = searchParams.get('userId') || undefined;
+    const userEmail = searchParams.get('userEmail') || undefined;
     const startDate = searchParams.get('startDate') ? new Date(searchParams.get('startDate')!) : undefined;
     const endDate = searchParams.get('endDate') ? new Date(searchParams.get('endDate')!) : undefined;
     const status = searchParams.get('status') as LogStatus | null;
@@ -26,6 +27,7 @@ export async function GET(request: NextRequest) {
     const result = await ActivityLogService.getLogs({
       logType: logType || undefined,
       userId,
+      userEmail,
       startDate,
       endDate,
       status: status || undefined,

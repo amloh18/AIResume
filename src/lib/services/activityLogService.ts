@@ -467,12 +467,10 @@ export class ActivityLogService {
     });
   }
 
-  /**
-   * Get logs with filters
-   */
   static async getLogs(filters: {
     logType?: LogType | LogType[];
     userId?: string;
+    userEmail?: string;
     startDate?: Date;
     endDate?: Date;
     status?: LogStatus;
@@ -494,7 +492,16 @@ export class ActivityLogService {
       }
 
       if (filters.userId) {
-        query.userId = new mongoose.Types.ObjectId(filters.userId);
+        if (mongoose.Types.ObjectId.isValid(filters.userId)) {
+          query.userId = new mongoose.Types.ObjectId(filters.userId);
+        } else {
+          // If it's not a valid ObjectId, search by userEmail pattern
+          query.userEmail = { $regex: filters.userId, $options: 'i' };
+        }
+      }
+
+      if (filters.userEmail) {
+        query.userEmail = { $regex: filters.userEmail, $options: 'i' };
       }
 
       if (filters.startDate || filters.endDate) {
