@@ -22,7 +22,10 @@ export function useCanvasFit(options: UseCanvasFitOptions = {}) {
   // Manual zoom control
   const setZoom = (newScale: number | ((prev: number) => number)) => {
     setIsAutoFit(false);
-    setScale(typeof newScale === 'function' ? newScale(scale) : newScale);
+    setScale(prev => {
+      const next = typeof newScale === 'function' ? newScale(prev) : newScale;
+      return Math.round(next);
+    });
   };
 
   const triggerAutoFit = () => {

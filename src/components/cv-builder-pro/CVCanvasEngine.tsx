@@ -16,6 +16,7 @@ import { DEFAULT_UNIFIED_CV_DATA } from '@/types/unified-cv-schema';
 import { useUserData } from '@/lib/hooks/useUserData';
 import { useCanvasFit } from '@/hooks/useCanvasFit';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
+import UtilityPanelPill from '@/components/resume-enhancer/components/UtilityPanelPill';
 const ReadOnlyWrapper = (props: any) => <EditableField {...props} readOnly={true} />;
 const EditableWrapper = EditableField;
 
@@ -379,7 +380,21 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     return deduped;
   });
   const [templateAnimKey, setTemplateAnimKey] = useState(0);
-  const [design, setDesign] = useState(cvData?.metadata?.canvasDesign || { font: 'Inter', fontSize: 12, spacing: 1.0, accentColor: '#22c55e', pageMargin: 40, showContactIcons: true, showHeaderIcons: true, headerLinks: {} as Record<string, boolean>, sidebarBgColor: '#f8fafc', sectionGap: 16, pageSize: 'A4' as 'A4' | 'Letter', dateFormat: 'MMM YYYY' });
+  const [design, setDesign] = useState(cvData?.metadata?.canvasDesign || { 
+    font: 'Inter', 
+    fontSize: 12, 
+    spacing: 1.0, 
+    accentColor: '#22c55e', 
+    pageMargin: 40, 
+    showContactIcons: true, 
+    showHeaderIcons: true, 
+    headerLinks: {} as Record<string, boolean>, 
+    sidebarBgColor: '#f8fafc', 
+    sectionGap: 16, 
+    pageSize: 'A4' as 'A4' | 'Letter', 
+    dateFormat: 'MMM YYYY',
+    splitContactInSidebar: true
+  });
   const [activeSidebar, setActiveSidebar] = useState<string | null>(null);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [replacingSnippet, setReplacingSnippet] = useState<any>(null);
@@ -421,6 +436,45 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     minScale: 0.5
   });
 
+  // Handle Ctrl/Cmd + Wheel to zoom the canvas area specifically, not the window
+  useEffect(() => {
+    const workspace = workspaceRef.current;
+    if (!workspace) return;
+
+    let accumulatedDelta = 0;
+
+    const handleWheel = (e: WheelEvent) => {
+      // If Ctrl or Cmd is held during wheel scroll, it's a zoom gesture/shortcut
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        
+        // Accumulate delta for a threshold-based jump
+        accumulatedDelta += -e.deltaY;
+        
+        // Use a threshold to determine when to jump by 10 points
+        // 50 is a good middle ground for both mouse wheels and trackpads
+        if (Math.abs(accumulatedDelta) >= 50) {
+          const direction = Math.sign(accumulatedDelta);
+          setZoom((prev: number) => {
+            // Jump by exactly 10 points
+            const next = prev + (direction * 10);
+            // Snap to nearest 10 for clean integer values
+            const snapped = Math.round(next / 10) * 10;
+            return Math.min(200, Math.max(50, snapped));
+          });
+          // Reset accumulator after a jump
+          accumulatedDelta = 0;
+        }
+      }
+    };
+
+    // Use { passive: false } to allow e.preventDefault()
+    workspace.addEventListener('wheel', handleWheel, { passive: false });
+    return () => {
+      workspace.removeEventListener('wheel', handleWheel);
+    };
+  }, [setZoom]);
+
   const [totalPagesCount, setTotalPagesCount] = useState(1);
   const [pageAssignments, setPageAssignments] = useState<Record<string, number>>({});
   const [viewport, setViewport] = useState(() => ({
@@ -428,6 +482,45 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     height: typeof window === 'undefined' ? 1080 : window.innerHeight,
     devicePixelRatio: typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1,
   }));
+
+  // Sync local state with cvData prop changes (external updates like "Fix Now" or "Mori Chat")
+  useEffect(() => {
+    if (!cvData) return;
+
+    // 1. Sync zones if metadata changed externally
+    if (cvData.metadata?.canvasZones) {
+      const raw = cvData.metadata.canvasZones;
+      const currentZonesStr = JSON.stringify(zones);
+      const nextZonesStr = JSON.stringify(raw);
+      
+      if (currentZonesStr !== nextZonesStr) {
+        const deduped: Record<string, any[]> = {};
+        Object.keys(raw).forEach(zoneId => {
+          const seen = new Set<string>();
+          deduped[zoneId] = (raw[zoneId] || []).filter((block: any) => {
+            if (!block?.id || seen.has(block.id)) return false;
+            seen.add(block.id);
+            return true;
+          });
+        });
+        setZones(deduped);
+      }
+    }
+
+    // 2. Sync design if metadata changed externally
+    if (cvData.metadata?.canvasDesign) {
+      const currentDesignStr = JSON.stringify(design);
+      const nextDesignStr = JSON.stringify(cvData.metadata.canvasDesign);
+      if (currentDesignStr !== nextDesignStr) {
+        setDesign(cvData.metadata.canvasDesign);
+      }
+    }
+
+    // 3. Sync active template if metadata changed externally
+    if (cvData.metadata?.canvasTemplate && cvData.metadata.canvasTemplate.id !== activeTemplate.id) {
+      setActiveTemplate(cvData.metadata.canvasTemplate);
+    }
+  }, [cvData.metadata]);
 
   useEffect(() => {
     if (template && template.id !== activeTemplate.id && !cvData?.metadata?.canvasTemplate) {
@@ -465,15 +558,41 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     const handleSetSidebar = (e: Event) => {
       const detail = (e as CustomEvent).detail;
       setActiveSidebar(active => active === detail ? null : detail);
+      setIsTemplateModalOpen(false);
     };
     const handleOpenTemplates = () => {
       setIsTemplateModalOpen(true);
+      setActiveSidebar(null);
     };
+    const handleCloseUtility = () => {
+      setActiveSidebar(null);
+      setIsTemplateModalOpen(false);
+    };
+    const handleOpenMori = () => {
+      setActiveSidebar(null);
+      setIsTemplateModalOpen(false);
+    };
+    const handleZoomIn = () => setZoom((z: number) => Math.min(200, z + 10));
+    const handleZoomOut = () => setZoom((z: number) => Math.max(50, z - 10));
+    const handleTogglePageSize = () => {
+      setDesign((d: any) => ({ ...d, pageSize: d.pageSize === 'A4' ? 'Letter' : 'A4' }));
+    };
+
     window.addEventListener('set-builder-sidebar', handleSetSidebar);
     window.addEventListener('open-templates', handleOpenTemplates);
+    window.addEventListener('close-utility-panel', handleCloseUtility);
+    window.addEventListener('open-mori-chat', handleOpenMori);
+    window.addEventListener('canvas-zoom-in', handleZoomIn);
+    window.addEventListener('canvas-zoom-out', handleZoomOut);
+    window.addEventListener('canvas-toggle-page-size', handleTogglePageSize);
     return () => {
       window.removeEventListener('set-builder-sidebar', handleSetSidebar);
       window.removeEventListener('open-templates', handleOpenTemplates);
+      window.removeEventListener('close-utility-panel', handleCloseUtility);
+      window.removeEventListener('open-mori-chat', handleOpenMori);
+      window.removeEventListener('canvas-zoom-in', handleZoomIn);
+      window.removeEventListener('canvas-zoom-out', handleZoomOut);
+      window.removeEventListener('canvas-toggle-page-size', handleTogglePageSize);
     };
   }, [readOnly]);
 
@@ -1055,6 +1174,8 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
   const pageAssignmentsRef = React.useRef(pageAssignments);
   pageAssignmentsRef.current = pageAssignments;
   const recentAssignmentsRef = React.useRef<string[]>([]);
+  const zoomRef = React.useRef(zoom);
+  zoomRef.current = zoom;
 
   // Dynamically calculate page partitioning assignments based on DOM snippet heights
   React.useEffect(() => {
@@ -1062,7 +1183,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     if (!docElement) return undefined;
 
     const measureAndPaginate = () => {
-      const scale = zoom / 100;
+      const scale = zoomRef.current / 100;
       const isA4 = design.pageSize === 'A4';
       const H = isA4 ? 1122.5 : 1056;
       const M = layoutMetrics.pageMarginPx || 40;
@@ -1081,39 +1202,59 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
 
         if (entryElements.length > 0) {
           let sumEntriesHeight = 0;
-          entryElements.forEach(entryEl => {
+          let sumEntryGaps = 0;
+          entryElements.forEach((entryEl, idx) => {
             const entryId = entryEl.getAttribute('data-entry-id');
             if (entryId) {
               const h = entryEl.getBoundingClientRect().height / scale;
               const unitId = `${blockId}_entry_${entryId}`;
               unitHeights[unitId] = h;
               sumEntriesHeight += h;
+              
+              if (idx > 0) {
+                const prevEl = entryElements[idx - 1];
+                const gap = (entryEl.getBoundingClientRect().top - prevEl.getBoundingClientRect().bottom) / scale;
+                sumEntryGaps += Math.max(0, gap);
+              }
             }
           });
 
-          // Header height is the leftover space
+          // Accurately measure header height as distance from block top to first entry top
+          const blockTop = blockEl.getBoundingClientRect().top;
+          const firstEntryTop = entryElements[0].getBoundingClientRect().top;
           const headerUnitId = `${blockId}_header`;
-          unitHeights[headerUnitId] = Math.max(0, parentHeight - sumEntriesHeight);
+          unitHeights[headerUnitId] = Math.max(0, (firstEntryTop - blockTop) / scale);
+          
+          // Store average entry gap for this block
+          unitHeights[`${blockId}_entryGap`] = entryElements.length > 1 ? (sumEntryGaps / (entryElements.length - 1)) : 16;
         } else {
           // Non-list block
           unitHeights[blockId] = parentHeight;
         }
       });
 
-      // 2. Compute page assignments for each zone/unit flow
+      // 2. Compute page assignments with coordinated global & column pagination flow
       const newAssignments: Record<string, number> = {};
       const safeZones = zones || {};
       let maxPageNum = 0;
+      const sectionGap = layoutMetrics.sectionGapPx || 0;
 
-      Object.keys(safeZones).forEach(zoneId => {
+      // Classify zones based on template flow
+      const layoutType = activeTemplate?.type || '1-col';
+      const flow = templateLayoutFlows[layoutType] || { global: [], columns: [] };
+      const globalZones = flow.global || [];
+      const globalSet = new Set(globalZones);
+      const columnZones = Object.keys(safeZones).filter(zoneId => !globalSet.has(zoneId));
+
+      // 2a. First, paginate global stacked zones sequentially
+      const globalHeightOnPage: Record<number, number> = {};
+      let currentGlobalPage = 0;
+      let currentGlobalHeight = 0;
+
+      globalZones.forEach(zoneId => {
         const blocks = safeZones[zoneId] || [];
-        let currentPage = 0;
-        let currentHeight = 0;
-        const sectionGap = layoutMetrics.sectionGapPx || 0;
-        const gapBefore = () => (currentHeight > 0 ? sectionGap : 0);
-
         blocks.forEach(block => {
-          // Check if this block is a list snippet
+          const gapBefore = () => (currentGlobalHeight > 0 ? sectionGap : 0);
           const snippetDef = SNIPPETS[block.type];
           const isList = snippetDef && LIST_SNIPPET_CATEGORIES.includes(snippetDef.category);
 
@@ -1121,42 +1262,114 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
             const collectionName = getCollectionNameForCategory(snippetDef.category);
             const entries = cvData[collectionName] || [];
 
-            // 1. Process header unit and 1st entry together
             const headerUnitId = `${block.id}_header`;
             const headerH = unitHeights[headerUnitId] || 40;
-            
             const firstEntry = entries[0];
             const firstEntryH = firstEntry ? (unitHeights[`${block.id}_entry_${firstEntry.id}`] || 80) : 0;
+            const entryGap = unitHeights[`${block.id}_entryGap`] || 16;
 
-            if (currentHeight + gapBefore() + headerH + firstEntryH > usableHeight && currentHeight > 0) {
+            if (currentGlobalHeight + gapBefore() + headerH + firstEntryH > usableHeight && currentGlobalHeight > 0) {
+              globalHeightOnPage[currentGlobalPage] = currentGlobalHeight;
+              currentGlobalPage++;
+              currentGlobalHeight = 0;
+            }
+            newAssignments[headerUnitId] = currentGlobalPage;
+            currentGlobalHeight += gapBefore() + headerH;
+            if (currentGlobalPage > maxPageNum) maxPageNum = currentGlobalPage;
+
+            entries.forEach((entry: any, entryIdx: number) => {
+              const entryUnitId = `${block.id}_entry_${entry.id}`;
+              const entryH = unitHeights[entryUnitId] || 80;
+
+              if (entryIdx > 0) {
+                if (currentGlobalHeight + entryGap + entryH > usableHeight && currentGlobalHeight > 0) {
+                  globalHeightOnPage[currentGlobalPage] = currentGlobalHeight;
+                  currentGlobalPage++;
+                  currentGlobalHeight = 0;
+                }
+              }
+              newAssignments[entryUnitId] = currentGlobalPage;
+              currentGlobalHeight += (entryIdx > 0 ? entryGap : 0) + entryH;
+              if (currentGlobalPage > maxPageNum) maxPageNum = currentGlobalPage;
+            });
+          } else {
+            const h = unitHeights[block.id] || 80;
+            if (currentGlobalHeight + gapBefore() + h > usableHeight && currentGlobalHeight > 0) {
+              globalHeightOnPage[currentGlobalPage] = currentGlobalHeight;
+              currentGlobalPage++;
+              currentGlobalHeight = 0;
+            }
+            newAssignments[block.id] = currentGlobalPage;
+            currentGlobalHeight += gapBefore() + h;
+            if (currentGlobalPage > maxPageNum) maxPageNum = currentGlobalPage;
+          }
+        });
+      });
+      if (currentGlobalHeight > 0) {
+        globalHeightOnPage[currentGlobalPage] = currentGlobalHeight;
+      }
+
+      // 2b. Next, paginate column zones independently, scaling maximum heights per page
+      columnZones.forEach(zoneId => {
+        const blocks = safeZones[zoneId] || [];
+        let currentPage = 0;
+        let currentHeight = 0;
+
+        blocks.forEach(block => {
+          const gapBefore = () => (currentHeight > 0 ? sectionGap : 0);
+          const getUsableHeightForPage = (pageIdx: number) => {
+            const consumedGlobal = globalHeightOnPage[pageIdx] || 0;
+            const overhead = consumedGlobal > 0 ? consumedGlobal + sectionGap : 0;
+            return Math.max(100, usableHeight - overhead);
+          };
+
+          const snippetDef = SNIPPETS[block.type];
+          const isList = snippetDef && LIST_SNIPPET_CATEGORIES.includes(snippetDef.category);
+
+          if (isList) {
+            const collectionName = getCollectionNameForCategory(snippetDef.category);
+            const entries = cvData[collectionName] || [];
+
+            const headerUnitId = `${block.id}_header`;
+            const headerH = unitHeights[headerUnitId] || 40;
+            const firstEntry = entries[0];
+            const firstEntryH = firstEntry ? (unitHeights[`${block.id}_entry_${firstEntry.id}`] || 80) : 0;
+            const entryGap = unitHeights[`${block.id}_entryGap`] || 16;
+
+            let neededH = gapBefore() + headerH + firstEntryH;
+            let pUsable = getUsableHeightForPage(currentPage);
+
+            if (currentHeight + neededH > pUsable && currentHeight > 0) {
               currentPage++;
               currentHeight = 0;
+              pUsable = getUsableHeightForPage(currentPage);
             }
             newAssignments[headerUnitId] = currentPage;
             currentHeight += gapBefore() + headerH;
             if (currentPage > maxPageNum) maxPageNum = currentPage;
 
-            // 2. Process each entry unit
             entries.forEach((entry: any, entryIdx: number) => {
               const entryUnitId = `${block.id}_entry_${entry.id}`;
               const entryH = unitHeights[entryUnitId] || 80;
-              
+
               if (entryIdx > 0) {
-                if (currentHeight + gapBefore() + entryH > usableHeight && currentHeight > 0) {
+                let pUsableInner = getUsableHeightForPage(currentPage);
+                if (currentHeight + entryGap + entryH > pUsableInner && currentHeight > 0) {
                   currentPage++;
                   currentHeight = 0;
                 }
               }
               newAssignments[entryUnitId] = currentPage;
-              currentHeight += (entryIdx > 0 ? gapBefore() : 0) + entryH;
+              currentHeight += (entryIdx > 0 ? entryGap : 0) + entryH;
               if (currentPage > maxPageNum) maxPageNum = currentPage;
             });
           } else {
-            // Non-list block unit
             const h = unitHeights[block.id] || 80;
-            if (currentHeight + gapBefore() + h > usableHeight && currentHeight > 0) {
+            let pUsable = getUsableHeightForPage(currentPage);
+            if (currentHeight + gapBefore() + h > pUsable && currentHeight > 0) {
               currentPage++;
               currentHeight = 0;
+              pUsable = getUsableHeightForPage(currentPage);
             }
             newAssignments[block.id] = currentPage;
             currentHeight += gapBefore() + h;
@@ -1165,8 +1378,9 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
         });
       });
 
-      // 3. Set total pages count state
-      setTotalPagesCount(maxPageNum + 1);
+      // 3. Set total pages count state only if changed
+      const nextTotalPages = maxPageNum + 1;
+      setTotalPagesCount(prev => prev !== nextTotalPages ? nextTotalPages : prev);
 
       // Cycle oscillation detection
       const assignmentsStr = JSON.stringify(newAssignments);
@@ -1188,15 +1402,29 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     };
 
     // Run adjust layout loop on requestAnimationFrame
-    const rafId = requestAnimationFrame(measureAndPaginate);
+    let rafId: number;
+    const runMeasure = () => {
+      measureAndPaginate();
+    };
 
-    // Watch for mutations (user typing or editing content) to recalculate page breaks dynamically dynamically with debounce
+    // Initial measurement
+    rafId = requestAnimationFrame(runMeasure);
+
+    // Watch for mutations (user typing or editing content)
     let debounceTimer: any;
+    
+    // Ensure fonts are loaded
+    if (typeof document !== 'undefined' && (document as any).fonts) {
+      (document as any).fonts.ready.then(() => {
+        measureAndPaginate();
+      });
+    }
+
     const observer = new MutationObserver(() => {
       clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => {
         measureAndPaginate();
-      }, 80);
+      }, 150);
     });
     observer.observe(docElement, { childList: true, subtree: true, characterData: true });
 
@@ -1205,7 +1433,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
       clearTimeout(debounceTimer);
       observer.disconnect();
     };
-  }, [cvData, zones, design, zoom, activeTemplate, layoutMetrics.pageMarginPx, layoutMetrics.sectionGapPx]);
+  }, [cvData.metadata, zones, design.pageSize, activeTemplate.id, layoutMetrics.pageMarginPx, layoutMetrics.sectionGapPx]);
 
   const handleTogglePhoto = () => {
     if (!cvData.basics?.showAvatar) {
@@ -1432,7 +1660,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     const pages = Array.from({ length: totalPages }, (_, i) => i);
 
     return (
-      <div className={`flex flex-col items-center gap-[var(--cv-page-gap)] cv-document ${formatClass}`} style={{ width: 'var(--cv-page-width)' }}>
+      <div id="cv-document-root" className={`flex flex-col items-center gap-[var(--cv-page-gap)] cv-document ${formatClass}`} style={{ width: 'var(--cv-page-width)' }}>
         {pages.map(pageIdx => {
           const renderLayout = () => {
             switch (layoutType) {
@@ -1644,7 +1872,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
           </div>
 
           {!readOnly && (
-            <div className="absolute bottom-6 right-6 z-[40] flex items-center gap-2 pointer-events-none">
+            <div className="absolute bottom-6 right-6 z-[40] hidden md:flex items-center gap-2 pointer-events-none">
               {/* Page Count and Size Info */}
               <div className={`px-3 h-9 rounded-xl border shadow-xl backdrop-blur-md flex items-center gap-3 text-[10px] font-bold uppercase tracking-wider ${bgNav} ${textPrimary} opacity-90 hover:opacity-100 transition-opacity pointer-events-auto`}>
                 <div className="flex items-center gap-1.5 border-r pr-3 border-gray-500/20">
@@ -1733,14 +1961,18 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
 
         {!readOnly && activeSidebar === 'design' && (() => {
           const portalTarget = document.getElementById('builder-utility-panel-portal');
+          if (!portalTarget) return null;
           const panelContent = (
-            <div className={`flex-grow flex flex-col h-full overflow-hidden ${portalTarget ? '' : 'w-[320px] border-l shadow-2xl z-20 shrink-0 ' + bgPanel}`}>
+            <div className="flex-grow flex flex-col h-full overflow-hidden">
               <div className={`p-5 border-b flex items-center justify-between shrink-0 ${bgNav}`}>
                 <h3 className={`font-bold flex items-center gap-2 ${textPrimary}`}><Palette size={18} className={brandGreen}/> Global Design</h3>
-                <button onClick={() => {
-                  setActiveSidebar(null);
-                  window.dispatchEvent(new CustomEvent('close-utility-panel'));
-                }} className={textMuted}><X size={18}/></button>
+                <div className="flex items-center gap-2">
+                  <UtilityPanelPill activePanel="design" />
+                  <button onClick={() => {
+                    setActiveSidebar(null);
+                    window.dispatchEvent(new CustomEvent('close-utility-panel'));
+                  }} className={textMuted}><X size={18}/></button>
+                </div>
               </div>
               <div className="p-5 flex flex-col gap-6 overflow-y-auto custom-scrollbar flex-1">
                 <div><label className={`text-small font-bold uppercase tracking-widest mb-2 block ${textMuted}`}>Typography</label><div className="grid grid-cols-2 gap-2">{['Inter', 'Merriweather', 'Roboto Mono', 'Playfair Display'].map(f => (<button key={f} onClick={() => setDesign({...design, font: f})} className={`py-2 px-1 text-small rounded border transition-colors ${design.font === f ? 'bg-emerald-500/20 border-emerald-500 ' + brandGreen : (isDarkUI ? 'bg-[#222] border-[#333] text-gray-300' : 'bg-white border-gray-200 text-gray-700')}`} style={{ fontFamily: f }}>{f.split(' ')[0]}</button>))}</div></div>
@@ -1752,6 +1984,20 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
                 <div><label className={`text-small font-bold uppercase tracking-widest mb-2 flex justify-between ${textMuted}`}><span>Section Gap</span><span className={brandGreen}>{design.sectionGap}px</span></label><input type="range" min="0" max="60" step="1" value={design.sectionGap} onChange={(e) => setDesign({...design, sectionGap: parseInt(e.target.value)})} className="w-full accent-emerald-500" /></div>
                 <div className="mt-4"><label className={`flex items-center justify-between cursor-pointer`}><span className={`text-small font-bold uppercase tracking-widest ${textMuted}`}>Header Icons</span><div className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors ${design.showHeaderIcons ? brandGreenBg : (isDarkUI ? 'bg-[#333]' : 'bg-gray-300')}`} onClick={() => setDesign({...design, showHeaderIcons: !design.showHeaderIcons})}><span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${design.showHeaderIcons ? 'translate-x-6' : 'translate-x-1'}`} /></div></label></div>
                 <div className="mt-4"><label className={`flex items-center justify-between cursor-pointer`}><span className={`text-small font-bold uppercase tracking-widest ${textMuted}`}>Contact Icons</span><div className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors ${design.showContactIcons ? brandGreenBg : (isDarkUI ? 'bg-[#333]' : 'bg-gray-300')}`} onClick={() => setDesign({...design, showContactIcons: !design.showContactIcons})}><span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${design.showContactIcons ? 'translate-x-6' : 'translate-x-1'}`} /></div></label></div>
+                {['sidebar-left', 'sidebar-left-dark', 'sidebar-right', 'top-sidebar-left', 'top-sidebar-right'].includes(activeTemplate.type) && (
+                  <div className="mt-4 border-t border-gray-200 dark:border-white/10 pt-4">
+                    <label className={`flex items-center justify-between cursor-pointer`}>
+                      <span className={`text-small font-bold uppercase tracking-widest ${textMuted}`}>Split Contact in Sidebar</span>
+                      <div 
+                        className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors ${design.splitContactInSidebar ? brandGreenBg : (isDarkUI ? 'bg-[#333]' : 'bg-gray-300')}`} 
+                        onClick={() => setDesign({...design, splitContactInSidebar: !design.splitContactInSidebar})}
+                      >
+                        <span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${design.splitContactInSidebar ? 'translate-x-6' : 'translate-x-1'}`} />
+                      </div>
+                    </label>
+                    <p className="text-[10px] text-gray-500 mt-1 italic">Controls if contact info is separated from header in vertical layouts.</p>
+                  </div>
+                )}
                 
                 <div className="mt-6 border-t pt-5 border-gray-200 dark:border-[#333]">
                   <label className={`text-small font-bold uppercase tracking-widest mb-2.5 block ${textMuted}`}>Description Layout</label>
@@ -1805,13 +2051,14 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
               </div>
             </div>
           );
-          return portalTarget ? createPortal(panelContent, portalTarget) : panelContent;
+          return createPortal(panelContent, portalTarget);
         })()}
 
         {!readOnly && activeSidebar === 'data' && (() => {
           const portalTarget = document.getElementById('builder-utility-panel-portal');
+          if (!portalTarget) return null;
           const panelContent = (
-            <div className={`flex-grow flex flex-col h-full overflow-hidden ${portalTarget ? '' : 'w-[600px] border-l shadow-2xl z-20 shrink-0 ' + bgPanel}`}>
+            <div className="flex-grow flex flex-col h-full overflow-hidden">
               <div className={`p-5 border-b flex items-center justify-between shrink-0 ${bgNav}`}>
                 <h3 className={`font-bold flex items-center gap-2 ${textPrimary}`}>
                   <FileJson size={18} className={brandGreen} /> Raw JSON
@@ -1825,6 +2072,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
                     <Copy size={13} />
                     Copy JSON Template
                   </button>
+                  <UtilityPanelPill activePanel="json" />
                   <button onClick={() => {
                     setActiveSidebar(null);
                     window.dispatchEvent(new CustomEvent('close-utility-panel'));
@@ -1836,7 +2084,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
               </div>
             </div>
           );
-          return portalTarget ? createPortal(panelContent, portalTarget) : panelContent;
+          return createPortal(panelContent, portalTarget);
         })()}
       </div>
 
@@ -1983,8 +2231,9 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
       {/* TEMPLATE PANEL (rendered as portal if target exists, otherwise fall back to modal) */}
       {isTemplateModalOpen && (() => {
         const portalTarget = document.getElementById('builder-utility-panel-portal');
+        if (!portalTarget) return null;
         const content = (
-          <div className={`${portalTarget ? 'flex-grow flex flex-col h-full overflow-hidden' : 'rounded-2xl shadow-2xl w-full max-w-7xl overflow-hidden flex flex-col h-[90vh] border ' + bgPanel}`}>
+          <div className="flex-grow flex flex-col h-full overflow-hidden">
             <div className={`p-5 border-b flex justify-between items-center shrink-0 ${bgNav}`}>
               <div className="flex items-center gap-3">
                 <LayoutTemplate size={18} className="text-emerald-500"/>
@@ -1992,12 +2241,15 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
                   <h3 className={`font-black text-xs uppercase tracking-wider ${textPrimary}`}>Template Library</h3>
                 </div>
               </div>
-              <button onClick={() => {
-                setIsTemplateModalOpen(false);
-                window.dispatchEvent(new CustomEvent('close-utility-panel'));
-              }} className={`p-1.5 rounded-full ${btnSecondary}`}>
-                <X size={16}/>
-              </button>
+              <div className="flex items-center gap-2">
+                <UtilityPanelPill activePanel="layout" />
+                <button onClick={() => {
+                  setIsTemplateModalOpen(false);
+                  window.dispatchEvent(new CustomEvent('close-utility-panel'));
+                }} className={`p-1.5 rounded-full ${btnSecondary}`}>
+                  <X size={16}/>
+                </button>
+              </div>
             </div>
             <div className={`p-4 overflow-y-auto flex-1 custom-scrollbar ${isDarkUI ? 'bg-[#0a0a0a]' : 'bg-gray-100'}`}>
               <div className="space-y-6">
@@ -2008,7 +2260,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
                     <div key={cat.id} className="space-y-3">
                       <div className={`py-1.5 flex items-center gap-2 border-b ${isDarkUI ? 'border-[#222] text-white' : 'border-gray-200 text-gray-900'}`}>
                         <span className="text-emerald-500">{cat.icon}</span>
-                        <h2 className="text-xs font-bold uppercase tracking-wider">{cat.name}</h2>
+                        <h2 className={`${cat.id === 'hybrid' ? 'text-[9px]' : 'text-xs'} font-bold uppercase tracking-wider`}>{cat.name}</h2>
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         {catTemplates.map(tpl => {
@@ -2038,60 +2290,31 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
           </div>
         );
 
-        if (portalTarget) {
-          return createPortal(content, portalTarget);
-        }
-
-        return (
-          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
-            {content}
-          </div>
-        );
+        return createPortal(content, portalTarget);
       })()}
 
       {/* REPLACE / ADD SNIPPET MODAL */}
       {replacingSnippet && (() => {
-        const MOCK_CV_DATA = {
-          basics: { name: 'John Doe', title: 'Senior Software Engineer', email: 'john.doe@example.com', phone: '+1 234 567 890', location: 'New York, USA', summary: 'A passionate software engineer with 10+ years of experience in building scalable web applications and leading cross-functional teams.' },
-          experience: [{ id: 'mock-1', role: 'Lead Developer', company: 'Tech Solutions Inc.', date: '2018 - Present', description: '<ul><li>Architected and developed a microservices-based platform serving 1M+ users.</li><li>Mentored junior engineers and improved sprint velocity by 25%.</li></ul>' }],
-          education: [{ id: 'mock-2', degree: 'BSc Computer Science', institution: 'University of Technology', date: '2014 - 2018', description: 'Graduated with First Class Honors. President of the Coding Club.' }],
-          projects: [{ id: 'mock-3', name: 'Open Source E-commerce', role: 'Creator & Maintainer', date: '2021', description: 'Built an open-source e-commerce platform with React and Node.js. 5k+ GitHub stars.' }],
-          skills: { languages: 'JavaScript, TypeScript, Python, Go, Rust', frameworks: 'React, Node.js, Next.js, Express, Django', tools: 'Git, Docker, Kubernetes, AWS, GCP' },
-          certifications: [{ id: 'mock-4', name: 'AWS Certified Solutions Architect', issuer: 'Amazon Web Services', date: '2022' }],
-          awards: [{ id: 'mock-5', name: 'Developer of the Year', issuer: 'Tech Solutions Inc.', date: '2021' }],
-          publications: [{ id: 'mock-6', title: 'Microservices Patterns', publisher: 'TechPress', date: '2020', description: 'A comprehensive guide to building scalable microservices.' }],
-          volunteer: [{ id: 'mock-7', role: 'Mentor', organization: 'Code for Good', date: '2019 - Present', description: 'Mentoring underrepresented youth in tech.' }],
-          references: [{ id: 'mock-8', name: 'Jane Smith', role: 'CTO at Tech Solutions', contact: 'jane.smith@example.com' }],
-          languages: 'English (Native), Spanish (Fluent), French (Intermediate)',
-          interests: 'Open Source, Photography, Hiking, Reading'
-        };
-
         const getPreviewData = (realData: any) => {
-          const isArrayEmpty = (arr: any) => !Array.isArray(arr) || arr.length === 0;
           return {
             ...realData,
             basics: {
-              ...MOCK_CV_DATA.basics,
+              name: 'Your Name',
+              title: 'Job Title',
+              summary: 'Professional summary...',
               ...realData?.basics,
-              name: realData?.basics?.name || MOCK_CV_DATA.basics.name,
-              title: realData?.basics?.title || MOCK_CV_DATA.basics.title,
-              summary: realData?.basics?.summary || MOCK_CV_DATA.basics.summary,
             },
-            experience: isArrayEmpty(realData?.experience) ? MOCK_CV_DATA.experience : realData.experience,
-            education: isArrayEmpty(realData?.education) ? MOCK_CV_DATA.education : realData.education,
-            projects: isArrayEmpty(realData?.projects) ? MOCK_CV_DATA.projects : realData.projects,
-            skills: {
-              ...MOCK_CV_DATA.skills,
-              ...realData?.skills,
-              languages: realData?.skills?.languages || MOCK_CV_DATA.skills.languages,
-            },
-            certifications: isArrayEmpty(realData?.certifications) ? MOCK_CV_DATA.certifications : realData.certifications,
-            awards: isArrayEmpty(realData?.awards) ? MOCK_CV_DATA.awards : realData.awards,
-            publications: isArrayEmpty(realData?.publications) ? MOCK_CV_DATA.publications : realData.publications,
-            volunteer: isArrayEmpty(realData?.volunteer) ? MOCK_CV_DATA.volunteer : realData.volunteer,
-            references: isArrayEmpty(realData?.references) ? MOCK_CV_DATA.references : realData.references,
-            languages: realData?.languages || MOCK_CV_DATA.languages,
-            interests: realData?.interests || MOCK_CV_DATA.interests,
+            experience: realData?.experience || [],
+            education: realData?.education || [],
+            projects: realData?.projects || [],
+            skills: realData?.skills || {},
+            certifications: realData?.certifications || [],
+            awards: realData?.awards || [],
+            publications: realData?.publications || [],
+            volunteer: realData?.volunteer || [],
+            references: realData?.references || [],
+            languages: realData?.languages || '',
+            interests: realData?.interests || '',
           };
         };
 
@@ -2245,6 +2468,26 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
         .custom-scrollbar::-webkit-scrollbar-thumb { background: ${isDarkUI ? '#444' : '#ccc'}; border-radius: 4px; }
         .cv-document { 
           font-family: var(--cv-font), sans-serif; color: #111827; font-size: var(--cv-base-size); position: relative; z-index: 10; 
+          overflow-wrap: break-word;
+          word-wrap: break-word;
+          white-space: normal;
+        }
+        .cv-document * {
+          min-width: 0;
+          max-width: 100%;
+          box-sizing: border-box;
+          word-break: normal;
+          hyphens: none;
+        }
+        /* Specific handle for name in header - allow shrinking */
+        .cv-header-name, .cv-header-role {
+          display: inline-block;
+          max-width: 100%;
+          overflow: hidden;
+          text-overflow: clip;
+          white-space: nowrap !important;
+          word-break: normal;
+          overflow-wrap: normal;
         }
         .cv-page {
           font-family: var(--cv-font), sans-serif; color: #111827; font-size: var(--cv-base-size); position: relative; z-index: 10; 
@@ -2252,16 +2495,16 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
           box-sizing: border-box;
           overflow: hidden;
         }
-        .cv-document .text-gray-900 { color: #111827 !important; }
-        .cv-document .text-gray-800 { color: #1f2937 !important; }
-        .cv-document .text-gray-700 { color: #374151 !important; }
-        .cv-document .text-gray-600 { color: #4b5563 !important; }
-        .cv-document .text-gray-500 { color: #6b7280 !important; }
-        .cv-document .text-gray-400 { color: #9ca3af !important; }
-        .cv-document .text-gray-300 { color: #d1d5db !important; }
-        .cv-document .text-gray-200 { color: #e5e7eb !important; }
-        .cv-document .text-gray-100 { color: #f3f4f6 !important; }
-        .cv-document .text-white { color: #ffffff !important; }
+        .cv-document .text-gray-900 { color: #111827; }
+        .cv-document .text-gray-800 { color: #1f2937; }
+        .cv-document .text-gray-700 { color: #374151; }
+        .cv-document .text-gray-600 { color: #4b5563; }
+        .cv-document .text-gray-500 { color: #6b7280; }
+        .cv-document .text-gray-400 { color: #9ca3af; }
+        .cv-document .text-gray-300 { color: #d1d5db; }
+        .cv-document .text-gray-200 { color: #e5e7eb; }
+        .cv-document .text-gray-100 { color: #f3f4f6; }
+        .cv-document .text-white { color: #ffffff; }
         
         /* Dark Sidebar Override Rules */
         .cv-document .cv-dark-sidebar,
@@ -2293,14 +2536,24 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
           border-color: rgba(255, 255, 255, 0.15) !important;
         }
         
-        .cv-name { font-size: calc(var(--cv-base-size) * 2.5); line-height: 1.1; }
-        .cv-name-narrow { font-size: calc(var(--cv-base-size) * 2.0); line-height: 1.1; }
-        .cv-role { font-size: calc(var(--cv-base-size) * 1.15); }
+        /* Container queries for responsive typography */
+        .cv-document, .cv-document > div, .cv-document > div > div {
+          container-type: inline-size;
+        }
+        
+        .cv-name { font-size: min(calc(var(--cv-base-size) * 2.5), 8cqw); line-height: 1.1; }
+        .cv-name-narrow { font-size: min(calc(var(--cv-base-size) * 2.0), 8cqw); line-height: 1.1; }
+        .cv-role { font-size: min(calc(var(--cv-base-size) * 1.15), 5.5cqw); }
         .cv-heading { font-size: calc(var(--cv-base-size) * 1.1); }
         .cv-title { font-size: calc(var(--cv-base-size) * 1.05); }
         .cv-subtitle { font-size: calc(var(--cv-base-size) * 0.95); }
         .cv-date { font-size: calc(var(--cv-base-size) * 0.85); }
         .cv-contact { font-size: calc(var(--cv-base-size) * 0.85); }
+        .cv-contact-horizontal {
+          flex-wrap: nowrap !important;
+          overflow: hidden;
+          font-size: min(calc(var(--cv-base-size) * 0.85), 2cqw) !important;
+        }
         .cv-body { font-size: inherit; line-height: calc(1.6 * var(--cv-spacing)); }
         .cv-document p, .cv-document ul, .cv-document li { font-size: inherit !important; line-height: inherit !important; margin: 0; padding: 0; }
         .cv-prose p { margin-bottom: calc(0.3em * var(--cv-spacing)) !important; }

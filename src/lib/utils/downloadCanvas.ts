@@ -47,14 +47,18 @@ export interface CanvasDownloadOptions {
   paperSize?: 'A4' | 'Letter';
   /** Capture quality 0–1 for JPEG (default 0.92) */
   quality?: number;
+  /** Target element to capture instead of the default root */
+  elementId?: string;
+  /** Direct element reference to capture */
+  element?: HTMLElement;
 }
 
 /**
  * Download the live CV canvas preview as a PDF.
  *
  * Finds the `.cv-document` element currently in the DOM, captures it with
- * html2canvas (removing CSS masks and editor-only UI), then splits the canvas
- * into individual A4/Letter pages and exports with jsPDF.
+ * jsPDF html method (removing CSS masks and editor-only UI), to generate
+ * text-selectable PDFs.
  *
  * @throws if `.cv-document` is not found in the DOM.
  */
@@ -62,132 +66,114 @@ export async function downloadCanvasAsPDF(
   filename = 'cv.pdf',
   options: CanvasDownloadOptions = {}
 ): Promise<void> {
-  const paperSize = options.paperSize || 'A4';
-  const quality = options.quality ?? 0.92;
-  const dims = PAGE_DIMS[paperSize];
+  if (typeof window === 'undefined') return;
 
-  // ── 1. Find the live canvas document element ──────────────────────────────
-  const cvDoc = document.querySelector('.cv-document') as HTMLElement | null;
+  const { 
+    paperSize = 'A4', 
+    elementId = 'cv-document-root',
+    element 
+  } = options;
+
+  const cvDoc = element || document.getElementById(elementId);
   if (!cvDoc) {
-    throw new Error(
-      'CV document not found. The canvas preview must be visible to generate a PDF.'
-    );
+    console.error(`CV document root (#${elementId}) not found`);
+    return;
   }
 
-  // ── 2. Read real page metrics from CSS variables (set by CVCanvasEngine) ──
-  const pageHeightPx = readCssPxVar(cvDoc, '--cv-page-height', dims.heightPx);
-  const pageGapPx    = readCssPxVar(cvDoc, '--cv-page-gap',    DEFAULT_PAGE_GAP_PX);
-  const slotHeightPx = pageHeightPx + pageGapPx; // one "page slot" in the document
+  const dims = PAGE_DIMS[paperSize];
+  const { jsPDF } = await import('jspdf');
 
-  // Natural (un-zoomed) element height — all content stacked vertically
-  const totalContentH = cvDoc.scrollHeight;
-  const totalPages = Math.max(1, Math.ceil(totalContentH / slotHeightPx));
-
-  // ── 3. Dynamic imports (avoid SSR / tree-shake bloat) ────────────────────
-  const [html2canvasModule, { jsPDF }] = await Promise.all([
-    import('html2canvas'),
-    import('jspdf'),
-  ]);
-  const html2canvas = html2canvasModule.default;
-
-  // ── 4. Render the element to a high-resolution canvas ────────────────────
-  const CAPTURE_SCALE = 2; // 2× → crisp on retina without huge files
-
-  const fullCanvas = await html2canvas(cvDoc, {
-    scale: CAPTURE_SCALE,
-    useCORS: true,
-    allowTaint: true,
-    backgroundColor: '#ffffff',
-    logging: false,
-    // Capture at natural element width (794px for A4) ignoring any parent zoom/scale
-    width: cvDoc.offsetWidth,
-    height: totalContentH,
-    windowWidth: cvDoc.offsetWidth,
-    onclone: (clonedDoc: Document) => {
-      // Disable all CSS transitions, animations, and keyframe delays in the cloned document
-      const style = clonedDoc.createElement('style');
-      style.innerHTML = `
-        * {
-          animation: none !important;
-          transition: none !important;
-          transition-duration: 0s !important;
-          animation-duration: 0s !important;
-        }
-      `;
-      clonedDoc.head.appendChild(style);
-
-      const clone = clonedDoc.querySelector('.cv-document') as HTMLElement | null;
-      if (clone) {
-        // Remove the CSS mask that hides content in the page-gap zones
-        clone.style.maskImage       = 'none';
-        clone.style.webkitMaskImage = 'none';
-        clone.style.height          = `${totalContentH}px`;
-        clone.style.overflow        = 'visible';
-      }
-
-      // Hide editor-only UI so it doesn't appear in the PDF
-      const editorSelectors = [
-        '.no-print',
-        '[data-no-print]',
-        '.cv-drag-handle',
-        '.cv-drag-overlay',
-        '.inline-add-section-button',
-        '.section-hover-controls',
-        '.cv-editor-only',
-        '.cv-section-drag-overlay',
-        '.cv-drop-zone-indicator',
-      ];
-      clonedDoc.querySelectorAll(editorSelectors.join(',')).forEach(el => {
-        (el as HTMLElement).style.display = 'none';
-      });
-
-      // Strip contenteditable so html2canvas renders clean text
-      clonedDoc.querySelectorAll('[contenteditable]').forEach(el => {
-        el.removeAttribute('contenteditable');
-      });
-    },
-  });
-
-  // ── 5. Build jsPDF document, one page at a time ───────────────────────────
+  // Create the jsPDF instance
   const doc = new jsPDF({
     orientation: 'portrait',
-    unit: 'mm',
-    format: [dims.widthMm, dims.heightMm],
+    unit: 'px',
+    format: [dims.widthPx, dims.heightPx],
+    hotfixes: ['px_scaling'],
   });
 
-  // px-to-mm conversion factor for the captured canvas
-  const canvasWidthPx = cvDoc.offsetWidth * CAPTURE_SCALE;
-  const pxToMm = dims.widthMm / canvasWidthPx;
-  const pageHeightMm = pageHeightPx * CAPTURE_SCALE * pxToMm;
+  // Create a hidden container
+  const container = document.createElement('div');
+  container.style.position = 'absolute';
+  container.style.top = '-9999px';
+  container.style.left = '-9999px';
+  container.style.width = `${dims.widthPx}px`;
+  // Important: allow height to be auto so content dictates it, but force width
+  document.body.appendChild(container);
 
-  for (let page = 0; page < totalPages; page++) {
-    if (page > 0) doc.addPage();
+  // Clone the CV document
+  const clone = cvDoc.cloneNode(true) as HTMLElement;
+  
+  // Clean up editor UI and editable attributes
+  const editorSelectors = [
+    '.no-print', '[data-no-print]', '.cv-drag-handle', '.cv-editor-only', 
+    '.cv-page-visualizer', '.cv-drop-zone-indicator', '.section-hover-controls'
+  ];
+  clone.querySelectorAll(editorSelectors.join(',')).forEach(el => {
+    (el as HTMLElement).style.display = 'none';
+  });
+  clone.querySelectorAll('[contenteditable]').forEach(el => {
+    el.removeAttribute('contenteditable');
+  });
 
-    // Source Y in the full canvas (each slot = page + gap, we only take the page part)
-    const srcY = page * slotHeightPx * CAPTURE_SCALE;
-    const srcH = pageHeightPx * CAPTURE_SCALE;
+  // Force dimensions and layout on the clone
+  clone.style.width = `${dims.widthPx}px`;
+  clone.style.height = 'auto';
+  clone.style.transform = 'none';
+  clone.style.boxShadow = 'none';
+  clone.style.margin = '0';
+  clone.style.gap = '0'; // Remove page gaps for continuous rendering
+  clone.style.overflow = 'visible';
 
-    if (srcY >= fullCanvas.height) break; // no more content
-    const actualSrcH = Math.min(srcH, fullCanvas.height - srcY);
-    if (actualSrcH <= 0) break;
+  // FIX: Pre-process SVGs (like Lucide icons) to avoid html2canvas SVG parsing errors
+  // We inline all computed styles into the SVG attributes to ensure styling remains intact 
+  // without external stylesheet dependencies.
+  const svgs = clone.querySelectorAll('svg');
+  svgs.forEach((svg) => {
+    const originalSvg = cvDoc.querySelector(`svg[class*="${svg.classList[0]}"]`) || svg;
+    const computedStyle = window.getComputedStyle(originalSvg);
+    const color = computedStyle.color || '#000000';
+    const width = svg.getAttribute('width') || computedStyle.width || '16px';
+    const height = svg.getAttribute('height') || computedStyle.height || '16px';
 
-    // Crop this page out of the full canvas
-    const pageCanvas = document.createElement('canvas');
-    pageCanvas.width  = canvasWidthPx;
-    pageCanvas.height = srcH;
+    svg.setAttribute('width', width);
+    svg.setAttribute('height', height);
+    svg.setAttribute('stroke', computedStyle.stroke);
+    svg.setAttribute('fill', computedStyle.fill);
+    svg.setAttribute('stroke-width', computedStyle.strokeWidth);
+    
+    // Replace currentColor with actual computed color
+    const svgString = new XMLSerializer().serializeToString(svg)
+      .replace(/currentColor/g, color);
+      
+    // Create an image to replace the SVG
+    const img = document.createElement('img');
+    img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgString)}`;
+    img.style.width = width;
+    img.style.height = height;
+    img.style.display = 'inline-block';
+    img.style.verticalAlign = 'middle';
+    img.className = svg.className.baseVal || '';
+    
+    if (svg.parentNode) {
+      svg.parentNode.replaceChild(img, svg);
+    }
+  });
 
-    const ctx = pageCanvas.getContext('2d')!;
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
-    ctx.drawImage(
-      fullCanvas,
-      0, srcY, canvasWidthPx, actualSrcH,  // source rect
-      0, 0,   canvasWidthPx, actualSrcH    // dest rect (top of page canvas)
-    );
+  container.appendChild(clone);
 
-    const imgData = pageCanvas.toDataURL('image/jpeg', quality);
-    doc.addImage(imgData, 'JPEG', 0, 0, dims.widthMm, Math.min(dims.heightMm, pageHeightMm));
+  try {
+    // Generate the PDF directly, parsing the DOM to keep text selectable
+    await doc.html(clone, {
+      x: 0,
+      y: 0,
+      width: dims.widthPx,
+      windowWidth: dims.widthPx,
+      autoPaging: 'text',
+    });
+    doc.save(filename);
+  } catch (error) {
+    console.error('Error generating PDF:', error);
+  } finally {
+    document.body.removeChild(container);
   }
-
-  doc.save(filename);
 }

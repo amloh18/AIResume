@@ -2597,7 +2597,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                             {(!jobDetails?.status || !['applied', 'interview', 'offer', 'rejected'].includes(jobDetails.status)) && journey.status !== 'completed' && (
                               <motion.button
                                 onClick={() => {
-                                  // Navigate to resume-enhancer in journey mode
+                                  // Navigate to cv-builder-pro in journey mode
                                   const params = new URLSearchParams();
                                   params.set('mode', 'journey');
                                   params.set('journeyId', journey.id);
@@ -2733,7 +2733,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                           {/* Improve Score Button */}
                           <motion.button
                             onClick={() => {
-                              // Navigate to resume-enhancer step 3 with CV loaded
+                              // Navigate to cv-builder-pro step 3 with CV loaded
                               const params = new URLSearchParams();
                               params.set('mode', 'journey');
                               params.set('journeyId', journey.id);
@@ -2848,7 +2848,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                                       openPaymentModal({ preselectedPlanKey: 'pro_monthly', triggerContext: 'cover-letter-edit' });
                                       return;
                                   }
-                                  // Navigate to resume-enhancer in edit-cover-letter mode
+                                  // Navigate to cv-builder-pro in edit-cover-letter mode
                                   const params = new URLSearchParams();
                                   params.set('mode', 'edit-cover-letter');
                                   params.set('journeyId', journey.id);

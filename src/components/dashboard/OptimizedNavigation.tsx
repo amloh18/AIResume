@@ -275,7 +275,7 @@ const OptimizedNavigation: React.FC = () => {
       'jobs-dashboard': '/dashboard/jobs',
       'tracker': '/dashboard/tracker',
       'settings': '/dashboard/settings',
-      'resume-enhancer': '/editor',
+      'cv-builder-pro': '/editor',
       'cover-letter-generator': '/editor?tab=cover-letters',
       'interview-coach': '/dashboard/interview',
       'linkedin-enhancer': '/linkedin-enhancer',
@@ -344,7 +344,7 @@ const OptimizedNavigation: React.FC = () => {
 
   const toolSections = [
     {
-      id: 'resume-enhancer',
+      id: 'cv-builder-pro',
       name: 'Editor',
       icon: Target,
       description: 'AI CV optimization',
