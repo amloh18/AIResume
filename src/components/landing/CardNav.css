@@ -20,7 +20,7 @@
   display: block;
   height: 70px;
   padding: 0;
-  background-color: rgba(14, 18, 11, 0.45); /* Highly translucent backdrop */
+  background-color: rgba(14, 18, 11, 0.92); /* Highly opaque backdrop to prevent text bleed */
   backdrop-filter: blur(35px) saturate(180%); /* Enhanced blur and dynamic color saturation */
   -webkit-backdrop-filter: blur(35px) saturate(180%);
   border: 2px solid rgba(255, 255, 255, 0.12);
@@ -35,7 +35,7 @@
   overflow: hidden;
   border-radius: 35px;
   height: 520px; /* Expand navbar container height directly to enclose submenu flow with more items */
-  background-color: rgba(14, 18, 11, 0.75); /* Smooth translucent depth expansion */
+  background-color: rgba(14, 18, 11, 0.98); /* Solid depth expansion */
   border-color: rgba(255, 255, 255, 0.18); /* Remove neon border, match normal border opacity */
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
 }
@@ -142,7 +142,7 @@
   overflow: visible;
   border-radius: 35px;
   height: 480px; /* Expand navbar container height directly to enclose submenu flow */
-  background-color: rgba(20, 24, 16, 0.98);
+  background-color: rgba(20, 24, 16, 0.99);
   border-color: rgba(129, 255, 0, 0.45);
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
 }
