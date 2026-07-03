@@ -6,6 +6,7 @@
   width: 95%;
   max-width: 1023px;
   z-index: 99999; /* Highest z-index to overlay video players, modal portals, and animations */
+  isolation: isolate; /* Form an independent stacking context so z-index always wins */
   box-sizing: border-box;
   transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease;
 }
@@ -31,14 +32,7 @@
   z-index: 10;
 }
 
-.card-nav-container.submenu-open .card-nav {
-  overflow: hidden;
-  border-radius: 35px;
-  height: 520px; /* Expand navbar container height directly to enclose submenu flow with more items */
-  background-color: rgba(14, 18, 11, 0.98); /* Solid depth expansion */
-  border-color: rgba(255, 255, 255, 0.18); /* Remove neon border, match normal border opacity */
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
-}
+
 
 .card-nav-content {
   display: flex;
@@ -143,7 +137,7 @@
   border-radius: 35px;
   height: 480px; /* Expand navbar container height directly to enclose submenu flow */
   background-color: rgba(20, 24, 16, 0.99);
-  border-color: rgba(129, 255, 0, 0.45);
+  border-color: rgba(255, 255, 255, 0.2); /* Subtle white border — no neon green */
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
 }
 
