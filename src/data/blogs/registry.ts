@@ -14,6 +14,9 @@ export const ARTICLE_SLUGS = [
   'professional-summary-examples',
   'semantic-keywords-tech-resumes',
   'modern-cv-editor-platform-concepts',
+  'primary-cv-method',
+  'ai-cover-letter-generator-guide',
+  'career-gap-resume-guide',
 ] as const;
 
 export type ArticleSlug = (typeof ARTICLE_SLUGS)[number];
@@ -31,6 +34,9 @@ import article08 from './08-tailoring-resume-job-description.json';
 import article09 from './09-professional-summary-examples.json';
 import article10 from './10-semantic-keywords-tech-resumes.json';
 import article11 from './11-modern-cv-editor-platform-concepts.json';
+import article12 from './12-primary-cv-method.json';
+import article13 from './13-ai-cover-letter-generator-guide.json';
+import article14 from './14-career-gap-resume-guide.json';
 
 const ARTICLE_REGISTRY: Record<ArticleSlug, BlogArticle> = {
   'why-cvcircle-beats-cakecv': article01,
@@ -44,6 +50,9 @@ const ARTICLE_REGISTRY: Record<ArticleSlug, BlogArticle> = {
   'professional-summary-examples': article09,
   'semantic-keywords-tech-resumes': article10,
   'modern-cv-editor-platform-concepts': article11,
+  'primary-cv-method': article12,
+  'ai-cover-letter-generator-guide': article13,
+  'career-gap-resume-guide': article14,
 };
 
 /**

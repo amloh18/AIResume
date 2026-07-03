@@ -117,7 +117,7 @@ const ProductVideo: React.FC<ProductVideoProps> = ({
       <div className="max-w-7xl mx-auto px-4 tablet:px-6 desktop:px-8">
         <div className="text-center mb-12">
           <motion.h2 
-            className="text-4xl font-bold text-gray-900 mb-4"
+            className="text-display font-bold text-gray-900 mb-4"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
@@ -125,7 +125,7 @@ const ProductVideo: React.FC<ProductVideoProps> = ({
             {title}
           </motion.h2>
           <motion.p 
-            className="text-xl text-gray-600 max-w-3xl mx-auto"
+            className="text-h3 text-gray-600 max-w-3xl mx-auto"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
@@ -157,8 +157,8 @@ const ProductVideo: React.FC<ProductVideoProps> = ({
                   >
                     <Play className="w-12 h-12 text-white" />
                   </motion.div>
-                  <h3 className="text-3xl font-bold text-white mb-4">Product Demo Coming Soon</h3>
-                  <p className="text-blue-100 text-lg mb-6">
+                  <h3 className="text-h1 font-bold text-white mb-4">Product Demo Coming Soon</h3>
+                  <p className="text-blue-100 text-h3 mb-6">
                     We're creating an amazing video to show you how CV Circle works. 
                     In the meantime, try our platform for free!
                   </p>
@@ -232,7 +232,7 @@ const ProductVideo: React.FC<ProductVideoProps> = ({
 
                 {/* Progress Bar */}
                 <div className="flex-1 flex items-center space-x-2">
-                  <span className="text-sm">{formatTime(currentTime)}</span>
+                  <span className="text-small">{formatTime(currentTime)}</span>
                   <input
                     type="range"
                     min="0"
@@ -241,7 +241,7 @@ const ProductVideo: React.FC<ProductVideoProps> = ({
                     onChange={handleSeek}
                     className="flex-1 h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer slider"
                   />
-                  <span className="text-sm">{formatTime(duration)}</span>
+                  <span className="text-small">{formatTime(duration)}</span>
                 </div>
 
                 {/* Volume Button */}
@@ -277,7 +277,7 @@ const ProductVideo: React.FC<ProductVideoProps> = ({
                 <RotateCcw className="w-6 h-6 text-blue-600" />
               </div>
               <h3 className="font-semibold text-gray-900 mb-2">Quick Setup</h3>
-              <p className="text-gray-600 text-sm">Get started in under 2 minutes</p>
+              <p className="text-gray-600 text-small">Get started in under 2 minutes</p>
             </motion.div>
 
             <motion.div 
@@ -290,7 +290,7 @@ const ProductVideo: React.FC<ProductVideoProps> = ({
                 <Play className="w-6 h-6 text-green-600" />
               </div>
               <h3 className="font-semibold text-gray-900 mb-2">AI-Powered</h3>
-              <p className="text-gray-600 text-sm">Smart optimization and suggestions</p>
+              <p className="text-gray-600 text-small">Smart optimization and suggestions</p>
             </motion.div>
 
             <motion.div 
@@ -303,7 +303,7 @@ const ProductVideo: React.FC<ProductVideoProps> = ({
                 <Maximize className="w-6 h-6 text-purple-600" />
               </div>
               <h3 className="font-semibold text-gray-900 mb-2">Professional Results</h3>
-              <p className="text-gray-600 text-sm">ATS-optimized and visually appealing</p>
+              <p className="text-gray-600 text-small">ATS-optimized and visually appealing</p>
             </motion.div>
           </div>
         </motion.div>

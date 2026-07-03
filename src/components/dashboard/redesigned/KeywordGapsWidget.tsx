@@ -41,7 +41,7 @@ export default function KeywordGapsWidget({ keywords = defaultKeywords, loading 
             className="group flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 hover:border-[#83d60d]/50 transition-all cursor-pointer"
           >
             <Tag size={12} className="text-gray-400 group-hover:text-[#83d60d]" />
-            <span className="text-xs font-bold text-gray-600 dark:text-gray-300">{kw.name}</span>
+            <span className="text-small font-bold text-gray-600 dark:text-gray-300">{kw.name}</span>
             <span className="text-[9px] font-black text-gray-300 dark:text-white/20 uppercase">{kw.category}</span>
             <div className="w-4 h-4 rounded-full bg-white dark:bg-white/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
               <Plus size={10} className="text-[#83d60d]" />

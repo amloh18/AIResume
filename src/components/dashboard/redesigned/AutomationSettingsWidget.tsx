@@ -30,7 +30,7 @@ export default function AutomationSettingsWidget({ loading = false }: { loading?
               <ToggleRight size={20} />
             </div>
             <div>
-              <p className="text-xs font-black text-gray-800 dark:text-gray-200 uppercase tracking-widest">Auto Apply</p>
+              <p className="text-small font-black text-gray-800 dark:text-gray-200 uppercase tracking-widest">Auto Apply</p>
               <p className="text-[10px] text-gray-500 font-medium">Automatic submission</p>
             </div>
           </div>
@@ -55,7 +55,7 @@ export default function AutomationSettingsWidget({ loading = false }: { loading?
               <Sliders size={14} className="text-gray-400" />
               <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Match Threshold</span>
             </div>
-            <span className="text-xs font-black text-[#83d60d]">{matchThreshold}%</span>
+            <span className="text-small font-black text-[#83d60d]">{matchThreshold}%</span>
           </div>
           <input 
             type="range" 

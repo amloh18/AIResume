@@ -83,11 +83,11 @@ const InterviewCoach: React.FC<InterviewCoachProps> = ({
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold flex items-center gap-2">
+          <h3 className="text-h3 font-semibold flex items-center gap-2">
             <MessageSquare className="w-5 h-5" />
             Interview Coach
           </h3>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
+          <p className="text-small text-gray-600 dark:text-gray-400">
             AI-generated questions for {jobTitle} at {company}
           </p>
         </div>
@@ -126,7 +126,7 @@ const InterviewCoach: React.FC<InterviewCoachProps> = ({
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${getCategoryColor(q.category)}`}>
+                      <span className={`px-2 py-1 rounded text-small font-medium ${getCategoryColor(q.category)}`}>
                         {q.category}
                       </span>
                     </div>
@@ -142,11 +142,11 @@ const InterviewCoach: React.FC<InterviewCoachProps> = ({
                         {/* Suggested Answer */}
                         {q.suggestedAnswer && (
                           <div>
-                            <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1">
+                            <p className="text-small font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1">
                               <MessageSquare className="w-3 h-3" />
                               Suggested Answer:
                             </p>
-                            <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                            <p className="text-small text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
                               {q.suggestedAnswer}
                             </p>
                           </div>
@@ -155,10 +155,10 @@ const InterviewCoach: React.FC<InterviewCoachProps> = ({
                         {/* Key Points */}
                         {keyPoints.length > 0 && (
                           <div>
-                            <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            <p className="text-small font-medium text-gray-700 dark:text-gray-300 mb-1">
                               Suggested talking points:
                             </p>
-                            <ul className="list-disc list-inside space-y-1 text-sm text-gray-600 dark:text-gray-400">
+                            <ul className="list-disc list-inside space-y-1 text-small text-gray-600 dark:text-gray-400">
                               {keyPoints.map((point, i) => (
                                 <li key={i}>{point}</li>
                               ))}
@@ -169,10 +169,10 @@ const InterviewCoach: React.FC<InterviewCoachProps> = ({
                         {/* Pain Points */}
                         {q.painPoints && q.painPoints.length > 0 && (
                           <div>
-                            <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                            <p className="text-small font-semibold text-gray-700 dark:text-gray-300 mb-2">
                               ⚠️ Potential Weaknesses:
                             </p>
-                            <ul className="list-disc list-inside space-y-1 text-sm text-gray-600 dark:text-gray-400">
+                            <ul className="list-disc list-inside space-y-1 text-small text-gray-600 dark:text-gray-400">
                               {q.painPoints.map((point, i) => (
                                 <li key={i}>{point}</li>
                               ))}
@@ -183,11 +183,11 @@ const InterviewCoach: React.FC<InterviewCoachProps> = ({
                         {/* Improvement Tips */}
                         {q.improvementTips && q.improvementTips.length > 0 && (
                           <div>
-                            <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1">
+                            <p className="text-small font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1">
                               <Lightbulb className="w-3 h-3" />
                               How to Improve:
                             </p>
-                            <ul className="list-disc list-inside space-y-1 text-sm text-gray-600 dark:text-gray-400">
+                            <ul className="list-disc list-inside space-y-1 text-small text-gray-600 dark:text-gray-400">
                               {q.improvementTips.map((tip, i) => (
                                 <li key={i}>{tip}</li>
                               ))}
@@ -198,11 +198,11 @@ const InterviewCoach: React.FC<InterviewCoachProps> = ({
                         {/* Star Example */}
                         {q.starExample && (
                           <div>
-                            <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1">
+                            <p className="text-small font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1">
                               <Sparkles className="w-3 h-3" />
                               Star Example Answer:
                             </p>
-                            <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                            <p className="text-small text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
                               {q.starExample}
                             </p>
                           </div>
@@ -211,7 +211,7 @@ const InterviewCoach: React.FC<InterviewCoachProps> = ({
                         {/* Why Asked */}
                         <div className="flex items-start gap-2 p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded">
                           <Lightbulb className="w-4 h-4 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
-                          <p className="text-xs text-yellow-800 dark:text-yellow-300">
+                          <p className="text-small text-yellow-800 dark:text-yellow-300">
                             <strong>Why asked:</strong> {q.whyAsked}
                           </p>
                         </div>
@@ -220,7 +220,7 @@ const InterviewCoach: React.FC<InterviewCoachProps> = ({
                   </div>
                   <button
                     onClick={() => setExpandedQuestion(expandedQuestion === index ? null : index)}
-                    className="text-sm text-blue-600 dark:text-blue-400 hover:underline flex-shrink-0 flex items-center gap-1"
+                    className="text-small text-blue-600 dark:text-blue-400 hover:underline flex-shrink-0 flex items-center gap-1"
                   >
                     {isExpanded ? (
                       <>

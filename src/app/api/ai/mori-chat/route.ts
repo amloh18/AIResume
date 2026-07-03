@@ -9,6 +9,7 @@ import CV from '@/models/CV';
 import { isFreeTierPlan } from '@/lib/utils/subscription-helpers';
 import crypto from 'crypto';
 import { ANALYSIS_AGENT_PROMPT, CV_TAILOR_AGENT_PROMPT } from '@/lib/prompts/promptTemplates';
+import { ActivityLogService } from '@/lib/services/activityLogService';
 
 function cleanAndParseJSON(content: string): any {
   let cleaned = content.trim();
@@ -334,6 +335,34 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Failed to create or update chat session' }, { status: 500 });
       }
 
+      // Log user action & AI activity
+      await ActivityLogService.logUserAction({
+        userId: session.user.id,
+        userEmail: session.user.email,
+        action: 'mori_chat_message',
+        resourceType: 'cv',
+        resourceId: cvId,
+        status: 'success',
+        metadata: {
+          chatId: chatRecord._id.toString(),
+          command: 'optimize_my_cv',
+          hasCvUpdate: true
+        }
+      });
+
+      await ActivityLogService.logAI({
+        userId: session.user.id,
+        userEmail: session.user.email,
+        model: 'gemini-1.5-flash',
+        tokensUsed: 0,
+        cost: 0,
+        prompt: 'Optimize my CV command',
+        responseLength: cleanMessage.length,
+        action: 'optimize_cv_chain',
+        status: 'success',
+        endpoint: '/api/ai/mori-chat'
+      });
+
       return NextResponse.json({
         chatId: chatRecord._id,
         title: chatRecord.title,
@@ -389,7 +418,9 @@ Strict Rules for CV updates:
   "updatedCV": <Full CV object structure, or null/omitted if no updates>
 }
 10. Ensure the response conforms strictly to this JSON format and is valid JSON.
-11. Selection Boundary Rule: Do NOT restrict your modifications only to the 'User Selection Context' if the user's request asks to update other sections, multiple sections, or the entire CV. The selection context is merely a focus guide. If they ask to update the whole CV or sections different from the selection, execute the requested broader updates.`;
+11. Selection Boundary Rule: Do NOT restrict your modifications only to the 'User Selection Context' if the user's request asks to update other sections, multiple sections, or the entire CV. The selection context is merely a focus guide. If they ask to update the whole CV or sections different from the selection, execute the requested broader updates.
+12. Section Target Protection Rule: Under NO circumstances should you modify, add, or delete items in other, unrelated CV sections if the selection path points to a specific field or section index (e.g. basics.summary, work[i], education[j], projects[k]). If a specific section path is provided or targeted, strictly limit all your updates to that targeted field/section index only, unless the user's text prompt explicitly asks you to update multiple sections or the entire CV.
+13. Strict Targeting Priorities: Prioritize applying edits directly to the exact field provided in 'User Selection Context' (e.g. work[i].highlights[j]). Never introduce random changes in unrelated sections.`;
 
     const formattedMessages = messages.map((m: any) => `${m.role.toUpperCase()}: ${m.content}`).join('\n\n');
     const prompt = `Chat History:\n${formattedMessages}`;
@@ -517,6 +548,36 @@ Strict Rules for CV updates:
       }
     }
 
+    // Log user action & AI activity
+    await ActivityLogService.logUserAction({
+      userId: session.user.id,
+      userEmail: session.user.email,
+      action: 'mori_chat_message',
+      resourceType: 'cv',
+      resourceId: cvId,
+      status: 'success',
+      metadata: {
+        chatId: chatRecord._id.toString(),
+        messageLength: latestMessage.content.length,
+        hasSelection: !!selection,
+        selectionPath: selection?.path,
+        hasCvUpdate: !!finalCvData
+      }
+    });
+
+    await ActivityLogService.logAI({
+      userId: session.user.id,
+      userEmail: session.user.email,
+      model: 'gemini-1.5-flash',
+      tokensUsed: 0,
+      cost: 0,
+      prompt: latestMessage.content,
+      responseLength: cleanMessage.length,
+      action: 'mori_chat',
+      status: 'success',
+      endpoint: '/api/ai/mori-chat'
+    });
+
     return NextResponse.json({
       chatId: chatRecord._id,
       title: chatRecord.title,
@@ -528,6 +589,19 @@ Strict Rules for CV updates:
 
   } catch (error: any) {
     console.error('Mori Chat Error:', error);
+    try {
+      await ActivityLogService.logUserAction({
+        userId: session?.user?.id,
+        userEmail: session?.user?.email,
+        action: 'mori_chat_message',
+        resourceType: 'cv',
+        resourceId: cvId,
+        status: 'failed',
+        metadata: {
+          error: error.message
+        }
+      });
+    } catch (_) {}
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

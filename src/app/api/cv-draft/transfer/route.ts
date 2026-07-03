@@ -170,7 +170,7 @@ export async function POST(request: NextRequest) {
         isPublic: false,
         viewCount: 0,
         downloadCount: 0,
-        createdVia: 'resume-enhancer',
+        createdVia: 'cv-builder-pro',
         transferredFromDraft: true,
         draftId: draft._id.toString(),
         // Store role context in metadata for future use

@@ -17,6 +17,91 @@ const TYPOGRAPHY = {
 };
 
 // ==========================================
+// ENTRY HEADER — Smart cascade layout
+// Title · Subtitle · Date on one row.
+// When title fills width → subtitle+date wrap to next line.
+// When subtitle also fills width → date wraps again.
+// No separator words (at, from, by, |).
+// Words only break internally if no whitespace available.
+// Two-column split snippets bypass this entirely (date is its own column).
+// ==========================================
+const ENTRY_HEADER_STYLES = {
+  // Outer wrapper: flex-wrap row in wide mode, flex-col in narrow
+  row: 'flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5 w-full',
+  col: 'flex flex-col gap-0.5 w-full',
+  // Title: does not shrink unnecessarily, wraps internally only when exceeding container width.
+  // We force direct children inline so the comma flows naturally with the title text.
+  titleWrap: 'shrink-0 max-w-full overflow-wrap-anywhere [&>*]:inline',
+  // Subtitle: does not shrink, wraps internally only when exceeding container width
+  subtitleWrap: 'shrink-0 max-w-full overflow-wrap-anywhere',
+  // Date: never shrinks, always pushed to next line if no room (ml-auto in row mode)
+  dateWrap: 'shrink-0 ml-auto whitespace-nowrap',
+  // In narrow/sidebar mode date is just inline
+  dateWrapNarrow: 'shrink-0 whitespace-nowrap',
+} as const;
+
+// Inline style for overflow-wrap since Tailwind doesn't have it natively
+const OVERFLOW_WRAP_ANYWHERE: React.CSSProperties = { overflowWrap: 'anywhere', wordBreak: 'normal' };
+
+interface EntryHeaderProps {
+  isNarrow?: boolean;
+  title?: React.ReactNode;
+  subtitle?: React.ReactNode;
+  date?: React.ReactNode;
+  titleClass?: string;
+  subtitleClass?: string;
+  dateClass?: string;
+}
+
+const EntryHeader: React.FC<EntryHeaderProps> = ({
+  isNarrow = false,
+  title,
+  subtitle,
+  date,
+  titleClass = '',
+  subtitleClass = '',
+  dateClass = '',
+}) => {
+  if (isNarrow) {
+    // Narrow mode (sidebar/column): always stacked
+    return (
+      <div className="flex flex-col gap-0.5 w-full">
+        {title && <div className={`${ENTRY_HEADER_STYLES.titleWrap} ${titleClass}`} style={OVERFLOW_WRAP_ANYWHERE}>{title}</div>}
+        {subtitle && <div className={`${ENTRY_HEADER_STYLES.subtitleWrap} ${subtitleClass}`} style={OVERFLOW_WRAP_ANYWHERE}>{subtitle}</div>}
+        {date && <div className={`${ENTRY_HEADER_STYLES.dateWrapNarrow} ${dateClass}`}>{date}</div>}
+      </div>
+    );
+  }
+
+  // Wide mode: all on one flex-wrap row.
+  // The CSS flex-wrap handles the cascade automatically:
+  //   • Title + subtitle + date all try to fit on one line.
+  //   • Title does not grow, keeping subtitle close (separated by a comma).
+  //   • When line is full, subtitle+date wrap to next line together.
+  //   • If subtitle is also full-width, date wraps alone.
+  //   • ml-auto on date pushes it to the right end of whichever line it lands on.
+  // Wide mode: all on one flex-wrap row.
+  // We merge title and subtitle into a single inline container. This prevents them from being
+  // blockified as individual flex items, ensuring they flow and wrap together like a single text line.
+  return (
+    <div className={ENTRY_HEADER_STYLES.row}>
+      {(title || subtitle) && (
+        <div className="min-w-0 max-w-full overflow-wrap-anywhere [&_*]:inline" style={OVERFLOW_WRAP_ANYWHERE}>
+          {title && <span className={titleClass}>{title}</span>}
+          {title && subtitle && <span className="opacity-70 font-normal mr-1.5">,</span>}
+          {subtitle && <span className={subtitleClass}>{subtitle}</span>}
+        </div>
+      )}
+      {date && (
+        <div className={`${ENTRY_HEADER_STYLES.dateWrap} ${dateClass}`}>
+          {date}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ==========================================
 // TITLE STYLES REGISTRY
 // ==========================================
 export const getNetworkIcon = (network: string) => {
@@ -202,23 +287,11 @@ const flattenSkillItems = (rawSkills: any) => (
       label,
       category: group.category,
       rating: clampSkillRating(group.rating, 5 - (index % 3)),
+      pathSkills: group.pathSkills,
+      skillIndex: index
     }))
   )
 );
-
-const SkillsEditableOverlay = ({ groups, Editable, readOnly }: { groups: any[], Editable: any, readOnly?: boolean }) => {
-  if (readOnly || groups.length === 0 || !Editable) return null;
-  return (
-    <div className="flex flex-col gap-1 mt-2 p-1.5 border border-dashed border-gray-300/60 rounded bg-gray-50/30 opacity-30 hover:opacity-100 transition-opacity no-print">
-      {groups.map((g, i) => g.pathSkills && (
-        <div key={i} className="text-[11px] text-gray-500">
-          {groups.length > 1 && <span className="font-bold mr-1">{g.category}:</span>}
-          <Editable path={g.pathSkills} />
-        </div>
-      ))}
-    </div>
-  );
-};
 
 const SECTION_ICONS: any = {
   summary: User,
@@ -239,31 +312,31 @@ const SECTION_ICONS: any = {
 export const TITLE_STYLES: Record<string, React.FC<{ children: React.ReactNode; isDark: boolean; showIcons?: boolean; titleKey?: string }>> = {
   'standard': ({ children, isDark, showIcons, titleKey }) => {
     const Icon = showIcons && titleKey && SECTION_ICONS[titleKey] ? SECTION_ICONS[titleKey] : null;
-    return <h3 className={`${TYPOGRAPHY.sectionTitle} mb-3 border-b-[1.5px] pb-1.5 cv-keep-with-next ${isDark ? 'text-white border-slate-700' : 'cv-accent-border text-gray-900'} flex items-center gap-2`}>{Icon && <Icon size={16} className="cv-accent-text" />}{children}</h3>;
+    return <h3 className={`${TYPOGRAPHY.sectionTitle} mb-1.5 border-b-[1.5px] pb-1.5 cv-keep-with-next ${isDark ? 'text-white border-slate-700' : 'cv-accent-border text-gray-900'} flex items-center gap-2`}>{Icon && <Icon size={16} className="cv-accent-text" />}{children}</h3>;
   },
   'minimal': ({ children, isDark, showIcons, titleKey }) => {
     const Icon = showIcons && titleKey && SECTION_ICONS[titleKey] ? SECTION_ICONS[titleKey] : null;
-    return <h3 className={`${TYPOGRAPHY.sectionTitle} mb-3 cv-keep-with-next ${isDark ? 'text-white' : 'cv-accent-text'} flex items-center gap-2`}>{Icon && <Icon size={16} />}{children}</h3>;
+    return <h3 className={`${TYPOGRAPHY.sectionTitle} mb-1.5 cv-keep-with-next ${isDark ? 'text-white' : 'cv-accent-text'} flex items-center gap-2`}>{Icon && <Icon size={16} />}{children}</h3>;
   },
   'accent': ({ children, isDark, showIcons, titleKey }) => {
     const Icon = showIcons && titleKey && SECTION_ICONS[titleKey] ? SECTION_ICONS[titleKey] : null;
-    return <h3 className={`${TYPOGRAPHY.sectionTitle} mb-3 border-b-[1.5px] pb-1.5 cv-keep-with-next ${isDark ? 'text-white border-slate-700' : 'text-gray-900 border-gray-900'} flex items-center gap-2`}>{Icon && <Icon size={16} className="cv-accent-text" />}{children}</h3>;
+    return <h3 className={`${TYPOGRAPHY.sectionTitle} mb-1.5 border-b-[1.5px] pb-1.5 cv-keep-with-next ${isDark ? 'text-white border-slate-700' : 'text-gray-900 border-gray-900'} flex items-center gap-2`}>{Icon && <Icon size={16} className="cv-accent-text" />}{children}</h3>;
   },
   'boxed': ({ children, isDark, showIcons, titleKey }) => {
     const Icon = showIcons && titleKey && SECTION_ICONS[titleKey] ? SECTION_ICONS[titleKey] : null;
-    return <div className={`inline-flex items-center gap-2 border px-2 py-1 mb-3 ${TYPOGRAPHY.date} cv-keep-with-next ${isDark ? 'border-slate-500 text-slate-200' : 'border-gray-800 text-gray-800'}`}>{Icon && <Icon size={14} />}{children}</div>;
+    return <div className={`inline-flex items-center gap-2 border px-2 py-1 mb-1.5 ${TYPOGRAPHY.date} cv-keep-with-next ${isDark ? 'border-slate-500 text-slate-200' : 'border-gray-800 text-gray-800'}`}>{Icon && <Icon size={14} />}{children}</div>;
   },
   'sidebar-default': ({ children, isDark, showIcons, titleKey }) => {
     const Icon = showIcons && titleKey && SECTION_ICONS[titleKey] ? SECTION_ICONS[titleKey] : null;
-    return <h3 className={`${TYPOGRAPHY.sectionTitle} mb-2 border-b pb-1 cv-keep-with-next ${isDark ? 'text-slate-300 border-slate-600' : 'text-gray-800 border-gray-300'} flex items-center gap-2`}>{Icon && <Icon size={14} />}{children}</h3>;
+    return <h3 className={`${TYPOGRAPHY.sectionTitle} mb-1 border-b pb-1 cv-keep-with-next ${isDark ? 'text-slate-300 border-slate-600' : 'text-gray-800 border-gray-300'} flex items-center gap-2`}>{Icon && <Icon size={14} />}{children}</h3>;
   },
   'designer': ({ children, isDark, showIcons, titleKey }) => {
     const Icon = showIcons && titleKey && SECTION_ICONS[titleKey] ? SECTION_ICONS[titleKey] : null;
-    return <h3 className={`${TYPOGRAPHY.sectionTitle} mb-4 cv-keep-with-next ${isDark ? 'text-white' : 'text-gray-800'} flex items-center gap-2`}>{Icon && <Icon size={16} className="cv-accent-text" />}{children}</h3>;
+    return <h3 className={`${TYPOGRAPHY.sectionTitle} mb-2 cv-keep-with-next ${isDark ? 'text-white' : 'text-gray-800'} flex items-center gap-2`}>{Icon && <Icon size={16} className="cv-accent-text" />}{children}</h3>;
   },
   'lines': ({ children, isDark, showIcons, titleKey }) => {
     const Icon = showIcons && titleKey && SECTION_ICONS[titleKey] ? SECTION_ICONS[titleKey] : null;
-    return <div className="flex items-center gap-4 mb-4 cv-keep-with-next"><div className={`h-px flex-1 ${isDark ? 'bg-slate-700' : 'bg-gray-300'}`}></div><h3 className={`${TYPOGRAPHY.sectionTitle} mb-0 ${isDark ? 'text-white' : 'text-gray-900'} flex items-center gap-2`}>{Icon && <Icon size={16} className="cv-accent-text" />}{children}</h3><div className={`h-px flex-1 ${isDark ? 'bg-slate-700' : 'bg-gray-300'}`}></div></div>;
+    return <div className="flex items-center gap-4 mb-2 cv-keep-with-next"><div className={`h-px flex-1 ${isDark ? 'bg-slate-700' : 'bg-gray-300'}`}></div><h3 className={`${TYPOGRAPHY.sectionTitle} mb-0 ${isDark ? 'text-white' : 'text-gray-900'} flex items-center gap-2`}>{Icon && <Icon size={16} className="cv-accent-text" />}{children}</h3><div className={`h-px flex-1 ${isDark ? 'bg-slate-700' : 'bg-gray-300'}`}></div></div>;
   },
 };
 
@@ -274,21 +347,20 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
   // === HEADERS (7) ===
   'header-minimal': { id: 'header-minimal', name: 'Minimal Center', category: 'Header', render: ({ data, Editable, zoneId, isDark, showIcons, design, layoutZones, Title, readOnly }: any) => {
     const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
-    const hasSidebarContact = layoutZones && Object.values(layoutZones).flat().some((block: any) => block?.type === 'sidebar-contact');
-    const align = design.headerAlign || 'center';
-    const alignClass = align === 'left' ? 'items-start text-left' : align === 'right' ? 'items-end text-right' : 'items-center text-center';
-    const justifyClass = align === 'left' ? 'justify-start' : align === 'right' ? 'justify-end' : 'justify-center';
+    const hasSidebarContact = design.splitContactInSidebar !== false && layoutZones && Object.values(layoutZones).flat().some((block: any) => block?.type === 'sidebar-contact');
+    const align = design.headerAlign || (isNarrow ? 'left' : 'center');
+    const alignClass = align === 'center' ? 'items-center text-center w-full' : (align === 'right' ? 'items-end text-right w-full' : 'items-start text-left w-full');
+    const justifyClass = align === 'center' ? 'justify-center' : (align === 'right' ? 'justify-end' : 'justify-start');
 
     return (
-      <div className={`flex ${isNarrow ? 'flex-col items-center text-center' : 'items-center'} gap-5 pb-4 border-b ${isDark ? 'border-slate-700 text-gray-300' : 'border-gray-200 text-gray-600'} snippet-anim cv-keep-with-next`}>
+      <div className={`flex flex-col snippet-anim w-full cv-keep-with-next gap-5 pb-4 border-b ${isNarrow ? alignClass : 'items-center'} ${isDark ? 'border-slate-700 text-gray-300' : 'border-gray-200 text-gray-600'}`}>
         <Title titleKey="header" overrideClass="hidden" />
-        {data?.basics?.showAvatar && <AvatarEditable data={data} sizeClass={isNarrow ? 'w-24 h-24 mb-3' : 'w-20 h-20'} shapeClass="rounded-full shadow-md" borderClass={isDark ? 'border-2 border-slate-700' : ''} readOnly={readOnly} />}
         <div className={`min-w-0 w-full flex flex-col ${alignClass}`}>
-          <h1 className={`${isNarrow ? TYPOGRAPHY.nameNarrow : TYPOGRAPHY.name} ${isDark ? 'text-white' : 'text-gray-900'} mb-1 uppercase tracking-widest`}><Editable path="basics.name" nowrap={!isNarrow} /></h1>
-          <h2 className={`${TYPOGRAPHY.role} ${isDark ? 'text-gray-400' : ''} mb-3`}><Editable path="basics.title" nowrap={!isNarrow} /></h2>
+          <h1 className={`${isNarrow ? TYPOGRAPHY.nameNarrow : TYPOGRAPHY.name} ${isDark ? 'text-white' : 'text-gray-900'} mb-1 uppercase tracking-widest pr-1`}><Editable path="basics.name" nowrap={!isNarrow} /></h1>
+          <h2 className={`${TYPOGRAPHY.role} ${isDark ? 'text-gray-400' : ''} mb-3 pr-1`}><Editable path="basics.title" nowrap={!isNarrow} /></h2>
           {!hasSidebarContact && (
-            <div className={`flex flex-wrap ${isNarrow ? 'flex-col gap-1.5 items-center' : `gap-x-4 gap-y-1.5 items-center ${justifyClass}`} ${TYPOGRAPHY.contact}`}>
-              <ContactLinks data={data} Editable={Editable} isNarrow={isNarrow} showIcons={showIcons} design={design} align={isNarrow ? 'justify-center' : justifyClass} />
+            <div className={`flex ${isNarrow ? 'flex-col gap-1.5' : 'flex-wrap gap-x-4 gap-y-1.5 items-center'} ${alignClass} ${TYPOGRAPHY.contact}`}>
+              <ContactLinks data={data} Editable={Editable} isNarrow={isNarrow} showIcons={showIcons} design={design} align={justifyClass} />
             </div>
           )}
         </div>
@@ -297,23 +369,24 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
   }},
   'header-split': { id: 'header-split', name: 'Split Modern', category: 'Header', render: ({ data, Editable, zoneId, isDark, showIcons, design, layoutZones, Title, readOnly }: any) => {
     const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
-    const hasSidebarContact = layoutZones && Object.values(layoutZones).flat().some((block: any) => block?.type === 'sidebar-contact');
+    const hasSidebarContact = design.splitContactInSidebar !== false && layoutZones && Object.values(layoutZones).flat().some((block: any) => block?.type === 'sidebar-contact');
     const align = design.headerAlign || 'left';
-    const alignClass = align === 'center' ? 'items-center text-center' : align === 'right' ? 'items-end text-right' : 'items-start text-left';
+    const alignClass = align === 'center' ? 'items-center text-center w-full' : (align === 'right' ? 'items-end text-right w-full' : 'items-start text-left w-full');
+    const justifyClass = align === 'center' ? 'justify-center' : (align === 'right' ? 'justify-end' : 'justify-start');
 
     return (
-      <div className={`flex ${isNarrow ? 'flex-col gap-4 text-center items-center' : 'justify-between items-end'} pb-4 border-b-[1.5px] ${isDark ? 'border-slate-600' : 'border-slate-800'} snippet-anim w-full cv-keep-with-next`}>
+      <div className={`flex ${isNarrow ? `flex-col gap-4 ${alignClass}` : 'justify-between items-center'} pb-5 border-b-[1.5px] ${isDark ? 'border-slate-600' : 'border-slate-200'} snippet-anim w-full cv-keep-with-next`}>
         <Title titleKey="header" overrideClass="hidden" />
-        <div className={`flex ${isNarrow ? 'flex-col text-center items-center' : 'items-center'} gap-4 min-w-0`}>
+        <div className={`flex ${isNarrow ? `flex-col ${alignClass}` : 'items-center'} gap-4 min-w-0 flex-1`}>
           {data?.basics?.showAvatar && <AvatarEditable data={data} sizeClass={isNarrow ? 'w-24 h-24' : 'w-16 h-16'} shapeClass="rounded-full shadow-md" readOnly={readOnly} />}
           <div className={`min-w-0 flex flex-col ${alignClass}`}>
-            <h1 className={`${isNarrow ? TYPOGRAPHY.nameNarrow : TYPOGRAPHY.name} ${isDark ? 'text-white' : 'text-slate-800'} mb-1.5`}><Editable path="basics.name" nowrap={!isNarrow} /></h1>
-            <h2 className={`${TYPOGRAPHY.role} ${isDark ? 'text-slate-400' : 'text-slate-600'}`}><Editable path="basics.title" nowrap={!isNarrow} /></h2>
+            <h1 className={`${isNarrow ? 'text-2xl' : 'text-3xl'} font-bold tracking-tight ${isDark ? 'text-white' : 'text-slate-800'} mb-1.5 pr-1`}><Editable path="basics.name" nowrap={!isNarrow} /></h1>
+            <h2 className={`text-xs font-semibold tracking-widest uppercase ${isDark ? 'text-emerald-400' : 'text-emerald-600'} pr-1`}><Editable path="basics.title" nowrap={!isNarrow} /></h2>
           </div>
         </div>
         {!hasSidebarContact && (
-          <div className={`${isNarrow ? 'text-center w-full mt-2 flex-col items-center' : 'text-right flex-row justify-end flex-wrap gap-x-4 gap-y-1.5 items-center'} ${TYPOGRAPHY.contact} flex ${isDark ? 'text-slate-300' : 'text-slate-600'} shrink-0 max-w-[60%]`}>
-            <ContactLinks data={data} Editable={Editable} isNarrow={isNarrow} showIcons={showIcons} design={design} align={isNarrow ? 'justify-center' : ''} />
+          <div className={`${isNarrow ? `text-left w-full mt-2 flex-col ${alignClass}` : 'text-right flex-row justify-end flex-wrap gap-x-4 gap-y-1.5 items-center'} ${TYPOGRAPHY.contact} flex ${isDark ? 'text-slate-300' : 'text-slate-600'} shrink-0 max-w-[50%] min-w-0`}>
+            <ContactLinks data={data} Editable={Editable} isNarrow={isNarrow} showIcons={showIcons} design={design} align={justifyClass} />
           </div>
         )}
       </div>
@@ -321,21 +394,21 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
   }},
   'header-avatar': { id: 'header-avatar', name: 'Avatar Left Bold', category: 'Header', render: ({ data, Editable, zoneId, isDark, showIcons, design, layoutZones, Title, readOnly }: any) => {
     const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
-    const hasSidebarContact = layoutZones && Object.values(layoutZones).flat().some((block: any) => block?.type === 'sidebar-contact');
+    const hasSidebarContact = design.splitContactInSidebar !== false && layoutZones && Object.values(layoutZones).flat().some((block: any) => block?.type === 'sidebar-contact');
     const align = design.headerAlign || 'left';
-    const alignClass = align === 'center' ? 'items-center text-center' : align === 'right' ? 'items-end text-right' : 'items-start text-left';
-    const justifyClass = align === 'center' ? 'justify-center' : align === 'right' ? 'justify-end' : 'justify-start';
+    const alignClass = align === 'center' ? 'items-center text-center w-full' : (align === 'right' ? 'items-end text-right w-full' : 'items-start text-left w-full');
+    const justifyClass = align === 'center' ? 'justify-center' : (align === 'right' ? 'justify-end' : 'justify-start');
 
     return (
-      <div className={`flex ${isNarrow ? 'flex-col items-center text-center' : 'items-center'} gap-5 pb-5 snippet-anim w-full cv-keep-with-next`}>
+      <div className={`flex ${isNarrow ? `flex-col ${alignClass}` : 'items-center'} gap-5 pb-5 snippet-anim w-full cv-keep-with-next`}>
         <Title titleKey="header" overrideClass="hidden" />
         {data?.basics?.showAvatar && <AvatarEditable data={data} sizeClass={isNarrow ? 'w-28 h-28' : 'w-24 h-24'} shapeClass="rounded-full shadow-lg" borderClass={isDark ? 'border-2 border-slate-700' : 'border-4 border-white'} readOnly={readOnly} />}
         <div className={`min-w-0 w-full flex flex-col ${alignClass}`}>
-          <h1 className={`${isNarrow ? TYPOGRAPHY.nameNarrow : TYPOGRAPHY.name} ${isDark ? 'text-white' : 'text-gray-900'} mb-1.5`}><Editable path="basics.name" nowrap={!isNarrow} /></h1>
-          <h2 className={`${TYPOGRAPHY.role} mb-3`}><Editable path="basics.title" nowrap={!isNarrow} /></h2>
+          <h1 className={`${isNarrow ? TYPOGRAPHY.nameNarrow : TYPOGRAPHY.name} ${isDark ? 'text-white' : 'text-gray-900'} mb-1.5 pr-1`}><Editable path="basics.name" nowrap={!isNarrow} /></h1>
+          <h2 className={`${TYPOGRAPHY.role} mb-3 pr-1`}><Editable path="basics.title" nowrap={!isNarrow} /></h2>
           {!hasSidebarContact && (
-            <div className={`flex flex-wrap ${isNarrow ? 'flex-col gap-1.5 justify-center items-center' : `gap-x-4 gap-y-1.5 items-center ${justifyClass}`} ${TYPOGRAPHY.contact} ${isDark ? 'text-gray-300' : 'text-gray-500'}`}>
-              <ContactLinks data={data} Editable={Editable} isNarrow={isNarrow} showIcons={showIcons} design={design} align={isNarrow ? 'justify-center' : justifyClass} />
+            <div className={`flex ${isNarrow ? `flex-col gap-1.5 ${alignClass}` : `flex-wrap gap-x-4 gap-y-1.5 items-center ${justifyClass}`} ${TYPOGRAPHY.contact} ${isDark ? 'text-gray-300' : 'text-gray-500'}`}>
+              <ContactLinks data={data} Editable={Editable} isNarrow={isNarrow} showIcons={showIcons} design={design} align={justifyClass} />
             </div>
           )}
         </div>
@@ -344,23 +417,23 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
   }},
   'header-boxed': { id: 'header-boxed', name: 'Elegant Box', category: 'Header', render: ({ data, Editable, zoneId, isDark, showIcons, design, layoutZones, Title, readOnly }: any) => {
     const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
-    const hasSidebarContact = layoutZones && Object.values(layoutZones).flat().some((block: any) => block?.type === 'sidebar-contact');
-    const align = design.headerAlign || 'center';
-    const alignClass = align === 'left' ? 'items-start text-left' : align === 'right' ? 'items-end text-right' : 'items-center text-center';
-    const justifyClass = align === 'left' ? 'justify-start' : align === 'right' ? 'justify-end' : 'justify-center';
+    const hasSidebarContact = design.splitContactInSidebar !== false && layoutZones && Object.values(layoutZones).flat().some((block: any) => block?.type === 'sidebar-contact');
+    const align = design.headerAlign || (isNarrow ? 'left' : 'center');
+    const alignClass = align === 'center' ? 'items-center text-center w-full' : (align === 'right' ? 'items-end text-right w-full' : 'items-start text-left w-full');
+    const justifyClass = align === 'center' ? 'justify-center' : (align === 'right' ? 'justify-end' : 'justify-start');
 
     return (
-      <div className={`flex ${isNarrow ? 'flex-col items-center text-center' : 'items-center text-left'} gap-5 pb-5 snippet-anim w-full cv-keep-with-next`}>
+      <div className={`flex ${isNarrow ? `flex-col ${alignClass}` : 'items-center text-left'} gap-5 pb-5 snippet-anim w-full cv-keep-with-next`}>
         <Title titleKey="header" overrideClass="hidden" />
         {data?.basics?.showAvatar && <AvatarEditable data={data} sizeClass={isNarrow ? 'w-28 h-28 mb-4' : 'w-24 h-24'} shapeClass="rounded-full shadow-xl" borderClass={isDark ? 'border-2 border-slate-700' : 'border-[4px] border-white'} readOnly={readOnly} />}
         <div className={`min-w-0 w-full flex flex-col ${alignClass}`}>
-          <div className={`inline-block border-[2px] px-8 py-3 mb-4 tracking-[0.25em] uppercase ${isDark ? 'border-white text-white' : 'border-gray-900 text-gray-900'}`}>
-            <h1 className={`${isNarrow ? 'text-xl' : 'text-2xl'} font-bold`}><Editable path="basics.name" nowrap={!isNarrow} /></h1>
+          <div className={`inline-block border-[2px] px-6 py-1.5 mb-4 tracking-[0.25em] uppercase ${isDark ? 'border-white text-white' : 'border-gray-900 text-gray-900'}`}>
+            <h1 className={`${isNarrow ? 'text-xl' : 'text-2xl'} font-bold leading-none pr-1`}><Editable path="basics.name" nowrap={!isNarrow} /></h1>
           </div>
-          <h2 className={`${TYPOGRAPHY.role} mb-5 ${isDark ? 'text-gray-400' : ''}`}><Editable path="basics.title" nowrap={!isNarrow} /></h2>
+          <h2 className={`${TYPOGRAPHY.role} mb-5 ${isDark ? 'text-gray-400' : ''} pr-1`}><Editable path="basics.title" nowrap={!isNarrow} /></h2>
           {!hasSidebarContact && (
-            <div className={`flex flex-wrap justify-center ${isNarrow ? 'flex-col gap-1.5' : `gap-x-4 gap-y-1.5 ${justifyClass}`} ${TYPOGRAPHY.contact}`}>
-              <ContactLinks data={data} Editable={Editable} isNarrow={isNarrow} showIcons={showIcons} design={design} align={isNarrow ? 'justify-center' : justifyClass} />
+            <div className={`flex ${isNarrow ? `flex-col gap-1.5 ${alignClass}` : `flex-wrap gap-x-4 gap-y-1.5 ${justifyClass}`} ${TYPOGRAPHY.contact}`}>
+              <ContactLinks data={data} Editable={Editable} isNarrow={isNarrow} showIcons={showIcons} design={design} align={justifyClass} />
             </div>
           )}
         </div>
@@ -369,43 +442,49 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
   }},
   'header-executive': { id: 'header-executive', name: 'Executive Stacked', category: 'Header', render: ({ data, Editable, zoneId, isDark, showIcons, design, layoutZones, Title, readOnly }: any) => {
     const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
-    const hasSidebarContact = layoutZones && Object.values(layoutZones).flat().some((block: any) => block?.type === 'sidebar-contact');
+    const hasSidebarContact = design.splitContactInSidebar !== false && layoutZones && Object.values(layoutZones).flat().some((block: any) => block?.type === 'sidebar-contact');
     const align = design.headerAlign || 'left';
-    const alignClass = align === 'center' ? 'items-center text-center' : align === 'right' ? 'items-end text-right' : 'items-start text-left';
-    const justifyClass = align === 'center' ? 'justify-center' : align === 'right' ? 'justify-end' : 'justify-start';
+    const alignClass = align === 'center' ? 'items-center text-center w-full' : (align === 'right' ? 'items-end text-right w-full' : 'items-start text-left w-full');
+    const justifyClass = align === 'center' ? 'justify-center' : (align === 'right' ? 'justify-end' : 'justify-start');
 
     return (
-      <div className={`flex ${isNarrow ? 'flex-col items-center text-center' : 'items-center text-left'} gap-5 pb-4 border-b-[1.5px] ${isDark ? 'border-slate-700' : 'border-gray-900'} snippet-anim w-full cv-keep-with-next`}>
+      <div className={`flex ${isNarrow ? `flex-col ${alignClass}` : 'items-center text-left'} gap-5 pb-4 border-b-[1.5px] ${isDark ? 'border-slate-700' : 'border-gray-900'} snippet-anim w-full cv-keep-with-next`}>
         <Title titleKey="header" overrideClass="hidden" />
         {data?.basics?.showAvatar && <AvatarEditable data={data} sizeClass={isNarrow ? 'w-24 h-24 mb-3' : 'w-20 h-24'} shapeClass="rounded shadow-md" borderClass={isDark ? 'border border-slate-600' : ''} readOnly={readOnly} />}
         <div className={`min-w-0 w-full flex flex-col ${alignClass}`}>
-          <h1 className={`${isNarrow ? 'text-2xl text-center' : 'text-3xl uppercase'} font-extrabold tracking-widest mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}><Editable path="basics.name" nowrap={!isNarrow} /></h1>
+          <h1 className={`${isNarrow ? 'text-2xl' : 'text-3xl uppercase'} font-extrabold tracking-widest mb-2 ${isDark ? 'text-white' : 'text-gray-900'} pr-1`}><Editable path="basics.name" nowrap={!isNarrow} /></h1>
           {!hasSidebarContact && (
-            <div className={`flex flex-wrap ${isNarrow ? 'flex-col text-center gap-1.5' : `gap-x-4 gap-y-1.5 ${justifyClass}`} ${TYPOGRAPHY.contact} ${isDark ? 'text-gray-300' : 'text-gray-800'}`}>
-              <ContactLinks data={data} Editable={Editable} isNarrow={isNarrow} showIcons={showIcons} design={design} align={isNarrow ? 'justify-center' : justifyClass} />
+            <div className={`flex ${isNarrow ? `flex-col gap-1.5 ${alignClass}` : `flex-wrap gap-x-4 gap-y-1.5 ${justifyClass}`} ${TYPOGRAPHY.contact} ${isDark ? 'text-gray-300' : 'text-gray-800'}`}>
+              <ContactLinks data={data} Editable={Editable} isNarrow={isNarrow} showIcons={showIcons} design={design} align={justifyClass} />
             </div>
           )}
         </div>
       </div>
     );
   }},
-  'header-accent': { id: 'header-accent', name: 'Accent Side Bar', category: 'Header', render: ({ data, Editable, zoneId, isDark, Title, showIcons, design, layoutZones }: any) => {
+  'header-accent': { id: 'header-accent', name: 'Accent Side Bar', category: 'Header', render: ({ data, Editable, zoneId, isDark, Title, showIcons, design, layoutZones, readOnly }: any) => {
     const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
-    const hasSidebarContact = layoutZones && Object.values(layoutZones).flat().some((block: any) => block?.type === 'sidebar-contact');
+    const hasSidebarContact = design.splitContactInSidebar !== false && layoutZones && Object.values(layoutZones).flat().some((block: any) => block?.type === 'sidebar-contact');
+    const align = design.headerAlign || 'left';
+    const alignClass = align === 'center' ? 'items-center text-center w-full' : (align === 'right' ? 'items-end text-right w-full' : 'items-start text-left w-full');
+    const justifyClass = align === 'center' ? 'justify-center' : (align === 'right' ? 'justify-end' : 'justify-start');
+
     return (
       <div className="snippet-anim w-full cv-keep-with-next">
         <Title titleKey="header" overrideClass="hidden" />
-        <div className={`flex ${isNarrow ? 'flex-col gap-6' : 'justify-between items-center'}`}>
-          <div className={`min-w-0 ${isNarrow ? 'w-full text-center' : 'w-2/3'}`}>
-            <h1 className={`${isNarrow ? 'text-3xl' : 'text-4xl'} font-light tracking-widest uppercase mb-2 ${isDark ? 'text-white' : 'text-gray-800'}`}><Editable path="basics.name" nowrap={!isNarrow} /></h1>
-            <h2 className={`${TYPOGRAPHY.role} tracking-[0.25em]`}><Editable path="basics.title" nowrap={!isNarrow} /></h2>
+        <div className={`flex ${isNarrow ? `flex-col gap-6 ${alignClass}` : 'justify-between items-center gap-6'}`}>
+          <div className={`min-w-0 flex ${isNarrow ? `flex-col ${alignClass} w-full` : 'items-center flex-1 gap-4'}`}>
+            {data?.basics?.showAvatar && <AvatarEditable data={data} sizeClass={isNarrow ? 'w-24 h-24 mb-4' : 'w-16 h-16'} shapeClass="rounded-full shadow-md" readOnly={readOnly} />}
+            <div className={`min-w-0 flex flex-col ${alignClass}`}>
+              <h1 className={`${isNarrow ? 'text-3xl' : 'text-4xl'} font-light tracking-widest uppercase mb-2 ${isDark ? 'text-white' : 'text-gray-800'} pr-1`}><Editable path="basics.name" nowrap={!isNarrow} /></h1>
+              <h2 className={`${TYPOGRAPHY.role} tracking-[0.25em] pr-1`}><Editable path="basics.title" nowrap={!isNarrow} /></h2>
+            </div>
           </div>
           {!hasSidebarContact && (
-            <div className={`flex items-stretch gap-4 ${isNarrow ? 'w-full justify-center text-center' : 'text-right'}`}>
-              {!isNarrow && <div className="flex flex-col justify-center"><Title titleKey="contact" overrideClass={`${TYPOGRAPHY.contact} tracking-widest uppercase mb-0 ${isDark ? 'text-gray-400' : 'text-gray-800'}`} /></div>}
+            <div className={`flex items-stretch gap-3 ${isNarrow ? `w-full ${justifyClass} text-center` : 'text-right'} shrink-0 max-w-[45%]`}>
               <div className="w-1.5 cv-accent-bg shrink-0 rounded-full"></div>
-              <div className={`${TYPOGRAPHY.contact} flex flex-col justify-center gap-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                <ContactLinks data={data} Editable={Editable} isNarrow={true} showIcons={showIcons} design={design} align={isNarrow ? 'justify-center' : 'justify-end'} />
+              <div className={`${TYPOGRAPHY.contact} flex flex-col justify-center gap-1 ${isDark ? 'text-gray-300' : 'text-gray-700'} min-w-0`}>
+                <ContactLinks data={data} Editable={Editable} isNarrow={true} showIcons={showIcons} design={design} align={justifyClass} />
               </div>
             </div>
           )}
@@ -415,21 +494,21 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
   }},
   'header-creative': { id: 'header-creative', name: 'Creative Block', category: 'Header', render: ({ data, Editable, zoneId, isDark, showIcons, design, layoutZones, Title, readOnly }: any) => {
     const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
-    const hasSidebarContact = layoutZones && Object.values(layoutZones).flat().some((block: any) => block?.type === 'sidebar-contact');
+    const hasSidebarContact = design.splitContactInSidebar !== false && layoutZones && Object.values(layoutZones).flat().some((block: any) => block?.type === 'sidebar-contact');
     const align = design.headerAlign || 'left';
-    const alignClass = align === 'center' ? 'items-center text-center' : align === 'right' ? 'items-end text-right' : 'items-start text-left';
-    const justifyClass = align === 'center' ? 'justify-center' : align === 'right' ? 'justify-end' : 'justify-start';
+    const alignClass = align === 'center' ? 'items-center text-center w-full' : (align === 'right' ? 'items-end text-right w-full' : 'items-start text-left w-full');
+    const justifyClass = align === 'center' ? 'justify-center' : (align === 'right' ? 'justify-end' : 'justify-start');
 
     return (
-      <div className={`flex ${isNarrow ? 'flex-col items-center text-center' : 'items-center text-left'} gap-6 p-6 rounded-xl snippet-anim cv-keep-with-next cv-accent-bg text-white shadow-lg`}>
+      <div className={`flex ${isNarrow ? `flex-col ${alignClass} p-4 py-6` : 'items-center text-left p-6'} gap-6 rounded-xl snippet-anim cv-keep-with-next cv-accent-bg text-white shadow-lg`}>
         <Title titleKey="header" overrideClass="hidden" />
-        {data?.basics?.showAvatar && <AvatarEditable data={data} sizeClass={isNarrow ? 'w-24 h-24 mb-4' : 'w-24 h-24'} shapeClass="rounded-full shadow-2xl" borderClass="border-4 border-white/20" readOnly={readOnly} />}
-        <div className={`min-w-0 w-full flex flex-col ${alignClass}`}>
-          <h1 className={`${isNarrow ? 'text-2xl' : 'text-4xl'} font-black tracking-tight mb-1`}><Editable path="basics.name" nowrap={!isNarrow} /></h1>
-          <h2 className={`text-sm font-semibold tracking-widest uppercase opacity-90 mb-4`}><Editable path="basics.title" nowrap={!isNarrow} /></h2>
+        {data?.basics?.showAvatar && <AvatarEditable data={data} sizeClass={isNarrow ? 'w-24 h-24 mb-2' : 'w-24 h-24'} shapeClass="rounded-full shadow-2xl" borderClass="border-4 border-white/20" readOnly={readOnly} />}
+        <div className={`min-w-0 flex-1 flex flex-col ${alignClass}`}>
+          <h1 className={`${isNarrow ? 'text-xl' : 'text-4xl'} font-black tracking-tight mb-1 pr-1`}><Editable path="basics.name" nowrap={!isNarrow} /></h1>
+          <h2 className={`${isNarrow ? 'text-[10px] tracking-wider' : 'text-sm tracking-widest'} font-semibold uppercase opacity-90 mb-4 pr-1`}><Editable path="basics.title" nowrap={!isNarrow} /></h2>
           {!hasSidebarContact && (
-            <div className={`flex flex-wrap ${isNarrow ? 'flex-col gap-1.5' : `gap-x-4 gap-y-1.5 ${justifyClass}`} text-xs font-medium opacity-90`}>
-              <ContactLinks data={data} Editable={Editable} isNarrow={isNarrow} showIcons={showIcons} design={design} align={isNarrow ? 'justify-center' : justifyClass} />
+            <div className={`flex ${isNarrow ? `flex-col gap-1.5 ${alignClass}` : `flex-wrap gap-x-4 gap-y-1.5 ${justifyClass}`} text-xs font-medium opacity-90`}>
+              <ContactLinks data={data} Editable={Editable} isNarrow={isNarrow} showIcons={showIcons} design={design} align={justifyClass} />
             </div>
           )}
         </div>
@@ -442,7 +521,7 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
     <div className="snippet-anim cv-section"><Title titleKey="summary" /><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><Editable path="basics.summary" multiline /></div></div>
   )},
   'summary-highlight': { id: 'summary-highlight', name: 'Left Accent Highlight', category: 'Summary', render: ({ data, Editable, isDark, Title }: any) => (
-    <div className="snippet-anim cv-section"><Title titleKey="summary" /><div className={`p-4 border-l-[4px] rounded-r-lg cv-accent-border cv-keep-with-next shadow-sm ${isDark ? 'bg-slate-800' : 'bg-slate-50'}`}><div className={`${TYPOGRAPHY.body} italic ${isDark ? 'text-slate-200' : 'text-gray-800'}`}><Editable path="basics.summary" multiline /></div></div></div>
+    <div className="snippet-anim cv-section"><Title titleKey="summary" /><div className="p-4 border-l-[4px] rounded-r-lg cv-accent-border cv-keep-with-next shadow-sm bg-gray-500/5"><div className={`${TYPOGRAPHY.body} italic opacity-90`}><Editable path="basics.summary" multiline /></div></div></div>
   )},
   'summary-quote': { id: 'summary-quote', name: 'Quotation Mark', category: 'Summary', render: ({ data, Editable, isDark, Title }: any) => (
     <div className="snippet-anim flex gap-4 items-start cv-section"><div className={`shrink-0 pt-1 cv-accent-text opacity-50`}><Quote size={28} fill="currentColor"/></div><div className="flex-1"><Title titleKey="summary" /><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><Editable path="basics.summary" multiline /></div></div></div>
@@ -462,68 +541,68 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
     const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
     const expData = Array.isArray(data?.experience) ? data.experience : [];
     if (expData.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="experience" /><div className="flex flex-col gap-4 cv-gap-md">{expData.map((exp: any, idx: number) => (<ListEntry key={exp.id} collection="experience" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className="cv-keep-with-next"><div className={`flex ${isNarrow ? 'flex-col gap-1' : 'justify-between items-baseline flex-wrap gap-x-4'} mb-1`}><h4 className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`experience.${idx}.role`} nowrap /></h4><span className={`${TYPOGRAPHY.date} ${isDark ? '' : 'text-gray-500'}`}><Editable path={`experience.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`experience.${idx}.endDate`} nowrap isDate={true} /></span></div><div className={`${TYPOGRAPHY.itemSubtitle} mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`experience.${idx}.company`} nowrap /></div></div><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><Editable path={`experience.${idx}.description`} multiline html /></div></ListEntry>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="experience" /><div className="flex flex-col gap-4 cv-gap-md">{expData.map((exp: any, idx: number) => (<ListEntry key={exp.id} collection="experience" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className="cv-keep-with-next mb-1"><EntryHeader isNarrow={isNarrow} title={<h4 className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`experience.${idx}.role`} /></h4>} subtitle={<div className={`${TYPOGRAPHY.itemSubtitle} ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`experience.${idx}.company`} /></div>} date={<span className={`${TYPOGRAPHY.date} ${isDark ? '' : 'text-gray-500'}`}><Editable path={`experience.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`experience.${idx}.endDate`} nowrap isDate={true} /></span>} /></div><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><Editable path={`experience.${idx}.description`} multiline html /></div></ListEntry>))}</div></div>);
   }},
   'experience-split': { id: 'experience-split', name: 'Split Columns', category: 'Experience', render: ({ data, Editable, zoneId, isDark, Title, moveEntry, deleteEntry }: any) => {
     const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
     const expData = data?.experience || [];
     if (expData.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="experience" /><div className="flex flex-col gap-5 cv-gap-lg">{expData.map((exp: any, idx: number) => (<ListEntry key={exp.id} collection="experience" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`flex ${isNarrow ? 'flex-col gap-1.5' : 'gap-5'}`}><div className={`${isNarrow ? 'w-full' : 'w-[25%]'} shrink-0 cv-keep-with-next`}><div className={`${TYPOGRAPHY.date}`}><Editable path={`experience.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`experience.${idx}.endDate`} nowrap isDate={true} /></div></div><div className={`${isNarrow ? 'w-full' : 'w-[75%]'}`}><div className="cv-keep-with-next"><h4 className={`${TYPOGRAPHY.itemTitle} inline-block mr-2 ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`experience.${idx}.company`} nowrap />,</h4><span className={`${TYPOGRAPHY.itemSubtitle} ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`experience.${idx}.role`} nowrap /></span></div><div className={`${TYPOGRAPHY.body} mt-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><Editable path={`experience.${idx}.description`} multiline html /></div></div></div></ListEntry>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="experience" /><div className="flex flex-col gap-5 cv-gap-lg">{expData.map((exp: any, idx: number) => (<ListEntry key={exp.id} collection="experience" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`flex ${isNarrow ? 'flex-col gap-1.5' : 'gap-5'}`}><div className={`${isNarrow ? 'w-full' : 'w-[25%]'} shrink-0 cv-keep-with-next`}><div className={`${TYPOGRAPHY.date}`}><Editable path={`experience.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`experience.${idx}.endDate`} nowrap isDate={true} /></div></div><div className={`${isNarrow ? 'w-full' : 'w-[75%]'}`}><div className="cv-keep-with-next"><h4 className={`${TYPOGRAPHY.itemTitle} inline ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`experience.${idx}.company`} nowrap /></h4><span className="opacity-70 font-normal mr-1.5">,</span><span className={`${TYPOGRAPHY.itemSubtitle} inline ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`experience.${idx}.role`} nowrap /></span></div><div className={`${TYPOGRAPHY.body} mt-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><Editable path={`experience.${idx}.description`} multiline html /></div></div></div></ListEntry>))}</div></div>);
   }},
   'experience-harvard': { id: 'experience-harvard', name: 'Harvard Dense', category: 'Experience', render: ({ data, Editable, zoneId, isDark, Title, moveEntry, deleteEntry }: any) => {
     const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
     const expData = data?.experience || [];
     if (expData.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="experience" /><div className="flex flex-col gap-4 cv-gap-md">{expData.map((exp: any, idx: number) => (<ListEntry key={exp.id} collection="experience" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`cv-keep-with-next flex ${isNarrow ? 'flex-col gap-1' : 'justify-between items-baseline'} w-full mb-1`}><h4 className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`experience.${idx}.company`} nowrap />, <span className="font-semibold italic"><Editable path={`experience.${idx}.role`} nowrap /></span></h4><span className={`${TYPOGRAPHY.date}`}><Editable path={`experience.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`experience.${idx}.endDate`} nowrap isDate={true} /></span></div><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-800'}`}><Editable path={`experience.${idx}.description`} multiline html /></div></ListEntry>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="experience" /><div className="flex flex-col gap-4 cv-gap-md">{expData.map((exp: any, idx: number) => (<ListEntry key={exp.id} collection="experience" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className="cv-keep-with-next mb-1"><EntryHeader isNarrow={isNarrow} title={<h4 className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`experience.${idx}.company`} /></h4>} subtitle={<span className={`${TYPOGRAPHY.itemSubtitle} font-semibold italic`}><Editable path={`experience.${idx}.role`} /></span>} date={<span className={`${TYPOGRAPHY.date}`}><Editable path={`experience.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`experience.${idx}.endDate`} nowrap isDate={true} /></span>} /></div><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-800'}`}><Editable path={`experience.${idx}.description`} multiline html /></div></ListEntry>))}</div></div>);
   }},
   'experience-timeline': { id: 'experience-timeline', name: 'Vertical Timeline', category: 'Experience', render: ({ data, Editable, isDark, Title, moveEntry, deleteEntry }: any) => {
     const expData = data?.experience || [];
     if (expData.length === 0) return null;
     return (
-    <div className="snippet-anim cv-section"><Title titleKey="experience" /><div className={`border-l-2 ml-2 flex flex-col gap-5 cv-gap-lg ${isDark ? 'border-slate-700' : 'border-gray-200'}`}>{expData.map((exp: any, idx: number) => (<ListEntry key={exp.id} collection="experience" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className="relative pl-6"><div className={`absolute w-3 h-3 border-[3px] rounded-full -left-[25px] top-1 cv-accent-border ${isDark ? 'bg-slate-900' : 'bg-white'}`}></div><div className="cv-keep-with-next"><div className={`${TYPOGRAPHY.date} mb-1`}><Editable path={`experience.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`experience.${idx}.endDate`} nowrap isDate={true} /></div><h4 className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`experience.${idx}.role`} nowrap /></h4><div className={`${TYPOGRAPHY.itemSubtitle} mb-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}><Editable path={`experience.${idx}.company`} nowrap /></div></div><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><Editable path={`experience.${idx}.description`} multiline html /></div></div></ListEntry>))}</div></div>
+    <div className="snippet-anim cv-section"><Title titleKey="experience" /><div className={`border-l-2 ml-2 flex flex-col gap-5 cv-gap-lg ${isDark ? 'border-slate-700' : 'border-gray-200'}`}>{expData.map((exp: any, idx: number) => (<ListEntry key={exp.id} collection="experience" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className="relative pl-6"><div className={`absolute w-3 h-3 border-[3px] rounded-full -left-[7px] top-1 cv-accent-border ${isDark ? 'bg-slate-900' : 'bg-white'}`}></div><div className="cv-keep-with-next mb-1"><EntryHeader title={<h4 className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`experience.${idx}.role`} /></h4>} subtitle={<div className={`${TYPOGRAPHY.itemSubtitle} ${isDark ? 'text-gray-400' : 'text-gray-500'}`}><Editable path={`experience.${idx}.company`} /></div>} date={<span className={`${TYPOGRAPHY.date} ${isDark ? 'text-gray-400' : 'text-gray-500'}`}><Editable path={`experience.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`experience.${idx}.endDate`} nowrap isDate={true} /></span>} /></div><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><Editable path={`experience.${idx}.description`} multiline html /></div></div></ListEntry>))}</div></div>
   )}},
   'experience-compact': { id: 'experience-compact', name: 'Compact Inline', category: 'Experience', render: ({ data, Editable, isDark, Title, moveEntry, deleteEntry }: any) => {
     const expData = data?.experience || [];
     if (expData.length === 0) return null;
     return (
-    <div className="snippet-anim cv-section"><Title titleKey="experience" /><div className="flex flex-col gap-4 cv-gap-md">{expData.map((exp: any, idx: number) => (<ListEntry key={exp.id} collection="experience" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`cv-keep-with-next flex flex-wrap items-baseline gap-x-2 mb-1 ${isDark ? 'text-gray-200' : 'text-gray-900'}`}><span className={`${TYPOGRAPHY.itemTitle}`}><Editable path={`experience.${idx}.role`} nowrap /></span><span className={`text-[11px] ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>at</span><span className={`${TYPOGRAPHY.itemSubtitle}`}><Editable path={`experience.${idx}.company`} nowrap /></span><span className={`${TYPOGRAPHY.date} ml-auto ${isDark ? 'text-gray-400' : 'text-gray-500'}`}><Editable path={`experience.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`experience.${idx}.endDate`} nowrap isDate={true} /></span></div><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><Editable path={`experience.${idx}.description`} multiline html /></div></ListEntry>))}</div></div>
+    <div className="snippet-anim cv-section"><Title titleKey="experience" /><div className="flex flex-col gap-4 cv-gap-md">{expData.map((exp: any, idx: number) => (<ListEntry key={exp.id} collection="experience" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className="cv-keep-with-next mb-1"><EntryHeader title={<span className={`${TYPOGRAPHY.itemTitle}`}><Editable path={`experience.${idx}.role`} /></span>} subtitle={<span className={`${TYPOGRAPHY.itemSubtitle}`}><Editable path={`experience.${idx}.company`} /></span>} date={<span className={`${TYPOGRAPHY.date} ${isDark ? 'text-gray-400' : 'text-gray-500'}`}><Editable path={`experience.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`experience.${idx}.endDate`} nowrap isDate={true} /></span>} /></div><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><Editable path={`experience.${idx}.description`} multiline html /></div></ListEntry>))}</div></div>
   )}},
   'experience-accent': { id: 'experience-accent', name: 'Accent Ribbon', category: 'Experience', render: ({ data, Editable, isDark, Title, moveEntry, deleteEntry }: any) => {
     const expData = data?.experience || [];
     if (expData.length === 0) return null;
     return (
-    <div className="snippet-anim cv-section"><Title titleKey="experience" /><div className="flex flex-col gap-5 cv-gap-lg">{expData.map((exp: any, idx: number) => (<ListEntry key={exp.id} collection="experience" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`pl-4 border-l-[3px] cv-accent-border`}><div className="cv-keep-with-next"><h4 className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`experience.${idx}.role`} nowrap /></h4><div className={`flex flex-wrap gap-x-3 mb-2 mt-0.5`}><span className={`${TYPOGRAPHY.itemSubtitle} ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`experience.${idx}.company`} nowrap /></span><span className={`${TYPOGRAPHY.date} opacity-80`}><Editable path={`experience.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`experience.${idx}.endDate`} nowrap isDate={true} /></span></div></div><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><Editable path={`experience.${idx}.description`} multiline html /></div></div></ListEntry>))}</div></div>
+    <div className="snippet-anim cv-section"><Title titleKey="experience" /><div className="flex flex-col gap-5 cv-gap-lg">{expData.map((exp: any, idx: number) => (<ListEntry key={exp.id} collection="experience" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`pl-4 border-l-[3px] cv-accent-border`}><div className="cv-keep-with-next mb-1"><h4 className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-100' : 'text-gray-900'} mb-1`}><Editable path={`experience.${idx}.role`} /></h4><EntryHeader subtitle={<span className={`${TYPOGRAPHY.itemSubtitle} ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`experience.${idx}.company`} /></span>} date={<span className={`${TYPOGRAPHY.date} opacity-80`}><Editable path={`experience.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`experience.${idx}.endDate`} nowrap isDate={true} /></span>} /></div><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><Editable path={`experience.${idx}.description`} multiline html /></div></div></ListEntry>))}</div></div>
   )}},
 
   // === EDUCATION (6) ===
   'education-standard': { id: 'education-standard', name: 'Standard Flow', category: 'Education', render: ({ data, Editable, zoneId, isDark, Title, moveEntry, deleteEntry }: any) => {
     const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
     const eduData = Array.isArray(data?.education) ? data.education : [];
-    return (<div className="snippet-anim cv-section"><Title titleKey="education" /><div className="flex flex-col gap-4 cv-gap-md">{eduData.map((edu: any, idx: number) => (<ListEntry key={edu.id} collection="education" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className="cv-keep-with-next"><div className={`flex ${isNarrow ? 'flex-col gap-1' : 'justify-between items-baseline flex-wrap gap-x-4'} mb-1`}><h4 className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`education.${idx}.degree`} nowrap /></h4><span className={`${TYPOGRAPHY.date}`}><Editable path={`education.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`education.${idx}.endDate`} nowrap isDate={true} /></span></div><div className={`${TYPOGRAPHY.itemSubtitle} mb-1.5 ${isDark ? 'text-gray-400' : 'text-gray-700'}`}><Editable path={`education.${idx}.institution`} nowrap /></div></div><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`education.${idx}.description`} multiline /></div></ListEntry>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="education" /><div className="flex flex-col gap-4 cv-gap-md">{eduData.map((edu: any, idx: number) => (<ListEntry key={edu.id} collection="education" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className="cv-keep-with-next mb-1"><EntryHeader isNarrow={isNarrow} title={<h4 className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`education.${idx}.degree`} /></h4>} subtitle={<div className={`${TYPOGRAPHY.itemSubtitle} ${isDark ? 'text-gray-400' : 'text-gray-700'}`}><Editable path={`education.${idx}.institution`} /></div>} date={<span className={`${TYPOGRAPHY.date}`}><Editable path={`education.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`education.${idx}.endDate`} nowrap isDate={true} /></span>} /></div><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`education.${idx}.description`} multiline /></div></ListEntry>))}</div></div>);
   }},
   'education-split': { id: 'education-split', name: 'Split Columns', category: 'Education', render: ({ data, Editable, zoneId, isDark, Title, moveEntry, deleteEntry }: any) => {
     const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
     const eduData = data?.education || [];
-    return (<div className="snippet-anim cv-section"><Title titleKey="education" /><div className="flex flex-col gap-4 cv-gap-lg">{eduData.map((edu: any, idx: number) => (<ListEntry key={edu.id} collection="education" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`flex ${isNarrow ? 'flex-col gap-1.5' : 'gap-5'}`}><div className={`${isNarrow ? 'w-full' : 'w-[25%]'} shrink-0 cv-keep-with-next`}><div className={`${TYPOGRAPHY.date}`}><Editable path={`education.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`education.${idx}.endDate`} nowrap isDate={true} /></div></div><div className={`${isNarrow ? 'w-full' : 'w-[75%]'}`}><div className="cv-keep-with-next"><h4 className={`${TYPOGRAPHY.itemTitle} inline-block mr-2 ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`education.${idx}.institution`} nowrap />,</h4><span className={`${TYPOGRAPHY.itemSubtitle} ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`education.${idx}.degree`} nowrap /></span></div><div className={`${TYPOGRAPHY.body} mt-1.5 ${isDark ? 'text-gray-400' : 'text-gray-700'}`}><Editable path={`education.${idx}.description`} multiline /></div></div></div></ListEntry>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="education" /><div className="flex flex-col gap-4 cv-gap-lg">{eduData.map((edu: any, idx: number) => (<ListEntry key={edu.id} collection="education" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`flex ${isNarrow ? 'flex-col gap-1.5' : 'gap-5'}`}><div className={`${isNarrow ? 'w-full' : 'w-[25%]'} shrink-0 cv-keep-with-next`}><div className={`${TYPOGRAPHY.date}`}><Editable path={`education.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`education.${idx}.endDate`} nowrap isDate={true} /></div></div><div className={`${isNarrow ? 'w-full' : 'w-[75%]'}`}><div className="cv-keep-with-next"><h4 className={`${TYPOGRAPHY.itemTitle} inline ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`education.${idx}.institution`} nowrap /></h4><span className="opacity-70 font-normal mr-1.5">,</span><span className={`${TYPOGRAPHY.itemSubtitle} inline ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`education.${idx}.degree`} nowrap /></span></div><div className={`${TYPOGRAPHY.body} mt-1.5 ${isDark ? 'text-gray-400' : 'text-gray-700'}`}><Editable path={`education.${idx}.description`} multiline /></div></div></div></ListEntry>))}</div></div>);
   }},
   'education-harvard': { id: 'education-harvard', name: 'Harvard Dense', category: 'Education', render: ({ data, Editable, zoneId, isDark, Title, moveEntry, deleteEntry }: any) => {
     const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
-    return (<div className="snippet-anim cv-section"><Title titleKey="education" /><div className="flex flex-col gap-4 cv-gap-md">{data.education.map((edu: any, idx: number) => (<ListEntry key={edu.id} collection="education" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`cv-keep-with-next flex ${isNarrow ? 'flex-col gap-1' : 'justify-between items-baseline'} w-full mb-1`}><h4 className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`education.${idx}.institution`} nowrap />, <span className="font-semibold italic"><Editable path={`education.${idx}.degree`} nowrap /></span></h4><span className={`${TYPOGRAPHY.date}`}><Editable path={`education.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`education.${idx}.endDate`} nowrap isDate={true} /></span></div><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-400' : 'text-gray-800'}`}><Editable path={`education.${idx}.description`} multiline /></div></ListEntry>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="education" /><div className="flex flex-col gap-4 cv-gap-md">{data.education.map((edu: any, idx: number) => (<ListEntry key={edu.id} collection="education" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className="cv-keep-with-next mb-1"><EntryHeader isNarrow={isNarrow} title={<h4 className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`education.${idx}.institution`} /></h4>} subtitle={<span className={`${TYPOGRAPHY.itemSubtitle} font-semibold italic`}><Editable path={`education.${idx}.degree`} /></span>} date={<span className={`${TYPOGRAPHY.date}`}><Editable path={`education.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`education.${idx}.endDate`} nowrap isDate={true} /></span>} /></div><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-400' : 'text-gray-800'}`}><Editable path={`education.${idx}.description`} multiline /></div></ListEntry>))}</div></div>);
   }},
   'education-timeline': { id: 'education-timeline', name: 'Vertical Timeline', category: 'Education', render: ({ data, Editable, isDark, Title, moveEntry, deleteEntry }: any) => {
     const eduData = data?.education || [];
     if (eduData.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="education" /><div className={`border-l-2 ml-2 flex flex-col gap-5 cv-gap-lg ${isDark ? 'border-slate-700' : 'border-gray-200'}`}>{eduData.map((edu: any, idx: number) => (<ListEntry key={edu.id} collection="education" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className="relative pl-6"><div className={`absolute w-3 h-3 border-[3px] rounded-full -left-[25px] top-1 cv-accent-border ${isDark ? 'bg-slate-800' : 'bg-white'}`}></div><div className="cv-keep-with-next"><div className={`${TYPOGRAPHY.date} mb-1`}><Editable path={`education.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`education.${idx}.endDate`} nowrap isDate={true} /></div><h4 className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`education.${idx}.degree`} nowrap /></h4><div className={`${TYPOGRAPHY.itemSubtitle} mb-1.5 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`education.${idx}.institution`} nowrap /></div></div><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`education.${idx}.description`} multiline /></div></div></ListEntry>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="education" /><div className={`border-l-2 ml-2 flex flex-col gap-5 cv-gap-lg ${isDark ? 'border-slate-700' : 'border-gray-200'}`}>{eduData.map((edu: any, idx: number) => (<ListEntry key={edu.id} collection="education" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className="relative pl-6"><div className={`absolute w-3 h-3 border-[3px] rounded-full -left-[7px] top-1 cv-accent-border ${isDark ? 'bg-slate-800' : 'bg-white'}`}></div><div className="cv-keep-with-next mb-1"><EntryHeader title={<h4 className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`education.${idx}.degree`} /></h4>} subtitle={<div className={`${TYPOGRAPHY.itemSubtitle} ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`education.${idx}.institution`} /></div>} date={<span className={`${TYPOGRAPHY.date}`}><Editable path={`education.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`education.${idx}.endDate`} nowrap isDate={true} /></span>} /></div><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`education.${idx}.description`} multiline /></div></div></ListEntry>))}</div></div>);
   }},
   'education-compact': { id: 'education-compact', name: 'Compact Inline', category: 'Education', render: ({ data, Editable, isDark, Title, moveEntry, deleteEntry }: any) => {
     const eduData = data?.education || [];
     if (eduData.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="education" /><div className="flex flex-col gap-4 cv-gap-md">{eduData.map((edu: any, idx: number) => (<ListEntry key={edu.id} collection="education" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`cv-keep-with-next flex flex-wrap items-baseline gap-x-2 mb-1 ${isDark ? 'text-gray-200' : 'text-gray-900'}`}><span className={`${TYPOGRAPHY.itemTitle}`}><Editable path={`education.${idx}.degree`} nowrap /></span><span className={`text-[11px] ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>from</span><span className={`${TYPOGRAPHY.itemSubtitle}`}><Editable path={`education.${idx}.institution`} nowrap /></span><span className={`${TYPOGRAPHY.date} ml-auto ${isDark ? 'text-gray-400' : 'text-gray-500'}`}><Editable path={`education.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`education.${idx}.endDate`} nowrap isDate={true} /></span></div><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`education.${idx}.description`} multiline /></div></ListEntry>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="education" /><div className="flex flex-col gap-4 cv-gap-md">{eduData.map((edu: any, idx: number) => (<ListEntry key={edu.id} collection="education" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className="cv-keep-with-next mb-1"><EntryHeader title={<span className={`${TYPOGRAPHY.itemTitle}`}><Editable path={`education.${idx}.degree`} /></span>} subtitle={<span className={`${TYPOGRAPHY.itemSubtitle}`}><Editable path={`education.${idx}.institution`} /></span>} date={<span className={`${TYPOGRAPHY.date} ${isDark ? 'text-gray-400' : 'text-gray-500'}`}><Editable path={`education.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`education.${idx}.endDate`} nowrap isDate={true} /></span>} /></div><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`education.${idx}.description`} multiline /></div></ListEntry>))}</div></div>);
   }},
   'education-blocks': { id: 'education-blocks', name: 'Shaded Blocks', category: 'Education', render: ({ data, Editable, isDark, Title, moveEntry, deleteEntry }: any) => {
     const eduData = data?.education || [];
     if (eduData.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="education" /><div className="flex flex-col gap-4 cv-gap-md">{eduData.map((edu: any, idx: number) => (<ListEntry key={edu.id} collection="education" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`p-4 rounded-xl ${isDark ? 'bg-slate-800/50' : 'bg-gray-50'} border ${isDark ? 'border-slate-700/50' : 'border-gray-100'}`}><div className="cv-keep-with-next"><div className={`flex justify-between items-baseline flex-wrap gap-x-3 mb-1`}><h4 className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`education.${idx}.degree`} nowrap /></h4><span className={`${TYPOGRAPHY.date}`}><Editable path={`education.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`education.${idx}.endDate`} nowrap isDate={true} /></span></div><div className={`${TYPOGRAPHY.itemSubtitle} mb-2 ${isDark ? 'text-gray-400' : 'text-gray-700'}`}><Editable path={`education.${idx}.institution`} nowrap /></div></div><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`education.${idx}.description`} multiline /></div></div></ListEntry>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="education" /><div className="flex flex-col gap-4 cv-gap-md">{eduData.map((edu: any, idx: number) => (<ListEntry key={edu.id} collection="education" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`p-4 rounded-xl ${isDark ? 'bg-slate-800/50' : 'bg-gray-50'} border ${isDark ? 'border-slate-700/50' : 'border-gray-100'}`}><div className="cv-keep-with-next mb-1"><EntryHeader title={<h4 className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`education.${idx}.degree`} /></h4>} subtitle={<div className={`${TYPOGRAPHY.itemSubtitle} ${isDark ? 'text-gray-400' : 'text-gray-700'}`}><Editable path={`education.${idx}.institution`} /></div>} date={<span className={`${TYPOGRAPHY.date}`}><Editable path={`education.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`education.${idx}.endDate`} nowrap isDate={true} /></span>} /></div><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`education.${idx}.description`} multiline /></div></div></ListEntry>))}</div></div>);
   }},
 
   // === PROJECTS (6) ===
@@ -531,29 +610,29 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
     const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
     const prjData = Array.isArray(data?.projects) ? data.projects : [];
     if (prjData.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="projects" /><div className="flex flex-col gap-4 cv-gap-md">{prjData.map((prj: any, idx: number) => (<ListEntry key={prj.id} collection="projects" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className="cv-keep-with-next"><div className={`flex ${isNarrow ? 'flex-col gap-1' : 'justify-between items-baseline flex-wrap gap-x-4'} mb-1`}><h4 className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`projects.${idx}.name`} nowrap /></h4><span className={`${TYPOGRAPHY.date} ${isDark ? '' : 'text-gray-500'}`}><Editable path={`projects.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`projects.${idx}.endDate`} nowrap isDate={true} /></span></div><div className={`${TYPOGRAPHY.itemSubtitle} mb-1.5 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`projects.${idx}.role`} nowrap /></div></div><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><Editable path={`projects.${idx}.description`} multiline html /></div></ListEntry>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="projects" /><div className="flex flex-col gap-4 cv-gap-md">{prjData.map((prj: any, idx: number) => (<ListEntry key={prj.id} collection="projects" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className="cv-keep-with-next mb-1"><EntryHeader isNarrow={isNarrow} title={<h4 className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`projects.${idx}.name`} /></h4>} subtitle={<div className={`${TYPOGRAPHY.itemSubtitle} ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`projects.${idx}.role`} /></div>} date={<span className={`${TYPOGRAPHY.date} ${isDark ? '' : 'text-gray-500'}`}><Editable path={`projects.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`projects.${idx}.endDate`} nowrap isDate={true} /></span>} /></div><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><Editable path={`projects.${idx}.description`} multiline html /></div></ListEntry>))}</div></div>);
   }},
   'projects-split': { id: 'projects-split', name: 'Split Columns', category: 'Projects', render: ({ data, Editable, zoneId, isDark, Title, moveEntry, deleteEntry }: any) => {
     const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
     const prjData = data?.projects || [];
     if (prjData.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="projects" /><div className="flex flex-col gap-5 cv-gap-lg">{prjData.map((prj: any, idx: number) => (<ListEntry key={prj.id} collection="projects" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`flex ${isNarrow ? 'flex-col gap-1.5' : 'gap-5'}`}><div className={`${isNarrow ? 'w-full' : 'w-[25%]'} shrink-0 cv-keep-with-next`}><div className={`${TYPOGRAPHY.date}`}><Editable path={`projects.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`projects.${idx}.endDate`} nowrap isDate={true} /></div></div><div className={`${isNarrow ? 'w-full' : 'w-[75%]'}`}><div className="cv-keep-with-next"><h4 className={`${TYPOGRAPHY.itemTitle} inline-block mr-2 ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`projects.${idx}.name`} nowrap />,</h4><span className={`${TYPOGRAPHY.itemSubtitle} ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`projects.${idx}.role`} nowrap /></span></div><div className={`${TYPOGRAPHY.body} mt-1.5 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><Editable path={`projects.${idx}.description`} multiline html /></div></div></div></ListEntry>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="projects" /><div className="flex flex-col gap-5 cv-gap-lg">{prjData.map((prj: any, idx: number) => (<ListEntry key={prj.id} collection="projects" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`flex ${isNarrow ? 'flex-col gap-1.5' : 'gap-5'}`}><div className={`${isNarrow ? 'w-full' : 'w-[25%]'} shrink-0 cv-keep-with-next`}><div className={`${TYPOGRAPHY.date}`}><Editable path={`projects.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`projects.${idx}.endDate`} nowrap isDate={true} /></div></div><div className={`${isNarrow ? 'w-full' : 'w-[75%]'}`}><div className="cv-keep-with-next"><h4 className={`${TYPOGRAPHY.itemTitle} inline ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`projects.${idx}.name`} nowrap /></h4><span className="opacity-70 font-normal mr-1.5">,</span><span className={`${TYPOGRAPHY.itemSubtitle} inline ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`projects.${idx}.role`} nowrap /></span></div><div className={`${TYPOGRAPHY.body} mt-1.5 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><Editable path={`projects.${idx}.description`} multiline html /></div></div></div></ListEntry>))}</div></div>);
   }},
   'projects-harvard': { id: 'projects-harvard', name: 'Harvard Dense', category: 'Projects', render: ({ data, Editable, zoneId, isDark, Title, moveEntry, deleteEntry }: any) => {
     const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
     const prjData = data?.projects || [];
     if (prjData.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="projects" /><div className="flex flex-col gap-4 cv-gap-md">{prjData.map((prj: any, idx: number) => (<ListEntry key={prj.id} collection="projects" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`cv-keep-with-next flex ${isNarrow ? 'flex-col gap-1' : 'justify-between items-baseline'} w-full mb-1`}><h4 className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`projects.${idx}.name`} nowrap />, <span className="font-semibold italic"><Editable path={`projects.${idx}.role`} nowrap /></span></h4><span className={`${TYPOGRAPHY.date}`}><Editable path={`projects.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`projects.${idx}.endDate`} nowrap isDate={true} /></span></div><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-800'}`}><Editable path={`projects.${idx}.description`} multiline html /></div></ListEntry>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="projects" /><div className="flex flex-col gap-4 cv-gap-md">{prjData.map((prj: any, idx: number) => (<ListEntry key={prj.id} collection="projects" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className="cv-keep-with-next mb-1"><EntryHeader isNarrow={isNarrow} title={<h4 className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`projects.${idx}.name`} /></h4>} subtitle={<span className={`${TYPOGRAPHY.itemSubtitle} font-semibold italic`}><Editable path={`projects.${idx}.role`} /></span>} date={<span className={`${TYPOGRAPHY.date}`}><Editable path={`projects.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`projects.${idx}.endDate`} nowrap isDate={true} /></span>} /></div><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-800'}`}><Editable path={`projects.${idx}.description`} multiline html /></div></ListEntry>))}</div></div>);
   }},
   'projects-timeline': { id: 'projects-timeline', name: 'Vertical Timeline', category: 'Projects', render: ({ data, Editable, isDark, Title, moveEntry, deleteEntry }: any) => {
     const prjData = data?.projects || [];
     if (prjData.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="projects" /><div className={`border-l-2 ml-2 flex flex-col gap-5 cv-gap-lg ${isDark ? 'border-slate-700' : 'border-gray-200'}`}>{prjData.map((prj: any, idx: number) => (<ListEntry key={prj.id} collection="projects" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className="relative pl-6"><div className={`absolute w-3 h-3 border-[3px] rounded-full -left-[25px] top-1 cv-accent-border ${isDark ? 'bg-slate-800' : 'bg-white'}`}></div><div className="cv-keep-with-next"><div className={`${TYPOGRAPHY.date} mb-1`}><Editable path={`projects.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`projects.${idx}.endDate`} nowrap isDate={true} /></div><h4 className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`projects.${idx}.name`} nowrap /></h4><div className={`${TYPOGRAPHY.itemSubtitle} mb-1.5 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}><Editable path={`projects.${idx}.role`} nowrap /></div></div><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><Editable path={`projects.${idx}.description`} multiline html /></div></div></ListEntry>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="projects" /><div className={`border-l-2 ml-2 flex flex-col gap-5 cv-gap-lg ${isDark ? 'border-slate-700' : 'border-gray-200'}`}>{prjData.map((prj: any, idx: number) => (<ListEntry key={prj.id} collection="projects" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className="relative pl-6"><div className={`absolute w-3 h-3 border-[3px] rounded-full -left-[7px] top-1 cv-accent-border ${isDark ? 'bg-slate-800' : 'bg-white'}`}></div><div className="cv-keep-with-next mb-1"><EntryHeader title={<h4 className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`projects.${idx}.name`} /></h4>} subtitle={<div className={`${TYPOGRAPHY.itemSubtitle} ${isDark ? 'text-gray-400' : 'text-gray-500'}`}><Editable path={`projects.${idx}.role`} /></div>} date={<span className={`${TYPOGRAPHY.date} ${isDark ? 'text-gray-400' : 'text-gray-500'}`}><Editable path={`projects.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`projects.${idx}.endDate`} nowrap isDate={true} /></span>} /></div><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><Editable path={`projects.${idx}.description`} multiline html /></div></div></ListEntry>))}</div></div>);
   }},
   'projects-compact': { id: 'projects-compact', name: 'Compact Inline', category: 'Projects', render: ({ data, Editable, isDark, Title, moveEntry, deleteEntry }: any) => {
     const prjData = data?.projects || [];
     if (prjData.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="projects" /><div className="flex flex-col gap-4 cv-gap-md">{prjData.map((prj: any, idx: number) => (<ListEntry key={prj.id} collection="projects" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`cv-keep-with-next flex flex-wrap items-baseline gap-x-2 mb-1 ${isDark ? 'text-gray-200' : 'text-gray-900'}`}><span className={`${TYPOGRAPHY.itemTitle}`}><Editable path={`projects.${idx}.name`} nowrap /></span><span className={`text-[11px] ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>|</span><span className={`${TYPOGRAPHY.itemSubtitle}`}><Editable path={`projects.${idx}.role`} nowrap /></span><span className={`${TYPOGRAPHY.date} ml-auto ${isDark ? 'text-gray-400' : 'text-gray-500'}`}><Editable path={`projects.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`projects.${idx}.endDate`} nowrap isDate={true} /></span></div><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><Editable path={`projects.${idx}.description`} multiline html /></div></ListEntry>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="projects" /><div className="flex flex-col gap-4 cv-gap-md">{prjData.map((prj: any, idx: number) => (<ListEntry key={prj.id} collection="projects" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className="cv-keep-with-next mb-1"><EntryHeader title={<span className={`${TYPOGRAPHY.itemTitle}`}><Editable path={`projects.${idx}.name`} /></span>} subtitle={<span className={`${TYPOGRAPHY.itemSubtitle}`}><Editable path={`projects.${idx}.role`} /></span>} date={<span className={`${TYPOGRAPHY.date} ${isDark ? 'text-gray-400' : 'text-gray-500'}`}><Editable path={`projects.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`projects.${idx}.endDate`} nowrap isDate={true} /></span>} /></div><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><Editable path={`projects.${idx}.description`} multiline html /></div></ListEntry>))}</div></div>);
   }},
   'projects-grid': { id: 'projects-grid', name: '2-Column Grid', category: 'Projects', render: ({ data, Editable, zoneId, isDark, Title, moveEntry, deleteEntry }: any) => {
     const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
@@ -567,18 +646,18 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
     const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
     const certData = Array.isArray(data?.certifications) ? data.certifications : [];
     if (certData.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="certifications" /><div className="flex flex-col gap-4 cv-gap-sm">{certData.map((cert: any, idx: number) => (<ListEntry key={cert.id} collection="certifications" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`flex ${isNarrow ? 'flex-col gap-1' : 'justify-between items-baseline flex-wrap gap-x-4'} cv-keep-with-next`}><h4 className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`certifications.${idx}.name`} nowrap /></h4><span className={`${TYPOGRAPHY.date} ${isDark ? '' : 'text-gray-500'}`}><Editable path={`certifications.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`certifications.${idx}.endDate`} nowrap isDate={true} /></span></div><div className={`${TYPOGRAPHY.itemSubtitle} ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`certifications.${idx}.issuer`} nowrap /></div></ListEntry>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="certifications" /><div className="flex flex-col gap-4 cv-gap-sm">{certData.map((cert: any, idx: number) => (<ListEntry key={cert.id} collection="certifications" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className="cv-keep-with-next"><EntryHeader isNarrow={isNarrow} title={<h4 className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`certifications.${idx}.name`} /></h4>} subtitle={<div className={`${TYPOGRAPHY.itemSubtitle} ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`certifications.${idx}.issuer`} /></div>} date={<span className={`${TYPOGRAPHY.date} ${isDark ? '' : 'text-gray-500'}`}><Editable path={`certifications.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`certifications.${idx}.endDate`} nowrap isDate={true} /></span>} /></div></ListEntry>))}</div></div>);
   }},
   'certifications-harvard': { id: 'certifications-harvard', name: 'Harvard Dense', category: 'Certifications', render: ({ data, Editable, zoneId, isDark, Title, moveEntry, deleteEntry }: any) => {
     const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
     const certData = data?.certifications || [];
     if (certData.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="certifications" /><div className="flex flex-col gap-3 cv-gap-sm">{certData.map((cert: any, idx: number) => (<ListEntry key={cert.id} collection="certifications" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`flex ${isNarrow ? 'flex-col' : 'justify-between items-baseline'} w-full cv-keep-with-next`}><div className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`certifications.${idx}.name`} nowrap />, <span className="font-normal italic"><Editable path={`certifications.${idx}.issuer`} nowrap /></span></div><span className={`${TYPOGRAPHY.date}`}><Editable path={`certifications.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`certifications.${idx}.endDate`} nowrap isDate={true} /></span></div></ListEntry>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="certifications" /><div className="flex flex-col gap-3 cv-gap-sm">{certData.map((cert: any, idx: number) => (<ListEntry key={cert.id} collection="certifications" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className="cv-keep-with-next"><EntryHeader isNarrow={isNarrow} title={<div className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`certifications.${idx}.name`} /></div>} subtitle={<span className={`${TYPOGRAPHY.itemSubtitle} font-normal italic`}><Editable path={`certifications.${idx}.issuer`} /></span>} date={<span className={`${TYPOGRAPHY.date}`}><Editable path={`certifications.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`certifications.${idx}.endDate`} nowrap isDate={true} /></span>} /></div></ListEntry>))}</div></div>);
   }},
   'certifications-compact': { id: 'certifications-compact', name: 'Compact Inline', category: 'Certifications', render: ({ data, Editable, isDark, Title, moveEntry, deleteEntry }: any) => {
     const certData = data?.certifications || [];
     if (certData.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="certifications" /><div className="flex flex-col gap-3 cv-gap-sm">{certData.map((cert: any, idx: number) => (<ListEntry key={cert.id} collection="certifications" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`flex flex-wrap items-baseline gap-x-2 cv-keep-with-next ${isDark ? 'text-gray-200' : 'text-gray-900'}`}><span className={`${TYPOGRAPHY.itemTitle}`}><Editable path={`certifications.${idx}.name`} nowrap /></span><span className={`text-[11px] ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>by</span><span className={`${TYPOGRAPHY.itemSubtitle}`}><Editable path={`certifications.${idx}.issuer`} nowrap /></span><span className={`${TYPOGRAPHY.date} ml-auto ${isDark ? 'text-gray-400' : 'text-gray-500'}`}><Editable path={`certifications.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`certifications.${idx}.endDate`} nowrap isDate={true} /></span></div></ListEntry>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="certifications" /><div className="flex flex-col gap-3 cv-gap-sm">{certData.map((cert: any, idx: number) => (<ListEntry key={cert.id} collection="certifications" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className="cv-keep-with-next"><EntryHeader title={<span className={`${TYPOGRAPHY.itemTitle}`}><Editable path={`certifications.${idx}.name`} /></span>} subtitle={<span className={`${TYPOGRAPHY.itemSubtitle}`}><Editable path={`certifications.${idx}.issuer`} /></span>} date={<span className={`${TYPOGRAPHY.date} ${isDark ? 'text-gray-400' : 'text-gray-500'}`}><Editable path={`certifications.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`certifications.${idx}.endDate`} nowrap isDate={true} /></span>} /></div></ListEntry>))}</div></div>);
   }},
 
   // === AWARDS (3) ===
@@ -586,12 +665,12 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
     const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
     const awdData = Array.isArray(data?.awards) ? data.awards : [];
     if (awdData.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="awards" /><div className="flex flex-col gap-4 cv-gap-sm">{awdData.map((awd: any, idx: number) => (<ListEntry key={awd.id} collection="awards" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`flex ${isNarrow ? 'flex-col gap-1' : 'justify-between items-baseline flex-wrap gap-x-4'} cv-keep-with-next`}><h4 className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`awards.${idx}.name`} nowrap /></h4><span className={`${TYPOGRAPHY.date} ${isDark ? '' : 'text-gray-500'}`}><Editable path={`awards.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`awards.${idx}.endDate`} nowrap isDate={true} /></span></div><div className={`${TYPOGRAPHY.itemSubtitle} ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`awards.${idx}.issuer`} nowrap /></div></ListEntry>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="awards" /><div className="flex flex-col gap-4 cv-gap-sm">{awdData.map((awd: any, idx: number) => (<ListEntry key={awd.id} collection="awards" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className="cv-keep-with-next"><EntryHeader isNarrow={isNarrow} title={<h4 className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`awards.${idx}.name`} /></h4>} subtitle={<div className={`${TYPOGRAPHY.itemSubtitle} ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`awards.${idx}.issuer`} /></div>} date={<span className={`${TYPOGRAPHY.date} ${isDark ? '' : 'text-gray-500'}`}><Editable path={`awards.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`awards.${idx}.endDate`} nowrap isDate={true} /></span>} /></div></ListEntry>))}</div></div>);
   }},
   'awards-compact': { id: 'awards-compact', name: 'Compact Inline', category: 'Awards', render: ({ data, Editable, isDark, Title, moveEntry, deleteEntry }: any) => {
     const awdData = data?.awards || [];
     if (awdData.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="awards" /><div className="flex flex-col gap-3 cv-gap-sm">{awdData.map((awd: any, idx: number) => (<ListEntry key={awd.id} collection="awards" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`flex flex-wrap items-baseline gap-x-2 cv-keep-with-next ${isDark ? 'text-gray-200' : 'text-gray-900'}`}><span className={`${TYPOGRAPHY.itemTitle}`}><Editable path={`awards.${idx}.name`} nowrap /></span><span className={`text-[11px] ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>from</span><span className={`${TYPOGRAPHY.itemSubtitle}`}><Editable path={`awards.${idx}.issuer`} nowrap /></span><span className={`${TYPOGRAPHY.date} ml-auto ${isDark ? 'text-gray-400' : 'text-gray-500'}`}><Editable path={`awards.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`awards.${idx}.endDate`} nowrap isDate={true} /></span></div></ListEntry>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="awards" /><div className="flex flex-col gap-3 cv-gap-sm">{awdData.map((awd: any, idx: number) => (<ListEntry key={awd.id} collection="awards" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className="cv-keep-with-next"><EntryHeader title={<span className={`${TYPOGRAPHY.itemTitle}`}><Editable path={`awards.${idx}.name`} /></span>} subtitle={<span className={`${TYPOGRAPHY.itemSubtitle}`}><Editable path={`awards.${idx}.issuer`} /></span>} date={<span className={`${TYPOGRAPHY.date} ${isDark ? 'text-gray-400' : 'text-gray-500'}`}><Editable path={`awards.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`awards.${idx}.endDate`} nowrap isDate={true} /></span>} /></div></ListEntry>))}</div></div>);
   }},
 
   // === PUBLICATIONS ===
@@ -599,7 +678,7 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
     const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
     const pubData = Array.isArray(data?.publications) ? data.publications : [];
     if (pubData.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="publications" /><div className="flex flex-col gap-4 cv-gap-md">{pubData.map((pub: any, idx: number) => (<ListEntry key={pub.id} collection="publications" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className="cv-keep-with-next"><div className={`flex ${isNarrow ? 'flex-col gap-1' : 'justify-between items-baseline flex-wrap gap-x-4'} mb-1`}><h4 className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`publications.${idx}.title`} nowrap /></h4><span className={`${TYPOGRAPHY.date} ${isDark ? '' : 'text-gray-500'}`}><Editable path={`publications.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`publications.${idx}.endDate`} nowrap isDate={true} /></span></div><div className={`${TYPOGRAPHY.itemSubtitle} mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`publications.${idx}.publisher`} nowrap /></div></div><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><Editable path={`publications.${idx}.description`} multiline html /></div></ListEntry>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="publications" /><div className="flex flex-col gap-4 cv-gap-md">{pubData.map((pub: any, idx: number) => (<ListEntry key={pub.id} collection="publications" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className="cv-keep-with-next mb-1"><EntryHeader isNarrow={isNarrow} title={<h4 className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`publications.${idx}.title`} /></h4>} subtitle={<div className={`${TYPOGRAPHY.itemSubtitle} ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`publications.${idx}.publisher`} /></div>} date={<span className={`${TYPOGRAPHY.date} ${isDark ? '' : 'text-gray-500'}`}><Editable path={`publications.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`publications.${idx}.endDate`} nowrap isDate={true} /></span>} /></div><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><Editable path={`publications.${idx}.description`} multiline html /></div></ListEntry>))}</div></div>);
   }},
 
   // === VOLUNTEER ===
@@ -607,7 +686,7 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
     const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
     const volData = Array.isArray(data?.volunteer) ? data.volunteer : [];
     if (volData.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="volunteer" /><div className="flex flex-col gap-4 cv-gap-md">{volData.map((vol: any, idx: number) => (<ListEntry key={vol.id} collection="volunteer" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className="cv-keep-with-next"><div className={`flex ${isNarrow ? 'flex-col gap-1' : 'justify-between items-baseline flex-wrap gap-x-4'} mb-1`}><h4 className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`volunteer.${idx}.role`} nowrap /></h4><span className={`${TYPOGRAPHY.date} ${isDark ? '' : 'text-gray-500'}`}><Editable path={`volunteer.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`volunteer.${idx}.endDate`} nowrap isDate={true} /></span></div><div className={`${TYPOGRAPHY.itemSubtitle} mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`volunteer.${idx}.organization`} nowrap /></div></div><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><Editable path={`volunteer.${idx}.description`} multiline html /></div></ListEntry>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="volunteer" /><div className="flex flex-col gap-4 cv-gap-md">{volData.map((vol: any, idx: number) => (<ListEntry key={vol.id} collection="volunteer" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className="cv-keep-with-next mb-1"><EntryHeader isNarrow={isNarrow} title={<h4 className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`volunteer.${idx}.role`} /></h4>} subtitle={<div className={`${TYPOGRAPHY.itemSubtitle} ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`volunteer.${idx}.organization`} /></div>} date={<span className={`${TYPOGRAPHY.date} ${isDark ? '' : 'text-gray-500'}`}><Editable path={`volunteer.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`volunteer.${idx}.endDate`} nowrap isDate={true} /></span>} /></div><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><Editable path={`volunteer.${idx}.description`} multiline html /></div></ListEntry>))}</div></div>);
   }},
 
   // === REFERENCES ===
@@ -640,17 +719,55 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
       </div>
     );
   }},
-  'skills-pills': { id: 'skills-pills', name: 'Solid Pills', category: 'Skills', render: ({ data, Editable, isDark, Title, readOnly }: any) => {
+  'skills-pills': { id: 'skills-pills', name: 'Solid Pills', category: 'Skills', render: ({ data, Editable, isDark, Title }: any) => {
     const allSkills = flattenSkillItems(data?.skills);
-    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-wrap gap-2 cv-gap-sm">{allSkills.map((skill: any, i: number) => (<span key={i} className={`px-3 py-1.5 text-[0.85em] font-semibold rounded-md border cv-item-avoid ${isDark ? 'bg-slate-700 border-slate-600 text-slate-200' : 'bg-slate-100 border-slate-200 text-slate-700'}`}>{skill.label}</span>))}</div><SkillsEditableOverlay groups={normalizeSkillGroups(data?.skills)} Editable={Editable} readOnly={readOnly} /></div>);
+    if (allSkills.length > 10) {
+      const groups = normalizeSkillGroups(data?.skills);
+      if (groups.length === 0) return null;
+      return (
+        <div className="snippet-anim cv-section">
+          <Title titleKey="skills" />
+          <div className="flex flex-col gap-2 cv-gap-sm">
+            {groups.map((group, index) => (
+              <div key={`${group.category}-${index}`} className={`${TYPOGRAPHY.body} ${isDark ? "text-gray-300" : "text-gray-700"} cv-item-avoid`}>
+                <span className={`${TYPOGRAPHY.itemTitle} ${isDark ? "text-gray-100" : "text-gray-900"} mr-2`}>
+                  {group.pathCategory ? <Editable path={group.pathCategory} nowrap /> : group.category}
+                </span>
+                {group.pathSkills ? <Editable path={group.pathSkills} /> : group.skillsText}
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-wrap gap-2 cv-gap-sm">{allSkills.map((skill: any, i: number) => (<span key={i} className={`px-3 py-1.5 text-[0.85em] font-semibold rounded-md border cv-item-avoid ${isDark ? "bg-slate-700 border-slate-600 text-slate-200" : "bg-slate-100 border-slate-200 text-slate-700"}`}><Editable path={skill.pathSkills} overrideValue={skill.label} arrayIndex={skill.skillIndex} nowrap /></span>))}</div></div>);
   }},
-  'skills-round-pills': { id: 'skills-round-pills', name: 'Round Pills', category: 'Skills', render: ({ data, Editable, isDark, Title, readOnly }: any) => {
+  'skills-round-pills': { id: 'skills-round-pills', name: 'Round Pills', category: 'Skills', render: ({ data, Editable, isDark, Title }: any) => {
     const allSkills = flattenSkillItems(data?.skills);
-    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-wrap gap-2 cv-gap-sm">{allSkills.map((skill: any, i: number) => (<span key={i} className={`px-4 py-1.5 text-[0.85em] font-semibold rounded-full border cv-item-avoid ${isDark ? 'bg-slate-700 border-slate-600 text-slate-200' : 'bg-slate-100 border-slate-200 text-slate-700'}`}>{skill.label}</span>))}</div><SkillsEditableOverlay groups={normalizeSkillGroups(data?.skills)} Editable={Editable} readOnly={readOnly} /></div>);
+    if (allSkills.length > 10) {
+      const groups = normalizeSkillGroups(data?.skills);
+      if (groups.length === 0) return null;
+      return (
+        <div className="snippet-anim cv-section">
+          <Title titleKey="skills" />
+          <div className="flex flex-col gap-2 cv-gap-sm">
+            {groups.map((group, index) => (
+              <div key={`${group.category}-${index}`} className={`${TYPOGRAPHY.body} ${isDark ? "text-gray-300" : "text-gray-700"} cv-item-avoid`}>
+                <span className={`${TYPOGRAPHY.itemTitle} ${isDark ? "text-gray-100" : "text-gray-900"} mr-2`}>
+                  {group.pathCategory ? <Editable path={group.pathCategory} nowrap /> : group.category}
+                </span>
+                {group.pathSkills ? <Editable path={group.pathSkills} /> : group.skillsText}
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-wrap gap-2 cv-gap-sm">{allSkills.map((skill: any, i: number) => (<span key={i} className={`px-4 py-1.5 text-[0.85em] font-semibold rounded-full border cv-item-avoid ${isDark ? "bg-slate-700 border-slate-600 text-slate-200" : "bg-slate-100 border-slate-200 text-slate-700"}`}><Editable path={skill.pathSkills} overrideValue={skill.label} arrayIndex={skill.skillIndex} nowrap /></span>))}</div></div>);
   }},
-  'skills-dots': { id: 'skills-dots', name: 'Dot Rating', category: 'Skills', render: ({ data, Editable, isDark, Title, readOnly }: any) => {
+  'skills-dots': { id: 'skills-dots', name: 'Dot Rating', category: 'Skills', render: ({ data, Editable, isDark, Title }: any) => {
     const allSkills = flattenSkillItems(data?.skills).slice(0, 6);
-    return (<div className="snippet-anim w-full cv-section"><Title titleKey="skills" /><div className="grid grid-cols-1 gap-y-2 gap-x-4 cv-gap-sm">{allSkills.map((skill: any, i: number) => (<div key={i} className={`flex justify-between items-center ${TYPOGRAPHY.body} cv-item-avoid`}><span className={`truncate font-medium ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>{skill.label}</span><div className="flex gap-1.5">{[...Array(5)].map((_, dotIdx) => (<div key={dotIdx} className={`w-2 h-2 rounded-full ${dotIdx < skill.rating ? 'cv-accent-bg' : (isDark ? 'bg-slate-700' : 'bg-gray-200')}`}></div>))}</div></div>))}</div><SkillsEditableOverlay groups={normalizeSkillGroups(data?.skills)} Editable={Editable} readOnly={readOnly} /></div>);
+    return (<div className="snippet-anim w-full cv-section"><Title titleKey="skills" /><div className="grid grid-cols-1 gap-y-2 gap-x-4 cv-gap-sm">{allSkills.map((skill: any, i: number) => (<div key={i} className={`flex justify-between items-center ${TYPOGRAPHY.body} cv-item-avoid`}><span className={`truncate font-medium ${isDark ? 'text-gray-200' : 'text-gray-800'}`}><Editable path={skill.pathSkills} overrideValue={skill.label} arrayIndex={skill.skillIndex} nowrap /></span><div className="flex gap-1.5">{[...Array(5)].map((_, dotIdx) => (<div key={dotIdx} className={`w-2 h-2 rounded-full ${dotIdx < skill.rating ? 'cv-accent-bg' : (isDark ? 'bg-slate-700' : 'bg-gray-200')}`}></div>))}</div></div>))}</div></div>);
   }},
   'skills-category-inline': { id: 'skills-category-inline', name: 'Category Inline', category: 'Skills', render: ({ data, Editable, isDark, Title }: any) => {
     const groups = normalizeSkillGroups(data?.skills);
@@ -704,6 +821,7 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
 
   // === SIDEBAR SPECIFIC ===
   'sidebar-contact': { id: 'sidebar-contact', name: 'Contact List', category: 'Sidebar', render: ({ data, Editable, isDark, Title, showIcons, design, readOnly }: any) => {
+    if (design?.splitContactInSidebar === false) return null;
     const headerLinks = design?.headerLinks || {};
     const isVisible = (key: string) => headerLinks[key] !== false;
     const hasValue = (val: any): boolean => {
@@ -735,47 +853,72 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
   // =======================================================
   ,'header-typographic': { id: 'header-typographic', name: 'Typographic Display', category: 'Header', render: ({ data, Editable, zoneId, isDark, showIcons, design, layoutZones, Title }: any) => {
     const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
-    const hasSidebarContact = layoutZones && Object.values(layoutZones).flat().some((b: any) => b?.type === 'sidebar-contact');
+    const hasSidebarContact = design.splitContactInSidebar !== false && layoutZones && Object.values(layoutZones).flat().some((b: any) => b?.type === 'sidebar-contact');
+    const align = design.headerAlign || 'left';
+    const alignClass = align === 'center' ? 'items-center text-center w-full' : (align === 'right' ? 'items-end text-right w-full' : 'items-start text-left w-full');
+    const justifyClass = align === 'center' ? 'justify-center' : (align === 'right' ? 'justify-end' : 'justify-start');
+
     return (
-      <div className="snippet-anim w-full cv-keep-with-next">
+      <div className={`snippet-anim w-full cv-keep-with-next flex flex-col ${alignClass}`}>
         <Title titleKey="header" overrideClass="hidden" />
-        <div className={isNarrow ? 'text-center' : ''}>
-          <h1 className={`font-black leading-none tracking-tighter mb-2 ${isNarrow ? 'text-3xl' : 'text-5xl'} ${isDark ? 'text-white' : 'text-gray-900'}`}><Editable path="basics.name" nowrap={!isNarrow} /></h1>
-          <div className={`flex items-center gap-3 mb-3 ${isNarrow ? 'justify-center' : ''}`}>
+        <div className={`w-full flex flex-col ${alignClass}`}>
+          <h1 className={`font-black leading-none tracking-tighter mb-2 ${isNarrow ? 'text-3xl' : 'text-5xl'} ${isDark ? 'text-white' : 'text-gray-900'} pr-1`}><Editable path="basics.name" nowrap={!isNarrow} /></h1>
+          <div className={`flex items-center gap-3 mb-3 ${isNarrow ? 'w-full' : ''} ${justifyClass}`}>
+            {align !== 'left' && <div className="h-[2px] flex-1 cv-accent-bg" />}
             <div className="h-[2px] w-10 cv-accent-bg shrink-0" />
-            <h2 className={`${TYPOGRAPHY.role} text-[0.85em] shrink-0`}><Editable path="basics.title" nowrap={!isNarrow} /></h2>
-            <div className="h-[2px] flex-1 cv-accent-bg" />
+            <h2 className={`${TYPOGRAPHY.role} text-[0.85em] shrink-0 pr-1`}><Editable path="basics.title" nowrap={!isNarrow} /></h2>
+            {align !== 'right' && <div className="h-[2px] flex-1 cv-accent-bg" />}
           </div>
-          {!hasSidebarContact && <div className={`flex flex-wrap gap-x-5 gap-y-1 ${isNarrow ? 'justify-center' : ''} ${TYPOGRAPHY.contact} ${isDark ? 'text-gray-400' : 'text-gray-500'}`}><ContactLinks data={data} Editable={Editable} isNarrow={isNarrow} showIcons={showIcons} design={design} /></div>}
+          {!hasSidebarContact && (
+            <div className={`flex ${isNarrow ? 'flex-col gap-1.5' : 'flex-wrap gap-x-5 gap-y-1'} ${justifyClass} ${TYPOGRAPHY.contact} ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+              <ContactLinks data={data} Editable={Editable} isNarrow={isNarrow} showIcons={showIcons} design={design} align={justifyClass} />
+            </div>
+          )}
         </div>
       </div>
     );
   }}
   ,'header-column-left': { id: 'header-column-left', name: 'Column Split', category: 'Header', render: ({ data, Editable, zoneId, isDark, showIcons, design, layoutZones, Title }: any) => {
     const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
-    const hasSidebarContact = layoutZones && Object.values(layoutZones).flat().some((b: any) => b?.type === 'sidebar-contact');
+    const hasSidebarContact = design.splitContactInSidebar !== false && layoutZones && Object.values(layoutZones).flat().some((b: any) => b?.type === 'sidebar-contact');
+    const align = design.headerAlign || 'left';
+    const alignClass = align === 'center' ? 'items-center text-center w-full' : (align === 'right' ? 'items-end text-right w-full' : 'items-start text-left w-full');
+    const justifyClass = align === 'center' ? 'justify-center' : (align === 'right' ? 'justify-end' : 'justify-start');
+
     return (
-      <div className={`snippet-anim w-full cv-keep-with-next flex ${isNarrow ? 'flex-col gap-3 items-center text-center' : 'gap-8 items-end'} pb-4 border-b ${isDark ? 'border-slate-700' : 'border-gray-200'}`}>
+      <div className={`snippet-anim w-full cv-keep-with-next flex ${isNarrow ? `flex-col gap-3 ${alignClass}` : 'gap-8 items-end'} pb-4 border-b ${isDark ? 'border-slate-700' : 'border-gray-200'}`}>
         <Title titleKey="header" overrideClass="hidden" />
-        <div className={`${isNarrow ? '' : 'flex-1'} min-w-0`}>
-          <h1 className={`font-bold leading-tight ${isNarrow ? TYPOGRAPHY.nameNarrow : TYPOGRAPHY.name} ${isDark ? 'text-white' : 'text-gray-900'}`}><Editable path="basics.name" nowrap={!isNarrow} /></h1>
-          <h2 className={`${TYPOGRAPHY.role} mt-1`}><Editable path="basics.title" nowrap={!isNarrow} /></h2>
+        <div className={`${isNarrow ? 'w-full' : 'flex-1'} min-w-0 flex flex-col ${alignClass}`}>
+          <h1 className={`font-bold leading-tight ${isNarrow ? TYPOGRAPHY.nameNarrow : TYPOGRAPHY.name} ${isDark ? 'text-white' : 'text-gray-900'} pr-1`}><Editable path="basics.name" nowrap={!isNarrow} /></h1>
+          <h2 className={`${TYPOGRAPHY.role} mt-1 pr-1`}><Editable path="basics.title" nowrap={!isNarrow} /></h2>
         </div>
-        {!hasSidebarContact && <div className={`flex flex-col gap-1 shrink-0 ${TYPOGRAPHY.contact} ${isDark ? 'text-gray-400' : 'text-gray-500'} ${isNarrow ? 'items-center' : 'text-right max-w-[45%]'}`}><ContactLinks data={data} Editable={Editable} isNarrow={true} showIcons={showIcons} design={design} align={isNarrow ? 'justify-center' : 'justify-end'} /></div>}
+        {!hasSidebarContact && (
+          <div className={`flex flex-col gap-1 shrink-0 ${TYPOGRAPHY.contact} ${isDark ? 'text-gray-400' : 'text-gray-500'} ${isNarrow ? `w-full ${alignClass}` : 'text-right max-w-[45%]'}`}>
+            <ContactLinks data={data} Editable={Editable} isNarrow={true} showIcons={showIcons} design={design} align={justifyClass} />
+          </div>
+        )}
       </div>
     );
   }}
   ,'header-banner': { id: 'header-banner', name: 'Accent Banner', category: 'Header', render: ({ data, Editable, zoneId, isDark, showIcons, design, layoutZones, Title }: any) => {
     const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
-    const hasSidebarContact = layoutZones && Object.values(layoutZones).flat().some((b: any) => b?.type === 'sidebar-contact');
+    const hasSidebarContact = design.splitContactInSidebar !== false && layoutZones && Object.values(layoutZones).flat().some((b: any) => b?.type === 'sidebar-contact');
+    const align = design.headerAlign || 'left';
+    const alignClass = align === 'center' ? 'items-center text-center w-full' : (align === 'right' ? 'items-end text-right w-full' : 'items-start text-left w-full');
+    const justifyClass = align === 'center' ? 'justify-center' : (align === 'right' ? 'justify-end' : 'justify-start');
+
     return (
-      <div className="snippet-anim w-full cv-keep-with-next">
+      <div className={`snippet-anim w-full cv-keep-with-next flex flex-col ${alignClass}`}>
         <Title titleKey="header" overrideClass="hidden" />
-        <div className="cv-accent-bg rounded-lg px-5 py-4 mb-3">
-          <h1 className={`font-extrabold tracking-tight text-white leading-tight ${isNarrow ? 'text-2xl' : 'text-3xl'}`}><Editable path="basics.name" nowrap={!isNarrow} /></h1>
-          <h2 className="text-[0.82em] font-semibold tracking-widest uppercase text-white/80 mt-0.5"><Editable path="basics.title" nowrap={!isNarrow} /></h2>
+        <div className={`cv-accent-bg rounded-lg px-5 py-4 mb-3 w-full flex flex-col ${alignClass}`}>
+          <h1 className={`font-extrabold tracking-tight text-white leading-tight ${isNarrow ? 'text-2xl' : 'text-3xl'} pr-1`}><Editable path="basics.name" nowrap={!isNarrow} /></h1>
+          <h2 className="text-[0.82em] font-semibold tracking-widest uppercase text-white/80 mt-0.5 pr-1"><Editable path="basics.title" nowrap={!isNarrow} /></h2>
         </div>
-        {!hasSidebarContact && <div className={`flex flex-wrap gap-x-4 gap-y-1 ${isNarrow ? 'flex-col items-start gap-1.5' : ''} ${TYPOGRAPHY.contact} ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><ContactLinks data={data} Editable={Editable} isNarrow={isNarrow} showIcons={showIcons} design={design} /></div>}
+        {!hasSidebarContact && (
+          <div className={`flex ${isNarrow ? `flex-col gap-1.5 ${alignClass}` : `flex-wrap gap-x-4 gap-y-1 ${justifyClass}`} ${TYPOGRAPHY.contact} ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+            <ContactLinks data={data} Editable={Editable} isNarrow={isNarrow} showIcons={showIcons} design={design} align={justifyClass} />
+          </div>
+        )}
       </div>
     );
   }}
@@ -847,26 +990,26 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
   ,'experience-card': { id: 'experience-card', name: 'Card Per Role', category: 'Experience', render: ({ data, Editable, zoneId, isDark, Title, moveEntry, deleteEntry }: any) => {
     const expData = Array.isArray(data?.experience) ? data.experience : []; if (expData.length === 0) return null;
     const isNarrow = ['sidebar','left','right'].includes(zoneId);
-    return (<div className="snippet-anim cv-section"><Title titleKey="experience" /><div className="flex flex-col gap-3">{expData.map((exp: any, idx: number) => (<ListEntry key={exp.id} collection="experience" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`rounded-xl border p-4 ${isDark ? 'border-slate-700 bg-slate-800/50' : 'border-gray-200 bg-white shadow-sm'}`}><div className="cv-keep-with-next"><div className={`flex ${isNarrow ? 'flex-col gap-0.5' : 'justify-between items-start'} mb-1`}><h4 className={`${TYPOGRAPHY.itemTitle} cv-accent-text`}><Editable path={`experience.${idx}.role`} nowrap /></h4><span className={`${TYPOGRAPHY.date} shrink-0 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}><Editable path={`experience.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`experience.${idx}.endDate`} nowrap isDate={true} /></span></div><div className={`${TYPOGRAPHY.itemSubtitle} mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`experience.${idx}.company`} nowrap /></div></div><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><Editable path={`experience.${idx}.description`} multiline html /></div></div></ListEntry>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="experience" /><div className="flex flex-col gap-3">{expData.map((exp: any, idx: number) => (<ListEntry key={exp.id} collection="experience" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`rounded-xl border p-4 ${isDark ? 'border-slate-700 bg-slate-800/50' : 'border-gray-200 bg-white shadow-sm'}`}><div className="cv-keep-with-next mb-1"><EntryHeader isNarrow={isNarrow} title={<h4 className={`${TYPOGRAPHY.itemTitle} cv-accent-text`}><Editable path={`experience.${idx}.role`} /></h4>} subtitle={<div className={`${TYPOGRAPHY.itemSubtitle} ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`experience.${idx}.company`} /></div>} date={<span className={`${TYPOGRAPHY.date} ${isDark ? 'text-gray-400' : 'text-gray-500'}`}><Editable path={`experience.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`experience.${idx}.endDate`} nowrap isDate={true} /></span>} /></div><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><Editable path={`experience.${idx}.description`} multiline html /></div></div></ListEntry>))}</div></div>);
   }}
   ,'experience-pill-date': { id: 'experience-pill-date', name: 'Pill Date Badge', category: 'Experience', render: ({ data, Editable, zoneId, isDark, Title, moveEntry, deleteEntry }: any) => {
     const expData = Array.isArray(data?.experience) ? data.experience : []; if (expData.length === 0) return null;
     const isNarrow = ['sidebar','left','right'].includes(zoneId);
-    return (<div className="snippet-anim cv-section"><Title titleKey="experience" /><div className="flex flex-col gap-4">{expData.map((exp: any, idx: number) => (<ListEntry key={exp.id} collection="experience" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div><div className={`flex ${isNarrow ? 'flex-col gap-1' : 'justify-between items-start'} mb-2 cv-keep-with-next`}><div><h4 className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`experience.${idx}.role`} nowrap /></h4><div className={`${TYPOGRAPHY.itemSubtitle} mt-0.5 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`experience.${idx}.company`} nowrap /></div></div><span className="shrink-0 text-[10px] font-bold px-2.5 py-1 rounded-full cv-accent-bg text-white tracking-wider whitespace-nowrap"><Editable path={`experience.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`experience.${idx}.endDate`} nowrap isDate={true} /></span></div><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><Editable path={`experience.${idx}.description`} multiline html /></div></div></ListEntry>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="experience" /><div className="flex flex-col gap-4">{expData.map((exp: any, idx: number) => (<ListEntry key={exp.id} collection="experience" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div><div className={`cv-keep-with-next mb-2`}><EntryHeader isNarrow={isNarrow} title={<h4 className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`experience.${idx}.role`} /></h4>} subtitle={<div className={`${TYPOGRAPHY.itemSubtitle} ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`experience.${idx}.company`} /></div>} date={<span className="text-[10px] font-bold px-2.5 py-1 rounded-full cv-accent-bg text-white tracking-wider"><Editable path={`experience.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`experience.${idx}.endDate`} nowrap isDate={true} /></span>} /></div><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><Editable path={`experience.${idx}.description`} multiline html /></div></div></ListEntry>))}</div></div>);
   }}
   ,'experience-two-row': { id: 'experience-two-row', name: 'Two Row Dense', category: 'Experience', render: ({ data, Editable, zoneId, isDark, Title, moveEntry, deleteEntry }: any) => {
     const expData = Array.isArray(data?.experience) ? data.experience : []; if (expData.length === 0) return null;
     const isNarrow = ['sidebar','left','right'].includes(zoneId);
-    return (<div className="snippet-anim cv-section"><Title titleKey="experience" /><div className="flex flex-col gap-4">{expData.map((exp: any, idx: number) => (<ListEntry key={exp.id} collection="experience" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div><div className="cv-keep-with-next mb-1"><h4 className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`experience.${idx}.role`} nowrap /></h4><div className={`flex ${isNarrow ? 'flex-col' : 'items-center gap-2'} mt-0.5`}><span className={`${TYPOGRAPHY.itemSubtitle} ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`experience.${idx}.company`} nowrap /></span>{!isNarrow && <span className={`text-gray-300 text-[10px]`}>·</span>}<span className={`${TYPOGRAPHY.date} ${isDark ? 'text-gray-500' : 'text-gray-400'}`}><Editable path={`experience.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`experience.${idx}.endDate`} nowrap isDate={true} /></span></div></div><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><Editable path={`experience.${idx}.description`} multiline html /></div></div></ListEntry>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="experience" /><div className="flex flex-col gap-4">{expData.map((exp: any, idx: number) => (<ListEntry key={exp.id} collection="experience" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div><div className="cv-keep-with-next mb-1"><EntryHeader title={<h4 className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`experience.${idx}.role`} /></h4>} subtitle={<span className={`${TYPOGRAPHY.itemSubtitle} ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`experience.${idx}.company`} /></span>} date={<span className={`${TYPOGRAPHY.date} ${isDark ? 'text-gray-500' : 'text-gray-400'}`}><Editable path={`experience.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`experience.${idx}.endDate`} nowrap isDate={true} /></span>} /></div><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><Editable path={`experience.${idx}.description`} multiline html /></div></div></ListEntry>))}</div></div>);
   }}
   ,'experience-minimal-list': { id: 'experience-minimal-list', name: 'Minimal Single Line', category: 'Experience', render: ({ data, Editable, zoneId, isDark, Title, moveEntry, deleteEntry }: any) => {
     const expData = Array.isArray(data?.experience) ? data.experience : []; if (expData.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="experience" /><div className="flex flex-col gap-1.5">{expData.map((exp: any, idx: number) => (<ListEntry key={exp.id} collection="experience" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`flex flex-wrap items-baseline gap-x-2 py-1.5 border-b ${isDark ? 'border-slate-800' : 'border-gray-100'}`}><span className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`experience.${idx}.role`} nowrap /></span><span className={`${TYPOGRAPHY.itemSubtitle} ${isDark ? 'text-gray-400' : 'text-gray-500'}`}><Editable path={`experience.${idx}.company`} nowrap /></span><span className={`${TYPOGRAPHY.date} ml-auto ${isDark ? 'text-gray-500' : 'text-gray-400'}`}><Editable path={`experience.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`experience.${idx}.endDate`} nowrap isDate={true} /></span></div></ListEntry>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="experience" /><div className="flex flex-col gap-1.5">{expData.map((exp: any, idx: number) => (<ListEntry key={exp.id} collection="experience" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`py-1.5 border-b ${isDark ? 'border-slate-800' : 'border-gray-100'} cv-keep-with-next`}><EntryHeader title={<span className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`experience.${idx}.role`} /></span>} subtitle={<span className={`${TYPOGRAPHY.itemSubtitle} ${isDark ? 'text-gray-400' : 'text-gray-500'}`}><Editable path={`experience.${idx}.company`} /></span>} date={<span className={`${TYPOGRAPHY.date} ${isDark ? 'text-gray-500' : 'text-gray-400'}`}><Editable path={`experience.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`experience.${idx}.endDate`} nowrap isDate={true} /></span>} /></div></ListEntry>))}</div></div>);
   }}
   ,'experience-numbered': { id: 'experience-numbered', name: 'Editorial Numbered', category: 'Experience', render: ({ data, Editable, zoneId, isDark, Title, moveEntry, deleteEntry }: any) => {
     const expData = Array.isArray(data?.experience) ? data.experience : []; if (expData.length === 0) return null;
     const isNarrow = ['sidebar','left','right'].includes(zoneId);
-    return (<div className="snippet-anim cv-section"><Title titleKey="experience" /><div className="flex flex-col gap-5">{expData.map((exp: any, idx: number) => (<ListEntry key={exp.id} collection="experience" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`flex gap-4`}><div className={`shrink-0 font-black text-[2em] leading-none cv-accent-text opacity-30 w-8 text-right`}>{String(idx+1).padStart(2,'0')}</div><div className="flex-1 min-w-0"><div className="cv-keep-with-next"><div className={`flex ${isNarrow ? 'flex-col gap-0.5' : 'justify-between items-baseline'} mb-1`}><h4 className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`experience.${idx}.role`} nowrap /></h4><span className={`${TYPOGRAPHY.date} ${isDark ? 'text-gray-400' : 'text-gray-500'}`}><Editable path={`experience.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`experience.${idx}.endDate`} nowrap isDate={true} /></span></div><div className={`${TYPOGRAPHY.itemSubtitle} mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`experience.${idx}.company`} nowrap /></div></div><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><Editable path={`experience.${idx}.description`} multiline html /></div></div></div></ListEntry>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="experience" /><div className="flex flex-col gap-5">{expData.map((exp: any, idx: number) => (<ListEntry key={exp.id} collection="experience" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`flex gap-4`}><div className={`shrink-0 font-black text-[2em] leading-none cv-accent-text opacity-30 w-8 text-right`}>{String(idx+1).padStart(2,'0')}</div><div className="flex-1 min-w-0"><div className="cv-keep-with-next mb-1"><EntryHeader isNarrow={isNarrow} title={<h4 className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`experience.${idx}.role`} /></h4>} subtitle={<div className={`${TYPOGRAPHY.itemSubtitle} ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`experience.${idx}.company`} /></div>} date={<span className={`${TYPOGRAPHY.date} ${isDark ? 'text-gray-400' : 'text-gray-500'}`}><Editable path={`experience.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`experience.${idx}.endDate`} nowrap isDate={true} /></span>} /></div><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><Editable path={`experience.${idx}.description`} multiline html /></div></div></div></ListEntry>))}</div></div>);
   }}
 
   // =======================================================
@@ -875,26 +1018,26 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
   ,'education-card': { id: 'education-card', name: 'Card Per Degree', category: 'Education', render: ({ data, Editable, zoneId, isDark, Title, moveEntry, deleteEntry }: any) => {
     const eduData = Array.isArray(data?.education) ? data.education : [];
     const isNarrow = ['sidebar','left','right'].includes(zoneId);
-    return (<div className="snippet-anim cv-section"><Title titleKey="education" /><div className="flex flex-col gap-3">{eduData.map((edu: any, idx: number) => (<ListEntry key={edu.id} collection="education" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`rounded-xl border p-4 ${isDark ? 'border-slate-700 bg-slate-800/50' : 'border-gray-100 bg-gray-50'}`}><div className="cv-keep-with-next"><div className={`flex ${isNarrow ? 'flex-col gap-0.5' : 'justify-between items-start'} mb-1`}><h4 className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`education.${idx}.degree`} nowrap /></h4><span className={`${TYPOGRAPHY.date} shrink-0 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}><Editable path={`education.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`education.${idx}.endDate`} nowrap isDate={true} /></span></div><div className={`${TYPOGRAPHY.itemSubtitle} italic ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`education.${idx}.institution`} nowrap /></div></div><div className={`${TYPOGRAPHY.body} mt-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`education.${idx}.description`} multiline /></div></div></ListEntry>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="education" /><div className="flex flex-col gap-3">{eduData.map((edu: any, idx: number) => (<ListEntry key={edu.id} collection="education" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`rounded-xl border p-4 ${isDark ? 'border-slate-700 bg-slate-800/50' : 'border-gray-100 bg-gray-50'}`}><div className="cv-keep-with-next mb-1"><EntryHeader isNarrow={isNarrow} title={<h4 className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`education.${idx}.degree`} /></h4>} subtitle={<div className={`${TYPOGRAPHY.itemSubtitle} italic ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`education.${idx}.institution`} /></div>} date={<span className={`${TYPOGRAPHY.date} ${isDark ? 'text-gray-400' : 'text-gray-500'}`}><Editable path={`education.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`education.${idx}.endDate`} nowrap isDate={true} /></span>} /></div><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`education.${idx}.description`} multiline /></div></div></ListEntry>))}</div></div>);
   }}
   ,'education-pill-year': { id: 'education-pill-year', name: 'Year Pill Focus', category: 'Education', render: ({ data, Editable, zoneId, isDark, Title, moveEntry, deleteEntry }: any) => {
     const eduData = Array.isArray(data?.education) ? data.education : [];
     const isNarrow = ['sidebar','left','right'].includes(zoneId);
-    return (<div className="snippet-anim cv-section"><Title titleKey="education" /><div className="flex flex-col gap-4">{eduData.map((edu: any, idx: number) => (<ListEntry key={edu.id} collection="education" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`flex ${isNarrow ? 'flex-col gap-2' : 'gap-4 items-start'} cv-keep-with-next`}><div className="shrink-0"><span className="inline-block text-[10px] font-bold px-2.5 py-1.5 rounded-lg cv-accent-bg text-white tracking-wider whitespace-nowrap"><Editable path={`education.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`education.${idx}.endDate`} nowrap isDate={true} /></span></div><div className="flex-1 min-w-0"><h4 className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`education.${idx}.institution`} nowrap /></h4><div className={`${TYPOGRAPHY.itemSubtitle} italic mt-0.5 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`education.${idx}.degree`} nowrap /></div><div className={`${TYPOGRAPHY.body} mt-1.5 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`education.${idx}.description`} multiline /></div></div></div></ListEntry>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="education" /><div className="flex flex-col gap-4">{eduData.map((edu: any, idx: number) => (<ListEntry key={edu.id} collection="education" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`flex ${isNarrow ? 'flex-col gap-2' : 'gap-4 items-start'} cv-keep-with-next`}><div className="shrink-0"><span className="inline-block text-[10px] font-bold px-2.5 py-1.5 rounded-lg cv-accent-bg text-white tracking-wider"><Editable path={`education.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`education.${idx}.endDate`} nowrap isDate={true} /></span></div><div className="flex-1 min-w-0"><EntryHeader isNarrow={isNarrow} title={<h4 className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`education.${idx}.institution`} /></h4>} subtitle={<div className={`${TYPOGRAPHY.itemSubtitle} italic ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`education.${idx}.degree`} /></div>} /><div className={`${TYPOGRAPHY.body} mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`education.${idx}.description`} multiline /></div></div></div></ListEntry>))}</div></div>);
   }}
   ,'education-institution-first': { id: 'education-institution-first', name: 'Institution Hero', category: 'Education', render: ({ data, Editable, zoneId, isDark, Title, moveEntry, deleteEntry }: any) => {
     const eduData = Array.isArray(data?.education) ? data.education : [];
     const isNarrow = ['sidebar','left','right'].includes(zoneId);
-    return (<div className="snippet-anim cv-section"><Title titleKey="education" /><div className="flex flex-col gap-4">{eduData.map((edu: any, idx: number) => (<ListEntry key={edu.id} collection="education" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className="cv-keep-with-next"><div className={`flex ${isNarrow ? 'flex-col gap-0.5' : 'justify-between items-baseline'} mb-0.5`}><h4 className={`${TYPOGRAPHY.itemTitle} text-[1.05em] font-extrabold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`education.${idx}.institution`} nowrap /></h4><span className={`${TYPOGRAPHY.date} ${isDark ? 'text-gray-500' : 'text-gray-400'} shrink-0`}><Editable path={`education.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`education.${idx}.endDate`} nowrap isDate={true} /></span></div><div className={`${TYPOGRAPHY.itemSubtitle} italic mb-1.5 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`education.${idx}.degree`} nowrap /></div><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`education.${idx}.description`} multiline /></div></div></ListEntry>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="education" /><div className="flex flex-col gap-4">{eduData.map((edu: any, idx: number) => (<ListEntry key={edu.id} collection="education" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className="cv-keep-with-next mb-1"><EntryHeader isNarrow={isNarrow} title={<h4 className={`${TYPOGRAPHY.itemTitle} text-[1.05em] font-extrabold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`education.${idx}.institution`} /></h4>} subtitle={<div className={`${TYPOGRAPHY.itemSubtitle} italic ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`education.${idx}.degree`} /></div>} date={<span className={`${TYPOGRAPHY.date} ${isDark ? 'text-gray-500' : 'text-gray-400'}`}><Editable path={`education.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`education.${idx}.endDate`} nowrap isDate={true} /></span>} /></div><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`education.${idx}.description`} multiline /></div></ListEntry>))}</div></div>);
   }}
   ,'education-minimal': { id: 'education-minimal', name: 'Minimal One Line', category: 'Education', render: ({ data, Editable, zoneId, isDark, Title, moveEntry, deleteEntry }: any) => {
     const eduData = Array.isArray(data?.education) ? data.education : [];
-    return (<div className="snippet-anim cv-section"><Title titleKey="education" /><div className="flex flex-col gap-1.5">{eduData.map((edu: any, idx: number) => (<ListEntry key={edu.id} collection="education" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`flex flex-wrap items-baseline gap-x-2 py-1.5 border-b ${isDark ? 'border-slate-800' : 'border-gray-100'}`}><span className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`education.${idx}.degree`} nowrap /></span><span className={`${TYPOGRAPHY.itemSubtitle} ${isDark ? 'text-gray-400' : 'text-gray-500'}`}><Editable path={`education.${idx}.institution`} nowrap /></span><span className={`${TYPOGRAPHY.date} ml-auto ${isDark ? 'text-gray-500' : 'text-gray-400'}`}><Editable path={`education.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`education.${idx}.endDate`} nowrap isDate={true} /></span></div></ListEntry>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="education" /><div className="flex flex-col gap-1.5">{eduData.map((edu: any, idx: number) => (<ListEntry key={edu.id} collection="education" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`py-1.5 border-b ${isDark ? 'border-slate-800' : 'border-gray-100'} cv-keep-with-next`}><EntryHeader title={<span className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`education.${idx}.degree`} /></span>} subtitle={<span className={`${TYPOGRAPHY.itemSubtitle} ${isDark ? 'text-gray-400' : 'text-gray-500'}`}><Editable path={`education.${idx}.institution`} /></span>} date={<span className={`${TYPOGRAPHY.date} ${isDark ? 'text-gray-500' : 'text-gray-400'}`}><Editable path={`education.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`education.${idx}.endDate`} nowrap isDate={true} /></span>} /></div></ListEntry>))}</div></div>);
   }}
   ,'education-bordered': { id: 'education-bordered', name: 'Left Border Rule', category: 'Education', render: ({ data, Editable, zoneId, isDark, Title, moveEntry, deleteEntry }: any) => {
     const eduData = Array.isArray(data?.education) ? data.education : [];
     const isNarrow = ['sidebar','left','right'].includes(zoneId);
-    return (<div className="snippet-anim cv-section"><Title titleKey="education" /><div className="flex flex-col gap-4">{eduData.map((edu: any, idx: number) => (<ListEntry key={edu.id} collection="education" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className="pl-4 border-l-[3px] cv-accent-border"><div className="cv-keep-with-next"><div className={`flex ${isNarrow ? 'flex-col gap-0.5' : 'justify-between items-baseline'} mb-0.5`}><h4 className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`education.${idx}.degree`} nowrap /></h4><span className={`${TYPOGRAPHY.date} shrink-0 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}><Editable path={`education.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`education.${idx}.endDate`} nowrap isDate={true} /></span></div><div className={`${TYPOGRAPHY.itemSubtitle} italic mb-1.5 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`education.${idx}.institution`} nowrap /></div></div><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`education.${idx}.description`} multiline /></div></div></ListEntry>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="education" /><div className="flex flex-col gap-4">{eduData.map((edu: any, idx: number) => (<ListEntry key={edu.id} collection="education" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className="pl-4 border-l-[3px] cv-accent-border"><div className="cv-keep-with-next mb-1"><EntryHeader isNarrow={isNarrow} title={<h4 className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`education.${idx}.degree`} /></h4>} subtitle={<div className={`${TYPOGRAPHY.itemSubtitle} italic ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`education.${idx}.institution`} /></div>} date={<span className={`${TYPOGRAPHY.date} ${isDark ? 'text-gray-400' : 'text-gray-500'}`}><Editable path={`education.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`education.${idx}.endDate`} nowrap isDate={true} /></span>} /></div><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`education.${idx}.description`} multiline /></div></div></ListEntry>))}</div></div>);
   }}
 
   // =======================================================
@@ -903,98 +1046,104 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
   ,'projects-card-tags': { id: 'projects-card-tags', name: 'Card with Tech Tags', category: 'Projects', render: ({ data, Editable, zoneId, isDark, Title, moveEntry, deleteEntry }: any) => {
     const projData = Array.isArray(data?.projects) ? data.projects : []; if (projData.length === 0) return null;
     const isNarrow = ['sidebar','left','right'].includes(zoneId);
-    return (<div className="snippet-anim cv-section"><Title titleKey="projects" /><div className="flex flex-col gap-3 cv-gap-md">{projData.map((proj: any, idx: number) => (<ListEntry key={proj.id} collection="projects" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`rounded-xl border p-4 flex flex-col gap-2.5 ${isDark ? 'border-slate-700 bg-slate-800/50' : 'border-gray-200 bg-white shadow-sm'}`}><div className="cv-keep-with-next"><div className={`flex ${isNarrow ? 'flex-col gap-0.5' : 'justify-between items-start'} mb-1`}><h4 className={`${TYPOGRAPHY.itemTitle} cv-accent-text`}><Editable path={`projects.${idx}.name`} nowrap /></h4><span className={`${TYPOGRAPHY.date} shrink-0 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}><Editable path={`projects.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`projects.${idx}.endDate`} nowrap isDate={true} /></span></div><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><Editable path={`projects.${idx}.description`} multiline html /></div></div><div className="flex flex-wrap gap-1.5 pt-0.5"><div className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full cv-accent-bg/20 cv-accent-text`}><Editable path={`projects.${idx}.tech`} nowrap /></div></div></div></ListEntry>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="projects" /><div className="flex flex-col gap-3 cv-gap-md">{projData.map((proj: any, idx: number) => (<ListEntry key={proj.id} collection="projects" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`rounded-xl border p-4 flex flex-col gap-2.5 ${isDark ? 'border-slate-700 bg-slate-800/50' : 'border-gray-200 bg-white shadow-sm'}`}><div className="cv-keep-with-next mb-1"><EntryHeader isNarrow={isNarrow} title={<h4 className={`${TYPOGRAPHY.itemTitle} cv-accent-text`}><Editable path={`projects.${idx}.name`} /></h4>} date={<span className={`${TYPOGRAPHY.date} ${isDark ? 'text-gray-400' : 'text-gray-500'}`}><Editable path={`projects.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`projects.${idx}.endDate`} nowrap isDate={true} /></span>} /></div><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><Editable path={`projects.${idx}.description`} multiline html /></div><div className="flex flex-wrap gap-1.5 pt-0.5"><div className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full cv-accent-bg/20 cv-accent-text overflow-wrap-anywhere`}><Editable path={`projects.${idx}.tech`} /></div></div></div></ListEntry>))}</div></div>);
   }}
   ,'projects-featured': { id: 'projects-featured', name: 'Featured + List', category: 'Projects', render: ({ data, Editable, zoneId, isDark, Title, moveEntry, deleteEntry }: any) => {
     const projData = Array.isArray(data?.projects) ? data.projects : []; if (projData.length === 0) return null;
     const featured = projData[0]; const rest = projData.slice(1);
-    return (<div className="snippet-anim cv-section"><Title titleKey="projects" /><div className="flex flex-col gap-3 cv-gap-md"><ListEntry collection="projects" index={0} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`rounded-xl p-5 cv-accent-bg/10 border cv-accent-border`}><div className="cv-keep-with-next"><h4 className={`${TYPOGRAPHY.itemTitle} cv-accent-text text-[1.1em] mb-1`}><Editable path="projects.0.name" nowrap /></h4><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-1.5`}><Editable path="projects.0.description" multiline html /></div></div><div className={`${TYPOGRAPHY.date}`}><Editable path="projects.0.startDate" nowrap isDate={true} /> - <Editable path="projects.0.endDate" nowrap isDate={true} /></div></div></ListEntry>{rest.map((proj: any, idx: number) => (<ListEntry key={proj.id} collection="projects" index={idx+1} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`flex justify-between items-baseline py-1.5 border-b ${isDark ? 'border-slate-800' : 'border-gray-100'}`}><span className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-200' : 'text-gray-800'}`}><Editable path={`projects.${idx+1}.name`} nowrap /></span><span className={`${TYPOGRAPHY.date}`}><Editable path={`projects.${idx+1}.startDate`} nowrap isDate={true} /> - <Editable path={`projects.${idx+1}.endDate`} nowrap isDate={true} /></span></div></ListEntry>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="projects" /><div className="flex flex-col gap-3 cv-gap-md"><ListEntry collection="projects" index={0} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`rounded-xl p-5 cv-accent-bg/10 border cv-accent-border`}><div className="cv-keep-with-next mb-1"><h4 className={`${TYPOGRAPHY.itemTitle} cv-accent-text text-[1.1em] mb-1 overflow-wrap-anywhere`}><Editable path="projects.0.name" /></h4><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-1.5`}><Editable path="projects.0.description" multiline html /></div></div><div className={`${TYPOGRAPHY.date}`}><Editable path="projects.0.startDate" nowrap isDate={true} /> - <Editable path="projects.0.endDate" nowrap isDate={true} /></div></div></ListEntry>{rest.map((proj: any, idx: number) => (<ListEntry key={proj.id} collection="projects" index={idx+1} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`py-1.5 border-b ${isDark ? 'border-slate-800' : 'border-gray-100'} cv-keep-with-next`}><EntryHeader title={<span className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-200' : 'text-gray-800'}`}><Editable path={`projects.${idx+1}.name`} /></span>} date={<span className={`${TYPOGRAPHY.date}`}><Editable path={`projects.${idx+1}.startDate`} nowrap isDate={true} /> - <Editable path={`projects.${idx+1}.endDate`} nowrap isDate={true} /></span>} /></div></ListEntry>))}</div></div>);
   }}
   ,'projects-numbered': { id: 'projects-numbered', name: 'Editorial Numbered', category: 'Projects', render: ({ data, Editable, zoneId, isDark, Title, moveEntry, deleteEntry }: any) => {
     const projData = Array.isArray(data?.projects) ? data.projects : []; if (projData.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="projects" /><div className="flex flex-col gap-4">{projData.map((proj: any, idx: number) => (<ListEntry key={proj.id} collection="projects" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className="flex gap-4"><div className="shrink-0 font-black text-[2em] leading-none cv-accent-text opacity-25 w-8 text-right">{String(idx+1).padStart(2,'0')}</div><div className="flex-1 min-w-0 cv-keep-with-next"><h4 className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-100' : 'text-gray-900'} mb-1`}><Editable path={`projects.${idx}.name`} nowrap /></h4><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><Editable path={`projects.${idx}.description`} multiline html /></div></div></div></ListEntry>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="projects" /><div className="flex flex-col gap-4">{projData.map((proj: any, idx: number) => (<ListEntry key={proj.id} collection="projects" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className="flex gap-4"><div className="shrink-0 font-black text-[2em] leading-none cv-accent-text opacity-25 w-8 text-right">{String(idx+1).padStart(2,'0')}</div><div className="flex-1 min-w-0 cv-keep-with-next"><h4 className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-100' : 'text-gray-900'} mb-1 overflow-wrap-anywhere`}><Editable path={`projects.${idx}.name`} /></h4><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><Editable path={`projects.${idx}.description`} multiline html /></div></div></div></ListEntry>))}</div></div>);
   }}
   ,'projects-minimal-list': { id: 'projects-minimal-list', name: 'Minimal Compact', category: 'Projects', render: ({ data, Editable, zoneId, isDark, Title, moveEntry, deleteEntry }: any) => {
     const projData = Array.isArray(data?.projects) ? data.projects : []; if (projData.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="projects" /><div className="flex flex-col gap-2 cv-gap-sm">{projData.map((proj: any, idx: number) => (<ListEntry key={proj.id} collection="projects" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`py-1.5 border-b ${isDark ? 'border-slate-800' : 'border-gray-100'}`}><div className="flex justify-between items-baseline gap-2 mb-0.5"><span className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`projects.${idx}.name`} nowrap /></span><span className={`${TYPOGRAPHY.date} shrink-0`}><Editable path={`projects.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`projects.${idx}.endDate`} nowrap isDate={true} /></span></div><div className={`${TYPOGRAPHY.body} italic ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`projects.${idx}.description`} multiline html /></div></div></ListEntry>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="projects" /><div className="flex flex-col gap-2 cv-gap-sm">{projData.map((proj: any, idx: number) => (<ListEntry key={proj.id} collection="projects" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`py-1.5 border-b ${isDark ? 'border-slate-800' : 'border-gray-100'} cv-keep-with-next`}><div className="mb-0.5"><EntryHeader title={<span className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`projects.${idx}.name`} /></span>} date={<span className={`${TYPOGRAPHY.date}`}><Editable path={`projects.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`projects.${idx}.endDate`} nowrap isDate={true} /></span>} /></div><div className={`${TYPOGRAPHY.body} italic ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`projects.${idx}.description`} multiline html /></div></div></ListEntry>))}</div></div>);
   }}
   ,'projects-card-accent': { id: 'projects-card-accent', name: 'Accent Header Card', category: 'Projects', render: ({ data, Editable, zoneId, isDark, Title, moveEntry, deleteEntry }: any) => {
     const projData = Array.isArray(data?.projects) ? data.projects : []; if (projData.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="projects" /><div className="flex flex-col gap-3 cv-gap-md">{projData.map((proj: any, idx: number) => (<ListEntry key={proj.id} collection="projects" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`rounded-xl overflow-hidden border ${isDark ? 'border-slate-700' : 'border-gray-200'} shadow-sm`}><div className="cv-accent-bg px-4 py-2 flex justify-between items-center"><span className="text-white font-bold text-[0.85em]"><Editable path={`projects.${idx}.name`} nowrap /></span><span className="text-white/70 text-[0.75em]"><Editable path={`projects.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`projects.${idx}.endDate`} nowrap isDate={true} /></span></div><div className={`p-4 ${isDark ? 'bg-slate-800/50' : 'bg-white'}`}><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><Editable path={`projects.${idx}.description`} multiline html /></div></div></div></ListEntry>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="projects" /><div className="flex flex-col gap-3 cv-gap-md">{projData.map((proj: any, idx: number) => (<ListEntry key={proj.id} collection="projects" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`rounded-xl overflow-hidden border ${isDark ? 'border-slate-700' : 'border-gray-200'} shadow-sm cv-keep-with-next`}><div className="cv-accent-bg px-4 py-2 flex justify-between items-center"><span className="text-white font-bold text-[0.85em] overflow-wrap-anywhere"><Editable path={`projects.${idx}.name`} /></span><span className="text-white/70 text-[0.75em] whitespace-nowrap ml-2"><Editable path={`projects.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`projects.${idx}.endDate`} nowrap isDate={true} /></span></div><div className={`p-4 ${isDark ? 'bg-slate-800/50' : 'bg-white'}`}><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><Editable path={`projects.${idx}.description`} multiline html /></div></div></div></ListEntry>))}</div></div>);
   }}
 
   // =======================================================
   // NEW SNIPPETS — SKILLS (5 new)
   // =======================================================
-  ,'skills-grouped-sections': { id: 'skills-grouped-sections', name: 'Grouped by Category', category: 'Skills', render: ({ data, Editable, isDark, Title, readOnly }: any) => {
+  ,'skills-grouped-sections': { id: 'skills-grouped-sections', name: 'Grouped by Category', category: 'Skills', render: ({ data, isDark, Title }: any) => {
     const groups = normalizeSkillGroups(data?.skills);
     if (groups.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-col gap-3">{groups.map((group, index) => (<div key={`${group.category}-${index}`}><div className={`text-[0.72em] uppercase tracking-widest font-bold mb-1.5 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{group.category}</div><div className="flex flex-wrap gap-1.5">{group.skills.map((skill: string, i: number) => (<span key={i} className={`text-[0.85em] px-2.5 py-0.5 rounded-md font-medium ${isDark ? 'bg-slate-700 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>{skill}</span>))}</div></div>))}</div><SkillsEditableOverlay groups={normalizeSkillGroups(data?.skills)} Editable={Editable} readOnly={readOnly} /></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-col gap-3">{groups.map((group, index) => (<div key={`${group.category}-${index}`}><div className={`text-[0.72em] uppercase tracking-widest font-bold mb-1.5 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{group.category}</div><div className="flex flex-wrap gap-1.5">{group.skills.map((skill: string, i: number) => (<span key={i} className={`text-[0.85em] px-2.5 py-0.5 rounded-md font-medium ${isDark ? 'bg-slate-700 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>{skill}</span>))}</div></div>))}</div></div>);
   }}
-  ,'skills-star-rating': { id: 'skills-star-rating', name: 'Star Rating', category: 'Skills', render: ({ data, Editable, isDark, Title, readOnly }: any) => {
+  ,'skills-star-rating': { id: 'skills-star-rating', name: 'Star Rating', category: 'Skills', render: ({ data, isDark, Title }: any) => {
     const items = flattenSkillItems(data?.skills).slice(0, 8);
-    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-col gap-2">{items.map((skill: any, i: number) => (<div key={i} className="flex justify-between items-center"><span className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{skill.label}</span><div className="flex gap-0.5">{[1,2,3,4,5].map(s => (<span key={s} className={`text-[13px] ${s <= skill.rating ? 'cv-accent-text' : (isDark ? 'text-slate-700' : 'text-gray-200')}`}>★</span>))}</div></div>))}</div><SkillsEditableOverlay groups={normalizeSkillGroups(data?.skills)} Editable={Editable} readOnly={readOnly} /></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-col gap-2">{items.map((skill: any, i: number) => (<div key={i} className="flex justify-between items-center"><span className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{skill.label}</span><div className="flex gap-0.5">{[1,2,3,4,5].map(s => (<span key={s} className={`text-[13px] ${s <= skill.rating ? 'cv-accent-text' : (isDark ? 'text-slate-700' : 'text-gray-200')}`}>★</span>))}</div></div>))}</div></div>);
   }}
-  ,'skills-two-col-list': { id: 'skills-two-col-list', name: 'Two Column List', category: 'Skills', render: ({ data, Editable, isDark, Title, readOnly }: any) => {
+  ,'skills-two-col-list': { id: 'skills-two-col-list', name: 'Two Column List', category: 'Skills', render: ({ data, isDark, Title }: any) => {
     const items = flattenSkillItems(data?.skills);
-    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="grid grid-cols-2 gap-x-4 gap-y-1">{items.map((skill: any, i: number) => (<div key={i} className={`flex items-center gap-1.5 ${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><span className="cv-accent-text text-[10px] shrink-0">●</span>{skill.label}</div>))}</div><SkillsEditableOverlay groups={normalizeSkillGroups(data?.skills)} Editable={Editable} readOnly={readOnly} /></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="grid grid-cols-2 gap-x-4 gap-y-1">{items.map((skill: any, i: number) => (<div key={i} className={`flex items-center gap-1.5 ${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><span className="cv-accent-text text-[10px] shrink-0">●</span>{skill.label}</div>))}</div></div>);
   }}
-  ,'skills-accent-badges': { id: 'skills-accent-badges', name: 'Accent Solid Badges', category: 'Skills', render: ({ data, Editable, isDark, Title, readOnly }: any) => {
+  ,'skills-accent-badges': { id: 'skills-accent-badges', name: 'Accent Solid Badges', category: 'Skills', render: ({ data, isDark, Title }: any) => {
     const items = flattenSkillItems(data?.skills);
-    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-wrap gap-1.5">{items.map((skill: any, i: number) => (<span key={i} className="text-[10px] font-bold px-2.5 py-1 rounded-md cv-accent-bg text-white tracking-wide">{skill.label}</span>))}</div><SkillsEditableOverlay groups={normalizeSkillGroups(data?.skills)} Editable={Editable} readOnly={readOnly} /></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-wrap gap-1.5">{items.map((skill: any, i: number) => (<span key={i} className="text-[10px] font-bold px-2.5 py-1 rounded-md cv-accent-bg text-white tracking-wide">{skill.label}</span>))}</div></div>);
   }}
-  ,'skills-compact-inline': { id: 'skills-compact-inline', name: 'Compact Inline All', category: 'Skills', render: ({ data, Editable, isDark, Title, readOnly }: any) => {
+  ,'skills-compact-inline': { id: 'skills-compact-inline', name: 'Compact Inline All', category: 'Skills', render: ({ data, isDark, Title }: any) => {
     const all = flattenSkillItems(data?.skills);
-    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><p className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'} leading-relaxed`}>{all.map((skill: any, i: number) => <span key={i}>{skill.label}{i < all.length-1 && <span className={`mx-1.5 ${isDark ? 'text-gray-600' : 'text-gray-300'}`}>·</span>}</span>)}</p><SkillsEditableOverlay groups={normalizeSkillGroups(data?.skills)} Editable={Editable} readOnly={readOnly} /></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><p className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'} leading-relaxed`}>{all.map((skill: any, i: number) => <span key={i}>{skill.label}{i < all.length-1 && <span className={`mx-1.5 ${isDark ? 'text-gray-600' : 'text-gray-300'}`}>·</span>}</span>)}</p></div>);
   }}
 
   // =======================================================
   // NEW SNIPPETS — CERTIFICATIONS (5 new)
   // =======================================================
-  ,'certifications-timeline': { id: 'certifications-timeline', name: 'Timeline Dots', category: 'Certifications', render: ({ data, isDark, Title, moveEntry, deleteEntry }: any) => {
+  ,'certifications-timeline': { id: 'certifications-timeline', name: 'Timeline Dots', category: 'Certifications', render: ({ data, Editable, zoneId, isDark, Title, moveEntry, deleteEntry }: any) => {
     const certs = Array.isArray(data?.certifications) ? data.certifications : []; if (certs.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="certifications" /><div className={`border-l-2 ml-2 flex flex-col gap-3 ${isDark ? 'border-slate-700' : 'border-gray-200'}`}>{certs.map((c: any, i: number) => (<ListEntry key={c.id} collection="certifications" index={i} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className="relative pl-5"><div className={`absolute w-2.5 h-2.5 rounded-full -left-[22px] top-1 cv-accent-bg`} /><div className="cv-keep-with-next"><div className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>{c.name || c.title}</div><div className={`${TYPOGRAPHY.date} mt-0.5`}>{c.issuer} {c.date && `· ${c.date}`}</div></div></div></ListEntry>))}</div></div>);
+    const isNarrow = ['sidebar','left','right'].includes(zoneId);
+    return (<div className="snippet-anim cv-section"><Title titleKey="certifications" /><div className={`border-l-2 ml-2 flex flex-col gap-3 ${isDark ? 'border-slate-700' : 'border-gray-200'}`}>{certs.map((c: any, i: number) => (<ListEntry key={c.id} collection="certifications" index={i} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className="relative pl-5"><div className={`absolute w-2.5 h-2.5 rounded-full -left-[22px] top-1 cv-accent-bg`} /><div className="cv-keep-with-next"><EntryHeader isNarrow={isNarrow} title={<div className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-200' : 'text-gray-800'} overflow-wrap-anywhere`}><Editable path={`certifications.${i}.name`} /></div>} subtitle={<div className={`${TYPOGRAPHY.itemSubtitle}`}><Editable path={`certifications.${i}.issuer`} /></div>} date={<div className={`${TYPOGRAPHY.date} mt-0.5`}><Editable path={`certifications.${i}.startDate`} nowrap isDate={true} /> - <Editable path={`certifications.${i}.endDate`} nowrap isDate={true} /></div>} /></div></div></ListEntry>))}</div></div>);
   }}
-  ,'certifications-badge': { id: 'certifications-badge', name: 'Badge Pills', category: 'Certifications', render: ({ data, isDark, Title, moveEntry, deleteEntry }: any) => {
+  ,'certifications-badge': { id: 'certifications-badge', name: 'Badge Pills', category: 'Certifications', render: ({ data, Editable, isDark, Title, moveEntry, deleteEntry }: any) => {
     const certs = Array.isArray(data?.certifications) ? data.certifications : []; if (certs.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="certifications" /><div className="flex flex-wrap gap-2">{certs.map((c: any, i: number) => (<ListEntry key={c.id} collection="certifications" index={i} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`px-3 py-1.5 rounded-xl border text-[0.85em] font-semibold ${isDark ? 'border-slate-600 bg-slate-800 text-gray-200' : 'border-gray-200 bg-white text-gray-700 shadow-sm'}`}><div className="font-bold cv-accent-text">{c.name || c.title}</div><div className={`text-[0.72em] mt-0.5 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{c.issuer}</div></div></ListEntry>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="certifications" /><div className="flex flex-wrap gap-2">{certs.map((c: any, i: number) => (<ListEntry key={c.id} collection="certifications" index={i} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`px-3 py-1.5 rounded-xl border text-[0.85em] font-semibold ${isDark ? 'border-slate-600 bg-slate-800 text-gray-200' : 'border-gray-200 bg-white text-gray-700 shadow-sm'}`}><div className="font-bold cv-accent-text overflow-wrap-anywhere"><Editable path={`certifications.${i}.name`} /></div><div className={`text-[0.72em] mt-0.5 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}><Editable path={`certifications.${i}.issuer`} /></div></div></ListEntry>))}</div></div>);
   }}
-  ,'certifications-grid': { id: 'certifications-grid', name: '2-Col Card Grid', category: 'Certifications', render: ({ data, isDark, Title, moveEntry, deleteEntry }: any) => {
+  ,'certifications-grid': { id: 'certifications-grid', name: '2-Col Card Grid', category: 'Certifications', render: ({ data, Editable, isDark, Title, moveEntry, deleteEntry }: any) => {
     const certs = Array.isArray(data?.certifications) ? data.certifications : []; if (certs.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="certifications" /><div className="grid grid-cols-2 gap-2">{certs.map((c: any, i: number) => (<ListEntry key={c.id} collection="certifications" index={i} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`p-3 rounded-lg border ${isDark ? 'border-slate-700 bg-slate-800/50' : 'border-gray-200 bg-gray-50'}`}><div className={`${TYPOGRAPHY.itemTitle} text-[0.85em] ${isDark ? 'text-gray-200' : 'text-gray-800'} mb-0.5`}>{c.name || c.title}</div><div className={`text-[9px] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{c.issuer} {c.date && `· ${c.date}`}</div></div></ListEntry>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="certifications" /><div className="grid grid-cols-2 gap-2">{certs.map((c: any, i: number) => (<ListEntry key={c.id} collection="certifications" index={i} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`p-3 rounded-lg border ${isDark ? 'border-slate-700 bg-slate-800/50' : 'border-gray-200 bg-gray-50'}`}><div className={`${TYPOGRAPHY.itemTitle} text-[0.85em] ${isDark ? 'text-gray-200' : 'text-gray-800'} mb-0.5 overflow-wrap-anywhere`}><Editable path={`certifications.${i}.name`} /></div><div className={`text-[9px] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}><Editable path={`certifications.${i}.issuer`} /> <Editable path={`certifications.${i}.startDate`} nowrap isDate={true} /></div></div></ListEntry>))}</div></div>);
   }}
-  ,'certifications-minimal': { id: 'certifications-minimal', name: 'Minimal Single Line', category: 'Certifications', render: ({ data, isDark, Title, moveEntry, deleteEntry }: any) => {
+  ,'certifications-minimal': { id: 'certifications-minimal', name: 'Minimal Single Line', category: 'Certifications', render: ({ data, Editable, zoneId, isDark, Title, moveEntry, deleteEntry }: any) => {
     const certs = Array.isArray(data?.certifications) ? data.certifications : []; if (certs.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="certifications" /><div className="flex flex-col gap-1">{certs.map((c: any, i: number) => (<ListEntry key={c.id} collection="certifications" index={i} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`flex flex-wrap items-baseline gap-x-2 py-1 border-b ${isDark ? 'border-slate-800' : 'border-gray-100'}`}><span className={`${TYPOGRAPHY.itemTitle} text-[0.85em] ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>{c.name || c.title}</span><span className={`${TYPOGRAPHY.date}`}>{c.issuer}</span><span className={`${TYPOGRAPHY.date} ml-auto`}>{c.date}</span></div></ListEntry>))}</div></div>);
+    const isNarrow = ['sidebar','left','right'].includes(zoneId);
+    return (<div className="snippet-anim cv-section"><Title titleKey="certifications" /><div className="flex flex-col gap-1">{certs.map((c: any, i: number) => (<ListEntry key={c.id} collection="certifications" index={i} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`py-1 border-b ${isDark ? 'border-slate-800' : 'border-gray-100'} cv-keep-with-next`}><EntryHeader isNarrow={isNarrow} title={<span className={`${TYPOGRAPHY.itemTitle} text-[0.85em] ${isDark ? 'text-gray-200' : 'text-gray-800'}`}><Editable path={`certifications.${i}.name`} /></span>} subtitle={<span className={`${TYPOGRAPHY.date}`}><Editable path={`certifications.${i}.issuer`} /></span>} date={<span className={`${TYPOGRAPHY.date} ml-auto`}><Editable path={`certifications.${i}.startDate`} nowrap isDate={true} /> - <Editable path={`certifications.${i}.endDate`} nowrap isDate={true} /></span>} /></div></ListEntry>))}</div></div>);
   }}
-  ,'certifications-bordered': { id: 'certifications-bordered', name: 'Left Border Row', category: 'Certifications', render: ({ data, isDark, Title, moveEntry, deleteEntry }: any) => {
+  ,'certifications-bordered': { id: 'certifications-bordered', name: 'Left Border Row', category: 'Certifications', render: ({ data, Editable, zoneId, isDark, Title, moveEntry, deleteEntry }: any) => {
     const certs = Array.isArray(data?.certifications) ? data.certifications : []; if (certs.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="certifications" /><div className="flex flex-col gap-3">{certs.map((c: any, i: number) => (<ListEntry key={c.id} collection="certifications" index={i} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className="pl-4 border-l-[3px] cv-accent-border cv-keep-with-next"><div className={`${TYPOGRAPHY.itemTitle} text-[0.9em] ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>{c.name || c.title}</div><div className={`${TYPOGRAPHY.date} mt-0.5`}>{c.issuer} {c.date && `· ${c.date}`}</div></div></ListEntry>))}</div></div>);
+    const isNarrow = ['sidebar','left','right'].includes(zoneId);
+    return (<div className="snippet-anim cv-section"><Title titleKey="certifications" /><div className="flex flex-col gap-3">{certs.map((c: any, i: number) => (<ListEntry key={c.id} collection="certifications" index={i} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className="pl-4 border-l-[3px] cv-accent-border cv-keep-with-next"><EntryHeader isNarrow={isNarrow} title={<div className={`${TYPOGRAPHY.itemTitle} text-[0.9em] ${isDark ? 'text-gray-200' : 'text-gray-800'} overflow-wrap-anywhere`}><Editable path={`certifications.${i}.name`} /></div>} subtitle={<div className={`${TYPOGRAPHY.date} mt-0.5`}><Editable path={`certifications.${i}.issuer`} /></div>} date={<div className={`${TYPOGRAPHY.date} mt-0.5`}><Editable path={`certifications.${i}.startDate`} nowrap isDate={true} /> - <Editable path={`certifications.${i}.endDate`} nowrap isDate={true} /></div>} /></div></ListEntry>))}</div></div>);
   }}
 
   // =======================================================
   // NEW SNIPPETS — AWARDS (5 new)
   // =======================================================
-  ,'awards-timeline': { id: 'awards-timeline', name: 'Timeline Flow', category: 'Awards', render: ({ data, isDark, Title, moveEntry, deleteEntry }: any) => {
+  ,'awards-timeline': { id: 'awards-timeline', name: 'Timeline Flow', category: 'Awards', render: ({ data, Editable, zoneId, isDark, Title, moveEntry, deleteEntry }: any) => {
     const awards = Array.isArray(data?.awards) ? data.awards : []; if (awards.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="awards" /><div className={`border-l-2 ml-2 flex flex-col gap-3 ${isDark ? 'border-slate-700' : 'border-gray-200'}`}>{awards.map((a: any, i: number) => (<ListEntry key={a.id} collection="awards" index={i} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className="relative pl-5"><div className="absolute w-2.5 h-2.5 rounded-full -left-[22px] top-1 cv-accent-bg" /><div className="cv-keep-with-next"><div className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>{a.title}</div><div className={`${TYPOGRAPHY.date} mt-0.5`}>{a.issuer} {a.date && `· ${a.date}`}</div></div></div></ListEntry>))}</div></div>);
+    const isNarrow = ['sidebar','left','right'].includes(zoneId);
+    return (<div className="snippet-anim cv-section"><Title titleKey="awards" /><div className={`border-l-2 ml-2 flex flex-col gap-3 ${isDark ? 'border-slate-700' : 'border-gray-200'}`}>{awards.map((a: any, i: number) => (<ListEntry key={a.id} collection="awards" index={i} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className="relative pl-5"><div className="absolute w-2.5 h-2.5 rounded-full -left-[22px] top-1 cv-accent-bg" /><div className="cv-keep-with-next"><EntryHeader isNarrow={isNarrow} title={<div className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-200' : 'text-gray-800'} overflow-wrap-anywhere`}><Editable path={`awards.${i}.title`} /></div>} subtitle={<div className={`${TYPOGRAPHY.date} mt-0.5`}><Editable path={`awards.${i}.issuer`} /></div>} date={<div className={`${TYPOGRAPHY.date} mt-0.5`}><Editable path={`awards.${i}.date`} nowrap isDate={true} /></div>} /></div></div></ListEntry>))}</div></div>);
   }}
-  ,'awards-featured': { id: 'awards-featured', name: 'Featured First', category: 'Awards', render: ({ data, isDark, Title, moveEntry, deleteEntry }: any) => {
+  ,'awards-featured': { id: 'awards-featured', name: 'Featured First', category: 'Awards', render: ({ data, Editable, zoneId, isDark, Title, moveEntry, deleteEntry }: any) => {
     const awards = Array.isArray(data?.awards) ? data.awards : []; if (awards.length === 0) return null;
+    const isNarrow = ['sidebar','left','right'].includes(zoneId);
     const [first, ...rest] = awards;
-    return (<div className="snippet-anim cv-section"><Title titleKey="awards" /><ListEntry collection="awards" index={0} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`rounded-xl p-4 mb-3 cv-accent-bg/10 border cv-accent-border flex gap-3 items-start`}><span className="text-[1.5em]">🏆</span><div><div className={`${TYPOGRAPHY.itemTitle} cv-accent-text`}>{first?.title}</div><div className={`${TYPOGRAPHY.date} mt-0.5`}>{first?.issuer} {first?.date && `· ${first.date}`}</div></div></div></ListEntry>{rest.map((a: any, i: number) => (<ListEntry key={a.id} collection="awards" index={i+1} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`flex items-baseline gap-2 py-1 border-b ${isDark ? 'border-slate-800' : 'border-gray-100'}`}><span className={`${TYPOGRAPHY.itemTitle} text-[0.85em] ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>{a.title}</span><span className={`${TYPOGRAPHY.date} ml-auto`}>{a.date}</span></div></ListEntry>))}</div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="awards" /><ListEntry collection="awards" index={0} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`rounded-xl p-4 mb-3 cv-accent-bg/10 border cv-accent-border flex gap-3 items-start`}><span className="text-[1.5em]">🏆</span><div className="cv-keep-with-next w-full"><EntryHeader isNarrow={isNarrow} title={<div className={`${TYPOGRAPHY.itemTitle} cv-accent-text overflow-wrap-anywhere`}><Editable path={`awards.0.title`} /></div>} subtitle={<div className={`${TYPOGRAPHY.date} mt-0.5`}><Editable path={`awards.0.issuer`} /></div>} date={<div className={`${TYPOGRAPHY.date} mt-0.5`}><Editable path={`awards.0.date`} nowrap isDate={true} /></div>} /></div></div></ListEntry>{rest.map((a: any, i: number) => (<ListEntry key={a.id} collection="awards" index={i+1} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`py-1 border-b ${isDark ? 'border-slate-800' : 'border-gray-100'} cv-keep-with-next`}><EntryHeader isNarrow={isNarrow} title={<span className={`${TYPOGRAPHY.itemTitle} text-[0.85em] ${isDark ? 'text-gray-200' : 'text-gray-800'}`}><Editable path={`awards.${i+1}.title`} /></span>} date={<span className={`${TYPOGRAPHY.date} ml-auto`}><Editable path={`awards.${i+1}.date`} nowrap isDate={true} /></span>} /></div></ListEntry>))}</div>);
   }}
-  ,'awards-badge': { id: 'awards-badge', name: 'Trophy Badges', category: 'Awards', render: ({ data, isDark, Title, moveEntry, deleteEntry }: any) => {
+  ,'awards-badge': { id: 'awards-badge', name: 'Trophy Badges', category: 'Awards', render: ({ data, Editable, isDark, Title, moveEntry, deleteEntry }: any) => {
     const awards = Array.isArray(data?.awards) ? data.awards : []; if (awards.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="awards" /><div className="flex flex-col gap-2">{awards.map((a: any, i: number) => (<ListEntry key={a.id} collection="awards" index={i} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`flex items-center gap-3 px-3 py-2 rounded-lg border ${isDark ? 'border-slate-700 bg-slate-800/50' : 'border-gray-200 bg-gray-50'}`}><span className="text-[1.2em] shrink-0">🏆</span><div><div className={`${TYPOGRAPHY.itemTitle} text-[0.85em] ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>{a.title}</div><div className={`${TYPOGRAPHY.date}`}>{a.issuer} {a.date && `· ${a.date}`}</div></div></div></ListEntry>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="awards" /><div className="flex flex-col gap-2">{awards.map((a: any, i: number) => (<ListEntry key={a.id} collection="awards" index={i} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`flex items-center gap-3 px-3 py-2 rounded-lg border ${isDark ? 'border-slate-700 bg-slate-800/50' : 'border-gray-200 bg-gray-50'}`}><span className="text-[1.2em] shrink-0">🏆</span><div><div className={`${TYPOGRAPHY.itemTitle} text-[0.85em] ${isDark ? 'text-gray-200' : 'text-gray-800'} overflow-wrap-anywhere`}><Editable path={`awards.${i}.title`} /></div><div className={`${TYPOGRAPHY.date}`}><Editable path={`awards.${i}.issuer`} /> <Editable path={`awards.${i}.date`} nowrap isDate={true} /></div></div></div></ListEntry>))}</div></div>);
   }}
-  ,'awards-minimal-list': { id: 'awards-minimal-list', name: 'Minimal Compact', category: 'Awards', render: ({ data, isDark, Title, moveEntry, deleteEntry }: any) => {
+  ,'awards-minimal-list': { id: 'awards-minimal-list', name: 'Minimal Compact', category: 'Awards', render: ({ data, Editable, zoneId, isDark, Title, moveEntry, deleteEntry }: any) => {
     const awards = Array.isArray(data?.awards) ? data.awards : []; if (awards.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="awards" /><div className="flex flex-col gap-1">{awards.map((a: any, i: number) => (<ListEntry key={a.id} collection="awards" index={i} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`flex flex-wrap items-baseline gap-x-2 py-1 border-b ${isDark ? 'border-slate-800' : 'border-gray-100'}`}><span className={`${TYPOGRAPHY.itemTitle} text-[0.85em] ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>{a.title}</span><span className={`${TYPOGRAPHY.date}`}>{a.issuer}</span><span className={`${TYPOGRAPHY.date} ml-auto`}>{a.date}</span></div></ListEntry>))}</div></div>);
+    const isNarrow = ['sidebar','left','right'].includes(zoneId);
+    return (<div className="snippet-anim cv-section"><Title titleKey="awards" /><div className="flex flex-col gap-1">{awards.map((a: any, i: number) => (<ListEntry key={a.id} collection="awards" index={i} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`py-1 border-b ${isDark ? 'border-slate-800' : 'border-gray-100'} cv-keep-with-next`}><EntryHeader isNarrow={isNarrow} title={<span className={`${TYPOGRAPHY.itemTitle} text-[0.85em] ${isDark ? 'text-gray-200' : 'text-gray-800'}`}><Editable path={`awards.${i}.title`} /></span>} subtitle={<span className={`${TYPOGRAPHY.date}`}><Editable path={`awards.${i}.issuer`} /></span>} date={<span className={`${TYPOGRAPHY.date} ml-auto`}><Editable path={`awards.${i}.date`} nowrap isDate={true} /></span>} /></div></ListEntry>))}</div></div>);
   }}
-  ,'awards-card': { id: 'awards-card', name: 'Card Grid', category: 'Awards', render: ({ data, isDark, Title, moveEntry, deleteEntry }: any) => {
+  ,'awards-card': { id: 'awards-card', name: 'Card Grid', category: 'Awards', render: ({ data, Editable, isDark, Title, moveEntry, deleteEntry }: any) => {
     const awards = Array.isArray(data?.awards) ? data.awards : []; if (awards.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="awards" /><div className="grid grid-cols-2 gap-2">{awards.map((a: any, i: number) => (<ListEntry key={a.id} collection="awards" index={i} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`p-3 rounded-lg border ${isDark ? 'border-slate-700 bg-slate-800/50' : 'border-gray-200 bg-white shadow-sm'}`}><div className={`${TYPOGRAPHY.itemTitle} text-[0.85em] ${isDark ? 'text-gray-200' : 'text-gray-800'} mb-0.5`}>{a.title}</div><div className={`text-[9px] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{a.issuer} {a.date && `· ${a.date}`}</div></div></ListEntry>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="awards" /><div className="grid grid-cols-2 gap-2">{awards.map((a: any, i: number) => (<ListEntry key={a.id} collection="awards" index={i} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`p-3 rounded-lg border ${isDark ? 'border-slate-700 bg-slate-800/50' : 'border-gray-200 bg-white shadow-sm'}`}><div className={`${TYPOGRAPHY.itemTitle} text-[0.85em] ${isDark ? 'text-gray-200' : 'text-gray-800'} mb-0.5 overflow-wrap-anywhere`}><Editable path={`awards.${i}.title`} /></div><div className={`text-[9px] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}><Editable path={`awards.${i}.issuer`} /> <Editable path={`awards.${i}.date`} nowrap isDate={true} /></div></div></ListEntry>))}</div></div>);
   }}
 
   // =======================================================

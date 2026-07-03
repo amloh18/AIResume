@@ -30,6 +30,7 @@ export interface JobDetails {
   postedDate?: string;
   applicationDeadline?: string;
   sourceUrl: string;
+  richData?: any;
 }
 
 /**
@@ -546,7 +547,7 @@ export class JobParserService {
       }
       
       // Store rich data under a custom symbol or return as part of the object
-      const mappedDetails: JobDetails & { richData?: any } = {
+      const mappedDetails: JobDetails = {
         title: parsed.role?.job_title?.value || parsed.tracker_enrichment?.tracker_card_data?.display_title || '',
         company: parsed.company?.company_name?.value || parsed.tracker_enrichment?.tracker_card_data?.display_company || '',
         location: parsed.location?.location_raw || parsed.tracker_enrichment?.tracker_card_data?.display_location || undefined,
@@ -600,4 +601,4 @@ export const closeJobParserService = async (): Promise<void> => {
     await jobParserService.close();
     jobParserService = null;
   }
-}; 
+};

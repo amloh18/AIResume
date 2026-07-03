@@ -21,7 +21,7 @@ export default function MatchScoreBar({ score }: MatchScoreBarProps) {
           style={{ width: `${score}%` }}
         ></div>
       </div>
-      <span className={`text-sm font-semibold ${colors.text} min-w-[40px]`}>
+      <span className={`text-small font-semibold ${colors.text} min-w-[40px]`}>
         {score}%
       </span>
     </div>

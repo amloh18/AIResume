@@ -5,7 +5,6 @@ import { ISectionBlueprint } from '@/models/Template';
 import { generateTemplateCSS } from './default-template';
 import { convertToTemplateSectionOrder } from '@/lib/section-mapping';
 import { generateEnforcedCSS } from './shared-layout-css';
-import { useFormatStore } from '@/lib/stores/formatStore';
 
 // Component registry for dynamic section rendering
 import PersonalHeader from '@/components/cv-sections/PersonalHeader';

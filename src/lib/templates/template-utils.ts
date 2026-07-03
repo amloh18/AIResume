@@ -121,6 +121,11 @@ export function migrateLegacyTemplateId(templateId: string | null | undefined): 
     'generic': 'tpl-1'
   };
 
+  // Unknown / unmapped ID — log a warning so developers can add the mapping and fall back safely to tpl-1
+  if (templateIdStr && !templateIdStr.match(/^\d+$/)) {
+    // Only warn for non-numeric IDs (numeric IDs are likely ObjectIds that should be handled elsewhere)
+    console.warn(`[migrateLegacyTemplateId] Unmapped legacy template ID: "${templateIdStr}" — falling back to tpl-1. Add this ID to legacyMap if it should map to a different template.`);
+  }
   return legacyMap[templateIdStr] || 'tpl-1';
 }
 

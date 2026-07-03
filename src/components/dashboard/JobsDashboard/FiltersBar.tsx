@@ -56,7 +56,7 @@ export default function FiltersBar({
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-4 border-t border-gray-300 dark:border-gray-700">
           {/* Match Score Range */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-small font-medium text-gray-700 dark:text-gray-300 mb-2">
               Match Score Range
             </label>
             <div className="flex items-center gap-2">
@@ -68,7 +68,7 @@ export default function FiltersBar({
                 onChange={(e) =>
                   onChange({ matchScoreMin: parseInt(e.target.value) })
                 }
-                className="w-20 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-sm"
+                className="w-20 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-small"
               />
               <span className="text-gray-500">-</span>
               <input
@@ -79,7 +79,7 @@ export default function FiltersBar({
                 onChange={(e) =>
                   onChange({ matchScoreMax: parseInt(e.target.value) })
                 }
-                className="w-20 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-sm"
+                className="w-20 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-small"
               />
             </div>
           </div>
@@ -87,7 +87,7 @@ export default function FiltersBar({
           {/* Companies */}
           {metrics && metrics.topCompanies.length > 0 && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-small font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Companies
               </label>
               <select
@@ -100,7 +100,7 @@ export default function FiltersBar({
                   );
                   onChange({ companies: selected });
                 }}
-                className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-sm max-h-32"
+                className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-small max-h-32"
               >
                 {metrics.topCompanies.map((company) => (
                   <option key={company.company} value={company.company}>
@@ -114,7 +114,7 @@ export default function FiltersBar({
           {/* Locations */}
           {metrics && metrics.topLocations.length > 0 && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-small font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Locations
               </label>
               <select
@@ -127,7 +127,7 @@ export default function FiltersBar({
                   );
                   onChange({ locations: selected });
                 }}
-                className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-sm max-h-32"
+                className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-small max-h-32"
               >
                 {metrics.topLocations.map((location) => (
                   <option key={location.location} value={location.location}>

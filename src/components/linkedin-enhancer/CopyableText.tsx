@@ -70,7 +70,7 @@ export default function CopyableText({
             <div className="relative z-10 flex items-start gap-2">
                 <div className="flex-1">
                     {label && (
-                        <span className="text-xs text-gray-500 uppercase tracking-wide block mb-1">
+                        <span className="text-small text-gray-500 uppercase tracking-wide block mb-1">
                             {label}
                         </span>
                     )}
@@ -108,7 +108,7 @@ export default function CopyableText({
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 10 }}
-                        className="absolute -bottom-8 left-1/2 -translate-x-1/2 px-3 py-1 bg-gray-900 text-white text-xs rounded-full whitespace-nowrap z-50"
+                        className="absolute -bottom-8 left-1/2 -translate-x-1/2 px-3 py-1 bg-gray-900 text-white text-small rounded-full whitespace-nowrap z-50"
                     >
                         Copied!
                     </motion.div>
@@ -152,7 +152,7 @@ export function CopyAllButton({ content, label = 'Copy All' }: CopyAllButtonProp
     return (
         <motion.button
             onClick={handleCopy}
-            className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1 rounded-full text-small font-medium transition-colors"
             style={{
                 backgroundColor: copied ? '#057642' : '#0a66c2',
                 color: 'white',

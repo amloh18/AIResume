@@ -381,7 +381,7 @@ export async function PUT(
     // Prepare update data (excluding legacy fields)
     const allowedFields = [
       'title', 'cvData', 'templateId', 'cvType', 'status', 'isMaster', 'metadata', 'journeyId',
-      // Central Score Manager fields — persisted by auto-save from Step3BuilderSurgeon
+      // Central Score Manager fields — persisted by auto-save from Step3CV
       'cv_score_master', 'cv_score_ats', 'score_breakdown', 'active_issues_json'
     ];
 

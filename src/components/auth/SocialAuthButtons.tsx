@@ -23,7 +23,7 @@ export default function SocialAuthButtons({
   const [hoveredButton, setHoveredButton] = useState<string | null>(null);
 
   const baseButton =
-    'relative flex items-center justify-center gap-2.5 py-3 px-4 rounded-sm transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-bold overflow-hidden whitespace-nowrap group';
+    'relative flex items-center justify-center gap-2.5 py-3 px-4 rounded-sm transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-small font-bold overflow-hidden whitespace-nowrap group';
 
   return (
     <div className="space-y-4">
@@ -93,7 +93,7 @@ export default function SocialAuthButtons({
           type="button"
           onClick={onMagicLinkAuth}
           disabled={isLoading}
-          className="w-full flex items-center justify-center gap-3 bg-[#80FF00]/10 hover:bg-[#80FF00]/20 border border-[#80FF00]/20 hover:border-[#80FF00]/40 text-gray-900 dark:text-white py-3 px-6 rounded-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-bold"
+          className="w-full flex items-center justify-center gap-3 bg-[#80FF00]/10 hover:bg-[#80FF00]/20 border border-[#80FF00]/20 hover:border-[#80FF00]/40 text-gray-900 dark:text-white py-3 px-6 rounded-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-small font-bold"
           whileHover={{ scale: 1.01 }}
           whileTap={{ scale: 0.99 }}
         >

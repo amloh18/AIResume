@@ -169,7 +169,7 @@ const SessionHub: React.FC<SessionHubProps> = ({ userId, jobId }) => {
     // Still loading
     if (loading) {
         return (
-            <div className="min-h-screen bg-[#f3f2ee] dark:bg-[#1a230f] flex items-center justify-center">
+            <div className="min-h-screen app-page-bg flex items-center justify-center">
                 <div className="animate-spin w-8 h-8 border-4 border-lime-500 border-t-transparent rounded-full" />
             </div>
         );
@@ -178,9 +178,9 @@ const SessionHub: React.FC<SessionHubProps> = ({ userId, jobId }) => {
     // Error state
     if (!session && !loading && !preparing) {
         return (
-            <div className="min-h-screen bg-[#f3f2ee] dark:bg-[#1a230f] flex flex-col items-center justify-center p-4">
+            <div className="min-h-screen app-page-bg flex flex-col items-center justify-center p-4">
                 <AlertTriangle className="w-12 h-12 text-yellow-500 mb-4" />
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Could not load session</h2>
+                <h2 className="text-h3 font-bold text-gray-900 dark:text-white mb-2">Could not load session</h2>
                 <p className="text-gray-500 text-center max-w-md mb-6">
                     We encountered an issue preparing your interview plan.
                 </p>
@@ -222,7 +222,7 @@ const SessionHub: React.FC<SessionHubProps> = ({ userId, jobId }) => {
     };
 
     return (
-        <div className="min-h-screen bg-[#f3f2ee] dark:bg-[#1a230f] flex flex-col">
+        <div className="min-h-screen app-page-bg flex flex-col">
             <InterviewCoachHeader />
             <div className="flex-1 max-w-7xl mx-auto px-6 py-8 w-full">
                 {/* Header */}
@@ -235,18 +235,18 @@ const SessionHub: React.FC<SessionHubProps> = ({ userId, jobId }) => {
                             <ArrowLeft className="w-4 h-4" />
                             Back
                         </button>
-                        <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">
+                        <h1 className="text-h1 md:text-display font-bold text-gray-900 dark:text-white">
                             {job?.jobTitle || session?.targetRole} @ {job?.company}
                         </h1>
                         <div className="flex items-center gap-4 mt-2 text-gray-500 dark:text-gray-400">
                             {session?.lastPracticedAt && (
-                                <span className="flex items-center gap-1 text-sm">
+                                <span className="flex items-center gap-1 text-small">
                                     <Calendar className="w-4 h-4" />
                                     Last practice: {new Date(session.lastPracticedAt).toLocaleDateString()}
                                 </span>
                             )}
                             {job?.location && (
-                                <span className="flex items-center gap-1 text-sm">
+                                <span className="flex items-center gap-1 text-small">
                                     <MapPin className="w-4 h-4" />
                                     {job.location}
                                 </span>
@@ -262,7 +262,7 @@ const SessionHub: React.FC<SessionHubProps> = ({ userId, jobId }) => {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Main Content - Learning Path */}
                     <div className="lg:col-span-2 space-y-6">
-                        <h2 className="text-xl font-bold text-gray-900 dark:text-white">Your Learning Path</h2>
+                        <h2 className="text-h3 font-bold text-gray-900 dark:text-white">Your Learning Path</h2>
 
                         {/* Modules */}
                         {(session?.modules || []).map((module, index) => {
@@ -279,12 +279,12 @@ const SessionHub: React.FC<SessionHubProps> = ({ userId, jobId }) => {
                                 >
                                     {/* Module Header */}
                                     <div className="flex items-start gap-3 mb-4">
-                                        <span className="text-2xl">{getModuleIcon(module.type)}</span>
+                                        <span className="text-h2">{getModuleIcon(module.type)}</span>
                                         <div>
-                                            <h3 className="font-bold text-gray-900 dark:text-white text-lg">
+                                            <h3 className="font-bold text-gray-900 dark:text-white text-h3">
                                                 Module {index + 1}: {module.title}
                                             </h3>
-                                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                                            <p className="text-small text-gray-500 dark:text-gray-400">
                                                 Master {module.type} concepts frequently asked in interviews.
                                             </p>
                                         </div>
@@ -306,11 +306,11 @@ const SessionHub: React.FC<SessionHubProps> = ({ userId, jobId }) => {
                                                         ) : (
                                                             <Circle className="w-5 h-5 text-gray-300 dark:text-gray-600" />
                                                         )}
-                                                        <span className={`text-sm flex-1 truncate ${isCompleted ? 'text-gray-500 dark:text-gray-400' : 'text-gray-700 dark:text-gray-300'}`}>
+                                                        <span className={`text-small flex-1 truncate ${isCompleted ? 'text-gray-500 dark:text-gray-400' : 'text-gray-700 dark:text-gray-300'}`}>
                                                             {q.content.question}
                                                         </span>
                                                     </div>
-                                                    <button className="text-sm text-lime-600 dark:text-lime-400 hover:text-lime-700 flex items-center gap-1">
+                                                    <button className="text-small text-lime-600 dark:text-lime-400 hover:text-lime-700 flex items-center gap-1">
                                                         Learn More
                                                         <ChevronRight className="w-4 h-4" />
                                                     </button>
@@ -363,19 +363,19 @@ const SessionHub: React.FC<SessionHubProps> = ({ userId, jobId }) => {
                                         />
                                     </svg>
                                     <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                        <span className="text-3xl font-bold text-gray-900 dark:text-white">
+                                        <span className="text-h1 font-bold text-gray-900 dark:text-white">
                                             {session?.readinessScore || 0}%
                                         </span>
-                                        <span className="text-xs text-gray-500 dark:text-gray-400">READY</span>
+                                        <span className="text-small text-gray-500 dark:text-gray-400">READY</span>
                                     </div>
                                 </div>
                             </div>
 
-                            <p className="text-sm text-gray-500 dark:text-gray-400 text-center mb-4">
+                            <p className="text-small text-gray-500 dark:text-gray-400 text-center mb-4">
                                 You're strong in Technical, but System Design needs more structure.
                             </p>
 
-                            <div className="flex items-center justify-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+                            <div className="flex items-center justify-center gap-4 text-small text-gray-500 dark:text-gray-400">
                                 <span className="flex items-center gap-1">
                                     <TrendingUp className="w-4 h-4 text-lime-500" />
                                     +12% this week
@@ -411,7 +411,7 @@ const SessionHub: React.FC<SessionHubProps> = ({ userId, jobId }) => {
                                 <Lightbulb className="w-5 h-5 text-yellow-500" />
                                 AI Coach Tips
                             </h3>
-                            <ul className="space-y-3 text-sm text-gray-600 dark:text-gray-400">
+                            <ul className="space-y-3 text-small text-gray-600 dark:text-gray-400">
                                 <li className="flex items-start gap-2">
                                     <span className="text-yellow-500 mt-1">•</span>
                                     Remember to ask clarifying questions before diving into code.
@@ -444,7 +444,7 @@ const SessionHub: React.FC<SessionHubProps> = ({ userId, jobId }) => {
                                     )}
                                     <div>
                                         <h4 className="font-semibold text-gray-900 dark:text-white">{job.company}</h4>
-                                        <p className="text-sm text-gray-500 dark:text-gray-400">{job.location}</p>
+                                        <p className="text-small text-gray-500 dark:text-gray-400">{job.location}</p>
                                     </div>
                                 </div>
                             </div>

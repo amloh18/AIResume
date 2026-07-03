@@ -8,6 +8,7 @@ import ViewportMeta from '@/components/ViewportMeta'
 import GlobalCommandBar from '@/components/ui/GlobalCommandBar'
 import { getServerSession } from 'next-auth'
 import { authConfig } from '@/lib/auth-config'
+import { geistFont } from '@/lib/fonts'
 
 // Allow Next.js to determine rendering strategy (SSG vs SSR) automatically
 export const dynamic = 'auto'
@@ -165,14 +166,23 @@ export default async function RootLayout({
     <html lang="en">
       <head>
         <meta name="impact-site-verification" {...{ value: "044e0d11-071e-4480-aa4e-7fae5e6da834" }} />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Cabinet+Grotesk:wght@300;400;500;600;700;800;900&display=swap"
-        />
+        {/* Suppress third-party Chrome Extension wallet injection errors (e.g. Rabby Wallet evmAsk.js) */}
+        <script dangerouslySetInnerHTML={{ __html: `
+          (function() {
+            window.addEventListener('error', function(e) {
+              if (e.message && (e.message.indexOf('ethereum') !== -1 || e.message.indexOf('evmAsk') !== -1 || (e.filename && e.filename.indexOf('evmAsk') !== -1))) {
+                e.stopImmediatePropagation();
+              }
+            }, true);
+            window.addEventListener('unhandledrejection', function(e) {
+              if (e.reason && (e.reason.message && e.reason.message.indexOf('ethereum') !== -1 || (e.reason.stack && e.reason.stack.indexOf('evmAsk') !== -1))) {
+                e.preventDefault();
+              }
+            }, true);
+          })();
+        `}} />
       </head>
-      <body>
+      <body className={`${geistFont.variable} geist-ui font-sans`}>
         <ViewportMeta />
         <ResourceHints />
         <React.Suspense fallback={

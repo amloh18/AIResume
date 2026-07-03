@@ -1094,7 +1094,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
             {/* Header */}
             <div className="border-b border-gray-200 dark:border-white/10 bg-white dark:bg-[#141810] sticky top-0 z-10">
               <div className="flex items-center justify-between p-4">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                <h2 className="text-h3 font-bold text-gray-900 dark:text-white">
                   {editingJob ? 'Edit Job Application' : 'Add New Job Application'}
                 </h2>
                 <motion.button
@@ -1119,14 +1119,14 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
                   <div className="flex items-center justify-between gap-3 pt-3">
                     <div className="flex items-center gap-2 flex-1">
                       <AlertCircle size={16} className="text-amber-600 dark:text-amber-400 flex-shrink-0" />
-                      <p className="text-sm text-amber-800 dark:text-amber-300">
+                      <p className="text-small text-amber-800 dark:text-amber-300">
                         You have unsaved changes
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
                       <motion.button
                         onClick={() => setShowUnsavedWarning(false)}
-                        className="px-3 py-1.5 text-sm font-medium text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/30 rounded-lg transition-colors"
+                        className="px-3 py-1.5 text-small font-medium text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/30 rounded-lg transition-colors"
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                       >
@@ -1134,7 +1134,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
                       </motion.button>
                       <motion.button
                         onClick={handleConfirmClose}
-                        className="px-3 py-1.5 text-sm font-medium bg-amber-600 hover:bg-amber-700 dark:bg-amber-700 dark:hover:bg-amber-600 text-white rounded-lg transition-colors"
+                        className="px-3 py-1.5 text-small font-medium bg-amber-600 hover:bg-amber-700 dark:bg-amber-700 dark:hover:bg-amber-600 text-white rounded-lg transition-colors"
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                       >
@@ -1156,8 +1156,8 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
               >
                 <AlertCircle size={20} className="text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
                 <div className="flex-1">
-                  <h4 className="text-sm font-semibold text-red-900 dark:text-red-300 mb-1">Error Saving Job</h4>
-                  <p className="text-sm text-red-700 dark:text-red-400">{errorMessage}</p>
+                  <h4 className="text-small font-semibold text-red-900 dark:text-red-300 mb-1">Error Saving Job</h4>
+                  <p className="text-small text-red-700 dark:text-red-400">{errorMessage}</p>
                 </div>
                 <button
                   onClick={() => {
@@ -1176,11 +1176,11 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
               <div className="space-y-6">
                 {/* Basic Information */}
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Basic Information</h3>
+                  <h3 className="text-h3 font-semibold text-gray-900 dark:text-white mb-4">Basic Information</h3>
 
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-gray-700 dark:text-white/80 text-sm font-medium mb-1">Job Title</label>
+                      <label className="block text-gray-700 dark:text-white/80 text-small font-medium mb-1">Job Title</label>
                       <input
                         type="text"
                         value={formData.jobTitle || ''}
@@ -1197,19 +1197,19 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
                         className={`w-full px-3 py-2 bg-white dark:bg-[#232f1c] border ${fieldErrors.jobTitle
                           ? 'border-red-500 dark:border-red-500'
                           : 'border-gray-300 dark:border-white/20'
-                          } text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md`}
+                          } text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-small focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md`}
                         placeholder="Enter job title"
                         maxLength={100}
                       />
                       {fieldErrors.jobTitle && (
-                        <p className="text-red-600 dark:text-red-400 text-xs mt-1">{fieldErrors.jobTitle}</p>
+                        <p className="text-red-600 dark:text-red-400 text-small mt-1">{fieldErrors.jobTitle}</p>
                       )}
-                      <div className="text-gray-500 dark:text-white/50 text-xs mt-1">{jobTitleCount}/100</div>
+                      <div className="text-gray-500 dark:text-white/50 text-small mt-1">{jobTitleCount}/100</div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-gray-700 dark:text-white/80 text-sm font-medium mb-1">Company</label>
+                        <label className="block text-gray-700 dark:text-white/80 text-small font-medium mb-1">Company</label>
                         <input
                           type="text"
                           value={formData.company || ''}
@@ -1226,27 +1226,27 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
                           className={`w-full px-3 py-2 bg-white dark:bg-[#232f1c] border ${fieldErrors.company
                             ? 'border-red-500 dark:border-red-500'
                             : 'border-gray-300 dark:border-white/20'
-                            } text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md`}
+                            } text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-small focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md`}
                           placeholder="Enter company name"
                           maxLength={100}
                         />
                         {fieldErrors.company && (
-                          <p className="text-red-600 dark:text-red-400 text-xs mt-1">{fieldErrors.company}</p>
+                          <p className="text-red-600 dark:text-red-400 text-small mt-1">{fieldErrors.company}</p>
                         )}
-                        <div className="text-gray-500 dark:text-white/50 text-xs mt-1">{companyCount}/100</div>
+                        <div className="text-gray-500 dark:text-white/50 text-small mt-1">{companyCount}/100</div>
                       </div>
                       <div>
-                        <label className="block text-gray-700 dark:text-white/80 text-sm font-medium mb-1">Location</label>
+                        <label className="block text-gray-700 dark:text-white/80 text-small font-medium mb-1">Location</label>
                         <div className="relative">
                           <input
                             type="text"
                             value={formData.location || ''}
                             onChange={(e) => handleFormChange('location', e.target.value)}
-                            className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md"
+                            className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-small focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md"
                             placeholder="Enter location"
                           />
                           {locationFlag && (
-                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-lg pointer-events-none">
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-h3 pointer-events-none">
                               {locationFlag}
                             </span>
                           )}
@@ -1255,7 +1255,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
                     </div>
 
                     <div>
-                      <label className="block text-gray-700 dark:text-white/80 text-sm font-medium mb-1">Job URL</label>
+                      <label className="block text-gray-700 dark:text-white/80 text-small font-medium mb-1">Job URL</label>
                       <input
                         type="url"
                         value={formData.jobUrl || ''}
@@ -1272,17 +1272,17 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
                         className={`w-full px-3 py-2 bg-white dark:bg-[#232f1c] border ${fieldErrors.jobUrl
                           ? 'border-red-500 dark:border-red-500'
                           : 'border-gray-300 dark:border-white/20'
-                          } text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md`}
+                          } text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-small focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md`}
                         placeholder="https://company.com/job-posting"
                       />
                       {fieldErrors.jobUrl && (
-                        <p className="text-red-600 dark:text-red-400 text-xs mt-1">{fieldErrors.jobUrl}</p>
+                        <p className="text-red-600 dark:text-red-400 text-small mt-1">{fieldErrors.jobUrl}</p>
                       )}
                     </div>
 
                     {/* Deadline and Priority */}
                     <div>
-                      <label className="block text-gray-700 dark:text-white/80 text-sm font-medium mb-2">Deadline</label>
+                      <label className="block text-gray-700 dark:text-white/80 text-small font-medium mb-2">Deadline</label>
 
                       {/* Quick Options */}
                       <div className="flex flex-wrap gap-2 mb-3">
@@ -1294,7 +1294,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
                               key={days}
                               type="button"
                               onClick={() => handleFormChange('deadline', dateStr)}
-                              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${isSelected
+                              className={`px-3 py-1.5 text-small font-medium rounded-lg transition-all ${isSelected
                                 ? 'bg-lime-500 dark:bg-[#80FF00] text-white dark:text-black'
                                 : 'bg-gray-100 dark:bg-[#232f1c] text-gray-700 dark:text-white/70 hover:bg-gray-200 dark:hover:bg-white/10 border border-gray-300 dark:border-white/20'
                                 }`}
@@ -1314,20 +1314,20 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
                             type="date"
                             value={formData.deadline || ''}
                             onChange={(e) => handleFormChange('deadline', e.target.value)}
-                            className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 rounded-md text-gray-900 dark:text-white text-sm focus:border-lime-500 dark:focus:border-lime-400/50 focus:outline-none"
+                            className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 rounded-md text-gray-900 dark:text-white text-small focus:border-lime-500 dark:focus:border-lime-400/50 focus:outline-none"
                             placeholder="Select date"
                           />
                           <Calendar size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-white/50 pointer-events-none" />
                         </div>
 
                         <div className="flex-shrink-0">
-                          <label className="block text-gray-700 dark:text-white/80 text-xs font-medium mb-1">Priority</label>
+                          <label className="block text-gray-700 dark:text-white/80 text-small font-medium mb-1">Priority</label>
                           <div className="flex bg-gray-100 dark:bg-[#232f1c] rounded-xl p-1 border border-gray-300 dark:border-white/20">
                             {['low', 'medium', 'high'].map((priority) => (
                               <button
                                 key={priority}
                                 onClick={() => handleFormChange('priority', priority)}
-                                className={`px-3 py-2 text-xs font-medium transition-all ${formData.priority === priority
+                                className={`px-3 py-2 text-small font-medium transition-all ${formData.priority === priority
                                   ? 'bg-lime-500 dark:bg-[#80FF00] text-white dark:text-black rounded-lg'
                                   : 'text-gray-700 dark:text-white/70 hover:text-gray-900 dark:hover:text-white rounded-lg'
                                   }`}
@@ -1344,14 +1344,14 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
 
                 <div>
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Salary Information</h3>
+                    <h3 className="text-h3 font-semibold text-gray-900 dark:text-white">Salary Information</h3>
                     <div className="flex items-center gap-4">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-gray-500 dark:text-gray-400">Currency:</span>
+                        <span className="text-small text-gray-500 dark:text-gray-400">Currency:</span>
                         <select
                           value={formData.salary?.currency || 'USD'}
                           onChange={(e) => handleFormChange('salary', { ...formData.salary, currency: e.target.value })}
-                          className="px-2 py-1 text-xs bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 rounded text-gray-700 dark:text-white focus:border-lime-500 focus:outline-none"
+                          className="px-2 py-1 text-small bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 rounded text-gray-700 dark:text-white focus:border-lime-500 focus:outline-none"
                         >
                           <option value="USD">USD ($)</option>
                           <option value="GBP">GBP (£)</option>
@@ -1363,11 +1363,11 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
                         </select>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-gray-500 dark:text-gray-400">Period:</span>
+                        <span className="text-small text-gray-500 dark:text-gray-400">Period:</span>
                         <select
                           value={formData.salary?.period || 'yearly'}
                           onChange={(e) => handleFormChange('salary', { ...formData.salary, period: e.target.value as 'yearly' | 'monthly' | 'hourly' })}
-                          className="px-2 py-1 text-xs bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 rounded text-gray-700 dark:text-white focus:border-lime-500 dark:focus:border-lime-400/50 focus:outline-none"
+                          className="px-2 py-1 text-small bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 rounded text-gray-700 dark:text-white focus:border-lime-500 dark:focus:border-lime-400/50 focus:outline-none"
                         >
                           <option value="yearly">Yearly</option>
                           <option value="monthly">Monthly</option>
@@ -1380,32 +1380,32 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
                   <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-gray-700 dark:text-white/80 text-sm font-medium mb-1">Min Salary</label>
+                        <label className="block text-gray-700 dark:text-white/80 text-small font-medium mb-1">Min Salary</label>
                         <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 text-sm pointer-events-none">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 text-small pointer-events-none">
                             {getCurrencySymbol(formData.salary?.currency || userCurrency || 'USD')}
                           </span>
                           <input
                             type="number"
                             value={formData.salary?.min || ''}
                             onChange={(e) => handleFormChange('salary', { ...formData.salary, min: e.target.value ? parseInt(e.target.value) : undefined })}
-                            className="w-full pl-8 pr-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md"
+                            className="w-full pl-8 pr-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-small focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md"
                             placeholder="e.g. 80000"
                           />
                         </div>
                       </div>
 
                       <div>
-                        <label className="block text-gray-700 dark:text-white/80 text-sm font-medium mb-1">Max Salary</label>
+                        <label className="block text-gray-700 dark:text-white/80 text-small font-medium mb-1">Max Salary</label>
                         <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 text-sm pointer-events-none">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 text-small pointer-events-none">
                             {getCurrencySymbol(formData.salary?.currency || userCurrency || 'USD')}
                           </span>
                           <input
                             type="number"
                             value={formData.salary?.max || ''}
                             onChange={(e) => handleFormChange('salary', { ...formData.salary, max: e.target.value ? parseInt(e.target.value) : undefined })}
-                            className="w-full pl-8 pr-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md"
+                            className="w-full pl-8 pr-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-small focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md"
                             placeholder="e.g. 120000"
                           />
                         </div>
@@ -1416,18 +1416,18 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
 
                 {/* Job Description */}
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Job Description</h3>
+                  <h3 className="text-h3 font-semibold text-gray-900 dark:text-white mb-4">Job Description</h3>
 
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                      <label className="block text-gray-700 dark:text-white/80 text-sm font-medium">Job Description</label>
-                      <div className="text-gray-500 dark:text-white/50 text-xs">{jobDescriptionCount}/10000</div>
+                      <label className="block text-gray-700 dark:text-white/80 text-small font-medium">Job Description</label>
+                      <div className="text-gray-500 dark:text-white/50 text-small">{jobDescriptionCount}/10000</div>
                     </div>
                     <textarea
                       rows={10}
                       value={formData.jobDescription || ''}
                       onChange={(e) => handleFormChange('jobDescription', e.target.value)}
-                      className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md resize-none"
+                      className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-small focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md resize-none"
                       placeholder="Paste the job description here..."
                       maxLength={10000}
                     />
@@ -1436,19 +1436,19 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
 
                 {/* Additional Information */}
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Additional Information</h3>
+                  <h3 className="text-h3 font-semibold text-gray-900 dark:text-white mb-4">Additional Information</h3>
 
                   <div className="space-y-4">
                     {/* Sponsorship and Tags - Inline */}
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-gray-700 dark:text-white/80 text-sm font-medium mb-1">Sponsorship</label>
+                        <label className="block text-gray-700 dark:text-white/80 text-small font-medium mb-1">Sponsorship</label>
                         <div className="flex bg-gray-100 dark:bg-[#232f1c] rounded-xl p-1 border border-gray-300 dark:border-white/20">
                           {['unknown', 'yes', 'no'].map((sponsorship) => (
                             <button
                               key={sponsorship}
                               onClick={() => handleFormChange('sponsorship', sponsorship)}
-                              className={`flex-1 px-3 py-2 text-sm font-medium transition-all ${formData.sponsorship === sponsorship
+                              className={`flex-1 px-3 py-2 text-small font-medium transition-all ${formData.sponsorship === sponsorship
                                 ? 'bg-lime-500 dark:bg-[#80FF00] text-white dark:text-black rounded-xl'
                                 : 'text-gray-700 dark:text-white/70 hover:text-gray-900 dark:hover:text-white rounded-lg'
                                 }`}
@@ -1460,61 +1460,61 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
                       </div>
 
                       <div>
-                        <label className="block text-gray-700 dark:text-white/80 text-sm font-medium mb-1">Tags</label>
+                        <label className="block text-gray-700 dark:text-white/80 text-small font-medium mb-1">Tags</label>
                         <input
                           type="text"
                           value={formData.tags?.join(', ') || ''}
                           onChange={(e) => handleFormChange('tags', e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0))}
-                          className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-lg"
+                          className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-small focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-lg"
                           placeholder="Remote, Full-time, FinTech"
                         />
-                        <div className="text-gray-500 dark:text-white/50 text-xs mt-1">Separate tags with commas</div>
+                        <div className="text-gray-500 dark:text-white/50 text-small mt-1">Separate tags with commas</div>
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-gray-700 dark:text-white/80 text-sm font-medium mb-1">Contact Details</label>
+                      <label className="block text-gray-700 dark:text-white/80 text-small font-medium mb-1">Contact Details</label>
                       <div className="space-y-2">
                         <div className="grid grid-cols-2 gap-2">
                           <div>
-                            <label className="block text-gray-600 dark:text-white/60 text-xs mb-1">Name</label>
+                            <label className="block text-gray-600 dark:text-white/60 text-small mb-1">Name</label>
                             <input
                               type="text"
                               value={formData.contactDetails?.name || ''}
                               onChange={(e) => handleFormChange('contactDetails', { ...formData.contactDetails, name: e.target.value })}
-                              className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md"
+                              className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-small focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md"
                               placeholder="HR Manager"
                             />
                           </div>
                           <div>
-                            <label className="block text-gray-600 dark:text-white/60 text-xs mb-1">Role</label>
+                            <label className="block text-gray-600 dark:text-white/60 text-small mb-1">Role</label>
                             <input
                               type="text"
                               value={formData.contactDetails?.role || ''}
                               onChange={(e) => handleFormChange('contactDetails', { ...formData.contactDetails, role: e.target.value })}
-                              className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md"
+                              className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-small focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md"
                               placeholder="HR Manager"
                             />
                           </div>
                         </div>
                         <div className="grid grid-cols-2 gap-2">
                           <div>
-                            <label className="block text-gray-600 dark:text-white/60 text-xs mb-1">Email</label>
+                            <label className="block text-gray-600 dark:text-white/60 text-small mb-1">Email</label>
                             <input
                               type="email"
                               value={formData.contactDetails?.email || ''}
                               onChange={(e) => handleFormChange('contactDetails', { ...formData.contactDetails, email: e.target.value })}
-                              className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md"
+                              className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-small focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md"
                               placeholder="hr@company.com"
                             />
                           </div>
                           <div>
-                            <label className="block text-gray-600 dark:text-white/60 text-xs mb-1">Phone</label>
+                            <label className="block text-gray-600 dark:text-white/60 text-small mb-1">Phone</label>
                             <input
                               type="tel"
                               value={formData.contactDetails?.phone || ''}
                               onChange={(e) => handleFormChange('contactDetails', { ...formData.contactDetails, phone: e.target.value })}
-                              className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md"
+                              className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-small focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md"
                               placeholder="+1 (555) 123-4567"
                             />
                           </div>
@@ -1526,18 +1526,18 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
 
                 {/* Notes */}
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Notes</h3>
+                  <h3 className="text-h3 font-semibold text-gray-900 dark:text-white mb-4">Notes</h3>
 
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                      <label className="block text-gray-700 dark:text-white/80 text-sm font-medium">Notes</label>
-                      <div className="text-gray-500 dark:text-white/50 text-xs">{notesCount}/500</div>
+                      <label className="block text-gray-700 dark:text-white/80 text-small font-medium">Notes</label>
+                      <div className="text-gray-500 dark:text-white/50 text-small">{notesCount}/500</div>
                     </div>
                     <textarea
                       rows={6}
                       value={formData.notes || ''}
                       onChange={(e) => handleFormChange('notes', e.target.value)}
-                      className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md resize-none"
+                      className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-small focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md resize-none"
                       placeholder="Add any personal notes here..."
                       maxLength={500}
                     />

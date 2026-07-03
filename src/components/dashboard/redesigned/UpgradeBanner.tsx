@@ -105,11 +105,11 @@ export default function UpgradeBanner({ tier, isYearly = false }: UpgradeBannerP
               <span className="text-[10px] font-black text-white uppercase tracking-widest">Premium Opportunity</span>
             </div>
             
-            <h2 className="text-3xl md:text-5xl font-black text-white leading-[1.1]">
+            <h2 className="text-h1 md:text-display font-black text-white leading-[1.1]">
               {content.title}
             </h2>
             
-            <p className="text-lg font-medium text-white/70 max-w-2xl leading-relaxed">
+            <p className="text-h3 font-medium text-white/70 max-w-2xl leading-relaxed">
               {content.description}
             </p>
             
@@ -117,7 +117,7 @@ export default function UpgradeBanner({ tier, isYearly = false }: UpgradeBannerP
               {content.features.map((feature, i) => (
                 <div key={i} className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-black/20 border border-white/5">
                   <div className="w-1.5 h-1.5 rounded-full bg-[#83d60d]" />
-                  <span className="text-xs font-bold text-white/90">{feature}</span>
+                  <span className="text-small font-bold text-white/90">{feature}</span>
                 </div>
               ))}
             </div>
@@ -134,7 +134,7 @@ export default function UpgradeBanner({ tier, isYearly = false }: UpgradeBannerP
             
             <button
               onClick={handleAction}
-              className="group relative px-8 py-4 rounded-2xl bg-[#83d60d] hover:bg-[#a2f02d] text-slate-900 font-black text-sm uppercase tracking-widest transition-all shadow-xl shadow-[#83d60d]/20 overflow-hidden"
+              className="group relative px-8 py-4 rounded-2xl bg-[#83d60d] hover:bg-[#a2f02d] text-slate-900 font-black text-small uppercase tracking-widest transition-all shadow-xl shadow-[#83d60d]/20 overflow-hidden"
             >
               <div className="relative z-10 flex items-center gap-2">
                 {content.cta}

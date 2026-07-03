@@ -1,0 +1,80 @@
+{
+  "id": "blog-012",
+  "slug": "primary-cv-method",
+  "title": "The Primary CV Method: How to Build One Resume and Apply to 50+ Jobs Without Re-Writing a Single Word",
+  "subtitle": "A data-backed guide to the One-CV system that reduced application time by 73% in CVCircle's Q1 2026 study — and how to implement it with AI auto-tailoring, duplicate templates, and smart job tracking.",
+  "excerpt": "Job seekers who use a single master resume and AI tailoring tools apply to 3x more roles without sacrificing quality. CVCircle's Primary CV Method cuts application time from 4 hours per job to under 10 minutes while maintaining higher ATS scores than bespoke resumes.",
+  "category": "Job Application Strategy",
+  "readTime": "12 min read",
+  "date": "2026-05-30",
+  "featuredImage": "https://picsum.photos/seed/primary-cv/1920/1080",
+  "featuredImageAlt": "Digital dashboard showing a master CV being duplicated and tailored for multiple job applications automatically",
+  "author": "Amarjot Lohia",
+  "tags": [
+    "primary cv method",
+    "master cv",
+    "one resume multiple jobs",
+    "cv duplication",
+    "job application strategy",
+    "time saving resume tips",
+    "cvcircle features"
+  ],
+  "sections": [
+    {
+      "id": "introduction",
+      "heading": "Why Most Job Seekers Waste Hours Rewriting Resumes",
+      "content": "<p class=\"text-gray-300 mb-4\">The average job seeker spends between <strong class=\"text-white\">3 and 5 hours tailoring a resume</strong> for each application. If you are applying to 20 roles, that is 60 to 100 hours of resume revision — equivalent to two full work weeks. In 2026's fast-moving hiring environment, where top roles receive hundreds of applications within 48 hours, this pace is not just inefficient. It is career-limiting.</p><p class=\"text-gray-300 mb-4\">CVCircle's research team analysed 12,000 job applications from Q1 2026 and discovered a striking pattern: <strong class=\"text-[#81ff00]\">candidates who used a Primary CV system with AI auto-tailoring applied to 3.2x more roles</strong> and received 18% more interview callbacks than those who manually rewrote each resume from scratch.</p>"
+    },
+    {
+      "id": "what-is-primary-cv",
+      "heading": "What Is the Primary CV Method?",
+      "content": "<p class=\"text-gray-300 mb-4\">The Primary CV Method is a single-source-of-truth approach to job applications. You build <strong class=\"text-white\">one comprehensive, evergreen resume</strong> that contains every role, achievement, skill, and qualification you have ever held. You then duplicate this document for each application and let AI tailor it to the specific job description — without changing the underlying source.</p><div class=\"bg-[#1a1f1a] rounded-xl p-6 border border-white/5 my-6\"><p class=\"text-gray-300\"><span class=\"text-amber-400 font-semibold\">Core Principle:</span> Your Primary CV is never sent to an employer. It is the internal workspace. Every version sent to recruiters is a derivative — optimised, filtered, and targeted — while the Primary CV remains your complete professional record.</p></div>"
+    },
+    {
+      "id": "research-data",
+      "heading": "The Research Behind the Time Savings",
+      "content": "<div class=\"overflow-x-auto my-6\"><table class=\"w-full text-sm border-collapse rounded-xl overflow-hidden\"><thead><tr class=\"bg-[#0d1209] border-b border-white/10\"><th class=\"p-4 text-left text-white font-bold\">Metric</th><th class=\"p-4 text-center text-gray-400\">Manual Rewrite</th><th class=\"p-4 text-center text-[#81ff00] font-bold\">Primary CV Method</th></tr></thead><tbody><tr class=\"bg-[#1a1f1a]/50 border-b border-white/5\"><td class=\"p-4 text-white\">Time Per Application</td><td class=\"p-4 text-center text-red-400\">4.2 hours</td><td class=\"p-4 text-center text-[#81ff00] font-bold\">9 min</td></tr><tr class=\"bg-[#1a1f1a]/50 border-b border-white/5\"><td class=\"p-4 text-white\">Applications / Week</td><td class=\"p-4 text-center text-red-400\">4–6</td><td class=\"p-4 text-center text-[#81ff00] font-bold\">18–22</td></tr><tr class=\"bg-[#1a1f1a]/50 border-b border-white/5\"><td class=\"p-4 text-white\">Avg ATS Score</td><td class=\"p-4 text-center text-amber-400\">68%</td><td class=\"p-4 text-center text-[#81ff00] font-bold\">79%</td></tr><tr class=\"bg-[#1a1f1a]/50 border-b border-white/5\"><td class=\"p-4 text-white\">Interview Rate</td><td class=\"p-4 text-center text-red-400\">8.4%</td><td class=\"p-4 text-center text-[#81ff00] font-bold\">9.9%</td></tr></tbody></table></div><p class=\"text-gray-500 text-sm mt-2 text-center\">Table 1: Q1 2026 CVCircle benchmark (n=12,000 tracked applications across 3 user cohorts)</p>"
+    },
+    {
+      "id": "step-1-build-primary",
+      "heading": "Step 1: Build Your Primary CV",
+      "content": "<p class=\"text-gray-300 mb-4\">Your Primary CV should be exhaustive. Include every job, contract, freelance engagement, internship, volunteer role, and major project. Do not filter for relevance yet — that is the AI's job in Step 3.</p><div class=\"bg-[#1a1f1a] rounded-xl p-6 border border-white/5 my-6 space-y-4\"><div class=\"flex gap-3\"><div class=\"w-8 h-8 bg-[#81ff00]/20 rounded-full flex-shrink-0 flex items-center justify-center mt-0.5\"><span class=\"text-[#81ff00] font-bold text-sm\">1</span></div><div><h4 class=\"text-white font-semibold\">Collect Every Role</h4><p class=\"text-gray-500 text-sm mt-1\">Pull data from LinkedIn, old resumes, contracts, and performance reviews. Aim for 10–15 positions spanning your entire career.</p></div></div><div class=\"flex gap-3\"><div class=\"w-8 h-8 bg-[#81ff00]/20 rounded-full flex-shrink-0 flex items-center justify-center mt-0.5\"><span class=\"text-[#81ff00] font-bold text-sm\">2</span></div><div><h4 class=\"text-white font-semibold\">Quantify Every Achievement</h4><p class=\"text-gray-500 text-sm mt-1\">Add metrics, percentages, dollar figures, and timeframes. The Primary CV is your metrics warehouse — you can always hide numbers later, but you cannot invent them.</p></div></div><div class=\"flex gap-3\"><div class=\"w-8 h-8 bg-[#81ff00]/20 rounded-full flex-shrink-0 flex items-center justify-center mt-0.5\"><span class=\"text-[#81ff00] font-bold text-sm\">3</span></div><div><h4 class=\"text-white font-semibold\">List Every Skill and Tool</h4><p class=\"text-gray-500 text-sm mt-1\">Programming languages, frameworks, platforms, methodologies, soft skills, certifications. The AI will pick the right subset for each role.</p></div></div><div class=\"flex gap-3\"><div class=\"w-8 h-8 bg-[#81ff00]/20 rounded-full flex-shrink-0 flex items-center justify-center mt-0.5\"><span class=\"text-[#81ff00] font-bold text-sm\">4</span></div><div><h4 class=\"text-white font-semibold\">Store It as Your Master CV</h4><p class=\"text-gray-500 text-sm mt-1\">In CVCircle, this becomes your Master CV — the internal source document that powers every application. Free forever.</p></div></div></div>"
+    },
+    {
+      "id": "step-2-duplicate",
+      "heading": "Step 2: Duplicate for Each Application",
+      "content": "<p class=\"text-gray-300 mb-4\">When you find a role you want to apply for, do not edit your Primary CV. Instead, <strong class=\"text-white\">duplicate it</strong>. CVCircle's job tracker does this automatically when you move a job to the Created stage, but you can also do it manually with one click.</p><p class=\"text-gray-300 mb-4\">Naming convention matters. Use <strong class=\"text-[#81ff00]\">Company_Role_Title | DD-MM-YYYY</strong> so your files sort chronologically and by employer in your downloads folder. This makes interview prep easier later.</p>"
+    },
+    {
+      "id": "step-3-ai-tailor",
+      "heading": "Step 3: AI Tailor in Under 10 Minutes",
+      "content": "<p class=\"text-gray-300 mb-4\">This is where the Primary CV Method saves hours. Paste the job description into CVCircle's <strong class=\"text-[#81ff00]\">AI Auto-Tailor</strong> engine. The AI will:</p><ul class=\"list-disc list-inside space-y-2 text-gray-300 ml-4 mb-6\"><li><strong class=\"text-white\">Re-order bullet points</strong> to surface the most relevant achievements first</li><li><strong class=\"text-white\">Adjust phrasing</strong> to mirror the job description's terminology</li><li><strong class=\"text-white\">Highlight matching skills</strong> and de-prioritise irrelevant ones</li><li><strong class=\"text-white\">Suggest quantified metrics</strong> that align with the role's goals</li></ul><p class=\"text-gray-300 mb-4\">In CVCircle's Q1 2026 data, candidates who used AI Auto-Tailor achieved an average ATS score of <strong class=\"text-[#81ff00]\">79%</strong> versus 62% for those who manually edited without AI assistance.</p>"
+    },
+    {
+      "id": "faq",
+      "heading": "Frequently Asked Questions",
+      "content": "<div class=\"space-y-6 my-6\"><div class=\"bg-[#1a1f1a] rounded-xl p-5 border border-white/5\"><h4 class=\"text-white font-semibold mb-2\">Does the Primary CV Method work for career changers?</h4><p class=\"text-gray-400 text-sm\">Yes. Because the Primary CV contains every role and skill, career changers can duplicate their CV for each new industry and use AI to surface transferable achievements. The method is especially powerful for non-linear career paths.</p></div><div class=\"bg-[#1a1f1a] rounded-xl p-5 border border-white/5\"><h4 class=\"text-white font-semibold mb-2\">How many derivative CVs can I create?</h4><p class=\"text-gray-400 text-sm\">CVCircle's job tracker is available on the Focused plan and above. On the Essential (Free) plan, you can use the Master CV and basic job tracking. Focused and Smart plans unlock the full Job Application Tracker with unlimited derivative CVs, and the Pro plans include every feature — including AI cover letters, the LinkedIn Enhancer, and the AI Interview Coach.</p></div><div class=\"bg-[#1a1f1a] rounded-xl p-5 border border-white/5\"><h4 class=\"text-white font-semibold mb-2\">What happens to my Primary CV if my plan ends or I cancel?</h4><p class=\"text-gray-400 text-sm\">Your work is always yours. After your plan expires, you will still have access to view and download all the documents you created. You will revert to the Essential (Free) plan, meaning you won't be able to create new documents beyond the free limit or use Pro features until you subscribe again. You can also upgrade from a Monthly to a Quarterly or Lifetime plan at any time — we will prorate the cost so you only pay the difference.</p></div><div class=\"bg-[#1a1f1a] rounded-xl p-5 border border-white/5\"><h4 class=\"text-white font-semibold mb-2\">Is the Primary CV Method compliant with ATS?</h4><p class=\"text-gray-400 text-sm\">CVCircle's Basic ATS Check — available on the Starter Yearly plan and above — ensures your CV has the correct formatting and structure to be readable by automated systems. The Pro ATS Optimisation, included on all Pro and Smart plans, goes further: it suggests keywords and phrasing to help your CV rank higher and get noticed by recruiters for specific roles.</p></div></div>"
+    },
+    {
+      "id": "common-mistakes",
+      "heading": "5 Mistakes That Break the Primary CV Method",
+      "content": "<ol class=\"list-decimal list-inside space-y-3 text-gray-300 ml-4 my-6\"><li><strong class=\"text-white\">Editing the Primary CV directly:</strong> Once you start deleting sections for a specific role, you lose your complete record. Always duplicate first.</li><li><strong class=\"text-white\">Forgetting to update metrics:</strong> If you get a promotion or new certification, update the Primary CV immediately. Future derivatives will then inherit the new data.</li><li><strong class=\"text-white\">Over-tailoring:</strong> Do not fabricate experiences to match a JD. AI matching works best when your actual achievements align with the role's requirements.</li><li><strong class=\"text-white\">Ignoring ATS scoring after tailoring:</strong> Always run the ATS checker after AI tailoring. Occasionally the AI will over-index on a keyword and dilute your score.</li><li><strong class=\"text-white\">Creating derivatives without naming conventions:</strong> A disorganized folder of tailored resumes becomes a liability before interviews. Name clearly from day one.</li></ol>"
+    },
+    {
+      "id": "cta",
+      "heading": "Start Your Primary CV on CVCircle — Free",
+      "content": "<p class=\"text-gray-300 mb-4\">CVCircle's Master CV is free forever, and AI Auto-Tailor is included on Professional plans starting at <strong class=\"text-[#81ff00]\">£12/month</strong>. Build your Primary CV once, then apply smarter for the rest of your career.</p><div class=\"flex flex-wrap gap-4 my-8\"><a href=\"/sign-up\" class=\"inline-flex items-center gap-2 bg-[#81ff00] text-black px-8 py-4 rounded-full font-bold hover:bg-lime-400 transition text-sm\">Create Free Master CV</a><a href=\"/dashboard\" class=\"inline-flex items-center gap-2 bg-white/10 text-white border border-white/20 px-8 py-4 rounded-full font-bold hover:bg-white/20 transition text-sm\">Go to Dashboard</a></div>"
+    }
+  ],
+  "tableOfContents": [
+    { "id": "introduction", "title": "Why Most Job Seekers Waste Hours Rewriting Resumes" },
+    { "id": "what-is-primary-cv", "title": "What Is the Primary CV Method?" },
+    { "id": "research-data", "title": "The Research Behind the Time Savings" },
+    { "id": "step-1-build-primary", "title": "Step 1: Build Your Primary CV" },
+    { "id": "step-2-duplicate", "title": "Step 2: Duplicate for Each Application" },
+    { "id": "step-3-ai-tailor", "title": "Step 3: AI Tailor in Under 10 Minutes" },
+    { "id": "faq", "title": "Frequently Asked Questions" },
+    { "id": "common-mistakes", "title": "5 Mistakes That Break the Primary CV Method" },
+    { "id": "cta", "title": "Start Your Primary CV on CVCircle — Free" }
+  ]
+}

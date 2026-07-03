@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Footer from '@/components/landing/Footer';
 import { notFound } from 'next/navigation';
 import { ArrowLeft, ArrowRight, Calendar, Clock, Tag, BookOpen, Sparkles, CheckCircle, FileText, Briefcase, Chrome, Globe, LayoutDashboard } from 'lucide-react';
 import { getArticleBySlug, getAllArticles } from '@/data/blogs';
@@ -153,18 +154,18 @@ function ArticleNavigation({ currentSlug, articles }: { currentSlug: string, art
     <div className="grid md:grid-cols-2 gap-4 mt-16">
       {prev ? (
         <Link href={`/blog/${prev.slug}`} className="group block p-6 bg-[#1a1f1a] rounded-xl border border-white/5 hover:border-[#81ff00]/30 transition-all duration-300">
-          <span className="text-xs text-gray-500 font-medium uppercase tracking-wider">Previous Article</span>
+          <span className="text-small text-gray-500 font-medium uppercase tracking-wider">Previous Article</span>
           <p className="text-white font-semibold mt-1 group-hover:text-[#81ff00] transition-colors line-clamp-2">{prev.title}</p>
-          <span className="inline-flex items-center gap-1 text-gray-500 text-sm mt-2 group-hover:text-gray-300">
+          <span className="inline-flex items-center gap-1 text-gray-500 text-small mt-2 group-hover:text-gray-300">
             <ArrowLeft className="w-4 h-4" /> Read
           </span>
         </Link>
       ) : <div />}
       {next ? (
         <Link href={`/blog/${next.slug}`} className="group block p-6 bg-[#1a1f1a] rounded-xl border border-white/5 hover:border-[#81ff00]/30 transition-all duration-300 md:text-right">
-          <span className="text-xs text-gray-500 font-medium uppercase tracking-wider">Next Article</span>
+          <span className="text-small text-gray-500 font-medium uppercase tracking-wider">Next Article</span>
           <p className="text-white font-semibold mt-1 group-hover:text-[#81ff00] transition-colors line-clamp-2">{next.title}</p>
-          <span className="inline-flex items-center gap-1 text-gray-500 text-sm mt-2 justify-end md:ml-auto group-hover:text-gray-300">
+          <span className="inline-flex items-center gap-1 text-gray-500 text-small mt-2 justify-end md:ml-auto group-hover:text-gray-300">
             Read <ArrowRight className="w-4 h-4" />
           </span>
         </Link>
@@ -262,37 +263,37 @@ export default async function BlogPostPage(props: {
         <header className="pt-32 pb-8 px-4">
           <div className="max-w-3xl mx-auto">
             <MotionDiv initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.3 }}>
-              <Link href="/blog" className="inline-flex items-center gap-2 text-gray-500 hover:text-[#81ff00] text-sm mb-8 transition-colors group">
+              <Link href="/blog" className="inline-flex items-center gap-2 text-gray-500 hover:text-[#81ff00] text-small mb-8 transition-colors group">
                 <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" /> Back to Blog
               </Link>
             </MotionDiv>
 
             <MotionDiv initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.05 }} className="flex flex-wrap items-center gap-3 mb-5">
-              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${categoryColor}`}>
+              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-small font-medium border ${categoryColor}`}>
                 <Tag className="w-3 h-3" />
                 {article.category}
               </span>
-              <span className="flex items-center gap-1 text-xs text-gray-500">
+              <span className="flex items-center gap-1 text-small text-gray-500">
                 <Calendar className="w-3.5 h-3.5" /> {article.date}
               </span>
-              <span className="flex items-center gap-1 text-xs text-gray-500">
+              <span className="flex items-center gap-1 text-small text-gray-500">
                 <Clock className="w-3.5 h-3.5" /> {article.readTime}
               </span>
             </MotionDiv>
 
-            <MotionH1 initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }} className="text-3xl md:text-5xl font-bold text-white mb-4 leading-tight">
+            <MotionH1 initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }} className="text-h1 md:text-display font-bold text-white mb-4 leading-tight">
               {article.title}
             </MotionH1>
 
             <MotionDiv initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.15 }}>
-              <p className="text-lg text-gray-400 mb-6 leading-relaxed">{article.subtitle}</p>
+              <p className="text-h3 text-gray-400 mb-6 leading-relaxed">{article.subtitle}</p>
               <div className="flex items-center gap-4 pb-6 border-b border-white/5">
                 <div className="w-10 h-10 bg-gradient-to-br from-[#81ff00]/30 to-green-600/20 rounded-full flex items-center justify-center border border-[#81ff00]/20">
-                  <span className="text-[#81ff00] font-bold text-sm">{article.author.split(' ').map((n: string) => n[0]).join('')}</span>
+                  <span className="text-[#81ff00] font-bold text-small">{article.author.split(' ').map((n: string) => n[0]).join('')}</span>
                 </div>
                 <div>
-                  <p className="text-white font-semibold text-sm">{article.author}</p>
-                  <p className="text-gray-500 text-xs">CVCircle Research Team</p>
+                  <p className="text-white font-semibold text-small">{article.author}</p>
+                  <p className="text-gray-500 text-small">CVCircle Research Team</p>
                 </div>
               </div>
             </MotionDiv>
@@ -314,25 +315,25 @@ export default async function BlogPostPage(props: {
                 
                 {/* Related Tools Links */}
                 <div className="mt-12 sticky top-32">
-                  <h4 className="text-white font-bold text-sm mb-4 uppercase tracking-wider">Essential Tools</h4>
+                  <h4 className="text-white font-bold text-small mb-4 uppercase tracking-wider">Essential Tools</h4>
                   <div className="flex flex-col gap-3">
                     <Link href="/ai-resume-builder" className="group flex items-center gap-3 p-3 bg-white/5 rounded-lg border border-white/5 hover:border-[#81ff00]/30 transition-all">
                       <div className="w-8 h-8 bg-lime-400/10 rounded-md flex items-center justify-center text-lime-400">
                         <Sparkles className="w-4 h-4" />
                       </div>
-                      <span className="text-xs text-gray-300 font-medium group-hover:text-white transition-colors">AI Resume Builder</span>
+                      <span className="text-small text-gray-300 font-medium group-hover:text-white transition-colors">AI Resume Builder</span>
                     </Link>
                     <Link href="/ats-resume-checker" className="group flex items-center gap-3 p-3 bg-white/5 rounded-lg border border-white/5 hover:border-blue-400/30 transition-all">
                       <div className="w-8 h-8 bg-blue-400/10 rounded-md flex items-center justify-center text-blue-400">
                         <CheckCircle className="w-4 h-4" />
                       </div>
-                      <span className="text-xs text-gray-300 font-medium group-hover:text-white transition-colors">ATS Scanner</span>
+                      <span className="text-small text-gray-300 font-medium group-hover:text-white transition-colors">ATS Scanner</span>
                     </Link>
                     <Link href="/templates" className="group flex items-center gap-3 p-3 bg-white/5 rounded-lg border border-white/5 hover:border-purple-400/30 transition-all">
                       <div className="w-8 h-8 bg-purple-400/10 rounded-md flex items-center justify-center text-purple-400">
                         <FileText className="w-4 h-4" />
                       </div>
-                      <span className="text-xs text-gray-300 font-medium group-hover:text-white transition-colors">Resume Templates</span>
+                      <span className="text-small text-gray-300 font-medium group-hover:text-white transition-colors">Resume Templates</span>
                     </Link>
                   </div>
                 </div>
@@ -346,13 +347,13 @@ export default async function BlogPostPage(props: {
                       viewport={{ once: true, margin: '-50px' }}
                       transition={{ duration: 0.4, delay: Math.min(index * 0.03, 0.3) }}
                     >
-                      <h2 className="text-2xl md:text-3xl font-bold text-white mb-5 leading-tight">{section.heading}</h2>
+                      <h2 className="text-h2 md:text-h1 font-bold text-white mb-5 leading-tight">{section.heading}</h2>
                       {section.content && (
                         <div className="prose-content text-gray-300 leading-relaxed" dangerouslySetInnerHTML={{ __html: section.content }} />
                       )}
                       {section.subSections?.map((sub, si) => (
                         <div key={si} className="mt-6">
-                          <h3 className="text-xl font-bold text-white mb-3">{sub.heading}</h3>
+                          <h3 className="text-h3 font-bold text-white mb-3">{sub.heading}</h3>
                           <div className="prose-content text-gray-300" dangerouslySetInnerHTML={{ __html: sub.content }} />
                         </div>
                       ))}
@@ -363,12 +364,12 @@ export default async function BlogPostPage(props: {
                 {/* FAQ Section if present in JSON */}
                 {article.faqs && article.faqs.length > 0 && (
                   <section id="faqs" className="mt-16 pt-16 border-t border-white/5 scroll-mt-28">
-                    <h2 className="text-2xl md:text-3xl font-bold text-white mb-8">Frequently Asked Questions</h2>
+                    <h2 className="text-h2 md:text-h1 font-bold text-white mb-8">Frequently Asked Questions</h2>
                     <div className="space-y-6">
                       {article.faqs.map((faq: any, i: number) => (
                         <div key={i} className="bg-[#1a1f1a] p-6 rounded-xl border border-white/5">
-                          <h3 className="text-lg font-bold text-white mb-3">{faq.question}</h3>
-                          <p className="text-gray-400 text-sm leading-relaxed">{faq.answer}</p>
+                          <h3 className="text-h3 font-bold text-white mb-3">{faq.question}</h3>
+                          <p className="text-gray-400 text-small leading-relaxed">{faq.answer}</p>
                         </div>
                       ))}
                     </div>
@@ -397,22 +398,45 @@ export default async function BlogPostPage(props: {
           </div>
         </div>
 
-        <section className="px-4 pb-12">
-          <div className="max-w-3xl mx-auto">
-            <MotionDiv initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }} className="relative rounded-2xl overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-br from-[#81ff00]/15 via-green-900/10 to-transparent" />
-              <div className="absolute inset-0 border border-[#81ff00]/20 rounded-2xl" />
-              <div className="relative p-10 text-center">
-                <div className="w-12 h-12 bg-[#81ff00]/15 rounded-xl flex items-center justify-center mx-auto mb-5 border border-[#81ff00]/20">
-                  <span className="text-[#81ff00] font-bold text-sm">CV</span>
-                </div>
-                <h2 className="text-2xl font-bold text-white mb-3">Ready to Build Your CV?</h2>
-                <p className="text-gray-400 mb-7 max-w-lg mx-auto leading-relaxed">
+        <section className="px-4 pb-24">
+          <div className="max-w-7xl mx-auto">
+            <MotionDiv
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+              className="relative rounded-3xl overflow-hidden group shadow-2xl shadow-[#81ff00]/5 border border-[#81ff00]/20 bg-black/60 backdrop-blur-md"
+            >
+              {/* Dynamic Animated Glow Backdrops */}
+              <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-gradient-to-br from-[#81ff00]/25 via-emerald-950/20 to-transparent rounded-full blur-3xl opacity-70 group-hover:opacity-90 transition-opacity duration-1000 -mr-20 -mt-20 pointer-events-none animate-pulse" style={{ animationDuration: '6s' }} />
+              <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-gradient-to-tr from-emerald-950/40 via-lime-950/20 to-transparent rounded-full blur-3xl opacity-50 group-hover:opacity-75 transition-opacity duration-1000 -ml-20 -mb-20 pointer-events-none" />
+              <div className="absolute inset-0 bg-[radial-gradient(circle_1000px_at_50%_-100px,#81ff00/15,transparent_75%)] opacity-100 pointer-events-none" />
+
+              {/* Abstract Glowing Tech Circuit / Waves Overlay */}
+              <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                <svg className="absolute w-[150%] h-[150%] -left-[25%] -top-[25%] text-[#81ff00]/10 opacity-30 group-hover:opacity-40 transition-opacity duration-700" viewBox="0 0 100 100" preserveAspectRatio="none">
+                  <path d="M0,50 Q25,20 50,50 T100,50" fill="none" stroke="currentColor" strokeWidth="0.5" className="animate-pulse" style={{ animationDuration: '8s' }} />
+                  <path d="M0,40 Q25,70 50,40 T100,40" fill="none" stroke="currentColor" strokeWidth="0.25" className="animate-pulse" style={{ animationDuration: '12s' }} />
+                </svg>
+                {/* Large abstract glowing orb graphic */}
+                <div className="absolute w-72 h-72 bg-gradient-to-tr from-[#81ff00]/10 to-emerald-500/10 rounded-full blur-2xl top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 group-hover:scale-125 transition-transform duration-1000 pointer-events-none" />
+              </div>
+
+              <div className="relative p-12 md:p-20 text-center z-10 flex flex-col items-center">
+                <h2 className="text-3xl md:text-6xl font-black text-white mb-6 tracking-tight leading-none max-w-3xl">
+                  Ready to Build Your <span className="text-[#81ff00] bg-clip-text bg-gradient-to-r from-[#81ff00] via-[#a2ff54] to-emerald-400">Perfect Resume?</span>
+                </h2>
+                <p className="text-gray-300 mb-10 max-w-3xl text-body md:text-h2 leading-relaxed">
                   Apply the strategies from this article in CVCircle&apos;s AI-powered resume builder. Build your ATS-optimised resume in minutes — free to start.
                 </p>
-                <div className="flex flex-wrap gap-3 justify-center">
-                  <Link href="/sign-up" className="inline-flex items-center gap-2 bg-[#81ff00] text-black px-7 py-3 rounded-full font-bold hover:bg-lime-400 transition-colors text-sm shadow-[0_0_20px_rgba(129,255,0,0.25)]">Build My CV Free</Link>
-                  <Link href="/ai-resume-builder" className="inline-flex items-center gap-2 bg-white/10 text-white border border-white/15 px-7 py-3 rounded-full font-bold hover:bg-white/15 transition-colors text-sm">Try AI Resume Builder</Link>
+                <div className="flex flex-col sm:flex-row gap-5 justify-center w-full sm:w-auto">
+                  <Link href="/sign-up" className="inline-flex items-center justify-center gap-2.5 bg-[#81ff00] text-black px-12 py-5 rounded-full font-extrabold hover:bg-lime-400 hover:text-black active:scale-[0.98] transition-all text-body shadow-[0_0_40px_rgba(129,255,0,0.4)] group/btn">
+                    Build My CV Free
+                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1.5 transition-transform" />
+                  </Link>
+                  <Link href="/ai-resume-builder" className="inline-flex items-center justify-center gap-2 bg-white/5 text-white border border-white/10 px-10 py-4.5 rounded-full font-extrabold hover:bg-white/10 hover:border-white/20 active:scale-[0.98] transition-all text-body">
+                    Try AI Resume Builder
+                  </Link>
                 </div>
               </div>
             </MotionDiv>
@@ -425,21 +449,7 @@ export default async function BlogPostPage(props: {
           </div>
         </section>
 
-        <footer className="py-8 px-4 border-t border-white/5">
-          <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 bg-[#81ff00] rounded flex items-center justify-center shadow-[0_0_8px_rgba(129,255,0,0.3)]">
-                <span className="text-black font-bold text-xs">CV</span>
-              </div>
-              <span className="text-gray-500 text-sm">© 2026 CVCircle by Morigrid Labs</span>
-            </div>
-            <div className="flex gap-6">
-              <Link href="/privacy-policy" className="text-gray-500 hover:text-white text-sm transition-colors">Privacy</Link>
-              <Link href="/terms" className="text-gray-500 hover:text-white text-sm transition-colors">Terms</Link>
-              <Link href="/blog" className="text-gray-500 hover:text-white text-sm transition-colors">All Posts</Link>
-            </div>
-          </div>
-        </footer>
+        <Footer />
 
         <style dangerouslySetInnerHTML={{
           __html: `

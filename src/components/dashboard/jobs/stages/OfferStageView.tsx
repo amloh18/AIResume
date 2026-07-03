@@ -93,10 +93,10 @@ const OfferStageView: React.FC<OfferStageViewProps> = ({
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
         <CheckCircle className="w-16 h-16 text-gray-400 dark:text-gray-600 mb-4" />
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+        <h3 className="text-h3 font-semibold text-gray-900 dark:text-white mb-2">
           No offers yet
         </h3>
-        <p className="text-sm text-gray-500 dark:text-gray-400">
+        <p className="text-small text-gray-500 dark:text-gray-400">
           Keep applying! Your offers will appear here.
         </p>
       </div>
@@ -109,7 +109,7 @@ const OfferStageView: React.FC<OfferStageViewProps> = ({
       <div className="px-6 py-4 border-b border-gray-200 dark:border-white/10 flex items-center justify-end">
         <button
           onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
-          className="flex items-center gap-2 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+          className="flex items-center gap-2 text-small font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
         >
           <TrendingUp size={14} />
           <span>Sort by Value ({sortOrder === 'desc' ? 'High to Low' : 'Low to High'})</span>
@@ -121,17 +121,17 @@ const OfferStageView: React.FC<OfferStageViewProps> = ({
           <thead className="bg-gray-50 dark:bg-[#1c2018]">
             <tr>
               {/* Universal Columns */}
-              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Company</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Role</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Location</th>
+              <th className="px-6 py-4 text-left text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Company</th>
+              <th className="px-6 py-4 text-left text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Role</th>
+              <th className="px-6 py-4 text-left text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Location</th>
 
               {/* Stage Specific Columns */}
-              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Offer Value</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Components</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Deadline</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+              <th className="px-6 py-4 text-left text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Offer Value</th>
+              <th className="px-6 py-4 text-left text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Components</th>
+              <th className="px-6 py-4 text-left text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Deadline</th>
+              <th className="px-6 py-4 text-left text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
 
-              <th className="px-6 py-4 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Action</th>
+              <th className="px-6 py-4 text-right text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 dark:divide-white/10">
@@ -151,7 +151,7 @@ const OfferStageView: React.FC<OfferStageViewProps> = ({
                   {/* Company */}
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-white/10 flex items-center justify-center text-xs font-bold text-gray-500 dark:text-gray-400 overflow-hidden">
+                      <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-white/10 flex items-center justify-center text-small font-bold text-gray-500 dark:text-gray-400 overflow-hidden">
                         {job.companyLogo ? (
                           <img
                             src={job.companyLogo}
@@ -164,18 +164,18 @@ const OfferStageView: React.FC<OfferStageViewProps> = ({
                           {(job.company || 'NA').substring(0, 2).toUpperCase()}
                         </span>
                       </div>
-                      <span className="text-sm font-semibold text-gray-900 dark:text-white">{job.company}</span>
+                      <span className="text-small font-semibold text-gray-900 dark:text-white">{job.company}</span>
                     </div>
                   </td>
 
                   {/* Role */}
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-sm text-gray-900 dark:text-white">{job.jobTitle || job.title}</span>
+                    <span className="text-small text-gray-900 dark:text-white">{job.jobTitle || job.title}</span>
                   </td>
 
                   {/* Location */}
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400">
+                    <div className="flex items-center gap-1.5 text-small text-gray-500 dark:text-gray-400">
                       <MapPin size={14} />
                       <span className="truncate max-w-[150px]">{job.location || '-'}</span>
                     </div>
@@ -184,7 +184,7 @@ const OfferStageView: React.FC<OfferStageViewProps> = ({
                   {/* Offer Value */}
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-lg font-bold text-green-600 dark:text-green-400">
+                      <span className="text-h3 font-bold text-green-600 dark:text-green-400">
                         {offerValue > 0 ? formatCurrency(offerValue, currency) : 'TBD'}
                       </span>
                     </div>
@@ -192,7 +192,7 @@ const OfferStageView: React.FC<OfferStageViewProps> = ({
 
                   {/* Components */}
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex flex-col text-xs text-gray-500 dark:text-gray-400">
+                    <div className="flex flex-col text-small text-gray-500 dark:text-gray-400">
                       {job.offerDetails?.bonus && <span>Bonus: {job.offerDetails.bonus}</span>}
                       {job.offerDetails?.equity && <span>Equity: {job.offerDetails.equity}</span>}
                       {!job.offerDetails?.bonus && !job.offerDetails?.equity && <span>-</span>}
@@ -202,7 +202,7 @@ const OfferStageView: React.FC<OfferStageViewProps> = ({
                   {/* Deadline */}
                   <td className="px-6 py-4 whitespace-nowrap">
                     {job.deadline ? (
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${daysUntilDeadline !== null && daysUntilDeadline < 0 ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' :
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-small font-medium ${daysUntilDeadline !== null && daysUntilDeadline < 0 ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' :
                         daysUntilDeadline !== null && daysUntilDeadline <= 3 ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400' :
                           'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
                         }`}>
@@ -215,7 +215,7 @@ const OfferStageView: React.FC<OfferStageViewProps> = ({
 
                   {/* Status */}
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 capitalize">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-small font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 capitalize">
                       {job.status}
                     </span>
                   </td>

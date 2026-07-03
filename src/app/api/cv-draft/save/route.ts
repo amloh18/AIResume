@@ -110,77 +110,45 @@ export async function POST(request: NextRequest) {
       ? { userId: session.user.id, isForMasterCV: isForMasterCV !== false }
       : { sessionId, isForMasterCV: isForMasterCV !== false };
 
-    let draft = await TemporaryCVDraft.findOne(query);
-
-    if (draft) {
-      // Update existing draft with validated data
-      draft.cvData = validatedCVData;
-      draft.aiAnalysis = aiAnalysis !== undefined ? aiAnalysis : draft.aiAnalysis;
-      draft.currentStep = currentStep || draft.currentStep;
-      draft.jobId = jobId || draft.jobId;
-      draft.jobData = jobData || draft.jobData;
-      draft.completedSteps = completedSteps || draft.completedSteps;
-      draft.activeSection = activeSection || draft.activeSection;
-      draft.availableSections = availableSections || draft.availableSections;
-      draft.targetRole = targetRole !== undefined ? targetRole : draft.targetRole;
-      draft.seniorityLevel = seniorityLevel !== undefined ? seniorityLevel : draft.seniorityLevel;
-      draft.templateId = templateId !== undefined ? templateId : draft.templateId;
-      draft.template = template !== undefined ? template : draft.template;
-      draft.cvTitle = cvTitle !== undefined ? cvTitle : draft.cvTitle;
-      
-      // If user just authenticated, link to user
-      if (session?.user?.id && !draft.userId) {
-        draft.userId = session.user.id;
-        // Keep sessionId for now (will be cleaned up later)
-        console.log('✅ Linking draft to authenticated user:', session.user.id);
-      }
-      
-      // CRITICAL FIX: Mark cvData as modified for Mongoose Mixed type
-      draft.markModified('cvData');
-      await draft.save();
-      
-      // Verify data was saved correctly by re-fetching
-      const verifyDraft = await TemporaryCVDraft.findById(draft._id).lean();
-      console.log('✅ Verification after save - Draft sections:', {
-        work: verifyDraft?.cvData?.work?.length || 0,
-        education: verifyDraft?.cvData?.education?.length || 0,
-        skills: verifyDraft?.cvData?.skills?.length || 0,
-        projects: verifyDraft?.cvData?.projects?.length || 0
-      });
-    } else {
-      // Create new draft with validated data
-      draft = new TemporaryCVDraft({
-        userId: session?.user?.id || undefined,
-        sessionId,
+    const update: any = {
+      $set: {
         cvData: validatedCVData,
-        aiAnalysis,
-        currentStep: currentStep || 1,
-        jobId,
-        jobData,
-        completedSteps: completedSteps || [],
-        activeSection,
-        availableSections: availableSections || [],
-        targetRole,
-        seniorityLevel,
-        templateId,
-        template,
-        cvTitle,
-        isForMasterCV: isForMasterCV !== false // Default to true for Master CV draft
-      });
-      
-      // CRITICAL FIX: Mark cvData as modified for Mongoose Mixed type
-      draft.markModified('cvData');
-      await draft.save();
-      
-      // Verify data was saved correctly by re-fetching
-      const verifyDraft = await TemporaryCVDraft.findById(draft._id).lean();
-      console.log('✅ Verification after save - Draft sections:', {
-        work: verifyDraft?.cvData?.work?.length || 0,
-        education: verifyDraft?.cvData?.education?.length || 0,
-        skills: verifyDraft?.cvData?.skills?.length || 0,
-        projects: verifyDraft?.cvData?.projects?.length || 0
-      });
+        isForMasterCV: isForMasterCV !== false,
+        sessionId,
+        lastAccessedAt: new Date(),
+        updatedAt: new Date()
+      }
+    };
+
+    if (session?.user?.id) {
+      update.$set.userId = session.user.id;
     }
+
+    if (aiAnalysis !== undefined) update.$set.aiAnalysis = aiAnalysis;
+    if (currentStep !== undefined) update.$set.currentStep = currentStep;
+    if (jobId !== undefined) update.$set.jobId = jobId;
+    if (jobData !== undefined) update.$set.jobData = jobData;
+    if (completedSteps !== undefined) update.$set.completedSteps = completedSteps;
+    if (activeSection !== undefined) update.$set.activeSection = activeSection;
+    if (availableSections !== undefined) update.$set.availableSections = availableSections;
+    if (targetRole !== undefined) update.$set.targetRole = targetRole;
+    if (seniorityLevel !== undefined) update.$set.seniorityLevel = seniorityLevel;
+    if (templateId !== undefined) update.$set.templateId = templateId;
+    if (template !== undefined) update.$set.template = template;
+    if (cvTitle !== undefined) update.$set.cvTitle = cvTitle;
+
+    const draft = await TemporaryCVDraft.findOneAndUpdate(
+      query,
+      update,
+      { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
+    );
+
+    console.log('✅ Verification after save - Draft sections:', {
+      work: draft?.cvData?.work?.length || 0,
+      education: draft?.cvData?.education?.length || 0,
+      skills: draft?.cvData?.skills?.length || 0,
+      projects: draft?.cvData?.projects?.length || 0
+    });
 
     // Set session ID cookie for anonymous users (7 days expiry)
     const response = NextResponse.json({

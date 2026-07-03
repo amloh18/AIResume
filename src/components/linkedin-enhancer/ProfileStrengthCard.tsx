@@ -31,7 +31,7 @@ export default function ProfileStrengthCard() {
     return (
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 flex flex-col h-full relative overflow-hidden">
             <div className="flex justify-between items-start mb-6 z-10 relative">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Profile Strength</h3>
+                <h3 className="text-h3 font-semibold text-gray-900 dark:text-white">Profile Strength</h3>
             </div>
             
             <div className="flex-1 flex items-center justify-center z-10 relative gap-6">
@@ -57,10 +57,10 @@ export default function ProfileStrengthCard() {
                             />
                         </svg>
                         <div className="absolute inset-0 flex items-center justify-center">
-                            <span className="text-xl font-bold text-gray-900 dark:text-white">{beforeScore}</span>
+                            <span className="text-h3 font-bold text-gray-900 dark:text-white">{beforeScore}</span>
                         </div>
                     </div>
-                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Before</span>
+                    <span className="text-small font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Before</span>
                 </div>
 
                 <div className="flex flex-col items-center text-gray-300 dark:text-gray-600">
@@ -91,10 +91,10 @@ export default function ProfileStrengthCard() {
                             />
                         </svg>
                         <div className="absolute inset-0 flex items-center justify-center">
-                            <span className="text-2xl font-bold text-gray-900 dark:text-white">{score}</span>
+                            <span className="text-h2 font-bold text-gray-900 dark:text-white">{score}</span>
                         </div>
                     </div>
-                    <span className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">After AI</span>
+                    <span className="text-small font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">After AI</span>
                 </div>
             </div>
             

@@ -47,7 +47,7 @@ export default function RedesignedAIInsightsWidget({ insights = defaultInsights,
               {insight.type === 'intelligence' ? <TrendingUp size={16} /> : <Lightbulb size={16} />}
             </div>
             <div>
-              <h4 className="text-xs font-black text-gray-800 dark:text-gray-200">{insight.title}</h4>
+              <h4 className="text-small font-black text-gray-800 dark:text-gray-200">{insight.title}</h4>
               <p className="text-[11px] font-medium text-gray-500 mt-1 leading-relaxed">{insight.description}</p>
             </div>
           </div>

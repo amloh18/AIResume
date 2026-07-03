@@ -38,10 +38,10 @@ function InterviewCoachGate() {
                     <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-lime-400/20 to-emerald-500/10 border border-lime-500/20 mb-5">
                         <Mic className="w-7 h-7 text-lime-400" />
                     </div>
-                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-3">
+                    <h1 className="text-h1 font-bold text-gray-900 dark:text-white mb-3">
                         AI Interview Coach
                     </h1>
-                    <p className="text-gray-500 dark:text-white/50 text-base max-w-md mx-auto">
+                    <p className="text-gray-500 dark:text-white/50 text-body max-w-md mx-auto">
                         Practice smarter with AI-powered mock interviews tailored to your exact job description.
                     </p>
                 </div>
@@ -57,8 +57,8 @@ function InterviewCoachGate() {
                                 <Icon className="w-4 h-4 text-lime-500 dark:text-lime-400" />
                             </div>
                             <div>
-                                <p className="text-sm font-semibold text-gray-800 dark:text-white">{label}</p>
-                                <p className="text-xs text-gray-500 dark:text-white/40 mt-0.5">{desc}</p>
+                                <p className="text-small font-semibold text-gray-800 dark:text-white">{label}</p>
+                                <p className="text-small text-gray-500 dark:text-white/40 mt-0.5">{desc}</p>
                             </div>
                         </div>
                     ))}
@@ -66,19 +66,19 @@ function InterviewCoachGate() {
 
                 {/* Upgrade CTA */}
                 <div className="bg-gradient-to-br from-lime-50 to-emerald-50 dark:from-lime-500/10 dark:to-emerald-500/5 border border-lime-200 dark:border-lime-500/20 rounded-2xl p-6 text-center">
-                    <div className="inline-flex items-center gap-2 text-xs font-semibold text-lime-700 dark:text-lime-400 bg-lime-100 dark:bg-lime-500/10 px-3 py-1.5 rounded-full mb-4">
+                    <div className="inline-flex items-center gap-2 text-small font-semibold text-lime-700 dark:text-lime-400 bg-lime-100 dark:bg-lime-500/10 px-3 py-1.5 rounded-full mb-4">
                         <Lock className="w-3 h-3" />
                         Focused Plan Required
                     </div>
-                    <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+                    <h2 className="text-h3 font-bold text-gray-900 dark:text-white mb-2">
                         Unlock Interview Coach with Focused
                     </h2>
-                    <p className="text-sm text-gray-500 dark:text-white/50 mb-5">
+                    <p className="text-small text-gray-500 dark:text-white/50 mb-5">
                         Get Interview Coach, unlimited job tracking, LinkedIn Enhancer, and full AI tools — all in one plan.
                     </p>
                     <button
                         onClick={handleUpgrade}
-                        className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-black font-semibold text-sm transition-all duration-200 shadow-md hover:shadow-lg"
+                        className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-black font-semibold text-small transition-all duration-200 shadow-md hover:shadow-lg"
                     >
                         Upgrade to Focused
                         <ChevronRight className="w-4 h-4" />

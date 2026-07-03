@@ -57,7 +57,7 @@ export default function LinkedInProjectsCard({ data, showEnhanced = true }: Link
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                     <FolderGit2 className="w-5 h-5 text-gray-700" />
-                    <h2 className="text-lg font-semibold text-gray-900">Projects</h2>
+                    <h2 className="text-h3 font-semibold text-gray-900">Projects</h2>
                 </div>
                 <CopyAllButton content={allContent} label="Copy All" />
             </div>
@@ -128,7 +128,7 @@ function ProjectEntry({ project, index, showEnhanced }: ProjectEntryProps) {
                     <div className="flex items-center justify-between gap-2 mb-1">
                         <CopyableText
                             text={displayTitle}
-                            className="text-base font-semibold text-gray-900 block"
+                            className="text-body font-semibold text-gray-900 block"
                         />
                         <button
                             onClick={() => {
@@ -147,7 +147,7 @@ function ProjectEntry({ project, index, showEnhanced }: ProjectEntryProps) {
 
                     {/* Date Range */}
                     {origData.date_range && (
-                        <div className="flex items-center gap-1.5 text-sm text-gray-500 mb-1">
+                        <div className="flex items-center gap-1.5 text-small text-gray-500 mb-1">
                             <Calendar className="w-3.5 h-3.5" />
                             <CopyableText
                                 text={origData.date_range}
@@ -159,7 +159,7 @@ function ProjectEntry({ project, index, showEnhanced }: ProjectEntryProps) {
 
                     {/* Associated With */}
                     {origData.associated_with && (
-                        <div className="flex items-center gap-1.5 text-sm text-gray-600 mb-2">
+                        <div className="flex items-center gap-1.5 text-small text-gray-600 mb-2">
                             <Building2 className="w-3.5 h-3.5" />
                             <CopyableText
                                 text={`Associated with ${origData.associated_with}`}
@@ -176,7 +176,7 @@ function ProjectEntry({ project, index, showEnhanced }: ProjectEntryProps) {
                                 href={origData.url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-sm text-blue-600 hover:underline flex items-center gap-1"
+                                className="text-small text-blue-600 hover:underline flex items-center gap-1"
                             >
                                 <ExternalLink className="w-3.5 h-3.5" />
                                 <span className="truncate max-w-xs">{origData.url}</span>
@@ -191,7 +191,7 @@ function ProjectEntry({ project, index, showEnhanced }: ProjectEntryProps) {
                                 <CopyableText
                                     key={idx}
                                     text={bullet.startsWith('•') ? bullet : `• ${bullet}`}
-                                    className="text-sm text-gray-700 block leading-relaxed"
+                                    className="text-small text-gray-700 block leading-relaxed"
                                     showIcon={false}
                                 />
                             ))}
@@ -201,12 +201,12 @@ function ProjectEntry({ project, index, showEnhanced }: ProjectEntryProps) {
                     {/* Skills Tags */}
                     {displaySkills.length > 0 && (
                         <div className="flex flex-wrap gap-2 mt-3">
-                            <span className="text-xs text-gray-500">◇</span>
+                            <span className="text-small text-gray-500">◇</span>
                             {displaySkills.map((skill, idx) => (
                                 <CopyableText
                                     key={idx}
                                     text={skill}
-                                    className="text-sm text-gray-700"
+                                    className="text-small text-gray-700"
                                     showIcon={false}
                                 >
                                     <span>{skill}</span>
@@ -216,7 +216,7 @@ function ProjectEntry({ project, index, showEnhanced }: ProjectEntryProps) {
                                 </CopyableText>
                             ))}
                             {displaySkills.length > 3 && (
-                                <span className="text-sm text-gray-500">
+                                <span className="text-small text-gray-500">
                                     and +{displaySkills.length - 3} skills
                                 </span>
                             )}

@@ -180,7 +180,7 @@ export default function UnifiedAuthForm({
     return (
       <div key={field.name}>
         <div className="flex flex-col gap-2">
-          <label htmlFor={field.name} className="text-sm font-medium text-gray-700 dark:text-white/80 w-full flex-shrink-0">
+          <label htmlFor={field.name} className="text-small font-medium text-gray-700 dark:text-white/80 w-full flex-shrink-0">
             {field.label}
           </label>
           <div className="relative w-full flex items-center">
@@ -229,7 +229,7 @@ export default function UnifiedAuthForm({
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mt-2 flex items-center gap-2 text-red-500 dark:text-red-400 text-sm"
+            className="mt-2 flex items-center gap-2 text-red-500 dark:text-red-400 text-small"
           >
             <AlertCircle className="w-4 h-4 flex-shrink-0" />
             <span>{fieldError}</span>
@@ -251,7 +251,7 @@ export default function UnifiedAuthForm({
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-gray-200 dark:border-white/20"></div>
             </div>
-            <div className="relative flex justify-center text-sm">
+            <div className="relative flex justify-center text-small">
               <span className="px-2 bg-white dark:bg-[#141810] text-gray-500 dark:text-white/60">Or continue with email</span>
             </div>
           </div>
@@ -270,7 +270,7 @@ export default function UnifiedAuthForm({
             className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/20 rounded-sm text-red-400"
           >
             <AlertCircle className="w-4 h-4 flex-shrink-0" />
-            <span className="text-sm">{error}</span>
+            <span className="text-small">{error}</span>
           </motion.div>
         )}
 
@@ -282,7 +282,7 @@ export default function UnifiedAuthForm({
             className="flex items-center gap-2 p-3 bg-green-500/10 border border-green-500/20 rounded-sm text-green-400"
           >
             <CheckCircle className="w-4 h-4 flex-shrink-0" />
-            <span className="text-sm">{success}</span>
+            <span className="text-small">{success}</span>
           </motion.div>
         )}
 

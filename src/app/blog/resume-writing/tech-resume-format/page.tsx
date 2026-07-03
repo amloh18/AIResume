@@ -123,19 +123,19 @@ export default function TechResumeFormatPage() {
 
         <article className="max-w-4xl mx-auto px-4 pt-32 pb-16">
           <header className="mb-12 text-center">
-            <MotionDiv initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="inline-block px-4 py-2 bg-blue-500/20 text-blue-400 rounded-full text-sm font-medium mb-6">
+            <MotionDiv initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="inline-block px-4 py-2 bg-blue-500/20 text-blue-400 rounded-full text-small font-medium mb-6">
               For Tech Professionals
             </MotionDiv>
-            <MotionDiv initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="text-4xl md:text-5xl font-bold text-white mb-6">
+            <MotionDiv initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="text-display md:text-display font-bold text-white mb-6">
               Tech Resume Format Guide 2026
             </MotionDiv>
-            <MotionDiv initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="text-xl text-gray-400">
+            <MotionDiv initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="text-h3 text-gray-400">
               Create a resume that lands interviews at top tech companies
             </MotionDiv>
           </header>
 
           <section className="mb-12">
-            <h2 className="text-2xl font-bold text-white mb-6">What Tech Recruiters Look For</h2>
+            <h2 className="text-h2 font-bold text-white mb-6">What Tech Recruiters Look For</h2>
             <div className="grid md:grid-cols-2 gap-4">
               {[{ name: 'Skills Match', desc: 'Keywords from job description' },
                 { name: 'Project Portfolio', desc: 'GitHub, live demos' },
@@ -147,22 +147,22 @@ export default function TechResumeFormatPage() {
                 <MotionDiv key={i} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }} viewport={{ once: true }}
                   className="bg-[#1a1f1a] p-5 rounded-xl border border-blue-800/30">
                   <h3 className="font-semibold text-white mb-1">{item.name}</h3>
-                  <p className="text-gray-400 text-sm">{item.desc}</p>
+                  <p className="text-gray-400 text-small">{item.desc}</p>
                 </MotionDiv>
               ))}
             </div>
           </section>
 
           <section className="mb-12">
-            <h2 className="text-2xl font-bold text-white mb-6">Recommended Section Order</h2>
+            <h2 className="text-h2 font-bold text-white mb-6">Recommended Section Order</h2>
             <div className="space-y-4">
               {techSections.map((section, i) => (
                 <MotionDiv key={i} initial={{ opacity: 0, x: -20 }} whileInView={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.1 }} viewport={{ once: true }}
                   className="bg-[#1a1f1a] rounded-xl p-6 border border-white/5 flex gap-4 items-start">
                   <div className="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center text-blue-400 flex-shrink-0">{section.icon}</div>
                   <div>
-                    <h3 className="text-lg font-semibold text-white mb-2">{section.title}</h3>
-                    <ul className="text-gray-400 text-sm space-y-1">{section.items.map((item, j) => <li key={j}>• {item}</li>)}</ul>
+                    <h3 className="text-h3 font-semibold text-white mb-2">{section.title}</h3>
+                    <ul className="text-gray-400 text-small space-y-1">{section.items.map((item, j) => <li key={j}>• {item}</li>)}</ul>
                   </div>
                 </MotionDiv>
               ))}
@@ -170,7 +170,7 @@ export default function TechResumeFormatPage() {
           </section>
 
           <section className="mb-12">
-            <h2 className="text-2xl font-bold text-white mb-4">Pro Tips for Tech Resumes</h2>
+            <h2 className="text-h2 font-bold text-white mb-4">Pro Tips for Tech Resumes</h2>
             <div className="bg-blue-900/20 border border-blue-800/50 rounded-xl p-6">
               <ul className="space-y-3 text-gray-300">
                 <li className="flex items-start gap-3"><span className="text-blue-400 font-bold">1.</span> <span>Include GitHub and LinkedIn links prominently</span></li>
@@ -184,15 +184,15 @@ export default function TechResumeFormatPage() {
           </section>
 
           <section className="mt-16 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-2xl p-8 text-center">
-            <h2 className="text-2xl font-bold text-white mb-4">Build Your Tech Resume</h2>
+            <h2 className="text-h2 font-bold text-white mb-4">Build Your Tech Resume</h2>
             <p className="text-blue-100 mb-6">Create a professional tech resume that stands out.</p>
-            <Link href="/sign-up?callbackUrl=/resume-enhancer" className="inline-flex items-center gap-2 bg-white text-blue-700 px-8 py-4 rounded-full font-bold hover:bg-gray-100 transition">
+            <Link href="/sign-up?callbackUrl=/editor" className="inline-flex items-center gap-2 bg-white text-blue-700 px-8 py-4 rounded-full font-bold hover:bg-gray-100 transition">
               Create Tech Resume Free <ArrowRight className="w-5 h-5" />
             </Link>
           </section>
 
           <section className="mt-12">
-            <h3 className="text-xl font-bold text-white mb-4">Related Pages</h3>
+            <h3 className="text-h3 font-bold text-white mb-4">Related Pages</h3>
             <div className="flex flex-wrap gap-3">
               <Link href="/resume/software-engineer" className="px-4 py-2 bg-[#1a1f1a] text-gray-300 rounded-lg hover:bg-[#2a2f2a] transition">Software Engineer Resume</Link>
               <Link href="/resume/frontend-developer" className="px-4 py-2 bg-[#1a1f1a] text-gray-300 rounded-lg hover:bg-[#2a2f2a] transition">Frontend Developer Resume</Link>
@@ -204,12 +204,12 @@ export default function TechResumeFormatPage() {
         <footer className="py-8 px-4 border-t border-white/5">
           <div className="max-w-7xl mx-auto flex justify-between items-center">
             <div className="flex items-center gap-2">
-              <div className="w-6 h-6 bg-[#81ff00] rounded"><span className="text-black font-bold text-xs">CV</span></div>
-              <span className="text-gray-500 text-sm">© 2026 CVCircle</span>
+              <div className="w-6 h-6 bg-[#81ff00] rounded"><span className="text-black font-bold text-small">CV</span></div>
+              <span className="text-gray-500 text-small">© 2026 CVCircle</span>
             </div>
             <div className="flex gap-6">
-              <Link href="/privacy-policy" className="text-gray-500 text-sm">Privacy</Link>
-              <Link href="/terms" className="text-gray-500 text-sm">Terms</Link>
+              <Link href="/privacy-policy" className="text-gray-500 text-small">Privacy</Link>
+              <Link href="/terms" className="text-gray-500 text-small">Terms</Link>
             </div>
           </div>
         </footer>

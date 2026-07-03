@@ -188,15 +188,15 @@ const CVListView: React.FC<CVListViewProps> = ({
                 <table className="w-full text-left border-collapse">
                     <thead>
                         <tr className="bg-gray-50 dark:bg-[#141810] border-b border-gray-200 dark:border-white/10">
-                            <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-white uppercase tracking-wider">Document Name</th>
-                            {!hideType && <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-white uppercase tracking-wider">Type</th>}
-                            {!hideStatus && <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-white uppercase tracking-wider">Status</th>}
-                            {showStage && <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-white uppercase tracking-wider">Stage</th>}
-                            <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-white uppercase tracking-wider">
+                            <th className="px-6 py-3 text-small font-semibold text-gray-500 dark:text-white uppercase tracking-wider">Document Name</th>
+                            {!hideType && <th className="px-6 py-3 text-small font-semibold text-gray-500 dark:text-white uppercase tracking-wider">Type</th>}
+                            {!hideStatus && <th className="px-6 py-3 text-small font-semibold text-gray-500 dark:text-white uppercase tracking-wider">Status</th>}
+                            {showStage && <th className="px-6 py-3 text-small font-semibold text-gray-500 dark:text-white uppercase tracking-wider">Stage</th>}
+                            <th className="px-6 py-3 text-small font-semibold text-gray-500 dark:text-white uppercase tracking-wider">
                                 {scoreLabel || (showATSScore ? 'ATS Score' : 'CV Score')}
                             </th>
-                            <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-white uppercase tracking-wider">Last Modified</th>
-                            <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-white uppercase tracking-wider text-right">Actions</th>
+                            <th className="px-6 py-3 text-small font-semibold text-gray-500 dark:text-white uppercase tracking-wider">Last Modified</th>
+                            <th className="px-6 py-3 text-small font-semibold text-gray-500 dark:text-white uppercase tracking-wider text-right">Actions</th>
                         </tr>
                     </thead>
                     <tbody className="dark:divide-white/10">
@@ -217,7 +217,7 @@ const CVListView: React.FC<CVListViewProps> = ({
                                                     type="text"
                                                     value={editingTitle || ''}
                                                     onChange={(e) => onTitleEdit?.(cv.id, e.target.value)}
-                                                    className="w-full bg-white dark:bg-[#1a2016] border border-gray-300 dark:border-lime-500/20 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-lime-500 dark:text-white"
+                                                    className="w-full bg-white dark:bg-[#1a2016] border border-gray-300 dark:border-lime-500/20 rounded px-2 py-1 text-small focus:outline-none focus:ring-2 focus:ring-lime-500 dark:text-white"
                                                     autoFocus
                                                     onKeyDown={(e) => {
                                                         if (e.key === 'Enter') {
@@ -232,7 +232,7 @@ const CVListView: React.FC<CVListViewProps> = ({
                                             </div>
                                         ) : (
                                             <div className="flex items-center gap-2">
-                                                <span className="font-medium text-sm text-gray-900 dark:text-white truncate" title={cv.title}>{cv.title}</span>
+                                                <span className="font-medium text-small text-gray-900 dark:text-white truncate" title={cv.title}>{cv.title}</span>
                                                 {onStartEditing && (
                                                     <button
                                                         onClick={(e) => {
@@ -262,7 +262,7 @@ const CVListView: React.FC<CVListViewProps> = ({
                                                 </button>
                                             </div>
                                         )}
-                                        {cv.description && <span className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">{cv.description}</span>}
+                                        {cv.description && <span className="text-small text-gray-500 dark:text-gray-400 truncate mt-0.5">{cv.description}</span>}
                                     </div>
                                 </td>
 
@@ -340,7 +340,7 @@ const CVListView: React.FC<CVListViewProps> = ({
                                 </td>
 
                                 {/* Last Modified */}
-                                <td className="px-6 py-3 text-xs text-gray-500 dark:text-gray-400">
+                                <td className="px-6 py-3 text-small text-gray-500 dark:text-gray-400">
                                     {formatDetailedTime(cv.lastModified)}
                                 </td>
 

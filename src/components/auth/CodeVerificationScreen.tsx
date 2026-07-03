@@ -111,7 +111,7 @@ export default function CodeVerificationScreen({
         >
           <div className="flex items-center justify-center gap-2">
             <AlertCircle className="w-4 h-4 text-red-400" />
-            <p className="text-red-400 text-sm">
+            <p className="text-red-400 text-small">
               Too many failed attempts. Please request a new code to continue.
             </p>
           </div>
@@ -128,7 +128,7 @@ export default function CodeVerificationScreen({
       >
         <div className="flex items-center justify-center gap-2">
           <AlertCircle className="w-4 h-4 text-red-400" />
-          <p className="text-red-400 text-sm">{error}</p>
+          <p className="text-red-400 text-small">{error}</p>
         </div>
       </motion.div>
     );
@@ -141,7 +141,7 @@ export default function CodeVerificationScreen({
     if (remainingAttempts <= 2) {
       return (
         <div className="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-none">
-          <p className="text-yellow-400 text-sm text-center">
+          <p className="text-yellow-400 text-small text-center">
             Multiple failed attempts will require a new code.
           </p>
         </div>
@@ -160,14 +160,14 @@ export default function CodeVerificationScreen({
     
     if (diff <= 0) {
       return (
-        <p className="text-red-400 text-sm text-center">
+        <p className="text-red-400 text-small text-center">
           Code has expired. Please request a new code.
         </p>
       );
     }
     
     return (
-      <p className="text-gray-400 text-sm text-center">
+      <p className="text-gray-400 text-small text-center">
         Code expires in {minutes}:{seconds.toString().padStart(2, '0')}
       </p>
     );
@@ -182,7 +182,7 @@ export default function CodeVerificationScreen({
           className="absolute top-4 left-4 lg:left-8 flex items-center gap-2 text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span className="text-sm font-medium hidden sm:inline">Back to Login</span>
+          <span className="text-small font-medium hidden sm:inline">Back to Login</span>
         </button>
       )}
 
@@ -206,22 +206,22 @@ export default function CodeVerificationScreen({
       </div>
 
       {/* Title */}
-      <h3 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">
+      <h3 className="text-h1 font-bold text-gray-900 dark:text-white mb-6">
         Check your email
       </h3>
       
       {/* Email Display */}
       {email && (
-        <p className="text-[#80FF00] text-base mb-4 font-medium">
+        <p className="text-[#80FF00] text-body mb-4 font-medium">
           {email}
         </p>
       )}
       
       {/* Instructions */}
-      <p className="text-gray-600 dark:text-gray-300 text-lg mb-2">
+      <p className="text-gray-600 dark:text-gray-300 text-h3 mb-2">
         We've sent a 4-digit verification code to your email address.
       </p>
-      <p className="text-gray-600 dark:text-gray-300 text-lg mb-8">
+      <p className="text-gray-600 dark:text-gray-300 text-h3 mb-8">
         Please enter it below to continue.
       </p>
 
@@ -255,14 +255,14 @@ export default function CodeVerificationScreen({
         >
           <div className="flex items-center justify-center gap-2">
             <CheckCircle className="w-4 h-4 text-green-400" />
-            <p className="text-green-400 text-sm">{success}</p>
+            <p className="text-green-400 text-small">{success}</p>
           </div>
         </motion.div>
       )}
 
       {/* Resend Link */}
       <div className="mt-8">
-        <p className="text-gray-300 text-sm">
+        <p className="text-gray-300 text-small">
           Didn't receive the code?{' '}
           <button
             onClick={handleResend}

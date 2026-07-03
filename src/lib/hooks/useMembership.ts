@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
+import { useQuery } from '@tanstack/react-query';
 import { PLAN_LIMITS, PlanLimits, getPlanLimits } from '@/lib/utils/subscription-helpers';
 
 /**
@@ -73,109 +74,73 @@ const PLAN_NAMES: Record<string, string> = {
     pro: 'Pro',
 };
 
+const defaultMembership: MembershipInfo = {
+    planKey: 'free',
+    planName: 'Free',
+    isFreePlan: true,
+    isProMember: false,
+    isLifetimeMember: false,
+    limits: PLAN_LIMITS.free,
+    isSubscriptionActive: true,
+    expiresAt: null,
+};
+
+async function fetchMembershipInfo(): Promise<MembershipInfo> {
+    const response = await fetch('/api/user/usage-limits');
+
+    if (!response.ok) {
+        console.warn('Failed to fetch membership info, using default values');
+        return defaultMembership;
+    }
+
+    const data = await response.json();
+
+    if (!data.success) {
+        return defaultMembership;
+    }
+
+    const planKey = data.subscription?.planKey || 'free';
+    const limits = getPlanLimits(planKey);
+    const isActive = data.subscription?.status === 'active' || planKey === 'free';
+
+    return {
+        planKey,
+        planName: PLAN_NAMES[planKey] || planKey,
+        isFreePlan: planKey === 'free' || planKey === 'starter_monthly',
+        isProMember: [
+            'focused_monthly', 'focused_yearly',
+            'smart_quarterly', 'smart_yearly',
+            'pro_monthly', 'pro_quarterly', 'pro_yearly', 'pro_lifetime', 'pro'
+        ].includes(planKey) && isActive,
+        isLifetimeMember: planKey === 'pro_lifetime' && isActive,
+        limits,
+        // Free tier (free + starter_monthly) is always active — no subscription expiry
+        isSubscriptionActive: (planKey === 'free' || planKey === 'starter_monthly') ? true : isActive,
+        expiresAt: data.subscription?.endDate
+            ? new Date(data.subscription.endDate)
+            : null,
+    };
+}
+
 /**
  * Hook to check user's membership status and feature access
  * Replaces the legacy credit system with membership-based feature locking
  */
 export function useMembership(): UseMembershipReturn {
     const { data: session, status: sessionStatus } = useSession();
-    const [membership, setMembership] = useState<MembershipInfo | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-
-    /**
-     * Fetch membership info from API
-     */
-    const fetchMembership = useCallback(async () => {
-        if (sessionStatus === 'loading') {
-            return; // Wait for session to load
-        }
-
-        if (!session?.user?.id) {
-            setMembership(null);
-            setLoading(false);
-            return;
-        }
-
-        setLoading(true);
-        setError(null);
-
-        try {
-            const response = await fetch('/api/user/usage-limits');
-
-            if (!response.ok) {
-                console.warn('Failed to fetch membership info, using default values');
-                // Default to free plan
-                setMembership({
-                    planKey: 'free',
-                    planName: 'Free',
-                    isFreePlan: true,
-                    isProMember: false,
-                    isLifetimeMember: false,
-                    limits: PLAN_LIMITS.free,
-                    isSubscriptionActive: true,
-                    expiresAt: null,
-                });
-                setLoading(false);
-                return;
-            }
-
-            const data = await response.json();
-
-            if (data.success) {
-                const planKey = data.subscription?.planKey || 'free';
-                const limits = getPlanLimits(planKey);
-                const isActive = data.subscription?.status === 'active' || planKey === 'free';
-
-                setMembership({
-                    planKey,
-                    planName: PLAN_NAMES[planKey] || planKey,
-                    isFreePlan: planKey === 'free' || planKey === 'starter_monthly',
-                    isProMember: [
-                        'focused_monthly', 'focused_yearly',
-                        'smart_quarterly', 'smart_yearly',
-                        'pro_monthly', 'pro_quarterly', 'pro_yearly', 'pro_lifetime', 'pro'
-                    ].includes(planKey) && isActive,
-                    isLifetimeMember: planKey === 'pro_lifetime' && isActive,
-                    limits,
-                    // Free tier (free + starter_monthly) is always active — no subscription expiry
-                    isSubscriptionActive: (planKey === 'free' || planKey === 'starter_monthly') ? true : isActive,
-                    expiresAt: data.subscription?.endDate
-                            ? new Date(data.subscription.endDate)
-                            : null,
-                });
-            } else {
-                // Default to free plan
-                setMembership({
-                    planKey: 'free',
-                    planName: 'Free',
-                    isFreePlan: true,
-                    isProMember: false,
-                    isLifetimeMember: false,
-                    limits: PLAN_LIMITS.free,
-                    isSubscriptionActive: true,
-                    expiresAt: null,
-                });
-            }
-        } catch (err: any) {
-            console.error('Error fetching membership:', err);
-            setError(err.message || 'Failed to fetch membership info');
-
-            // Default to free plan on error
-            setMembership({
-                planKey: 'free',
-                planName: 'Free',
-                isFreePlan: true,
-                isProMember: false,
-                isLifetimeMember: false,
-                limits: PLAN_LIMITS.free,
-                isSubscriptionActive: true,
-                expiresAt: null,
-            });
-        } finally {
-            setLoading(false);
-        }
-    }, [session?.user?.id, sessionStatus]);
+    const hasSession = !!session?.user?.id;
+    const {
+        data: membership = null,
+        isPending,
+        error: queryError,
+        refetch,
+    } = useQuery({
+        queryKey: ['membership', session?.user?.id],
+        queryFn: fetchMembershipInfo,
+        enabled: sessionStatus === 'authenticated' && hasSession,
+        staleTime: 60 * 1000,
+        gcTime: 10 * 60 * 1000,
+    });
 
     /**
      * Check if user can access a specific feature
@@ -270,19 +235,16 @@ export function useMembership(): UseMembershipReturn {
         return membership?.isProMember || false;
     }, [membership]);
 
-    // Initial fetch
-    useEffect(() => {
-        fetchMembership();
-    }, [fetchMembership]);
-
     return {
         membership,
-        loading,
-        error,
+        loading: sessionStatus === 'loading' || (hasSession && isPending),
+        error: queryError instanceof Error ? queryError.message : null,
         canAccess,
         getLockedReason,
         isPaidMember,
-        refreshMembership: fetchMembership,
+        refreshMembership: async () => {
+            await refetch();
+        },
     };
 }
 

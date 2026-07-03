@@ -111,7 +111,7 @@ You must return only valid JSON matching this schema:
 1. **Introduction:** Hook the recruiter by referencing the company mission and the candidate's specific enthusiasm.
 2. **The Match:** Identify the strongest quantified achievements in the CV that solve specific JD requirements.
 3. **Motivation:** Address cultural alignment and why the candidate is specifically excited about ${targetCompany}.
-4. **Closing:** A bold Call to Action (CTA).
+4. **Closing:** A bold Call to Action (CTA), ending with a formal sign-off (e.g., "Sincerely,\n\n${candidateName}"). Ensure this signature is included in the closing section text.
 5. **Length Constraint:** The overall generated body text (the sum of the sections: introduction, experience_bridge_1, experience_bridge_2, motivation, closing) MUST be at least 1000 characters long, adhering to industry standards for thoroughness, detail, and professionalism. Do not write short placeholders or single-sentence paragraphs.
 
 ### Output JSON Format
@@ -149,7 +149,14 @@ You must return only valid JSON matching this schema:
   "metadata": {
     "primary_keywords": ["Keyword1", "Keyword2"],
     "tone": "${tone}",
-    "match_quality": 85
+    "match_quality": 85,
+    "metrics": {
+      "role_alignment": 85,
+      "impact_value": 80,
+      "clarity_flow": 90,
+      "tone_suitability": 85,
+      "ats_friendliness": 80
+    }
   }
 }`;
 }

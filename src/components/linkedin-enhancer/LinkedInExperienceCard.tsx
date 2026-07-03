@@ -23,8 +23,8 @@ export default function LinkedInExperienceCard({ data }: LinkedInExperienceCardP
                 transition={{ delay: 0.2 }}
                 className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
             >
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">Experience</h2>
-                <p className="text-gray-500 text-sm">No experience data available</p>
+                <h2 className="text-h3 font-semibold text-gray-900 mb-4">Experience</h2>
+                <p className="text-gray-500 text-small">No experience data available</p>
             </motion.div>
         );
     }
@@ -39,8 +39,8 @@ export default function LinkedInExperienceCard({ data }: LinkedInExperienceCardP
                 transition={{ delay: 0.2 }}
                 className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
             >
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">Experience</h2>
-                <p className="text-gray-500 text-sm">No experience data available</p>
+                <h2 className="text-h3 font-semibold text-gray-900 mb-4">Experience</h2>
+                <p className="text-gray-500 text-small">No experience data available</p>
             </motion.div>
         );
     }
@@ -80,7 +80,7 @@ export default function LinkedInExperienceCard({ data }: LinkedInExperienceCardP
                 {/* Original Column */}
                 <div className="flex-1 p-6 bg-gray-50/50">
                     <div className="flex items-center justify-between mb-6">
-                        <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">Original Experience</span>
+                        <span className="text-small font-semibold uppercase tracking-wider text-gray-500">Original Experience</span>
                     </div>
                     <div className="space-y-6">
                         {validData.map((experience, index) => (
@@ -93,16 +93,16 @@ export default function LinkedInExperienceCard({ data }: LinkedInExperienceCardP
                 <div className="flex-1 p-6 relative flex flex-col">
                     <div className="flex items-center justify-between mb-6">
                         <div className="flex items-center gap-2">
-                            <span className="text-xs font-semibold uppercase tracking-wider text-blue-600 flex items-center gap-1">
+                            <span className="text-small font-semibold uppercase tracking-wider text-blue-600 flex items-center gap-1">
                                 <Sparkles className="w-3 h-3" /> AI Enhanced
                             </span>
                             {hasEnhancements && (
-                                <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-bold">
+                                <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-small font-bold">
                                     {confidenceScore}% Match
                                 </span>
                             )}
                             {allAccepted && (
-                                <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-bold flex items-center gap-1">
+                                <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-small font-bold flex items-center gap-1">
                                     <Check className="w-3 h-3" /> All Accepted
                                 </span>
                             )}
@@ -127,8 +127,8 @@ export default function LinkedInExperienceCard({ data }: LinkedInExperienceCardP
                     ) : isError ? (
                         <div className="bg-red-50 border border-red-100 rounded-lg p-4 text-center flex-1">
                             <AlertCircle className="w-6 h-6 text-red-500 mx-auto mb-2" />
-                            <p className="text-sm text-red-700 mb-3">Failed to generate enhancement.</p>
-                            <button onClick={handleRetry} className="flex items-center gap-2 mx-auto text-sm bg-white border border-red-200 text-red-600 px-3 py-1.5 rounded-md hover:bg-red-50">
+                            <p className="text-small text-red-700 mb-3">Failed to generate enhancement.</p>
+                            <button onClick={handleRetry} className="flex items-center gap-2 mx-auto text-small bg-white border border-red-200 text-red-600 px-3 py-1.5 rounded-md hover:bg-red-50">
                                 <RefreshCw className="w-4 h-4" /> Retry
                             </button>
                         </div>
@@ -139,7 +139,7 @@ export default function LinkedInExperienceCard({ data }: LinkedInExperienceCardP
                             ))}
                         </div>
                     ) : (
-                        <div className="text-sm text-gray-500 italic flex-1 flex items-center justify-center">No enhancements generated yet.</div>
+                        <div className="text-small text-gray-500 italic flex-1 flex items-center justify-center">No enhancements generated yet.</div>
                     )}
                 </div>
             </div>
@@ -210,10 +210,10 @@ function ExperienceEntry({ data, index, isEnhancedView, isLast }: ExperienceEntr
                             <input 
                                 value={editedTitle}
                                 onChange={(e) => setEditedTitle(e.target.value)}
-                                className="w-full text-sm font-semibold text-gray-900 p-1 border border-blue-300 rounded focus:ring-1 focus:ring-blue-500"
+                                className="w-full text-small font-semibold text-gray-900 p-1 border border-blue-300 rounded focus:ring-1 focus:ring-blue-500"
                             />
                         ) : (
-                            <div className="text-sm font-semibold text-gray-900 flex-1">
+                            <div className="text-small font-semibold text-gray-900 flex-1">
                                 {displayTitle}
                                 {isEnhancedView && data.status === 'ACCEPTED' && <Check className="inline-block w-3 h-3 text-blue-600 ml-1" />}
                             </div>
@@ -235,7 +235,7 @@ function ExperienceEntry({ data, index, isEnhancedView, isLast }: ExperienceEntr
                         )}
                     </div>
 
-                    <div className="text-xs text-gray-700 mt-0.5">
+                    <div className="text-small text-gray-700 mt-0.5">
                         {`${originalData.company || ''}${originalData.employment_type ? ` · ${originalData.employment_type}` : ''}`}
                     </div>
 
@@ -259,7 +259,7 @@ function ExperienceEntry({ data, index, isEnhancedView, isLast }: ExperienceEntr
                             <textarea 
                                 value={editedBullets}
                                 onChange={(e) => setEditedBullets(e.target.value)}
-                                className="w-full text-xs text-gray-700 p-2 border border-blue-300 rounded focus:ring-1 focus:ring-blue-500 min-h-[80px]"
+                                className="w-full text-small text-gray-700 p-2 border border-blue-300 rounded focus:ring-1 focus:ring-blue-500 min-h-[80px]"
                                 placeholder="Enter bullets, one per line"
                             />
                             <div className="flex justify-end gap-2">
@@ -271,7 +271,7 @@ function ExperienceEntry({ data, index, isEnhancedView, isLast }: ExperienceEntr
                         displayBullets.length > 0 && (
                             <div className="mt-2 space-y-1.5">
                                 {displayBullets.map((bullet, idx) => (
-                                    <div key={idx} className="text-xs text-gray-700 pl-3 relative">
+                                    <div key={idx} className="text-small text-gray-700 pl-3 relative">
                                         <span className="absolute left-0 top-1.5 w-1 h-1 bg-gray-400 rounded-full" />
                                         {isEnhancedView ? <CopyableText text={bullet} className="p-0.5 -ml-0.5 rounded hover:bg-gray-50 transition-colors" showIcon={false} /> : bullet}
                                     </div>

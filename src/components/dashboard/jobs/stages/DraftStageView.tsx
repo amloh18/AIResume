@@ -66,10 +66,10 @@ const DraftStageView: React.FC<DraftStageViewProps> = ({
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
         <FileText className="w-16 h-16 text-gray-400 dark:text-gray-600 mb-4" />
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+        <h3 className="text-h3 font-semibold text-gray-900 dark:text-white mb-2">
           No draft jobs
         </h3>
-        <p className="text-sm text-gray-500 dark:text-gray-400">
+        <p className="text-small text-gray-500 dark:text-gray-400">
           Add a job to get started with your application journey.
         </p>
       </div>
@@ -82,7 +82,7 @@ const DraftStageView: React.FC<DraftStageViewProps> = ({
       <div className="px-6 py-4 border-b border-gray-200 dark:border-white/10 flex items-center justify-end">
         <button
           onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
-          className="flex items-center gap-2 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+          className="flex items-center gap-2 text-small font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
         >
           <TrendingUp size={14} />
           <span>Sort by Match Score ({sortOrder === 'desc' ? 'High to Low' : 'Low to High'})</span>
@@ -94,18 +94,18 @@ const DraftStageView: React.FC<DraftStageViewProps> = ({
           <thead className="bg-gray-50 dark:bg-[#1c2018]">
             <tr>
               {/* Universal Columns */}
-              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Company</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Role</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Location</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Comp Range</th>
+              <th className="px-6 py-4 text-left text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Company</th>
+              <th className="px-6 py-4 text-left text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Role</th>
+              <th className="px-6 py-4 text-left text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Location</th>
+              <th className="px-6 py-4 text-left text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Comp Range</th>
 
               {/* Stage Specific Columns */}
-              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Match Score</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sponsorship</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Source</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date Added</th>
+              <th className="px-6 py-4 text-left text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Match Score</th>
+              <th className="px-6 py-4 text-left text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sponsorship</th>
+              <th className="px-6 py-4 text-left text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Source</th>
+              <th className="px-6 py-4 text-left text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date Added</th>
 
-              <th className="px-6 py-4 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Action</th>
+              <th className="px-6 py-4 text-right text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 dark:divide-white/10">
@@ -122,7 +122,7 @@ const DraftStageView: React.FC<DraftStageViewProps> = ({
                   {/* Company */}
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-white/10 flex items-center justify-center text-xs font-bold text-gray-500 dark:text-gray-400 overflow-hidden">
+                      <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-white/10 flex items-center justify-center text-small font-bold text-gray-500 dark:text-gray-400 overflow-hidden">
                         {job.companyLogo ? (
                           <img
                             src={job.companyLogo}
@@ -135,18 +135,18 @@ const DraftStageView: React.FC<DraftStageViewProps> = ({
                           {job.company.substring(0, 2).toUpperCase()}
                         </span>
                       </div>
-                      <span className="text-sm font-semibold text-gray-900 dark:text-white">{job.company}</span>
+                      <span className="text-small font-semibold text-gray-900 dark:text-white">{job.company}</span>
                     </div>
                   </td>
 
                   {/* Role */}
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-sm text-gray-900 dark:text-white">{job.jobTitle || job.title}</span>
+                    <span className="text-small text-gray-900 dark:text-white">{job.jobTitle || job.title}</span>
                   </td>
 
                   {/* Location */}
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400">
+                    <div className="flex items-center gap-1.5 text-small text-gray-500 dark:text-gray-400">
                       <MapPin size={14} />
                       <span className="truncate max-w-[150px]">{job.location || '-'}</span>
                     </div>
@@ -154,12 +154,12 @@ const DraftStageView: React.FC<DraftStageViewProps> = ({
 
                   {/* Comp Range */}
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-sm text-gray-600 dark:text-gray-300">{getCompRange(job)}</span>
+                    <span className="text-small text-gray-600 dark:text-gray-300">{getCompRange(job)}</span>
                   </td>
 
                   {/* Match Score */}
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${matchScore >= 80 ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-small font-medium ${matchScore >= 80 ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
                       matchScore >= 60 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' :
                         'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
                       }`}>
@@ -180,7 +180,7 @@ const DraftStageView: React.FC<DraftStageViewProps> = ({
 
                   {/* Source */}
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400">
+                    <div className="flex items-center gap-1.5 text-small text-gray-500 dark:text-gray-400">
                       <Globe size={14} />
                       <span>{job.source || 'Manual'}</span>
                     </div>
@@ -188,7 +188,7 @@ const DraftStageView: React.FC<DraftStageViewProps> = ({
 
                   {/* Date Added */}
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400">
+                    <div className="flex items-center gap-1.5 text-small text-gray-500 dark:text-gray-400">
                       <Calendar size={14} />
                       <span>{new Date(job.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
                     </div>
@@ -198,7 +198,7 @@ const DraftStageView: React.FC<DraftStageViewProps> = ({
                   <td className="px-6 py-4 whitespace-nowrap text-right" onClick={(e) => e.stopPropagation()}>
                     <button
                       onClick={(e) => handleCreateJourney(job, e)}
-                      className="px-3 py-1.5 bg-lime-500 text-[#141810] text-xs font-bold rounded-lg hover:bg-lime-400 transition-colors inline-flex items-center gap-1.5"
+                      className="px-3 py-1.5 bg-lime-500 text-[#141810] text-small font-bold rounded-lg hover:bg-lime-400 transition-colors inline-flex items-center gap-1.5"
                     >
                       <Sparkles size={14} />
                       Generate Docs

@@ -64,22 +64,22 @@ export default function JobsTable({
         <table className="w-full">
           <thead>
             <tr className="bg-gray-50 dark:bg-[#1a230f] border-b-2 border-gray-300 dark:border-gray-600">
-              <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-small font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wider">
                 Job Title
               </th>
-              <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-small font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wider">
                 Company
               </th>
-              <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-small font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wider">
                 Location
               </th>
-              <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-small font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wider">
                 Match
               </th>
-              <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-small font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wider">
                 Status
               </th>
-              <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-small font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wider">
                 Actions
               </th>
             </tr>
@@ -99,7 +99,7 @@ export default function JobsTable({
                     <span className="font-medium text-gray-900 dark:text-white">
                       {job.title}
                     </span>
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                    <span className="text-small text-gray-500 dark:text-gray-400">
                       {job.source.replace('_', ' ')}
                     </span>
                   </div>
@@ -156,7 +156,7 @@ export default function JobsTable({
               </h3>
               <MatchScoreBar score={job.matchScore} />
             </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+            <p className="text-small text-gray-600 dark:text-gray-400 mb-2">
               {job.company} • {job.location}
             </p>
             {job.appliedStatus && <StatusBadge status={job.appliedStatus} />}
@@ -166,7 +166,7 @@ export default function JobsTable({
 
       {/* Pagination */}
       <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 dark:border-gray-700">
-        <div className="text-sm text-gray-600 dark:text-gray-400">
+        <div className="text-small text-gray-600 dark:text-gray-400">
           Showing {(page - 1) * pageSize + 1} to{' '}
           {Math.min(page * pageSize, total)} of {total} jobs
         </div>
@@ -174,17 +174,17 @@ export default function JobsTable({
           <button
             onClick={() => onPageChange(page - 1)}
             disabled={page === 1}
-            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 text-small font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Previous
           </button>
-          <span className="text-sm text-gray-600 dark:text-gray-400">
+          <span className="text-small text-gray-600 dark:text-gray-400">
             Page {page}
           </span>
           <button
             onClick={() => onPageChange(page + 1)}
             disabled={!hasMore}
-            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 text-small font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Next
           </button>

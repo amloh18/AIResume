@@ -52,10 +52,10 @@ export default function InterviewCoachCard({ className }: InterviewCoachCardProp
 
         {/* Header */}
         <div className="flex items-center justify-between relative z-10">
-          <span className="text-sm font-semibold text-indigo-100">
+          <span className="text-small font-semibold text-indigo-100">
             Interview Coach
           </span>
-          <div className="flex items-center px-3 py-1.5 bg-indigo-500/30 backdrop-blur-sm rounded-full text-xs font-medium text-white border border-indigo-400/20">
+          <div className="flex items-center px-3 py-1.5 bg-indigo-500/30 backdrop-blur-sm rounded-full text-small font-medium text-white border border-indigo-400/20">
             <MessageSquare size={14} className="mr-1.5" />
             <span className="hidden sm:inline">Prep</span>
           </div>
@@ -63,10 +63,10 @@ export default function InterviewCoachCard({ className }: InterviewCoachCardProp
 
         {/* Main Count & Status */}
         <div className="my-4 flex items-end gap-3 relative z-10">
-          <h2 className="text-5xl font-black tracking-tighter text-white leading-none">
+          <h2 className="text-display font-black tracking-tighter text-white leading-none">
             {prepJobs.length}
           </h2>
-          <span className="text-xs font-medium text-amber-300 mb-1 flex items-center">
+          <span className="text-small font-medium text-amber-300 mb-1 flex items-center">
             ↑ Upcoming
           </span>
         </div>
@@ -101,7 +101,7 @@ export default function InterviewCoachCard({ className }: InterviewCoachCardProp
                 <div className="w-1.5 h-1.5 rounded-full bg-amber-400 shadow-[0_0_8px_rgba(250,204,21,0.8)] flex-shrink-0" />
                 <div className="flex-1 min-w-0 flex justify-between items-center gap-2">
                   <div className="min-w-0">
-                    <p className="text-xs font-bold text-white truncate">
+                    <p className="text-small font-bold text-white truncate">
                       {job.jobTitle || job.title || 'Interview Prep'}
                     </p>
                     <p className="text-[10px] text-indigo-200 truncate mt-0.5 flex items-center gap-1">
@@ -131,7 +131,7 @@ export default function InterviewCoachCard({ className }: InterviewCoachCardProp
               </div>
             ))
           ) : (
-            <div className="text-xs text-indigo-200/70 italic py-2 text-center">
+            <div className="text-small text-indigo-200/70 italic py-2 text-center">
               No upcoming interviews. Add a job to start prepping!
             </div>
           )}
@@ -159,7 +159,7 @@ export default function InterviewCoachCard({ className }: InterviewCoachCardProp
 
         {/* Footer CTA */}
         <div className="mt-auto pt-3 text-right relative z-10">
-          <span className="text-xs font-medium text-indigo-100 group-hover:text-white transition-colors">
+          <span className="text-small font-medium text-indigo-100 group-hover:text-white transition-colors">
             Start Coaching →
           </span>
         </div>

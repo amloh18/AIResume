@@ -190,7 +190,7 @@ Full Cover Letter Body:
 User Request:
 ${textToSend}
 
-Please rewrite the cover letter body to fulfill the request. Return the rewritten body content directly.`;
+Please rewrite the cover letter body to fulfill the request. Return the rewritten body content directly. IMPORTANT: Ensure that the rewritten cover letter body ends with a formal sign-off (e.g., "Sincerely,\n\n${state.cvData?.basics?.name || 'Candidate'}") so the signature remains part of the body text.`;
       }
 
       const response = await fetch('/api/ai/improve-content', {

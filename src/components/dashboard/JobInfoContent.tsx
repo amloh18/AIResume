@@ -41,7 +41,7 @@ const JobInfoContent: React.FC<JobInfoContentProps> = ({
     <div className="space-y-6">
       {/* Job Information Display */}
       <div>
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+        <h3 className="text-h3 font-semibold text-gray-900 dark:text-white mb-4">
           📋 Job Information
         </h3>
         
@@ -49,11 +49,11 @@ const JobInfoContent: React.FC<JobInfoContentProps> = ({
           {/* Job URL */}
           {job.jobUrl && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-small font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Job URL
               </label>
               <div className="flex items-center gap-2">
-                <span className="text-gray-600 dark:text-gray-400 text-sm truncate flex-1">
+                <span className="text-gray-600 dark:text-gray-400 text-small truncate flex-1">
                   {job.jobUrl}
                 </span>
                 <a
@@ -71,12 +71,12 @@ const JobInfoContent: React.FC<JobInfoContentProps> = ({
           {/* Salary */}
           {job.salary && (job.salary.min || job.salary.max) && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-small font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Salary
               </label>
               <div className="flex items-center gap-2">
                 <DollarSign size={16} className="text-gray-500" />
-                <span className="text-gray-600 dark:text-gray-400 text-sm">
+                <span className="text-gray-600 dark:text-gray-400 text-small">
                   {job.salary.min && job.salary.max 
                     ? `${job.salary.min.toLocaleString()} - ${job.salary.max.toLocaleString()}`
                     : job.salary.min 
@@ -90,12 +90,12 @@ const JobInfoContent: React.FC<JobInfoContentProps> = ({
 
           {/* Status */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block text-small font-medium text-gray-700 dark:text-gray-300 mb-1">
               Status
             </label>
             <div className="flex items-center gap-2">
               <CheckCircle size={16} className="text-green-500" />
-              <span className="text-gray-600 dark:text-gray-400 text-sm capitalize">
+              <span className="text-gray-600 dark:text-gray-400 text-small capitalize">
                 {job.status}
               </span>
             </div>
@@ -103,12 +103,12 @@ const JobInfoContent: React.FC<JobInfoContentProps> = ({
 
           {/* Priority */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block text-small font-medium text-gray-700 dark:text-gray-300 mb-1">
               Priority
             </label>
             <div className="flex items-center gap-2">
               <Star size={16} className="text-yellow-500" />
-              <span className="text-gray-600 dark:text-gray-400 text-sm capitalize">
+              <span className="text-gray-600 dark:text-gray-400 text-small capitalize">
                 {job.priority}
               </span>
             </div>
@@ -117,12 +117,12 @@ const JobInfoContent: React.FC<JobInfoContentProps> = ({
           {/* Application Date */}
           {job.applicationDate && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-small font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Application Date
               </label>
               <div className="flex items-center gap-2">
                 <Calendar size={16} className="text-gray-500" />
-                <span className="text-gray-600 dark:text-gray-400 text-sm">
+                <span className="text-gray-600 dark:text-gray-400 text-small">
                   {formatDate(job.applicationDate)}
                 </span>
               </div>
@@ -132,12 +132,12 @@ const JobInfoContent: React.FC<JobInfoContentProps> = ({
           {/* Deadline */}
           {job.deadline && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-small font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Deadline
               </label>
               <div className="flex items-center gap-2">
                 <Calendar size={16} className="text-gray-500" />
-                <span className="text-gray-600 dark:text-gray-400 text-sm">
+                <span className="text-gray-600 dark:text-gray-400 text-small">
                   {formatDate(job.deadline)}
                 </span>
               </div>
@@ -147,12 +147,12 @@ const JobInfoContent: React.FC<JobInfoContentProps> = ({
           {/* Sponsorship */}
           {job.sponsorship && job.sponsorship !== 'unknown' && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-small font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Sponsorship
               </label>
               <div className="flex items-center gap-2">
                 <Settings size={16} className="text-gray-500" />
-                <span className="text-gray-600 dark:text-gray-400 text-sm capitalize">
+                <span className="text-gray-600 dark:text-gray-400 text-small capitalize">
                   {job.sponsorship}
                 </span>
               </div>
@@ -163,11 +163,11 @@ const JobInfoContent: React.FC<JobInfoContentProps> = ({
         {/* Job Description */}
         {job.jobDescription && (
           <div className="mt-4">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-small font-medium text-gray-700 dark:text-gray-300 mb-2">
               Job Description
             </label>
             <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 max-h-32 overflow-y-auto">
-              <p className="text-gray-600 dark:text-gray-400 text-sm whitespace-pre-wrap">
+              <p className="text-gray-600 dark:text-gray-400 text-small whitespace-pre-wrap">
                 {job.jobDescription}
               </p>
             </div>
@@ -177,11 +177,11 @@ const JobInfoContent: React.FC<JobInfoContentProps> = ({
         {/* Notes */}
         {job.notes && (
           <div className="mt-4">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-small font-medium text-gray-700 dark:text-gray-300 mb-2">
               Notes
             </label>
             <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
-              <p className="text-gray-600 dark:text-gray-400 text-sm whitespace-pre-wrap">
+              <p className="text-gray-600 dark:text-gray-400 text-small whitespace-pre-wrap">
                 {job.notes}
               </p>
             </div>
@@ -191,14 +191,14 @@ const JobInfoContent: React.FC<JobInfoContentProps> = ({
         {/* Tags */}
         {job.tags && job.tags.length > 0 && (
           <div className="mt-4">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-small font-medium text-gray-700 dark:text-gray-300 mb-2">
               Tags
             </label>
             <div className="flex flex-wrap gap-2">
               {job.tags.map((tag: string, index: number) => (
                 <span
                   key={index}
-                  className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 text-xs rounded-full"
+                  className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 text-small rounded-full"
                 >
                   {tag}
                 </span>
@@ -210,7 +210,7 @@ const JobInfoContent: React.FC<JobInfoContentProps> = ({
 
       {/* Job Actions */}
       <div>
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+        <h3 className="text-h3 font-semibold text-gray-900 dark:text-white mb-4">
           ⚙️ Job Actions
         </h3>
         <div className="flex flex-wrap gap-3">

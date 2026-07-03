@@ -27,8 +27,8 @@ const DashboardContent: React.FC<{ children?: React.ReactNode; noPadding?: boole
   // App Shell Pattern: Render layout structure immediately, regardless of data loading
   // This provides instant visual feedback and prevents layout shifts
   return (
-    <div className="min-h-screen bg-[#f3f2ee] dark:bg-[#1a230f] layout-stable">
-      <div className="flex h-screen">
+    <div className="h-macro app-page-bg layout-stable overflow-hidden">
+      <div className="flex h-full">
         {/* Desktop Sidebar - Hidden on sm/md, visible on lg and up */}
         {/* Render sidebar as a standard flex child on desktop so it pushes content naturally */}
          <div

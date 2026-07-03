@@ -79,22 +79,22 @@ export default function FieldMappingTable({ mappings, onFieldUpdate }: FieldMapp
         <table className="w-full">
           <thead>
             <tr className="bg-gray-50 dark:bg-white/5 border-b border-gray-200 dark:border-white/10">
-              <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 CV Field
               </th>
-              <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 LinkedIn Field
               </th>
-              <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 Status
               </th>
-              <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 CV Value
               </th>
-              <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 LinkedIn Value
               </th>
-              <th className="px-4 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              <th className="px-4 py-3 text-right text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 Actions
               </th>
             </tr>
@@ -109,17 +109,17 @@ export default function FieldMappingTable({ mappings, onFieldUpdate }: FieldMapp
                 className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
               >
                 <td className="px-4 py-3">
-                  <span className="text-sm font-medium text-gray-900 dark:text-white">
+                  <span className="text-small font-medium text-gray-900 dark:text-white">
                     {mapping.cvField}
                   </span>
                 </td>
                 <td className="px-4 py-3">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                  <span className="text-small text-gray-600 dark:text-gray-400">
                     {mapping.linkedinField}
                   </span>
                 </td>
                 <td className="px-4 py-3">
-                  <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(mapping.status)}`}>
+                  <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-small font-medium ${getStatusColor(mapping.status)}`}>
                     {getStatusIcon(mapping.status)}
                     {getStatusLabel(mapping.status)}
                   </span>
@@ -130,16 +130,16 @@ export default function FieldMappingTable({ mappings, onFieldUpdate }: FieldMapp
                       type="text"
                       value={editValue}
                       onChange={(e) => setEditValue(e.target.value)}
-                      className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-white/10 rounded bg-white dark:bg-black/20 text-gray-900 dark:text-white"
+                      className="w-full px-2 py-1 text-small border border-gray-300 dark:border-white/10 rounded bg-white dark:bg-black/20 text-gray-900 dark:text-white"
                       autoFocus
                     />
                   ) : (
-                    <span className="text-sm text-gray-900 dark:text-white">
+                    <span className="text-small text-gray-900 dark:text-white">
                       {mapping.cvValue || '-'}</span>
                   )}
                 </td>
                 <td className="px-4 py-3">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                  <span className="text-small text-gray-600 dark:text-gray-400">
                     {mapping.linkedinValue || '-'}
                   </span>
                 </td>

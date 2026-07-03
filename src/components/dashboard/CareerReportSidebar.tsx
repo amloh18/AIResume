@@ -323,7 +323,7 @@ const CareerReportSidebar: React.FC<CareerReportSidebarProps> = ({
                       {selectedCV.title}
                     </span>
                     {selectedCV.metadata?.isMaster || selectedCV.isMaster ? (
-                      <span className="px-2 py-0.5 bg-[#80FF00]/20 text-[#80FF00] rounded text-xs flex-shrink-0">
+                      <span className="px-2 py-0.5 bg-[#80FF00]/20 text-[#80FF00] rounded text-small flex-shrink-0">
                         Master
                       </span>
                     ) : null}
@@ -343,7 +343,7 @@ const CareerReportSidebar: React.FC<CareerReportSidebarProps> = ({
                           <div className="flex items-center justify-between gap-2 min-w-0">
                             <span className="font-medium text-gray-900 dark:text-white truncate flex-1 min-w-0">{cv.title}</span>
                             {cv.metadata?.isMaster || cv.isMaster ? (
-                              <span className="px-2 py-0.5 bg-[#80FF00]/20 text-[#80FF00] rounded text-xs flex-shrink-0">
+                              <span className="px-2 py-0.5 bg-[#80FF00]/20 text-[#80FF00] rounded text-small flex-shrink-0">
                                 Master
                               </span>
                             ) : null}

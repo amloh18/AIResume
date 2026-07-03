@@ -8,7 +8,7 @@ import {
   Save, X, Palette, LayoutTemplate, Download, Settings, ChevronDown, Check,
   Baseline, AlignLeft, MoveHorizontal, Zap, MousePointer2, Brain, History,
   RefreshCcw, Eye, Clipboard, Mail, FileJson, Clock, Flame, ShieldCheck,
-  TrendingUp, UserCheck
+  TrendingUp, UserCheck, ZoomIn, ZoomOut
 } from 'lucide-react';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
 import CoverLetterLayoutEngine, { CoverLetterDesignProps } from '../../cover-letter-engine/CoverLetterLayoutEngine';
@@ -69,7 +69,10 @@ export default function Step4CoverLetter({ onComplete }: Step4CoverLetterProps) 
   const [grammarIssues, setGrammarIssues] = useState<any[]>([]);
   const [matchScore, setMatchScore] = useState(82);
   const [showMoriChat, setShowMoriChat] = useState(false);
+  const [showGuidePanel, setShowGuidePanel] = useState(false);
   const [showTemplateSelector, setShowTemplateSelector] = useState(false);
+  const previewRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Design State
   const [design, setDesign] = useState<CoverLetterDesignProps>({
@@ -124,6 +127,37 @@ export default function Step4CoverLetter({ onComplete }: Step4CoverLetterProps) 
     };
   }, []);
 
+  // Handle Ctrl/Cmd + Wheel to zoom the canvas area specifically, not the window
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    let accumulatedDelta = 0;
+
+    const handleWheel = (e: WheelEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        
+        accumulatedDelta += -e.deltaY;
+
+        if (Math.abs(accumulatedDelta) >= 50) {
+          const direction = Math.sign(accumulatedDelta);
+          setZoom((prev: number) => {
+            const next = prev + (direction * 10);
+            const snapped = Math.round(next / 10) * 10;
+            return Math.min(200, Math.max(50, snapped));
+          });
+          accumulatedDelta = 0;
+        }
+      }
+    };
+
+    container.addEventListener('wheel', handleWheel, { passive: false });
+    return () => {
+      container.removeEventListener('wheel', handleWheel);
+    };
+  }, []);
+
   const handleGenerate = async () => {
     if (!state.cvData || !state.jobData) {
       toast.error('CV and Job Description are required for AI generation.');
@@ -158,7 +192,10 @@ export default function Step4CoverLetter({ onComplete }: Step4CoverLetterProps) 
         const generatedText = data.body || data.content;
         dispatch({ 
           type: 'SET_AUTO_COVER_LETTER', 
-          payload: { draft: generatedText } 
+          payload: { 
+            draft: generatedText,
+            metadata: data.structuredContent?.metadata
+          } 
         });
         toast.success('Success! Your letter has been tailored.', { id: loadingToast });
         
@@ -203,7 +240,7 @@ export default function Step4CoverLetter({ onComplete }: Step4CoverLetterProps) 
         
         {/* Canvas Wrapper */}
         <div className="flex-1 min-h-0 relative flex flex-col rounded-xl overflow-hidden shadow-sm shadow-black/10 dark:shadow-black/30 border border-gray-200 dark:border-white/5 text-gray-900">
-          <div className="flex-1 min-h-0 overflow-y-auto bg-gray-100/50 dark:bg-[#141810] p-4 lg:p-8 flex justify-center custom-scrollbar">
+          <div ref={containerRef} className="flex-1 min-h-0 overflow-y-auto bg-gray-100/50 dark:bg-[#141810] p-4 lg:p-8 flex justify-center custom-scrollbar">
             <div className="transition-transform duration-300 transform origin-top pb-20" style={{ transform: `scale(${zoom / 100})` }}>
               <CoverLetterLayoutEngine 
                 templateType={templateType}
@@ -231,8 +268,8 @@ export default function Step4CoverLetter({ onComplete }: Step4CoverLetterProps) 
           </div>
 
           {/* Floating Zoom & Page Controls */}
-          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[40] flex items-center gap-2 pointer-events-none">
-            <div className="px-3 py-1.5 rounded-xl border shadow-xl backdrop-blur-md flex items-center gap-3 text-[10px] font-bold uppercase tracking-wider bg-white/90 dark:bg-[#111]/90 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-[#2a2a2a] opacity-90 hover:opacity-100 transition-opacity pointer-events-auto">
+          <div className="absolute bottom-6 right-6 z-[40] hidden md:flex items-center gap-2 pointer-events-none">
+            <div className="px-3 h-9 rounded-xl border shadow-xl backdrop-blur-md flex items-center gap-3 text-[10px] font-bold uppercase tracking-wider bg-white/90 dark:bg-[#111]/90 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-[#2a2a2a] opacity-90 hover:opacity-100 transition-opacity pointer-events-auto">
               <button 
                 onClick={() => setPageFormat(pageFormat === 'a4' ? 'letter' : 'a4')}
                 className="flex items-center gap-1.5 px-1.5 py-0.5 rounded-md transition-all hover:bg-emerald-500/10 text-emerald-600 dark:text-[#7EE787]"
@@ -242,7 +279,7 @@ export default function Step4CoverLetter({ onComplete }: Step4CoverLetterProps) 
               </button>
             </div>
 
-            <div className="px-2 py-1.5 rounded-xl border shadow-xl backdrop-blur-md flex items-center gap-2 bg-white/90 dark:bg-[#111]/90 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-[#2a2a2a] opacity-90 hover:opacity-100 transition-opacity pointer-events-auto">
+            <div className="px-2 h-9 rounded-xl border shadow-xl backdrop-blur-md flex items-center gap-2 bg-white/90 dark:bg-[#111]/90 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-[#2a2a2a] opacity-90 hover:opacity-100 transition-opacity pointer-events-auto">
               <div className="flex items-center gap-0.5">
                 <button 
                   onClick={() => setZoom(Math.max(50, zoom - 10))}
@@ -253,7 +290,7 @@ export default function Step4CoverLetter({ onComplete }: Step4CoverLetterProps) 
                 <input 
                   type="range" min="50" max="200" step="5" value={zoom} 
                   onChange={(e) => setZoom(parseInt(e.target.value))}
-                  className="w-20 accent-[#80FF00] h-1 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                  className="w-20 accent-emerald-500 h-1 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer"
                 />
                 <button 
                   onClick={() => setZoom(Math.min(200, zoom + 10))}
@@ -265,7 +302,7 @@ export default function Step4CoverLetter({ onComplete }: Step4CoverLetterProps) 
               
               <button 
                 onClick={() => setZoom(100)}
-                className={`min-w-[42px] px-1.5 py-1 text-[9px] font-black rounded-md transition-all border ${zoom === 100 ? 'bg-[#80FF00]/20 border-[#80FF00]/50 text-[#80FF00]' : 'bg-transparent border-gray-500/20 hover:border-[#80FF00]/50 text-gray-500 dark:text-gray-400'}`}
+                className={`min-w-[42px] px-1.5 py-1 text-[9px] font-black rounded-md transition-all border ${zoom === 100 ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-600' : 'bg-transparent border-gray-500/20 hover:border-[#80FF00]/50 text-gray-500 dark:text-gray-400'}`}
               >
                 {zoom}%
               </button>
@@ -274,73 +311,32 @@ export default function Step4CoverLetter({ onComplete }: Step4CoverLetterProps) 
         </div>
 
         {/* MIDDLE COLUMN - LETTER GUIDE (radial progress, metrics, context) */}
-        <div className="flex flex-col w-[400px] shrink-0 h-full relative z-10">
-          <LetterGuidePanel 
-            matchScore={matchScore}
-            templateType={templateType}
-            setTemplateType={setTemplateType}
-            design={design}
-            setDesign={setDesign}
-            isEditing={isEditing}
-            setIsEditing={setIsEditing}
-            onComplete={onComplete}
-            onUpdateTarget={() => setJobSidebarOpen(true)}
-            showMoriChat={showMoriChat}
-            onToggleMoriChat={() => setShowMoriChat(!showMoriChat)}
-          />
-        </div>
-
-        {/* RIGHT COLUMN - MORI AI ASSISTANT CHAT */}
-        <AnimatePresence>
-          {showMoriChat && (
-            <motion.div 
-              initial={{ opacity: 0, x: 20, width: 0 }}
-              animate={{ opacity: 1, x: 0, width: 360 }}
-              exit={{ opacity: 0, x: 20, width: 0 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="hidden lg:flex flex-col shrink-0 h-full relative z-10 min-h-0 overflow-hidden"
-            >
-              <MoriCoverLetterChat 
-                onBodyChange={handleBodyChange} 
-                onClose={() => setShowMoriChat(false)}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-
-      {showTemplateSelector && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] no-print">
-          <div className="bg-white dark:bg-[#141810] border border-slate-200 dark:border-white/10 rounded-2xl shadow-2xl w-[95vw] md:w-[90vw] max-w-5xl max-h-[85vh] flex flex-col overflow-hidden animate-fade-in-up animate-in duration-200">
-            {/* Dark mode overrides for light-themed PDF previews */}
-            <style dangerouslySetInnerHTML={{__html: `
-              .cl-preview-container .dark\\:text-slate-100 { color: #1e293b !important; }
-              .cl-preview-container .dark\\:text-slate-200 { color: #334155 !important; }
-              .cl-preview-container .dark\\:text-slate-300 { color: #475569 !important; }
-              .cl-preview-container .dark\\:text-gray-400 { color: #6b7280 !important; }
-              .cl-preview-container .dark\\:bg-white\\/\\[0\\.02\\] { background-color: #f8fafc !important; }
-            `}} />
-            {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-slate-100 dark:border-white/5 flex items-center justify-between bg-slate-50 dark:bg-transparent">
-              <div>
-                <h3 className="font-extrabold text-sm uppercase tracking-wider text-slate-800 dark:text-white flex items-center gap-2">
+        <div 
+          className={`
+            fixed inset-y-0 right-0 z-50 w-full bg-white dark:bg-[#0a0a0a] flex flex-col h-full gap-3 min-h-0 shadow-2xl transition-all duration-300
+            lg:static lg:w-[400px] lg:shadow-none lg:flex lg:z-10 lg:p-0 lg:overflow-hidden lg:bg-transparent
+            ${showGuidePanel || showTemplateSelector ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}
+          `}
+          style={{ order: (showMoriChat || showGuidePanel || showTemplateSelector) ? 1 : 2 }}
+        >
+          {showTemplateSelector ? (
+            <div className="flex flex-col h-full bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/5 rounded-2xl shadow-sm overflow-hidden">
+              {/* Panel Header */}
+              <div className="px-4 py-3 border-b border-gray-200 dark:border-white/10 flex items-center justify-between bg-white dark:bg-transparent shrink-0">
+                <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
                   <LayoutTemplate className="w-4 h-4 text-emerald-500" />
-                  Choose Header Style
-                </h3>
-                <p className="text-[10px] text-slate-400 uppercase tracking-widest mt-0.5">Select a layout template for your cover letter header</p>
+                  <span>Header Styles</span>
+                </div>
+                <button 
+                  onClick={() => setShowTemplateSelector(false)}
+                  className="p-1 rounded-full hover:bg-gray-150 dark:hover:bg-white/5 text-slate-400 hover:text-slate-600 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
-              <button 
-                type="button"
-                onClick={() => setShowTemplateSelector(false)} 
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-all"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            
-            {/* Modal Grid Content */}
-            <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+              {/* Panel Thumbnails List */}
+              <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4 bg-gray-50 dark:bg-[#0a0a0a]">
                 {TEMPLATES.map((t) => {
                   const isSelected = templateType === t.id;
                   const PreviewHeaderComponent = (() => {
@@ -356,29 +352,45 @@ export default function Step4CoverLetter({ onComplete }: Step4CoverLetterProps) 
                       default: return ModernHeader;
                     }
                   })();
-                  
+
                   return (
-                    <button
-                      key={t.id}
-                      type="button"
+                    <div 
+                      key={t.id} 
                       onClick={() => {
                         setTemplateType(t.id);
-                        setShowTemplateSelector(false);
-                      }}
-                      className={`group flex flex-col rounded-xl border-2 text-left overflow-hidden transition-all ${
+                        if (t.id === 'classic') {
+                          setDesign(prev => ({ ...prev, fontFamily: 'font-serif' }));
+                        } else {
+                          setDesign(prev => ({ ...prev, fontFamily: 'font-sans' }));
+                        }
+                      }} 
+                      className={`group relative rounded-xl border-2 cursor-pointer transition-all overflow-hidden flex flex-col hover:shadow-lg bg-white dark:bg-[#111] ${
                         isSelected 
-                          ? 'border-emerald-500 bg-emerald-500/[0.02]' 
-                          : 'border-slate-200 dark:border-white/5 hover:border-emerald-400 bg-transparent'
+                          ? 'border-emerald-500 ring-2 ring-emerald-500/20' 
+                          : 'border-gray-200 dark:border-white/5 hover:border-gray-400'
                       }`}
                     >
-                      {/* Live Scaled Down Preview */}
-                      <div className="cl-preview-container @container w-full h-[140px] bg-white border-b border-slate-150 dark:border-white/5 flex justify-center items-start p-3 relative overflow-hidden select-none">
+                      <div className="p-3 flex flex-col gap-1 z-10 border-b border-gray-100 dark:border-[#222]">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <div className="font-bold text-xs text-gray-900 dark:text-gray-100 uppercase tracking-tight">{t.name}</div>
+                            <div className="text-[9px] font-semibold uppercase tracking-wider text-gray-400 mt-0.5">{t.desc}</div>
+                          </div>
+                          {isSelected && (
+                            <span className="bg-emerald-500/20 text-emerald-500 text-[8px] px-1.5 py-0.5 rounded font-bold tracking-widest uppercase">ACTIVE</span>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="relative w-full aspect-[16/9] overflow-hidden bg-[#f9f9f9]">
                         <div 
-                          className="w-[800px] shrink-0 origin-top transform" 
+                          className="absolute top-0 left-0 origin-top-left pointer-events-none p-4 opacity-95 group-hover:opacity-100 transition-opacity cv-document text-gray-900" 
                           style={{ 
-                            width: '800px',
-                            transform: 'scale(min(0.55, calc((100cqw - 24px) / 800)))'
-                          }}
+                            width: '250%', 
+                            transform: 'scale(0.4)',
+                            '--cv-accent': design.accentColor || '#80FF00',
+                            '--cv-font': design.fontFamily === 'font-serif' ? 'Merriweather' : 'Inter'
+                          } as React.CSSProperties}
                         >
                           <PreviewHeaderComponent {...{
                             name,
@@ -390,30 +402,105 @@ export default function Step4CoverLetter({ onComplete }: Step4CoverLetterProps) 
                             companyName
                           }} />
                         </div>
-                        {isSelected && (
-                          <div className="absolute top-2 right-2 bg-emerald-500 text-white rounded-full p-1 shadow">
-                            <Check className="w-3.5 h-3.5 stroke-[3]" />
-                          </div>
-                        )}
                       </div>
-                      
-                      {/* Metadata */}
-                      <div className="p-3 bg-slate-50/50 dark:bg-white/[0.01] flex-1 flex flex-col justify-center">
-                        <div className="font-extrabold text-xs text-slate-800 dark:text-slate-200 group-hover:text-emerald-600 transition-colors uppercase tracking-tight">
-                          {t.name}
-                        </div>
-                        <div className="text-[10px] text-slate-400 font-medium mt-0.5">
-                          {t.desc}
-                        </div>
-                      </div>
-                    </button>
+                    </div>
                   );
                 })}
               </div>
             </div>
-          </div>
+          ) : (
+            <LetterGuidePanel 
+              matchScore={matchScore}
+              templateType={templateType}
+              setTemplateType={setTemplateType}
+              design={design}
+              setDesign={setDesign}
+              isEditing={isEditing}
+              setIsEditing={setIsEditing}
+              onComplete={onComplete}
+              onUpdateTarget={() => setJobSidebarOpen(true)}
+              showMoriChat={showMoriChat}
+              onToggleMoriChat={() => {
+                setShowMoriChat(!showMoriChat);
+                setShowGuidePanel(false);
+              }}
+            />
+          )}
         </div>
-      )}
+
+        {/* RIGHT COLUMN - MORI AI ASSISTANT CHAT */}
+        <AnimatePresence>
+          {showMoriChat && (
+            <motion.div 
+              initial={{ opacity: 0, x: 20, width: 0 }}
+              animate={{ opacity: 1, x: 0, width: 360 }}
+              exit={{ opacity: 0, x: 20, width: 0 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="fixed inset-y-0 right-0 z-50 w-full lg:static lg:w-[360px] flex flex-col shrink-0 h-full relative min-h-0 overflow-hidden shadow-2xl lg:shadow-none bg-white dark:bg-[var(--bg-secondary)]"
+              style={{ order: 3 }}
+            >
+              <MoriCoverLetterChat 
+                onBodyChange={handleBodyChange} 
+                onClose={() => setShowMoriChat(false)}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Mobile unified bottom navigation pill */}
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] md:hidden flex items-center gap-2 bg-white/90 dark:bg-[#141810]/90 backdrop-blur-md border border-lime-200 dark:border-lime-900/30 rounded-2xl p-1.5 shadow-2xl no-print">
+        {/* Zoom & Page Format controls (hidden if a panel is open) */}
+        {!showMoriChat && !showGuidePanel && (
+          <>
+            <button 
+              onClick={() => setPageFormat(pageFormat === 'a4' ? 'letter' : 'a4')}
+              className="p-2 rounded-xl text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-150 dark:hover:bg-white/5 transition-all border-none bg-transparent"
+              title="Toggle Page Format"
+            >
+              <Layout size={16} />
+            </button>
+            <div className="w-px h-5 bg-gray-200 dark:bg-white/10 mx-1" />
+          </>
+        )}
+
+        {/* Panel Buttons */}
+        <div className="flex items-center gap-1">
+          {/* Guide Panel */}
+          <button
+            onClick={() => {
+              setShowGuidePanel(!showGuidePanel);
+              setShowMoriChat(false);
+            }}
+            className={`p-2 rounded-xl transition-all border-none bg-transparent ${
+              showGuidePanel
+                ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+                : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
+            }`}
+            title="Letter Guide"
+          >
+            <Target size={16} />
+          </button>
+
+          {/* Mori Chat */}
+          <button
+            onClick={() => {
+              setShowMoriChat(!showMoriChat);
+              setShowGuidePanel(false);
+            }}
+            className={`p-2 rounded-xl transition-all border-none bg-transparent ${
+              showMoriChat
+                ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+                : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
+            }`}
+            title="Mori Chat"
+          >
+            <Sparkles size={16} />
+          </button>
+        </div>
+      </div>
+
+
     </div>
   );
 }

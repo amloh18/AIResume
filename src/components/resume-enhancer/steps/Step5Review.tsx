@@ -263,7 +263,7 @@ const JobDescriptionSegmented = ({ jobData, keywordGaps }: JobDescriptionSegment
   );
 };
 
-export default function Step4Review({ onSave }: { onSave?: () => Promise<void> }) {
+export default function Step5Review({ onSave }: { onSave?: () => Promise<void> }) {
   const { state, setTemplate, dispatch, goToStep } = useResumeEnhancer();
   const router = useRouter();
   const { openPaymentModal } = usePaymentModal();
@@ -329,12 +329,46 @@ export default function Step4Review({ onSave }: { onSave?: () => Promise<void> }
       const padding = 40; // 20px on each side
       const availableWidth = containerWidth - padding;
       const calculatedZoom = Math.min(0.9, Math.max(0.4, availableWidth / a4Width));
-      setZoom(calculatedZoom);
+      // Round to nearest 0.01 to keep percentage values as integers in the UI
+      setZoom(Math.round(calculatedZoom * 100) / 100);
     };
 
     calculateFitZoom();
     window.addEventListener('resize', calculateFitZoom);
     return () => window.removeEventListener('resize', calculateFitZoom);
+  }, []);
+
+  // Handle Ctrl/Cmd + Wheel to zoom the canvas area specifically, not the window
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    let accumulatedDelta = 0;
+
+    const handleWheel = (e: WheelEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        
+        accumulatedDelta += -e.deltaY;
+
+        if (Math.abs(accumulatedDelta) >= 50) {
+          const direction = Math.sign(accumulatedDelta);
+          setZoom((prev: number) => {
+            // Jump by 0.1 (10 points in decimal scale)
+            const next = prev + (direction * 0.1);
+            // Snap to nearest 0.1 for clean values
+            const snapped = Math.round(next * 10) / 10;
+            return Math.min(1.5, Math.max(0.4, snapped));
+          });
+          accumulatedDelta = 0;
+        }
+      }
+    };
+
+    container.addEventListener('wheel', handleWheel, { passive: false });
+    return () => {
+      container.removeEventListener('wheel', handleWheel);
+    };
   }, []);
 
   const paperWidth = state.paperSize === 'Letter' ? 816 : 794;
@@ -395,20 +429,20 @@ export default function Step4Review({ onSave }: { onSave?: () => Promise<void> }
               // --- AUTO-GENERATE IF MISSING ---
               // User requested backend auto-creation without clicking 'Generate'.
               // We trigger it here if it doesn't exist.
-              console.log('🔄 Step4Review - Auto-generating missing cover letter...');
+              console.log('🔄 Step5Review - Auto-generating missing cover letter...');
 
               // We need userId for the request - assuming it's available in context or params, 
-              // but Step4Review doesn't usually have userId prop explicitly passed in all usages or it uses session.
+              // but Step5Review doesn't usually have userId prop explicitly passed in all usages or it uses session.
               // However, the `auto-generate` endpoint expects userId in body.
               // We'll try to get it from state.cvData.userId if available or skipped?
-              // `Step4Review` might not have userId readily available in `state`.
+              // `Step5Review` might not have userId readily available in `state`.
               // We can rely on server session, but `route.ts` expects explicit userId in body.
-              // Let's check props. Step4Review doesn't receive Props in the export default function Step4Review() line 19.
+              // Let's check props. Step5Review doesn't receive Props in the export default function Step5Review() line 19.
               // Ah, ResumeEnhancerContext might have it? `state` has `cvData`.
               // `state.cvData.userId` might be there? UnifiedSchema doesn't always have root userId.
-              // Wait, the new `Step4Review` file content I viewed has `userId`? No, line 19 is `export default function Step4Review()`.
+              // Wait, the new `Step5Review` file content I viewed has `userId`? No, line 19 is `export default function Step5Review()`.
               // But line 440 of `CoverLetterEditorContainer` passes `userId`. That's different file.
-              // `NotificationCenter` metadata says `Step4Review.tsx` active? No.
+              // `NotificationCenter` metadata says `Step5Review.tsx` active? No.
 
               // Let's assume we can get userId from the API session implicitly if we update API to use session. 
               // BUT my new API expects `userId` in body.
@@ -431,7 +465,7 @@ export default function Step4Review({ onSave }: { onSave?: () => Promise<void> }
                 if (genResponse.ok) {
                   const genResult = await genResponse.json();
                   if (genResult.success && genResult.coverLetterId) {
-                    console.log('✅ Step4Review - Auto-generated cover letter:', genResult.coverLetterId);
+                    console.log('✅ Step5Review - Auto-generated cover letter:', genResult.coverLetterId);
                     dispatch({ type: 'SET_AUTO_COVER_LETTER', payload: { draft: '', coverLetterId: genResult.coverLetterId } });
                   }
                 }

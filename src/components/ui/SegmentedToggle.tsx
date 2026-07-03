@@ -62,7 +62,7 @@ const SegmentedToggle: React.FC<SegmentedToggleProps> = ({
     };
 
     const colors = getThemeColors();
-    const sizeClasses = size === 'sm' ? 'px-3 py-1 text-xs' : 'px-4 py-1.5 text-sm';
+    const sizeClasses = size === 'sm' ? 'px-3 py-1 text-small' : 'px-4 py-1.5 text-small';
     const containerPadding = size === 'sm' ? 'p-1' : 'p-1.5';
 
     return (

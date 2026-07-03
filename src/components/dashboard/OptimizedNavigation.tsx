@@ -275,7 +275,7 @@ const OptimizedNavigation: React.FC = () => {
       'jobs-dashboard': '/dashboard/jobs',
       'tracker': '/dashboard/tracker',
       'settings': '/dashboard/settings',
-      'resume-enhancer': '/editor',
+      'cv-builder-pro': '/editor',
       'cover-letter-generator': '/editor?tab=cover-letters',
       'interview-coach': '/dashboard/interview',
       'linkedin-enhancer': '/linkedin-enhancer',
@@ -344,7 +344,7 @@ const OptimizedNavigation: React.FC = () => {
 
   const toolSections = [
     {
-      id: 'resume-enhancer',
+      id: 'cv-builder-pro',
       name: 'Editor',
       icon: Target,
       description: 'AI CV optimization',
@@ -494,12 +494,12 @@ const OptimizedNavigation: React.FC = () => {
             >
               <Icon className={`w-6 h-6 lg:w-5 lg:h-5 flex-shrink-0 ${isActive ? 'text-[rgb(129,255,0)]' : ''}`} />
               <div className={`flex-1 min-w-0 ${!isDesktopExpanded ? 'lg:hidden' : ''}`}>
-                <div className="text-sm font-semibold truncate flex items-baseline gap-1">
+                <div className="text-small font-semibold truncate flex items-baseline gap-1">
                   {section.name}
                   {section.id === 'jobs-dashboard' && <Lock className="w-3 h-3 opacity-60 ml-1" />}
                   {isExternal && <ExternalLink className="w-3 h-3 opacity-60" />}
                 </div>
-                <div className={`text-xs truncate mt-0.5 ${isActive
+                <div className={`text-small truncate mt-0.5 ${isActive
                   ? 'text-[rgb(129,255,0)]/70'
                   : 'text-gray-500 dark:text-gray-400'
                   }`}>
@@ -621,7 +621,7 @@ const OptimizedNavigation: React.FC = () => {
                 <Briefcase className="w-5 h-5 flex-shrink-0" />
                 {isDesktopExpanded && (
                   <div className="min-w-0 w-full text-left">
-                    <div className="text-sm font-medium truncate">HR Dashboard</div>
+                    <div className="text-small font-medium truncate">HR Dashboard</div>
                     <div className="text-[11px] opacity-80 truncate mt-0.5">
                       Business Portal
                     </div>
@@ -649,7 +649,7 @@ const OptimizedNavigation: React.FC = () => {
                 <Shield className="w-5 h-5 flex-shrink-0" />
                 {isDesktopExpanded && (
                   <div className="min-w-0 w-full text-left">
-                    <div className="text-sm font-medium truncate">Admin Dashboard</div>
+                    <div className="text-small font-medium truncate">Admin Dashboard</div>
                     <div className="text-[11px] text-purple-600 dark:text-purple-300 truncate mt-0.5">
                       System controls
                     </div>
@@ -752,7 +752,7 @@ const OptimizedNavigation: React.FC = () => {
 
               return (
                 <div className={`hidden ${isDesktopExpanded ? 'lg:block' : ''} rounded-2xl p-3 text-white border-2 border-white/20`} style={{ backgroundColor: '#603a86' }}>
-                  <div className="text-sm font-semibold mb-2">
+                  <div className="text-small font-semibold mb-2">
                     Your Free Plan
                   </div>
 
@@ -774,16 +774,16 @@ const OptimizedNavigation: React.FC = () => {
                   )}
 
                   {!hasCredits && (
-                    <div className="text-xs text-yellow-300 mb-2 font-medium">
+                    <div className="text-small text-yellow-300 mb-2 font-medium">
                       ⚠️ Job Tracker requires Pro membership. Upgrade to track jobs.
                     </div>
                   )}
 
-                  <div className="text-xs font-semibold mb-1.5">
+                  <div className="text-small font-semibold mb-1.5">
                     What you can do:
                   </div>
 
-                  <ul className="text-xs text-white/90 space-y-0.5 mb-3">
+                  <ul className="text-small text-white/90 space-y-0.5 mb-3">
                     <li className="flex items-center gap-1.5">
                       {canCreateMasterCV ? '✓' : '✗'}
                       <span className={canCreateMasterCV ? '' : 'opacity-50'}>Create Master CV (Free Forever)</span>
@@ -804,7 +804,7 @@ const OptimizedNavigation: React.FC = () => {
                         setPreselectedPlanKey('pro_yearly');
                         setShowSubscriptionModal(true);
                       }}
-                      className="w-full bg-white/20 hover:bg-white/30 text-white text-xs font-semibold py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5"
+                      className="w-full bg-white/20 hover:bg-white/30 text-white text-small font-semibold py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5"
                       whileHover={{ scale: 1.03 }}
                       whileTap={{ scale: 0.97 }}
                     >
@@ -817,7 +817,7 @@ const OptimizedNavigation: React.FC = () => {
                         setPreselectedPlanKey('pro_monthly');
                         setShowSubscriptionModal(true);
                       }}
-                      className="w-full bg-white/20 hover:bg-white/30 text-white text-xs font-semibold py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5"
+                      className="w-full bg-white/20 hover:bg-white/30 text-white text-small font-semibold py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5"
                       whileHover={{ scale: 1.03 }}
                       whileTap={{ scale: 0.97 }}
                     >
@@ -830,7 +830,7 @@ const OptimizedNavigation: React.FC = () => {
                         setPreselectedPlanKey(undefined);
                         setShowSubscriptionModal(true);
                       }}
-                      className="w-full bg-white/20 hover:bg-white/30 text-white text-xs font-semibold py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5"
+                      className="w-full bg-white/20 hover:bg-white/30 text-white text-small font-semibold py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5"
                       whileHover={{ scale: 1.03 }}
                       whileTap={{ scale: 0.97 }}
                     >
@@ -855,12 +855,12 @@ const OptimizedNavigation: React.FC = () => {
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-1.5">
                       {isUrgent && <AlertCircle className="w-3.5 h-3.5 animate-pulse" />}
-                      <div className="text-sm font-semibold">
+                      <div className="text-small font-semibold">
                         Yearly Plan
                       </div>
                     </div>
                     {timeRemaining && (
-                      <div className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full ${isUrgent ? 'bg-red-400/30' : 'bg-white/20'
+                      <div className={`flex items-center gap-1 text-small font-bold px-2 py-1 rounded-full ${isUrgent ? 'bg-red-400/30' : 'bg-white/20'
                         }`}>
                         <Clock className="w-3 h-3" />
                         <span>
@@ -870,7 +870,7 @@ const OptimizedNavigation: React.FC = () => {
                     )}
                   </div>
 
-                  <div className="text-xs text-white/95 mb-2 leading-relaxed">
+                  <div className="text-small text-white/95 mb-2 leading-relaxed">
                     <span>We have created tailored CVs/CLs for <span className="font-bold">{totalCreated}</span> {totalCreated === 1 ? 'job' : 'jobs'} for you.</span>
                   </div>
 
@@ -892,12 +892,12 @@ const OptimizedNavigation: React.FC = () => {
                   )}
 
                   {!hasCredits && !isExpired && (
-                    <div className="text-xs text-yellow-200 mb-2 font-medium">
+                    <div className="text-small text-yellow-200 mb-2 font-medium">
                       ⚠️ Feature limit reached. Upgrade to continue.
                     </div>
                   )}
 
-                  <div className="text-xs text-white/95 mb-2.5 leading-relaxed">
+                  <div className="text-small text-white/95 mb-2.5 leading-relaxed">
                     {isUrgent ? (
                       <span className="font-medium">Your yearly plan is about to expire. Upgrade to lifetime for permanent access.</span>
                     ) : (
@@ -907,7 +907,7 @@ const OptimizedNavigation: React.FC = () => {
 
                   <motion.button
                     onClick={() => setShowSubscriptionModal(true)}
-                    className={`w-full text-white text-xs font-semibold py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5 ${isUrgent
+                    className={`w-full text-white text-small font-semibold py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5 ${isUrgent
                       ? 'bg-white text-red-600 hover:bg-red-50 shadow-lg'
                       : 'bg-white/20 hover:bg-white/30'
                       }`}
@@ -927,8 +927,8 @@ const OptimizedNavigation: React.FC = () => {
                 <div className={`hidden ${isDesktopExpanded ? 'lg:block' : ''} rounded-2xl p-3 bg-gradient-to-br from-blue-500 to-blue-600 text-white border-2 border-white/20`}>
                   <div className="flex items-center justify-between mb-2">
                     <div>
-                      <div className="text-sm font-semibold">Monthly Plan</div>
-                      <div className="text-xs text-white/80">Pro subscriber</div>
+                      <div className="text-small font-semibold">Monthly Plan</div>
+                      <div className="text-small text-white/80">Pro subscriber</div>
                     </div>
                     {nextReset && (
                       <div className="text-[10px] text-white/70 bg-white/10 px-2 py-1 rounded-full">
@@ -938,10 +938,10 @@ const OptimizedNavigation: React.FC = () => {
                   </div>
 
                   <div className="bg-white/15 rounded-xl p-3 mb-2">
-                    <div className="text-xs text-white/80 mb-0.5">
+                    <div className="text-small text-white/80 mb-0.5">
                       Jobs created this month
                     </div>
-                    <div className="text-xl font-bold">
+                    <div className="text-h3 font-bold">
                       {totalCreated}
                     </div>
                     <div className="text-[10px] text-white/70 mt-0.5">
@@ -949,13 +949,13 @@ const OptimizedNavigation: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="text-xs text-white/90 mb-2.5 leading-relaxed">
+                  <div className="text-small text-white/90 mb-2.5 leading-relaxed">
                     <span className="font-medium">💡 Save up to 40% with quarterly or yearly plans!</span>
                   </div>
 
                   <motion.button
                     onClick={() => setShowSubscriptionModal(true)}
-                    className="w-full bg-white/20 hover:bg-white/30 text-white text-xs font-semibold py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5"
+                    className="w-full bg-white/20 hover:bg-white/30 text-white text-small font-semibold py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5"
                     whileHover={{ scale: 1.03 }}
                     whileTap={{ scale: 0.97 }}
                   >
@@ -972,8 +972,8 @@ const OptimizedNavigation: React.FC = () => {
                 <div className={`hidden ${isDesktopExpanded ? 'lg:block' : ''} rounded-2xl p-3 bg-gradient-to-br from-green-500 to-green-600 text-white border-2 border-white/20`}>
                   <div className="flex items-center justify-between mb-2">
                     <div>
-                      <div className="text-sm font-semibold">Quarterly Plan</div>
-                      <div className="text-xs text-white/80">Pro subscriber</div>
+                      <div className="text-small font-semibold">Quarterly Plan</div>
+                      <div className="text-small text-white/80">Pro subscriber</div>
                     </div>
                     {nextReset && (
                       <div className="text-[10px] text-white/70 bg-white/10 px-2 py-1 rounded-full">
@@ -983,10 +983,10 @@ const OptimizedNavigation: React.FC = () => {
                   </div>
 
                   <div className="bg-white/15 rounded-xl p-3 mb-2">
-                    <div className="text-xs text-white/80 mb-0.5">
+                    <div className="text-small text-white/80 mb-0.5">
                       Jobs created this quarter
                     </div>
-                    <div className="text-xl font-bold">
+                    <div className="text-h3 font-bold">
                       {totalCreated}
                     </div>
                     <div className="text-[10px] text-white/70 mt-0.5">
@@ -994,7 +994,7 @@ const OptimizedNavigation: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="text-xs text-white/90 leading-relaxed">
+                  <div className="text-small text-white/90 leading-relaxed">
                     <span>Quarterly plan • Unlimited job creation & CV/CL generation</span>
                   </div>
                 </div>
@@ -1012,8 +1012,8 @@ const OptimizedNavigation: React.FC = () => {
 
                   <div className="flex items-center justify-between mb-2">
                     <div>
-                      <div className="text-sm font-semibold">Yearly Plan</div>
-                      <div className="text-xs text-white/80">Pro subscriber</div>
+                      <div className="text-small font-semibold">Yearly Plan</div>
+                      <div className="text-small text-white/80">Pro subscriber</div>
                     </div>
                     {nextReset && (
                       <div className="text-[10px] text-white/70 bg-white/10 px-2 py-1 rounded-full">
@@ -1023,10 +1023,10 @@ const OptimizedNavigation: React.FC = () => {
                   </div>
 
                   <div className="bg-white/15 rounded-xl p-3 mb-2">
-                    <div className="text-xs text-white/80 mb-0.5">
+                    <div className="text-small text-white/80 mb-0.5">
                       Jobs created this year
                     </div>
-                    <div className="text-xl font-bold">
+                    <div className="text-h3 font-bold">
                       {totalCreated}
                     </div>
                     <div className="text-[10px] text-white/70 mt-0.5">
@@ -1034,7 +1034,7 @@ const OptimizedNavigation: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="text-xs text-white/90 leading-relaxed">
+                  <div className="text-small text-white/90 leading-relaxed">
                     <span>Annual plan • Best value with unlimited access all year</span>
                   </div>
                 </div>
@@ -1045,7 +1045,7 @@ const OptimizedNavigation: React.FC = () => {
             if (currentPlan === 'starter_monthly') {
               return (
                 <div className={`hidden ${isDesktopExpanded ? 'lg:block' : ''} rounded-2xl p-3 text-white border-2 border-white/20 bg-gradient-to-br from-indigo-600 to-purple-700`}>
-                  <div className="text-sm font-semibold mb-1">
+                  <div className="text-small font-semibold mb-1">
                     Starter Monthly
                   </div>
                   <div className="text-[11px] text-white/80 mb-2">
@@ -1070,7 +1070,7 @@ const OptimizedNavigation: React.FC = () => {
                   )}
 
                   {!hasCredits && (
-                    <div className="text-xs text-yellow-300 mb-2 font-medium">
+                    <div className="text-small text-yellow-300 mb-2 font-medium">
                       ⚠️ Job Tracker limit reached. Upgrade to Pro.
                     </div>
                   )}
@@ -1100,7 +1100,7 @@ const OptimizedNavigation: React.FC = () => {
                         setPreselectedPlanKey('focused_monthly');
                         setShowSubscriptionModal(true);
                       }}
-                      className="w-full bg-white/20 hover:bg-white/30 text-white text-xs font-semibold py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5"
+                      className="w-full bg-white/20 hover:bg-white/30 text-white text-small font-semibold py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5"
                       whileHover={{ scale: 1.03 }}
                       whileTap={{ scale: 0.97 }}
                     >
@@ -1113,7 +1113,7 @@ const OptimizedNavigation: React.FC = () => {
                         setPreselectedPlanKey(undefined);
                         setShowSubscriptionModal(true);
                       }}
-                      className="w-full bg-white/20 hover:bg-white/30 text-white text-xs font-semibold py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5"
+                      className="w-full bg-white/20 hover:bg-white/30 text-white text-small font-semibold py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5"
                       whileHover={{ scale: 1.03 }}
                       whileTap={{ scale: 0.97 }}
                     >
@@ -1131,7 +1131,7 @@ const OptimizedNavigation: React.FC = () => {
                 <div className={`hidden ${isDesktopExpanded ? 'lg:block' : ''} rounded-2xl p-3 text-white border-2 border-white/20 bg-gradient-to-br from-lime-600 to-lime-700`}>
                   <div className="flex items-center justify-between mb-2">
                     <div>
-                      <div className="text-sm font-semibold">Starter Yearly</div>
+                      <div className="text-small font-semibold">Starter Yearly</div>
                       <div className="text-[11px] text-white/80">Active subscriber</div>
                     </div>
                     {nextReset && (
@@ -1142,12 +1142,12 @@ const OptimizedNavigation: React.FC = () => {
                   </div>
 
                   <div className="bg-white/15 rounded-xl p-3 mb-2">
-                    <div className="text-xs text-white/80 mb-0.5">CVs created this year</div>
-                    <div className="text-xl font-bold">{totalCreated}</div>
+                    <div className="text-small text-white/80 mb-0.5">CVs created this year</div>
+                    <div className="text-h3 font-bold">{totalCreated}</div>
                     <div className="text-[10px] text-white/70 mt-0.5">Unlimited CVs & AI Cover Letters</div>
                   </div>
 
-                  <div className="text-xs text-white/90 leading-relaxed mb-3">
+                  <div className="text-small text-white/90 leading-relaxed mb-3">
                     <span>Starter Yearly • No Job Tracker included. Upgrade to Focused/Smart for Job Tracker.</span>
                   </div>
 
@@ -1156,7 +1156,7 @@ const OptimizedNavigation: React.FC = () => {
                       setPreselectedPlanKey('focused_yearly');
                       setShowSubscriptionModal(true);
                     }}
-                    className="w-full bg-white/20 hover:bg-white/30 text-white text-xs font-semibold py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5"
+                    className="w-full bg-white/20 hover:bg-white/30 text-white text-small font-semibold py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5"
                     whileHover={{ scale: 1.03 }}
                     whileTap={{ scale: 0.97 }}
                   >
@@ -1186,8 +1186,8 @@ const OptimizedNavigation: React.FC = () => {
           >
             <Settings className="w-6 h-6 flex-shrink-0" />
             <div className="flex-1 min-w-0">
-              <div className="text-base font-medium truncate">Settings</div>
-              <div className="text-sm text-gray-500 dark:text-gray-400 truncate mt-0.5">
+              <div className="text-body font-medium truncate">Settings</div>
+              <div className="text-small text-gray-500 dark:text-gray-400 truncate mt-0.5">
                 Manage your account
               </div>
             </div>
@@ -1207,10 +1207,10 @@ const OptimizedNavigation: React.FC = () => {
               <Moon className="w-6 h-6 flex-shrink-0" />
             )}
             <div className="flex-1 min-w-0">
-              <div className="text-base font-medium truncate">
+              <div className="text-body font-medium truncate">
                 {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
               </div>
-              <div className="text-sm text-gray-500 dark:text-gray-400 truncate mt-0.5">
+              <div className="text-small text-gray-500 dark:text-gray-400 truncate mt-0.5">
                 Switch theme
               </div>
             </div>
@@ -1226,8 +1226,8 @@ const OptimizedNavigation: React.FC = () => {
           >
             <LogOut className="w-6 h-6 flex-shrink-0" />
             <div className="flex-1 min-w-0">
-              <div className="text-base font-medium truncate">Sign Out</div>
-              <div className="text-sm text-red-500 dark:text-red-400 truncate mt-0.5">
+              <div className="text-body font-medium truncate">Sign Out</div>
+              <div className="text-small text-red-500 dark:text-red-400 truncate mt-0.5">
                 Log out of your account
               </div>
             </div>
@@ -1258,7 +1258,7 @@ const OptimizedNavigation: React.FC = () => {
                   >
                     <User className="w-5 h-5 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium truncate">View Profile</div>
+                      <div className="text-small font-medium truncate">View Profile</div>
                     </div>
                   </motion.button>
 
@@ -1271,7 +1271,7 @@ const OptimizedNavigation: React.FC = () => {
                   >
                     <Settings className="w-5 h-5 flex-shrink-0" />
                     <div className={`flex-1 min-w-0 hidden ${isDesktopExpanded ? 'lg:block' : ''}`}>
-                      <div className="text-sm font-medium truncate">Settings</div>
+                      <div className="text-small font-medium truncate">Settings</div>
                     </div>
                   </motion.button>
 
@@ -1301,7 +1301,7 @@ const OptimizedNavigation: React.FC = () => {
                       ) : (
                         <Moon className="w-5 h-5 text-gray-600 dark:text-gray-400 flex-shrink-0" />
                       )}
-                      <span className="text-sm text-gray-700 dark:text-gray-300">Theme</span>
+                      <span className="text-small text-gray-700 dark:text-gray-300">Theme</span>
                     </div>
                     <button
                       onClick={toggleTheme}
@@ -1328,7 +1328,7 @@ const OptimizedNavigation: React.FC = () => {
                   >
                     <LogOut className="w-5 h-5 flex-shrink-0" />
                     <div className={`flex-1 min-w-0 hidden ${isDesktopExpanded ? 'lg:block' : ''}`}>
-                      <div className="text-sm font-medium truncate">Sign Out</div>
+                      <div className="text-small font-medium truncate">Sign Out</div>
                     </div>
                   </motion.button>
                 </div>
@@ -1354,10 +1354,10 @@ const OptimizedNavigation: React.FC = () => {
               />
               {/* User Info - Only show when sidebar is fully expanded */}
               <div className={`flex-1 min-w-0 hidden ${isDesktopExpanded ? 'lg:block' : ''}`}>
-                <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                <div className="text-small font-medium text-gray-900 dark:text-white truncate">
                   {getUserDisplayName(userData)}
                 </div>
-                <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                <div className="text-small text-gray-500 dark:text-gray-400 truncate">
                   {userData?.email || ''}
                 </div>
               </div>
