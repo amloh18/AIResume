@@ -281,7 +281,7 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
   if (!targetNode) return null;
   return (
     <div
-      className="fixed z-[200] bg-white/95 backdrop-blur-sm shadow-[0_8px_32px_rgba(0,0,0,0.12)] border border-gray-100 rounded-2xl flex items-center px-2 py-1.5 gap-0 transform -translate-x-1/2 transition-all duration-200"
+      className="fixed z-[200] bg-white backdrop-blur-sm shadow-[0_8px_32px_rgba(0,0,0,0.15)] border border-gray-200 rounded-2xl flex items-center px-2 py-1.5 gap-0 transform -translate-x-1/2 transition-all duration-200 text-gray-800"
       style={{ top: pos.top, left: pos.left }}
       onMouseDown={(e) => e.preventDefault()}
     >
@@ -475,11 +475,7 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
   const showInlineControls = !readOnly && !ctx?.moriChatMode && primaryTitleKey && isHeaderPage;
   const canAddListEntry = SnippetComponent && ['Experience', 'Education', 'Projects', 'Certifications', 'Awards', 'Publications', 'Volunteer', 'References'].includes(SnippetComponent.category);
   const controls = showInlineControls ? (
-    <div className={`absolute opacity-0 group-hover/inner:opacity-100 transition-all duration-200 flex items-center gap-0 z-[200] no-print ${
-      isHeader || isNarrow
-        ? 'top-[-24px] right-1 bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-700/50 rounded px-0.5 py-0.5'
-        : 'top-1 right-1'
-    }`}>
+    <div className="absolute opacity-0 group-hover/inner:opacity-100 transition-all duration-200 flex items-center gap-0.5 z-[200] no-print top-[-24px] right-1 bg-white shadow-[0_4px_12px_rgba(0,0,0,0.08)] border border-gray-200 rounded px-1 py-0.5">
       {/* Action icons group */}
       {isHeader && instance.type !== 'header-accent' && instance.type !== 'header-minimal' && (
         <button
@@ -527,7 +523,7 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
         </button>
       )}
       {isHeader && (
-        <div className="flex items-center gap-0.5 border-r border-slate-700/20 dark:border-white/10 pr-1 mr-1">
+        <div className="flex items-center gap-0.5 border-r border-gray-200 pr-1 mr-1">
           <button
             onClick={() => ctx?.setDesign?.({ ...ctx.design, headerAlign: 'left' })}
             className={`w-7 h-7 flex items-center justify-center transition-all duration-150 hover:scale-110 active:scale-95 bg-transparent ${
@@ -573,7 +569,7 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
       </button>
       {!isHeader && (
         <>
-          <div className="w-[1.5px] h-4 bg-slate-200 dark:bg-slate-700/50 mx-1" />
+          <div className="w-[1.5px] h-4 bg-gray-200 mx-1" />
           {/* Layout-aware directional arrow controls */}
           {(() => {
             const tplType: string = activeTemplate?.type || '1-col';
@@ -656,9 +652,9 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
                     <ChevronRight size={12} />
                   </button>
                 )}
-                {tplType === 'hybrid-split' && (
+                 {tplType === 'hybrid-split' && (
                   <>
-                    <div className="w-[1px] h-3 bg-slate-200 dark:bg-slate-700 mx-1" />
+                    <div className="w-[1px] h-3 bg-gray-200 mx-1" />
                     {bareZoneId === 'main' ? (
                       <button
                         onClick={() => onMoveToZone?.(index, 'left')}
