@@ -21,8 +21,8 @@ export default function ProfileChecklistCard() {
     return (
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 flex flex-col h-full relative overflow-hidden">
             <div className="flex justify-between items-center mb-6 z-10 relative">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Profile Checklist</h3>
-                <span className="text-sm font-medium text-gray-600 dark:text-gray-400">{completedCount}/{checklistItems.length}</span>
+                <h3 className="text-h3 font-semibold text-gray-900 dark:text-white">Profile Checklist</h3>
+                <span className="text-small font-medium text-gray-600 dark:text-gray-400">{completedCount}/{checklistItems.length}</span>
             </div>
 
             <div className="mb-6 z-10 relative">
@@ -45,15 +45,15 @@ export default function ProfileChecklistCard() {
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                                         </svg>
                                     ) : (
-                                        <span className="text-xs font-bold block w-full h-full text-center leading-6">-</span>
+                                        <span className="text-small font-bold block w-full h-full text-center leading-6">-</span>
                                     )}
                                 </div>
-                                <span className={`text-sm font-medium ${item.completed ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'}`}>
+                                <span className={`text-small font-medium ${item.completed ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'}`}>
                                     {item.label}
                                 </span>
                             </div>
                             {!item.completed && (
-                                <button className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 px-2 py-1 rounded transition-colors">
+                                <button className="text-small font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 px-2 py-1 rounded transition-colors">
                                     Add
                                 </button>
                             )}

@@ -131,10 +131,10 @@ const InterviewModePage: React.FC = () => {
               <ArrowLeft className="w-5 h-5" />
             </button>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+              <h1 className="text-h2 font-bold text-gray-900 dark:text-white">
                 Interview Mode
               </h1>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-small text-gray-600 dark:text-gray-400">
                 {job.jobTitle} at {job.company}
               </p>
             </div>
@@ -153,12 +153,12 @@ const InterviewModePage: React.FC = () => {
         {/* Left Panel: Job Description & CV Preview */}
         <div className="space-y-4 overflow-y-auto">
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
-            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <h2 className="text-h3 font-semibold mb-4 flex items-center gap-2">
               <FileText className="w-5 h-5" />
               Job Description
             </h2>
             <div className="prose dark:prose-invert max-w-none">
-              <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+              <p className="text-small text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
                 {job.jobDescription || 'No job description available'}
               </p>
             </div>
@@ -166,12 +166,12 @@ const InterviewModePage: React.FC = () => {
 
           {journey.cvId && (
             <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
-              <h2 className="text-lg font-semibold mb-4">CV Preview</h2>
+              <h2 className="text-h3 font-semibold mb-4">CV Preview</h2>
               <a
                 href={`/studio?journeyId=${journey.id}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-blue-600 dark:text-blue-400 hover:underline text-sm"
+                className="text-blue-600 dark:text-blue-400 hover:underline text-small"
               >
                 View CV in Studio →
               </a>
@@ -183,12 +183,12 @@ const InterviewModePage: React.FC = () => {
         <div className="space-y-4 overflow-y-auto">
           {/* Timer */}
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
-            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <h2 className="text-h3 font-semibold mb-4 flex items-center gap-2">
               <Clock className="w-5 h-5" />
               Interview Timer
             </h2>
             <div className="text-center">
-              <div className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
+              <div className="text-display font-bold text-gray-900 dark:text-white mb-4">
                 {String(timerMinutes).padStart(2, '0')}:{String(timerSeconds).padStart(2, '0')}
               </div>
               <div className="flex gap-2 justify-center">

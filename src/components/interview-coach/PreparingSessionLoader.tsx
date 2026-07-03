@@ -47,7 +47,7 @@ const PreparingSessionLoader: React.FC<PreparingSessionLoaderProps> = ({ onCompl
     }, [onComplete]);
 
     return (
-        <div className="min-h-screen bg-[#f3f2ee] dark:bg-[#1a230f] flex flex-col">
+        <div className="min-h-screen app-page-bg flex flex-col">
             <InterviewCoachHeader />
             <div className="flex-1 flex items-center justify-center">
                 <div className="bg-white dark:bg-[#141810] rounded-2xl p-8 shadow-lg max-w-md w-full mx-4">
@@ -60,7 +60,7 @@ const PreparingSessionLoader: React.FC<PreparingSessionLoaderProps> = ({ onCompl
                                 <Sparkles className="w-8 h-8 text-lime-600 dark:text-lime-400" />
                             </motion.div>
                         </div>
-                        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                        <h2 className="text-h2 font-bold text-gray-900 dark:text-white mb-2">
                             Preparing your interview plan...
                         </h2>
                         <p className="text-gray-500 dark:text-gray-400">
@@ -107,7 +107,7 @@ const PreparingSessionLoader: React.FC<PreparingSessionLoaderProps> = ({ onCompl
                                     </div>
 
                                     {/* Label */}
-                                    <span className={`text-sm font-medium ${isActive
+                                    <span className={`text-small font-medium ${isActive
                                         ? 'text-lime-700 dark:text-lime-300'
                                         : isCompleted
                                             ? 'text-gray-700 dark:text-gray-300'

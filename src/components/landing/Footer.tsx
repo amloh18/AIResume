@@ -99,7 +99,7 @@ const Footer = () => {
             transition={{ duration: 0.8, delay: 0.2 }}
             viewport={{ once: true }}
           >
-            <h3 className="text-base tablet:text-lg font-bold text-white mb-4 tablet:mb-6">Contact Us</h3>
+            <h3 className="text-body tablet:text-h3 font-bold text-white mb-4 tablet:mb-6">Contact Us</h3>
 
             <div className="space-y-4 tablet:space-y-6">
               {/* Email */}
@@ -123,10 +123,10 @@ const Footer = () => {
                   <Mail className="w-3.5 h-3.5 tablet:w-[18px] tablet:h-[18px] text-black" />
                 </motion.div>
                 <div>
-                  <p className="text-white/60 text-xs tablet:text-xs">Email</p>
+                  <p className="text-white/60 text-small tablet:text-small">Email</p>
                   <a
                     href="mailto:support@cvcircle.io"
-                    className="text-white hover:text-lime-400 transition-colors duration-300 font-medium text-xs tablet:text-sm break-all"
+                    className="text-white hover:text-lime-400 transition-colors duration-300 font-medium text-small tablet:text-small break-all"
                   >
                     support@cvcircle.io
                   </a>
@@ -154,10 +154,10 @@ const Footer = () => {
                   <Phone className="w-3.5 h-3.5 tablet:w-[18px] tablet:h-[18px] text-white" />
                 </motion.div>
                 <div>
-                  <p className="text-white/60 text-xs tablet:text-xs">Phone</p>
+                  <p className="text-white/60 text-small tablet:text-small">Phone</p>
                   <a
                     href="tel:+447879768984"
-                    className="text-white hover:text-lime-400 transition-colors duration-300 font-medium text-xs tablet:text-sm"
+                    className="text-white hover:text-lime-400 transition-colors duration-300 font-medium text-small tablet:text-small"
                   >
                     +44 7879768984
                   </a>
@@ -185,8 +185,8 @@ const Footer = () => {
                   <MapPin className="w-3.5 h-3.5 tablet:w-[18px] tablet:h-[18px] text-white" />
                 </motion.div>
                 <div>
-                  <p className="text-white/60 text-xs tablet:text-xs">Address</p>
-                  <p className="text-white font-medium text-xs tablet:text-base">
+                  <p className="text-white/60 text-small tablet:text-small">Address</p>
+                  <p className="text-white font-medium text-small tablet:text-body">
                     London, England
                   </p>
                 </div>
@@ -202,7 +202,7 @@ const Footer = () => {
             transition={{ duration: 0.8, delay: 0.2 }}
             viewport={{ once: true }}
           >
-            <h3 className="text-base tablet:text-lg font-bold text-white mb-4 tablet:mb-6">Quick Links</h3>
+            <h3 className="text-body tablet:text-h3 font-bold text-white mb-4 tablet:mb-6">Quick Links</h3>
             <ul className="space-y-3">
               {quickLinks.map((link, index) => (
                 <motion.li
@@ -217,7 +217,7 @@ const Footer = () => {
                       e.preventDefault();
                       scrollToSection(link.href);
                     }}
-                    className="text-white/60 hover:text-lime-400 transition-colors duration-300 text-xs font-medium group flex items-center gap-2"
+                    className="text-white/60 hover:text-lime-400 transition-colors duration-300 text-small font-medium group flex items-center gap-2"
                     whileHover={{ x: -5 }}
                   >
                     <span>{link.name}</span>
@@ -251,7 +251,7 @@ const Footer = () => {
                 <Logo size="lg" />
               </div>
             </motion.div>
-            <p className="text-white/70 leading-relaxed max-w-sm text-base">
+            <p className="text-white/70 leading-relaxed max-w-sm text-body">
               Empowering job seekers with modern tools to create stunning CVs,
               track applications, and connect with industry professionals.
             </p>
@@ -299,8 +299,8 @@ const Footer = () => {
             transition={{ duration: 0.8, delay: 0.6 }}
             viewport={{ once: true }}
           >
-            <h3 className="text-xl font-bold text-white">Stay Updated</h3>
-            <p className="text-white/70 text-base">
+            <h3 className="text-h3 font-bold text-white">Stay Updated</h3>
+            <p className="text-white/70 text-body">
               Get the latest updates on new features and job search tips.
             </p>
             <form onSubmit={handleNewsletterSubscription} className="space-y-3">
@@ -309,7 +309,7 @@ const Footer = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Enter your email"
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors duration-300 backdrop-blur-sm text-xs"
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors duration-300 backdrop-blur-sm text-small"
                 whileFocus={{ scale: 1.02 }}
                 disabled={isSubscribing}
               />
@@ -347,7 +347,7 @@ const Footer = () => {
                   ) : (
                     <Mail size={12} />
                   )}
-                  <span className="text-xs">{isSubscribing ? 'Subscribing...' : 'Subscribe'}</span>
+                  <span className="text-small">{isSubscribing ? 'Subscribing...' : 'Subscribe'}</span>
                   {!isSubscribing && (
                     <motion.div
                       whileHover={{ rotate: 45 }}
@@ -364,7 +364,7 @@ const Footer = () => {
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className={`flex items-center gap-2 text-xs ${subscriptionStatus === 'success'
+                  className={`flex items-center gap-2 text-small ${subscriptionStatus === 'success'
                     ? 'text-lime-400'
                     : subscriptionStatus === 'error'
                       ? 'text-red-400'
@@ -377,7 +377,7 @@ const Footer = () => {
                 </motion.div>
               )}
 
-              <p className="text-xs text-white/40">
+              <p className="text-small text-white/40">
                 We respect your privacy. Unsubscribe at any time.
               </p>
             </form>
@@ -394,7 +394,7 @@ const Footer = () => {
           viewport={{ once: true }}
         >
           <motion.div
-            className="text-white/60 text-xs flex flex-col tablet:flex-row items-center gap-2"
+            className="text-white/60 text-small flex flex-col tablet:flex-row items-center gap-2"
             whileHover={{ scale: 1.02 }}
           >
             <span>© 2026 <span className="text-lime-400">CVCircle</span> by <span className="text-white">Morigrid Labs</span>. All rights reserved.</span>
@@ -413,7 +413,7 @@ const Footer = () => {
           <div className="flex space-x-8">
             <motion.a
               href="/legal#privacy"
-              className="text-white/60 hover:text-lime-400 text-xs transition-colors duration-300 font-medium"
+              className="text-white/60 hover:text-lime-400 text-small transition-colors duration-300 font-medium"
               whileHover={{ y: -2 }}
               whileTap={{ scale: 0.95 }}
             >
@@ -421,7 +421,7 @@ const Footer = () => {
             </motion.a>
             <motion.a
               href="/legal#terms"
-              className="text-white/60 hover:text-lime-400 text-xs transition-colors duration-300 font-medium"
+              className="text-white/60 hover:text-lime-400 text-small transition-colors duration-300 font-medium"
               whileHover={{ y: -2 }}
               whileTap={{ scale: 0.95 }}
             >
@@ -429,7 +429,7 @@ const Footer = () => {
             </motion.a>
             <motion.a
               href="/legal#cookies"
-              className="text-white/60 hover:text-lime-400 text-xs transition-colors duration-300 font-medium"
+              className="text-white/60 hover:text-lime-400 text-small transition-colors duration-300 font-medium"
               whileHover={{ y: -2 }}
               whileTap={{ scale: 0.95 }}
             >
@@ -437,7 +437,7 @@ const Footer = () => {
             </motion.a>
             <motion.a
               href="/legal#support"
-              className="text-white/60 hover:text-lime-400 text-xs transition-colors duration-300 font-medium"
+              className="text-white/60 hover:text-lime-400 text-small transition-colors duration-300 font-medium"
               whileHover={{ y: -2 }}
               whileTap={{ scale: 0.95 }}
             >

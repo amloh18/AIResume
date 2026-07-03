@@ -220,10 +220,10 @@ const UserAvatarDropdown: React.FC<UserAvatarDropdownProps> = ({ user, openUpwar
               className="cursor-pointer transition-all"
             />
             <div className="flex-1 min-w-0 text-left">
-              <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
+              <div className="text-small font-medium text-gray-900 dark:text-white truncate">
                 {user.name}
               </div>
-              <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+              <div className="text-small text-gray-500 dark:text-gray-400 truncate">
                 {user.email}
               </div>
             </div>
@@ -288,7 +288,7 @@ const UserAvatarDropdown: React.FC<UserAvatarDropdownProps> = ({ user, openUpwar
                 className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left cursor-pointer"
               >
                 <User className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-                <span className="text-sm text-gray-700 dark:text-gray-300">
+                <span className="text-small text-gray-700 dark:text-gray-300">
                   View Profile
                 </span>
               </button>
@@ -302,7 +302,7 @@ const UserAvatarDropdown: React.FC<UserAvatarDropdownProps> = ({ user, openUpwar
                 className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left cursor-pointer"
               >
                 <Settings className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-                <span className="text-sm text-gray-700 dark:text-gray-300">
+                <span className="text-small text-gray-700 dark:text-gray-300">
                   Settings
                 </span>
               </button>
@@ -318,7 +318,7 @@ const UserAvatarDropdown: React.FC<UserAvatarDropdownProps> = ({ user, openUpwar
                   className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left cursor-pointer"
                 >
                   <Briefcase className="h-4 w-4 text-primary" />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">
+                  <span className="text-small text-gray-700 dark:text-gray-300">
                     HR Dashboard
                   </span>
                 </button>
@@ -331,7 +331,7 @@ const UserAvatarDropdown: React.FC<UserAvatarDropdownProps> = ({ user, openUpwar
                   ) : (
                     <Moon className="h-4 w-4 text-gray-600 dark:text-gray-400" />
                   )}
-                  <span className="text-sm text-gray-700 dark:text-gray-300">
+                  <span className="text-small text-gray-700 dark:text-gray-300">
                     Theme
                   </span>
                 </div>
@@ -368,7 +368,7 @@ const UserAvatarDropdown: React.FC<UserAvatarDropdownProps> = ({ user, openUpwar
                 className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-left rounded-lg cursor-pointer"
               >
                 <LogOut className="h-4 w-4 text-red-600 dark:text-red-400" />
-                <span className="text-sm text-red-600 dark:text-red-400 font-medium">
+                <span className="text-small text-red-600 dark:text-red-400 font-medium">
                   Sign Out
                 </span>
               </button>

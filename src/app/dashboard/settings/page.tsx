@@ -3,6 +3,7 @@
 
 import React, { useState, Suspense, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useUnifiedAuth, getUserIdForAPI } from '@/lib/hooks/useUnifiedAuth';
 import { usePricingPlans } from '@/lib/hooks/usePricingPlans';
 import { useBillingData } from '@/lib/hooks/useBillingData';
@@ -52,6 +53,20 @@ import { useUserData } from '@/lib/hooks/useUserData';
 import { getPlanName } from '@/lib/utils/userPlanUtils';
 import toast from 'react-hot-toast';
 import EmailConnectModal from '@/components/dashboard/jobs/EmailConnectModal';
+
+const fetchSettingsUserData = async (): Promise<User> => {
+  const response = await fetch('/api/user');
+  if (!response.ok) {
+    throw new Error('Failed to fetch user data');
+  }
+
+  const data = await response.json();
+  if (!data.success || !data.user) {
+    throw new Error(data.error || 'Failed to fetch user data');
+  }
+
+  return data.user;
+};
 
 // --- TYPES ---
 
@@ -161,14 +176,27 @@ interface Invoice {
 // Skeleton components for better loading UX (no full-page spinners)
 
 const AccountProfileSkeleton = () => (
-  <div className="p-8">
-    <div className="space-y-8 animate-pulse">
-      <div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded"></div>
+  <div className="p-4 sm:p-6 lg:p-8 min-w-0 max-w-full overflow-x-hidden">
+    <div className="space-y-8">
+      <div>
+        <h3 className="text-h3 font-semibold text-gray-900 dark:text-white">Account & Profile</h3>
+        <div className="mt-2 h-3 w-64 max-w-full bg-gray-200 dark:bg-white/10 rounded animate-pulse"></div>
+      </div>
+      <div className="flex flex-col sm:flex-row gap-6">
+        <div className="w-24 h-24 bg-gray-200 dark:bg-white/10 rounded-full animate-pulse"></div>
+        <div className="flex-1 space-y-3">
+          <div className="h-5 w-40 bg-gray-200 dark:bg-white/10 rounded animate-pulse"></div>
+          <div className="h-4 w-72 max-w-full bg-gray-200 dark:bg-white/10 rounded animate-pulse"></div>
+          <div className="h-10 w-36 bg-gray-200 dark:bg-white/10 rounded-lg animate-pulse"></div>
+        </div>
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {[...Array(6)].map((_, i) => (
           <div key={i} className="space-y-2">
-            <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded"></div>
-            <div className="h-10 w-full bg-gray-200 dark:bg-gray-700 rounded"></div>
+            <div className="h-4 w-24 bg-gray-200 dark:bg-white/10 rounded animate-pulse"></div>
+            <div className="h-10 w-full bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-lg">
+              <div className="h-full w-2/3 bg-gray-100 dark:bg-white/5 rounded-lg animate-pulse"></div>
+            </div>
           </div>
         ))}
       </div>
@@ -177,12 +205,23 @@ const AccountProfileSkeleton = () => (
 );
 
 const SecuritySkeleton = () => (
-  <div className="p-8">
-    <div className="space-y-8 animate-pulse">
-      <div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded"></div>
+  <div className="p-4 sm:p-6 lg:p-8 min-w-0 max-w-full overflow-x-hidden">
+    <div className="space-y-8">
+      <div className="space-y-2">
+        <h3 className="text-h3 font-semibold text-gray-900 dark:text-white">Security</h3>
+        <div className="h-3 w-72 max-w-full bg-gray-200 dark:bg-white/10 rounded animate-pulse"></div>
+      </div>
       <div className="space-y-4">
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="h-16 w-full bg-gray-200 dark:bg-gray-700 rounded"></div>
+        {['Two-Factor Authentication', 'Change Password', 'Email Notifications', 'Push Notifications'].map((label) => (
+          <div key={label} className="flex items-center justify-between py-4 border-b border-gray-200 dark:border-gray-700">
+            <div className="space-y-2">
+              <div className="text-small font-medium text-gray-900 dark:text-white">{label}</div>
+              <div className="h-3 w-64 max-w-full bg-gray-200 dark:bg-white/10 rounded animate-pulse"></div>
+            </div>
+            <div className="w-12 h-6 rounded-full bg-gray-300 dark:bg-gray-600 animate-pulse">
+              <div className="w-5 h-5 bg-white rounded-full translate-x-0.5 mt-0.5" />
+            </div>
+          </div>
         ))}
       </div>
     </div>
@@ -414,11 +453,11 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
         <div className="py-4 sm:py-6 border-b border-gray-200 dark:border-gray-700">
           <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
             <div className="flex-1">
-              <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-2">Avatar</h3>
-              <p className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm">
+              <h3 className="text-body sm:text-h3 font-semibold text-gray-900 dark:text-white mb-2">Avatar</h3>
+              <p className="text-gray-600 dark:text-gray-300 text-small sm:text-small">
                 Choose an image that best reflects your identity or brand.
               </p>
-              <p className="text-gray-500 dark:text-gray-500 text-xs mt-2">
+              <p className="text-gray-500 dark:text-gray-500 text-small mt-2">
                 We only support .JPG, .JPEG, or .PNG file. 1 MB max.
               </p>
             </div>
@@ -487,7 +526,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
                 />
                 <label
                   htmlFor="avatar-upload"
-                  className={`px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer text-center ${isUploadingAvatar ? 'opacity-50 cursor-not-allowed' : ''
+                  className={`px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-small font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer text-center ${isUploadingAvatar ? 'opacity-50 cursor-not-allowed' : ''
                     }`}
                 >
                   {isUploadingAvatar ? (
@@ -502,7 +541,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
                 {avatar && !isUploadingAvatar && (
                   <button
                     onClick={() => setAvatar('')}
-                    className="px-4 py-2 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 transition-colors border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium"
+                    className="px-4 py-2 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 transition-colors border border-gray-300 dark:border-gray-600 rounded-lg text-small font-medium"
                   >
                     <div className="flex items-center justify-center gap-2">
                       <Trash2 size={16} />
@@ -518,36 +557,36 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
         {/* Personal Information */}
         <div className="space-y-4 sm:space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Personal Information</h3>
+            <h3 className="text-body sm:text-h3 font-semibold text-gray-900 dark:text-white">Personal Information</h3>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
             <div>
-              <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2">
+              <label className="block text-small sm:text-small font-medium text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2">
                 First Name
               </label>
               <input
                 type="text"
                 value={formData.firstName}
                 onChange={(e) => handleInputChange('firstName', e.target.value)}
-                className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 dark:border-lime-500/20 rounded-lg bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 focus:ring-2 focus:ring-lime-500 focus:border-transparent"
+                className="w-full px-3 py-2 text-small sm:text-body border border-gray-300 dark:border-lime-500/20 rounded-lg bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 focus:ring-2 focus:ring-lime-500 focus:border-transparent"
               />
             </div>
 
             <div>
-              <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2">
+              <label className="block text-small sm:text-small font-medium text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2">
                 Last Name
               </label>
               <input
                 type="text"
                 value={formData.lastName}
                 onChange={(e) => handleInputChange('lastName', e.target.value)}
-                className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 dark:border-lime-500/20 rounded-lg bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 focus:ring-2 focus:ring-lime-500 focus:border-transparent"
+                className="w-full px-3 py-2 text-small sm:text-body border border-gray-300 dark:border-lime-500/20 rounded-lg bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 focus:ring-2 focus:ring-lime-500 focus:border-transparent"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-small font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Email
               </label>
               <div className="space-y-2">
@@ -565,7 +604,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
                     </div>
                   )}
                 </div>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
+                <p className="text-small text-gray-500 dark:text-gray-400">
                   Email cannot be changed. Contact support if you need to update your email address.
                 </p>
 
@@ -573,14 +612,14 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <XCircle className="h-4 w-4 text-orange-500" />
-                      <span className="text-sm text-orange-600 dark:text-orange-400 font-medium">
+                      <span className="text-small text-orange-600 dark:text-orange-400 font-medium">
                         Email Not Verified
                       </span>
                     </div>
                     <button
                       onClick={handleSendVerification}
                       disabled={isSendingVerification}
-                      className="flex items-center gap-2 px-3 py-1.5 text-sm bg-orange-100 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 rounded-md hover:bg-orange-200 dark:hover:bg-orange-900/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex items-center gap-2 px-3 py-1.5 text-small bg-orange-100 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 rounded-md hover:bg-orange-200 dark:hover:bg-orange-900/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isSendingVerification ? (
                         <Loader2 className="h-3 w-3 animate-spin" />
@@ -593,7 +632,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
                 )}
 
                 {verificationMessage && (
-                  <div className={`text-sm px-3 py-2 rounded-md ${verificationMessage.type === 'success'
+                  <div className={`text-small px-3 py-2 rounded-md ${verificationMessage.type === 'success'
                     ? 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300'
                     : 'bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-300'
                     }`}>
@@ -604,7 +643,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-small font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Username
               </label>
               <div className="relative">
@@ -651,15 +690,15 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
                 )}
               </div>
               {usernameError && (
-                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{usernameError}</p>
+                <p className="mt-1 text-small text-red-600 dark:text-red-400">{usernameError}</p>
               )}
               {usernameStatus === 'available' && !usernameError && (
-                <p className="mt-1 text-sm text-green-600 dark:text-green-400">Username is available</p>
+                <p className="mt-1 text-small text-green-600 dark:text-green-400">Username is available</p>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-small font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Phone
               </label>
               <input
@@ -671,7 +710,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-small font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Location
               </label>
               <input
@@ -684,7 +723,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-small font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Website
               </label>
               <input
@@ -697,7 +736,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-small font-medium text-gray-700 dark:text-gray-300 mb-2">
                 LinkedIn
               </label>
               <input
@@ -710,7 +749,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-small font-medium text-gray-700 dark:text-gray-300 mb-2">
                 GitHub
               </label>
               <input
@@ -723,7 +762,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-small font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Company
               </label>
               <input
@@ -735,7 +774,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-small font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Job Title
               </label>
               <input
@@ -748,7 +787,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-small font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Industry
               </label>
               <input
@@ -761,7 +800,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-small font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Experience Level
               </label>
               <select
@@ -779,7 +818,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
 
           {/* Professional Summary */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-small font-medium text-gray-700 dark:text-gray-300 mb-2">
               Professional Summary
             </label>
             <textarea
@@ -794,11 +833,11 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
 
         {/* Preferences */}
         <div className="space-y-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Preferences</h3>
+          <h3 className="text-h3 font-semibold text-gray-900 dark:text-white">Preferences</h3>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-small font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Language
               </label>
               <select
@@ -814,7 +853,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-small font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Timezone
               </label>
               <select
@@ -1435,13 +1474,13 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
       <div className="space-y-8 min-w-0 max-w-full">
         {/* Security Section */}
         <div className="space-y-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Security</h3>
+          <h3 className="text-h3 font-semibold text-gray-900 dark:text-white">Security</h3>
 
           <div className="space-y-4">
             <div className="flex items-center justify-between py-4 border-b border-gray-200 dark:border-gray-700">
               <div>
-                <div className="text-sm font-medium text-gray-900 dark:text-white">Two-Factor Authentication</div>
-                <div className="text-xs text-gray-500 dark:text-gray-300">Add an extra layer of security to your account</div>
+                <div className="text-small font-medium text-gray-900 dark:text-white">Two-Factor Authentication</div>
+                <div className="text-small text-gray-500 dark:text-gray-300">Add an extra layer of security to your account</div>
               </div>
               <button
                 onClick={handleTwoFactorToggled}
@@ -1455,8 +1494,8 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
             {/* Inline Form to Enter 2FA Code */}
             {showTwoFactorSetup && (
               <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
-                <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">Verify Your Email</h4>
-                <p className="text-xs text-gray-600 dark:text-gray-400 mb-4">
+                <h4 className="text-small font-semibold text-gray-900 dark:text-white mb-2">Verify Your Email</h4>
+                <p className="text-small text-gray-600 dark:text-gray-400 mb-4">
                   We've sent a 4-digit code to {user.email}. Enter it below to enable two-factor authentication.
                 </p>
                 <div className="flex items-center gap-3">
@@ -1469,12 +1508,12 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
                       setTwoFactorError(null);
                     }}
                     placeholder="0000"
-                    className="w-24 px-3 py-2 text-center text-lg tracking-widest border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-[#1a1a1a] text-gray-900 dark:text-white focus:ring-2 focus:ring-lime-500 focus:border-transparent"
+                    className="w-24 px-3 py-2 text-center text-h3 tracking-widest border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-[#1a1a1a] text-gray-900 dark:text-white focus:ring-2 focus:ring-lime-500 focus:border-transparent"
                   />
                   <button
                     onClick={confirmEnableTwoFactor}
                     disabled={twoFactorLoading || twoFactorCode.length !== 4}
-                    className="px-4 py-2 bg-lime-500 hover:bg-lime-600 text-white rounded-lg font-medium text-sm transition-colors disabled:opacity-50"
+                    className="px-4 py-2 bg-lime-500 hover:bg-lime-600 text-white rounded-lg font-medium text-small transition-colors disabled:opacity-50"
                   >
                     {twoFactorLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Verify'}
                   </button>
@@ -1485,20 +1524,20 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
                       setTwoFactorCode('');
                       setTwoFactorError(null);
                     }}
-                    className="px-4 py-2 bg-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white rounded-lg font-medium text-sm transition-colors"
+                    className="px-4 py-2 bg-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white rounded-lg font-medium text-small transition-colors"
                   >
                     Cancel
                   </button>
                 </div>
-                {twoFactorError && <p className="mt-2 text-xs text-red-500">{twoFactorError}</p>}
+                {twoFactorError && <p className="mt-2 text-small text-red-500">{twoFactorError}</p>}
               </div>
             )}
 
             {/* Inline Prompt for Disabling 2FA */}
             {showDisableTwoFactorPrompt && (
               <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
-                <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">Disable Two-Factor Authentication</h4>
-                <p className="text-xs text-gray-600 dark:text-gray-400 mb-4">
+                <h4 className="text-small font-semibold text-gray-900 dark:text-white mb-2">Disable Two-Factor Authentication</h4>
+                <p className="text-small text-gray-600 dark:text-gray-400 mb-4">
                   Please enter your password to confirm you want to disable 2FA.
                 </p>
                 <div className="flex items-center gap-3">
@@ -1515,7 +1554,7 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
                   <button
                     onClick={() => disableTwoFactor(disableTwoFactorPassword)}
                     disabled={twoFactorLoading || !disableTwoFactorPassword}
-                    className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium text-sm transition-colors disabled:opacity-50"
+                    className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium text-small transition-colors disabled:opacity-50"
                   >
                     {twoFactorLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Disable'}
                   </button>
@@ -1525,25 +1564,25 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
                       setDisableTwoFactorPassword('');
                       setTwoFactorError(null);
                     }}
-                    className="px-4 py-2 bg-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white rounded-lg font-medium text-sm transition-colors"
+                    className="px-4 py-2 bg-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white rounded-lg font-medium text-small transition-colors"
                   >
                     Cancel
                   </button>
                 </div>
-                {twoFactorError && <p className="mt-2 text-xs text-red-500">{twoFactorError}</p>}
+                {twoFactorError && <p className="mt-2 text-small text-red-500">{twoFactorError}</p>}
               </div>
             )}
 
             <div className="py-4 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <div className="text-sm font-medium text-gray-900 dark:text-white">Change Password</div>
-                  <div className="text-xs text-gray-500 dark:text-gray-300">Update your account password</div>
+                  <div className="text-small font-medium text-gray-900 dark:text-white">Change Password</div>
+                  <div className="text-small text-gray-500 dark:text-gray-300">Update your account password</div>
                 </div>
                 {!isSocialLogin && (
                   <button
                     onClick={() => setShowPasswordForm(!showPasswordForm)}
-                    className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm font-medium"
+                    className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-small font-medium"
                   >
                     {showPasswordForm ? 'Cancel' : 'Change Password'}
                   </button>
@@ -1555,7 +1594,7 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
                   <div className="flex items-start gap-3">
                     <Shield className="w-5 h-5 text-gray-400 dark:text-gray-500 mt-0.5" />
                     <div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                      <p className="text-small text-gray-600 dark:text-gray-400">
                         Your account is linked via your provider. Password management is handled there.
                       </p>
                     </div>
@@ -1564,12 +1603,12 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
               ) : showPasswordForm && (
                 <form onSubmit={handlePasswordSubmit} className="mt-6 space-y-5 p-6 bg-[#1a1a1a]/95 backdrop-blur-3xl rounded-3xl border border-white/10 shadow-2xl">
                   <div className="flex items-center gap-3 mb-2">
-                    <h4 className="text-lg font-semibold text-white">Change Password</h4>
+                    <h4 className="text-h3 font-semibold text-white">Change Password</h4>
                   </div>
 
                   {/* Current Password */}
                   <div>
-                    <label className="block text-white/80 text-sm font-medium mb-2">
+                    <label className="block text-white/80 text-small font-medium mb-2">
                       Current Password
                     </label>
                     <div className="relative">
@@ -1592,7 +1631,7 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
 
                   {/* New Password */}
                   <div>
-                    <label className="block text-white/80 text-sm font-medium mb-2">
+                    <label className="block text-white/80 text-small font-medium mb-2">
                       New Password
                     </label>
                     <div className="relative">
@@ -1612,13 +1651,13 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
                       </button>
                     </div>
                     {passwordForm.newPassword && passwordForm.newPassword.length < 8 && (
-                      <p className="mt-2 text-xs text-red-400">Password must be at least 8 characters</p>
+                      <p className="mt-2 text-small text-red-400">Password must be at least 8 characters</p>
                     )}
                   </div>
 
                   {/* Confirm Password */}
                   <div>
-                    <label className="block text-white/80 text-sm font-medium mb-2">
+                    <label className="block text-white/80 text-small font-medium mb-2">
                       Confirm New Password
                     </label>
                     <div className="relative">
@@ -1638,7 +1677,7 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
                       </button>
                     </div>
                     {passwordForm.confirmPassword && passwordForm.newPassword !== passwordForm.confirmPassword && (
-                      <p className="mt-2 text-xs text-red-400">Passwords do not match</p>
+                      <p className="mt-2 text-small text-red-400">Passwords do not match</p>
                     )}
                   </div>
 
@@ -1647,7 +1686,7 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
                     <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
                       <div className="flex items-center gap-2">
                         <AlertCircle className="w-4 h-4 text-red-400" />
-                        <p className="text-sm text-red-300">{passwordErrors}</p>
+                        <p className="text-small text-red-300">{passwordErrors}</p>
                       </div>
                     </div>
                   )}
@@ -1688,13 +1727,13 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
 
         {/* Notifications Section */}
         <div className="space-y-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Notifications</h3>
+          <h3 className="text-h3 font-semibold text-gray-900 dark:text-white">Notifications</h3>
 
           <div className="space-y-4">
             <div className="flex items-center justify-between py-4 border-b border-gray-200 dark:border-gray-700">
               <div>
-                <div className="text-sm font-medium text-gray-900 dark:text-white">Email Notifications</div>
-                <div className="text-xs text-gray-500 dark:text-gray-300">Receive updates via email</div>
+                <div className="text-small font-medium text-gray-900 dark:text-white">Email Notifications</div>
+                <div className="text-small text-gray-500 dark:text-gray-300">Receive updates via email</div>
               </div>
               <button
                 onClick={() => handleNotificationToggle('email', !emailNotifications)}
@@ -1709,8 +1748,8 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
 
             <div className="flex items-center justify-between py-4 border-b border-gray-200 dark:border-gray-700">
               <div>
-                <div className="text-sm font-medium text-gray-900 dark:text-white">Daily Summary Email</div>
-                <div className="text-xs text-gray-500 dark:text-gray-300">Receive a daily summary of your job search activity</div>
+                <div className="text-small font-medium text-gray-900 dark:text-white">Daily Summary Email</div>
+                <div className="text-small text-gray-500 dark:text-gray-300">Receive a daily summary of your job search activity</div>
               </div>
               <button
                 onClick={() => handleDailySummaryToggle(!dailySummaryEmail)}
@@ -1725,8 +1764,8 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
 
             <div className="flex items-center justify-between py-4">
               <div>
-                <div className="text-sm font-medium text-gray-900 dark:text-white">Push Notifications</div>
-                <div className="text-xs text-gray-500 dark:text-gray-300">Receive push notifications in your browser</div>
+                <div className="text-small font-medium text-gray-900 dark:text-white">Push Notifications</div>
+                <div className="text-small text-gray-500 dark:text-gray-300">Receive push notifications in your browser</div>
               </div>
               <button
                 onClick={() => handleNotificationToggle('push', !pushNotifications)}
@@ -1744,11 +1783,11 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
         {/* Integration Section */}
         <div className="space-y-6 pt-8 border-t border-gray-200 dark:border-gray-700">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+            <h3 className="text-h3 font-semibold text-gray-900 dark:text-white flex items-center gap-2">
               <Link className="h-5 w-5 text-lime-500" />
               Integration
             </h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            <p className="text-small text-gray-500 dark:text-gray-400 mt-1">
               Manage your linked email and calendar accounts for automated job application tracking.
             </p>
           </div>
@@ -1757,15 +1796,15 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
             {/* Email Account Integration */}
             <div className="py-4 border-b border-gray-200 dark:border-gray-700 flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <div className="text-sm font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                <div className="text-small font-medium text-gray-900 dark:text-white flex items-center gap-2">
                   <Mail className="h-4 w-4 text-emerald-500" />
                   Email Integration (Gmail / Outlook)
                 </div>
-                <div className="text-xs text-gray-500 dark:text-gray-300 mt-1 max-w-xl">
+                <div className="text-small text-gray-500 dark:text-gray-300 mt-1 max-w-xl">
                   Sync recruiter emails directly. When recruiter messages are matched, the job pipeline stage updates automatically.
                 </div>
                 {emailSyncConnected && (
-                  <div className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold mt-2 flex items-center gap-1.5">
+                  <div className="text-small text-emerald-600 dark:text-emerald-400 font-semibold mt-2 flex items-center gap-1.5">
                     <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
                     Connected to {emailSyncAddress} ({emailSyncProvider.toUpperCase()})
                   </div>
@@ -1777,7 +1816,7 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
                   <button
                     onClick={handleDisconnectEmail}
                     disabled={emailConnecting}
-                    className="px-4 py-2 border border-red-200 dark:border-red-950 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg text-sm font-medium transition duration-150 disabled:opacity-50"
+                    className="px-4 py-2 border border-red-200 dark:border-red-950 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg text-small font-medium transition duration-150 disabled:opacity-50"
                   >
                     Disconnect
                   </button>
@@ -1787,7 +1826,7 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
                       setModalInitialTab('email');
                       setIsEmailConnectModalOpen(true);
                     }}
-                    className="px-4 py-2 bg-lime-500 hover:bg-lime-600 text-black rounded-lg text-xs font-semibold transition"
+                    className="px-4 py-2 bg-lime-500 hover:bg-lime-600 text-black rounded-lg text-small font-semibold transition"
                   >
                     Connect Email
                   </button>
@@ -1798,15 +1837,15 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
             {/* Calendar Integration */}
             <div className="py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <div className="text-sm font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                <div className="text-small font-medium text-gray-900 dark:text-white flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-blue-500" />
                   Calendar Sync (Google Calendar)
                 </div>
-                <div className="text-xs text-gray-500 dark:text-gray-300 mt-1 max-w-xl">
+                <div className="text-small text-gray-500 dark:text-gray-300 mt-1 max-w-xl">
                   Automatically synchronize job application deadlines, follow-up reminders, and scheduled recruiter interviews to your primary calendar.
                 </div>
                 {calendarSettings.connected && (
-                  <div className="text-xs text-blue-600 dark:text-blue-400 font-semibold mt-2 flex items-center gap-1.5">
+                  <div className="text-small text-blue-600 dark:text-blue-400 font-semibold mt-2 flex items-center gap-1.5">
                     <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse"></span>
                     Connected to Google Calendar
                   </div>
@@ -1819,14 +1858,14 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
                     <button
                       onClick={handleForceSyncCalendar}
                       disabled={syncingCalendar}
-                      className="px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-xs font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition flex items-center gap-1.5"
+                      className="px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-small font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition flex items-center gap-1.5"
                     >
                       {syncingCalendar ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
                       Sync Now
                     </button>
                     <button
                       onClick={handleDisconnectCalendar}
-                      className="px-4 py-2 border border-red-200 dark:border-red-950 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg text-sm font-medium transition"
+                      className="px-4 py-2 border border-red-200 dark:border-red-950 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg text-small font-medium transition"
                     >
                       Disconnect
                     </button>
@@ -1837,7 +1876,7 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
                       setModalInitialTab('calendar');
                       setIsEmailConnectModalOpen(true);
                     }}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold transition"
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-small font-semibold transition"
                   >
                     Connect Calendar
                   </button>
@@ -1850,7 +1889,7 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
               <div className="mt-2 pl-4 border-l-2 border-lime-500/30 space-y-4 pt-2">
                 <div className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-white/5">
                   <div className="space-y-0.5">
-                    <div className="text-xs font-medium text-gray-800 dark:text-gray-200">Enable Calendar Syncing</div>
+                    <div className="text-small font-medium text-gray-800 dark:text-gray-200">Enable Calendar Syncing</div>
                     <div className="text-[10px] text-gray-500 dark:text-gray-400">Keep Google Calendar updated automatically</div>
                   </div>
                   <button
@@ -1863,9 +1902,9 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
 
                 {calendarSettings.syncEnabled && (
                   <div className="space-y-3 pl-2">
-                    <div className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sync Options</div>
+                    <div className="text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sync Options</div>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      <label className="flex items-center gap-2 text-xs font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                      <label className="flex items-center gap-2 text-small font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
                         <input
                           type="checkbox"
                           checked={calendarSettings.syncSettings?.includeInterviews ?? true}
@@ -1874,7 +1913,7 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
                         />
                         Include Interviews
                       </label>
-                      <label className="flex items-center gap-2 text-xs font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                      <label className="flex items-center gap-2 text-small font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
                         <input
                           type="checkbox"
                           checked={calendarSettings.syncSettings?.includeFollowUps ?? true}
@@ -1883,7 +1922,7 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
                         />
                         Include Follow-ups
                       </label>
-                      <label className="flex items-center gap-2 text-xs font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                      <label className="flex items-center gap-2 text-small font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
                         <input
                           type="checkbox"
                           checked={calendarSettings.syncSettings?.includeDeadlines ?? true}
@@ -1991,7 +2030,7 @@ const MembershipBilling = ({ user }: { user: User }) => {
 
         {/* Plan Cards Section */}
         <div className="space-y-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Subscription Plans</h3>
+          <h3 className="text-h3 font-semibold text-gray-900 dark:text-white">Subscription Plans</h3>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
             {/* Current Plan Card */}
@@ -2016,7 +2055,7 @@ const MembershipBilling = ({ user }: { user: User }) => {
               <div className="glass-widget-premium p-6 relative h-full flex flex-col justify-between">
                 <div>
                   <div className="absolute top-4 right-4">
-                    <span className="px-2.5 py-1 bg-lime-500/10 text-lime-600 dark:text-lime-400 border border-lime-500/20 text-xs font-semibold rounded-full tracking-wide">
+                    <span className="px-2.5 py-1 bg-lime-500/10 text-lime-600 dark:text-lime-400 border border-lime-500/20 text-small font-semibold rounded-full tracking-wide">
                       {subscription?.status || 'Active'}
                     </span>
                   </div>
@@ -2025,8 +2064,8 @@ const MembershipBilling = ({ user }: { user: User }) => {
                       <Award className="w-6 h-6 text-white" />
                     </div>
                     <div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400 mb-0.5">Current Plan</p>
-                      <p className="text-2xl font-bold text-gray-900 dark:text-white leading-tight">
+                      <p className="text-small text-gray-500 dark:text-gray-400 mb-0.5">Current Plan</p>
+                      <p className="text-h2 font-bold text-gray-900 dark:text-white leading-tight">
                         {currentPlanName}
                       </p>
                     </div>
@@ -2035,7 +2074,7 @@ const MembershipBilling = ({ user }: { user: User }) => {
                   {currentPlanDetails?.features && (
                     <ul className="space-y-2 mb-4">
                       {currentPlanDetails.features.slice(0, 3).map((feature: string, idx: number) => (
-                        <li key={idx} className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
+                        <li key={idx} className="flex items-center gap-2 text-small text-gray-600 dark:text-gray-300">
                           <CheckCircle className="w-3.5 h-3.5 text-lime-500 shrink-0" />
                           {feature}
                         </li>
@@ -2050,7 +2089,7 @@ const MembershipBilling = ({ user }: { user: User }) => {
                     if (!endDate) return null;
 
                     return (
-                      <div className="flex justify-between items-center text-sm">
+                      <div className="flex justify-between items-center text-small">
                         <span className="text-gray-600 dark:text-gray-400 flex items-center gap-1.5">
                           <Calendar className="w-4 h-4" /> Renewal Date
                         </span>
@@ -2065,7 +2104,7 @@ const MembershipBilling = ({ user }: { user: User }) => {
                     
                     if (isFree) {
                       return (
-                        <div className="flex justify-between items-center text-sm">
+                        <div className="flex justify-between items-center text-small">
                           <span className="text-gray-600 dark:text-gray-400 flex items-center gap-1.5">
                             <DollarSign className="w-4 h-4" /> Price
                           </span>
@@ -2097,14 +2136,14 @@ const MembershipBilling = ({ user }: { user: User }) => {
 
                     return (
                       <div className="space-y-2">
-                        <div className="flex justify-between items-center text-sm">
+                        <div className="flex justify-between items-center text-small">
                           <span className="text-gray-600 dark:text-gray-400 flex items-center gap-1.5">
                             <DollarSign className="w-4 h-4" /> Price
                           </span>
                           <div>
                             {hasDiscount ? (
                               <div className="flex items-center gap-2">
-                                <span className="line-through text-xs text-gray-400">
+                                <span className="line-through text-small text-gray-400">
                                   {formatCurrency(originalAmount, displayCurrency)}
                                 </span>
                                 <span className="font-semibold text-green-600 dark:text-green-400">
@@ -2165,19 +2204,19 @@ const MembershipBilling = ({ user }: { user: User }) => {
                       <Star className="w-5 h-5 text-gray-700 dark:text-gray-300" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                      <h3 className="text-h3 font-bold text-gray-900 dark:text-white">
                         Upgrade Your Plan
                       </h3>
                     </div>
                   </div>
                   
-                  <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+                  <p className="text-small text-gray-600 dark:text-gray-300 mb-4">
                     Unlock premium features, priority support, and advanced AI-powered tools to accelerate your career.
                   </p>
                   
                   <ul className="space-y-2.5 mb-6">
                     {['Unlimited AI resume tailoring', 'Advanced cover letter generation', 'Priority support'].map((feature, idx) => (
-                      <li key={idx} className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
+                      <li key={idx} className="flex items-center gap-2 text-small text-gray-700 dark:text-gray-200">
                         <CheckCircle className="w-4 h-4 text-lime-500 shrink-0" />
                         {feature}
                       </li>
@@ -2189,7 +2228,7 @@ const MembershipBilling = ({ user }: { user: User }) => {
                   onClick={() => {
                     setIsMembershipModalOpen(true);
                   }}
-                  className="relative z-10 w-full py-2.5 px-4 bg-gray-900 hover:bg-gray-800 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-900 text-sm font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
+                  className="relative z-10 w-full py-2.5 px-4 bg-gray-900 hover:bg-gray-800 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-900 text-small font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
                 >
                   Upgrade Your Plan <ArrowRight className="w-4 h-4" />
                 </button>
@@ -2202,11 +2241,11 @@ const MembershipBilling = ({ user }: { user: User }) => {
         <div className="space-y-6 pt-6 border-t border-gray-200 dark:border-gray-800">
           <div className="glass-widget-premium p-6 rounded-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             <div className="space-y-1">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+              <h3 className="text-h3 font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                 <span className="w-2 h-2 bg-green-500 rounded-full animate-ping"></span>
                 Need Help with Billing or Account?
               </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-300">
+              <p className="text-small text-gray-600 dark:text-gray-300">
                 Ask Mori Assistant, our helpful virtual guide. Understand plans, ask about invoices, resolve account issues, or get in touch with our support teams.
               </p>
             </div>
@@ -2215,7 +2254,7 @@ const MembershipBilling = ({ user }: { user: User }) => {
                 localStorage.setItem('mori_assistant_active', 'true');
                 window.dispatchEvent(new CustomEvent('mori-assistant-toggle', { detail: true }));
               }}
-              className="py-2.5 px-6 bg-lime-500 hover:bg-lime-600 text-white font-semibold rounded-lg text-sm transition-colors text-center shadow-lg shadow-lime-500/20 whitespace-nowrap"
+              className="py-2.5 px-6 bg-lime-500 hover:bg-lime-600 text-white font-semibold rounded-lg text-small transition-colors text-center shadow-lg shadow-lime-500/20 whitespace-nowrap"
             >
               Chat with Mori Assistant
             </button>
@@ -2225,7 +2264,7 @@ const MembershipBilling = ({ user }: { user: User }) => {
         {/* Compare Plans Section */}
         {/* Payment History Section */}
         <div id="payment-history" className="space-y-6 pt-6 border-t border-gray-200 dark:border-gray-800">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+          <h3 className="text-h3 font-semibold text-gray-900 dark:text-white">
             Payment History
           </h3>
 
@@ -2258,12 +2297,12 @@ const MembershipBilling = ({ user }: { user: User }) => {
             <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
               <div className="flex items-center gap-2">
                 <XCircle className="w-5 h-5 text-red-500" />
-                <p className="text-red-700 dark:text-red-300 text-sm">
+                <p className="text-red-700 dark:text-red-300 text-small">
                   {invoicesError}
                 </p>
               </div>
               <button
-                className="mt-2 text-red-600 dark:text-red-400 text-sm hover:underline"
+                className="mt-2 text-red-600 dark:text-red-400 text-small hover:underline"
                 onClick={() => {
                   refetchBillingData();
                 }}
@@ -2279,11 +2318,11 @@ const MembershipBilling = ({ user }: { user: User }) => {
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="border-b border-gray-200 dark:border-gray-700/50 bg-gray-50/50 dark:bg-black/20">
-                      <th className="px-6 py-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Plan</th>
-                      <th className="px-6 py-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Upgrade Date</th>
-                      <th className="px-6 py-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total</th>
-                      <th className="px-6 py-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-                      <th className="px-6 py-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Invoice</th>
+                      <th className="px-6 py-4 text-small font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Plan</th>
+                      <th className="px-6 py-4 text-small font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Upgrade Date</th>
+                      <th className="px-6 py-4 text-small font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total</th>
+                      <th className="px-6 py-4 text-small font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                      <th className="px-6 py-4 text-small font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Invoice</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200 dark:divide-gray-700/50">
@@ -2295,27 +2334,27 @@ const MembershipBilling = ({ user }: { user: User }) => {
                               <Star className="w-4 h-4" />
                             </div>
                             <div>
-                              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                              <p className="text-small font-medium text-gray-900 dark:text-white">
                                 {invoice.planName || 'Subscription'}
                               </p>
-                              <p className="text-xs text-gray-500 dark:text-gray-400">
+                              <p className="text-small text-gray-500 dark:text-gray-400">
                                 {invoice.billingCycle || 'One-time'}
                               </p>
                             </div>
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <p className="text-sm text-gray-600 dark:text-gray-300">
+                          <p className="text-small text-gray-600 dark:text-gray-300">
                             {formatDate(invoice.createdAt || invoice.date)}
                           </p>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                          <p className="text-small font-semibold text-gray-900 dark:text-white">
                             {formatCurrency(invoice.amount, invoice.currency)}
                           </p>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-small font-medium capitalize
                             ${invoice.status === 'paid' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' :
                               invoice.status === 'pending' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400' :
                                 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'}`}>
@@ -2346,8 +2385,8 @@ const MembershipBilling = ({ user }: { user: User }) => {
               <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700/50 rounded-full flex items-center justify-center mx-auto mb-4">
                 <FileText className="w-8 h-8 text-gray-400 dark:text-gray-500" />
               </div>
-              <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No Payment History</h4>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-0">
+              <h4 className="text-h3 font-semibold text-gray-900 dark:text-white mb-2">No Payment History</h4>
+              <p className="text-small text-gray-500 dark:text-gray-400 mb-0">
                 You haven't made any purchases yet. Your payment history and invoices will appear here.
               </p>
             </div>
@@ -2409,15 +2448,50 @@ const getTabDescription = (tab: string) => {
   }
 };
 
+const SettingsPageShell = () => (
+  <div className="w-full min-w-0 overflow-x-hidden pb-20">
+    <div className="max-w-6xl mx-auto px-4 md:px-6 w-full min-w-0">
+      <div className="py-5">
+        <h1 className="text-h1 font-black text-gray-900 dark:text-white">Settings</h1>
+        <div className="mt-2 h-3 w-80 max-w-full rounded bg-gray-200 dark:bg-white/10 animate-pulse" />
+      </div>
+      <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
+        <div className="flex gap-6 overflow-hidden">
+          {settingsTabs.map((tab) => {
+            const IconComponent = tab.icon;
+            return (
+              <div key={tab.id} className="flex items-center gap-2 px-4 py-3 text-gray-600 dark:text-gray-300">
+                <IconComponent className="h-4 w-4" />
+                <span className="hidden sm:inline text-small font-medium">{tab.name}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      <AccountProfileSkeleton />
+    </div>
+  </div>
+);
+
 // Main Settings Content Component
 const SettingsContent = () => {
   const { user, loading: authLoading, isAuthenticated } = useUnifiedAuth();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { toggleSidebar, isOpen } = useMobileSidebar();
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState('account');
-  const [userData, setUserData] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const {
+    data: userData = null,
+    isPending: loading,
+    refetch: fetchUserData
+  } = useQuery({
+    queryKey: ['settings-user', user?.id || user?.email],
+    queryFn: fetchSettingsUserData,
+    enabled: !!user,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
+  });
 
   // Handle URL tab parameter
   useEffect(() => {
@@ -2426,32 +2500,6 @@ const SettingsContent = () => {
       setActiveTab(tab);
     }
   }, [searchParams]);
-
-  // Fetch user data from database
-  const fetchUserData = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch('/api/user');
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success && data.user) {
-          setUserData(data.user);
-        }
-      } else {
-        console.error('Failed to fetch user data');
-      }
-    } catch (error) {
-      console.error('Error fetching user data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (user) {
-      fetchUserData();
-    }
-  }, [user]);
 
   // Listen for user profile updates from other components
   useEffect(() => {
@@ -2464,7 +2512,7 @@ const SettingsContent = () => {
         fetchUserData();
       } else if (updatedUser) {
         console.log('🔄 Settings - Received user profile update:', updatedUser);
-        setUserData(prev => ({
+        queryClient.setQueryData(['settings-user', user?.id || user?.email], (prev: User | null) => ({
           ...prev,
           ...updatedUser,
         }));
@@ -2476,11 +2524,11 @@ const SettingsContent = () => {
     return () => {
       window.removeEventListener('userProfileUpdated', handleUserProfileUpdate as EventListener);
     };
-  }, []);
+  }, [fetchUserData, queryClient, user?.email, user?.id]);
 
   const handleSaveUser = (updatedUser: User) => {
     console.log('🔄 Settings - Updating local state with saved user data');
-    setUserData(updatedUser);
+    queryClient.setQueryData(['settings-user', user?.id || user?.email], updatedUser);
 
     // Dispatch custom event to notify other components of user data update
     window.dispatchEvent(new CustomEvent('userProfileUpdated', {
@@ -2494,17 +2542,17 @@ const SettingsContent = () => {
 
     switch (activeTab) {
       case 'account':
-        return loading || !userData ? <AccountProfileSkeleton /> : <AccountProfile user={userData} onSave={handleSaveUser} />;
+        return !userData ? <AccountProfileSkeleton /> : <AccountProfile user={userData} onSave={handleSaveUser} />;
       case 'security':
-        return loading || !userData ? <SecuritySkeleton /> : <SecurityAndNotifications user={userData} />;
+        return !userData ? <SecuritySkeleton /> : <SecurityAndNotifications user={userData} />;
       case 'membership':
-        return loading || !userData ? <MembershipSkeleton /> : <MembershipBilling user={userData} />;
+        return <MembershipBilling user={userData || user || { id: '', firstName: '', lastName: '', email: '' }} />;
       default:
         return (
           <div className="p-4 sm:p-6 lg:p-8 h-full min-w-0 max-w-full overflow-x-hidden">
             <div className="w-full min-w-0 max-w-full">
-              <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-4">Coming Soon</h3>
-              <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300">This section is currently under development.</p>
+              <h3 className="text-body sm:text-h3 font-semibold text-gray-900 dark:text-white mb-4">Coming Soon</h3>
+              <p className="text-small sm:text-body text-gray-600 dark:text-gray-300">This section is currently under development.</p>
             </div>
           </div>
         );
@@ -2577,7 +2625,7 @@ const SettingsContent = () => {
 export default function SettingsPage() {
   return (
     <ErrorBoundary>
-      <Suspense fallback={null}>
+      <Suspense fallback={<SettingsPageShell />}>
         <RouteGuard requireAuth={true}>
           <SettingsContent />
         </RouteGuard>

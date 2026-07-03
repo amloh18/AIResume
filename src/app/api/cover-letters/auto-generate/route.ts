@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
             // Let's rely on the frontend reloading or we can try to update the journey here.
 
             // Ideally, we'd use a Journey service. Since we don't have one handy in this file, let's do a fetch to update it?
-            // Or simpler: The user refreshes Step 4 and it sees the CL because `fetchCoverLetterStatus` in Step4Review 
+            // Or simpler: The user refreshes Step 5 and it sees the CL because `fetchCoverLetterStatus` in Step5Review 
             // does `fetch('/api/application-journey/' + journeyId)` and checks `coverLetterId`.
             // So we MUST update the Journey document.
         }

@@ -164,7 +164,7 @@ const CardNav = ({
             </div>
           </button>
 
-          <div className="nav-links">
+          <div className="nav-links" onMouseLeave={() => setHoveredLink(null)}>
             {links.map((link, index) => {
               const hasSubmenu = link.submenu && link.submenu.length > 0;
               const isHovered = hoveredLink === link.label;
@@ -174,7 +174,6 @@ const CardNav = ({
                   key={`${link.label}-${index}`}
                   className={`nav-link-wrapper ${hasSubmenu ? 'has-submenu' : ''} ${isHovered ? 'hovered' : ''}`}
                   onMouseEnter={() => hasSubmenu && setHoveredLink(link.label)}
-                  onMouseLeave={() => hasSubmenu && setHoveredLink(null)}
                 >
                   <button
                     className="nav-link"

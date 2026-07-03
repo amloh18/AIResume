@@ -93,8 +93,7 @@ const ListEntry = ({ collection, index, moveEntry, deleteEntry, children }: any)
   }
 
   return (
-    <motion.div
-      layout="position"
+    <div
       ref={entryRef}
       onClick={handleMoriClick}
       className={`${baseClass} ${hoverClass}`}
@@ -137,7 +136,7 @@ const ListEntry = ({ collection, index, moveEntry, deleteEntry, children }: any)
           </button>
       </div>
       {children}
-    </motion.div>
+    </div>
   );
 };
 

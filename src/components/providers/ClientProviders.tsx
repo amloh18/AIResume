@@ -1,6 +1,7 @@
 'use client';
 
 import { ReactNode, useEffect } from 'react';
+import { Toaster as HotToaster } from 'react-hot-toast';
 import SessionProvider from './SessionProvider';
 import { AuthProvider } from '@/contexts/AuthContext';
 // AdminAuthProvider removed - use NextAuth useSession() directly
@@ -18,6 +19,7 @@ import { Session } from 'next-auth';
 import ClientErrorBoundary from './ClientErrorBoundary';
 import FeaturePromotionProvider from '@/components/promotions/FeaturePromotionProvider';
 import AuthModal from '@/components/auth/AuthModal';
+import ReactQueryProvider from './ReactQueryProvider';
 
 interface ClientProvidersProps {
   children: ReactNode;
@@ -35,6 +37,7 @@ function ConditionalProviders({ children }: ClientProvidersProps) {
               <CookieConsent />
               <SessionCleanup />
               <Toaster />
+              <HotToaster />
               <AuthModal />
               {children}
             </FeaturePromotionProvider>
@@ -67,18 +70,20 @@ export default function ClientProviders({ children, session }: ClientProvidersPr
   }, []);
 
   return (
-    <SessionProvider session={session}>
-      {/* REFACTORED: Flattened provider nesting from 6 levels to 4 levels */}
-      {/* Removed AdminAuthProvider - now deprecated, use useSession() directly */}
-      <AuthProvider>
-        {/* NotificationProvider must be inside SessionProvider to use useSession */}
-        {/* Wrap NotificationProvider in error boundary to prevent crashes */}
-        <ClientErrorBoundary>
-          <NotificationProvider>
-            <ConditionalProviders>{children}</ConditionalProviders>
-          </NotificationProvider>
-        </ClientErrorBoundary>
-      </AuthProvider>
-    </SessionProvider>
+    <ReactQueryProvider>
+      <SessionProvider session={session}>
+        {/* REFACTORED: Flattened provider nesting from 6 levels to 4 levels */}
+        {/* Removed AdminAuthProvider - now deprecated, use useSession() directly */}
+        <AuthProvider>
+          {/* NotificationProvider must be inside SessionProvider to use useSession */}
+          {/* Wrap NotificationProvider in error boundary to prevent crashes */}
+          <ClientErrorBoundary>
+            <NotificationProvider>
+              <ConditionalProviders>{children}</ConditionalProviders>
+            </NotificationProvider>
+          </ClientErrorBoundary>
+        </AuthProvider>
+      </SessionProvider>
+    </ReactQueryProvider>
   );
 }

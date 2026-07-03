@@ -66,6 +66,7 @@
     "@radix-ui/react-toast": "^1.2.15",
     "@radix-ui/react-tooltip": "^1.2.8",
     "@sentry/nextjs": "^10.53.1",
+    "@tanstack/react-query": "^5.101.2",
     "@tiptap/extension-bubble-menu": "^3.21.0",
     "@tiptap/extension-placeholder": "^3.10.4",
     "@tiptap/extension-text-align": "^3.10.4",
@@ -160,6 +161,7 @@
     "tesseract.js": "6.0.1"
   },
   "devDependencies": {
+    "@tailwindcss/container-queries": "^0.1.1",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.1.0",
     "@types/mime": "^3.0.4",

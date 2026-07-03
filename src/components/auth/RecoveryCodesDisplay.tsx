@@ -85,10 +85,10 @@ export default function RecoveryCodesDisplay({
                 <CheckCircle className="w-5 h-5 text-[#88E03F]" />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                <h2 className="text-h3 font-bold text-gray-900 dark:text-white">
                   Recovery Codes
                 </h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
+                <p className="text-small text-gray-500 dark:text-gray-400">
                   Save these codes securely
                 </p>
               </div>
@@ -100,10 +100,10 @@ export default function RecoveryCodesDisplay({
             <div className="flex gap-3">
               <AlertCircle className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                <p className="text-small font-medium text-yellow-800 dark:text-yellow-200">
                   Important Security Notice
                 </p>
-                <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
+                <p className="text-small text-yellow-700 dark:text-yellow-300 mt-1">
                   Store these codes in a secure location (like a password manager). 
                   Do not screenshot or save to cloud storage. Each code can only be used once.
                 </p>
@@ -115,12 +115,12 @@ export default function RecoveryCodesDisplay({
           <div className="p-6">
             <div className="bg-gray-50 dark:bg-[#1a1a1a]/50 rounded-none border border-gray-200 dark:border-white/10 p-4 mb-4">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                <span className="text-small font-medium text-gray-600 dark:text-gray-400">
                   Your Recovery Codes
                 </span>
                 <button
                   onClick={() => setShowCodes(!showCodes)}
-                  className="flex items-center gap-1 text-sm text-[#88E03F] hover:text-[#88E03F]/80 transition-colors"
+                  className="flex items-center gap-1 text-small text-[#88E03F] hover:text-[#88E03F]/80 transition-colors"
                 >
                   {showCodes ? (
                     <><EyeOff className="w-4 h-4" /> Hide</>
@@ -133,7 +133,7 @@ export default function RecoveryCodesDisplay({
                 {codes.map((code, index) => (
                   <div
                     key={index}
-                    className={`p-3 rounded-none border border-gray-200 dark:border-gray-700 text-center font-mono text-lg ${
+                    className={`p-3 rounded-none border border-gray-200 dark:border-gray-700 text-center font-mono text-h3 ${
                       showCodes ? 'text-gray-900 dark:text-white' : 'text-gray-400'
                     }`}
                   >
@@ -150,7 +150,7 @@ export default function RecoveryCodesDisplay({
                 className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-none border-2 border-gray-200 dark:border-white/10 hover:border-[#88E03F] hover:text-[#88E03F] transition-all duration-200 group"
               >
                 <Copy className={`w-4 h-4 ${copied ? 'text-[#88E03F]' : ''}`} />
-                <span className="text-sm font-medium">
+                <span className="text-small font-medium">
                   {copied ? 'Copied!' : 'Copy Codes'}
                 </span>
               </button>
@@ -159,7 +159,7 @@ export default function RecoveryCodesDisplay({
                 className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-none border-2 border-gray-200 dark:border-white/10 hover:border-[#88E03F] hover:text-[#88E03F] transition-all duration-200 group"
               >
                 <Download className={`w-4 h-4 ${downloaded ? 'text-[#88E03F]' : ''}`} />
-                <span className="text-sm font-medium">
+                <span className="text-small font-medium">
                   {downloaded ? 'Downloaded!' : 'Download'}
                 </span>
               </button>
@@ -174,7 +174,7 @@ export default function RecoveryCodesDisplay({
                   onChange={(e) => setHasConfirmed(e.target.checked)}
                   className="mt-1 w-4 h-4 text-[#88E03F] border-gray-300 dark:border-gray-600 rounded-none focus:ring-[#88E03F]"
                 />
-                <span className="text-sm text-gray-600 dark:text-gray-400">
+                <span className="text-small text-gray-600 dark:text-gray-400">
                   I have saved these recovery codes in a secure location and understand that each code can only be used once.
                 </span>
               </label>
@@ -186,7 +186,7 @@ export default function RecoveryCodesDisplay({
             <div className="flex gap-3">
               <button
                 onClick={onRegenerate}
-                className="flex-1 px-4 py-3 rounded-none border-2 border-gray-200 dark:border-white/10 hover:border-red-500 hover:text-red-500 transition-all duration-200 text-sm font-medium"
+                className="flex-1 px-4 py-3 rounded-none border-2 border-gray-200 dark:border-white/10 hover:border-red-500 hover:text-red-500 transition-all duration-200 text-small font-medium"
               >
                 Regenerate Codes
               </button>

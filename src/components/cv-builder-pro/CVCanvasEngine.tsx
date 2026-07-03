@@ -2,7 +2,8 @@
 
 
 import React, { useState, useEffect, useImperativeHandle, forwardRef, useMemo, useCallback } from 'react';
-import { GripVertical, Download, Plus, LayoutTemplate, Save, RefreshCw, Layers, Check, Search, Filter, Briefcase, PlusCircle, Trash2, ChevronUp, ChevronDown, ImageIcon, ArrowRight, Loader2, PlayCircle, Eye, MousePointer2, Wand2, Quote, FileText, Palette, FileJson, X, Sparkles, Copy, CopyCheck, AlertCircle } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { GripVertical, Download, Plus, LayoutTemplate, Save, RefreshCw, Layers, Check, Search, Filter, Briefcase, PlusCircle, Trash2, ChevronUp, ChevronDown, ImageIcon, ArrowRight, Loader2, PlayCircle, Eye, MousePointer2, Wand2, Quote, FileText, Palette, FileJson, X, Sparkles, Copy, CopyCheck, AlertCircle, Undo, Redo } from 'lucide-react';
 import { CANVAS_TEMPLATES, TEMPLATE_CATEGORIES, SNIPPETS, TITLE_STYLES, SNIPPET_FAMILIES, ATS_SNIPPETS } from './registry';
 import { EditableField, CanvasSnippet, CanvasZone, StaticLayoutRenderer, FloatingToolbar, CanvasContext } from './components/CoreUI';
 import { JSONSidebarViewer } from './components/JSONSidebarViewer';
@@ -13,9 +14,42 @@ import { analyzeText } from '@/lib/grammar/engine';
 import { computeCanvasLayoutMetrics } from './layout-utils';
 import { DEFAULT_UNIFIED_CV_DATA } from '@/types/unified-cv-schema';
 import { useUserData } from '@/lib/hooks/useUserData';
-
+import { useCanvasFit } from '@/hooks/useCanvasFit';
+import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
+import UtilityPanelPill from '@/components/resume-enhancer/components/UtilityPanelPill';
 const ReadOnlyWrapper = (props: any) => <EditableField {...props} readOnly={true} />;
 const EditableWrapper = EditableField;
+
+const LIST_SNIPPET_CATEGORIES = ['Experience', 'Education', 'Projects', 'Certifications', 'Awards', 'Publications', 'Volunteer', 'References'];
+
+const getCollectionNameForCategory = (category?: string) => {
+  const key = (category || '').toLowerCase();
+  const collectionMap: Record<string, string> = {
+    experience: 'experience',
+    education: 'education',
+    projects: 'projects',
+    certifications: 'certifications',
+    awards: 'awards',
+    publications: 'publications',
+    volunteer: 'volunteer',
+    references: 'references',
+  };
+
+  return collectionMap[key] || key;
+};
+
+const createDefaultListEntry = (category?: string) => {
+  const key = getCollectionNameForCategory(category);
+  if (key === 'experience') return { id: generateId(), company: 'New Company', role: 'Job Title', date: 'Date', description: '<ul><li>Describe your responsibilities and achievements here.</li></ul>' };
+  if (key === 'education') return { id: generateId(), institution: 'Institution Name', degree: 'Degree', date: 'Date', description: 'Additional details.' };
+  if (key === 'projects') return { id: generateId(), name: 'Project Name', role: 'Role', date: 'Date', description: '<ul><li>Project details.</li></ul>' };
+  if (key === 'certifications') return { id: generateId(), name: 'Certification Name', issuer: 'Issuer', date: 'Date' };
+  if (key === 'awards') return { id: generateId(), name: 'Award Name', issuer: 'Issuer', date: 'Date' };
+  if (key === 'publications') return { id: generateId(), title: 'Publication Title', publisher: 'Publisher', date: 'Date', description: 'Brief summary.' };
+  if (key === 'volunteer') return { id: generateId(), organization: 'Org Name', role: 'Role', date: 'Date', description: '<ul><li>Duties here.</li></ul>' };
+  if (key === 'references') return { id: generateId(), name: 'Ref Name', role: 'Role', contact: 'Contact Info' };
+  return null;
+};
 
 // PROPS AND REF INTERFACE
 // ==========================================
@@ -111,14 +145,14 @@ const FloatingAICard = ({ pointSuggestion, setPointSuggestion, handleFetchSugges
         <div className="flex px-5 pt-4 gap-4 border-b border-white/5">
           <button 
             onClick={() => setActiveTab('improvement')}
-            className={`pb-3 text-xs font-bold tracking-wide transition-all relative ${activeTab === 'improvement' ? 'text-emerald-400' : 'text-gray-500 hover:text-gray-300'}`}
+            className={`pb-3 text-small font-bold tracking-wide transition-all relative ${activeTab === 'improvement' ? 'text-emerald-400' : 'text-gray-500 hover:text-gray-300'}`}
           >
             IMPROVEMENT
             {activeTab === 'improvement' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-400 rounded-full" />}
           </button>
           <button 
             onClick={() => setActiveTab('original')}
-            className={`pb-3 text-xs font-bold tracking-wide transition-all relative ${activeTab === 'original' ? 'text-emerald-400' : 'text-gray-500 hover:text-gray-300'}`}
+            className={`pb-3 text-small font-bold tracking-wide transition-all relative ${activeTab === 'original' ? 'text-emerald-400' : 'text-gray-500 hover:text-gray-300'}`}
           >
             ORIGINAL
             {activeTab === 'original' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-400 rounded-full" />}
@@ -138,7 +172,7 @@ const FloatingAICard = ({ pointSuggestion, setPointSuggestion, handleFetchSugges
         ) : pointSuggestion.error === 'usage_limit_reached' ? (
           <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 flex gap-3">
             <AlertCircle className="text-red-400 shrink-0" size={20} />
-            <div className="text-sm text-red-100 leading-relaxed">
+            <div className="text-small text-red-100 leading-relaxed">
               <span className="font-bold block mb-1">Limit Reached</span>
               Upgrade to Pro for unlimited AI-powered contextual suggestions and career coaching.
               <button
@@ -157,7 +191,7 @@ const FloatingAICard = ({ pointSuggestion, setPointSuggestion, handleFetchSugges
             </div>
           </div>
         ) : pointSuggestion.error ? (
-          <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 text-sm text-red-400 flex items-center gap-2">
+          <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 text-small text-red-400 flex items-center gap-2">
             <AlertCircle size={16} /> {pointSuggestion.error}
           </div>
         ) : (
@@ -184,15 +218,15 @@ const FloatingAICard = ({ pointSuggestion, setPointSuggestion, handleFetchSugges
           <div className="flex flex-col gap-2">
             <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Targeted Refinement</p>
             <div className="flex flex-wrap gap-2">
-              <button onClick={() => handleFetchSuggestion('star')} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 rounded-lg text-xs font-bold transition-all border border-blue-500/20"><Sparkles size={12}/> STAR Method</button>
-              <button onClick={() => handleFetchSuggestion('quantify')} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 rounded-lg text-xs font-bold transition-all border border-purple-500/20"># Quantify</button>
-              <button onClick={() => handleFetchSuggestion('concise')} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 rounded-lg text-xs font-bold transition-all border border-orange-500/20">✂️ Concise</button>
-              <button onClick={() => handleFetchSuggestion('action_verbs')} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-lg text-xs font-bold transition-all border border-emerald-500/20">🚀 Power Verbs</button>
+              <button onClick={() => handleFetchSuggestion('star')} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 rounded-lg text-small font-bold transition-all border border-blue-500/20"><Sparkles size={12}/> STAR Method</button>
+              <button onClick={() => handleFetchSuggestion('quantify')} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 rounded-lg text-small font-bold transition-all border border-purple-500/20"># Quantify</button>
+              <button onClick={() => handleFetchSuggestion('concise')} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 rounded-lg text-small font-bold transition-all border border-orange-500/20">✂️ Concise</button>
+              <button onClick={() => handleFetchSuggestion('action_verbs')} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-lg text-small font-bold transition-all border border-emerald-500/20">🚀 Power Verbs</button>
               
               <div className="relative inline-block">
                 <select 
                   onChange={(e) => handleFetchSuggestion('tone', e.target.value)} 
-                  className="bg-white/5 hover:bg-white/10 text-xs text-gray-300 border border-white/10 rounded-lg px-2.5 py-1.5 outline-none focus:border-emerald-500/50 appearance-none cursor-pointer pr-7 font-bold transition-all"
+                  className="bg-white/5 hover:bg-white/10 text-small text-gray-300 border border-white/10 rounded-lg px-2.5 py-1.5 outline-none focus:border-emerald-500/50 appearance-none cursor-pointer pr-7 font-bold transition-all"
                 >
                   <option value="">🎭 Tone...</option>
                   <option value="Professional">Professional</option>
@@ -206,7 +240,7 @@ const FloatingAICard = ({ pointSuggestion, setPointSuggestion, handleFetchSugges
           </div>
 
           <div className="flex gap-3 pt-4 border-t border-white/5">
-            <button onClick={() => setPointSuggestion(null)} className="flex-1 px-4 py-2.5 text-sm font-bold rounded-xl bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white transition-all">Cancel</button>
+            <button onClick={() => setPointSuggestion(null)} className="flex-1 px-4 py-2.5 text-small font-bold rounded-xl bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white transition-all">Cancel</button>
             <button 
               onClick={() => { 
                 const currentHtml = getNestedValue(cvData, pointSuggestion.path) || ''; 
@@ -219,7 +253,7 @@ const FloatingAICard = ({ pointSuggestion, setPointSuggestion, handleFetchSugges
                 handleDataChange(pointSuggestion.path, newHtml); 
                 setPointSuggestion(null); 
               }} 
-              className="flex-[1.5] px-4 py-2.5 text-sm font-bold rounded-xl shadow-[0_4px_20px_rgba(126,231,135,0.2)] bg-emerald-400 text-[#0a0a0a] hover:bg-emerald-300 active:scale-[0.98] transition-all"
+              className="flex-[1.5] px-4 py-2.5 text-small font-bold rounded-xl shadow-[0_4px_20px_rgba(126,231,135,0.2)] bg-emerald-400 text-[#0a0a0a] hover:bg-emerald-300 active:scale-[0.98] transition-all"
             >
               Accept & Add Bullet
             </button>
@@ -333,102 +367,161 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
   const [focusedNode, setFocusedNode] = useState<HTMLElement | null>(null);
   const [zones, setZones] = useState<Record<string, any[]>>(() => {
     const raw: Record<string, any[]> = cvData?.metadata?.canvasZones || {};
+    // Deduplicate blocks within each zone to prevent React duplicate-key warnings
     const deduped: Record<string, any[]> = {};
-    const globallySeen = new Set<string>(); // Prevent duplicate blocks across all zones
-    
     Object.keys(raw).forEach(zoneId => {
-      // Clean up old paginated keys from database
-      if (zoneId.includes('_page_')) return;
-      
       const seen = new Set<string>();
       deduped[zoneId] = (raw[zoneId] || []).filter((block: any) => {
-        if (!block?.id || seen.has(block.id) || globallySeen.has(block.id)) return false;
+        if (!block?.id || seen.has(block.id)) return false;
         seen.add(block.id);
-        globallySeen.add(block.id);
         return true;
       });
     });
     return deduped;
   });
   const [templateAnimKey, setTemplateAnimKey] = useState(0);
-  const [design, setDesign] = useState(cvData?.metadata?.canvasDesign || { font: 'Inter', fontSize: 12, spacing: 1.0, accentColor: '#22c55e', pageMargin: 40, showContactIcons: true, showHeaderIcons: true, headerLinks: {} as Record<string, boolean>, sidebarBgColor: '#f8fafc', sectionGap: 16, pageSize: 'A4' as 'A4' | 'Letter', dateFormat: 'MMM YYYY' });
+  const [design, setDesign] = useState(cvData?.metadata?.canvasDesign || { 
+    font: 'Inter', 
+    fontSize: 12, 
+    spacing: 1.0, 
+    accentColor: '#22c55e', 
+    pageMargin: 40, 
+    showContactIcons: true, 
+    showHeaderIcons: true, 
+    headerLinks: {} as Record<string, boolean>, 
+    sidebarBgColor: '#f8fafc', 
+    sectionGap: 16, 
+    itemGap: 12, // Gap between items/child containers
+    pageSize: 'A4' as 'A4' | 'Letter', 
+    dateFormat: 'MMM YYYY',
+    splitContactInSidebar: false
+  });
   const [activeSidebar, setActiveSidebar] = useState<string | null>(null);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [replacingSnippet, setReplacingSnippet] = useState<any>(null);
   const [dragState, setDragState] = useState<any>({ isDragging: false, sourceZoneId: null, sourceIndex: null, overZoneId: null, overIndex: null });
   const [dragPreview, setDragPreview] = useState<any>(null);
+  const dragDroppedRef = React.useRef(false); // track if a valid drop occurred
+  const dragPreviewRef = React.useRef<any>(null); // stable ref to dragPreview for closure access
   const [scanning, setScanning] = useState(false);
-  const [zoom, setZoom] = useState(100);
+  const { state: enhancerState, dispatch: enhancerDispatch } = useResumeEnhancer();
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        if (e.shiftKey) {
+          enhancerDispatch({ type: 'REDO' });
+        } else {
+          enhancerDispatch({ type: 'UNDO' });
+        }
+      } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'y') {
+        e.preventDefault();
+        enhancerDispatch({ type: 'REDO' });
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [enhancerDispatch]);
+
+  // Keep dragPreviewRef in sync with dragPreview state for closure access
+  useEffect(() => {
+    dragPreviewRef.current = dragPreview;
+  }, [dragPreview]);
+
+  // Use the new smart auto-scaling hook
+  const { containerRef: workspaceRef, zoom, setZoom, isAutoFit, triggerAutoFit } = useCanvasFit({
+    documentPixelWidth: 794, // Standard A4 width in pixels
+    paddingPx: 64, // 32px padding per side
+    maxScale: 2.0,
+    minScale: 0.5
+  });
+
+  // Handle Ctrl/Cmd + Wheel to zoom the canvas area specifically, not the window
+  useEffect(() => {
+    const workspace = workspaceRef.current;
+    if (!workspace) return;
+
+    let accumulatedDelta = 0;
+
+    const handleWheel = (e: WheelEvent) => {
+      // If Ctrl or Cmd is held during wheel scroll, it's a zoom gesture/shortcut
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        
+        // Accumulate delta for a threshold-based jump
+        accumulatedDelta += -e.deltaY;
+        
+        // Use a threshold to determine when to jump by 10 points
+        // 50 is a good middle ground for both mouse wheels and trackpads
+        if (Math.abs(accumulatedDelta) >= 50) {
+          const direction = Math.sign(accumulatedDelta);
+          setZoom((prev: number) => {
+            // Jump by exactly 10 points
+            const next = prev + (direction * 10);
+            // Snap to nearest 10 for clean integer values
+            const snapped = Math.round(next / 10) * 10;
+            return Math.min(200, Math.max(50, snapped));
+          });
+          // Reset accumulator after a jump
+          accumulatedDelta = 0;
+        }
+      }
+    };
+
+    // Use { passive: false } to allow e.preventDefault()
+    workspace.addEventListener('wheel', handleWheel, { passive: false });
+    return () => {
+      workspace.removeEventListener('wheel', handleWheel);
+    };
+  }, [setZoom]);
+
   const [totalPagesCount, setTotalPagesCount] = useState(1);
   const [pageAssignments, setPageAssignments] = useState<Record<string, number>>({});
-  const [emptyZonePages, setEmptyZonePages] = useState<Record<string, number>>({});
   const [viewport, setViewport] = useState(() => ({
     width: typeof window === 'undefined' ? 1440 : window.innerWidth,
     height: typeof window === 'undefined' ? 1080 : window.innerHeight,
     devicePixelRatio: typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1,
   }));
 
-  const workspaceRef = React.useRef<HTMLDivElement>(null);
-
+  // Sync local state with cvData prop changes (external updates like "Fix Now" or "Mori Chat")
   useEffect(() => {
-    const workspace = workspaceRef.current;
-    if (!workspace) return;
+    if (!cvData) return;
 
-    const handleWheel = (e: WheelEvent) => {
-      if (e.ctrlKey) {
-        e.preventDefault();
-        setZoom(prev => {
-          const delta = -e.deltaY * 0.5;
-          const newZoom = Math.min(200, Math.max(50, prev + delta));
-          return Math.round(newZoom);
+    // 1. Sync zones if metadata changed externally
+    if (cvData.metadata?.canvasZones) {
+      const raw = cvData.metadata.canvasZones;
+      const currentZonesStr = JSON.stringify(zones);
+      const nextZonesStr = JSON.stringify(raw);
+      
+      if (currentZonesStr !== nextZonesStr) {
+        const deduped: Record<string, any[]> = {};
+        Object.keys(raw).forEach(zoneId => {
+          const seen = new Set<string>();
+          deduped[zoneId] = (raw[zoneId] || []).filter((block: any) => {
+            if (!block?.id || seen.has(block.id)) return false;
+            seen.add(block.id);
+            return true;
+          });
         });
+        setZones(deduped);
       }
-    };
+    }
 
-    let initialDistance = 0;
-    let initialZoom = 100;
-
-    const getDistance = (touches: TouchList) => {
-      if (touches.length < 2) return 0;
-      const dx = touches[0].clientX - touches[1].clientX;
-      const dy = touches[0].clientY - touches[1].clientY;
-      return Math.sqrt(dx * dx + dy * dy);
-    };
-
-    const handleTouchStart = (e: TouchEvent) => {
-      if (e.touches.length === 2) {
-        e.preventDefault();
-        initialDistance = getDistance(e.touches);
-        initialZoom = zoom;
+    // 2. Sync design if metadata changed externally
+    if (cvData.metadata?.canvasDesign) {
+      const currentDesignStr = JSON.stringify(design);
+      const nextDesignStr = JSON.stringify(cvData.metadata.canvasDesign);
+      if (currentDesignStr !== nextDesignStr) {
+        setDesign(cvData.metadata.canvasDesign);
       }
-    };
+    }
 
-    const handleTouchMove = (e: TouchEvent) => {
-      if (e.touches.length === 2 && initialDistance > 0) {
-        e.preventDefault();
-        const currentDistance = getDistance(e.touches);
-        const ratio = currentDistance / initialDistance;
-        const newZoom = Math.min(200, Math.max(50, initialZoom * ratio));
-        setZoom(Math.round(newZoom));
-      }
-    };
-
-    const handleTouchEnd = () => {
-      initialDistance = 0;
-    };
-
-    workspace.addEventListener('wheel', handleWheel, { passive: false });
-    workspace.addEventListener('touchstart', handleTouchStart, { passive: false });
-    workspace.addEventListener('touchmove', handleTouchMove, { passive: false });
-    workspace.addEventListener('touchend', handleTouchEnd);
-
-    return () => {
-      workspace.removeEventListener('wheel', handleWheel);
-      workspace.removeEventListener('touchstart', handleTouchStart);
-      workspace.removeEventListener('touchmove', handleTouchMove);
-      workspace.removeEventListener('touchend', handleTouchEnd);
-    };
-  }, [zoom]);
+    // 3. Sync active template if metadata changed externally
+    if (cvData.metadata?.canvasTemplate && cvData.metadata.canvasTemplate.id !== activeTemplate.id) {
+      setActiveTemplate(cvData.metadata.canvasTemplate);
+    }
+  }, [cvData.metadata]);
 
   useEffect(() => {
     if (template && template.id !== activeTemplate.id && !cvData?.metadata?.canvasTemplate) {
@@ -460,6 +553,50 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
 
     return () => clearTimeout(timer);
   }, [design, activeTemplate, zones, readOnly]);
+
+  useEffect(() => {
+    if (readOnly) return;
+    const handleSetSidebar = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      setActiveSidebar(active => active === detail ? null : detail);
+      setIsTemplateModalOpen(false);
+    };
+    const handleOpenTemplates = () => {
+      setIsTemplateModalOpen(true);
+      setActiveSidebar(null);
+    };
+    const handleCloseUtility = () => {
+      setActiveSidebar(null);
+      setIsTemplateModalOpen(false);
+    };
+    const handleOpenMori = () => {
+      setActiveSidebar(null);
+      setIsTemplateModalOpen(false);
+    };
+    const handleZoomIn = () => setZoom((z: number) => Math.min(200, z + 10));
+    const handleZoomOut = () => setZoom((z: number) => Math.max(50, z - 10));
+    const handleTogglePageSize = () => {
+      setDesign((d: any) => ({ ...d, pageSize: d.pageSize === 'A4' ? 'Letter' : 'A4' }));
+    };
+
+    window.addEventListener('set-builder-sidebar', handleSetSidebar);
+    window.addEventListener('open-templates', handleOpenTemplates);
+    window.addEventListener('close-utility-panel', handleCloseUtility);
+    window.addEventListener('open-mori-chat', handleOpenMori);
+    window.addEventListener('canvas-zoom-in', handleZoomIn);
+    window.addEventListener('canvas-zoom-out', handleZoomOut);
+    window.addEventListener('canvas-toggle-page-size', handleTogglePageSize);
+    return () => {
+      window.removeEventListener('set-builder-sidebar', handleSetSidebar);
+      window.removeEventListener('open-templates', handleOpenTemplates);
+      window.removeEventListener('close-utility-panel', handleCloseUtility);
+      window.removeEventListener('open-mori-chat', handleOpenMori);
+      window.removeEventListener('canvas-zoom-in', handleZoomIn);
+      window.removeEventListener('canvas-zoom-out', handleZoomOut);
+      window.removeEventListener('canvas-toggle-page-size', handleTogglePageSize);
+    };
+  }, [readOnly]);
+
   const [aiIssues, setAiIssues] = useState<any[]>([]);
   const [grammarIssues, setGrammarIssues] = useState<any[]>([]);
   const [activeIssueId, setActiveIssueId] = useState<string | null>(null);
@@ -550,6 +687,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
       loadTemplate(template || CANVAS_TEMPLATES[0]);
     }
     const handleDragStart = (e: any) => {
+      dragDroppedRef.current = false;
       setDragState((prev: any) => ({ ...prev, isDragging: true, sourceZoneId: e.detail.zoneId, sourceIndex: e.detail.index }));
       setDragPreview({
         markup: e.detail.previewMarkup,
@@ -558,25 +696,97 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
         label: e.detail.label || 'Section',
         x: e.detail.pointer?.x || 0,
         y: e.detail.pointer?.y || 0,
+        sourceZoneId: e.detail.zoneId,
+        sourceIndex: e.detail.index,
+        sourceInstance: e.detail.instance,
       });
     };
     const handleDragOver = (e: any) => setDragState((prev: any) => ({ ...prev, overZoneId: e.detail.zoneId, overIndex: e.detail.index }));
     const handleDragEnd = () => {
+      // If no valid drop happened, restore to original position (abandon)
+      if (!dragDroppedRef.current && dragPreviewRef.current) {
+        const { sourceZoneId, sourceIndex, sourceInstance } = dragPreviewRef.current;
+        if (sourceZoneId && sourceIndex !== null && sourceInstance) {
+          setZones(prev => {
+            const newZones = { ...prev };
+            const list = [...(newZones[sourceZoneId] || [])];
+            // Only restore if the item is missing (was removed during drag display)
+            const exists = list.some(b => b.id === sourceInstance.id);
+            if (!exists) {
+              list.splice(sourceIndex, 0, sourceInstance);
+              newZones[sourceZoneId] = list;
+            }
+            return newZones;
+          });
+        }
+      }
       setDragState({ isDragging: false, sourceZoneId: null, sourceIndex: null, overZoneId: null, overIndex: null });
       setDragPreview(null);
+      dragDroppedRef.current = false;
     };
     const handleWindowDragOver = (event: DragEvent) => {
       setDragPreview((prev: any) => prev ? { ...prev, x: event.clientX, y: event.clientY } : prev);
     };
+    // Touch drag support
+    const handleTouchDragOver = (event: TouchEvent) => {
+      if (!dragPreviewRef.current) return;
+      const touch = event.touches[0];
+      setDragPreview((prev: any) => prev ? { ...prev, x: touch.clientX, y: touch.clientY } : prev);
+      // Find which canvas zone is under finger
+      const el = document.elementFromPoint(touch.clientX, touch.clientY);
+      if (el) {
+        const zoneEl = el.closest('[data-zone-id]') as HTMLElement | null;
+        if (zoneEl) {
+          const zoneId = zoneEl.getAttribute('data-zone-id');
+          const blocks = zoneEl.querySelectorAll('[data-block-id]');
+          let overIndex = blocks.length;
+          blocks.forEach((block, i) => {
+            const rect = block.getBoundingClientRect();
+            const mid = rect.top + rect.height / 2;
+            if (touch.clientY < mid && overIndex === blocks.length) overIndex = i;
+          });
+          if (zoneId) document.dispatchEvent(new CustomEvent('snippet-drag-over', { detail: { zoneId, index: overIndex } }));
+        }
+      }
+    };
+    const handleTouchDragEnd = (event: TouchEvent) => {
+      const touch = event.changedTouches[0];
+      const el = document.elementFromPoint(touch.clientX, touch.clientY);
+      if (el) {
+        const zoneEl = el.closest('[data-zone-id]') as HTMLElement | null;
+        if (zoneEl && dragPreviewRef.current) {
+          const zoneId = zoneEl.getAttribute('data-zone-id')!;
+          const { sourceZoneId, sourceIndex, sourceInstance } = dragPreviewRef.current;
+          if (sourceZoneId && sourceInstance) {
+            dragDroppedRef.current = true;
+            document.dispatchEvent(new CustomEvent('snippet-touch-drop', {
+              detail: { zoneId, sourceZoneId, sourceIndex, sourceInstance }
+            }));
+          }
+        }
+      }
+      document.dispatchEvent(new CustomEvent('snippet-drag-end'));
+    };
+    const handleTouchDrop = (e: any) => {
+      const { zoneId: targetZoneId, sourceZoneId, sourceIndex, sourceInstance } = e.detail;
+      const dropIdx = dragState?.overIndex ?? undefined;
+      handleZoneDrop(targetZoneId, { source: 'canvas', zoneId: sourceZoneId, index: sourceIndex, instance: sourceInstance }, dropIdx ?? 9999);
+    };
     document.addEventListener('snippet-drag-start', handleDragStart);
     document.addEventListener('snippet-drag-over', handleDragOver);
     document.addEventListener('snippet-drag-end', handleDragEnd);
+    document.addEventListener('snippet-touch-drop', handleTouchDrop);
     window.addEventListener('dragover', handleWindowDragOver);
+    window.addEventListener('touchmove', handleTouchDragOver, { passive: true });
+    window.addEventListener('touchend', handleTouchDragEnd, { passive: true });
     return () => {
       document.removeEventListener('snippet-drag-start', handleDragStart);
       document.removeEventListener('snippet-drag-over', handleDragOver);
       document.removeEventListener('snippet-drag-end', handleDragEnd);
+      document.removeEventListener('snippet-touch-drop', handleTouchDrop);
       window.removeEventListener('dragover', handleWindowDragOver);
+      window.removeEventListener('touchmove', handleTouchDragOver);
+      window.removeEventListener('touchend', handleTouchDragEnd);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -596,7 +806,10 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
       });
     }
     setZones(initialZones);
-    setIsTemplateModalOpen(false);
+    const portalTarget = typeof document !== 'undefined' && document.getElementById('builder-utility-panel-portal');
+    if (!portalTarget) {
+      setIsTemplateModalOpen(false);
+    }
     setTemplateAnimKey(prev => prev + 1);
     if (onTemplateChange) onTemplateChange(template);
   };
@@ -715,6 +928,10 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
         cvContext: { path, text: originalText, sectionName }
       }
     }));
+    window.dispatchEvent(new CustomEvent('mori-cv-selection', {
+      detail: { path, text: `(${sectionName}): ${originalText}` }
+    }));
+    window.dispatchEvent(new CustomEvent('open-mori-chat'));
   };
 
   useEffect(() => {
@@ -830,6 +1047,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
   }, []);
 
   const handleZoneDrop = (targetZoneId: string, dragData: any, targetIndex: number) => {
+    dragDroppedRef.current = true; // mark as a successful drop
     setZones(prev => {
       if (!isSnippetDropAllowed(targetZoneId, dragData)) {
         return prev;
@@ -898,7 +1116,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
   const handleAddClick = (zoneId: string, insertIndex?: number) => setReplacingSnippet({ zoneId, isAdd: true, insertIndex });
 
   const handleAddListEntry = (type: string) => {
-    const l = type.toLowerCase();
+    const l = getCollectionNameForCategory(type);
     const updated = { ...cvData };
     if (l === 'experience') updated.experience = [...(updated.experience || []), { id: generateId(), company: 'New Company', role: 'Job Title', date: 'Date', description: '<ul><li>Describe your responsibilities and achievements here.</li></ul>' }];
     else if (l === 'education') updated.education = [...(updated.education || []), { id: generateId(), institution: 'Institution Name', degree: 'Degree', date: 'Date', description: 'Additional details.' }];
@@ -911,22 +1129,9 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     onDataChange(updated);
   };
 
-  const isExecutingRef = React.useRef(false);
   const executeReplaceOrAdd = (newType: string) => {
-    if (!replacingSnippet || isExecutingRef.current) return;
-    isExecutingRef.current = true;
-    
-    // Safety check to prevent duplicate categories when adding
-    const category = SNIPPETS[newType]?.category;
-    if (replacingSnippet.isAdd && category) {
-      const currentCategories = Object.values(zones).flat().map((z: any) => SNIPPETS[z.type]?.category).filter(Boolean);
-      if (currentCategories.includes(category)) {
-        setReplacingSnippet(null);
-        isExecutingRef.current = false;
-        return;
-      }
-    }
-
+    if (!replacingSnippet) return;
+    const snippetDef = SNIPPETS[newType];
     setZones(prev => {
       const newZones = { ...prev };
       if (!newZones[replacingSnippet.zoneId]) {
@@ -944,13 +1149,23 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
       }
       return newZones;
     });
-    setReplacingSnippet(null);
-    setTimeout(() => {
-      isExecutingRef.current = false;
-    }, 100);
-  };
 
-  const [replacingSnippetRaw, setReplacingSnippetState] = useState<any>(null);
+    if (snippetDef && LIST_SNIPPET_CATEGORIES.includes(snippetDef.category)) {
+      const collectionName = getCollectionNameForCategory(snippetDef.category);
+      const collection = cvData?.[collectionName];
+      if (!Array.isArray(collection) || collection.length === 0) {
+        const defaultEntry = createDefaultListEntry(snippetDef.category);
+        if (defaultEntry) {
+          onDataChange({
+            ...cvData,
+            [collectionName]: [...(Array.isArray(collection) ? collection : []), defaultEntry],
+          });
+        }
+      }
+    }
+
+    setReplacingSnippet(null);
+  };
 
   const photoInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -963,9 +1178,9 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
 
   const pageAssignmentsRef = React.useRef(pageAssignments);
   pageAssignmentsRef.current = pageAssignments;
-  const emptyZonePagesRef = React.useRef(emptyZonePages);
-  emptyZonePagesRef.current = emptyZonePages;
   const recentAssignmentsRef = React.useRef<string[]>([]);
+  const zoomRef = React.useRef(zoom);
+  zoomRef.current = zoom;
 
   // Dynamically calculate page partitioning assignments based on DOM snippet heights
   React.useEffect(() => {
@@ -973,11 +1188,11 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     if (!docElement) return undefined;
 
     const measureAndPaginate = () => {
-      const scale = zoom / 100;
+      const scale = zoomRef.current / 100;
       const isA4 = design.pageSize === 'A4';
       const H = isA4 ? 1122.5 : 1056;
       const M = layoutMetrics.pageMarginPx || 40;
-      const usableHeight = H - 2 * M - 12; // 12px safety buffer to prevent clipping variations
+      const usableHeight = H - 2 * M;
 
       // 1. Measure all rendered snippet/unit heights from the DOM
       const unitHeights: Record<string, number> = {};
@@ -992,183 +1207,229 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
 
         if (entryElements.length > 0) {
           let sumEntriesHeight = 0;
-          entryElements.forEach(entryEl => {
+          let sumEntryGaps = 0;
+          entryElements.forEach((entryEl, idx) => {
             const entryId = entryEl.getAttribute('data-entry-id');
             if (entryId) {
               const h = entryEl.getBoundingClientRect().height / scale;
               const unitId = `${blockId}_entry_${entryId}`;
               unitHeights[unitId] = h;
               sumEntriesHeight += h;
+              
+              if (idx > 0) {
+                const prevEl = entryElements[idx - 1];
+                const gap = (entryEl.getBoundingClientRect().top - prevEl.getBoundingClientRect().bottom) / scale;
+                sumEntryGaps += Math.max(0, gap);
+              }
             }
           });
 
-          // Header height is the leftover space
+          // Accurately measure header height as distance from block top to first entry top
+          const blockTop = blockEl.getBoundingClientRect().top;
+          const firstEntryTop = entryElements[0].getBoundingClientRect().top;
           const headerUnitId = `${blockId}_header`;
-          unitHeights[headerUnitId] = Math.max(0, parentHeight - sumEntriesHeight);
+          unitHeights[headerUnitId] = Math.max(0, (firstEntryTop - blockTop) / scale);
+          
+          // Store average entry gap for this block
+          unitHeights[`${blockId}_entryGap`] = entryElements.length > 1 ? (sumEntryGaps / (entryElements.length - 1)) : 16;
         } else {
-          // Non-list block OR empty list block
+          // Non-list block
           unitHeights[blockId] = parentHeight;
-          // Also set it as the header height so empty list blocks measure correctly
-          unitHeights[`${blockId}_header`] = parentHeight;
         }
       });
 
-      // 2. Compute page assignments for each zone/unit flow
+      // 2. Compute page assignments with coordinated global & column pagination flow
       const newAssignments: Record<string, number> = {};
-      const newEmptyZonePages: Record<string, number> = {};
       const safeZones = zones || {};
       let maxPageNum = 0;
+      const sectionGap = layoutMetrics.sectionGapPx || 0;
 
-      // Track height and page per layout zone so columns flow independently
-      const zonePages: Record<string, number> = {};
-      const zoneHeights: Record<string, number> = {};
+      // Classify zones based on template flow
+      const layoutType = activeTemplate?.type || '1-col';
+      const flow = templateLayoutFlows[layoutType] || { global: [], columns: [] };
+      const globalZones = flow.global || [];
+      const globalSet = new Set(globalZones);
+      const columnZones = Object.keys(safeZones).filter(zoneId => !globalSet.has(zoneId));
 
-      const paginateZone = (zoneId: string, startPage: number, startHeight: number) => {
+      // 2a. First, paginate global stacked zones sequentially
+      const globalHeightOnPage: Record<number, number> = {};
+      let currentGlobalPage = 0;
+      let currentGlobalHeight = 0;
+
+      globalZones.forEach(zoneId => {
         const blocks = safeZones[zoneId] || [];
-        let currPage = startPage;
-        let currHeight = startHeight;
-        const sectionGap = layoutMetrics.sectionGapPx || 16;
-
         blocks.forEach(block => {
-          // Check if this block is a list snippet
+          const gapBefore = () => (currentGlobalHeight > 0 ? sectionGap : 0);
           const snippetDef = SNIPPETS[block.type];
-          const isList = snippetDef && ['Experience', 'Education', 'Projects', 'Certifications', 'Awards', 'Publications', 'Volunteer', 'References'].includes(snippetDef.category);
+          const isList = snippetDef && LIST_SNIPPET_CATEGORIES.includes(snippetDef.category);
 
           if (isList) {
-            const collectionName = snippetDef.category.toLowerCase();
+            const collectionName = getCollectionNameForCategory(snippetDef.category);
             const entries = cvData[collectionName] || [];
 
-            // 1. Process header unit and 1st entry together
             const headerUnitId = `${block.id}_header`;
             const headerH = unitHeights[headerUnitId] || 40;
-            
             const firstEntry = entries[0];
             const firstEntryH = firstEntry ? (unitHeights[`${block.id}_entry_${firstEntry.id}`] || 80) : 0;
+            const entryGap = unitHeights[`${block.id}_entryGap`] || 16;
 
-            const blockGap = currHeight > 0 ? sectionGap : 0;
-            if (currHeight + blockGap + headerH + firstEntryH > usableHeight && currHeight > 0) {
-              currPage++;
-              currHeight = 0;
+            if (currentGlobalHeight + gapBefore() + headerH + firstEntryH > usableHeight && currentGlobalHeight > 0) {
+              globalHeightOnPage[currentGlobalPage] = currentGlobalHeight;
+              currentGlobalPage++;
+              currentGlobalHeight = 0;
             }
-            newAssignments[headerUnitId] = currPage;
-            currHeight += (currHeight > 0 ? sectionGap : 0) + headerH;
-            if (currPage > maxPageNum) maxPageNum = currPage;
+            newAssignments[headerUnitId] = currentGlobalPage;
+            currentGlobalHeight += gapBefore() + headerH;
+            if (currentGlobalPage > maxPageNum) maxPageNum = currentGlobalPage;
 
-            // 2. Process each entry unit
             entries.forEach((entry: any, entryIdx: number) => {
               const entryUnitId = `${block.id}_entry_${entry.id}`;
               const entryH = unitHeights[entryUnitId] || 80;
-              
+
               if (entryIdx > 0) {
-                const entryGap = 12; // Standard small spacing gap between entries inside a list
-                if (currHeight + entryGap + entryH > usableHeight && currHeight > 0) {
-                  currPage++;
-                  currHeight = 0;
+                if (currentGlobalHeight + entryGap + entryH > usableHeight && currentGlobalHeight > 0) {
+                  globalHeightOnPage[currentGlobalPage] = currentGlobalHeight;
+                  currentGlobalPage++;
+                  currentGlobalHeight = 0;
                 }
-                newAssignments[entryUnitId] = currPage;
-                currHeight += (currHeight > 0 ? entryGap : 0) + entryH;
-              } else {
-                newAssignments[entryUnitId] = currPage;
-                currHeight += entryH;
               }
-              if (currPage > maxPageNum) maxPageNum = currPage;
+              newAssignments[entryUnitId] = currentGlobalPage;
+              currentGlobalHeight += (entryIdx > 0 ? entryGap : 0) + entryH;
+              if (currentGlobalPage > maxPageNum) maxPageNum = currentGlobalPage;
             });
           } else {
-            // Non-list block unit
             const h = unitHeights[block.id] || 80;
-            const blockGap = currHeight > 0 ? sectionGap : 0;
-            if (currHeight + blockGap + h > usableHeight && currHeight > 0) {
-              currPage++;
-              currHeight = 0;
+            if (currentGlobalHeight + gapBefore() + h > usableHeight && currentGlobalHeight > 0) {
+              globalHeightOnPage[currentGlobalPage] = currentGlobalHeight;
+              currentGlobalPage++;
+              currentGlobalHeight = 0;
             }
-            newAssignments[block.id] = currPage;
-            currHeight += (currHeight > 0 ? blockGap : 0) + h;
-            if (currPage > maxPageNum) maxPageNum = currPage;
+            newAssignments[block.id] = currentGlobalPage;
+            currentGlobalHeight += gapBefore() + h;
+            if (currentGlobalPage > maxPageNum) maxPageNum = currentGlobalPage;
           }
         });
-        
-        zonePages[zoneId] = currPage;
-        zoneHeights[zoneId] = currHeight;
-        return { endPage: currPage, endHeight: currHeight };
-      };
-
-      const processedZones = new Set<string>();
-      
-      const processZone = (zoneId: string, startPage: number, startHeight: number) => {
-        if (!safeZones[zoneId] || safeZones[zoneId].length === 0) {
-          newEmptyZonePages[zoneId] = startPage;
-          return { endPage: startPage, endHeight: startHeight };
-        }
-        processedZones.add(zoneId);
-        return paginateZone(zoneId, startPage, startHeight);
-      };
-
-      const layoutType = activeTemplate?.type || '1-col';
-
-      if (layoutType === 'hybrid-split') {
-        const headerState = processZone('header', 0, 0);
-        const mainState = processZone('main', headerState.endPage, headerState.endHeight);
-        processZone('left', mainState.endPage, mainState.endHeight);
-        processZone('right', mainState.endPage, mainState.endHeight);
-      } else if (layoutType === '2-col') {
-        const headerState = processZone('header', 0, 0);
-        processZone('left', headerState.endPage, headerState.endHeight);
-        processZone('right', headerState.endPage, headerState.endHeight);
-      } else if (layoutType === 'top-sidebar-left' || layoutType === 'top-sidebar-right') {
-        const headerState = processZone('header', 0, 0);
-        processZone('sidebar', headerState.endPage, headerState.endHeight);
-        processZone('main', headerState.endPage, headerState.endHeight);
-      } else if (layoutType === 'sidebar-left' || layoutType === 'sidebar-left-dark' || layoutType === 'sidebar-right') {
-        processZone('sidebar', 0, 0);
-        processZone('main', 0, 0);
-      } else {
-        const headerState = processZone('header', 0, 0);
-        processZone('main', headerState.endPage, headerState.endHeight);
+      });
+      if (currentGlobalHeight > 0) {
+        globalHeightOnPage[currentGlobalPage] = currentGlobalHeight;
       }
 
-      // Process any unhandled zones independently to ensure they are assigned
-      Object.keys(safeZones).forEach(zoneId => {
-        if (!processedZones.has(zoneId)) {
-          processZone(zoneId, 0, 0);
-        }
+      // 2b. Next, paginate column zones independently, scaling maximum heights per page
+      columnZones.forEach(zoneId => {
+        const blocks = safeZones[zoneId] || [];
+        let currentPage = 0;
+        let currentHeight = 0;
+
+        blocks.forEach(block => {
+          const gapBefore = () => (currentHeight > 0 ? sectionGap : 0);
+          const getUsableHeightForPage = (pageIdx: number) => {
+            const consumedGlobal = globalHeightOnPage[pageIdx] || 0;
+            const overhead = consumedGlobal > 0 ? consumedGlobal + sectionGap : 0;
+            return Math.max(100, usableHeight - overhead);
+          };
+
+          const snippetDef = SNIPPETS[block.type];
+          const isList = snippetDef && LIST_SNIPPET_CATEGORIES.includes(snippetDef.category);
+
+          if (isList) {
+            const collectionName = getCollectionNameForCategory(snippetDef.category);
+            const entries = cvData[collectionName] || [];
+
+            const headerUnitId = `${block.id}_header`;
+            const headerH = unitHeights[headerUnitId] || 40;
+            const firstEntry = entries[0];
+            const firstEntryH = firstEntry ? (unitHeights[`${block.id}_entry_${firstEntry.id}`] || 80) : 0;
+            const entryGap = unitHeights[`${block.id}_entryGap`] || 16;
+
+            let neededH = gapBefore() + headerH + firstEntryH;
+            let pUsable = getUsableHeightForPage(currentPage);
+
+            if (currentHeight + neededH > pUsable && currentHeight > 0) {
+              currentPage++;
+              currentHeight = 0;
+              pUsable = getUsableHeightForPage(currentPage);
+            }
+            newAssignments[headerUnitId] = currentPage;
+            currentHeight += gapBefore() + headerH;
+            if (currentPage > maxPageNum) maxPageNum = currentPage;
+
+            entries.forEach((entry: any, entryIdx: number) => {
+              const entryUnitId = `${block.id}_entry_${entry.id}`;
+              const entryH = unitHeights[entryUnitId] || 80;
+
+              if (entryIdx > 0) {
+                let pUsableInner = getUsableHeightForPage(currentPage);
+                if (currentHeight + entryGap + entryH > pUsableInner && currentHeight > 0) {
+                  currentPage++;
+                  currentHeight = 0;
+                }
+              }
+              newAssignments[entryUnitId] = currentPage;
+              currentHeight += (entryIdx > 0 ? entryGap : 0) + entryH;
+              if (currentPage > maxPageNum) maxPageNum = currentPage;
+            });
+          } else {
+            const h = unitHeights[block.id] || 80;
+            let pUsable = getUsableHeightForPage(currentPage);
+            if (currentHeight + gapBefore() + h > pUsable && currentHeight > 0) {
+              currentPage++;
+              currentHeight = 0;
+              pUsable = getUsableHeightForPage(currentPage);
+            }
+            newAssignments[block.id] = currentPage;
+            currentHeight += gapBefore() + h;
+            if (currentPage > maxPageNum) maxPageNum = currentPage;
+          }
+        });
       });
 
-      // 3. Set total pages count state
-      setTotalPagesCount(maxPageNum + 1);
+      // 3. Set total pages count state only if changed
+      const nextTotalPages = maxPageNum + 1;
+      setTotalPagesCount(prev => prev !== nextTotalPages ? nextTotalPages : prev);
 
       // Cycle oscillation detection
-      const assignmentsStr = JSON.stringify({ ...newAssignments, ...newEmptyZonePages });
+      const assignmentsStr = JSON.stringify(newAssignments);
       if (recentAssignmentsRef.current.includes(assignmentsStr)) {
         return; // Abort cycle
       }
 
       // 4. Update page assignments state only if changed to avoid loop
       const oldAssignments = pageAssignmentsRef.current;
-      const oldEmptyPages = emptyZonePagesRef.current;
       const isChanged = Object.keys(newAssignments).some(id => newAssignments[id] !== oldAssignments[id]) ||
-                        Object.keys(oldAssignments).some(id => newAssignments[id] !== oldAssignments[id]) ||
-                        Object.keys(newEmptyZonePages).some(id => newEmptyZonePages[id] !== oldEmptyPages[id]) ||
-                        Object.keys(oldEmptyPages).some(id => newEmptyZonePages[id] !== oldEmptyPages[id]);
+                        Object.keys(oldAssignments).some(id => newAssignments[id] !== oldAssignments[id]);
       if (isChanged) {
         recentAssignmentsRef.current.push(assignmentsStr);
         if (recentAssignmentsRef.current.length > 5) {
           recentAssignmentsRef.current.shift();
         }
         setPageAssignments(newAssignments);
-        setEmptyZonePages(newEmptyZonePages);
       }
     };
 
     // Run adjust layout loop on requestAnimationFrame
-    const rafId = requestAnimationFrame(measureAndPaginate);
+    let rafId: number;
+    const runMeasure = () => {
+      measureAndPaginate();
+    };
 
-    // Watch for mutations (user typing or editing content) to recalculate page breaks dynamically dynamically with debounce
+    // Initial measurement
+    rafId = requestAnimationFrame(runMeasure);
+
+    // Watch for mutations (user typing or editing content)
     let debounceTimer: any;
+    
+    // Ensure fonts are loaded
+    if (typeof document !== 'undefined' && (document as any).fonts) {
+      (document as any).fonts.ready.then(() => {
+        measureAndPaginate();
+      });
+    }
+
     const observer = new MutationObserver(() => {
       clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => {
         measureAndPaginate();
-      }, 80);
+      }, 30);
     });
     observer.observe(docElement, { childList: true, subtree: true, characterData: true });
 
@@ -1177,10 +1438,17 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
       clearTimeout(debounceTimer);
       observer.disconnect();
     };
-  }, [cvData, zones, design, zoom, activeTemplate, layoutMetrics.pageMarginPx]);
+  }, [cvData.metadata, zones, design.pageSize, activeTemplate.id, layoutMetrics.pageMarginPx, layoutMetrics.sectionGapPx]);
 
   const handleTogglePhoto = () => {
-    handleDataChange('basics.showAvatar', !cvData.basics?.showAvatar);
+    if (!cvData.basics?.showAvatar) {
+      handleDataChange('basics.showAvatar', true);
+      if (!cvData.basics?.avatar) {
+        setTimeout(() => photoInputRef.current?.click(), 50);
+      }
+    } else {
+      handleDataChange('basics.showAvatar', false);
+    }
   };
 
   const handlePhotoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1273,14 +1541,14 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
       const blocks = safeZones[zoneId] || [];
       return blocks.filter(block => {
         const snippetDef = SNIPPETS[block.type];
-        const isList = snippetDef && ['Experience', 'Education', 'Projects', 'Certifications', 'Awards', 'Publications', 'Volunteer', 'References'].includes(snippetDef.category);
+        const isList = snippetDef && LIST_SNIPPET_CATEGORIES.includes(snippetDef.category);
 
         if (isList) {
           const headerUnitId = `${block.id}_header`;
           if ((pageAssignments[headerUnitId] ?? 0) === pageIdx) {
             return true;
           }
-          const collectionName = snippetDef.category.toLowerCase();
+          const collectionName = getCollectionNameForCategory(snippetDef.category);
           const entries = cvData[collectionName] || [];
           return entries.some((entry: any) => {
             const entryUnitId = `${block.id}_entry_${entry.id}`;
@@ -1295,22 +1563,31 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
 
     const renderPageZone = (zoneId: string, pageIdx: number, className: string, isDark = false) => {
       const pageBlocks = getPageBlocks(zoneId, pageIdx);
-      const globalBlocks = safeZones[zoneId] || [];
-      const isGloballyEmpty = globalBlocks.length === 0;
-      
-      const targetEmptyPage = emptyZonePages[zoneId] ?? 0;
-      const isEmptyZoneTarget = isGloballyEmpty && pageIdx === targetEmptyPage;
-
-      if (!isEmptyZoneTarget && pageBlocks.length === 0) {
-        return null;
-      }
       
       const getGlobalIndex = (pageSpecificIdx: number) => {
+        const globalBlocks = safeZones[zoneId] || [];
         if (pageSpecificIdx >= 0 && pageSpecificIdx < pageBlocks.length) {
           const targetBlock = pageBlocks[pageSpecificIdx];
           return globalBlocks.findIndex(b => b.id === targetBlock.id);
         }
         return -1;
+      };
+
+      const getGlobalInsertIndex = (pageSpecificInsertIdx?: number) => {
+        const globalBlocks = safeZones[zoneId] || [];
+        if (typeof pageSpecificInsertIdx === 'number' && pageSpecificInsertIdx < pageBlocks.length) {
+          const targetBlock = pageBlocks[pageSpecificInsertIdx];
+          const targetIndex = globalBlocks.findIndex(b => b.id === targetBlock.id);
+          return targetIndex === -1 ? globalBlocks.length : targetIndex;
+        }
+
+        if (pageBlocks.length > 0) {
+          const lastBlock = pageBlocks[pageBlocks.length - 1];
+          const lastIndex = globalBlocks.findIndex(b => b.id === lastBlock.id);
+          return lastIndex === -1 ? globalBlocks.length : lastIndex + 1;
+        }
+
+        return globalBlocks.length;
       };
 
       return (
@@ -1321,6 +1598,8 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
           cvData={cvData}
           EditableWrapper={readOnly ? ReadOnlyWrapper : EditableWrapper}
           handleDrop={(targetZoneId: string, dragData: any, dropIdx: number) => {
+            const globalBlocks = safeZones[zoneId] || [];
+            
             let insertIndex = 0;
             if (dropIdx !== undefined && dropIdx < pageBlocks.length) {
               const targetBlock = pageBlocks[dropIdx];
@@ -1353,20 +1632,8 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
               handleReplaceClick(zoneId, gIdx, type);
             }
           }}
-          onAddSnippet={(targetZoneId: string, pageSpecificIdx?: number) => {
-            let globalInsertIndex = undefined;
-            if (pageSpecificIdx !== undefined && pageSpecificIdx < pageBlocks.length) {
-              const targetBlock = pageBlocks[pageSpecificIdx];
-              globalInsertIndex = globalBlocks.findIndex(b => b.id === targetBlock.id);
-            } else if (pageSpecificIdx !== undefined) {
-              if (pageBlocks.length > 0) {
-                const lastBlock = pageBlocks[pageBlocks.length - 1];
-                globalInsertIndex = globalBlocks.findIndex(b => b.id === lastBlock.id) + 1;
-              } else {
-                globalInsertIndex = globalBlocks.length;
-              }
-            }
-            handleAddClick(zoneId, globalInsertIndex);
+          onAddSnippet={(targetZoneId: string, pageSpecificInsertIdx?: number) => {
+            handleAddClick(zoneId, getGlobalInsertIndex(pageSpecificInsertIdx));
           }}
           onTogglePhoto={handleTogglePhoto}
           onAddListEntry={handleAddListEntry}
@@ -1379,6 +1646,13 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
           isDark={isDark}
           onOpenSkillsSuggestions={() => void openSkillsSuggestions()}
           isDropAllowed={isSnippetDropAllowed}
+          onMoveToZone={(pageSpecificIdx: number, targetZoneId: string) => {
+            const gIdx = getGlobalIndex(pageSpecificIdx);
+            if (gIdx === -1) return;
+            const instance = (safeZones[zoneId] || [])[gIdx];
+            if (!instance) return;
+            handleZoneDrop(targetZoneId, { source: 'canvas', zoneId, index: gIdx, instance }, 9999);
+          }}
         />
       );
     };
@@ -1391,7 +1665,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     const pages = Array.from({ length: totalPages }, (_, i) => i);
 
     return (
-      <div className={`flex flex-col items-center gap-[var(--cv-page-gap)] cv-document ${formatClass}`} style={{ width: 'var(--cv-page-width)' }}>
+      <div id="cv-document-root" className={`flex flex-col items-center gap-[var(--cv-page-gap)] cv-document ${formatClass}`} style={{ width: 'var(--cv-page-width)' }}>
         {pages.map(pageIdx => {
           const renderLayout = () => {
             switch (layoutType) {
@@ -1417,7 +1691,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
                 return (
                   <div className="h-full w-full flex relative" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingTop: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)' }}>
                     <div className="absolute left-0 top-0 bottom-0 z-0" style={{ backgroundColor: 'var(--cv-sidebar-bg)', width: 'calc(32% + 0.36 * var(--cv-page-margin))' }}></div>
-                    <div className={`w-[32%] min-w-0 border-r border-slate-200 relative z-10 ${isDarkSidebar ? 'cv-dark-sidebar text-white' : ''}`} style={{ paddingRight: '5mm' }}>
+                    <div className={`w-[32%] min-w-0 relative z-10 ${isDarkSidebar ? 'cv-dark-sidebar text-white' : ''}`} style={{ paddingRight: '5mm' }}>
                       {renderPageZone('sidebar', pageIdx, 'h-max', isDarkSidebar)}
                     </div>
                     <div className="w-[68%] min-w-0 relative z-10" style={{ paddingLeft: '5mm' }}>
@@ -1444,7 +1718,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
                     <div className="w-[68%] min-w-0 relative z-10" style={{ paddingRight: '5mm' }}>
                       {renderPageZone('main', pageIdx, 'h-max')}
                     </div>
-                    <div className={`w-[32%] min-w-0 border-l border-slate-200 relative z-10 ${isDarkSidebar ? 'cv-dark-sidebar text-white' : ''}`} style={{ paddingLeft: '5mm' }}>
+                    <div className={`w-[32%] min-w-0 relative z-10 ${isDarkSidebar ? 'cv-dark-sidebar text-white' : ''}`} style={{ paddingLeft: '5mm' }}>
                       {renderPageZone('sidebar', pageIdx, 'h-max', isDarkSidebar)}
                     </div>
                   </div>
@@ -1458,8 +1732,8 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
                       </div>
                     )}
                     <div className="flex flex-1 relative z-10 items-start gap-[var(--cv-column-gap)]" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)', paddingTop: pageIdx === 0 && safeZones['header'] ? 'var(--cv-section-gap, 16px)' : 'var(--cv-page-margin)' }}>
-                      <div className="absolute left-[var(--cv-page-margin)] top-[var(--cv-section-gap,16px)] bottom-[var(--cv-page-margin)] w-[calc(32%-1rem)] rounded-lg z-[-1]" style={{ backgroundColor: 'var(--cv-sidebar-bg)' }}></div>
-                      <div className={`w-[32%] min-w-0 border-r border-slate-200 ${isDarkSidebar ? 'cv-dark-sidebar text-white' : ''}`} style={{ paddingRight: '5mm' }}>
+                      <div className="absolute left-[var(--cv-page-margin)] top-[var(--cv-section-gap,16px)] bottom-0 rounded-lg z-[-1]" style={{ backgroundColor: 'var(--cv-sidebar-bg)', width: 'calc(32% - 16px)' }}></div>
+                      <div className={`w-[32%] min-w-0 ${isDarkSidebar ? 'cv-dark-sidebar text-white' : ''}`} style={{ paddingRight: '5mm' }}>
                         {renderPageZone('sidebar', pageIdx, 'h-max', isDarkSidebar)}
                       </div>
                       <div className="w-[68%] min-w-0">
@@ -1480,8 +1754,8 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
                       <div className="w-[68%] min-w-0">
                         {renderPageZone('main', pageIdx, 'h-max')}
                       </div>
-                      <div className="absolute right-[var(--cv-page-margin)] top-[var(--cv-section-gap,16px)] bottom-[var(--cv-page-margin)] w-[calc(32%-1rem)] rounded-lg z-[-1]" style={{ backgroundColor: 'var(--cv-sidebar-bg)' }}></div>
-                      <div className={`w-[32%] min-w-0 border-l border-slate-200 ${isDarkSidebar ? 'cv-dark-sidebar text-white' : ''}`} style={{ paddingLeft: '5mm' }}>
+                      <div className="absolute right-[var(--cv-page-margin)] top-[var(--cv-section-gap,16px)] bottom-0 rounded-lg z-[-1]" style={{ backgroundColor: 'var(--cv-sidebar-bg)', width: 'calc(32% - 16px)' }}></div>
+                      <div className={`w-[32%] min-w-0 ${isDarkSidebar ? 'cv-dark-sidebar text-white' : ''}`} style={{ paddingLeft: '5mm' }}>
                         {renderPageZone('sidebar', pageIdx, 'h-max', isDarkSidebar)}
                       </div>
                     </div>
@@ -1577,127 +1851,11 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
         )}
         {!readOnly && <FloatingToolbar targetNode={focusedNode} onSuggestPoint={handleSuggestPoint} />}
 
-      {!readOnly && (
-        <div className={`w-14 border-r flex flex-col items-center py-5 gap-3 z-30 shrink-0 transition-colors ${bgNav}`}>
-          <div className={`w-8 h-8 flex items-center justify-center rounded-xl mb-3 ${brandGreenBg} shadow-lg`} title="CVCIRCLE Builder"><FileText size={16} /></div>
-          <button onClick={() => setActiveSidebar(activeSidebar === 'design' ? null : 'design')} className={`w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-200 hover:scale-110 active:scale-95 ${activeSidebar === 'design' ? 'text-emerald-500' : (isDarkUI ? 'text-gray-500 hover:text-gray-200' : 'text-gray-400 hover:text-gray-700')}`} title="Design & Layout"><Palette size={18}/></button>
-          <button onClick={() => setIsTemplateModalOpen(true)} className={`w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-200 hover:scale-110 active:scale-95 ${isDarkUI ? 'text-gray-500 hover:text-gray-200' : 'text-gray-400 hover:text-gray-700'}`} title="Templates"><LayoutTemplate size={18}/></button>
-          <button onClick={() => setActiveSidebar(activeSidebar === 'data' ? null : 'data')} className={`w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-200 hover:scale-110 active:scale-95 ${activeSidebar === 'data' ? 'text-emerald-500' : (isDarkUI ? 'text-gray-500 hover:text-gray-200' : 'text-gray-400 hover:text-gray-700')}`} title="Raw Data JSON"><FileJson size={18}/></button>
-          <div className="flex-1"></div>
-          {!isGuestMode && (
-            <button
-              onClick={() => {
-                const event = new CustomEvent('open-download-modal');
-                window.dispatchEvent(event);
-              }}
-              className={`w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-200 hover:scale-110 active:scale-95 shadow-lg ${brandGreenBg}`}
-              title="Download PDF"
-            >
-              <Download size={18}/>
-            </button>
-          )}
-        </div>
-      )}
-
-      <div className="flex-1 flex overflow-hidden">
-        {!readOnly && activeSidebar === 'design' && (
-          <div className={`w-[320px] border-r flex flex-col shadow-2xl z-20 shrink-0 ${bgPanel}`}>
-            <div className={`p-5 border-b flex items-center justify-between ${bgNav}`}>
-              <h3 className={`font-bold flex items-center gap-2 ${textPrimary}`}><Palette size={18} className={brandGreen}/> Global Design</h3>
-              <button onClick={() => setActiveSidebar(null)} className={textMuted}><X size={18}/></button>
-            </div>
-            <div className="p-5 flex flex-col gap-6 overflow-y-auto custom-scrollbar">
-              <div><label className={`text-xs font-bold uppercase tracking-widest mb-2 block ${textMuted}`}>Typography</label><div className="grid grid-cols-2 gap-2">{['Inter', 'Merriweather', 'Roboto Mono', 'Playfair Display'].map(f => (<button key={f} onClick={() => setDesign({...design, font: f})} className={`py-2 px-1 text-xs rounded border transition-colors ${design.font === f ? 'bg-emerald-500/20 border-emerald-500 ' + brandGreen : (isDarkUI ? 'bg-[#222] border-[#333] text-gray-300' : 'bg-white border-gray-200 text-gray-700')}`} style={{ fontFamily: f }}>{f.split(' ')[0]}</button>))}</div></div>
-              <div><label className={`text-xs font-bold uppercase tracking-widest mb-2 flex justify-between ${textMuted}`}><span>Font Size</span><span className={brandGreen}>{design.fontSize}px</span></label><input type="range" min="10" max="16" step="0.5" value={design.fontSize} onChange={(e) => setDesign({...design, fontSize: parseFloat(e.target.value)})} className="w-full accent-emerald-500" /></div>
-              <div><label className={`text-xs font-bold uppercase tracking-widest mb-2 flex justify-between ${textMuted}`}><span>Line Spacing</span><span className={brandGreen}>{design.spacing.toFixed(1)}x</span></label><input type="range" min="0.5" max="2" step="0.1" value={design.spacing} onChange={(e) => setDesign({...design, spacing: parseFloat(e.target.value)})} className="w-full accent-emerald-500" /></div>
-              <div><label className={`text-xs font-bold uppercase tracking-widest mb-2 flex justify-between ${textMuted}`}><span>Page Margin</span><span className={brandGreen}>{design.pageMargin}px</span></label><input type="range" min="0" max="80" step="1" value={design.pageMargin} onChange={(e) => setDesign({...design, pageMargin: parseInt(e.target.value)})} className="w-full accent-emerald-500" /></div>
-              <div><label className={`text-xs font-bold uppercase tracking-widest mb-2 block ${textMuted}`}>Accent Color</label><div className="flex gap-3 flex-wrap">{['#7EE787', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#1f2937', '#000000', '#ffffff'].map(c => (<button key={c} onClick={() => setDesign({...design, accentColor: c})} className={`w-7 h-7 rounded-full border-2 transition-transform ${design.accentColor === c ? 'border-white scale-125 shadow-lg' : 'border-transparent hover:scale-110'}`} style={{ backgroundColor: c }} />))}</div></div>
-              <div><label className={`text-xs font-bold uppercase tracking-widest mb-2 block ${textMuted}`}>Sidebar Background</label><div className="flex gap-3 flex-wrap">{['#ffffff', '#f8fafc', '#f3f4f6', '#fafaf9', '#f0fdf4', '#f0f9ff', '#fff1f2', '#1e293b', '#0f172a', '#111827', '#1a0f0f', '#0d233a', '#0c2511', '#2a1428'].map(c => (<button key={c} onClick={() => setDesign({...design, sidebarBgColor: c})} className={`w-7 h-7 rounded-full border-2 transition-transform ${design.sidebarBgColor === c ? 'border-emerald-500 scale-125 shadow-lg' : 'border-gray-300 dark:border-gray-600 hover:scale-110'}`} style={{ backgroundColor: c }} />))}</div></div>
-              <div><label className={`text-xs font-bold uppercase tracking-widest mb-2 flex justify-between ${textMuted}`}><span>Section Gap</span><span className={brandGreen}>{design.sectionGap}px</span></label><input type="range" min="0" max="60" step="1" value={design.sectionGap} onChange={(e) => setDesign({...design, sectionGap: parseInt(e.target.value)})} className="w-full accent-emerald-500" /></div>
-              <div className="mt-4"><label className={`flex items-center justify-between cursor-pointer`}><span className={`text-xs font-bold uppercase tracking-widest ${textMuted}`}>Header Icons</span><div className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors ${design.showHeaderIcons ? brandGreenBg : (isDarkUI ? 'bg-[#333]' : 'bg-gray-300')}`} onClick={() => setDesign({...design, showHeaderIcons: !design.showHeaderIcons})}><span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${design.showHeaderIcons ? 'translate-x-6' : 'translate-x-1'}`} /></div></label></div>
-              <div className="mt-4"><label className={`flex items-center justify-between cursor-pointer`}><span className={`text-xs font-bold uppercase tracking-widest ${textMuted}`}>Contact Icons</span><div className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors ${design.showContactIcons ? brandGreenBg : (isDarkUI ? 'bg-[#333]' : 'bg-gray-300')}`} onClick={() => setDesign({...design, showContactIcons: !design.showContactIcons})}><span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${design.showContactIcons ? 'translate-x-6' : 'translate-x-1'}`} /></div></label></div>
-              
-              <div className="mt-6 border-t pt-5 border-gray-200 dark:border-[#333]">
-                <label className={`text-xs font-bold uppercase tracking-widest mb-2.5 block ${textMuted}`}>Description Layout</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { id: 'hybrid', label: 'Hybrid' },
-                    { id: 'paragraph_only', label: 'Paragraph' },
-                    { id: 'bullets_only', label: 'Bullets' }
-                  ].map(opt => (
-                    <button
-                      key={opt.id}
-                      onClick={() => setDesign({ ...design, formatOption: opt.id })}
-                      className={`py-2 px-1 text-xs font-bold rounded border transition-colors ${
-                        (design.formatOption || 'hybrid') === opt.id
-                          ? 'bg-emerald-500/20 border-emerald-500 ' + brandGreen
-                          : (isDarkUI ? 'bg-[#222] border-[#333] text-gray-300 hover:bg-[#2e2e2e]' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50')
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="mt-6 border-t pt-5 border-gray-200 dark:border-[#333]">
-                <label className={`text-xs font-bold uppercase tracking-widest mb-3 block ${textMuted}`}>Date Format</label>
-                <select value={design.dateFormat || 'MMM YYYY'} onChange={(e) => setDesign({...design, dateFormat: e.target.value})} className={`w-full p-2.5 rounded-lg border text-sm appearance-none cursor-pointer focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all ${isDarkUI ? 'bg-[#1e1e1e] border-gray-700 text-gray-200 hover:border-gray-600' : 'bg-white border-gray-200 text-gray-800 hover:border-gray-300 shadow-sm'}`}>
-                  <option value="MMM YYYY">Short Text (Jan 2024)</option>
-                  <option value="MMMM YYYY">Long Text (January 2024)</option>
-                  <option value="MM/YYYY">US Numeric (01/2024)</option>
-                  <option value="YYYY-MM">ISO Numeric (2024-01)</option>
-                  <option value="YYYY">Year Only (2024)</option>
-                </select>
-              </div>
-
-              <div className="mt-6 border-t pt-5 border-gray-200 dark:border-[#333]">
-                <label className={`text-xs font-bold uppercase tracking-widest mb-3 block ${textMuted}`}>Header Links</label>
-                <div className="flex flex-col gap-3">
-                  {['location', 'phone', 'email', 'linkedin', 'website', ...(cvData?.basics?.profiles?.map((p: any) => p.network?.toLowerCase()) || [])]
-                    .filter((v, i, a) => a.indexOf(v) === i && v)
-                    .map(linkType => (
-                    <label key={linkType} className="flex items-center justify-between cursor-pointer group">
-                      <span className={`text-xs capitalize font-medium transition-colors ${design.headerLinks?.[linkType] !== false ? textPrimary : textMuted}`}>{linkType}</span>
-                      <div className={`relative inline-flex items-center h-5 rounded-full w-9 transition-colors ${design.headerLinks?.[linkType] !== false ? brandGreenBg : (isDarkUI ? 'bg-[#333]' : 'bg-gray-300')}`} onClick={() => setDesign({...design, headerLinks: {...(design.headerLinks || {}), [linkType]: design.headerLinks?.[linkType] === false}})}>
-                        <span className={`inline-block w-3 h-3 transform bg-white rounded-full transition-transform ${design.headerLinks?.[linkType] !== false ? 'translate-x-5' : 'translate-x-1'}`} />
-                      </div>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {!readOnly && activeSidebar === 'data' && (
-          <div className={`w-[600px] border-r flex flex-col shadow-2xl z-20 shrink-0 ${bgPanel}`}>
-            <div className={`p-5 border-b flex items-center justify-between ${bgNav}`}>
-              <h3 className={`font-bold flex items-center gap-2 ${textPrimary}`}>
-                <FileJson size={18} className={brandGreen} /> Raw JSON
-              </h3>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleCopyJsonTemplate}
-                  title="Copy JSON Template"
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${brandGreenBg} hover:opacity-90`}
-                >
-                  <Copy size={13} />
-                  Copy JSON Template
-                </button>
-                <button onClick={() => setActiveSidebar(null)} className={textMuted}><X size={18} /></button>
-              </div>
-            </div>
-            <div className="flex-1 overflow-hidden relative flex flex-col">
-              <JSONSidebarViewer data={cvData} focusedPath={focusedNode ? focusedNode.getAttribute('data-path') : null} onChange={(newData) => onDataChange(newData)} rainbowHighlight={true} />
-            </div>
-          </div>
-        )}
-
+        <div className="flex-1 flex overflow-hidden">
         <div className="flex-1 flex flex-col relative min-w-0">
           <div
             ref={workspaceRef}
-            className={readOnly ? 'w-full' : `flex-1 overflow-auto relative flex justify-center custom-scrollbar transition-colors ${bgWorkspace}`}
+            className={readOnly ? 'w-full @container' : `flex-1 overflow-auto relative flex justify-center custom-scrollbar transition-colors @container ${bgWorkspace}`}
             style={readOnly ? undefined : {
               paddingTop: layoutMetrics.workspacePaddingY,
               paddingBottom: layoutMetrics.workspacePaddingY,
@@ -1710,7 +1868,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
               {renderCanvasLayout()}
             </div>
           ) : (
-            <div key={templateAnimKey} className="transform origin-top transition-transform h-max pb-20 text-gray-900" style={{ transform: `scale(${zoom / 100})` }}>
+            <div key={templateAnimKey} className="transform origin-top transition-transform h-max pb-4 text-gray-900" style={{ transform: `scale(${zoom / 100})` }}>
               <div className="cv-document-wrapper relative" style={canvasStyleVars}>
                 {renderCanvasLayout()}
               </div>
@@ -1719,9 +1877,9 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
           </div>
 
           {!readOnly && (
-            <div className="absolute bottom-6 right-6 z-[40] flex items-center gap-2 pointer-events-none">
+            <div className="absolute bottom-6 right-6 z-[40] hidden md:flex items-center gap-2 pointer-events-none">
               {/* Page Count and Size Info */}
-              <div className={`px-3 py-1.5 rounded-xl border shadow-xl backdrop-blur-md flex items-center gap-3 text-[10px] font-bold uppercase tracking-wider ${bgNav} ${textPrimary} opacity-90 hover:opacity-100 transition-opacity pointer-events-auto`}>
+              <div className={`px-3 h-9 rounded-xl border shadow-xl backdrop-blur-md flex items-center gap-3 text-[10px] font-bold uppercase tracking-wider ${bgNav} ${textPrimary} opacity-90 hover:opacity-100 transition-opacity pointer-events-auto`}>
                 <div className="flex items-center gap-1.5 border-r pr-3 border-gray-500/20">
                   <FileText size={12} className={brandGreen} />
                   <span>{totalPagesCount} {totalPagesCount === 1 ? 'Page' : 'Pages'}</span>
@@ -1736,7 +1894,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
               </div>
 
               {/* Zoom Controls */}
-              <div className={`px-2 py-1.5 rounded-xl border shadow-xl backdrop-blur-md flex items-center gap-2 ${bgNav} ${textPrimary} opacity-90 hover:opacity-100 transition-opacity pointer-events-auto`}>
+              <div className={`px-2 h-9 rounded-xl border shadow-xl backdrop-blur-md flex items-center gap-2 ${bgNav} ${textPrimary} opacity-90 hover:opacity-100 transition-opacity pointer-events-auto`}>
                 <div className="flex items-center gap-0.5">
                   <button 
                     onClick={() => setZoom(Math.max(50, zoom - 10))}
@@ -1763,45 +1921,225 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
                 
                 <button 
                   onClick={() => setZoom(100)}
-                  className={`min-w-[42px] px-1.5 py-1 text-[9px] font-black rounded-md transition-all border ${zoom === 100 ? 'bg-emerald-500/20 border-emerald-500/50 ' + brandGreen : 'bg-transparent border-gray-500/20 hover:border-emerald-500/50 ' + textMuted}`}
+                  className={`min-w-[42px] px-1.5 py-1 text-[9px] font-black rounded-md transition-all border ${zoom === 100 && !isAutoFit ? 'bg-emerald-500/20 border-emerald-500/50 ' + brandGreen : 'bg-transparent border-gray-500/20 hover:border-emerald-500/50 ' + textMuted}`}
                 >
                   {zoom}%
+                </button>
+                <button 
+                  onClick={triggerAutoFit}
+                  className={`min-w-[42px] px-1.5 py-1 text-[9px] font-black rounded-md transition-all border ${isAutoFit ? 'bg-emerald-500/20 border-emerald-500/50 ' + brandGreen : 'bg-transparent border-gray-500/20 hover:border-emerald-500/50 ' + textMuted}`}
+                >
+                  FIT
+                </button>
+              </div>
+
+              {/* Undo / Redo History Controls */}
+              <div className={`px-2 h-9 rounded-xl border shadow-xl backdrop-blur-md flex items-center gap-1.5 ${bgNav} ${textPrimary} opacity-90 hover:opacity-100 transition-opacity pointer-events-auto`}>
+                <button
+                  onClick={() => enhancerDispatch({ type: 'UNDO' })}
+                  disabled={enhancerState.undoStack.length === 0}
+                  className={`p-1.5 transition-all flex items-center justify-center hover:scale-105 active:scale-95 rounded-lg ${
+                    enhancerState.undoStack.length === 0 
+                      ? 'opacity-30 cursor-not-allowed text-gray-500' 
+                      : 'hover:bg-emerald-500/10 text-emerald-500 hover:text-emerald-400'
+                  }`}
+                  title="Undo (Cmd+Z / Ctrl+Z)"
+                >
+                  <Undo size={14} />
+                </button>
+                <button
+                  onClick={() => enhancerDispatch({ type: 'REDO' })}
+                  disabled={enhancerState.redoStack.length === 0}
+                  className={`p-1.5 transition-all flex items-center justify-center hover:scale-105 active:scale-95 rounded-lg ${
+                    enhancerState.redoStack.length === 0 
+                      ? 'opacity-30 cursor-not-allowed text-gray-500' 
+                      : 'hover:bg-emerald-500/10 text-emerald-500 hover:text-emerald-400'
+                  }`}
+                  title="Redo (Cmd+Shift+Z / Ctrl+Shift+Z)"
+                >
+                  <Redo size={14} />
                 </button>
               </div>
             </div>
           )}
         </div>
 
+        {!readOnly && activeSidebar === 'design' && (() => {
+          const portalTarget = document.getElementById('builder-utility-panel-portal');
+          if (!portalTarget) return null;
+          const panelContent = (
+            <div className="flex-grow flex flex-col h-full overflow-hidden">
+              <div className={`p-5 border-b flex items-center justify-between shrink-0 ${bgNav}`}>
+                <h3 className={`font-bold flex items-center gap-2 ${textPrimary}`}><Palette size={18} className={brandGreen}/> Global Design</h3>
+                <div className="flex items-center gap-2">
+                  <UtilityPanelPill activePanel="design" />
+                  <button onClick={() => {
+                    setActiveSidebar(null);
+                    window.dispatchEvent(new CustomEvent('close-utility-panel'));
+                  }} className={textMuted}><X size={18}/></button>
+                </div>
+              </div>
+              <div className="p-5 flex flex-col gap-6 overflow-y-auto custom-scrollbar flex-1">
+                <div><label className={`text-small font-bold uppercase tracking-widest mb-2 block ${textMuted}`}>Typography</label><div className="grid grid-cols-2 gap-2">{['Inter', 'Merriweather', 'Roboto Mono', 'Playfair Display'].map(f => (<button key={f} onClick={() => setDesign({...design, font: f})} className={`py-2 px-1 text-small rounded border transition-colors ${design.font === f ? 'bg-emerald-500/20 border-emerald-500 ' + brandGreen : (isDarkUI ? 'bg-[#222] border-[#333] text-gray-300' : 'bg-white border-gray-200 text-gray-700')}`} style={{ fontFamily: f }}>{f.split(' ')[0]}</button>))}</div></div>
+                <div><label className={`text-small font-bold uppercase tracking-widest mb-2 flex justify-between ${textMuted}`}><span>Font Size</span><span className={brandGreen}>{design.fontSize}px</span></label><input type="range" min="10" max="16" step="0.5" value={design.fontSize} onChange={(e) => setDesign({...design, fontSize: parseFloat(e.target.value)})} className="w-full accent-emerald-500" /></div>
+                <div><label className={`text-small font-bold uppercase tracking-widest mb-2 flex justify-between ${textMuted}`}><span>Line Spacing</span><span className={brandGreen}>{design.spacing.toFixed(1)}x</span></label><input type="range" min="0.5" max="2" step="0.1" value={design.spacing} onChange={(e) => setDesign({...design, spacing: parseFloat(e.target.value)})} className="w-full accent-emerald-500" /></div>
+                <div><label className={`text-small font-bold uppercase tracking-widest mb-2 flex justify-between ${textMuted}`}><span>Page Margin</span><span className={brandGreen}>{design.pageMargin}px</span></label><input type="range" min="0" max="80" step="1" value={design.pageMargin} onChange={(e) => setDesign({...design, pageMargin: parseInt(e.target.value)})} className="w-full accent-emerald-500" /></div>
+                <div><label className={`text-small font-bold uppercase tracking-widest mb-2 block ${textMuted}`}>Accent Color</label><div className="flex gap-3 flex-wrap">{['#7EE787', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#1f2937', '#000000', '#ffffff'].map(c => (<button key={c} onClick={() => setDesign({...design, accentColor: c})} className={`w-7 h-7 rounded-full border-2 transition-transform ${design.accentColor === c ? 'border-white scale-125 shadow-lg' : 'border-transparent hover:scale-110'}`} style={{ backgroundColor: c }} />))}</div></div>
+                <div><label className={`text-small font-bold uppercase tracking-widest mb-2 block ${textMuted}`}>Sidebar Background</label><div className="flex gap-3 flex-wrap">{['#ffffff', '#f8fafc', '#f3f4f6', '#fafaf9', '#f0fdf4', '#f0f9ff', '#fff1f2', '#1e293b', '#0f172a', '#111827', '#1a0f0f', '#0d233a', '#0c2511', '#2a1428'].map(c => (<button key={c} onClick={() => setDesign({...design, sidebarBgColor: c})} className={`w-7 h-7 rounded-full border-2 transition-transform ${design.sidebarBgColor === c ? 'border-emerald-500 scale-125 shadow-lg' : 'border-gray-300 dark:border-gray-600 hover:scale-110'}`} style={{ backgroundColor: c }} />))}</div></div>
+                <div><label className={`text-small font-bold uppercase tracking-widest mb-2 flex justify-between ${textMuted}`}><span>Section Gap</span><span className={brandGreen}>{design.sectionGap}px</span></label><input type="range" min="0" max="60" step="1" value={design.sectionGap} onChange={(e) => setDesign({...design, sectionGap: parseInt(e.target.value)})} className="w-full accent-emerald-500" /></div>
+                <div className="mt-4"><label className={`flex items-center justify-between cursor-pointer`}><span className={`text-small font-bold uppercase tracking-widest ${textMuted}`}>Header Icons</span><div className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors ${design.showHeaderIcons ? brandGreenBg : (isDarkUI ? 'bg-[#333]' : 'bg-gray-300')}`} onClick={() => setDesign({...design, showHeaderIcons: !design.showHeaderIcons})}><span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${design.showHeaderIcons ? 'translate-x-6' : 'translate-x-1'}`} /></div></label></div>
+                <div className="mt-4"><label className={`flex items-center justify-between cursor-pointer`}><span className={`text-small font-bold uppercase tracking-widest ${textMuted}`}>Contact Icons</span><div className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors ${design.showContactIcons ? brandGreenBg : (isDarkUI ? 'bg-[#333]' : 'bg-gray-300')}`} onClick={() => setDesign({...design, showContactIcons: !design.showContactIcons})}><span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${design.showContactIcons ? 'translate-x-6' : 'translate-x-1'}`} /></div></label></div>
+                {['sidebar-left', 'sidebar-left-dark', 'sidebar-right', 'top-sidebar-left', 'top-sidebar-right'].includes(activeTemplate.type) && (
+                  <div className="mt-4 border-t border-gray-200 dark:border-white/10 pt-4">
+                    <label className={`flex items-center justify-between cursor-pointer`}>
+                      <span className={`text-small font-bold uppercase tracking-widest ${textMuted}`}>Split Contact in Sidebar</span>
+                      <div 
+                        className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors ${design.splitContactInSidebar ? brandGreenBg : (isDarkUI ? 'bg-[#333]' : 'bg-gray-300')}`} 
+                        onClick={() => setDesign({...design, splitContactInSidebar: !design.splitContactInSidebar})}
+                      >
+                        <span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${design.splitContactInSidebar ? 'translate-x-6' : 'translate-x-1'}`} />
+                      </div>
+                    </label>
+                    <p className="text-[10px] text-gray-500 mt-1 italic">Controls if contact info is separated from header in vertical layouts.</p>
+                  </div>
+                )}
+                
+                <div className="mt-6 border-t pt-5 border-gray-200 dark:border-[#333]">
+                  <label className={`text-small font-bold uppercase tracking-widest mb-2.5 block ${textMuted}`}>Description Layout</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { id: 'hybrid', label: 'Hybrid' },
+                      { id: 'paragraph_only', label: 'Paragraph' },
+                      { id: 'bullets_only', label: 'Bullets' }
+                    ].map(opt => (
+                      <button
+                        key={opt.id}
+                        onClick={() => setDesign({ ...design, formatOption: opt.id })}
+                        className={`py-2 px-1 text-small font-bold rounded border transition-colors ${
+                          (design.formatOption || 'hybrid') === opt.id
+                            ? 'bg-emerald-500/20 border-emerald-500 ' + brandGreen
+                            : (isDarkUI ? 'bg-[#222] border-[#333] text-gray-300 hover:bg-[#2e2e2e]' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50')
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mt-6 border-t pt-5 border-gray-200 dark:border-[#333]">
+                  <label className={`text-small font-bold uppercase tracking-widest mb-3 block ${textMuted}`}>Date Format</label>
+                  <select value={design.dateFormat || 'MMM YYYY'} onChange={(e) => setDesign({...design, dateFormat: e.target.value})} className={`w-full p-2.5 rounded-lg border text-small appearance-none cursor-pointer focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all ${isDarkUI ? 'bg-[#1e1e1e] border-gray-700 text-gray-200 hover:border-gray-600' : 'bg-white border-gray-200 text-gray-800 hover:border-gray-300 shadow-sm'}`}>
+                    <option value="MMM YYYY">Short Text (Jan 2024)</option>
+                    <option value="MMMM YYYY">Long Text (January 2024)</option>
+                    <option value="MM/YYYY">US Numeric (01/2024)</option>
+                    <option value="YYYY-MM">ISO Numeric (2024-01)</option>
+                    <option value="YYYY">Year Only (2024)</option>
+                  </select>
+                </div>
+
+                <div className="mt-6 border-t pt-5 border-gray-200 dark:border-[#333]">
+                  <label className={`text-small font-bold uppercase tracking-widest mb-3 block ${textMuted}`}>Header Links</label>
+                  <div className="flex flex-col gap-3">
+                    {['location', 'phone', 'email', 'linkedin', 'website', ...(cvData?.basics?.profiles?.map((p: any) => p.network?.toLowerCase()) || [])]
+                      .filter((v, i, a) => a.indexOf(v) === i && v)
+                      .map(linkType => (
+                      <label key={linkType} className="flex items-center justify-between cursor-pointer group">
+                        <span className={`text-small capitalize font-medium transition-colors ${design.headerLinks?.[linkType] !== false ? textPrimary : textMuted}`}>{linkType}</span>
+                        <div className={`relative inline-flex items-center h-5 rounded-full w-9 transition-colors ${design.headerLinks?.[linkType] !== false ? brandGreenBg : (isDarkUI ? 'bg-[#333]' : 'bg-gray-300')}`} onClick={() => setDesign({...design, headerLinks: {...(design.headerLinks || {}), [linkType]: design.headerLinks?.[linkType] === false}})}>
+                          <span className={`inline-block w-3 h-3 transform bg-white rounded-full transition-transform ${design.headerLinks?.[linkType] !== false ? 'translate-x-5' : 'translate-x-1'}`} />
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+          return createPortal(panelContent, portalTarget);
+        })()}
+
+        {!readOnly && activeSidebar === 'data' && (() => {
+          const portalTarget = document.getElementById('builder-utility-panel-portal');
+          if (!portalTarget) return null;
+          const panelContent = (
+            <div className="flex-grow flex flex-col h-full overflow-hidden">
+              <div className={`p-5 border-b flex items-center justify-between shrink-0 ${bgNav}`}>
+                <h3 className={`font-bold flex items-center gap-2 ${textPrimary}`}>
+                  <FileJson size={18} className={brandGreen} /> Raw JSON
+                </h3>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleCopyJsonTemplate}
+                    title="Copy JSON Template"
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-small font-semibold transition-all ${brandGreenBg} hover:opacity-90`}
+                  >
+                    <Copy size={13} />
+                    Copy JSON Template
+                  </button>
+                  <UtilityPanelPill activePanel="json" />
+                  <button onClick={() => {
+                    setActiveSidebar(null);
+                    window.dispatchEvent(new CustomEvent('close-utility-panel'));
+                  }} className={textMuted}><X size={18} /></button>
+                </div>
+              </div>
+              <div className="flex-1 overflow-hidden relative flex flex-col">
+                <JSONSidebarViewer data={cvData} focusedPath={focusedNode ? focusedNode.getAttribute('data-path') : null} onChange={(newData) => onDataChange(newData)} rainbowHighlight={true} />
+              </div>
+            </div>
+          );
+          return createPortal(panelContent, portalTarget);
+        })()}
       </div>
 
-      {/* Removed ThinkHard AI contextual suggestion card in favor of Mori Assistant AI panel */}
-      {!readOnly && dragPreview?.markup && (
-        <div
-          className="fixed z-[130] pointer-events-none"
-          style={{
-            left: dragPreview.x + 20,
-            top: dragPreview.y + 20,
-            width: dragPreview.width,
-            maxWidth: 'min(520px, calc(100vw - 48px))',
-            opacity: 0.82,
-            transform: 'translate3d(0,0,0)',
-          }}
-        >
-          <div className="rounded-2xl border border-emerald-300/70 bg-white/96 shadow-[0_24px_64px_rgba(15,23,42,0.26)] backdrop-blur-sm overflow-hidden">
-            <div className="px-3 py-2 border-b border-emerald-100 bg-emerald-50/95 text-[10px] font-bold uppercase tracking-[0.24em] text-emerald-700">
-              {dragPreview.label}
+      {/* Drag preview thumbnail — 16:9 floating card that follows cursor/touch */}
+      {!readOnly && dragPreview?.markup && (() => {
+        const THUMB_W = 280;
+        const THUMB_H = Math.round(THUMB_W * (9 / 16)); // 16:9 aspect ratio = 157.5px
+        return (
+          <div
+            className="fixed z-[9999] pointer-events-none select-none"
+            style={{
+              left: dragPreview.x - THUMB_W / 2,
+              top: dragPreview.y - THUMB_H / 2 - 20,
+              width: THUMB_W,
+              height: THUMB_H,
+              filter: 'drop-shadow(0 20px 40px rgba(0,0,0,0.3))',
+              transform: 'rotate(-1.5deg) scale(1.04)',
+              transition: 'transform 0.1s ease',
+            }}
+          >
+            {/* Label badge */}
+            <div
+              className="absolute -top-6 left-1/2 -translate-x-1/2 bg-emerald-500 text-white text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow-md whitespace-nowrap z-10"
+            >
+              ✦ {dragPreview.label}
             </div>
-            <div className="pointer-events-none [&_.no-print]:hidden" dangerouslySetInnerHTML={{ __html: dragPreview.markup }} />
+            {/* 16:9 card */}
+            <div className="w-full h-full rounded-xl border-2 border-emerald-400/80 bg-white shadow-[0_12px_40px_rgba(0,0,0,0.25)] overflow-hidden relative">
+              {/* Scaled content — scale from actual width to thumbnail width */}
+              <div
+                className="absolute top-0 left-0 origin-top-left pointer-events-none [&_.no-print]:hidden"
+                style={{
+                  width: dragPreview.width || 500,
+                  transform: `scale(${THUMB_W / (dragPreview.width || 500)})`,
+                }}
+                dangerouslySetInnerHTML={{ __html: dragPreview.markup }}
+              />
+              {/* Frosted overlay to soften content edges */}
+              <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-white/60 pointer-events-none" />
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
       {!readOnly && skillsSuggestionState.open && (
         <div className="fixed inset-0 z-[125] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
           <div className={`w-full max-w-3xl rounded-2xl border shadow-2xl overflow-hidden ${bgPanel}`}>
             <div className={`px-5 py-4 border-b flex items-center justify-between ${bgNav}`}>
               <div>
-                <h3 className={`text-lg font-bold ${textPrimary}`}>AI Skill Suggestions</h3>
-                <p className={`text-sm ${textMuted}`}>Personalized recommendations for {skillsSuggestionState.meta?.role || role || 'your target role'}.</p>
+                <h3 className={`text-h3 font-bold ${textPrimary}`}>AI Skill Suggestions</h3>
+                <p className={`text-small ${textMuted}`}>Personalized recommendations for {skillsSuggestionState.meta?.role || role || 'your target role'}.</p>
               </div>
               <button
                 type="button"
@@ -1815,15 +2153,15 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
               <div className={`grid grid-cols-1 sm:grid-cols-3 gap-3`}>
                 <div className={`rounded-xl border p-4 ${isDarkUI ? 'border-[#2a2a2a] bg-[#111111]' : 'border-gray-200 bg-white'}`}>
                   <div className={`text-[11px] uppercase tracking-[0.22em] ${textMuted}`}>Potential Adds</div>
-                  <div className={`mt-2 text-2xl font-black ${textPrimary}`}>{skillsSuggestionState.categories.reduce((total, category) => total + category.skills.length, 0)}</div>
+                  <div className={`mt-2 text-h2 font-black ${textPrimary}`}>{skillsSuggestionState.categories.reduce((total, category) => total + category.skills.length, 0)}</div>
                 </div>
                 <div className={`rounded-xl border p-4 ${isDarkUI ? 'border-[#2a2a2a] bg-[#111111]' : 'border-gray-200 bg-white'}`}>
                   <div className={`text-[11px] uppercase tracking-[0.22em] ${textMuted}`}>Skill Groups</div>
-                  <div className={`mt-2 text-2xl font-black ${textPrimary}`}>{skillsSuggestionState.categories.length}</div>
+                  <div className={`mt-2 text-h2 font-black ${textPrimary}`}>{skillsSuggestionState.categories.length}</div>
                 </div>
                 <div className={`rounded-xl border p-4 ${isDarkUI ? 'border-[#2a2a2a] bg-[#111111]' : 'border-gray-200 bg-white'}`}>
                   <div className={`text-[11px] uppercase tracking-[0.22em] ${textMuted}`}>Impact Preview</div>
-                  <div className={`mt-2 text-sm font-semibold ${textPrimary}`}>Adds targeted keywords with one click.</div>
+                  <div className={`mt-2 text-small font-semibold ${textPrimary}`}>Adds targeted keywords with one click.</div>
                 </div>
               </div>
 
@@ -1837,7 +2175,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
               )}
 
               {skillsSuggestionState.error && !skillsSuggestionState.loading && (
-                <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-small text-red-700">
                   {skillsSuggestionState.error}
                 </div>
               )}
@@ -1848,8 +2186,8 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
                     <div key={`${category.category}-${index}`} className={`rounded-2xl border p-4 ${isDarkUI ? 'border-[#2a2a2a] bg-[#111111]' : 'border-gray-200 bg-white'}`}>
                       <div className="flex items-start justify-between gap-4">
                         <div>
-                          <div className={`text-base font-bold ${textPrimary}`}>{category.category}</div>
-                          <div className={`mt-1 text-sm ${textMuted}`}>Preview impact: +{category.skills.length} relevant skills</div>
+                          <div className={`text-body font-bold ${textPrimary}`}>{category.category}</div>
+                          <div className={`mt-1 text-small ${textMuted}`}>Preview impact: +{category.skills.length} relevant skills</div>
                         </div>
                         <button
                           type="button"
@@ -1861,7 +2199,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
                       </div>
                       <div className="mt-4 flex flex-wrap gap-2">
                         {category.skills.map((skill) => (
-                          <span key={`${category.category}-${skill}`} className={`px-3 py-1.5 rounded-full text-sm font-medium border ${isDarkUI ? 'border-emerald-900/60 bg-emerald-950/40 text-emerald-200' : 'border-emerald-200 bg-emerald-50 text-emerald-800'}`}>
+                          <span key={`${category.category}-${skill}`} className={`px-3 py-1.5 rounded-full text-small font-medium border ${isDarkUI ? 'border-emerald-900/60 bg-emerald-950/40 text-emerald-200' : 'border-emerald-200 bg-emerald-50 text-emerald-800'}`}>
                             {skill}
                           </span>
                         ))}
@@ -1872,7 +2210,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
               )}
             </div>
             <div className={`px-5 py-4 border-t flex items-center justify-between ${bgNav}`}>
-              <p className={`text-sm ${textMuted}`}>Review the recommendation preview, then add a category or apply everything at once.</p>
+              <p className={`text-small ${textMuted}`}>Review the recommendation preview, then add a category or apply everything at once.</p>
               <div className="flex items-center gap-3">
                 <button
                   type="button"
@@ -1895,78 +2233,93 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
         </div>
       )}
 
-      {/* TEMPLATE MODAL */}
-      {isTemplateModalOpen && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
-          <div className={`rounded-2xl shadow-2xl w-full max-w-7xl overflow-hidden flex flex-col h-[90vh] border ${bgPanel}`}>
+      {/* TEMPLATE PANEL (rendered as portal if target exists, otherwise fall back to modal) */}
+      {isTemplateModalOpen && (() => {
+        const portalTarget = document.getElementById('builder-utility-panel-portal');
+        if (!portalTarget) return null;
+        const content = (
+          <div className="flex-grow flex flex-col h-full overflow-hidden">
             <div className={`p-5 border-b flex justify-between items-center shrink-0 ${bgNav}`}>
-              <div className="flex items-center gap-3"><LayoutTemplate size={24} className="text-emerald-500"/><div><h3 className={`font-black text-xl ${textPrimary}`}>Template Library</h3><p className={`text-xs ${textMuted}`}>Select a layout. All sections can be customized.</p></div></div>
-              <button onClick={() => setIsTemplateModalOpen(false)} className={`p-2 rounded-full ${btnSecondary}`}><X size={20}/></button>
+              <div className="flex items-center gap-3">
+                <LayoutTemplate size={18} className="text-emerald-500"/>
+                <div>
+                  <h3 className={`font-black text-xs uppercase tracking-wider ${textPrimary}`}>Template Library</h3>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <UtilityPanelPill activePanel="layout" />
+                <button onClick={() => {
+                  setIsTemplateModalOpen(false);
+                  window.dispatchEvent(new CustomEvent('close-utility-panel'));
+                }} className={`p-1.5 rounded-full ${btnSecondary}`}>
+                  <X size={16}/>
+                </button>
+              </div>
             </div>
-            <div className={`p-6 overflow-y-auto flex-1 custom-scrollbar ${isDarkUI ? 'bg-[#0a0a0a]' : 'bg-gray-100'}`}>
-              <div className="max-w-6xl mx-auto space-y-10">
+            <div className={`p-4 overflow-y-auto flex-1 custom-scrollbar ${isDarkUI ? 'bg-[#0a0a0a]' : 'bg-gray-100'}`}>
+              <div className="space-y-6">
                 {TEMPLATE_CATEGORIES.map(cat => {
                   const catTemplates = CANVAS_TEMPLATES.filter(tpl => cat.types.includes(tpl.type));
                   if (catTemplates.length === 0) return null;
-                  return (<div key={cat.id}><div className={`py-3 mb-5 flex items-center gap-3 border-b ${isDarkUI ? 'border-[#222] text-white' : 'border-gray-200 text-gray-900'}`}><span className="text-emerald-500">{cat.icon}</span><h2 className="text-lg font-bold">{cat.name}</h2><span className={`text-xs ${textMuted}`}>- {cat.desc}</span></div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">{catTemplates.map(tpl => {
-                      const isActive = activeTemplate.id === tpl.id;
-                      return (<div key={tpl.id} onClick={() => loadTemplate(tpl)} className={`group relative rounded-xl border-2 cursor-pointer transition-all overflow-hidden flex flex-col hover:-translate-y-1 hover:shadow-2xl ${bgPanel} ${isActive ? 'border-emerald-500 ring-4 ring-emerald-500/20' : (isDarkUI ? 'border-[#333]' : 'border-gray-200')}`}>
-                        <div className={`p-2.5 border-b flex justify-between items-center z-10 shrink-0 ${bgNav}`}><div className={`font-bold text-xs ${textPrimary}`}>{tpl.name}</div>{isActive && <span className="bg-emerald-500/20 text-emerald-500 text-[9px] px-1.5 py-0.5 rounded font-bold">ACTIVE</span>}</div>
-                        <div className={`relative w-full flex justify-center items-center p-4 flex-1 overflow-hidden pointer-events-none ${isDarkUI ? 'bg-[#141414]' : 'bg-gray-50'}`}><div className="relative w-[180px] h-[255px] bg-white shadow-md overflow-hidden rounded-sm ring-1 ring-gray-300"><div className="absolute top-0 left-0 w-[794px] h-[1123px] origin-top-left text-gray-900" style={{ transform: 'scale(0.2265)' }}><StaticLayoutRenderer template={tpl} cvData={cvData} ReadOnlyWrapper={ReadOnlyWrapper} design={design} /></div></div></div>
-                      </div>);
-                    })}</div>
-                  </div>);
+                  return (
+                    <div key={cat.id} className="space-y-3">
+                      <div className={`py-1.5 flex items-center gap-2 border-b ${isDarkUI ? 'border-[#222] text-white' : 'border-gray-200 text-gray-900'}`}>
+                        <span className="text-emerald-500">{cat.icon}</span>
+                        <h2 className={`${cat.id === 'hybrid' ? 'text-[9px]' : 'text-xs'} font-bold uppercase tracking-wider`}>{cat.name}</h2>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        {catTemplates.map(tpl => {
+                          const isActive = activeTemplate.id === tpl.id;
+                          return (
+                            <div key={tpl.id} onClick={() => loadTemplate(tpl)} className={`group relative rounded-xl border-2 cursor-pointer transition-all overflow-hidden flex flex-col hover:shadow-lg ${bgPanel} ${isActive ? 'border-emerald-500 ring-2 ring-emerald-500/20' : 'border-transparent'}`}>
+                              <div className={`p-2 flex justify-between items-center z-10 shrink-0 ${bgNav}`}>
+                                <div className={`font-bold text-xs ${textPrimary}`}>{tpl.name}</div>
+                                {isActive && <span className="bg-emerald-500/20 text-emerald-500 text-[9px] px-1.5 py-0.5 rounded font-bold">ACTIVE</span>}
+                              </div>
+                              <div className={`relative w-full flex justify-center items-center p-0 overflow-hidden pointer-events-none ${isDarkUI ? 'bg-[#141414]' : 'bg-gray-50'}`}>
+                                <div className="relative w-[177px] h-[250px] bg-white shadow-md overflow-hidden rounded-sm">
+                                  <div className="absolute top-0 left-0 w-[794px] h-[1123px] origin-top-left text-gray-900" style={{ transform: 'scale(0.2229)' }}>
+                                    <StaticLayoutRenderer template={tpl} cvData={cvData} ReadOnlyWrapper={ReadOnlyWrapper} design={design} />
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
                 })}
               </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+
+        return createPortal(content, portalTarget);
+      })()}
 
       {/* REPLACE / ADD SNIPPET MODAL */}
       {replacingSnippet && (() => {
-        const MOCK_CV_DATA = {
-          basics: { name: 'John Doe', title: 'Senior Software Engineer', email: 'john.doe@example.com', phone: '+1 234 567 890', location: 'New York, USA', summary: 'A passionate software engineer with 10+ years of experience in building scalable web applications and leading cross-functional teams.' },
-          experience: [{ id: 'mock-1', role: 'Lead Developer', company: 'Tech Solutions Inc.', date: '2018 - Present', description: '<ul><li>Architected and developed a microservices-based platform serving 1M+ users.</li><li>Mentored junior engineers and improved sprint velocity by 25%.</li></ul>' }],
-          education: [{ id: 'mock-2', degree: 'BSc Computer Science', institution: 'University of Technology', date: '2014 - 2018', description: 'Graduated with First Class Honors. President of the Coding Club.' }],
-          projects: [{ id: 'mock-3', name: 'Open Source E-commerce', role: 'Creator & Maintainer', date: '2021', description: 'Built an open-source e-commerce platform with React and Node.js. 5k+ GitHub stars.' }],
-          skills: { languages: 'JavaScript, TypeScript, Python, Go, Rust', frameworks: 'React, Node.js, Next.js, Express, Django', tools: 'Git, Docker, Kubernetes, AWS, GCP' },
-          certifications: [{ id: 'mock-4', name: 'AWS Certified Solutions Architect', issuer: 'Amazon Web Services', date: '2022' }],
-          awards: [{ id: 'mock-5', name: 'Developer of the Year', issuer: 'Tech Solutions Inc.', date: '2021' }],
-          publications: [{ id: 'mock-6', title: 'Microservices Patterns', publisher: 'TechPress', date: '2020', description: 'A comprehensive guide to building scalable microservices.' }],
-          volunteer: [{ id: 'mock-7', role: 'Mentor', organization: 'Code for Good', date: '2019 - Present', description: 'Mentoring underrepresented youth in tech.' }],
-          references: [{ id: 'mock-8', name: 'Jane Smith', role: 'CTO at Tech Solutions', contact: 'jane.smith@example.com' }],
-          languages: 'English (Native), Spanish (Fluent), French (Intermediate)',
-          interests: 'Open Source, Photography, Hiking, Reading'
-        };
-
         const getPreviewData = (realData: any) => {
-          const isArrayEmpty = (arr: any) => !Array.isArray(arr) || arr.length === 0;
           return {
             ...realData,
             basics: {
-              ...MOCK_CV_DATA.basics,
+              name: 'Your Name',
+              title: 'Job Title',
+              summary: 'Professional summary...',
               ...realData?.basics,
-              name: realData?.basics?.name || MOCK_CV_DATA.basics.name,
-              title: realData?.basics?.title || MOCK_CV_DATA.basics.title,
-              summary: realData?.basics?.summary || MOCK_CV_DATA.basics.summary,
             },
-            experience: isArrayEmpty(realData?.experience) ? MOCK_CV_DATA.experience : realData.experience,
-            education: isArrayEmpty(realData?.education) ? MOCK_CV_DATA.education : realData.education,
-            projects: isArrayEmpty(realData?.projects) ? MOCK_CV_DATA.projects : realData.projects,
-            skills: {
-              ...MOCK_CV_DATA.skills,
-              ...realData?.skills,
-              languages: realData?.skills?.languages || MOCK_CV_DATA.skills.languages,
-            },
-            certifications: isArrayEmpty(realData?.certifications) ? MOCK_CV_DATA.certifications : realData.certifications,
-            awards: isArrayEmpty(realData?.awards) ? MOCK_CV_DATA.awards : realData.awards,
-            publications: isArrayEmpty(realData?.publications) ? MOCK_CV_DATA.publications : realData.publications,
-            volunteer: isArrayEmpty(realData?.volunteer) ? MOCK_CV_DATA.volunteer : realData.volunteer,
-            references: isArrayEmpty(realData?.references) ? MOCK_CV_DATA.references : realData.references,
-            languages: realData?.languages || MOCK_CV_DATA.languages,
-            interests: realData?.interests || MOCK_CV_DATA.interests,
+            experience: realData?.experience || [],
+            education: realData?.education || [],
+            projects: realData?.projects || [],
+            skills: realData?.skills || {},
+            certifications: realData?.certifications || [],
+            awards: realData?.awards || [],
+            publications: realData?.publications || [],
+            volunteer: realData?.volunteer || [],
+            references: realData?.references || [],
+            languages: realData?.languages || '',
+            interests: realData?.interests || '',
           };
         };
 
@@ -2023,24 +2376,30 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
         });
 
         return (
-          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
-            <div className={`rounded-2xl shadow-2xl w-full max-w-6xl overflow-hidden flex flex-col max-h-[90vh] border ${isDarkUI ? 'bg-[#141414] border-[#2a2a2a]' : 'bg-white border-gray-200'}`}>
+          <>
+            {/* Backdrop Overlay */}
+            <div 
+              className="fixed inset-0 bg-black/40 backdrop-blur-xs z-[110] transition-opacity duration-300"
+              onClick={() => setReplacingSnippet(null)}
+            />
+            {/* Right Side Panel */}
+            <div className={`fixed top-0 right-0 h-full w-full max-w-[420px] shadow-2xl z-[120] flex flex-col border-l transition-all duration-300 ease-in-out ${isDarkUI ? 'bg-[#111111] border-[#2a2a2a]' : 'bg-white border-gray-200'}`}>
               <div className={`p-4 border-b flex justify-between items-center ${isDarkUI ? 'bg-[#111] border-[#2a2a2a]' : 'bg-white border-gray-200'}`}>
-                <h3 className={`font-bold text-base flex items-center gap-2 ${textPrimary}`}>{replacingSnippet.isAdd ? <PlusCircle size={18} className="text-emerald-500"/> : <RefreshCw size={18} className="text-blue-500"/>}{replacingSnippet.isAdd ? 'Add Snippet' : `Replace ${replacingSnippet.category}`}</h3>
+                <h3 className={`font-bold text-body flex items-center gap-2 ${textPrimary}`}>{replacingSnippet.isAdd ? <PlusCircle size={18} className="text-emerald-500"/> : <RefreshCw size={18} className="text-blue-500"/>}{replacingSnippet.isAdd ? 'Add Snippet' : `Replace ${replacingSnippet.category}`}</h3>
                 <button onClick={() => setReplacingSnippet(null)} className={`p-1.5 rounded-full ${isDarkUI ? 'bg-[#222] text-gray-300 hover:bg-[#333]' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'} transition-colors`}><X size={18}/></button>
               </div>
               {replacingSnippet.isAdd && (
-                <div className={`px-5 pt-4 pb-2 flex flex-wrap gap-2 border-b ${isDarkUI ? 'border-[#2a2a2a]' : 'border-gray-200'}`}>
+                <div className={`px-4 py-3 flex flex-wrap gap-1.5 border-b ${isDarkUI ? 'border-[#2a2a2a]' : 'border-gray-200'} bg-[#f9f9f9] dark:bg-[#0d0d0d]`}>
                   {['All', 'Header', 'Summary', 'Experience', 'Education', 'Projects', 'Certifications', 'Awards', 'Skills', 'Languages', 'Interests', 'Publications', 'Volunteer', 'References', 'Sidebar']
                     .filter(cat => cat === 'All' || !currentCategories.includes(cat))
                     .map(cat => (
-                    <button key={cat} onClick={() => setReplacingSnippet({...replacingSnippet, filterCategory: cat === 'All' ? null : cat})} className={`px-3 py-1.5 text-xs font-bold rounded-full uppercase tracking-wider border ${replacingSnippet.filterCategory === cat || (!replacingSnippet.filterCategory && cat === 'All') ? 'bg-emerald-500/20 text-emerald-500 border-emerald-500/50' : (isDarkUI ? 'bg-[#222] text-gray-400 border-[#333]' : 'bg-white text-gray-600 border-gray-200')}`}>{cat}</button>
+                    <button key={cat} onClick={() => setReplacingSnippet({...replacingSnippet, filterCategory: cat === 'All' ? null : cat})} className={`px-2.5 py-1 text-[11px] font-bold rounded-full uppercase tracking-wider border transition-all ${replacingSnippet.filterCategory === cat || (!replacingSnippet.filterCategory && cat === 'All') ? 'bg-emerald-500/20 text-emerald-500 border-emerald-500/50' : (isDarkUI ? 'bg-[#1e1e1e] text-gray-400 border-[#2a2a2a] hover:bg-[#252525]' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50')}`}>{cat}</button>
                   ))}
                   {(!replacingSnippet.filterCategory || replacingSnippet.filterCategory === 'Skills') && (
                     <button
                       type="button"
                       onClick={() => void openSkillsSuggestions()}
-                      className="ml-auto px-3 py-1.5 text-xs font-bold rounded-full uppercase tracking-wider border border-emerald-400/50 bg-emerald-500/10 text-emerald-500 flex items-center gap-1.5"
+                      className="w-full mt-2 justify-center px-3 py-1.5 text-xs font-bold rounded-lg uppercase tracking-wider border border-emerald-400/50 bg-emerald-500/10 text-emerald-500 flex items-center gap-1.5 hover:bg-emerald-500/20 transition-all"
                     >
                       <Sparkles size={12} />
                       AI Skill Recommendations
@@ -2048,54 +2407,49 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
                   )}
                 </div>
               )}
-              <div className={`p-5 overflow-y-auto flex-1 custom-scrollbar ${isDarkUI ? 'bg-[#0a0a0a]' : 'bg-gray-100'}`}>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                  {sortedSnippets.map(snippet => {
-                    const targetZoneId = replacingSnippet.zoneId;
-                    const isTargetDark = activeTemplate.type.includes('dark') && targetZoneId === 'sidebar';
-                    const isSidebar = ['sidebar', 'left', 'right'].includes(targetZoneId);
-                    const styleKey = isSidebar && activeTemplate.sidebarTitleStyle ? activeTemplate.sidebarTitleStyle : activeTemplate.titleStyle;
-                    const TitleRenderer = TITLE_STYLES[styleKey] || TITLE_STYLES['standard'];
-                    
-                    const isCurrent = snippet.id === replacingSnippet.currentType;
-                    const isRecommended = recommendedFamily && SNIPPET_FAMILIES[recommendedFamily].some(k => snippet.id.includes(k));
-                    const isATS = ATS_SNIPPETS.includes(snippet.id);
-                    
-                    // Dynamic scaling based on category to prevent tiny previews
-                    const isHeader = snippet.category === 'Header';
-                    const isCompact = ['Languages', 'Interests', 'Skills', 'Awards'].includes(snippet.category);
-                    const scale = isHeader ? 0.6 : 0.65;
-                    const wrapperWidth = isSidebar ? '200%' : (isHeader ? '166%' : '153%');
-                    const height = isHeader ? '160px' : (isCompact ? '180px' : '240px');
+              <div className={`p-4 overflow-y-auto flex-1 custom-scrollbar space-y-4 ${isDarkUI ? 'bg-[#0a0a0a]' : 'bg-gray-50'}`}>
+                {sortedSnippets.map(snippet => {
+                  const targetZoneId = replacingSnippet.zoneId;
+                  const isTargetDark = false; // Always light theme for snippet previews
+                  const isSidebar = ['sidebar', 'left', 'right'].includes(targetZoneId);
+                  const styleKey = isSidebar && activeTemplate.sidebarTitleStyle ? activeTemplate.sidebarTitleStyle : activeTemplate.titleStyle;
+                  const TitleRenderer = TITLE_STYLES[styleKey] || TITLE_STYLES['standard'];
+                  
+                  const isCurrent = snippet.id === replacingSnippet.currentType;
+                  const isRecommended = recommendedFamily && SNIPPET_FAMILIES[recommendedFamily].some(k => snippet.id.includes(k));
+                  const isATS = ATS_SNIPPETS.includes(snippet.id);
+                  
+                  const isHeader = snippet.category === 'Header';
+                  const scale = isHeader ? 0.5 : 0.4;
+                  const wrapperWidth = isSidebar ? '250%' : (isHeader ? '200%' : '250%');
 
-                    return (
-                      <div key={snippet.id} onClick={() => executeReplaceOrAdd(snippet.id)} className={`group relative rounded-xl border-2 cursor-pointer transition-all overflow-hidden flex flex-col hover:-translate-y-1 hover:shadow-xl ${isDarkUI ? 'bg-[#111]' : 'bg-white'} ${isCurrent ? 'border-emerald-500 ring-2 ring-emerald-500/20' : (isRecommended && !isCurrent ? 'border-amber-400 ring-2 ring-amber-400/20' : (isDarkUI ? 'border-[#333] hover:border-gray-500' : 'border-gray-200 hover:border-gray-400'))}`}>
-                        <div className={`p-4 flex flex-col gap-2 z-10 ${isDarkUI ? 'bg-[#111]' : 'bg-white'}`}>
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <div className={`font-bold text-[15px] ${textPrimary}`}>{snippet.name}</div>
-                              <div className={`text-[10px] mt-1 font-semibold uppercase tracking-wider ${textMuted}`}>{snippet.category}</div>
-                            </div>
-                            <div className="flex flex-col gap-1 items-end">
-                              {isCurrent && <span className="bg-emerald-500/20 text-emerald-500 text-[9px] px-2 py-1 rounded font-bold tracking-widest uppercase">CURRENT</span>}
-                              {isRecommended && !isCurrent && <span className="bg-amber-400/20 text-amber-600 text-[9px] px-2 py-1 rounded font-bold tracking-widest uppercase flex items-center gap-1"><Sparkles size={10}/> FOR YOUR STYLE</span>}
-                              {isATS && <span className="bg-blue-500/10 text-blue-600 border border-blue-500/20 text-[9px] px-2 py-1 rounded font-bold tracking-widest uppercase flex items-center gap-1"><Check size={10}/> ATS READY</span>}
-                            </div>
+                  return (
+                    <div key={snippet.id} onClick={() => executeReplaceOrAdd(snippet.id)} className={`group relative rounded-xl border-2 cursor-pointer transition-all overflow-hidden flex flex-col hover:shadow-lg ${isDarkUI ? 'bg-[#111]' : 'bg-white'} ${isCurrent ? 'border-emerald-500 ring-2 ring-emerald-500/20' : (isRecommended && !isCurrent ? 'border-amber-400 ring-2 ring-amber-400/20' : (isDarkUI ? 'border-[#222] hover:border-gray-500' : 'border-gray-200 hover:border-gray-300'))}`}>
+                      <div className={`p-3 flex flex-col gap-1.5 z-10 ${isDarkUI ? 'bg-[#111]' : 'bg-white'} border-b ${isDarkUI ? 'border-[#222]' : 'border-gray-100'}`}>
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <div className={`font-bold text-sm ${textPrimary}`}>{snippet.name}</div>
+                            <div className={`text-[9px] mt-0.5 font-semibold uppercase tracking-wider ${textMuted}`}>{snippet.category}</div>
                           </div>
-                        </div>
-                        
-                        <div className="relative w-full overflow-hidden border-t border-gray-800" style={{ height, backgroundColor: isTargetDark ? design.sidebarBgColor : '#f9f9f9', '--cv-font': design.font, '--cv-base-size': `${design.fontSize}px`, '--cv-spacing': design.spacing, '--cv-accent': design.accentColor, '--cv-sidebar-bg': design.sidebarBgColor, '--cv-section-gap': `${design.sectionGap}px` } as React.CSSProperties}>
-                          <div className={`absolute top-0 left-0 origin-top-left pointer-events-none px-6 py-6 opacity-95 group-hover:opacity-100 transition-opacity cv-document ${isTargetDark ? 'text-gray-200' : 'text-gray-900'}`} style={{ width: wrapperWidth, transform: `scale(${scale})` }}>
-                            <snippet.render data={previewData} Editable={ReadOnlyWrapper} zoneId={targetZoneId} isDark={isTargetDark} design={design} showIcons={true} layoutZones={zones} Title={({ titleKey }: any) => <TitleRenderer isDark={isTargetDark}><ReadOnlyWrapper path={`sectionTitles.${titleKey}`} nowrap /></TitleRenderer>} moveEntry={() => {}} deleteEntry={() => {}} readOnly={true} />
+                          <div className="flex flex-col gap-1 items-end">
+                            {isCurrent && <span className="bg-emerald-500/20 text-emerald-500 text-[8px] px-1.5 py-0.5 rounded font-bold tracking-widest uppercase">CURRENT</span>}
+                            {isRecommended && !isCurrent && <span className="bg-amber-400/20 text-amber-600 text-[8px] px-1.5 py-0.5 rounded font-bold tracking-widest uppercase flex items-center gap-0.5"><Sparkles size={8}/> RECOMMEND</span>}
+                            {isATS && <span className="bg-blue-500/10 text-blue-600 border border-blue-500/20 text-[8px] px-1.5 py-0.5 rounded font-bold tracking-widest uppercase flex items-center gap-0.5"><Check size={8}/> ATS</span>}
                           </div>
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
+                      
+                      <div className="relative w-full aspect-[16/9] overflow-hidden bg-[#f9f9f9]" style={{ '--cv-font': design.font, '--cv-base-size': `${design.fontSize}px`, '--cv-spacing': design.spacing, '--cv-accent': design.accentColor, '--cv-sidebar-bg': '#ffffff', '--cv-section-gap': `${design.sectionGap}px` } as React.CSSProperties}>
+                        <div className="absolute top-0 left-0 origin-top-left pointer-events-none p-4 opacity-95 group-hover:opacity-100 transition-opacity cv-document text-gray-900" style={{ width: wrapperWidth, transform: `scale(${scale})` }}>
+                          <snippet.render data={previewData} Editable={ReadOnlyWrapper} zoneId={targetZoneId} isDark={isTargetDark} design={design} showIcons={true} layoutZones={zones} Title={({ titleKey }: any) => <TitleRenderer isDark={isTargetDark}><ReadOnlyWrapper path={`sectionTitles.${titleKey}`} nowrap /></TitleRenderer>} moveEntry={() => {}} deleteEntry={() => {}} readOnly={true} />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
-          </div>
+          </>
         );
       })()}
 
@@ -2120,6 +2474,26 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
         .custom-scrollbar::-webkit-scrollbar-thumb { background: ${isDarkUI ? '#444' : '#ccc'}; border-radius: 4px; }
         .cv-document { 
           font-family: var(--cv-font), sans-serif; color: #111827; font-size: var(--cv-base-size); position: relative; z-index: 10; 
+          overflow-wrap: break-word;
+          word-wrap: break-word;
+          white-space: normal;
+        }
+        .cv-document * {
+          min-width: 0;
+          max-width: 100%;
+          box-sizing: border-box;
+          word-break: normal;
+          hyphens: none;
+        }
+        /* Specific handle for name in header - allow shrinking */
+        .cv-header-name, .cv-header-role {
+          display: inline-block;
+          max-width: 100%;
+          overflow: visible !important;
+          text-overflow: clip;
+          white-space: nowrap !important;
+          word-break: normal;
+          overflow-wrap: normal;
         }
         .cv-page {
           font-family: var(--cv-font), sans-serif; color: #111827; font-size: var(--cv-base-size); position: relative; z-index: 10; 
@@ -2127,16 +2501,16 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
           box-sizing: border-box;
           overflow: hidden;
         }
-        .cv-document .text-gray-900 { color: #111827 !important; }
-        .cv-document .text-gray-800 { color: #1f2937 !important; }
-        .cv-document .text-gray-700 { color: #374151 !important; }
-        .cv-document .text-gray-600 { color: #4b5563 !important; }
-        .cv-document .text-gray-500 { color: #6b7280 !important; }
-        .cv-document .text-gray-400 { color: #9ca3af !important; }
-        .cv-document .text-gray-300 { color: #d1d5db !important; }
-        .cv-document .text-gray-200 { color: #e5e7eb !important; }
-        .cv-document .text-gray-100 { color: #f3f4f6 !important; }
-        .cv-document .text-white { color: #ffffff !important; }
+        .cv-document .text-gray-900 { color: #111827; }
+        .cv-document .text-gray-800 { color: #1f2937; }
+        .cv-document .text-gray-700 { color: #374151; }
+        .cv-document .text-gray-600 { color: #4b5563; }
+        .cv-document .text-gray-500 { color: #6b7280; }
+        .cv-document .text-gray-400 { color: #9ca3af; }
+        .cv-document .text-gray-300 { color: #d1d5db; }
+        .cv-document .text-gray-200 { color: #e5e7eb; }
+        .cv-document .text-gray-100 { color: #f3f4f6; }
+        .cv-document .text-white { color: #ffffff; }
         
         /* Dark Sidebar Override Rules */
         .cv-document .cv-dark-sidebar,
@@ -2168,26 +2542,41 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
           border-color: rgba(255, 255, 255, 0.15) !important;
         }
         
-        .cv-name { font-size: calc(var(--cv-base-size) * 2.5); line-height: 1.1; }
-        .cv-name-narrow { font-size: calc(var(--cv-base-size) * 2.0); line-height: 1.1; }
-        .cv-role { font-size: calc(var(--cv-base-size) * 1.15); }
+        /* Container queries for responsive typography */
+        .cv-document, .cv-document > div, .cv-document > div > div {
+          container-type: inline-size;
+        }
+        
+        .cv-name { font-size: min(calc(var(--cv-base-size) * 2.5), 8cqw); line-height: 1.1; }
+        .cv-name-narrow { font-size: min(calc(var(--cv-base-size) * 2.0), 8cqw); line-height: 1.1; }
+        .cv-role { font-size: min(calc(var(--cv-base-size) * 1.15), 5.5cqw); }
         .cv-heading { font-size: calc(var(--cv-base-size) * 1.1); }
         .cv-title { font-size: calc(var(--cv-base-size) * 1.05); }
         .cv-subtitle { font-size: calc(var(--cv-base-size) * 0.95); }
         .cv-date { font-size: calc(var(--cv-base-size) * 0.85); }
         .cv-contact { font-size: calc(var(--cv-base-size) * 0.85); }
+        .cv-contact-horizontal {
+          flex-wrap: nowrap !important;
+          overflow: hidden;
+          font-size: min(calc(var(--cv-base-size) * 0.85), 2cqw) !important;
+        }
         .cv-body { font-size: inherit; line-height: calc(1.6 * var(--cv-spacing)); }
         .cv-document p, .cv-document ul, .cv-document li { font-size: inherit !important; line-height: inherit !important; margin: 0; padding: 0; }
+        .cv-document ul { list-style-type: disc !important; padding-left: 1.25rem !important; }
+        .cv-document li { display: list-item !important; }
+        .cv-document svg, .cv-document .lucide { vertical-align: middle !important; display: inline-block !important; }
+        .cv-document .cv-contact span, .cv-document .cv-contact svg { display: inline-flex !important; align-items: center !important; }
+        .cv-document .cv-contact svg { margin-top: -0.1em !important; }
         .cv-prose p { margin-bottom: calc(0.3em * var(--cv-spacing)) !important; }
-        .cv-prose ul { list-style-type: disc; padding-left: 1.2em; margin-top: calc(0.25em * var(--cv-spacing)) !important; margin-bottom: calc(0.25em * var(--cv-spacing)) !important; }
-        .cv-prose li { margin-bottom: calc(0.15em * var(--cv-spacing)) !important; }
+        .cv-prose ul { list-style-type: disc !important; padding-left: 1.25rem !important; margin-top: calc(0.25em * var(--cv-spacing)) !important; margin-bottom: calc(0.25em * var(--cv-spacing)) !important; }
+        .cv-prose li { display: list-item !important; margin-bottom: calc(0.15em * var(--cv-spacing)) !important; }
         [contenteditable]:empty:before { content: attr(placeholder); color: #9ca3af; pointer-events: none; display: block; }
         .cv-accent-text { color: var(--cv-accent) !important; }
         .cv-accent-bg { background-color: var(--cv-accent) !important; }
         .cv-accent-border { border-color: var(--cv-accent) !important; }
-        .cv-document .cv-gap-sm { gap: calc(0.5rem * var(--cv-spacing)) !important; }
-        .cv-document .cv-gap-md { gap: calc(0.75rem * var(--cv-spacing)) !important; }
-        .cv-document .cv-gap-lg { gap: calc(1rem * var(--cv-spacing)) !important; }
+        .cv-document .cv-gap-sm { gap: calc(8px * var(--cv-spacing)) !important; }
+        .cv-document .cv-gap-md { gap: calc(12px * var(--cv-spacing)) !important; }
+        .cv-document .cv-gap-lg { gap: calc(16px * var(--cv-spacing)) !important; }
         
         /* Layout formats */
         .cv-format-bullets-only .cv-prose p {
@@ -2205,18 +2594,6 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
           display: none !important;
           margin: 0 !important;
           padding: 0 !important;
-        }
-        
-        /* Ghost Wrapper Fix */
-        .cv-section-wrapper:has(.cv-continuation-marker) {
-          margin-top: 0 !important;
-          padding-top: 0 !important;
-        }
-        .cv-section-wrapper:has(.cv-continuation-marker) > div > .snippet-content > .cv-section,
-        .cv-section:has(.cv-continuation-marker) {
-          margin-top: 0 !important;
-          padding-top: 0 !important;
-          border-top: none !important;
         }
 
         .cv-page-visualizer { position: absolute; inset: 0; pointer-events: none; z-index: 1; background-size: 100% calc(var(--cv-page-height) + var(--cv-page-gap)); background-image: linear-gradient(to bottom, #ffffff 0, #ffffff var(--cv-page-height), transparent var(--cv-page-height), transparent calc(var(--cv-page-height) + var(--cv-page-gap))); filter: drop-shadow(0 15px 25px rgba(0,0,0,0.15)); }
@@ -2247,8 +2624,17 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
         }
         @keyframes fadeInUp { from { opacity: 0; transform: translate(-50%, 10px); } to { opacity: 1; transform: translate(-50%, 0); } }
         .animate-fade-in-up { animation: fadeInUp 0.2s ease-out forwards; }
-        @keyframes snippetEntrance { from { opacity: 0; } to { opacity: 1; } }
-        .snippet-anim { animation: snippetEntrance 0.3s ease-out forwards; }
+        @keyframes snippetEntrance { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+        .snippet-anim { 
+          animation: snippetEntrance 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards; 
+          transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .cv-page {
+          transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .cv-section, .cv-item {
+          transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
       `}} />
       </div>
     </CanvasContext.Provider>

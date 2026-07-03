@@ -70,7 +70,7 @@ const CVPreviewThumbnail: React.FC<CVPreviewThumbnailProps> = ({
       <div className={`w-full h-full flex items-center justify-center bg-gray-100 rounded-lg ${className}`}>
         <div className="text-center text-gray-500">
           <FileText size={32} className="mx-auto mb-2 opacity-50" />
-          <p className="text-sm font-medium">No preview available</p>
+          <p className="text-small font-medium">No preview available</p>
         </div>
       </div>
     );

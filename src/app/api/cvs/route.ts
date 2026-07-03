@@ -568,8 +568,8 @@ export async function POST(request: NextRequest) {
       console.log('✅ CV POST API - First CV: Forcing Master CV type');
     }
 
-    // Check if this is from resume-enhancer
-    const isFromResumeEnhancer = finalMetadata?.createdVia === 'resume-enhancer';
+    // Check if this is from cv-builder-pro
+    const isFromResumeEnhancer = finalMetadata?.createdVia === 'cv-builder-pro';
 
     // Security: Check CV creation limits using unified limit service
     if (isFromResumeEnhancer || finalCvType === 'standalone' || isCreatingMasterCV || finalCvType === 'journey') {
@@ -839,7 +839,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Spend credit for CV creation (for free users)
-    // Only spend credit for master CVs and standalone CVs from resume-enhancer
+    // Only spend credit for master CVs and standalone CVs from cv-builder-pro
     // Journey CVs don't need credit spending as they're created with jobs (credit already spent)
     if (isFromResumeEnhancer || finalCvType === 'standalone' || isCreatingMasterCV || finalCvType === 'master') {
       const User = (await import('@/models/User')).default;

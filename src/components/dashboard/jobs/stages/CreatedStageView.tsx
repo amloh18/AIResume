@@ -63,10 +63,10 @@ const CreatedStageView: React.FC<CreatedStageViewProps> = ({
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
         <FileText className="w-16 h-16 text-gray-400 dark:text-gray-600 mb-4" />
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+        <h3 className="text-h3 font-semibold text-gray-900 dark:text-white mb-2">
           No created jobs
         </h3>
-        <p className="text-sm text-gray-500 dark:text-gray-400">
+        <p className="text-small text-gray-500 dark:text-gray-400">
           Jobs with generated documents will appear here.
         </p>
       </div>
@@ -79,7 +79,7 @@ const CreatedStageView: React.FC<CreatedStageViewProps> = ({
       <div className="px-6 py-4 border-b border-gray-200 dark:border-white/10 flex items-center justify-end">
         <button
           onClick={() => setShowReadyOnly(!showReadyOnly)}
-          className={`flex items-center gap-2 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${showReadyOnly
+          className={`flex items-center gap-2 text-small font-medium px-3 py-1.5 rounded-lg transition-colors ${showReadyOnly
             ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
             : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5'
             }`}
@@ -94,18 +94,18 @@ const CreatedStageView: React.FC<CreatedStageViewProps> = ({
           <thead className="bg-gray-50 dark:bg-[#1c2018]">
             <tr>
               {/* Universal Columns */}
-              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Company</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Role</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Location</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Comp Range</th>
+              <th className="px-6 py-4 text-left text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Company</th>
+              <th className="px-6 py-4 text-left text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Role</th>
+              <th className="px-6 py-4 text-left text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Location</th>
+              <th className="px-6 py-4 text-left text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Comp Range</th>
 
               {/* Stage Specific Columns */}
-              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">ATS Score</th>
-              <th className="px-6 py-4 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">CV Status</th>
-              <th className="px-6 py-4 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">CL Status</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Risk Factor</th>
+              <th className="px-6 py-4 text-left text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">ATS Score</th>
+              <th className="px-6 py-4 text-center text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">CV Status</th>
+              <th className="px-6 py-4 text-center text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">CL Status</th>
+              <th className="px-6 py-4 text-left text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Risk Factor</th>
 
-              <th className="px-6 py-4 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+              <th className="px-6 py-4 text-right text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 dark:divide-white/10">
@@ -128,7 +128,7 @@ const CreatedStageView: React.FC<CreatedStageViewProps> = ({
                   {/* Company */}
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-white/10 flex items-center justify-center text-xs font-bold text-gray-500 dark:text-gray-400 overflow-hidden">
+                      <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-white/10 flex items-center justify-center text-small font-bold text-gray-500 dark:text-gray-400 overflow-hidden">
                         {job.companyLogo ? (
                           <img
                             src={job.companyLogo}
@@ -141,18 +141,18 @@ const CreatedStageView: React.FC<CreatedStageViewProps> = ({
                           {job.company.substring(0, 2).toUpperCase()}
                         </span>
                       </div>
-                      <span className="text-sm font-semibold text-gray-900 dark:text-white">{job.company}</span>
+                      <span className="text-small font-semibold text-gray-900 dark:text-white">{job.company}</span>
                     </div>
                   </td>
 
                   {/* Role */}
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-sm text-gray-900 dark:text-white">{job.jobTitle || job.title}</span>
+                    <span className="text-small text-gray-900 dark:text-white">{job.jobTitle || job.title}</span>
                   </td>
 
                   {/* Location */}
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400">
+                    <div className="flex items-center gap-1.5 text-small text-gray-500 dark:text-gray-400">
                       <MapPin size={14} />
                       <span className="truncate max-w-[150px]">{job.location || '-'}</span>
                     </div>
@@ -160,13 +160,13 @@ const CreatedStageView: React.FC<CreatedStageViewProps> = ({
 
                   {/* Comp Range */}
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-sm text-gray-600 dark:text-gray-300">{getCompRange(job)}</span>
+                    <span className="text-small text-gray-600 dark:text-gray-300">{getCompRange(job)}</span>
                   </td>
 
                   {/* ATS Score */}
                   <td className="px-6 py-4 whitespace-nowrap align-middle">
                     <div className="w-24">
-                      <div className="flex justify-between text-xs mb-1">
+                      <div className="flex justify-between text-small mb-1">
                         <span className={atsScore >= 80 ? 'text-green-600 dark:text-green-400 font-medium' : 'text-amber-600 dark:text-amber-400'}>
                           {atsScore}/100
                         </span>
@@ -202,7 +202,7 @@ const CreatedStageView: React.FC<CreatedStageViewProps> = ({
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-2">
                       <Shield size={14} className={riskLevel === 'low' ? 'text-blue-500' : 'text-gray-400'} />
-                      <span className={`text-sm ${riskLevel === 'low' ? 'text-gray-600 dark:text-gray-300' :
+                      <span className={`text-small ${riskLevel === 'low' ? 'text-gray-600 dark:text-gray-300' :
                         riskLevel === 'high' ? 'text-red-500' : 'text-gray-500'
                         }`}>
                         {riskLevel === 'low' ? 'Low Risk' : riskLevel === 'high' ? 'High Risk' : 'Analyzing...'}

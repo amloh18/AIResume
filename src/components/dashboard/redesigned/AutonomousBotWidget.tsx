@@ -38,7 +38,7 @@ export default function AutonomousBotWidget({ isActive = true, loading = false, 
             <div>
               <div className="text-[10px] font-black uppercase tracking-widest text-gray-500">System Status</div>
               <div className={cn(
-                "text-xl font-black",
+                "text-h3 font-black",
                 isActive ? "text-[#83d60d]" : "text-gray-400"
               )}>
                 {isActive ? 'ACTIVE' : 'PAUSED'}
@@ -49,19 +49,19 @@ export default function AutonomousBotWidget({ isActive = true, loading = false, 
           <div className="grid grid-cols-2 gap-6">
             <div>
               <div className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1">Jobs Applied</div>
-              <div className="text-3xl font-black">23</div>
+              <div className="text-h1 font-black">23</div>
             </div>
             <div>
               <div className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1">Matches Found</div>
-              <div className="text-3xl font-black text-[#83d60d]">147</div>
+              <div className="text-h1 font-black text-[#83d60d]">147</div>
             </div>
             <div>
               <div className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1">Avg Match Score</div>
-              <div className="text-3xl font-black">92%</div>
+              <div className="text-h1 font-black">92%</div>
             </div>
             <div>
               <div className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1">Active Rules</div>
-              <div className="text-3xl font-black text-blue-400">4</div>
+              <div className="text-h1 font-black text-blue-400">4</div>
             </div>
           </div>
         </div>

@@ -443,7 +443,7 @@ export const CommunicationSidebar: React.FC<CommunicationSidebarProps> = ({
       <div className="p-4 border-b border-gray-200 dark:border-white/10 flex items-center justify-between bg-white dark:bg-[#191f15] flex-shrink-0">
         <div className="flex items-center gap-2">
           <Mail className="h-5 w-5 text-emerald-500" />
-          <h3 className="font-bold text-gray-900 dark:text-white text-base">Communication</h3>
+          <h3 className="font-bold text-gray-900 dark:text-white text-body">Communication</h3>
         </div>
         <button 
           onClick={onClose}
@@ -454,7 +454,7 @@ export const CommunicationSidebar: React.FC<CommunicationSidebarProps> = ({
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-gray-200 dark:border-white/10 bg-white dark:bg-[#141810] text-xs font-semibold flex-shrink-0">
+      <div className="flex border-b border-gray-200 dark:border-white/10 bg-white dark:bg-[#141810] text-small font-semibold flex-shrink-0">
         <button 
           onClick={() => setActiveTab('emails')}
           className={`flex-1 py-3.5 text-center transition-colors border-b-2 flex items-center justify-center gap-1.5 ${
@@ -512,7 +512,7 @@ export const CommunicationSidebar: React.FC<CommunicationSidebarProps> = ({
         {loading ? (
           <div className="flex-1 flex flex-col items-center justify-center py-20 text-gray-400">
             <RefreshCw className="h-8 w-8 animate-spin text-emerald-500 mb-2" />
-            <p className="text-sm font-medium">Fetching email threads...</p>
+            <p className="text-small font-medium">Fetching email threads...</p>
           </div>
         ) : (
           <>
@@ -523,7 +523,7 @@ export const CommunicationSidebar: React.FC<CommunicationSidebarProps> = ({
                 {/* 1. Job Context Card (Mockup) */}
                 <div className="bg-white dark:bg-[#131810] border border-gray-200 dark:border-white/10 p-3 sm:p-4 rounded-2xl shadow-sm flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 flex items-center justify-center font-bold text-lg text-gray-700 dark:text-gray-300 animate-fade-in">
+                    <div className="h-10 w-10 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 flex items-center justify-center font-bold text-h3 text-gray-700 dark:text-gray-300 animate-fade-in">
                       {!logoError && companyLogoUrl ? (
                         <img 
                           src={companyLogoUrl} 
@@ -536,8 +536,8 @@ export const CommunicationSidebar: React.FC<CommunicationSidebarProps> = ({
                       )}
                     </div>
                     <div>
-                      <h4 className="font-bold text-gray-900 dark:text-white text-sm leading-tight">{job.company || 'Google'}</h4>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-tight">{job.jobTitle || job.title || 'Software Engineer'}</p>
+                      <h4 className="font-bold text-gray-900 dark:text-white text-small leading-tight">{job.company || 'Google'}</h4>
+                      <p className="text-small text-gray-500 dark:text-gray-400 mt-0.5 leading-tight">{job.jobTitle || job.title || 'Software Engineer'}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -552,7 +552,7 @@ export const CommunicationSidebar: React.FC<CommunicationSidebarProps> = ({
                         <MoreVertical className="h-4 w-4" />
                       </button>
                       {showOptionsMenu && (
-                        <div className="absolute right-0 top-8 z-[1020] w-48 bg-white dark:bg-[#181f15] border border-gray-200 dark:border-white/10 rounded-xl shadow-xl p-1.5 flex flex-col gap-1 text-xs text-gray-700 dark:text-gray-300 font-medium">
+                        <div className="absolute right-0 top-8 z-[1020] w-48 bg-white dark:bg-[#181f15] border border-gray-200 dark:border-white/10 rounded-xl shadow-xl p-1.5 flex flex-col gap-1 text-small text-gray-700 dark:text-gray-300 font-medium">
                           <button 
                             onClick={() => {
                               setShowOptionsMenu(false);
@@ -604,7 +604,7 @@ export const CommunicationSidebar: React.FC<CommunicationSidebarProps> = ({
                 </div>
 
                 {/* 2. Filter / Sorter Row (Mockup) */}
-                <div className="flex items-center justify-between text-xs py-1">
+                <div className="flex items-center justify-between text-small py-1">
                   <div className="flex gap-2">
                     <button 
                       onClick={() => setEmailFilter('all')} 
@@ -637,7 +637,7 @@ export const CommunicationSidebar: React.FC<CommunicationSidebarProps> = ({
                     <select 
                       value={emailSortOrder}
                       onChange={(e) => setEmailSortOrder(e.target.value as 'newest' | 'oldest')}
-                      className="bg-white dark:bg-[#131810] text-gray-600 dark:text-gray-300 text-xs font-semibold px-2.5 py-1.5 rounded-xl border border-gray-200 dark:border-white/10 focus:outline-none cursor-pointer"
+                      className="bg-white dark:bg-[#131810] text-gray-600 dark:text-gray-300 text-small font-semibold px-2.5 py-1.5 rounded-xl border border-gray-200 dark:border-white/10 focus:outline-none cursor-pointer"
                     >
                       <option value="newest">Newest first</option>
                       <option value="oldest">Oldest first</option>
@@ -652,14 +652,14 @@ export const CommunicationSidebar: React.FC<CommunicationSidebarProps> = ({
                 </div>
 
                 {!isAutomated && (
-                  <div className="bg-white dark:bg-[#131810] border border-gray-200 dark:border-white/10 p-4 rounded-2xl shadow-sm text-sm animate-fade-in">
+                  <div className="bg-white dark:bg-[#131810] border border-gray-200 dark:border-white/10 p-4 rounded-2xl shadow-sm text-small animate-fade-in">
                     <div className="flex gap-2.5 items-start mb-3">
                       <div className="p-1.5 bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 rounded-lg">
                         <Sparkles size={16} />
                       </div>
                       <div>
                         <h4 className="font-semibold text-gray-900 dark:text-white">Auto Sync Inbox</h4>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-5">
+                        <p className="text-small text-gray-500 dark:text-gray-400 mt-0.5 leading-5">
                           Connect your email inbox to auto-sync recruiter threads, matching them to job cards and auto-updating stages instantly.
                         </p>
                       </div>
@@ -670,7 +670,7 @@ export const CommunicationSidebar: React.FC<CommunicationSidebarProps> = ({
                         setModalInitialTab('email');
                         setIsEmailConnectModalOpen(true);
                       }}
-                      className="w-full bg-[#80FF00] hover:brightness-95 text-black font-semibold py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 transition duration-150 shadow-sm"
+                      className="w-full bg-[#80FF00] hover:brightness-95 text-black font-semibold py-2.5 rounded-xl text-small flex items-center justify-center gap-1.5 transition duration-150 shadow-sm"
                     >
                       <Plus className="h-3.5 w-3.5" />
                       Connect Automated Integration
@@ -680,7 +680,7 @@ export const CommunicationSidebar: React.FC<CommunicationSidebarProps> = ({
 
                 {/* Auto Stage movement Toast/Banner inside Sidebar */}
                 {lastStageLogId && (
-                  <div className="bg-emerald-100 border border-emerald-300 dark:bg-emerald-950/40 dark:border-emerald-500/20 p-3 rounded-xl flex items-center justify-between gap-2 shadow-sm text-xs text-emerald-900 dark:text-emerald-300">
+                  <div className="bg-emerald-100 border border-emerald-300 dark:bg-emerald-950/40 dark:border-emerald-500/20 p-3 rounded-xl flex items-center justify-between gap-2 shadow-sm text-small text-emerald-900 dark:text-emerald-300">
                     <p className="leading-5">
                       📧 Recruiter email auto-moved this job to <b>{job.status.toUpperCase()}</b>.
                     </p>
@@ -697,8 +697,8 @@ export const CommunicationSidebar: React.FC<CommunicationSidebarProps> = ({
                 {filteredMessages.length === 0 ? (
                   <div className="flex-1 flex flex-col items-center justify-center py-16 text-center text-gray-400">
                     <Mail className="h-10 w-10 text-gray-300 mb-2" />
-                    <h5 className="text-sm font-semibold text-gray-700 dark:text-white/80">No email history logged</h5>
-                    <p className="text-xs text-gray-500 mt-1 max-w-[240px]">
+                    <h5 className="text-small font-semibold text-gray-700 dark:text-white/80">No email history logged</h5>
+                    <p className="text-small text-gray-500 mt-1 max-w-[240px]">
                       Sync your inbox or log messages using the reply composer below.
                     </p>
                   </div>
@@ -724,7 +724,7 @@ export const CommunicationSidebar: React.FC<CommunicationSidebarProps> = ({
                               </div>
                             ) : (
                               <div className="flex flex-col items-center gap-2">
-                                <div className="h-10 w-10 rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-400 flex items-center justify-center font-bold text-sm shadow-sm overflow-hidden border border-gray-200 dark:border-white/10 transition-transform hover:scale-105">
+                                <div className="h-10 w-10 rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-400 flex items-center justify-center font-bold text-small shadow-sm overflow-hidden border border-gray-200 dark:border-white/10 transition-transform hover:scale-105">
                                   {msg.senderName === 'Jane Smith' ? (
                                     <img 
                                       src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=120&h=120" 
@@ -752,7 +752,7 @@ export const CommunicationSidebar: React.FC<CommunicationSidebarProps> = ({
                               }`}
                             >
                               {/* Header sender info */}
-                              <div className="flex items-center justify-between gap-2 mb-1.5 text-xs">
+                              <div className="flex items-center justify-between gap-2 mb-1.5 text-small">
                                 <div className="flex items-center gap-1.5">
                                   <span className="font-bold text-gray-900 dark:text-white">
                                     {isOutbound ? 'You' : (msg.senderName || msg.senderEmail)}
@@ -775,12 +775,12 @@ export const CommunicationSidebar: React.FC<CommunicationSidebarProps> = ({
                               </div>
 
                               {/* Subject */}
-                              <h5 className="text-xs font-bold text-gray-800 dark:text-gray-200 mb-1 leading-5">
+                              <h5 className="text-small font-bold text-gray-800 dark:text-gray-200 mb-1 leading-5">
                                 {msg.subject}
                               </h5>
                               
                               {/* Message snippet */}
-                              <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed font-normal whitespace-pre-line">
+                              <p className="text-small text-gray-600 dark:text-gray-300 leading-relaxed font-normal whitespace-pre-line">
                                 {msg.bodySnippet}
                               </p>
 
@@ -851,7 +851,7 @@ export const CommunicationSidebar: React.FC<CommunicationSidebarProps> = ({
                         value={customInstructions}
                         onChange={(e) => setCustomInstructions(e.target.value)}
                         placeholder="What should this email highlight? (e.g. ask for 15% salary increase, mention notice period of 3 weeks)"
-                        className="w-full text-xs p-2 bg-white dark:bg-[#131810] border border-gray-200 dark:border-white/10 rounded-lg focus:outline-none dark:text-white h-16 resize-none"
+                        className="w-full text-small p-2 bg-white dark:bg-[#131810] border border-gray-200 dark:border-white/10 rounded-lg focus:outline-none dark:text-white h-16 resize-none"
                       />
                       <div className="flex justify-between items-center gap-2">
                         <div className="flex items-center gap-1.5">
@@ -879,7 +879,7 @@ export const CommunicationSidebar: React.FC<CommunicationSidebarProps> = ({
                   )}
 
                   {/* AI assist helper dropdown toggle */}
-                  <div className="relative flex items-center justify-between text-xs">
+                  <div className="relative flex items-center justify-between text-small">
                     <span className="text-gray-400 font-medium">Reply to recruiter</span>
                     
                     <div className="flex gap-2">
@@ -896,7 +896,7 @@ export const CommunicationSidebar: React.FC<CommunicationSidebarProps> = ({
                       </button>
 
                       {showAiDropdown && (
-                        <div className="absolute right-0 bottom-8 z-[1010] w-[200px] bg-white dark:bg-[#181f15] border border-gray-200 dark:border-white/10 rounded-xl shadow-xl p-1.5 flex flex-col gap-0.5 text-xs text-gray-700 dark:text-gray-300 font-medium">
+                        <div className="absolute right-0 bottom-8 z-[1010] w-[200px] bg-white dark:bg-[#181f15] border border-gray-200 dark:border-white/10 rounded-xl shadow-xl p-1.5 flex flex-col gap-0.5 text-small text-gray-700 dark:text-gray-300 font-medium">
                           <button onClick={() => handleAiAssistDraft('initial_outreach')} className="p-2 text-left hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg">Draft Cold Outreach</button>
                           <button onClick={() => handleAiAssistDraft('thank_you')} className="p-2 text-left hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg">Post-Interview Thank You</button>
                           <button onClick={() => handleAiAssistDraft('follow_up')} className="p-2 text-left hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg">Follow Up (No Response)</button>
@@ -937,7 +937,7 @@ export const CommunicationSidebar: React.FC<CommunicationSidebarProps> = ({
                         value={replyText}
                         onChange={(e) => setReplyText(e.target.value)}
                         placeholder={`Reply to ${job.contactDetails?.name || 'recruiter'}...`}
-                        className="flex-1 text-xs bg-transparent focus:outline-none dark:text-white h-10 resize-none py-2 scrollbar-none"
+                        className="flex-1 text-small bg-transparent focus:outline-none dark:text-white h-10 resize-none py-2 scrollbar-none"
                       />
                     </div>
                     <button 
@@ -955,7 +955,7 @@ export const CommunicationSidebar: React.FC<CommunicationSidebarProps> = ({
                       href={`https://mail.google.com/mail/u/0/#search/from%3A${encodeURIComponent(job.contactDetails?.email || '')}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 text-xs font-semibold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white transition"
+                      className="inline-flex items-center gap-2 text-small font-semibold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white transition"
                     >
                       <Mail className="h-3.5 w-3.5 text-red-500 animate-pulse" />
                       Open in Gmail
@@ -969,19 +969,19 @@ export const CommunicationSidebar: React.FC<CommunicationSidebarProps> = ({
             {/* TABS 2: PEOPLE */}
             {activeTab === 'people' && (
               <div className="bg-white dark:bg-[#131810] border border-gray-200 dark:border-white/10 p-4 rounded-2xl shadow-sm">
-                <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Contacts Associated with this Application</h4>
+                <h4 className="text-small font-semibold text-gray-900 dark:text-white mb-4">Contacts Associated with this Application</h4>
                 <div className="divide-y divide-gray-100 dark:divide-white/10">
                   {contacts.length === 0 ? (
-                    <p className="text-xs text-gray-500 py-4 text-center">No participants extracted from this thread yet.</p>
+                    <p className="text-small text-gray-500 py-4 text-center">No participants extracted from this thread yet.</p>
                   ) : (
                     contacts.map((contact, index) => (
                       <div key={index} className="py-3 flex items-center justify-between gap-3">
                         <div className="flex items-center gap-2.5">
-                          <div className="h-8 w-8 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400 flex items-center justify-center font-bold text-xs shadow-sm">
+                          <div className="h-8 w-8 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400 flex items-center justify-center font-bold text-small shadow-sm">
                             {contact.name.substring(0, 1).toUpperCase()}
                           </div>
                           <div>
-                            <h5 className="text-xs font-semibold text-gray-900 dark:text-white">{contact.name}</h5>
+                            <h5 className="text-small font-semibold text-gray-900 dark:text-white">{contact.name}</h5>
                             <p className="text-[10px] text-gray-500 mt-0.5">{contact.email}</p>
                           </div>
                         </div>
@@ -998,13 +998,13 @@ export const CommunicationSidebar: React.FC<CommunicationSidebarProps> = ({
             {/* TABS 3: FILES */}
             {activeTab === 'files' && (
               <div className="bg-white dark:bg-[#131810] border border-gray-200 dark:border-white/10 p-4 rounded-2xl shadow-sm animate-fade-in">
-                <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Attachments & Documents</h4>
+                <h4 className="text-small font-semibold text-gray-900 dark:text-white mb-4">Attachments & Documents</h4>
                 <div className="space-y-3">
                   {attachments.length === 0 ? (
-                    <p className="text-xs text-gray-500 py-6 text-center">No email attachments found for this application.</p>
+                    <p className="text-small text-gray-500 py-6 text-center">No email attachments found for this application.</p>
                   ) : (
                     attachments.map((file, idx) => (
-                      <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-[#181f15] border border-gray-200 dark:border-white/10 rounded-xl text-xs shadow-sm transition hover:scale-[1.01]">
+                      <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-[#181f15] border border-gray-200 dark:border-white/10 rounded-xl text-small shadow-sm transition hover:scale-[1.01]">
                         <div className="flex items-center gap-2.5">
                           {file.isIcs ? (
                             <Calendar className="h-5 w-5 text-blue-500 shrink-0" />
@@ -1033,30 +1033,30 @@ export const CommunicationSidebar: React.FC<CommunicationSidebarProps> = ({
             {activeTab === 'insights' && (
               <div className="space-y-4">
                 {/* Summary */}
-                <div className="bg-white dark:bg-[#131810] border border-gray-200 dark:border-white/10 p-4 rounded-2xl shadow-sm space-y-3 text-xs leading-5">
-                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white">AI Thread Summary</h4>
+                <div className="bg-white dark:bg-[#131810] border border-gray-200 dark:border-white/10 p-4 rounded-2xl shadow-sm space-y-3 text-small leading-5">
+                  <h4 className="text-small font-semibold text-gray-900 dark:text-white">AI Thread Summary</h4>
                   <p className="text-gray-600 dark:text-gray-300">
                     {getInsightsSummary()}
                   </p>
                   {messages.length > 0 && (
                     <div className="flex flex-col gap-1 text-[10px] font-bold bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 p-2.5 rounded-xl border border-yellow-500/10 animate-pulse">
                       <span className="uppercase tracking-wider">Recommended Next Action:</span>
-                      <span className="font-semibold text-xs mt-0.5">Attend scheduled interview on Thursday, June 27 at 2:00 PM PT.</span>
+                      <span className="font-semibold text-small mt-0.5">Attend scheduled interview on Thursday, June 27 at 2:00 PM PT.</span>
                     </div>
                   )}
                 </div>
 
                 {/* KPI metrics */}
-                <div className="bg-white dark:bg-[#131810] border border-gray-200 dark:border-white/10 p-4 rounded-2xl shadow-sm text-xs">
-                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Communication Health</h4>
+                <div className="bg-white dark:bg-[#131810] border border-gray-200 dark:border-white/10 p-4 rounded-2xl shadow-sm text-small">
+                  <h4 className="text-small font-semibold text-gray-900 dark:text-white mb-3">Communication Health</h4>
                   <div className="grid grid-cols-2 gap-3 text-center">
                     <div className="bg-gray-50 dark:bg-[#181f15] p-3 rounded-xl border border-gray-200 dark:border-white/5 hover:scale-105 transition-transform duration-200">
                       <p className="text-[10px] text-gray-500 uppercase tracking-wide">Reply Latency</p>
-                      <p className="text-lg font-bold text-gray-900 dark:text-white mt-1">4.5 hrs</p>
+                      <p className="text-h3 font-bold text-gray-900 dark:text-white mt-1">4.5 hrs</p>
                     </div>
                     <div className="bg-gray-50 dark:bg-[#181f15] p-3 rounded-xl border border-gray-200 dark:border-white/5 hover:scale-105 transition-transform duration-200">
                       <p className="text-[10px] text-gray-500 uppercase tracking-wide">Recruiter Sentiment</p>
-                      <p className="text-lg font-bold text-emerald-500 mt-1">Positive</p>
+                      <p className="text-h3 font-bold text-emerald-500 mt-1">Positive</p>
                     </div>
                   </div>
                 </div>

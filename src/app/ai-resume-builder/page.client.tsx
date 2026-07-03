@@ -71,7 +71,7 @@ export default function AIResumeBuilderPage() {
             className="flex flex-col sm:flex-row gap-4 justify-center"
           >
             <Link
-              href="/sign-up?callbackUrl=/resume-enhancer"
+              href="/sign-up?callbackUrl=/editor"
               className="inline-flex items-center gap-2 bg-[#81ff00] hover:bg-[#6dd600] text-black px-8 py-4 rounded-full font-bold text-lg transition-all hover:scale-105"
             >
               Create Resume Free
@@ -187,7 +187,7 @@ export default function AIResumeBuilderPage() {
             Join thousands who landed their dream jobs with CVCircle.
           </p>
           <Link
-            href="/sign-up?callbackUrl=/resume-enhancer"
+            href="/sign-up?callbackUrl=/editor"
             className="inline-block px-10 py-5 bg-white text-green-700 font-bold rounded-full hover:bg-gray-100 transition-all hover:scale-105 text-lg"
           >
             Start Building for Free

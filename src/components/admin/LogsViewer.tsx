@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Search, Filter, Download, RefreshCw, AlertCircle, CheckCircle, Clock,
   FileText, Brain, Activity, CreditCard, Upload, Settings, X, 
-  ChevronDown, ChevronUp, Zap, Shield, Globe, ArrowUpRight, Terminal
+  ChevronDown, ChevronUp, Zap, Shield, Globe, ArrowUpRight, Terminal, User
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { LogType, LogStatus } from '@/models/ActivityLog';
@@ -43,6 +43,7 @@ export default function LogsViewer() {
   const [logTypeFilter, setLogTypeFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [userFilter, setUserFilter] = useState('');
   const [timeRange, setTimeRange] = useState<'today' | '7d' | '30d' | '90d'>('7d');
   const [expandedLog, setExpandedLog] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
@@ -61,6 +62,13 @@ export default function LogsViewer() {
       if (logTypeFilter !== 'all') params.append('logType', logTypeFilter);
       if (statusFilter !== 'all') params.append('status', statusFilter);
       if (searchTerm) params.append('action', searchTerm);
+      if (userFilter) {
+        if (userFilter.includes('@')) {
+          params.append('userEmail', userFilter.trim());
+        } else {
+          params.append('userId', userFilter.trim());
+        }
+      }
 
       const response = await fetch(`/api/admin/logs?${params.toString()}`);
       const data = await response.json();
@@ -88,7 +96,7 @@ export default function LogsViewer() {
       fetchLogs();
       fetchMetrics();
     }
-  }, [currentPage, logTypeFilter, statusFilter, timeRange, mounted]);
+  }, [currentPage, logTypeFilter, statusFilter, timeRange, userFilter, mounted]);
 
   const container = {
     hidden: { opacity: 0 },
@@ -159,41 +167,93 @@ export default function LogsViewer() {
       </div>
 
       {/* Filters Bar */}
-      <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-6 flex flex-wrap gap-6 items-center shadow-xl backdrop-blur-md">
-        <div className="flex items-center gap-3">
-          <Filter className="w-4 h-4 text-white/20" />
-          <span className="text-[10px] font-black text-white/20 uppercase tracking-widest">Filter Matrix:</span>
-        </div>
+      <div className="bg-[#111111] border border-white/10 rounded-[2rem] p-8 shadow-2xl relative overflow-hidden">
+        {/* Glow effect */}
+        <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-[100px] pointer-events-none" />
         
-        <Select value={logTypeFilter} onValueChange={setLogTypeFilter}>
-          <SelectTrigger className="bg-white/5 border-white/5 w-44 rounded-xl text-white text-xs h-12"><SelectValue placeholder="Type" /></SelectTrigger>
-          <SelectContent className="bg-[#111111] border-white/10 text-white rounded-xl">
-            <SelectItem value="all">All Types</SelectItem>
-            <SelectItem value="api">API Streams</SelectItem>
-            <SelectItem value="ai">Neural Cycles</SelectItem>
-            <SelectItem value="user_action">Identity Acts</SelectItem>
-            <SelectItem value="admin_action">Root Protocols</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex flex-col gap-6">
+          <div className="flex items-center justify-between border-b border-white/5 pb-4">
+            <div className="flex items-center gap-3">
+              <Filter className="w-5 h-5 text-emerald-500" />
+              <div>
+                <h3 className="text-sm font-black text-white uppercase tracking-wider">Filter Matrix</h3>
+                <p className="text-[10px] text-white/40 uppercase tracking-widest mt-0.5">Refine system audit stream</p>
+              </div>
+            </div>
+            {(logTypeFilter !== 'all' || statusFilter !== 'all' || timeRange !== '7d' || userFilter || searchTerm) && (
+              <button 
+                onClick={() => {
+                  setLogTypeFilter('all');
+                  setStatusFilter('all');
+                  setTimeRange('7d');
+                  setUserFilter('');
+                  setSearchTerm('');
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all"
+              >
+                <X className="w-3.5 h-3.5" /> Clear Filters
+              </button>
+            )}
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest block">Event Stream Type</label>
+              <Select value={logTypeFilter} onValueChange={setLogTypeFilter}>
+                <SelectTrigger className="bg-white/5 border-white/5 w-full rounded-xl text-white text-xs h-12 focus:ring-emerald-500/20"><SelectValue placeholder="Type" /></SelectTrigger>
+                <SelectContent className="bg-[#111111] border-white/10 text-white rounded-xl">
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="api">API Streams</SelectItem>
+                  <SelectItem value="ai">Neural Cycles</SelectItem>
+                  <SelectItem value="user_action">Identity Acts</SelectItem>
+                  <SelectItem value="admin_action">Root Protocols</SelectItem>
+                  <SelectItem value="payment">Payment Cycles</SelectItem>
+                  <SelectItem value="export">Export Streams</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="bg-white/5 border-white/5 w-44 rounded-xl text-white text-xs h-12"><SelectValue placeholder="Status" /></SelectTrigger>
-          <SelectContent className="bg-[#111111] border-white/10 text-white rounded-xl">
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="success">Nominal</SelectItem>
-            <SelectItem value="failed">Anomaly</SelectItem>
-            <SelectItem value="warning">Degraded</SelectItem>
-          </SelectContent>
-        </Select>
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest block">Anomaly Status</label>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="bg-white/5 border-white/5 w-full rounded-xl text-white text-xs h-12 focus:ring-emerald-500/20"><SelectValue placeholder="Status" /></SelectTrigger>
+                <SelectContent className="bg-[#111111] border-white/10 text-white rounded-xl">
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="success">Nominal (Success)</SelectItem>
+                  <SelectItem value="failed">Anomaly (Failed)</SelectItem>
+                  <SelectItem value="warning">Degraded (Warning)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-        <Select value={timeRange} onValueChange={(v: any) => setTimeRange(v)}>
-          <SelectTrigger className="bg-white/5 border-white/5 w-44 rounded-xl text-white text-xs h-12"><SelectValue placeholder="Window" /></SelectTrigger>
-          <SelectContent className="bg-[#111111] border-white/10 text-white rounded-xl">
-            <SelectItem value="today">Cycle: 24h</SelectItem>
-            <SelectItem value="7d">Cycle: 7d</SelectItem>
-            <SelectItem value="30d">Cycle: 30d</SelectItem>
-          </SelectContent>
-        </Select>
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest block">Temporal Window</label>
+              <Select value={timeRange} onValueChange={(v: any) => setTimeRange(v)}>
+                <SelectTrigger className="bg-white/5 border-white/5 w-full rounded-xl text-white text-xs h-12 focus:ring-emerald-500/20"><SelectValue placeholder="Window" /></SelectTrigger>
+                <SelectContent className="bg-[#111111] border-white/10 text-white rounded-xl">
+                  <SelectItem value="today">Cycle: 24h</SelectItem>
+                  <SelectItem value="7d">Cycle: 7d</SelectItem>
+                  <SelectItem value="30d">Cycle: 30d</SelectItem>
+                  <SelectItem value="90d">Cycle: 90d</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest block">Subject Node (User)</label>
+              <div className="relative group">
+                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 group-focus-within:text-emerald-400 transition-colors" />
+                <input
+                  type="text"
+                  placeholder="User ID or Email..."
+                  value={userFilter}
+                  onChange={(e) => setUserFilter(e.target.value)}
+                  className="w-full pl-12 pr-4 py-3 bg-white/5 border border-white/5 rounded-xl text-xs text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:bg-white/10 h-12 transition-all"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Logs Table */}

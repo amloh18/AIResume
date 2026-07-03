@@ -70,7 +70,7 @@ export default function TopSkillsWidget({ className }: TopSkillsWidgetProps) {
       {/* Header */}
       <div className="relative z-10 flex items-center justify-between mb-3">
         <div>
-          <h3 className="text-base font-bold text-gray-900 dark:text-white">
+          <h3 className="text-body font-bold text-gray-900 dark:text-white">
             Top Skills
           </h3>
           <p className="text-[11px] text-gray-500 dark:text-gray-400">
@@ -79,7 +79,7 @@ export default function TopSkillsWidget({ className }: TopSkillsWidgetProps) {
         </div>
         {/* Icon decoration */}
         <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center opacity-80">
-          <span className="text-base">🎯</span>
+          <span className="text-body">🎯</span>
         </div>
       </div>
 
@@ -91,7 +91,7 @@ export default function TopSkillsWidget({ className }: TopSkillsWidgetProps) {
           </div>
         ) : skills.length === 0 ? (
           <div className="text-center py-6">
-            <p className="text-sm text-gray-500">No skill data available.</p>
+            <p className="text-small text-gray-500">No skill data available.</p>
           </div>
         ) : (
           skills.slice(0, 5).map((skill, idx) => (

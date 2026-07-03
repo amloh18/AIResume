@@ -19,8 +19,8 @@ export default function LinkedInEducationCard({ data }: LinkedInEducationCardPro
                 transition={{ delay: 0.3 }}
                 className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
             >
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">Education</h2>
-                <p className="text-gray-500 text-sm">No education data available</p>
+                <h2 className="text-h3 font-semibold text-gray-900 mb-4">Education</h2>
+                <p className="text-gray-500 text-small">No education data available</p>
             </motion.div>
         );
     }
@@ -44,8 +44,8 @@ export default function LinkedInEducationCard({ data }: LinkedInEducationCardPro
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-2">
-                    <h2 className="text-lg font-semibold text-gray-900">Education</h2>
-                    <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full text-xs font-medium border border-gray-200">
+                    <h2 className="text-h3 font-semibold text-gray-900">Education</h2>
+                    <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full text-small font-medium border border-gray-200">
                         Original (No AI Optimization Needed)
                     </span>
                 </div>
@@ -101,14 +101,14 @@ function EducationEntry({ data, isLast }: EducationEntryProps) {
                 <div className="flex-1 min-w-0">
                     {/* Institution */}
                     <div className="flex items-start justify-between gap-2">
-                        <div className="text-sm font-semibold text-gray-900">
+                        <div className="text-small font-semibold text-gray-900">
                             {data.institution}
                         </div>
                         <CopyAllButton content={entryContent} label="Copy" />
                     </div>
 
                     {/* Degree & Field */}
-                    <div className="text-xs text-gray-700 mt-0.5">
+                    <div className="text-small text-gray-700 mt-0.5">
                         {`${data.degree}${data.field ? ` (${data.field})` : ''}`}
                     </div>
 
@@ -127,7 +127,7 @@ function EducationEntry({ data, isLast }: EducationEntryProps) {
                         <div className="mt-2 space-y-1.5">
                             <span className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">Activities & Achievements</span>
                             {activitiesBullets.map((bullet, idx) => (
-                                <div key={idx} className="text-xs text-gray-700 pl-3 relative">
+                                <div key={idx} className="text-small text-gray-700 pl-3 relative">
                                     <span className="absolute left-0 top-1.5 w-1 h-1 bg-gray-400 rounded-full" />
                                     {bullet}
                                 </div>

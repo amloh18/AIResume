@@ -109,10 +109,27 @@ const FAQ = () => {
           transition={{ duration: 0.8, ease: "easeOut" }}
           viewport={{ once: true, margin: "-50px" }}
         >
-          <h2 className="text-2xl tablet:text-2xl desktop:text-4xl font-bold text-white text-center mb-6">
+          {/* Decorative squiggle */}
+          <motion.div
+            className="mb-6 flex justify-start"
+            initial={{ opacity: 0, x: -20 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+          >
+            <svg width="48" height="24" viewBox="0 0 48 24" fill="none" className="text-[#81ff00]">
+              <path
+                d="M2 12C6 6 10 18 14 12C18 6 22 18 26 12C30 6 34 18 38 12C42 6 46 12 46 12"
+                stroke="currentColor"
+                strokeWidth="3"
+                strokeLinecap="round"
+              />
+            </svg>
+          </motion.div>
+          <h2 className="!text-[2rem] tablet:!text-[2.5rem] desktop:!text-[3rem] font-extrabold text-white text-left tracking-tighter !leading-[1.05] mb-6">
             Frequently Asked Questions
           </h2>
-          <p className="text-xs tablet:text-sm desktop:text-lg text-white/70 max-w-3xl mx-auto leading-relaxed font-light">
+          <p className="text-small tablet:text-small desktop:text-h3 text-white/70 max-w-3xl leading-relaxed font-light text-left">
             Everything you need to know about our plans, features, and policies. Can't find what you're looking for?
             <span className="text-lime-400 font-medium"> Contact our support team</span>.
           </p>
@@ -152,7 +169,7 @@ const FAQ = () => {
                       toggleItem(item.id);
                     }}
                   >
-                    <h3 className="text-sm tablet:text-base desktop:text-lg font-semibold text-white pr-4 group-hover:text-lime-400 transition-colors duration-300">
+                    <h3 className="text-small tablet:text-body desktop:text-h3 font-semibold text-white pr-4 group-hover:text-lime-400 transition-colors duration-300">
                       {item.question}
                     </h3>
                     <div
@@ -170,7 +187,7 @@ const FAQ = () => {
                   >
                     <div className="px-8 pb-6">
                       <div className="border-t border-white/10 pt-4">
-                        <p className="text-white/80 leading-relaxed text-xs tablet:text-sm font-light">
+                        <p className="text-white/80 leading-relaxed text-small tablet:text-small font-light">
                           {item.answer}
                         </p>
                       </div>
@@ -190,7 +207,7 @@ const FAQ = () => {
           transition={{ duration: 0.8, ease: "easeOut" }}
           viewport={{ once: true, margin: "-50px" }}
         >
-          <p className="text-white/60 mb-6 text-xs tablet:text-sm desktop:text-base">Still have questions?</p>
+          <p className="text-white/60 mb-6 text-small tablet:text-small desktop:text-body">Still have questions?</p>
           <motion.button
             className="group text-lime-400 hover:text-lime-300 font-semibold transition-colors duration-300 flex items-center gap-2 mx-auto"
             whileHover={{ x: 5 }}

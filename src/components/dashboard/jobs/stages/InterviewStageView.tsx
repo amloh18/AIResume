@@ -84,10 +84,10 @@ const InterviewStageView: React.FC<InterviewStageViewProps> = ({
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
         <GraduationCap className="w-16 h-16 text-gray-400 dark:text-gray-600 mb-4" />
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+        <h3 className="text-h3 font-semibold text-gray-900 dark:text-white mb-2">
           No interviews scheduled
         </h3>
-        <p className="text-sm text-gray-500 dark:text-gray-400">
+        <p className="text-small text-gray-500 dark:text-gray-400">
           Jobs in interview stage will appear here.
         </p>
       </div>
@@ -100,7 +100,7 @@ const InterviewStageView: React.FC<InterviewStageViewProps> = ({
       <div className="px-6 py-4 border-b border-gray-200 dark:border-white/10 flex items-center justify-end">
         <button
           onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
-          className="flex items-center gap-2 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+          className="flex items-center gap-2 text-small font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
         >
           <TrendingUp size={14} />
           <span>Sort by Date ({sortOrder === 'asc' ? 'Earliest First' : 'Latest First'})</span>
@@ -112,18 +112,18 @@ const InterviewStageView: React.FC<InterviewStageViewProps> = ({
           <thead className="bg-gray-50 dark:bg-[#1c2018]">
             <tr>
               {/* Universal Columns */}
-              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Company</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Role</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Location</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Comp Range</th>
+              <th className="px-6 py-4 text-left text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Company</th>
+              <th className="px-6 py-4 text-left text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Role</th>
+              <th className="px-6 py-4 text-left text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Location</th>
+              <th className="px-6 py-4 text-left text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Comp Range</th>
 
               {/* Stage Specific Columns */}
-              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Schedule</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Round Type</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Interviewer</th>
-              <th className="px-6 py-4 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Link</th>
+              <th className="px-6 py-4 text-left text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Schedule</th>
+              <th className="px-6 py-4 text-left text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Round Type</th>
+              <th className="px-6 py-4 text-left text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Interviewer</th>
+              <th className="px-6 py-4 text-center text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Link</th>
 
-              <th className="px-6 py-4 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Action</th>
+              <th className="px-6 py-4 text-right text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 dark:divide-white/10">
@@ -142,7 +142,7 @@ const InterviewStageView: React.FC<InterviewStageViewProps> = ({
                   {/* Company */}
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-white/10 flex items-center justify-center text-xs font-bold text-gray-500 dark:text-gray-400 overflow-hidden">
+                      <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-white/10 flex items-center justify-center text-small font-bold text-gray-500 dark:text-gray-400 overflow-hidden">
                         {job.companyLogo ? (
                           <img
                             src={job.companyLogo}
@@ -155,18 +155,18 @@ const InterviewStageView: React.FC<InterviewStageViewProps> = ({
                           {job.company.substring(0, 2).toUpperCase()}
                         </span>
                       </div>
-                      <span className="text-sm font-semibold text-gray-900 dark:text-white">{job.company}</span>
+                      <span className="text-small font-semibold text-gray-900 dark:text-white">{job.company}</span>
                     </div>
                   </td>
 
                   {/* Role */}
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-sm text-gray-900 dark:text-white">{job.jobTitle || job.title}</span>
+                    <span className="text-small text-gray-900 dark:text-white">{job.jobTitle || job.title}</span>
                   </td>
 
                   {/* Location */}
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400">
+                    <div className="flex items-center gap-1.5 text-small text-gray-500 dark:text-gray-400">
                       <MapPin size={14} />
                       <span className="truncate max-w-[150px]">{job.location || '-'}</span>
                     </div>
@@ -174,29 +174,29 @@ const InterviewStageView: React.FC<InterviewStageViewProps> = ({
 
                   {/* Comp Range */}
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-sm text-gray-600 dark:text-gray-300">{getCompRange(job)}</span>
+                    <span className="text-small text-gray-600 dark:text-gray-300">{getCompRange(job)}</span>
                   </td>
 
                   {/* Schedule */}
                   <td className="px-6 py-4 whitespace-nowrap">
                     {interviewDate ? (
                       <div className="flex flex-col">
-                        <span className="text-sm font-bold text-gray-900 dark:text-white">
+                        <span className="text-small font-bold text-gray-900 dark:text-white">
                           {interviewDate.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
                         </span>
-                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                        <span className="text-small text-gray-500 dark:text-gray-400">
                           {interviewDate.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
                     ) : (
-                      <span className="text-xs text-gray-400 italic">No upcoming</span>
+                      <span className="text-small text-gray-400 italic">No upcoming</span>
                     )}
                   </td>
 
                   {/* Round Type */}
                   <td className="px-6 py-4 whitespace-nowrap">
                     {nextInterview ? (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400 capitalize">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-small font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400 capitalize">
                         {(nextInterview.type || 'Unknown').replace('-', ' ')}
                       </span>
                     ) : (
@@ -207,14 +207,14 @@ const InterviewStageView: React.FC<InterviewStageViewProps> = ({
                   {/* Interviewer */}
                   <td className="px-6 py-4 whitespace-nowrap">
                     {nextInterview?.interviewer ? (
-                      <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                      <div className="flex items-center gap-2 text-small text-gray-600 dark:text-gray-300">
                         <div className="w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-[10px] uppercase">
                           {nextInterview.interviewer.substring(0, 1)}
                         </div>
                         <span>{nextInterview.interviewer}</span>
                       </div>
                     ) : (
-                      <div className="flex items-center gap-2 text-sm text-gray-400 italic">
+                      <div className="flex items-center gap-2 text-small text-gray-400 italic">
                         <User size={14} />
                         <span>Not assigned</span>
                       </div>
@@ -247,7 +247,7 @@ const InterviewStageView: React.FC<InterviewStageViewProps> = ({
                         // View details to see notes
                         onJobClick(job);
                       }}
-                      className="px-3 py-1.5 bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 text-xs font-medium rounded-lg hover:bg-gray-200 dark:hover:bg-white/20 transition-colors inline-flex items-center gap-1.5"
+                      className="px-3 py-1.5 bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 text-small font-medium rounded-lg hover:bg-gray-200 dark:hover:bg-white/20 transition-colors inline-flex items-center gap-1.5"
                     >
                       View Notes
                     </button>

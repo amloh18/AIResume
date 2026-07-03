@@ -50,7 +50,7 @@ export default function SuggestedFixesWidget({ fixes = defaultFixes, loading = f
               {fix.priority === 'high' ? <AlertCircle size={12} /> : <CheckCircle2 size={12} />}
             </div>
             <div className="flex-1">
-              <p className="text-xs font-bold text-gray-700 dark:text-gray-300 leading-snug">
+              <p className="text-small font-bold text-gray-700 dark:text-gray-300 leading-snug">
                 {fix.text}
               </p>
             </div>

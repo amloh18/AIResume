@@ -146,7 +146,7 @@ export default function GreetingHeader() {
       
       {/* Center content */}
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className={cn("font-black leading-tight", sizeClass.includes('h-12') ? 'text-xs' : 'text-lg')}>
+        <span className={cn("font-black leading-tight", sizeClass.includes('h-12') ? 'text-small' : 'text-h3')}>
           {profileStrength}%
         </span>
       </div>
@@ -160,7 +160,7 @@ export default function GreetingHeader() {
         {/* Left Section: Branding & Profile Strength (Inline on Mobile) */}
         <div className="flex items-center lg:items-start justify-between lg:justify-start lg:gap-8 flex-1 min-w-0">
           <div className="flex-1 flex flex-col justify-center min-w-0">
-            <h1 className="font-black text-gray-900 dark:text-white leading-tight tracking-tight text-xl xs:text-2xl sm:text-3xl lg:text-4xl mb-0.5 md:mb-2 italic uppercase">
+            <h1 className="font-black text-gray-900 dark:text-white leading-tight tracking-tight text-h3 xs:text-h2 sm:text-h1 lg:text-display mb-0.5 md:mb-2 italic uppercase">
               {getGreeting()}, {getUserDisplayName()}!
             </h1>
             <div className="h-5 md:h-6 overflow-hidden">
@@ -171,7 +171,7 @@ export default function GreetingHeader() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
                   transition={{ duration: 0.3 }}
-                  className="text-gray-500 dark:text-gray-400 font-medium text-[11px] xs:text-xs sm:text-sm md:text-base lg:text-lg mt-0.5 md:mt-1 leading-snug"
+                  className="text-gray-500 dark:text-gray-400 font-medium text-[11px] xs:text-small sm:text-small md:text-body lg:text-h3 mt-0.5 md:mt-1 leading-snug"
                 >
                   {CONTEXT_SUBTITLES[currentSubtitleIndex]}
                 </motion.p>
@@ -198,7 +198,7 @@ export default function GreetingHeader() {
                 Profile Strength
               </p>
               <p className={cn(
-                "text-sm font-black mt-0.5",
+                "text-small font-black mt-0.5",
                 ringColors.bg
               )}>
                 {profileStrength >= 80 ? 'Excellent' : profileStrength >= 60 ? 'Good' : 'Needs Work'}

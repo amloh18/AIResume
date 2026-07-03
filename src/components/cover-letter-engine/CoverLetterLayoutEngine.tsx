@@ -201,8 +201,6 @@ export default function CoverLetterLayoutEngine({
   const recentAssignmentsRef = useRef<string[]>([]);
 
   useEffect(() => {
-    if (isEditing) return;
-
     const docElement = document.querySelector('.cover-letter-wrapper');
     if (!docElement) return;
 
@@ -236,7 +234,14 @@ export default function CoverLetterLayoutEngine({
 
       // 1. Header
       const headerH = unitHeights['header'] || 160;
-      newAssignments['header'] = 0;
+      const firstPH = letterBlocks.length > 0 ? (unitHeights['p_0'] || 80) : 0;
+      
+      if (currentHeight + headerH + 24 + firstPH > usableHeight && currentHeight > 0) {
+        currentPage++;
+        currentHeight = 0;
+      }
+      
+      newAssignments['header'] = currentPage;
       currentHeight += headerH + 24;
 
       // 2. Paragraphs
@@ -278,6 +283,14 @@ export default function CoverLetterLayoutEngine({
     };
 
     const rafId = requestAnimationFrame(measureAndPaginate);
+    
+    // Ensure fonts are loaded before initial measurement
+    if (typeof document !== 'undefined' && (document as any).fonts) {
+      (document as any).fonts.ready.then(() => {
+        measureAndPaginate();
+      });
+    }
+
     let debounceTimer: any;
     const observer = new MutationObserver(() => {
       clearTimeout(debounceTimer);
@@ -290,7 +303,7 @@ export default function CoverLetterLayoutEngine({
       clearTimeout(debounceTimer);
       observer.disconnect();
     };
-  }, [bodyContent, pageFormat, activeDesign, letterBlocks.length, isEditing]);
+  }, [bodyContent, pageFormat, activeDesign, letterBlocks.length]);
 
   const maxPage = Object.values(pageAssignments).reduce((max, p) => Math.max(max, p), 0);
   const totalPages = maxPage + 1;
@@ -298,12 +311,40 @@ export default function CoverLetterLayoutEngine({
   const activePages = isEditing ? [0] : pages;
 
   return (
-    <div className={`flex flex-col items-center gap-6 cover-letter-wrapper cv-document ${fontClass}`} style={{ width, '--cv-page-height': minHeight, '--cv-page-gap': '24px' } as React.CSSProperties}>
+    <div id="cl-document-root" className="flex flex-col items-center gap-6 cover-letter-wrapper" style={{ width }}>
+      <style>
+        {`
+          .cl-document *, .cl-page * {
+            min-width: 0 !important;
+            max-width: 100% !important;
+            box-sizing: border-box !important;
+            word-break: normal !important;
+            hyphens: none !important;
+          }
+          .cl-header-name {
+            display: inline-block !important;
+            max-width: 100% !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+            white-space: nowrap !important;
+            word-break: normal !important;
+            overflow-wrap: normal !important;
+          }
+          @supports (font-size: clamp(1rem, 5vw, 3rem)) {
+            .cl-header-name {
+              font-size: clamp(1.2rem, 4vw, 3.5rem) !important;
+              white-space: normal !important;
+              word-break: normal !important;
+              overflow-wrap: normal !important;
+            }
+          }
+        `}
+      </style>
       {activePages.map(pageIdx => {
         return (
           <div 
             key={pageIdx}
-            className="bg-white dark:bg-white shadow-2xl flex flex-col text-black transition-all duration-500 ease-in-out relative cover-letter-document cv-page"
+            className={`bg-white dark:bg-white shadow-2xl flex flex-col text-black transition-all duration-500 ease-in-out relative cover-letter-document cv-document ${fontClass}`}
             style={{ 
               width,
               height: minHeight,
@@ -312,13 +353,16 @@ export default function CoverLetterLayoutEngine({
               fontSize: `${activeDesign.fontSize}px`,
               lineHeight: activeDesign.lineHeight,
               '--cv-accent': activeDesign.accentColor,
-              boxSizing: 'border-box'
+              boxSizing: 'border-box',
+              overflowWrap: 'break-word',
+              whiteSpace: 'normal',
+              wordBreak: 'normal'
             } as React.CSSProperties}
           >
             <div 
               className="flex flex-col relative z-10 w-full h-full cover-letter-page-content"
               style={{ 
-                padding: `${activeDesign.pageMargin}cqw ${activeDesign.pageMargin * 1.5}cqw`,
+                padding: `${activeDesign.pageMargin}cqw`,
                 boxSizing: 'border-box',
                 height: '100%'
               }}
@@ -399,14 +443,6 @@ export default function CoverLetterLayoutEngine({
                   </div>
                 )}
               </div>
-
-              {/* Footer Snippet / Layout */}
-              {((isEditing && pageIdx === 0) || (!isEditing && (pageAssignments['footer'] ?? 0) === pageIdx)) && (
-                <div data-unit-id="footer" className="pt-4 border-t border-gray-100 text-black w-full mt-4">
-                  <p className="mb-2">{footerContent || 'Sincerely,'}</p>
-                  <p className="font-bold text-lg tracking-tight">{headerProps.name}</p>
-                </div>
-              )}
             </div>
           </div>
         );

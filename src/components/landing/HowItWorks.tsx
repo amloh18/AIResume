@@ -97,20 +97,23 @@ const HowItWorks = () => {
 
           {/* Headline */}
           <motion.h2
-            className="text-2xl tablet:text-3xl desktop:text-4xl font-bold text-white mb-4 leading-tight"
+            className="!text-[2rem] tablet:!text-[2.5rem] desktop:!text-[3rem] font-extrabold text-white mb-3 tracking-tighter !leading-[1.05]"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.1 }}
           >
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-lime-400 to-lime-500">
-              Stop juggling five different apps.
-            </span>
-            <br />
-            <span className="text-white/70 font-normal">
-              CVCircle makes it simple to manage your entire job application.
-            </span>
+            Stop juggling <span className="text-transparent bg-clip-text bg-gradient-to-r from-lime-400 to-lime-500">five different apps.</span>
           </motion.h2>
+          <motion.p
+            className="text-h3 text-gray-400 max-w-2xl leading-relaxed text-left"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.15 }}
+          >
+            CVCircle makes it simple to manage your entire job application.
+          </motion.p>
         </div>
 
         <div className="flex flex-col desktop:flex-row items-center desktop:items-start gap-8 tablet:gap-12 desktop:gap-20">
@@ -147,10 +150,10 @@ const HowItWorks = () => {
                       />
                     )}
 
-                    <h3 className={`text-lg font-semibold mb-1 transition-colors ${index === activeStep ? 'text-white' : 'text-gray-300'}`}>
+                    <h3 className={`text-h3 font-semibold mb-1 transition-colors ${index === activeStep ? 'text-white' : 'text-gray-300'}`}>
                       {feature.title}
                     </h3>
-                    <p className="text-gray-400 text-sm leading-relaxed">
+                    <p className="text-gray-400 text-small leading-relaxed">
                       {feature.description}
                     </p>
                   </div>
@@ -175,10 +178,10 @@ const HowItWorks = () => {
                       transition={{ duration: 0.05, ease: "linear" }}
                     />
 
-                    <h3 className="text-xl font-bold text-white mb-3">
+                    <h3 className="text-h3 font-bold text-white mb-3">
                       {features[activeStep].title}
                     </h3>
-                    <p className="text-gray-400 text-base leading-relaxed">
+                    <p className="text-gray-400 text-body leading-relaxed">
                       {features[activeStep].description}
                     </p>
                   </motion.div>

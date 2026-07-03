@@ -140,14 +140,14 @@ export default function SubscriptionExpiryBanner({
               )}
             </div>
             <div className="flex-1">
-              <h3 className={`text-lg font-semibold ${styles.text} mb-1`}>
+              <h3 className={`text-h3 font-semibold ${styles.text} mb-1`}>
                 {isExpired 
                   ? `${planName} Expired`
                   : isInGracePeriod
                   ? `${planName} - Grace Period`
                   : `${planName} Expiring Soon`}
               </h3>
-              <p className={`text-sm ${styles.textSecondary} mb-2`}>
+              <p className={`text-small ${styles.textSecondary} mb-2`}>
                 {isExpired 
                   ? 'Your subscription has expired. Renew now to continue using premium features.'
                   : isInGracePeriod
@@ -155,13 +155,13 @@ export default function SubscriptionExpiryBanner({
                   : `Your ${planName.toLowerCase()} will expire ${formatTimeRemaining()}. Renew now to continue uninterrupted access.`}
               </p>
               {expiresAt && (
-                <p className={`text-sm ${styles.textSecondary} mb-3`}>
+                <p className={`text-small ${styles.textSecondary} mb-3`}>
                   Expires: {formatDate(expiresAt)}
                 </p>
               )}
               <button
                 onClick={handleRenew}
-                className={`inline-flex items-center gap-2 px-4 py-2 ${styles.button} rounded-lg transition-colors text-sm font-medium`}
+                className={`inline-flex items-center gap-2 px-4 py-2 ${styles.button} rounded-lg transition-colors text-small font-medium`}
               >
                 <ArrowRight className="w-4 h-4" />
                 {isExpired ? 'Renew Subscription' : 'Renew Now'}

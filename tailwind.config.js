@@ -67,9 +67,16 @@ module.exports = {
         "4xl": ["var(--text-4xl)", { lineHeight: "2.5rem" }],
         "5xl": ["var(--text-5xl)", { lineHeight: "1" }],
       },
+      height: {
+        macro: "100dvh",
+      },
+      backdropBlur: {
+        glass: "12px",
+      },
     },
   },
   plugins: [
     require("tailwindcss-animate"),
+    require("@tailwindcss/container-queries"),
   ],
 }

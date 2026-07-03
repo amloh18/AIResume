@@ -152,10 +152,10 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
               <FileText className="w-6 h-6 text-black" strokeWidth={2} />
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="text-xl font-bold text-black leading-tight">
+              <h3 className="text-h3 font-bold text-black leading-tight">
                 Documents
               </h3>
-              <p className="text-sm font-medium text-black/70 truncate">
+              <p className="text-small font-medium text-black/70 truncate">
                 {loadingJourney ? 'Loading...' : 'Download CVs & Reports'}
               </p>
             </div>
@@ -172,7 +172,7 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
         <div className="px-5 pb-5 space-y-4">
           {/* Section Label */}
           <div className="flex items-center justify-between px-1">
-            <span className="text-xs font-bold text-gray-500 uppercase tracking-[0.2em]">
+            <span className="text-small font-bold text-gray-500 uppercase tracking-[0.2em]">
               FORMATS
             </span>
           </div>
@@ -193,8 +193,8 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
                 strokeWidth={1.5}
               />
               <div className="text-center space-y-1">
-                <span className="block text-base font-bold text-gray-100">CV</span>
-                <span className="block text-xs font-medium text-gray-500 group-hover:text-gray-400 transition-colors">PDF Format</span>
+                <span className="block text-body font-bold text-gray-100">CV</span>
+                <span className="block text-small font-medium text-gray-500 group-hover:text-gray-400 transition-colors">PDF Format</span>
               </div>
               {downloadingItem === 'cv-pdf' && (
                 <div className="absolute inset-0 bg-[#0D0D0D]/80 backdrop-blur-sm rounded-3xl flex items-center justify-center">
@@ -218,8 +218,8 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
                   strokeWidth={1.5}
                 />
                 <div className="text-center space-y-1">
-                  <span className="block text-base font-bold text-gray-100">Cover Letter</span>
-                  <span className="block text-xs font-medium text-gray-500 group-hover:text-gray-400 transition-colors">PDF Format</span>
+                  <span className="block text-body font-bold text-gray-100">Cover Letter</span>
+                  <span className="block text-small font-medium text-gray-500 group-hover:text-gray-400 transition-colors">PDF Format</span>
                 </div>
                 {downloadingItem === 'cl-pdf' && (
                   <div className="absolute inset-0 bg-[#0D0D0D]/80 backdrop-blur-sm rounded-3xl flex items-center justify-center">
@@ -249,8 +249,8 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
                 />
               )}
               <div className="text-center space-y-1">
-                <span className="block text-base font-bold text-gray-100">CV</span>
-                <span className="block text-xs font-medium text-gray-500 group-hover:text-gray-400 transition-colors">Word (DOCX)</span>
+                <span className="block text-body font-bold text-gray-100">CV</span>
+                <span className="block text-small font-medium text-gray-500 group-hover:text-gray-400 transition-colors">Word (DOCX)</span>
               </div>
               {!canExportDocx && journeyInfo.hasCV && (
                 <span className="absolute top-4 right-4 text-[10px] bg-amber-500/10 text-amber-500 px-2 py-1 rounded-full font-bold tracking-wide border border-amber-500/20">PRO</span>
@@ -283,8 +283,8 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
                   />
                 )}
                 <div className="text-center space-y-1">
-                  <span className="block text-base font-bold text-gray-100">Cover Letter</span>
-                  <span className="block text-xs font-medium text-gray-500 group-hover:text-gray-400 transition-colors">Word (DOCX)</span>
+                  <span className="block text-body font-bold text-gray-100">Cover Letter</span>
+                  <span className="block text-small font-medium text-gray-500 group-hover:text-gray-400 transition-colors">Word (DOCX)</span>
                 </div>
                 {!canExportDocx && journeyInfo.hasCoverLetter && (
                   <span className="absolute top-4 right-4 text-[10px] bg-amber-500/10 text-amber-500 px-2 py-1 rounded-full font-bold tracking-wide border border-amber-500/20">PRO</span>
@@ -304,7 +304,7 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
               <button
                 onClick={() => handleDirectDownload('all', 'pdf', 'bundle')}
                 disabled={(!journeyInfo.hasCV && !journeyInfo.hasCoverLetter) || isDownloading}
-                className={`relative w-full flex items-center justify-center gap-3 px-5 py-4 rounded-2xl font-semibold text-sm transition-all ${(!journeyInfo.hasCV && !journeyInfo.hasCoverLetter)
+                className={`relative w-full flex items-center justify-center gap-3 px-5 py-4 rounded-2xl font-semibold text-small transition-all ${(!journeyInfo.hasCV && !journeyInfo.hasCoverLetter)
                   ? 'opacity-40 cursor-not-allowed bg-[#222] text-gray-600'
                   : 'bg-[#80FF00] text-black hover:bg-[#99FF33] shadow-lg shadow-[#80FF00]/20 hover:shadow-xl hover:shadow-[#80FF00]/30 active:scale-[0.98]'
                   }`}
@@ -314,7 +314,7 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
                   {downloadingItem === 'bundle' ? 'Preparing Download...' : 'Download Complete Package'}
                 </span>
               </button>
-              <p className="text-center text-xs text-gray-500">
+              <p className="text-center text-small text-gray-500">
                 Includes CV, Cover Letter, and ATS Report (ZIP)
               </p>
             </>

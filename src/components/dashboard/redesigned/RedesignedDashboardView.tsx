@@ -184,12 +184,9 @@ export default function RedesignedDashboardView({ tier, isExpanded = false }: Re
       { label: 'Draft', status: 'draft', color: 'bg-slate-400' },
       { label: 'Staging', status: 'created', color: 'bg-cyan-500' },
       { label: 'Applied', status: 'applied', color: 'bg-blue-500' },
-      { label: 'Screening', status: 'screening', color: 'bg-indigo-500' },
       { label: 'Interview', status: 'interview', color: 'bg-amber-500' },
       { label: 'Offer', status: 'offer', color: 'bg-[#83d60d]' },
-      { label: 'Accepted', status: 'accepted', color: 'bg-emerald-500' },
       { label: 'Rejected', status: 'rejected', color: 'bg-rose-500' },
-      { label: 'Withdrawn', status: 'withdrawn', color: 'bg-zinc-500' },
     ] as const;
 
     return stageDefs.map((stage) => ({
@@ -574,7 +571,7 @@ export default function RedesignedDashboardView({ tier, isExpanded = false }: Re
                 </div>
               </div>
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-1">
+                <div className="lg:col-span-3">
                   <InterviewCoachWidget />
                 </div>
               </div>

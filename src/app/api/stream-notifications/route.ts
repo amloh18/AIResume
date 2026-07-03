@@ -112,46 +112,51 @@ export async function GET(request: NextRequest) {
                     return;
                 }
 
-                // Track last sent IDs/times to avoid duplicates and gaps
-                let lastCheckTime = new Date(Date.now() - 1000); // Start looking from 1s ago
+                // Track last sent IDs to avoid duplicates and gaps
+                const sentNotificationIds = new Set<string>();
+                const sentActivityIds = new Set<string>();
 
                 // Set up interval to check for new notifications and activities
                 const interval = setInterval(async () => {
                     try {
-                        const checkTime = new Date();
-                        
                         // Ensure userId is valid
                         let userIdObjectId: mongoose.Types.ObjectId;
                         try {
                             userIdObjectId = new mongoose.Types.ObjectId(userId);
                         } catch (e) { return; }
 
-                        // 1. Check for new notifications
+                        // 1. Check for new notifications (fetch unread from last 5 minutes)
                         const newNotifications = await Notification.find({
                             userId: userIdObjectId,
                             read: false,
-                            createdAt: { $gt: lastCheckTime },
+                            createdAt: { $gt: new Date(Date.now() - 5 * 60 * 1000) },
                         }).sort({ createdAt: 1 }).lean();
 
-                        for (const notification of newNotifications) {
-                            const data = JSON.stringify({ type: 'notification', notification });
-                            controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+                         for (const notification of newNotifications) {
+                             const notifId = (notification as any)._id.toString();
+                             if (!sentNotificationIds.has(notifId)) {
+                                 sentNotificationIds.add(notifId);
+                                 const data = JSON.stringify({ type: 'notification', notification });
+                                 controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+                             }
+                         }
+
+                         // 2. Check for new activities (fetch from last 5 minutes)
+                         const newActivities = await ActivityLog.find({
+                             userId: userIdObjectId,
+                             logType: 'user_action',
+                             timestamp: { $gt: new Date(Date.now() - 5 * 60 * 1000) }
+                         }).sort({ timestamp: 1 }).lean();
+
+                         for (const activity of newActivities) {
+                             const actId = (activity as any)._id.toString();
+                            if (!sentActivityIds.has(actId)) {
+                                sentActivityIds.add(actId);
+                                const mapped = mapActivity(activity);
+                                const data = JSON.stringify({ type: 'activity', activity: mapped });
+                                controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+                            }
                         }
-
-                        // 2. Check for new activities
-                        const newActivities = await ActivityLog.find({
-                            userId: userIdObjectId,
-                            logType: 'user_action',
-                            timestamp: { $gt: lastCheckTime }
-                        }).sort({ timestamp: 1 }).lean();
-
-                        for (const activity of newActivities) {
-                            const mapped = mapActivity(activity);
-                            const data = JSON.stringify({ type: 'activity', activity: mapped });
-                            controller.enqueue(encoder.encode(`data: ${data}\n\n`));
-                        }
-
-                        lastCheckTime = checkTime;
                     } catch (error) {
                         console.error('Error checking for new events in SSE stream:', error);
                     }
@@ -201,8 +206,10 @@ export async function GET(request: NextRequest) {
         return new Response(stream, {
             headers: {
                 'Content-Type': 'text/event-stream',
-                'Cache-Control': 'no-cache',
+                'Cache-Control': 'no-cache, no-transform',
                 'Connection': 'keep-alive',
+                'X-Accel-Buffering': 'no',
+                'Content-Encoding': 'none',
             },
         });
     } catch (error: any) {

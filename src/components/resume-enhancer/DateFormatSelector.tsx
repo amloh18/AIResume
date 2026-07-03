@@ -12,7 +12,7 @@ interface DateFormatSelectorProps {
 
 /**
  * Compact dropdown selector for date format preference
- * Used in Step4Review to let users choose how dates appear on their CV
+ * Used in Step5Review to let users choose how dates appear on their CV
  */
 export default function DateFormatSelector({ value, onChange, className = '' }: DateFormatSelectorProps) {
     const options = Object.entries(DATE_FORMAT_OPTIONS) as [DateFormatStyle, { label: string; example: string }][];

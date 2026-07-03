@@ -48,7 +48,7 @@ export default function CoverLetterWidget({ docs = defaultDocs, loading = false,
               <FileText size={20} />
             </div>
             <div className="flex-1 min-w-0">
-              <h4 className="text-xs font-black text-gray-800 dark:text-gray-200 truncate">{doc.title}</h4>
+              <h4 className="text-small font-black text-gray-800 dark:text-gray-200 truncate">{doc.title}</h4>
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{doc.role}</p>
             </div>
             <div className="text-right">

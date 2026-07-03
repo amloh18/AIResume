@@ -2,6 +2,8 @@ import { MongoClient } from 'mongodb';
 
 const options = {};
 
+let cachedClientPromise: Promise<MongoClient> | null = null;
+
 // Lazily initialise the MongoClient promise so the module can be imported
 // during Next.js build even when MONGODB_URI is not set.
 function getClientPromise(): Promise<MongoClient> {
@@ -20,9 +22,12 @@ function getClientPromise(): Promise<MongoClient> {
     return global._mongoClientPromise;
   }
 
-  // In production mode, it's best to not use a global variable.
-  const client = new MongoClient(uri, options);
-  return client.connect();
+  // In production mode, cache and reuse the connection promise across requests.
+  if (!cachedClientPromise) {
+    const client = new MongoClient(uri, options);
+    cachedClientPromise = client.connect();
+  }
+  return cachedClientPromise;
 }
 
 // Re-export a proxy promise that defers initialisation to first await.

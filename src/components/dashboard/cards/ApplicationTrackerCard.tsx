@@ -48,10 +48,10 @@ export default function ApplicationTrackerCard({ className }: ApplicationTracker
 
         {/* Card Header */}
         <div className="flex items-center justify-between relative z-10">
-          <span className="text-sm font-semibold text-gray-500 dark:text-gray-400">
+          <span className="text-small font-semibold text-gray-500 dark:text-gray-400">
             Canvas
           </span>
-          <div className="flex items-center px-3 py-1.5 bg-gray-50 dark:bg-white/5 rounded-full text-xs font-medium text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-white/10">
+          <div className="flex items-center px-3 py-1.5 bg-gray-50 dark:bg-white/5 rounded-full text-small font-medium text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-white/10">
             <Folder size={14} className="mr-1.5 text-lime-600 dark:text-lime-400" />
             <span className="hidden sm:inline">Vault</span>
           </div>
@@ -60,7 +60,7 @@ export default function ApplicationTrackerCard({ className }: ApplicationTracker
         {/* Document Stats Summary */}
         <div className="mt-4 flex gap-6 relative z-10">
           <div className="flex flex-col">
-            <span className="text-2xl font-black text-gray-900 dark:text-white leading-none">
+            <span className="text-h2 font-black text-gray-900 dark:text-white leading-none">
               {docs.length}
             </span>
             <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mt-1">
@@ -69,7 +69,7 @@ export default function ApplicationTrackerCard({ className }: ApplicationTracker
           </div>
           <div className="w-px h-8 bg-gray-100 dark:bg-white/10 self-center" />
           <div className="flex flex-col">
-            <span className="text-2xl font-black text-gray-900 dark:text-white leading-none">
+            <span className="text-h2 font-black text-gray-900 dark:text-white leading-none">
               {coverLetters?.length || 0}
             </span>
             <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mt-1">
@@ -95,7 +95,7 @@ export default function ApplicationTrackerCard({ className }: ApplicationTracker
                   <div className={cn('p-1.5 rounded-lg', doc.bgColor)}>
                     <Icon size={16} className={doc.color} />
                   </div>
-                  <span className={cn("text-lg font-black tracking-tight", doc.color.replace('text-', 'text-opacity-90 '))}>
+                  <span className={cn("text-h3 font-black tracking-tight", doc.color.replace('text-', 'text-opacity-90 '))}>
                     {doc.count}
                   </span>
                 </div>
@@ -109,7 +109,7 @@ export default function ApplicationTrackerCard({ className }: ApplicationTracker
 
         {/* Footer */}
         <div className="mt-auto pt-3 text-right relative z-10">
-          <span className="text-xs font-medium text-gray-600 dark:text-gray-300 group-hover:text-lime-600 dark:group-hover:text-lime-400 transition-colors">
+          <span className="text-small font-medium text-gray-600 dark:text-gray-300 group-hover:text-lime-600 dark:group-hover:text-lime-400 transition-colors">
             Open Canvas →
           </span>
         </div>

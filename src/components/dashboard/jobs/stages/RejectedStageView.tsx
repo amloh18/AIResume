@@ -73,10 +73,10 @@ const RejectedStageView: React.FC<RejectedStageViewProps> = ({
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
         <XCircle className="w-16 h-16 text-gray-400 dark:text-gray-600 mb-4" />
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+        <h3 className="text-h3 font-semibold text-gray-900 dark:text-white mb-2">
           No rejected applications
         </h3>
-        <p className="text-sm text-gray-500 dark:text-gray-400">
+        <p className="text-small text-gray-500 dark:text-gray-400">
           Keep applying! Learn from each application.
         </p>
       </div>
@@ -88,32 +88,32 @@ const RejectedStageView: React.FC<RejectedStageViewProps> = ({
       {/* Insights Section - Only show when NOT full screen */}
       {!isFullScreen && (
         <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900/50 dark:to-gray-800/50 rounded-lg p-4 md:p-6 border border-gray-200 dark:border-white/10">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+          <h3 className="text-h3 font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
             <BarChart3 className="w-5 h-5" />
             Insights
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-white dark:bg-[#1a2015] rounded-lg p-4">
-              <div className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
+              <div className="text-h2 font-bold text-gray-900 dark:text-white mb-1">
                 {jobs.length}
               </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">
+              <div className="text-small text-gray-600 dark:text-gray-400">
                 Total Rejections
               </div>
             </div>
             <div className="bg-white dark:bg-[#1a2015] rounded-lg p-4">
-              <div className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
+              <div className="text-h2 font-bold text-gray-900 dark:text-white mb-1">
                 {avgMatchScore}%
               </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">
+              <div className="text-small text-gray-600 dark:text-gray-400">
                 Avg Match Score
               </div>
             </div>
             <div className="bg-white dark:bg-[#1a2015] rounded-lg p-4">
-              <div className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
+              <div className="text-h2 font-bold text-gray-900 dark:text-white mb-1">
                 {avgDaysToRejection}
               </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">
+              <div className="text-small text-gray-600 dark:text-gray-400">
                 Avg Days to Rejection
               </div>
             </div>
@@ -142,10 +142,10 @@ const RejectedStageView: React.FC<RejectedStageViewProps> = ({
                     <Building className="w-5 h-5 text-white" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-base font-semibold text-gray-900 dark:text-white truncate">
+                    <h3 className="text-body font-semibold text-gray-900 dark:text-white truncate">
                       {job.jobTitle || job.title}
                     </h3>
-                    <div className="flex items-center gap-3 mt-1 text-xs text-gray-600 dark:text-gray-400">
+                    <div className="flex items-center gap-3 mt-1 text-small text-gray-600 dark:text-gray-400">
                       <span>{job.company}</span>
                       {daysToRejection !== null && (
                         <>
@@ -172,7 +172,7 @@ const RejectedStageView: React.FC<RejectedStageViewProps> = ({
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <motion.button
                     onClick={(e) => handleViewAnalysis(job, e)}
-                    className="px-3 py-1.5 bg-purple-500 hover:bg-purple-600 text-white rounded-lg text-xs font-medium transition-all flex items-center gap-1.5"
+                    className="px-3 py-1.5 bg-purple-500 hover:bg-purple-600 text-white rounded-lg text-small font-medium transition-all flex items-center gap-1.5"
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                   >
@@ -184,7 +184,7 @@ const RejectedStageView: React.FC<RejectedStageViewProps> = ({
                       e.stopPropagation();
                       onJobClick(job);
                     }}
-                    className="px-3 py-1.5 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5"
+                    className="px-3 py-1.5 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-small font-medium transition-all flex items-center gap-1.5"
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                   >
@@ -212,16 +212,16 @@ const RejectedStageView: React.FC<RejectedStageViewProps> = ({
                       <Building className="w-5 h-5 text-white" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1 truncate">
+                      <h3 className="text-h3 font-semibold text-gray-900 dark:text-white mb-1 truncate">
                         {job.jobTitle || job.title}
                       </h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                      <p className="text-small text-gray-600 dark:text-gray-400">
                         {job.company}
                       </p>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm mb-3">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-small mb-3">
                     {/* Application Date */}
                     <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
                       <Calendar className="w-4 h-4" />
@@ -258,11 +258,11 @@ const RejectedStageView: React.FC<RejectedStageViewProps> = ({
                   {matchScore > 0 && (
                     <div className="mb-3">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-medium text-gray-600 dark:text-gray-400 flex items-center gap-1">
+                        <span className="text-small font-medium text-gray-600 dark:text-gray-400 flex items-center gap-1">
                           <TrendingUp className="w-3 h-3" />
                           Match Score
                         </span>
-                        <span className={`text-sm font-semibold ${matchScore >= 80 ? 'text-green-600 dark:text-green-400' :
+                        <span className={`text-small font-semibold ${matchScore >= 80 ? 'text-green-600 dark:text-green-400' :
                             matchScore >= 60 ? 'text-yellow-600 dark:text-yellow-400' :
                               'text-red-600 dark:text-red-400'
                           }`}>
@@ -286,7 +286,7 @@ const RejectedStageView: React.FC<RejectedStageViewProps> = ({
                 <div className="flex flex-col gap-2 flex-shrink-0">
                   <motion.button
                     onClick={(e) => handleViewAnalysis(job, e)}
-                    className="px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2"
+                    className="px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg text-small font-medium transition-all flex items-center justify-center gap-2"
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                   >
@@ -295,7 +295,7 @@ const RejectedStageView: React.FC<RejectedStageViewProps> = ({
                   </motion.button>
                   <motion.button
                     onClick={(e) => handleArchive(job, e)}
-                    className="px-4 py-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2"
+                    className="px-4 py-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-small font-medium transition-all flex items-center justify-center gap-2"
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                   >

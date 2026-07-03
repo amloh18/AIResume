@@ -8,14 +8,14 @@ import Image from 'next/image';
 import Logo from '@/components/ui/Logo';
 import { motion, AnimatePresence } from 'framer-motion';
 import { gsap } from 'gsap';
-import { X, Save, Eye, Loader2, Sparkles, User, Settings, LogOut, Sun, Moon, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Minimize2, Maximize2, Home, Plus, Palette, FileText, PenTool, Edit2, Check } from 'lucide-react';
+import { X, Save, Eye, Loader2, Sparkles, User, Settings, LogOut, Sun, Moon, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Minimize2, Maximize2, Home, Plus, Palette, FileText, PenTool, Edit2, Check, ClipboardList } from 'lucide-react';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
 import StepIndicator from './StepIndicator';
-import Step1Parser from './steps/Step1Parser';
+import Step1Dashboard from './steps/Step1Dashboard';
 import Step2Template from './steps/Step2Template';
-import Step3BuilderSurgeon from './steps/Step3BuilderSurgeon';
+import Step3CV from './steps/Step3CV';
 import Step4CoverLetter from './steps/Step4CoverLetter';
-import Step4Review from './steps/Step4Review';
+import Step5Review from './steps/Step5Review';
 
 import ErrorBoundary from './ErrorBoundary';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
@@ -39,7 +39,7 @@ import { comprehensiveSignOut } from '@/lib/utils/signout';
 import { getVisibleCVSections } from '@/lib/selectors/cv-section-selectors';
 import { migrateLegacyCV } from '@/lib/migrations/cv-structure-migration';
 import { getSectionIcon } from '@/lib/utils/cv-section-selectors';
-import type { Step3BuilderSurgeonRef } from '@/components/resume-enhancer/steps/Step3BuilderSurgeon';
+import type { Step3CVRef } from '@/components/resume-enhancer/steps/Step3CV';
 import { InfoTooltip, HelpTooltip } from '@/components/ui/tooltip';
 import { SaveIndicator } from '@/components/ui/AnimatedCheckmark';
 import { AnimatedScore, AnimatedProgressBar } from '@/components/ui/AnimatedScore';
@@ -63,7 +63,7 @@ import { generateCVTitle } from '@/lib/utils/cv-title-generator';
 import ModeValidationBanner from '@/components/resume-enhancer/components/ModeValidationBanner';
 import ModeTransitionDialog from '@/components/resume-enhancer/components/ModeTransitionDialog';
 import { getAnalysisModeWithValidation, hasAnalysisContextChanged, type AnalysisMode } from '@/lib/utils/analysis-mode';
-import { invalidateStep1Cache } from './steps/Step1Parser';
+import { invalidateStep1Cache } from './steps/Step1Dashboard';
 import {
   queueCvThumbnailSnapshotUpload,
   saveCvThumbnailSnapshot,
@@ -102,6 +102,7 @@ export default function ResumeEnhancerContainer({
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [tempTitle, setTempTitle] = useState('');
+  const [isMobileStepsOpen, setIsMobileStepsOpen] = useState(false);
 
   // Map internal steps (1-5) to display steps (1-5) for the step indicator
   const displayStep = state.currentStep;
@@ -118,7 +119,7 @@ export default function ResumeEnhancerContainer({
   const { theme, toggleTheme } = useTheme();
   const [isUserMenuExpanded, setIsUserMenuExpanded] = useState(false);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const step3Ref = useRef<Step3BuilderSurgeonRef>(null);
+  const step3Ref = useRef<Step3CVRef>(null);
   const stepContentRef = useRef<HTMLDivElement>(null);
   const templateOverlayRef = useRef<HTMLDivElement>(null);
   const initializedRef = useRef<{ mode: string; cvId?: string } | null>(null);
@@ -189,7 +190,7 @@ export default function ResumeEnhancerContainer({
     return Math.max(0, Math.min(100, state.surgeonAnalysis?.score ?? 0));
   }, [state.scoreReport?.overall_score, atsScore, jdText, state.surgeonAnalysis?.score]);
 
-  // Calculate score breakdown using CentralScoreManager - same as Step4Review
+  // Calculate score breakdown using CentralScoreManager - same as Step5Review
   const scoreResult = useMemo(() => {
     return CentralScoreManager.getInstance().getScoreSync(
       state.cvData,
@@ -3175,7 +3176,7 @@ export default function ResumeEnhancerContainer({
   }
 
   return (
-    <div className="min-h-screen bg-[#f3f2ee] dark:bg-[#1a230f] flex overflow-hidden w-full">
+    <div className="h-macro bg-[#f3f2ee] dark:bg-[#1a230f] flex overflow-hidden w-full">
       {/* Desktop Sidebar - Hidden on sm/md, visible on lg and up */}
       {state.currentStep === 1 && (
         <div
@@ -3215,7 +3216,7 @@ export default function ResumeEnhancerContainer({
               <div className="flex items-center gap-3 min-w-0 lg:w-[280px] flex-shrink-0">
                 <button
                   onClick={handleHomeStepClick}
-                  className="w-10 h-10 rounded-xl bg-white dark:bg-[#1a2312] border border-lime-200 dark:border-lime-900/30 flex items-center justify-center text-lime-600 dark:text-lime-400 hover:bg-lime-50 dark:hover:bg-lime-950/20 active:scale-95 transition-all duration-200 flex-shrink-0 shadow-sm"
+                  className="hidden md:flex w-10 h-10 rounded-xl bg-white dark:bg-[#1a2312] border border-lime-200 dark:border-lime-900/30 items-center justify-center text-lime-600 dark:text-lime-400 hover:bg-lime-50 dark:hover:bg-lime-950/20 active:scale-95 transition-all duration-200 flex-shrink-0 shadow-sm"
                   title="Back to Step 1"
                 >
                   <Home className="w-5 h-5 text-lime-600 dark:text-lime-400" />
@@ -3354,7 +3355,7 @@ export default function ResumeEnhancerContainer({
               {state.currentStep > 1 && (
                 <button
                   onClick={handleBackStep}
-                  className="flex lg:hidden items-center gap-1.5 p-1.5 sm:px-3 sm:py-1.5 bg-[var(--bg-tertiary)] hover:bg-[var(--hover-bg)] text-[color:var(--text-primary)] rounded-full text-xs font-medium transition-all duration-200"
+                  className="hidden md:flex lg:hidden items-center gap-1.5 p-1.5 sm:px-3 sm:py-1.5 bg-[var(--bg-tertiary)] hover:bg-[var(--hover-bg)] text-[color:var(--text-primary)] rounded-full text-xs font-medium transition-all duration-200"
                   title="Back"
                 >
                   <ChevronLeft className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
@@ -3367,7 +3368,7 @@ export default function ResumeEnhancerContainer({
                 <motion.button
                   onClick={() => handleSmartSave(true)}
                   disabled={saveStatus === 'saving'}
-                  className="lg:hidden p-1.5 sm:px-4 sm:py-1.5 bg-lime-500 dark:bg-[#80FF00] hover:bg-lime-600 dark:hover:bg-[#70e600] disabled:bg-gray-300 dark:disabled:bg-[var(--bg-tertiary)] disabled:cursor-not-allowed text-black disabled:text-gray-500 dark:disabled:text-[color:var(--text-tertiary)] rounded-full text-xs font-semibold transition-colors flex items-center space-x-1.5 shadow-md hover:shadow-lg overflow-hidden min-w-[36px] sm:min-w-[85px] justify-center"
+                  className="hidden md:inline-flex lg:hidden p-1.5 sm:px-4 sm:py-1.5 bg-lime-500 dark:bg-[#80FF00] hover:bg-lime-600 dark:hover:bg-[#70e600] disabled:bg-gray-300 dark:disabled:bg-[var(--bg-tertiary)] disabled:cursor-not-allowed text-black disabled:text-gray-500 dark:disabled:text-[color:var(--text-tertiary)] rounded-full text-xs font-semibold transition-colors flex items-center space-x-1.5 shadow-md hover:shadow-lg overflow-hidden min-w-[36px] sm:min-w-[85px] justify-center"
                   title="Save"
                   whileHover={{ scale: saveStatus === 'saving' ? 1 : 1.05 }}
                   whileTap={{ scale: 0.95 }}
@@ -3429,7 +3430,7 @@ export default function ResumeEnhancerContainer({
               {state.currentStep === 3 && !isMasterCV && (
                 <button
                   onClick={handleStep3Complete}
-                  className="lg:hidden p-1.5 sm:px-4 sm:py-1.5 bg-white text-black dark:bg-white/10 dark:text-white hover:bg-gray-100 dark:hover:bg-white/15 border border-gray-200 dark:border-white/20 rounded-full text-xs font-semibold transition-all flex items-center space-x-1.5 shadow-md hover:shadow-lg hover:scale-105"
+                  className="hidden md:inline-flex lg:hidden p-1.5 sm:px-4 sm:py-1.5 bg-white text-black dark:bg-white/10 dark:text-white hover:bg-gray-100 dark:hover:bg-white/15 border border-gray-200 dark:border-white/20 rounded-full text-xs font-semibold transition-all flex items-center space-x-1.5 shadow-md hover:shadow-lg hover:scale-105"
                   title="Cover Letter"
                 >
                   <FileText className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
@@ -3441,13 +3442,49 @@ export default function ResumeEnhancerContainer({
               {state.currentStep === 4 && (
                 <button
                   onClick={handleStep4Complete}
-                  className="lg:hidden p-1.5 sm:px-4 sm:py-1.5 bg-white text-black dark:bg-white/10 dark:text-white hover:bg-gray-100 dark:hover:bg-white/15 border border-gray-200 dark:border-white/20 rounded-full text-xs font-semibold transition-all flex items-center space-x-1.5 shadow-md hover:shadow-lg hover:scale-105"
+                  className="hidden md:inline-flex lg:hidden p-1.5 sm:px-4 sm:py-1.5 bg-white text-black dark:bg-white/10 dark:text-white hover:bg-gray-100 dark:hover:bg-white/15 border border-gray-200 dark:border-white/20 rounded-full text-xs font-semibold transition-all flex items-center space-x-1.5 shadow-md hover:shadow-lg hover:scale-105"
                   title="Review"
                 >
                   <Eye className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                   <span className="hidden sm:inline">Review</span>
                 </button>
               )}
+
+              {/* Mobile Step Dropdown Trigger */}
+              <div className="relative md:hidden z-[120]">
+                <button
+                  onClick={() => setIsMobileStepsOpen(!isMobileStepsOpen)}
+                  className="w-10 h-10 rounded-xl bg-white dark:bg-[#1a2312] border border-lime-200 dark:border-lime-900/30 flex items-center justify-center text-lime-600 dark:text-lime-400 hover:bg-lime-50 dark:hover:bg-lime-950/20 active:scale-95 transition-all duration-200 shadow-sm border-none bg-transparent"
+                  title="Navigate Steps"
+                >
+                  <ClipboardList className="w-5 h-5 text-lime-600 dark:text-lime-400" />
+                </button>
+                
+                {isMobileStepsOpen && (
+                  <div className="absolute right-0 top-12 z-[130] w-56 bg-white dark:bg-[#11160d] border border-gray-200 dark:border-lime-500/20 rounded-xl shadow-2xl p-2.5 flex flex-col gap-1">
+                    <div className="text-[9px] font-bold text-gray-400 dark:text-lime-400 uppercase tracking-widest px-2.5 py-1.5 border-b border-gray-100 dark:border-lime-500/10 mb-1">
+                      Navigate Steps
+                    </div>
+                    {getHeaderSteps().map((step) => (
+                      <button
+                        key={step.id}
+                        onClick={() => {
+                          handleStepNavigation(step.targetStep, !!step.openTemplateOverlay);
+                          setIsMobileStepsOpen(false);
+                        }}
+                        className={`flex items-center justify-between p-2 rounded-lg transition-all text-left w-full border-none shadow-none bg-transparent hover:bg-gray-100 dark:hover:bg-white/5 ${
+                          step.isActive 
+                            ? 'bg-[#f1f9ec] dark:bg-[#1a2312] text-lime-800 dark:text-lime-400 font-bold' 
+                            : 'text-gray-700 dark:text-gray-300'
+                        }`}
+                      >
+                        <span className="text-xs">{step.label}</span>
+                        {step.isActive && <span className="w-1.5 h-1.5 rounded-full bg-lime-500" />}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </>
           )}
 
@@ -3493,8 +3530,8 @@ export default function ResumeEnhancerContainer({
                     transition={{ duration: 0.3 }}
                     className="h-full min-h-0 flex flex-col w-full"
                   >
-                    <ErrorBoundary stepName="CV Parser" onReset={() => dispatch({ type: 'SET_STEP', payload: 1 })}>
-                      <Step1Parser
+                    <ErrorBoundary stepName="Dashboard" onReset={() => dispatch({ type: 'SET_STEP', payload: 1 })}>
+                      <Step1Dashboard
                         onComplete={handleStep1Complete}
                         userHasMasterCV={state.hasMasterCV}
                         mode={'create'}
@@ -3516,7 +3553,7 @@ export default function ResumeEnhancerContainer({
                     className="h-full min-h-0 flex flex-col w-full"
                   >
                     <ErrorBoundary stepName="CV Builder" onReset={() => dispatch({ type: 'SET_STEP', payload: 3 })}>
-                      <Step3BuilderSurgeon
+                      <Step3CV
                         ref={step3Ref}
                         onComplete={handleStep3Complete}
                         onActiveSectionChange={(sectionId) => setActiveSection(sectionId)}
@@ -3548,7 +3585,7 @@ export default function ResumeEnhancerContainer({
                     className="h-full min-h-0 flex flex-col w-full"
                   >
                     <ErrorBoundary stepName="Review & Download" onReset={() => dispatch({ type: 'SET_STEP', payload: 5 })}>
-                      <Step4Review onSave={() => handleSmartSave(true)} />
+                      <Step5Review onSave={() => handleSmartSave(true)} />
                     </ErrorBoundary>
                   </motion.div>
                 )}

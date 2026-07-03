@@ -64,6 +64,66 @@ export default function ContentAnalytics() {
                 </div>
             </div>
 
+            {/* Broadcast System Alert Panel */}
+            <motion.div variants={item} className="bg-[#111111] border border-red-500/20 hover:border-red-500/30 p-8 rounded-[2.5rem] shadow-2xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-red-500/5 blur-[80px] rounded-full pointer-events-none" />
+                <div className="flex items-center gap-3 mb-6">
+                    <div className="p-3 bg-red-500/10 text-red-500 rounded-2xl">
+                        <Shield className="w-6 h-6 animate-pulse" />
+                    </div>
+                    <div>
+                        <h2 className="text-lg font-black text-white uppercase tracking-tight">System Emergency Broadcast</h2>
+                        <p className="text-white/30 text-[9px] font-black uppercase tracking-widest mt-0.5">Send Global System-Wide In-App Push Alerts</p>
+                    </div>
+                </div>
+
+                <div className="space-y-4 max-w-2xl">
+                    <div className="flex flex-col gap-2">
+                        <label className="text-white/30 text-[9px] font-black uppercase tracking-widest">Alert Message Title</label>
+                        <input
+                            type="text"
+                            placeholder="System Maintenance Scheduled"
+                            id="alert-title"
+                            defaultValue="System Maintenance Update"
+                            className="bg-black/40 border border-white/5 rounded-xl px-4 py-3 text-small text-white placeholder-gray-600 focus:outline-none focus:border-red-500/40"
+                        />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-500">Message Content</label>
+                        <textarea
+                          id="alert-message"
+                          placeholder="Brief technical update notification description..."
+                          rows={3}
+                          className="bg-black/40 border border-white/5 rounded-xl px-4 py-3 text-small text-gray-200 outline-none focus:border-red-500/30 transition-all resize-none"
+                        />
+                      </div>
+                      <button
+                        onClick={async () => {
+                          const title = (document.getElementById('alert-title') as HTMLInputElement)?.value || 'System Update';
+                          const msg = (document.getElementById('alert-message') as HTMLTextAreaElement)?.value || 'CVCircle platform performance optimizations are undergoing live maintenance.';
+                          try {
+                            const res = await fetch('/api/notifications/send-all-types', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ title, message: msg, type: 'system_update', actionType: 'dismiss' })
+                            });
+                            if (res.ok) {
+                              alert('✅ System-wide notification successfully queued for delivery!');
+                            } else {
+                              alert('❌ Failed to broadcast alert.');
+                            }
+                          } catch (err) {
+                            alert('❌ Network connection error dispatching alert.');
+                          }
+                        }}
+                        className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-500 text-white font-black uppercase tracking-widest text-[10px] px-6 py-3 rounded-full transition-all"
+                      >
+                        <Zap className="w-3.5 h-3.5" />
+                        Dispatch Broadcast
+                      </button>
+                </div>
+            </motion.div>
+
             {/* Content Metrics */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {[

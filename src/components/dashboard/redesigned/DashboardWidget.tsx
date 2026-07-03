@@ -28,8 +28,7 @@ export default function DashboardWidget({
   };
 
   return (
-    <motion.div
-      layout
+    <div
       className={cn(
         'relative bg-white dark:bg-[#111317] rounded-[32px] border border-gray-100 dark:border-white/5 shadow-sm overflow-hidden flex flex-col',
         isExpanded ? 'z-50' : 'z-0',
@@ -94,8 +93,8 @@ export default function DashboardWidget({
             >
               <AlertCircle className="w-8 h-8 text-rose-500" />
               <div>
-                <p className="text-sm font-bold text-gray-900 dark:text-white">Oops! Something went wrong</p>
-                <p className="text-xs text-gray-500 mt-1">{error}</p>
+                <p className="text-small font-bold text-gray-900 dark:text-white">Oops! Something went wrong</p>
+                <p className="text-small text-gray-500 mt-1">{error}</p>
               </div>
             </motion.div>
           ) : empty ? (
@@ -110,14 +109,14 @@ export default function DashboardWidget({
                 <Sparkles size={32} className="text-gray-200 dark:text-white/10" />
               </div>
               <div>
-                <p className="text-sm font-bold text-gray-900 dark:text-white">{emptyState?.title || 'No data yet'}</p>
-                <p className="text-xs text-gray-500 mt-1 max-w-[200px]">{emptyState?.description || 'Your control room is waiting.'}</p>
+                <p className="text-small font-bold text-gray-900 dark:text-white">{emptyState?.title || 'No data yet'}</p>
+                <p className="text-small text-gray-500 mt-1 max-w-[200px]">{emptyState?.description || 'Your control room is waiting.'}</p>
               </div>
               {emptyState?.action && (
                 <button
                   onClick={emptyState.action.onClick}
                   className={cn(
-                    "px-4 py-2 rounded-xl text-xs font-medium uppercase tracking-wide transition-all",
+                    "px-4 py-2 rounded-xl text-small font-medium uppercase tracking-wide transition-all",
                     emptyState.action.primary 
                       ? "bg-[#83d60d] text-slate-900 shadow-lg shadow-[#83d60d]/20" 
                       : "bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300 hover:bg-gray-200"
@@ -166,6 +165,6 @@ export default function DashboardWidget({
           </div>
         </div>
       )}
-    </motion.div>
+    </div>
   );
 }

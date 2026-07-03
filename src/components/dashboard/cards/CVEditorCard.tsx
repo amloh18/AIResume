@@ -36,10 +36,10 @@ export default function CVEditorCard({ className }: CVEditorCardProps) {
 
         {/* Card Header */}
         <div className="flex items-center justify-between mb-4 relative z-10">
-          <span className="text-sm font-semibold text-gray-500 dark:text-gray-400">
+          <span className="text-small font-semibold text-gray-500 dark:text-gray-400">
             CV Editor
           </span>
-          <div className="flex items-center px-3 py-1.5 bg-gray-50 dark:bg-white/5 rounded-full text-xs font-medium text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-white/10">
+          <div className="flex items-center px-3 py-1.5 bg-gray-50 dark:bg-white/5 rounded-full text-small font-medium text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-white/10">
             <FileText size={14} className="mr-1.5 text-lime-600 dark:text-lime-400" />
             <span className="hidden sm:inline">Manage</span>
           </div>
@@ -47,10 +47,10 @@ export default function CVEditorCard({ className }: CVEditorCardProps) {
 
         {/* Main Count */}
         <div className="mb-4 flex items-end gap-3 relative z-10">
-          <h2 className="text-5xl font-black tracking-tighter text-gray-900 dark:text-white leading-none">
+          <h2 className="text-display font-black tracking-tighter text-gray-900 dark:text-white leading-none">
             {cvs?.length || 0}
           </h2>
-          <span className="text-xs font-medium text-lime-600 dark:text-lime-400 mb-1 flex items-center">
+          <span className="text-small font-medium text-lime-600 dark:text-lime-400 mb-1 flex items-center">
             ↑ Active
           </span>
         </div>
@@ -65,7 +65,7 @@ export default function CVEditorCard({ className }: CVEditorCardProps) {
               <div className="w-1.5 h-1.5 rounded-full bg-lime-500 flex-shrink-0" />
               <div className="flex-1 min-w-0 flex justify-between items-center gap-2">
                 <div className="min-w-0">
-                  <p className="text-xs font-bold text-gray-900 dark:text-gray-100 truncate">
+                  <p className="text-small font-bold text-gray-900 dark:text-gray-100 truncate">
                     {cv.title || 'Untitled CV'}
                   </p>
                   <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate mt-0.5">
@@ -86,7 +86,7 @@ export default function CVEditorCard({ className }: CVEditorCardProps) {
             </div>
           ))}
           {(!cvs || cvs.length === 0) && (
-            <div className="text-xs text-gray-400 italic py-2 text-center">
+            <div className="text-small text-gray-400 italic py-2 text-center">
               No CVs yet. Create your first one!
             </div>
           )}
@@ -94,7 +94,7 @@ export default function CVEditorCard({ className }: CVEditorCardProps) {
 
         {/* Footer CTA */}
         <div className="mt-4 pt-3 border-t border-gray-100 dark:border-white/5 relative z-10">
-          <span className="text-xs font-medium text-gray-600 dark:text-gray-300 group-hover:text-lime-600 dark:group-hover:text-lime-400 transition-colors">
+          <span className="text-small font-medium text-gray-600 dark:text-gray-300 group-hover:text-lime-600 dark:group-hover:text-lime-400 transition-colors">
             Open CV Editor →
           </span>
         </div>

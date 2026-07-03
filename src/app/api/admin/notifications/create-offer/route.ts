@@ -76,6 +76,15 @@ export async function POST(request: NextRequest) {
       enqueued++;
     }
 
+    // Trigger processing immediately in a non-blocking way so notifications arrive instantly
+    if (enqueued > 0) {
+      setTimeout(() => {
+        notificationService.processNotificationQueue(enqueued).catch(err => {
+          console.error('Error processing notification queue after admin send:', err);
+        });
+      }, 500);
+    }
+
     return NextResponse.json({
       success: true,
       message: `Discount offer created and sent to ${enqueued} users`,

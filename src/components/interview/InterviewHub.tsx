@@ -37,7 +37,7 @@ const InterviewHub: React.FC<InterviewHubProps> = ({ session, questionsByModule 
     }
 
     return (
-        <div className="h-full bg-[#f3f2ee] dark:bg-[#1a230f] min-h-screen font-sans">
+        <div className="h-full app-page-bg min-h-screen font-sans">
             {/* Header */}
             <div className="bg-white dark:bg-[#141810] border-b border-gray-200 dark:border-gray-800 sticky top-0 z-10 px-6 py-4">
                 <div className="max-w-[1400px] mx-auto flex items-center justify-between">

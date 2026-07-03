@@ -141,7 +141,7 @@ export async function POST(
           company: jobData.company || 'Unknown Company',
           jobDescription: jobData.description || jobData.jobDescription,
           status: 'created',
-          source: 'resume-enhancer',
+          source: 'cv-builder-pro',
           priority: 'medium',
           tags: [],
           contacts: [],

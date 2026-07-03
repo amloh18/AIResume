@@ -1650,13 +1650,13 @@ ${userName}`
           {/* Header */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 p-4 sm:p-6 border-b border-gray-200 dark:border-white/10 flex-shrink-0">
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-1 sm:gap-2 min-w-0 flex-1">
-              <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white truncate">{job.jobTitle || job.title}</h2>
+              <h2 className="text-h3 sm:text-h3 font-semibold text-gray-900 dark:text-white truncate">{job.jobTitle || job.title}</h2>
               <span className="text-gray-500 dark:text-gray-400 hidden sm:inline">at</span>
-              <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white truncate">{job.company}</h2>
+              <h2 className="text-h3 sm:text-h3 font-semibold text-gray-900 dark:text-white truncate">{job.company}</h2>
 
               {/* Sponsorship Tag */}
               {job.sponsorship && job.sponsorship !== 'unknown' && (
-                <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ml-0 sm:ml-2 ${job.sponsorship === 'yes'
+                <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-small font-medium ml-0 sm:ml-2 ${job.sponsorship === 'yes'
                   ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                   : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
                   }`}>
@@ -1729,11 +1729,11 @@ ${userName}`
               <section className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">Stages</p>
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Application timeline</h3>
+                    <p className="text-small font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">Stages</p>
+                    <h3 className="text-h3 font-semibold text-gray-900 dark:text-white">Application timeline</h3>
                   </div>
                   {terminalStageLabel && (
-                    <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700 dark:bg-red-900/30 dark:text-red-300">
+                    <span className="rounded-full bg-red-100 px-3 py-1 text-small font-semibold text-red-700 dark:bg-red-900/30 dark:text-red-300">
                       {terminalStageLabel}
                     </span>
                   )}
@@ -1793,10 +1793,10 @@ ${userName}`
               <section className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">Journey Card</p>
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">What matters right now</h3>
+                    <p className="text-small font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">Journey Card</p>
+                    <h3 className="text-h3 font-semibold text-gray-900 dark:text-white">What matters right now</h3>
                   </div>
-                  <span className={`rounded-full px-3 py-1 text-xs font-semibold ${journeyCardData.accentClasses}`}>
+                  <span className={`rounded-full px-3 py-1 text-small font-semibold ${journeyCardData.accentClasses}`}>
                     {journeyCardData.eyebrow}
                   </span>
                 </div>
@@ -1810,11 +1810,11 @@ ${userName}`
                           <span className={`rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wider ${journeyCardData.accentClasses}`}>
                             {journeyCardData.eyebrow}
                           </span>
-                          <h4 className="text-xs font-black text-gray-900 dark:text-white uppercase tracking-wider">
+                          <h4 className="text-small font-black text-gray-900 dark:text-white uppercase tracking-wider">
                             {journeyCardData.title || (job.status === 'applied' || job.status === 'screening' ? 'Journey Snapshot' : 'Next Steps')}
                           </h4>
                         </div>
-                        <p className="text-xs text-gray-600 dark:text-gray-300 leading-normal max-w-lg">
+                        <p className="text-small text-gray-600 dark:text-gray-300 leading-normal max-w-lg">
                           {journeyCardData.summary}
                         </p>
                       </div>
@@ -1839,7 +1839,7 @@ ${userName}`
                             <button
                               onClick={() => void handleOpenDocumentPreview('cv')}
                               disabled={previewLoading === 'cv'}
-                              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200/60 dark:border-white/10 bg-white/80 dark:bg-[#1a2015] px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:text-[var(--text-secondary)] dark:hover:bg-[var(--bg-tertiary)] transition-colors"
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200/60 dark:border-white/10 bg-white/80 dark:bg-[#1a2015] px-2.5 py-1.5 text-small font-semibold text-gray-700 hover:bg-gray-50 dark:text-[var(--text-secondary)] dark:hover:bg-[var(--bg-tertiary)] transition-colors"
                             >
                               {previewLoading === 'cv' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Eye className="h-3.5 w-3.5" />}
                               CV
@@ -1849,7 +1849,7 @@ ${userName}`
                             <button
                               onClick={() => void handleOpenDocumentPreview('coverLetter')}
                               disabled={previewLoading === 'coverLetter'}
-                              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200/60 dark:border-white/10 bg-white/80 dark:bg-[#1a2015] px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:text-[var(--text-secondary)] dark:hover:bg-[var(--bg-tertiary)] transition-colors"
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200/60 dark:border-white/10 bg-white/80 dark:bg-[#1a2015] px-2.5 py-1.5 text-small font-semibold text-gray-700 hover:bg-gray-50 dark:text-[var(--text-secondary)] dark:hover:bg-[var(--bg-tertiary)] transition-colors"
                             >
                               {previewLoading === 'coverLetter' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Eye className="h-3.5 w-3.5" />}
                               Cover Letter
@@ -1869,7 +1869,7 @@ ${userName}`
                         <motion.button
                           onClick={() => void runSidebarAction(journeyCardData.primaryActionId)}
                           disabled={isMovingToCreated || isCreatingJourney}
-                          className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#80FF00] px-4 py-2.5 text-xs font-black text-black shadow-sm transition hover:brightness-95 dark:bg-[#99FF00] disabled:opacity-60"
+                          className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#80FF00] px-4 py-2.5 text-small font-black text-black shadow-sm transition hover:brightness-95 dark:bg-[#99FF00] disabled:opacity-60"
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
                         >
@@ -1879,7 +1879,7 @@ ${userName}`
                         {journeyCardData.secondaryAction && journeyCardData.secondaryLabel && (
                           <motion.button
                             onClick={() => journeyCardData.secondaryActionId && void runSidebarAction(journeyCardData.secondaryActionId)}
-                            className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-gray-250 bg-white px-4 py-2.5 text-xs font-black text-gray-800 hover:bg-gray-50 dark:border-white/15 dark:bg-white/5 dark:text-white dark:hover:bg-white/10 transition-all"
+                            className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-gray-250 bg-white px-4 py-2.5 text-small font-black text-gray-800 hover:bg-gray-50 dark:border-white/15 dark:bg-white/5 dark:text-white dark:hover:bg-white/10 transition-all"
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                           >
@@ -1890,12 +1890,12 @@ ${userName}`
 
                       {/* Journey Status Nudge */}
                       {primaryJourney ? (
-                        <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                        <div className="flex items-center gap-1.5 text-small text-gray-500">
                           <span className="w-1.5 h-1.5 rounded-full bg-[#80FF00] animate-pulse shrink-0" />
                           <span>Status: <strong className="capitalize text-gray-700 dark:text-gray-300">{primaryJourney.status?.replace(/_/g, ' ') || 'In progress'}</strong></span>
                         </div>
                       ) : (
-                        <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                        <div className="flex items-center gap-1.5 text-small text-gray-500">
                           <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
                           <span>Journey not started</span>
                         </div>
@@ -1909,10 +1909,10 @@ ${userName}`
                 <section className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810]">
                   <div className="mb-4 flex items-start justify-between gap-4">
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">Recruiter Visibility</p>
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Outreach that keeps this application visible</h3>
+                      <p className="text-small font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">Recruiter Visibility</p>
+                      <h3 className="text-h3 font-semibold text-gray-900 dark:text-white">Outreach that keeps this application visible</h3>
                     </div>
-                    <span className="rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300">
+                    <span className="rounded-full bg-indigo-100 px-3 py-1 text-small font-semibold text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300">
                       {job.status === 'screening' ? 'Screening follow-up' : 'Applied follow-up'}
                     </span>
                   </div>
@@ -1922,15 +1922,15 @@ ${userName}`
                       {recruiterVisibilitySteps.map((step, index) => (
                         <div key={`${step}-${index}`} className="flex items-start gap-3">
                           <Mail className="mt-0.5 h-4 w-4 shrink-0 text-indigo-500" />
-                          <p className="text-sm leading-6 text-gray-700 dark:text-gray-300">{step}</p>
+                          <p className="text-small leading-6 text-gray-700 dark:text-gray-300">{step}</p>
                         </div>
                       ))}
                     </div>
 
                     <div className="space-y-3 rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-4 dark:border-white/10 dark:bg-[#181f16]">
                       <div>
-                        <p className="text-sm font-semibold text-gray-900 dark:text-white">Current action path</p>
-                        <p className="mt-1 text-sm leading-6 text-gray-600 dark:text-gray-300">
+                        <p className="text-small font-semibold text-gray-900 dark:text-white">Current action path</p>
+                        <p className="mt-1 text-small leading-6 text-gray-600 dark:text-gray-300">
                           {hasRecruiterEmail
                             ? 'Open the draft email now, then confirm whether you sent it so the tracker can keep the timeline honest.'
                             : 'Use the manual fallback first: copy the draft, add a recruiter email, or send the same message through LinkedIn.'}
@@ -1939,7 +1939,7 @@ ${userName}`
                       <div className="flex flex-col gap-3">
                         <button
                           onClick={() => handleOpenEmail(0)}
-                          className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#80FF00] px-4 py-3 text-sm font-semibold text-black shadow-sm transition hover:brightness-95"
+                          className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#80FF00] px-4 py-3 text-small font-semibold text-black shadow-sm transition hover:brightness-95"
                         >
                           <Mail className="h-4 w-4" />
                           {hasRecruiterEmail ? 'Open Recruiter Email Draft' : 'Open Manual Outreach Draft'}
@@ -1950,7 +1950,7 @@ ${userName}`
                             setActiveActionPayload(sidebarConfig.actionPayloads.open_details || null);
                             setShowEmailTemplate(!showEmailTemplate);
                           }}
-                          className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-800 transition hover:bg-gray-50 dark:border-white/10 dark:bg-[#20281d] dark:text-white dark:hover:bg-[#273021]"
+                          className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 text-small font-semibold text-gray-800 transition hover:bg-gray-50 dark:border-white/10 dark:bg-[#20281d] dark:text-white dark:hover:bg-[#273021]"
                         >
                           {showEmailTemplate ? 'Hide Manual Script' : 'View Manual Script'}
                         </button>
@@ -1962,27 +1962,27 @@ ${userName}`
                     <div className="mt-4 rounded-2xl border border-gray-200 bg-gray-50 p-4 dark:border-white/10 dark:bg-[#181f16]">
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <div>
-                          <p className="text-sm font-semibold text-gray-900 dark:text-white">Manual outreach fallback</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                          <p className="text-small font-semibold text-gray-900 dark:text-white">Manual outreach fallback</p>
+                          <p className="text-small text-gray-500 dark:text-gray-400">
                             Subject: {getEmailSubject(job)}
                           </p>
                         </div>
                         <div className="flex gap-2">
                           <button
                             onClick={() => handleCopyToClipboard(getEmailSubject(job), 'subject')}
-                            className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 transition hover:bg-white dark:border-white/10 dark:text-gray-200 dark:hover:bg-[#20281d]"
+                            className="rounded-lg border border-gray-200 px-3 py-2 text-small font-medium text-gray-700 transition hover:bg-white dark:border-white/10 dark:text-gray-200 dark:hover:bg-[#20281d]"
                           >
                             Copy Subject
                           </button>
                           <button
                             onClick={() => handleCopyToClipboard(getEmailTemplate(job), 'email')}
-                            className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 transition hover:bg-white dark:border-white/10 dark:text-gray-200 dark:hover:bg-[#20281d]"
+                            className="rounded-lg border border-gray-200 px-3 py-2 text-small font-medium text-gray-700 transition hover:bg-white dark:border-white/10 dark:text-gray-200 dark:hover:bg-[#20281d]"
                           >
                             Copy Message
                           </button>
                         </div>
                       </div>
-                      <div className="mt-3 whitespace-pre-wrap rounded-xl bg-white px-4 py-4 text-sm leading-6 text-gray-700 dark:bg-[#20281d] dark:text-gray-300">
+                      <div className="mt-3 whitespace-pre-wrap rounded-xl bg-white px-4 py-4 text-small leading-6 text-gray-700 dark:bg-[#20281d] dark:text-gray-300">
                         {getEmailTemplate(job)}
                       </div>
                     </div>
@@ -1993,7 +1993,7 @@ ${userName}`
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-1.5">
                         <Mail className="h-4 w-4 text-emerald-500" />
-                        <p className="text-sm font-semibold text-gray-900 dark:text-white">Inbox & Emails</p>
+                        <p className="text-small font-semibold text-gray-900 dark:text-white">Inbox & Emails</p>
                       </div>
                       
                       {isPremiumUser ? (
@@ -2014,7 +2014,7 @@ ${userName}`
                       )}
                     </div>
 
-                    <div className="text-xs leading-5">
+                    <div className="text-small leading-5">
                       {isPremiumUser ? (
                         isEmailConnected ? (
                           <div className="space-y-2">
@@ -2052,7 +2052,7 @@ ${userName}`
                           <button
                             type="button"
                             onClick={() => setShowUpgradePopupState(true)}
-                            className="px-4 py-2 bg-lime-500 hover:bg-lime-600 text-black rounded-xl text-xs font-bold transition shadow-md shadow-lime-500/10"
+                            className="px-4 py-2 bg-lime-500 hover:bg-lime-600 text-black rounded-xl text-small font-bold transition shadow-md shadow-lime-500/10"
                           >
                             Upgrade to Unlock
                           </button>
@@ -2069,12 +2069,12 @@ ${userName}`
                     <div className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810]">
                       <div className="mb-4 flex items-center justify-between gap-3">
                         <div>
-                          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">Job Details</p>
-                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Core job information</h3>
+                          <p className="text-small font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">Job Details</p>
+                          <h3 className="text-h3 font-semibold text-gray-900 dark:text-white">Core job information</h3>
                         </div>
                         <button
                           onClick={() => void runSidebarAction('open_details')}
-                          className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-white/10 dark:text-white dark:hover:bg-[#273021]"
+                          className="rounded-xl border border-gray-200 px-4 py-2 text-small font-medium text-gray-700 transition hover:bg-gray-50 dark:border-white/10 dark:text-white dark:hover:bg-[#273021]"
                         >
                           View Full Details
                         </button>
@@ -2086,9 +2086,9 @@ ${userName}`
                             key={row.label}
                             className={`space-y-1 ${row.label === 'Job URL' ? 'sm:col-span-2' : ''}`}
                           >
-                            <p className="text-xs uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">{row.label}</p>
+                            <p className="text-small uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">{row.label}</p>
                             <div className="flex items-center gap-2">
-                              <p className="min-w-0 truncate text-sm font-medium text-gray-900 dark:text-white">{row.value}</p>
+                              <p className="min-w-0 truncate text-small font-medium text-gray-900 dark:text-white">{row.value}</p>
                               {row.label === 'Job URL' && job.jobUrl && (
                                 <a
                                   href={job.jobUrl}
@@ -2110,12 +2110,12 @@ ${userName}`
                     <div className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810]">
                       <div className="mb-4 flex items-center justify-between gap-3">
                         <div>
-                          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">Application Insights</p>
-                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Performance snapshot</h3>
+                          <p className="text-small font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">Application Insights</p>
+                          <h3 className="text-h3 font-semibold text-gray-900 dark:text-white">Performance snapshot</h3>
                         </div>
                         <button
                           onClick={() => void runSidebarAction('open_insights')}
-                          className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-white/10 dark:text-white dark:hover:bg-[#273021]"
+                          className="rounded-xl border border-gray-200 px-4 py-2 text-small font-medium text-gray-700 transition hover:bg-gray-50 dark:border-white/10 dark:text-white dark:hover:bg-[#273021]"
                         >
                           View Full Insights
                         </button>
@@ -2125,15 +2125,15 @@ ${userName}`
                         <div className="space-y-3">
                           {sidebarConfig.insightRows.map((row) => (
                             <div key={row.label} className="flex items-center justify-between rounded-xl bg-gray-50 px-4 py-3 dark:bg-[#181f16]">
-                              <span className="text-sm text-gray-600 dark:text-gray-300">{row.label}</span>
-                              <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                              <span className="text-small text-gray-600 dark:text-gray-300">{row.label}</span>
+                              <span className="text-small font-semibold text-gray-900 dark:text-white">
                                 {row.label === 'Match Score' && insightsLoading ? '...' : row.value}
                               </span>
                             </div>
                           ))}
                         </div>
                       ) : (
-                        <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-4 py-5 text-sm leading-6 text-gray-600 dark:border-white/10 dark:bg-[#181f16] dark:text-gray-300">
+                        <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-4 py-5 text-small leading-6 text-gray-600 dark:border-white/10 dark:bg-[#181f16] dark:text-gray-300">
                           {sidebarConfig.insightsEmptyState}
                         </div>
                       )}
@@ -2163,7 +2163,7 @@ ${userName}`
                 <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
                   <Trash2 size={20} className="text-red-600 dark:text-red-400" />
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                <h3 className="text-h3 font-semibold text-gray-900 dark:text-white">
                   Delete CV Journey
                 </h3>
               </div>
@@ -2236,14 +2236,14 @@ ${userName}`
             >
               <div className="p-6 border-b border-gray-200 dark:border-white/10 flex-shrink-0 flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">
+                  <p className="text-small font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">
                     {detailsModalView === 'details' ? 'Job Details' : 'Application Insights'}
                   </p>
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mt-1">
+                  <h3 className="text-h3 font-bold text-gray-900 dark:text-white mt-1">
                     {job.jobTitle || job.title} at {job.company}
                   </h3>
                   {activeActionPayload && (
-                    <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                    <p className="mt-2 text-small text-gray-500 dark:text-gray-400">
                       Viewing {formatStageLabel(activeActionPayload.stage)} context
                       {activeJourneyForPayload?.id ? ` with journey ${activeJourneyForPayload.id.slice(0, 8)}` : ' without a linked journey yet'}.
                     </p>
@@ -2260,7 +2260,7 @@ ${userName}`
               <div className="mb-6 flex gap-2 rounded-2xl bg-gray-100 p-1 dark:bg-[#222a1f] mx-6 mt-4">
                 <button
                   onClick={() => setDetailsModalView('details')}
-                  className={`flex-1 rounded-xl px-4 py-2 text-sm font-medium transition ${
+                  className={`flex-1 rounded-xl px-4 py-2 text-small font-medium transition ${
                     detailsModalView === 'details'
                       ? 'bg-white text-gray-900 shadow-sm dark:bg-[#2a3326] dark:text-white'
                       : 'text-gray-600 dark:text-gray-300'
@@ -2270,7 +2270,7 @@ ${userName}`
                 </button>
                 <button
                   onClick={() => setDetailsModalView('insights')}
-                  className={`flex-1 rounded-xl px-4 py-2 text-sm font-medium transition ${
+                  className={`flex-1 rounded-xl px-4 py-2 text-small font-medium transition ${
                     detailsModalView === 'insights'
                       ? 'bg-white text-gray-900 shadow-sm dark:bg-[#2a3326] dark:text-white'
                       : 'text-gray-600 dark:text-gray-300'
@@ -2281,7 +2281,7 @@ ${userName}`
               </div>
 
               {activeActionPayload && (
-                <div className="mb-6 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600 dark:border-white/10 dark:bg-[#20281d] dark:text-gray-300 mx-6">
+                <div className="mb-6 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-small text-gray-600 dark:border-white/10 dark:bg-[#20281d] dark:text-gray-300 mx-6">
                   {activeActionId === 'open_insights'
                     ? `Insights are filtered to the ${formatStageLabel(activeActionPayload.stage)} stage for this tracker item.`
                     : `This panel opened from the ${formatStageLabel(activeActionPayload.stage)} stage and keeps the current job, journey, and entitlement context together.`}
@@ -2295,22 +2295,22 @@ ${userName}`
                     <div className="space-y-5">
                       {/* Core Details */}
                       <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d]">
-                        <h4 className="mb-4 text-base font-semibold text-gray-900 dark:text-white">Core Details</h4>
+                        <h4 className="mb-4 text-body font-semibold text-gray-900 dark:text-white">Core Details</h4>
                         <div className="space-y-4">
                           <div className="flex items-start gap-3">
                             <Building2 className="mt-0.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
                             <div>
-                              <p className="text-xs uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Company</p>
-                              <p className="text-sm font-medium text-gray-900 dark:text-white">{job.company}</p>
+                              <p className="text-small uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Company</p>
+                              <p className="text-small font-medium text-gray-900 dark:text-white">{job.company}</p>
                             </div>
                           </div>
                           <div className="flex items-start gap-3">
                             <MapPin className="mt-0.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
                             <div>
-                              <p className="text-xs uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Location</p>
-                              <p className="text-sm font-medium text-gray-900 dark:text-white">{job.location || fallbacks.defaultLocation}</p>
+                              <p className="text-small uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Location</p>
+                              <p className="text-small font-medium text-gray-900 dark:text-white">{job.location || fallbacks.defaultLocation}</p>
                               {job.extractedJd?.location?.location_type?.value && (
-                                <span className="inline-block mt-1 px-2 py-0.5 text-xs bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 rounded capitalize">
+                                <span className="inline-block mt-1 px-2 py-0.5 text-small bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 rounded capitalize">
                                   Type: {job.extractedJd.location.location_type.value}
                                 </span>
                               )}
@@ -2319,15 +2319,15 @@ ${userName}`
                           <div className="flex items-start gap-3">
                             <Briefcase className="mt-0.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
                             <div>
-                              <p className="text-xs uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Type</p>
-                              <p className="text-sm font-medium capitalize text-gray-900 dark:text-white">{job.jobType || job.type || 'Not specified'}</p>
+                              <p className="text-small uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Type</p>
+                              <p className="text-small font-medium capitalize text-gray-900 dark:text-white">{job.jobType || job.type || 'Not specified'}</p>
                             </div>
                           </div>
                           <div className="flex items-start gap-3">
                             <DollarSign className="mt-0.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
                             <div>
-                              <p className="text-xs uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Salary</p>
-                              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                              <p className="text-small uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Salary</p>
+                              <p className="text-small font-medium text-gray-900 dark:text-white">
                                 {formatJobSalary(job.salary, fallbacks.defaultSalary)}
                                 {job.extractedJd?.compensation?.salary_inferred && (
                                   <span className="inline-block ml-2 px-1.5 py-0.5 text-[10px] bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 rounded">
@@ -2340,20 +2340,20 @@ ${userName}`
                           <div className="flex items-start gap-3">
                             <Calendar className="mt-0.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
                             <div>
-                              <p className="text-xs uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Deadline</p>
-                              <p className="text-sm font-medium text-gray-900 dark:text-white">{formatJobDate(job.deadline, 'No deadline set')}</p>
+                              <p className="text-small uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Deadline</p>
+                              <p className="text-small font-medium text-gray-900 dark:text-white">{formatJobDate(job.deadline, 'No deadline set')}</p>
                             </div>
                           </div>
                           <div className="flex items-start gap-3">
                             <ExternalLink className="mt-0.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
                             <div className="min-w-0">
-                              <p className="text-xs uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Job URL</p>
+                              <p className="text-small uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Job URL</p>
                               {job.jobUrl ? (
-                                <a href={job.jobUrl} target="_blank" rel="noopener noreferrer" className="truncate text-sm font-medium text-emerald-600 hover:underline dark:text-[#80FF00]">
+                                <a href={job.jobUrl} target="_blank" rel="noopener noreferrer" className="truncate text-small font-medium text-emerald-600 hover:underline dark:text-[#80FF00]">
                                   {job.jobUrl}
                                 </a>
                               ) : (
-                                <p className="text-sm font-medium text-gray-900 dark:text-white">No URL provided</p>
+                                <p className="text-small font-medium text-gray-900 dark:text-white">No URL provided</p>
                               )}
                             </div>
                           </div>
@@ -2363,12 +2363,12 @@ ${userName}`
                       {/* Contact Details */}
                       {job.contactDetails && (job.contactDetails.name || job.contactDetails.email || job.contactDetails.phone || job.contactDetails.role) && (
                         <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d]">
-                          <h4 className="mb-4 text-base font-semibold text-gray-900 dark:text-white">Contact Details</h4>
+                          <h4 className="mb-4 text-body font-semibold text-gray-900 dark:text-white">Contact Details</h4>
                           <div className="space-y-4">
-                            {job.contactDetails.name && <p className="text-sm text-gray-700 dark:text-gray-300"><span className="font-medium text-gray-900 dark:text-white">Name:</span> {job.contactDetails.name}</p>}
-                            {job.contactDetails.role && <p className="text-sm text-gray-700 dark:text-gray-300"><span className="font-medium text-gray-900 dark:text-white">Role:</span> {job.contactDetails.role}</p>}
-                            {job.contactDetails.email && <p className="text-sm text-gray-700 dark:text-gray-300"><span className="font-medium text-gray-900 dark:text-white">Email:</span> {job.contactDetails.email}</p>}
-                            {job.contactDetails.phone && <p className="text-sm text-gray-700 dark:text-gray-300"><span className="font-medium text-gray-900 dark:text-white">Phone:</span> {job.contactDetails.phone}</p>}
+                            {job.contactDetails.name && <p className="text-small text-gray-700 dark:text-gray-300"><span className="font-medium text-gray-900 dark:text-white">Name:</span> {job.contactDetails.name}</p>}
+                            {job.contactDetails.role && <p className="text-small text-gray-700 dark:text-gray-300"><span className="font-medium text-gray-900 dark:text-white">Role:</span> {job.contactDetails.role}</p>}
+                            {job.contactDetails.email && <p className="text-small text-gray-700 dark:text-gray-300"><span className="font-medium text-gray-900 dark:text-white">Email:</span> {job.contactDetails.email}</p>}
+                            {job.contactDetails.phone && <p className="text-small text-gray-700 dark:text-gray-300"><span className="font-medium text-gray-900 dark:text-white">Phone:</span> {job.contactDetails.phone}</p>}
                           </div>
                         </div>
                       )}
@@ -2376,13 +2376,13 @@ ${userName}`
                       {/* Requirements */}
                       {job.extractedJd?.role_content && (
                         <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d] space-y-4">
-                          <h4 className="text-base font-semibold text-gray-900 dark:text-white">Job Requirements</h4>
+                          <h4 className="text-body font-semibold text-gray-900 dark:text-white">Job Requirements</h4>
                           
                           {/* Must Have */}
                           {job.extractedJd.role_content.requirements_must_have?.length > 0 && (
                             <div>
-                              <h5 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Must Have</h5>
-                              <ul className="space-y-1.5 text-sm text-gray-700 dark:text-gray-300">
+                              <h5 className="text-small font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Must Have</h5>
+                              <ul className="space-y-1.5 text-small text-gray-700 dark:text-gray-300">
                                 {job.extractedJd.role_content.requirements_must_have.map((req: any, i: number) => (
                                   <li key={i} className="flex items-start gap-2">
                                     <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-red-500 flex-shrink-0" />
@@ -2396,8 +2396,8 @@ ${userName}`
                           {/* Nice to Have */}
                           {job.extractedJd.role_content.requirements_nice_to_have?.length > 0 && (
                             <div>
-                              <h5 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Nice to Have</h5>
-                              <ul className="space-y-1.5 text-sm text-gray-700 dark:text-gray-300">
+                              <h5 className="text-small font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Nice to Have</h5>
+                              <ul className="space-y-1.5 text-small text-gray-700 dark:text-gray-300">
                                 {job.extractedJd.role_content.requirements_nice_to_have.map((req: any, i: number) => (
                                   <li key={i} className="flex items-start gap-2">
                                     <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-lime-500 flex-shrink-0" />
@@ -2411,8 +2411,8 @@ ${userName}`
                           {/* Inferred Requirements */}
                           {job.extractedJd.role_content.requirements_inferred?.length > 0 && (
                             <div>
-                              <h5 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Inferred (AI Identified)</h5>
-                              <ul className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
+                              <h5 className="text-small font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Inferred (AI Identified)</h5>
+                              <ul className="space-y-2 text-small text-gray-700 dark:text-gray-300">
                                 {job.extractedJd.role_content.requirements_inferred.map((req: any, i: number) => (
                                   <li key={i} className="flex flex-col bg-white/50 dark:bg-white/5 p-2 rounded-lg border border-gray-100 dark:border-white/5">
                                     <span className="font-medium text-gray-900 dark:text-white flex items-center gap-1.5">
@@ -2420,7 +2420,7 @@ ${userName}`
                                       {req.text}
                                     </span>
                                     {req.inference_reason && (
-                                      <span className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 italic">Reason: {req.inference_reason}</span>
+                                      <span className="text-small text-gray-500 dark:text-gray-400 mt-0.5 italic">Reason: {req.inference_reason}</span>
                                     )}
                                   </li>
                                 ))}
@@ -2433,15 +2433,15 @@ ${userName}`
                       {/* Skills & Tech Stack */}
                       {job.extractedJd?.skills && (
                         <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d] space-y-4">
-                          <h4 className="text-base font-semibold text-gray-900 dark:text-white">Skills & Tech Stack</h4>
+                          <h4 className="text-body font-semibold text-gray-900 dark:text-white">Skills & Tech Stack</h4>
                           
                           {/* Technical Skills */}
                           {job.extractedJd.skills.skills_technical?.length > 0 && (
                             <div>
-                              <h5 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Technical Skills</h5>
+                              <h5 className="text-small font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Technical Skills</h5>
                               <div className="flex flex-wrap gap-1.5">
                                 {job.extractedJd.skills.skills_technical.map((item: any, i: number) => (
-                                  <span key={i} className={`px-2.5 py-1 text-xs font-medium rounded-full ${
+                                  <span key={i} className={`px-2.5 py-1 text-small font-medium rounded-full ${
                                     item.importance === 'critical' 
                                       ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 border border-red-200/50' 
                                       : item.importance === 'strong'
@@ -2458,10 +2458,10 @@ ${userName}`
                           {/* Tools & Platforms */}
                           {job.extractedJd.skills.tools_and_platforms?.length > 0 && (
                             <div>
-                              <h5 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Tools & Platforms</h5>
+                              <h5 className="text-small font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Tools & Platforms</h5>
                               <div className="flex flex-wrap gap-1.5">
                                 {job.extractedJd.skills.tools_and_platforms.map((item: any, i: number) => (
-                                  <span key={i} className="px-2.5 py-1 text-xs font-medium bg-lime-100 text-lime-800 dark:bg-[#80FF00]/10 dark:text-[#80FF00] rounded-full border border-lime-200/20">
+                                  <span key={i} className="px-2.5 py-1 text-small font-medium bg-lime-100 text-lime-800 dark:bg-[#80FF00]/10 dark:text-[#80FF00] rounded-full border border-lime-200/20">
                                     {item.tool}
                                   </span>
                                 ))}
@@ -2472,10 +2472,10 @@ ${userName}`
                           {/* Soft Skills */}
                           {job.extractedJd.skills.skills_soft?.length > 0 && (
                             <div>
-                              <h5 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Soft Skills</h5>
+                              <h5 className="text-small font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Soft Skills</h5>
                               <div className="flex flex-wrap gap-1.5">
                                 {job.extractedJd.skills.skills_soft.map((item: any, i: number) => (
-                                  <span key={i} className="px-2.5 py-1 text-xs font-medium bg-gray-100 text-gray-800 dark:bg-white/10 dark:text-gray-300 rounded-full">
+                                  <span key={i} className="px-2.5 py-1 text-small font-medium bg-gray-100 text-gray-800 dark:bg-white/10 dark:text-gray-300 rounded-full">
                                     {item.skill}
                                   </span>
                                 ))}
@@ -2490,16 +2490,16 @@ ${userName}`
                     <div className="space-y-5">
                       {/* Job Description */}
                       <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d]">
-                        <h4 className="mb-4 text-base font-semibold text-gray-900 dark:text-white">Job Description</h4>
-                        <div className="max-h-[300px] overflow-y-auto whitespace-pre-wrap text-sm leading-6 text-gray-700 dark:text-gray-300 pr-2">
+                        <h4 className="mb-4 text-body font-semibold text-gray-900 dark:text-white">Job Description</h4>
+                        <div className="max-h-[300px] overflow-y-auto whitespace-pre-wrap text-small leading-6 text-gray-700 dark:text-gray-300 pr-2">
                           {job.jobDescription || fallbacks.defaultJobDescription}
                         </div>
                       </div>
 
                       {/* Notes */}
                       <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d]">
-                        <h4 className="mb-4 text-base font-semibold text-gray-900 dark:text-white">Notes</h4>
-                        <div className="whitespace-pre-wrap text-sm leading-6 text-gray-700 dark:text-gray-300">
+                        <h4 className="mb-4 text-body font-semibold text-gray-900 dark:text-white">Notes</h4>
+                        <div className="whitespace-pre-wrap text-small leading-6 text-gray-700 dark:text-gray-300">
                           {job.notes || 'No notes added yet.'}
                         </div>
                       </div>
@@ -2507,26 +2507,26 @@ ${userName}`
                       {/* Team & Culture */}
                       {job.extractedJd?.team_and_culture && (
                         <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d] space-y-4">
-                          <h4 className="text-base font-semibold text-gray-900 dark:text-white">Team & Culture</h4>
+                          <h4 className="text-body font-semibold text-gray-900 dark:text-white">Team & Culture</h4>
                           
                           {/* Structure */}
                           {job.extractedJd.team_and_culture.team_structure && (
-                            <div className="grid grid-cols-2 gap-3 text-sm border-b border-gray-100 dark:border-white/5 pb-3">
+                            <div className="grid grid-cols-2 gap-3 text-small border-b border-gray-100 dark:border-white/5 pb-3">
                               {job.extractedJd.team_and_culture.team_structure.department && (
                                 <div>
-                                  <span className="text-xs text-gray-500 dark:text-gray-400 block">Department</span>
+                                  <span className="text-small text-gray-500 dark:text-gray-400 block">Department</span>
                                   <span className="font-medium text-gray-900 dark:text-white">{job.extractedJd.team_and_culture.team_structure.department}</span>
                                 </div>
                               )}
                               {job.extractedJd.team_and_culture.team_structure.reports_to && (
                                 <div>
-                                  <span className="text-xs text-gray-500 dark:text-gray-400 block">Reports To</span>
+                                  <span className="text-small text-gray-500 dark:text-gray-400 block">Reports To</span>
                                   <span className="font-medium text-gray-900 dark:text-white">{job.extractedJd.team_and_culture.team_structure.reports_to}</span>
                                 </div>
                               )}
                               {job.extractedJd.team_and_culture.team_structure.team_size && (
                                 <div>
-                                  <span className="text-xs text-gray-500 dark:text-gray-400 block">Team Size</span>
+                                  <span className="text-small text-gray-500 dark:text-gray-400 block">Team Size</span>
                                   <span className="font-medium text-gray-900 dark:text-white">{job.extractedJd.team_and_culture.team_structure.team_size}</span>
                                 </div>
                               )}
@@ -2536,12 +2536,12 @@ ${userName}`
                           {/* Company Values */}
                           {job.extractedJd.team_and_culture.company_values?.length > 0 && (
                             <div>
-                              <h5 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Company Values</h5>
-                              <div className="space-y-2 text-sm">
+                              <h5 className="text-small font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Company Values</h5>
+                              <div className="space-y-2 text-small">
                                 {job.extractedJd.team_and_culture.company_values.map((val: any, i: number) => (
                                   <div key={i} className="flex flex-col bg-white/50 dark:bg-white/5 p-2 rounded-lg border border-gray-100 dark:border-white/5">
                                     <span className="font-semibold text-gray-900 dark:text-white">{val.value}</span>
-                                    {val.evidence && <span className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{val.evidence}</span>}
+                                    {val.evidence && <span className="text-small text-gray-500 dark:text-gray-400 mt-0.5">{val.evidence}</span>}
                                   </div>
                                 ))}
                               </div>
@@ -2557,29 +2557,29 @@ ${userName}`
                     <div className="space-y-5">
                       {/* Application Snapshot */}
                       <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d]">
-                        <h4 className="mb-4 text-base font-semibold text-gray-900 dark:text-white">Application Snapshot</h4>
+                        <h4 className="mb-4 text-body font-semibold text-gray-900 dark:text-white">Application Snapshot</h4>
                         <div className="space-y-4">
                           <div className="flex items-center justify-between">
-                            <span className="text-sm text-gray-600 dark:text-gray-300">Status</span>
-                            <span className="text-sm font-semibold capitalize text-gray-900 dark:text-white">{job.status}</span>
+                            <span className="text-small text-gray-600 dark:text-gray-300">Status</span>
+                            <span className="text-small font-semibold capitalize text-gray-900 dark:text-white">{job.status}</span>
                           </div>
                           <div className="flex items-center justify-between">
-                            <span className="text-sm text-gray-600 dark:text-gray-300">Success Probability</span>
-                            <span className="text-sm font-semibold text-gray-900 dark:text-white">{successProb}%</span>
+                            <span className="text-small text-gray-600 dark:text-gray-300">Success Probability</span>
+                            <span className="text-small font-semibold text-gray-900 dark:text-white">{successProb}%</span>
                           </div>
                           <div className="flex items-center justify-between">
-                            <span className="text-sm text-gray-600 dark:text-gray-300">Priority</span>
-                            <span className="text-sm font-semibold capitalize text-gray-900 dark:text-white">{job.priority || 'medium'}</span>
+                            <span className="text-small text-gray-600 dark:text-gray-300">Priority</span>
+                            <span className="text-small font-semibold capitalize text-gray-900 dark:text-white">{job.priority || 'medium'}</span>
                           </div>
                           <div className="flex items-center justify-between">
-                            <span className="text-sm text-gray-600 dark:text-gray-300">Sponsorship</span>
-                            <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                            <span className="text-small text-gray-600 dark:text-gray-300">Sponsorship</span>
+                            <span className="text-small font-semibold text-gray-900 dark:text-white">
                               {job.sponsorship === 'yes' ? 'Provided' : job.sponsorship === 'no' ? 'Not provided' : 'Unknown'}
                             </span>
                           </div>
                           <div className="flex items-center justify-between">
-                            <span className="text-sm text-gray-600 dark:text-gray-300">Match Score</span>
-                            <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">{insightsLoading ? '...' : `${keywordMatchScore}%`}</span>
+                            <span className="text-small text-gray-600 dark:text-gray-300">Match Score</span>
+                            <span className="text-small font-semibold text-emerald-600 dark:text-emerald-400">{insightsLoading ? '...' : `${keywordMatchScore}%`}</span>
                           </div>
                         </div>
                       </div>
@@ -2588,10 +2588,10 @@ ${userName}`
                       {job.extractedJd?.jd_quality && (
                         <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d] space-y-4">
                           <div className="flex items-center justify-between">
-                            <h4 className="text-base font-semibold text-gray-900 dark:text-white">JD Quality Audit</h4>
+                            <h4 className="text-body font-semibold text-gray-900 dark:text-white">JD Quality Audit</h4>
                             <div className="flex items-center gap-2">
-                              <span className="text-xs text-gray-500 dark:text-gray-400 capitalize">Grade: {job.extractedJd.jd_quality.jd_quality_grade}</span>
-                              <span className={`px-2 py-0.5 rounded text-xs font-bold ${
+                              <span className="text-small text-gray-500 dark:text-gray-400 capitalize">Grade: {job.extractedJd.jd_quality.jd_quality_grade}</span>
+                              <span className={`px-2 py-0.5 rounded text-small font-bold ${
                                 job.extractedJd.jd_quality.jd_quality_score >= 70
                                   ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
                                   : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
@@ -2604,14 +2604,14 @@ ${userName}`
                           {/* Red Flags */}
                           {job.extractedJd.jd_quality.jd_red_flags?.length > 0 && (
                             <div className="space-y-2">
-                              <span className="text-xs font-semibold text-red-600 dark:text-red-400 block uppercase tracking-wider">Concerns & Red Flags ({job.extractedJd.jd_quality.jd_red_flags.length})</span>
+                              <span className="text-small font-semibold text-red-600 dark:text-red-400 block uppercase tracking-wider">Concerns & Red Flags ({job.extractedJd.jd_quality.jd_red_flags.length})</span>
                               <div className="space-y-2">
                                 {job.extractedJd.jd_quality.jd_red_flags.map((flag: any, i: number) => (
-                                  <div key={i} className="flex gap-2 p-2 bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 rounded-lg text-sm text-gray-700 dark:text-gray-300">
+                                  <div key={i} className="flex gap-2 p-2 bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 rounded-lg text-small text-gray-700 dark:text-gray-300">
                                     <AlertCircle className="h-4 w-4 text-red-500 flex-shrink-0 mt-0.5" />
                                     <div>
                                       <span className="font-semibold block text-red-800 dark:text-red-400">{flag.flag}</span>
-                                      <span className="text-xs text-gray-600 dark:text-gray-400 mt-0.5 block">{flag.detail}</span>
+                                      <span className="text-small text-gray-600 dark:text-gray-400 mt-0.5 block">{flag.detail}</span>
                                     </div>
                                   </div>
                                 ))}
@@ -2622,14 +2622,14 @@ ${userName}`
                           {/* Positive Signals */}
                           {job.extractedJd.jd_quality.jd_positive_signals?.length > 0 && (
                             <div className="space-y-2">
-                              <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 block uppercase tracking-wider">Positive Signals</span>
+                              <span className="text-small font-semibold text-emerald-600 dark:text-emerald-400 block uppercase tracking-wider">Positive Signals</span>
                               <div className="space-y-2">
                                 {job.extractedJd.jd_quality.jd_positive_signals.map((sig: any, i: number) => (
-                                  <div key={i} className="flex gap-2 p-2 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 rounded-lg text-sm text-gray-700 dark:text-gray-300">
+                                  <div key={i} className="flex gap-2 p-2 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 rounded-lg text-small text-gray-700 dark:text-gray-300">
                                     <Sparkles className="h-4 w-4 text-emerald-500 flex-shrink-0 mt-0.5" />
                                     <div>
                                       <span className="font-semibold block text-emerald-800 dark:text-emerald-400">{sig.signal}</span>
-                                      {sig.detail && <span className="text-xs text-gray-600 dark:text-gray-400 mt-0.5 block">{sig.detail}</span>}
+                                      {sig.detail && <span className="text-small text-gray-600 dark:text-gray-400 mt-0.5 block">{sig.detail}</span>}
                                     </div>
                                   </div>
                                 ))}
@@ -2644,19 +2644,19 @@ ${userName}`
                     <div className="space-y-5">
                       {/* Deeper Insights */}
                       <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d]">
-                        <h4 className="mb-4 text-base font-semibold text-gray-900 dark:text-white">Deeper Insights</h4>
+                        <h4 className="mb-4 text-body font-semibold text-gray-900 dark:text-white">Deeper Insights</h4>
                         <div className="space-y-4">
                           <div className="flex items-center justify-between">
-                            <span className="text-sm text-gray-600 dark:text-gray-300">Hiring Trend</span>
-                            <span className="text-sm font-semibold text-gray-900 dark:text-white">{insightsLoading ? '...' : insights?.companyHiringTrend || 'Unknown'}</span>
+                            <span className="text-small text-gray-600 dark:text-gray-300">Hiring Trend</span>
+                            <span className="text-small font-semibold text-gray-900 dark:text-white">{insightsLoading ? '...' : insights?.companyHiringTrend || 'Unknown'}</span>
                           </div>
                           <div className="flex items-center justify-between">
-                            <span className="text-sm text-gray-600 dark:text-gray-300">Skills Gap</span>
-                            <span className="text-right text-sm font-semibold text-gray-900 dark:text-white">{insightsLoading ? '...' : insights?.skillsGap || 'Unable to analyze'}</span>
+                            <span className="text-small text-gray-600 dark:text-gray-300">Skills Gap</span>
+                            <span className="text-right text-small font-semibold text-gray-900 dark:text-white">{insightsLoading ? '...' : insights?.skillsGap || 'Unable to analyze'}</span>
                           </div>
                           <div className="flex items-center justify-between">
-                            <span className="text-sm text-gray-600 dark:text-gray-300">Market Competitiveness</span>
-                            <span className={`text-right text-sm font-semibold ${
+                            <span className="text-small text-gray-600 dark:text-gray-300">Market Competitiveness</span>
+                            <span className={`text-right text-small font-semibold ${
                               salaryComp.comparison === 'above'
                                 ? 'text-green-600 dark:text-green-400'
                                 : salaryComp.comparison === 'below'
@@ -2667,7 +2667,7 @@ ${userName}`
                             </span>
                           </div>
                           {nudge && (
-                            <div className="rounded-xl bg-blue-50 px-4 py-3 text-sm leading-6 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300">
+                            <div className="rounded-xl bg-blue-50 px-4 py-3 text-small leading-6 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300">
                               <span className="font-semibold">Smart action:</span> {nudge}
                             </div>
                           )}
@@ -2677,15 +2677,15 @@ ${userName}`
                       {/* ATS Keywords Section */}
                       {job.extractedJd?.ats_keywords && (
                         <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d] space-y-4">
-                          <h4 className="text-base font-semibold text-gray-900 dark:text-white">ATS Target Keywords</h4>
+                          <h4 className="text-body font-semibold text-gray-900 dark:text-white">ATS Target Keywords</h4>
                           
                           {/* Primary Keywords */}
                           {job.extractedJd.ats_keywords.primary?.length > 0 && (
                             <div>
-                              <h5 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Primary Keywords (High Importance)</h5>
+                              <h5 className="text-small font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Primary Keywords (High Importance)</h5>
                               <div className="flex flex-wrap gap-1.5">
                                 {job.extractedJd.ats_keywords.primary.map((kw: any, i: number) => (
-                                  <span key={i} className="px-2.5 py-1 text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400 rounded-lg flex items-center gap-1">
+                                  <span key={i} className="px-2.5 py-1 text-small font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400 rounded-lg flex items-center gap-1">
                                     {kw.keyword}
                                     {kw.frequency > 0 && <span className="opacity-60 font-mono text-[9px]">x{kw.frequency}</span>}
                                   </span>
@@ -2697,10 +2697,10 @@ ${userName}`
                           {/* Secondary Keywords */}
                           {job.extractedJd.ats_keywords.secondary?.length > 0 && (
                             <div>
-                              <h5 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Secondary Keywords</h5>
+                              <h5 className="text-small font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Secondary Keywords</h5>
                               <div className="flex flex-wrap gap-1.5">
                                 {job.extractedJd.ats_keywords.secondary.map((kw: any, i: number) => (
-                                  <span key={i} className="px-2.5 py-1 text-xs font-medium bg-gray-100 text-gray-800 dark:bg-white/10 dark:text-gray-300 rounded-lg">
+                                  <span key={i} className="px-2.5 py-1 text-small font-medium bg-gray-100 text-gray-800 dark:bg-white/10 dark:text-gray-300 rounded-lg">
                                     {kw.keyword}
                                   </span>
                                 ))}
@@ -2713,15 +2713,15 @@ ${userName}`
                       {/* Interview Prep & Questions */}
                       {job.extractedJd?.tracker_enrichment && (
                         <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d] space-y-4">
-                          <h4 className="text-base font-semibold text-gray-900 dark:text-white">Interview Prep Planner</h4>
+                          <h4 className="text-body font-semibold text-gray-900 dark:text-white">Interview Prep Planner</h4>
                           
                           {/* Prep Topics */}
                           {job.extractedJd.tracker_enrichment.interview_prep_topics?.length > 0 && (
                             <div className="space-y-2">
-                              <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 block uppercase tracking-wider">Top Topics to Prepare</span>
+                              <span className="text-small font-semibold text-gray-500 dark:text-gray-400 block uppercase tracking-wider">Top Topics to Prepare</span>
                               <div className="space-y-2">
                                 {job.extractedJd.tracker_enrichment.interview_prep_topics.map((item: any, i: number) => (
-                                  <div key={i} className="flex flex-col bg-white/50 dark:bg-white/5 p-2 rounded-lg border border-gray-100 dark:border-white/5 text-sm">
+                                  <div key={i} className="flex flex-col bg-white/50 dark:bg-white/5 p-2 rounded-lg border border-gray-100 dark:border-white/5 text-small">
                                     <span className="font-semibold text-gray-900 dark:text-white flex items-center justify-between">
                                       {item.topic}
                                       {item.prep_type && (
@@ -2730,7 +2730,7 @@ ${userName}`
                                         </span>
                                       )}
                                     </span>
-                                    {item.why_likely && <span className="text-xs text-gray-500 dark:text-gray-400 mt-1">{item.why_likely}</span>}
+                                    {item.why_likely && <span className="text-small text-gray-500 dark:text-gray-400 mt-1">{item.why_likely}</span>}
                                   </div>
                                 ))}
                               </div>
@@ -2740,12 +2740,12 @@ ${userName}`
                           {/* Questions to Ask */}
                           {job.extractedJd.tracker_enrichment.questions_to_ask_interviewer?.length > 0 && (
                             <div className="space-y-2">
-                              <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 block uppercase tracking-wider">Suggested Questions for the Interviewer</span>
-                              <div className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
+                              <span className="text-small font-semibold text-gray-500 dark:text-gray-400 block uppercase tracking-wider">Suggested Questions for the Interviewer</span>
+                              <div className="space-y-2 text-small text-gray-700 dark:text-gray-300">
                                 {job.extractedJd.tracker_enrichment.questions_to_ask_interviewer.map((item: any, i: number) => (
                                   <div key={i} className="p-2 bg-white/50 dark:bg-white/5 rounded-lg border border-gray-100 dark:border-white/5">
                                     <span className="font-medium text-gray-900 dark:text-white block">Q: {item.question}</span>
-                                    {item.why_ask && <span className="text-xs text-gray-500 dark:text-gray-400 mt-1 block">Context: {item.why_ask}</span>}
+                                    {item.why_ask && <span className="text-small text-gray-500 dark:text-gray-400 mt-1 block">Context: {item.why_ask}</span>}
                                   </div>
                                 ))}
                               </div>
@@ -2812,7 +2812,7 @@ ${userName}`
                 <div className="p-2 bg-lime-100 dark:bg-lime-500/20 rounded-lg">
                   <Mail size={20} className="text-lime-600 dark:text-[#80FF00]" />
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                <h3 className="text-h3 font-semibold text-gray-900 dark:text-white">
                   Email Sent?
                 </h3>
               </div>

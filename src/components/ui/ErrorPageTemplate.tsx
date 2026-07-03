@@ -56,7 +56,7 @@ const ErrorPageTemplate: React.FC<ErrorPageTemplateProps> = ({
           transition={{ delay: 0.3 }}
           className="absolute inset-0 flex flex-col items-center justify-center"
         >
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-2 italic">
+          <h2 className="text-h1 md:text-display font-bold text-gray-900 dark:text-white mb-2 italic">
             {title}
           </h2>
         </motion.div>
@@ -66,7 +66,7 @@ const ErrorPageTemplate: React.FC<ErrorPageTemplateProps> = ({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.5 }}
-        className="text-gray-600 dark:text-gray-400 max-w-md mb-10 text-lg"
+        className="text-gray-600 dark:text-gray-400 max-w-md mb-10 text-h3"
       >
         {message}
       </motion.p>

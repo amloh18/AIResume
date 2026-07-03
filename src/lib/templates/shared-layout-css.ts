@@ -25,6 +25,7 @@ export function generateEnforcedCSS(rules?: Partial<CVLayoutRules>): string {
     generateTwoThirdsCSS(layout),
     generateVerticalRhythmCSS(layout),
     generatePageBreakCSS(layout),
+    generateKeepWithNextCSS(),
     generateOrphanPreventionCSS(layout),
     generateEmptyStateCSS(edgeCases),
     generateURLShorteningCSS(edgeCases),
@@ -105,6 +106,24 @@ function generateVerticalRhythmCSS(layout: LayoutRules): string {
 function generatePageBreakCSS(layout: LayoutRules): string {
   return `
 /* ─── PAGE BREAKS ────────────────────────────────────────── */
+/* Canvas/jsPDF screen-mode page break enforcement */
+${layout.pageBreaks.preventOrphanedHeaders ? `.section-header,
+.cv-section-header {
+  break-after: avoid;
+  page-break-after: avoid;
+}` : ''}
+${layout.pageBreaks.preventSplitEntries ? `.experience-item,
+.education-item,
+.project-item,
+.volunteer-item,
+.award-item,
+.publication-item,
+.certificate-item,
+.cv-entry-item,
+.entry-block {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}` : ''}
 @media print {
   ${layout.pageBreaks.preventOrphanedHeaders ? `
   .section-header,
@@ -127,6 +146,18 @@ function generatePageBreakCSS(layout: LayoutRules): string {
   .section-content {
     break-before: auto;
   }
+}
+`.trim();
+}
+
+// ─── KEEP-WITH-NEXT ──────────────────────────────────────
+
+function generateKeepWithNextCSS(): string {
+  return `
+/* ─── KEEP-WITH-NEXT ─────────────────────────────────────── */
+.cv-keep-with-next {
+  break-after: avoid;
+  page-break-after: avoid;
 }
 `.trim();
 }
@@ -206,7 +237,9 @@ function generateSkillsFormattingCSS(edgeCases: EdgeCaseRules): string {
     parts.push(`
 .skill-name,
 .skill-tag {
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: normal;
 }`);
   }
 

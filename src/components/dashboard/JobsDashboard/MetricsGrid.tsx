@@ -126,7 +126,7 @@ export default function MetricsGrid({ metrics, loading }: MetricsGridProps) {
               </div>
               {card.trend && (
                 <div
-                  className={`text-xs font-medium ${
+                  className={`text-small font-medium ${
                     card.trend === 'up'
                       ? 'text-green-500'
                       : card.trend === 'down'
@@ -138,10 +138,10 @@ export default function MetricsGrid({ metrics, loading }: MetricsGridProps) {
                 </div>
               )}
             </div>
-            <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1">
+            <div className="text-h1 font-bold text-gray-900 dark:text-white mb-1">
               {card.value}
             </div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">
+            <div className="text-small text-gray-600 dark:text-gray-400">
               {card.label}
             </div>
           </div>

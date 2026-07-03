@@ -214,7 +214,7 @@ const Modal: React.FC<ModalProps> = ({
           {/* Header */}
           <div className="flex items-center gap-3 mb-4">
             {getIcon()}
-            <h3 className="text-lg font-semibold text-white">{title}</h3>
+            <h3 className="text-h3 font-semibold text-white">{title}</h3>
             <button
               onClick={onClose}
               className="ml-auto p-1 hover:bg-gray-200 dark:hover:bg-white/10 rounded-lg transition-colors"
@@ -319,7 +319,7 @@ const CleanUnlinkedButton: React.FC<CleanUnlinkedButtonProps> = ({
     <div className="flex items-center gap-2">
       <motion.button
         onClick={checkUnlinkedItems}
-        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 ${className} ${isExpanded ? 'bg-red-500 text-white hover:bg-red-600' : ''
+        className={`px-4 py-2 rounded-lg text-small font-medium transition-all duration-200 flex items-center gap-2 ${className} ${isExpanded ? 'bg-red-500 text-white hover:bg-red-600' : ''
           }`}
         whileHover={!isExpanded ? { scale: 1.05 } : {}}
         whileTap={!isExpanded ? { scale: 0.95 } : {}}
@@ -344,7 +344,7 @@ const CleanUnlinkedButton: React.FC<CleanUnlinkedButtonProps> = ({
         <>
           <motion.button
             onClick={handleConfirmClean}
-            className="px-4 py-2 rounded-lg text-sm font-medium bg-red-500 text-white hover:bg-red-600 transition-all duration-200 flex items-center gap-2"
+            className="px-4 py-2 rounded-lg text-small font-medium bg-red-500 text-white hover:bg-red-600 transition-all duration-200 flex items-center gap-2"
             initial={{ opacity: 0, scale: 0.8, width: 0 }}
             animate={{ opacity: 1, scale: 1, width: 'auto' }}
             exit={{ opacity: 0, scale: 0.8, width: 0 }}
@@ -356,7 +356,7 @@ const CleanUnlinkedButton: React.FC<CleanUnlinkedButtonProps> = ({
           </motion.button>
           <motion.button
             onClick={handleCancel}
-            className="px-4 py-2 rounded-lg text-sm font-medium bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600 transition-all duration-200 flex items-center gap-2"
+            className="px-4 py-2 rounded-lg text-small font-medium bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600 transition-all duration-200 flex items-center gap-2"
             initial={{ opacity: 0, scale: 0.8, width: 0 }}
             animate={{ opacity: 1, scale: 1, width: 'auto' }}
             exit={{ opacity: 0, scale: 0.8, width: 0 }}
@@ -415,49 +415,55 @@ const Canvas: React.FC = () => {
   const [showCareerReportSidebar, setShowCareerReportSidebar] = useState(false);
   const [selectedCVForReport, setSelectedCVForReport] = useState<CV | null>(null);
 
+  // Track the last seen context CVs to avoid redundant processing
+  const lastContextCVsStrRef = useRef<string>('');
+
   // Sync CVs from context to local state (prevents refetching on navigation)
   useEffect(() => {
-    // Only initialize from context if not already loaded and context has data
-    if (!hasInitializedFromContextRef.current && contextCVs && contextCVs.length > 0) {
-      hasInitializedFromContextRef.current = true;
+    if (!contextCVs) return;
 
-      // Process context CVs with completion percentage and type classification
-      const enrichedCVs = contextCVs.map((cv: any) => ({
-        id: cv.id || cv._id,
-        title: cv.title || 'Untitled CV',
-        lastModified: cv.metadata?.lastModified || cv.updatedAt || cv.createdAt,
-        updatedAt: cv.updatedAt || cv.metadata?.lastModified || cv.createdAt || new Date().toISOString(),
-        status: cv.status || 'draft',
-        views: cv.metadata?.viewCount || 0,
-        isStarred: cv.metadata?.starred || false,
-        thumbnail: cv.metadata?.thumbnailUrl || '',
-        description: cv.description || '',
-        cvData: cv.cvData || null,
-        template: cv.template || cv.templateData || null,
-        templateId: cv.templateId,
-        templateName: cv.templateName,
-        templateData: cv.templateData,
-        journeyId: cv.journeyId,
-        cvType: cv.cvType || cv.metadata?.cvType || (cv.journeyId ? 'journey' : cv.metadata?.isMaster ? 'master' : 'standalone'),
-        completionPercentage: cv.completionPercentage || calculateCompletionPercentage(cv),
-        isMaster: cv.metadata?.isMaster === true || cv.isMaster === true,
-        atsScore: cv.metadata?.surgeonAnalysis?.scoreReport?.overall_score ??
-                  cv.scoreReport?.overall_score ??
-                  cv.metadata?.atsScore ??
-                  cv.metadata?.cvScore ??
-                  cv.atsScore,
-        metadata: cv.metadata
-      })) as CV[];
+    const currentContextCVsStr = JSON.stringify(contextCVs.map(c => ({ id: c.id || c._id, updatedAt: c.updatedAt })));
+    if (currentContextCVsStr === lastContextCVsStrRef.current) return;
 
-      // Split into master and regular CVs
-      const masters = filterMasterCVs(enrichedCVs);
-      const regulars = filterRegularCVs(enrichedCVs);
+    lastContextCVsStrRef.current = currentContextCVsStr;
+    hasInitializedFromContextRef.current = true;
 
-      setCvs(regulars);
-      setMasterCVs(masters);
-      setLoading(false);
-      hasLoadedCVsRef.current = true;
-    }
+    // Process context CVs with completion percentage and type classification
+    const enrichedCVs = contextCVs.map((cv: any) => ({
+      id: cv.id || cv._id,
+      title: cv.title || 'Untitled CV',
+      lastModified: cv.metadata?.lastModified || cv.updatedAt || cv.createdAt,
+      updatedAt: cv.updatedAt || cv.metadata?.lastModified || cv.createdAt || new Date().toISOString(),
+      status: cv.status || 'draft',
+      views: cv.metadata?.viewCount || 0,
+      isStarred: cv.metadata?.starred || false,
+      thumbnail: cv.metadata?.thumbnailUrl || '',
+      description: cv.description || '',
+      cvData: cv.cvData || null,
+      template: cv.template || cv.templateData || null,
+      templateId: cv.templateId,
+      templateName: cv.templateName,
+      templateData: cv.templateData,
+      journeyId: cv.journeyId,
+      cvType: cv.cvType || cv.metadata?.cvType || (cv.journeyId ? 'journey' : cv.metadata?.isMaster ? 'master' : 'standalone'),
+      completionPercentage: cv.completionPercentage || calculateCompletionPercentage(cv),
+      isMaster: cv.metadata?.isMaster === true || cv.isMaster === true,
+      atsScore: cv.metadata?.surgeonAnalysis?.scoreReport?.overall_score ??
+                cv.scoreReport?.overall_score ??
+                cv.metadata?.atsScore ??
+                cv.metadata?.cvScore ??
+                cv.atsScore,
+      metadata: cv.metadata
+    })) as CV[];
+
+    // Split into master and regular CVs
+    const masters = filterMasterCVs(enrichedCVs);
+    const regulars = filterRegularCVs(enrichedCVs);
+
+    setCvs(regulars);
+    setMasterCVs(masters);
+    setLoading(false);
+    hasLoadedCVsRef.current = true;
   }, [contextCVs]);
 
   // Update loading state based on context
@@ -1239,7 +1245,7 @@ const Canvas: React.FC = () => {
       );
 
       if (duplicateCV && duplicateCV.id) {
-        // Navigate to resume-enhancer with duplicated CV (standalone mode, ready for job linking)
+        // Navigate to cv-builder-pro with duplicated CV (standalone mode, ready for job linking)
         router.push(`/editor?mode=edit&cvId=${duplicateCV.id}`);
       } else {
         throw new Error('Failed to duplicate master CV');
@@ -1430,8 +1436,8 @@ const Canvas: React.FC = () => {
       // All CV edits should open Resume Enhancer (replaces legacy studio)
       router.push(`/editor?mode=edit&cvId=${cv.id}`);
     } catch (error) {
-      console.error('Error navigating to resume-enhancer:', error);
-      // Fallback: still attempt to open resume-enhancer
+      console.error('Error navigating to cv-builder-pro:', error);
+      // Fallback: still attempt to open cv-builder-pro
       router.push(`/editor?mode=edit&cvId=${cv.id}`);
     }
   };
@@ -2340,14 +2346,14 @@ const Canvas: React.FC = () => {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setActiveTab('cv')}
-                className={`flex items-center px-4 py-3 text-sm font-medium transition-all duration-200 rounded-none border-b-2 ${activeTab === 'cv'
+                className={`flex items-center px-4 py-3 text-small font-medium transition-all duration-200 rounded-none border-b-2 ${activeTab === 'cv'
                   ? 'text-lime-700 dark:text-lime-400 border-lime-500 dark:border-lime-400'
                   : 'text-gray-600 dark:text-gray-300 border-transparent hover:text-gray-900 dark:hover:text-white'
                   }`}
               >
                 <FileText className="h-4 w-4 mr-2" />
                 CVs
-                <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-semibold ${activeTab === 'cv'
+                <span className={`ml-2 px-2 py-0.5 rounded-full text-small font-semibold ${activeTab === 'cv'
                   ? 'bg-lime-100 dark:bg-lime-900/30 text-lime-700 dark:text-lime-400'
                   : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
                   }`}>
@@ -2356,14 +2362,14 @@ const Canvas: React.FC = () => {
               </button>
               <button
                 onClick={() => setActiveTab('coverLetter')}
-                className={`flex items-center px-4 py-3 text-sm font-medium transition-all duration-200 rounded-none border-b-2 ${activeTab === 'coverLetter'
+                className={`flex items-center px-4 py-3 text-small font-medium transition-all duration-200 rounded-none border-b-2 ${activeTab === 'coverLetter'
                   ? 'text-lime-700 dark:text-lime-400 border-lime-500 dark:border-lime-400'
                   : 'text-gray-600 dark:text-gray-300 border-transparent hover:text-gray-900 dark:hover:text-white'
                   }`}
               >
                 <PenTool className="h-4 w-4 mr-2" />
                 Cover Letters
-                <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-semibold ${activeTab === 'coverLetter'
+                <span className={`ml-2 px-2 py-0.5 rounded-full text-small font-semibold ${activeTab === 'coverLetter'
                   ? 'bg-lime-100 dark:bg-lime-900/30 text-lime-700 dark:text-lime-400'
                   : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
                   }`}>
@@ -2404,7 +2410,7 @@ const Canvas: React.FC = () => {
           <div className="relative" data-sort-dropdown>
             <button
               onClick={() => setShowSortDropdown(!showSortDropdown)}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 text-gray-700 dark:text-gray-300 hover:bg-[#141810] dark:hover:bg-[#141810]"
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-small font-medium transition-all duration-200 bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 text-gray-700 dark:text-gray-300 hover:bg-[#141810] dark:hover:bg-[#141810]"
             >
               <SortAsc className="h-4 w-4" />
               <span className="hidden sm:inline">
@@ -2435,7 +2441,7 @@ const Canvas: React.FC = () => {
                         setSortBy(option.value as any);
                         setShowSortDropdown(false);
                       }}
-                      className={`w-full px-4 py-2 text-left text-sm transition-colors ${sortBy === option.value
+                      className={`w-full px-4 py-2 text-left text-small transition-colors ${sortBy === option.value
                         ? 'bg-lime-500/10 text-lime-700 dark:text-lime-300'
                         : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                         }`}
@@ -2481,7 +2487,7 @@ const Canvas: React.FC = () => {
             <div className="space-y-6">
               {/* My CVs Section (Master CVs + Standalone CVs) */}
               <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider ml-1">My CVs</h3>
+                <h3 className="text-small font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider ml-1">My CVs</h3>
                 
                 {/* Draft CV in List View */}
                 {draftCV && !searchQuery && (
@@ -2502,7 +2508,7 @@ const Canvas: React.FC = () => {
                           Draft
                         </span>
                       </div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      <p className="text-small text-gray-500 dark:text-gray-400 mt-1">
                         Last edited {new Date(draftCV.lastSaved || Date.now()).toLocaleDateString()}
                       </p>
                     </div>
@@ -2547,7 +2553,7 @@ const Canvas: React.FC = () => {
               {/* Tracked Applications Section (Journey CVs) */}
               {filteredAndSortedJourneyCVs.length > 0 && (
                 <div className="space-y-3">
-                  <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider ml-1">Tracked Applications</h3>
+                  <h3 className="text-small font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider ml-1">Tracked Applications</h3>
                   <CVListView
                     cvs={filteredAndSortedJourneyCVs}
                     onEdit={(cv) => handleCVClick(cv as any)}
@@ -2588,7 +2594,7 @@ const Canvas: React.FC = () => {
                       {/* A special styled thumbnail for drafts */}
                       <div className="w-full aspect-[1/1.414] bg-orange-50 dark:bg-orange-950/20 rounded-[2rem] border-2 border-dashed border-orange-300 dark:border-orange-500/30 flex flex-col items-center justify-center relative overflow-hidden group-hover:border-orange-500 group-hover:bg-orange-100 dark:group-hover:bg-orange-900/30 transition-all duration-300">
                         <FileText className="w-12 h-12 text-orange-400/50 dark:text-orange-500/30 mb-4" />
-                        <span className="text-orange-600 dark:text-orange-400 font-bold text-sm">Draft Resume</span>
+                        <span className="text-orange-600 dark:text-orange-400 font-bold text-small">Draft Resume</span>
                         
                         <div className="absolute top-4 left-4 z-30">
                           <span className="px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider shadow-lg bg-orange-500 text-white shadow-orange-500/20 flex items-center gap-1">
@@ -2600,10 +2606,10 @@ const Canvas: React.FC = () => {
                     </div>
 
                     <div className="px-1">
-                       <h4 className="text-lg font-black text-gray-900 dark:text-white truncate group-hover:text-orange-600 dark:group-hover:text-orange-500 transition-colors tracking-tight">
+                       <h4 className="text-h3 font-black text-gray-900 dark:text-white truncate group-hover:text-orange-600 dark:group-hover:text-orange-500 transition-colors tracking-tight">
                          {draftCV.cvTitle || 'Unfinished Resume'}
                        </h4>
-                       <p className="text-xs text-gray-500 dark:text-gray-400 font-bold flex items-center gap-2 mt-1">
+                       <p className="text-small text-gray-500 dark:text-gray-400 font-bold flex items-center gap-2 mt-1">
                          <span className="w-1.5 h-1.5 bg-orange-500 rounded-full shadow-[0_0_8px_rgba(249,115,22,0.5)]" />
                          Last edited {new Date(draftCV.lastSaved || Date.now()).toLocaleDateString()}
                        </p>
@@ -2747,7 +2753,7 @@ const Canvas: React.FC = () => {
                     <div className="col-span-full flex flex-col items-center justify-center py-12 px-4">
                       <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 border border-gray-200 dark:border-gray-700 max-w-md w-full text-center">
                         <FileText className="w-16 h-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
-                        <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No CVs Found</h3>
+                        <h3 className="text-h3 font-semibold text-gray-900 dark:text-white mb-2">No CVs Found</h3>
                         <p className="text-gray-600 dark:text-gray-400">
                           No CVs found.
                         </p>
@@ -2836,11 +2842,11 @@ const Canvas: React.FC = () => {
                 <div className="flex flex-col items-center justify-center py-12 px-4">
                   <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 border border-gray-200 dark:border-gray-700 max-w-md w-full text-center">
                     <MessageSquare className="w-16 h-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
-                    <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No Cover Letters Found</h3>
+                    <h3 className="text-h3 font-semibold text-gray-900 dark:text-white mb-2">No Cover Letters Found</h3>
                     <p className="text-gray-600 dark:text-gray-400 mb-6">
                       Create your first cover letter to get started.
                     </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                    <p className="text-small text-gray-500 dark:text-gray-400">
                       Cover letters are typically created when you start a job application journey.
                     </p>
                   </div>

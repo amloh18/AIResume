@@ -50,11 +50,11 @@ export default function TailoredCVWidget({ docs = defaultDocs, loading = false, 
               <FileText size={20} />
             </div>
             <div className="flex-1 min-w-0">
-              <h4 className="text-xs font-black text-gray-800 dark:text-gray-200 truncate">{doc.title}</h4>
+              <h4 className="text-small font-black text-gray-800 dark:text-gray-200 truncate">{doc.title}</h4>
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{doc.role}</p>
             </div>
             <div className="text-right">
-              <div className="text-sm font-black text-[#83d60d]">{doc.matchScore}%</div>
+              <div className="text-small font-black text-[#83d60d]">{doc.matchScore}%</div>
               <div className="text-[9px] font-medium text-gray-400 flex items-center gap-1 justify-end">
                 <Clock size={8} />
                 {doc.updatedAt}

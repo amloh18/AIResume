@@ -64,7 +64,7 @@ export default function BrowserExtensionModal({ isOpen, onClose, onPreview, sele
                             <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
                                 <ShieldCheck className="w-5 h-5" />
                             </div>
-                            <h2 className="text-xl font-bold text-gray-900">Safe Mode Preview</h2>
+                            <h2 className="text-h3 font-bold text-gray-900">Safe Mode Preview</h2>
                         </div>
                         <button
                             onClick={onClose}
@@ -76,7 +76,7 @@ export default function BrowserExtensionModal({ isOpen, onClose, onPreview, sele
 
                     {/* Body */}
                     <div className="p-6">
-                        <div className="mb-6 bg-blue-50 border border-blue-100 rounded-xl p-4 text-sm text-blue-800 flex gap-3">
+                        <div className="mb-6 bg-blue-50 border border-blue-100 rounded-xl p-4 text-small text-blue-800 flex gap-3">
                             <ShieldCheck className="w-5 h-5 text-blue-600 flex-shrink-0" />
                             <p>
                                 <strong>Safety First:</strong> The CVCircle extension acts solely as a bridge. It will never modify your profile without your explicit confirmation on the LinkedIn page.
@@ -96,7 +96,7 @@ export default function BrowserExtensionModal({ isOpen, onClose, onPreview, sele
                                     </div>
                                     <div className="pt-2 pb-4">
                                         <h3 className="font-semibold text-gray-900">{step.title}</h3>
-                                        <p className="text-sm text-gray-600 mt-1">{step.description}</p>
+                                        <p className="text-small text-gray-600 mt-1">{step.description}</p>
                                     </div>
                                 </div>
                             ))}
@@ -107,13 +107,13 @@ export default function BrowserExtensionModal({ isOpen, onClose, onPreview, sele
                     <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
                         <button
                             onClick={onClose}
-                            className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 rounded-lg transition-colors"
+                            className="px-4 py-2 text-small font-medium text-gray-700 hover:bg-gray-200 rounded-lg transition-colors"
                         >
                             Cancel
                         </button>
                         <motion.button
                             onClick={onPreview}
-                            className="flex items-center gap-2 px-6 py-2 text-sm font-medium text-white rounded-lg shadow-sm"
+                            className="flex items-center gap-2 px-6 py-2 text-small font-medium text-white rounded-lg shadow-sm"
                             style={{ backgroundColor: LINKEDIN_COLORS.PRIMARY_BLUE }}
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}

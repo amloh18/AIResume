@@ -73,62 +73,79 @@ export const downloadAsPDF = async (
       }
     }
 
-    // Fallback: Client-side PDF generation using html2pdf.js
-    // This is less accurate but works offline and when API fails
+    // Fallback: Client-side PDF generation using jsPDF html method
     console.log('Using client-side PDF generation (fallback)');
 
-    // Dynamic imports to avoid SSR issues
-    const html2canvas = (await import('html2canvas')).default;
-    const html2pdf = (await import('html2pdf.js')).default;
+    const { jsPDF } = await import('jspdf');
 
-    // Enhanced configuration for better PDF quality
-    const opt = {
-      margin: [10, 10, 10, 10] as [number, number, number, number],
-      filename: filename,
-      image: {
-        type: 'jpeg' as const,
-        quality: 0.98
-      },
-      html2canvas: {
-        scale: 3,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: '#ffffff',
-        width: 794,
-        height: 1123,
-        logging: false,
-        letterRendering: true,
-        removeContainer: true,
-        imageTimeout: 0,
-        onclone: (clonedDoc: Document) => {
-          const elements = clonedDoc.querySelectorAll('*');
-          elements.forEach((el: any) => {
-            if (el.style) {
-              el.style.webkitPrintColorAdjust = 'exact';
-              el.style.printColorAdjust = 'exact';
-              el.style.colorAdjust = 'exact';
-            }
-          });
-        }
-      },
-      jsPDF: {
-        unit: 'mm',
-        format: 'a4',
-        orientation: 'portrait' as const,
-        compress: true,
-        precision: 16,
-        userUnit: 1.0
-      },
-      pagebreak: {
-        mode: ['avoid-all', 'css', 'legacy'],
-        before: '.page-break-before',
-        after: '.page-break-after',
-        avoid: ['.no-page-break', '.section-content', '.experience-item', '.education-item', '.project-item']
+    const doc = new jsPDF({
+      orientation: options?.orientation || 'portrait',
+      unit: 'px',
+      format: options?.paperSize === 'Letter' ? [816, 1056] : [794, 1123],
+      hotfixes: ['px_scaling'],
+    });
+
+    const clone = elementRef.cloneNode(true) as HTMLElement;
+    clone.style.width = options?.paperSize === 'Letter' ? '816px' : '794px';
+    clone.style.height = 'auto';
+    clone.style.position = 'absolute';
+    clone.style.top = '-9999px';
+    clone.style.left = '-9999px';
+    clone.style.overflow = 'visible';
+    
+    const editorSelectors = [
+      '.no-print', '[data-no-print]', '.cv-drag-handle', '.cv-drag-overlay',
+      '.inline-add-section-button', '.section-hover-controls', '.cv-editor-only',
+      '.cv-section-drag-overlay', '.cv-drop-zone-indicator', '.cv-page-visualizer',
+    ];
+    clone.querySelectorAll(editorSelectors.join(',')).forEach((el) => {
+      (el as HTMLElement).style.display = 'none';
+    });
+    
+    clone.querySelectorAll('[contenteditable]').forEach(el => {
+      el.removeAttribute('contenteditable');
+    });
+
+    // Fix SVGs
+    const svgs = clone.querySelectorAll('svg');
+    svgs.forEach((svg) => {
+      const originalSvg = elementRef.querySelector(`svg.lucide-${svg.classList[1]?.replace('lucide-', '')}`) || svg;
+      const computedStyle = window.getComputedStyle(originalSvg);
+      const color = computedStyle.color || '#000000';
+      const width = svg.getAttribute('width') || computedStyle.width || '16px';
+      const height = svg.getAttribute('height') || computedStyle.height || '16px';
+
+      svg.setAttribute('width', width);
+      svg.setAttribute('height', height);
+      
+      const svgString = new XMLSerializer().serializeToString(svg)
+        .replace(/currentColor/g, color);
+        
+      const img = document.createElement('img');
+      img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgString)}`;
+      img.style.width = width;
+      img.style.height = height;
+      img.className = svg.className.baseVal || '';
+      
+      if (svg.parentNode) {
+        svg.parentNode.replaceChild(img, svg);
       }
-    };
+    });
 
-    await new Promise(resolve => setTimeout(resolve, 100));
-    await html2pdf().set(opt).from(elementRef).save();
+    document.body.appendChild(clone);
+
+    try {
+      await doc.html(clone, {
+        x: 0,
+        y: 0,
+        width: options?.paperSize === 'Letter' ? 816 : 794,
+        windowWidth: options?.paperSize === 'Letter' ? 816 : 794,
+        autoPaging: 'text',
+      });
+      doc.save(filename);
+    } finally {
+      document.body.removeChild(clone);
+    }
 
   } catch (error) {
     console.error('Error generating PDF:', error);

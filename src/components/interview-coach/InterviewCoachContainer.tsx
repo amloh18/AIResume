@@ -121,21 +121,21 @@ const InterviewCoachContainer: React.FC<InterviewCoachContainerProps> = ({ userI
     };
 
     return (
-        <div className="min-h-screen bg-[#f3f2ee] dark:bg-[#1a230f] flex flex-col font-sans">
-            <div className="flex-1 max-w-[1400px] mx-auto px-4 sm:px-8 py-8 w-full">
+        <div className="h-macro app-page-bg flex flex-col font-sans overflow-hidden">
+            <div className="flex-1 max-w-[1400px] mx-auto px-4 sm:px-8 py-8 w-full overflow-y-auto overflow-x-hidden scrollbar-hide">
                 
                 {/* Breadcrumbs & Header */}
                 <div className="mb-8">
-                    <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3 flex items-center gap-2">
+                    <div className="text-small font-medium text-gray-500 dark:text-gray-400 mb-3 flex items-center gap-2">
                         <span className="cursor-pointer hover:text-gray-900 transition-colors" onClick={() => router.push('/dashboard')}>Dashboard</span>
                         <span>›</span>
                         <span className="text-gray-900 dark:text-gray-200">Interview Coach</span>
                     </div>
-                    <h1 className="text-3xl md:text-[32px] font-bold text-gray-900 dark:text-white flex items-center gap-2 tracking-tight">
+                    <h1 className="text-h1 md:text-[32px] font-bold text-gray-900 dark:text-white flex items-center gap-2 tracking-tight">
                         Interview Coach
                         <Sparkles className="w-6 h-6 text-purple-500" />
                     </h1>
-                    <p className="text-gray-500 dark:text-gray-400 mt-2 text-sm md:text-base">
+                    <p className="text-gray-500 dark:text-gray-400 mt-2 text-small md:text-body">
                         Practice for your upcoming interviews with AI-powered coaching.
                     </p>
                 </div>
@@ -148,8 +148,8 @@ const InterviewCoachContainer: React.FC<InterviewCoachContainerProps> = ({ userI
                             <Briefcase className="w-6 h-6 text-purple-600 dark:text-purple-400" />
                         </div>
                         <div className="flex flex-col">
-                            <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Total Opportunities</span>
-                            <span className="text-2xl font-black text-gray-900 dark:text-white leading-none mb-1">{stats.totalOpportunities}</span>
+                            <span className="text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Total Opportunities</span>
+                            <span className="text-h2 font-black text-gray-900 dark:text-white leading-none mb-1">{stats.totalOpportunities}</span>
                             <span className="text-[11px] text-gray-400">{stats.totalOpportunities > 0 ? 'Active interview prep' : 'Start preparing for your next role'}</span>
                         </div>
                     </div>
@@ -160,8 +160,8 @@ const InterviewCoachContainer: React.FC<InterviewCoachContainerProps> = ({ userI
                             <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
                         </div>
                         <div className="flex flex-col z-10">
-                            <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Completed Sessions</span>
-                            <span className="text-2xl font-black text-gray-900 dark:text-white leading-none mb-1">{stats.completedSessions}</span>
+                            <span className="text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Completed Sessions</span>
+                            <span className="text-h2 font-black text-gray-900 dark:text-white leading-none mb-1">{stats.completedSessions}</span>
                             <span className="text-[11px] text-gray-400">{stats.completedSessions > 0 ? 'Great job!' : 'No sessions completed yet'}</span>
                         </div>
                         {stats.completedSessions > 0 && (
@@ -180,8 +180,8 @@ const InterviewCoachContainer: React.FC<InterviewCoachContainerProps> = ({ userI
                             <TrendingUp className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                         </div>
                         <div className="flex flex-col z-10">
-                            <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Average Score</span>
-                            <span className="text-2xl font-black text-gray-900 dark:text-white leading-none mb-1">{stats.averageScore > 0 ? `${stats.averageScore}%` : '-'}</span>
+                            <span className="text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Average Score</span>
+                            <span className="text-h2 font-black text-gray-900 dark:text-white leading-none mb-1">{stats.averageScore > 0 ? `${stats.averageScore}%` : '-'}</span>
                             <span className="text-[11px] text-green-500 font-medium">{stats.averageScore > 0 ? '+12% vs last month' : <span className="text-gray-400 font-normal">Complete a session to see insights</span>}</span>
                         </div>
                         {stats.averageScore > 0 && (
@@ -200,8 +200,8 @@ const InterviewCoachContainer: React.FC<InterviewCoachContainerProps> = ({ userI
                             <Flame className="w-6 h-6 text-orange-600 dark:text-orange-400" />
                         </div>
                         <div className="flex flex-col">
-                            <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Current Streak</span>
-                            <span className="text-2xl font-black text-gray-900 dark:text-white leading-none mb-1">{stats.currentStreak} days</span>
+                            <span className="text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Current Streak</span>
+                            <span className="text-h2 font-black text-gray-900 dark:text-white leading-none mb-1">{stats.currentStreak} days</span>
                             <span className="text-[11px] text-orange-500 font-medium">{stats.currentStreak > 0 ? 'Keep it up!' : 'Start your streak today!'}</span>
                         </div>
                     </div>
@@ -209,14 +209,14 @@ const InterviewCoachContainer: React.FC<InterviewCoachContainerProps> = ({ userI
 
                 {/* Section Header: Your Opportunities */}
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-4">
-                    <h2 className="text-xl font-bold text-gray-900 dark:text-white">Your Opportunities</h2>
+                    <h2 className="text-h3 font-bold text-gray-900 dark:text-white">Your Opportunities</h2>
                     <div className="flex items-center gap-3 w-full sm:w-auto">
-                        <button className="flex items-center gap-2 px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-xl text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors bg-white dark:bg-[#141810]">
+                        <button className="flex items-center gap-2 px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-xl text-small font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors bg-white dark:bg-[#141810]">
                             <Filter className="w-4 h-4" />
                             All Status
                             <ChevronDown className="w-4 h-4 ml-1" />
                         </button>
-                        <button onClick={handleAddNewRole} className="flex items-center justify-center gap-2 px-4 py-2 border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 rounded-xl text-sm font-bold hover:bg-purple-100 dark:hover:bg-purple-900/40 transition-colors w-full sm:w-auto">
+                        <button onClick={handleAddNewRole} className="flex items-center justify-center gap-2 px-4 py-2 border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 rounded-xl text-small font-bold hover:bg-purple-100 dark:hover:bg-purple-900/40 transition-colors w-full sm:w-auto">
                             <Plus className="w-4 h-4" />
                             New Opportunity
                         </button>
@@ -229,7 +229,7 @@ const InterviewCoachContainer: React.FC<InterviewCoachContainerProps> = ({ userI
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
-                            className={`pb-3 text-sm font-bold transition-colors relative ${
+                            className={`pb-3 text-small font-bold transition-colors relative ${
                                 activeTab === tab 
                                     ? 'text-purple-600 dark:text-purple-400' 
                                     : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
@@ -268,10 +268,10 @@ const InterviewCoachContainer: React.FC<InterviewCoachContainerProps> = ({ userI
                                 <Sparkles className="absolute bottom-4 left-0 w-4 h-4 text-purple-300" />
                             </div>
                         </div>
-                        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+                        <h2 className="text-h3 font-bold text-gray-900 dark:text-white mb-2">
                             You haven't added any opportunities yet
                         </h2>
-                        <p className="text-gray-500 dark:text-gray-400 mb-8 text-center max-w-sm text-sm">
+                        <p className="text-gray-500 dark:text-gray-400 mb-8 text-center max-w-sm text-small">
                             Add your first job opportunity and let AI help you prepare with personalized interview practice.
                         </p>
                         <button
@@ -280,7 +280,7 @@ const InterviewCoachContainer: React.FC<InterviewCoachContainerProps> = ({ userI
                         >
                             + Add Your First Opportunity
                         </button>
-                        <button className="flex items-center gap-2 text-sm font-semibold text-purple-600 dark:text-purple-400 hover:text-purple-800 transition-colors">
+                        <button className="flex items-center gap-2 text-small font-semibold text-purple-600 dark:text-purple-400 hover:text-purple-800 transition-colors">
                             <Play className="w-4 h-4" /> Learn how it works
                         </button>
                     </div>
@@ -302,14 +302,14 @@ const InterviewCoachContainer: React.FC<InterviewCoachContainerProps> = ({ userI
                                 >
                                     {/* Left: Logo & Job Details */}
                                     <div className="flex items-center gap-4 flex-1">
-                                        <div className={`w-14 h-14 rounded-xl flex items-center justify-center text-2xl font-bold flex-shrink-0 ${getIconBgColor(job.company)}`}>
+                                        <div className={`w-14 h-14 rounded-xl flex items-center justify-center text-h2 font-bold flex-shrink-0 ${getIconBgColor(job.company)}`}>
                                             {getJobIcon(job.jobTitle, job.company)}
                                         </div>
                                         <div className="flex flex-col flex-1">
-                                            <h3 className="text-lg font-bold text-gray-900 dark:text-white leading-tight">
+                                            <h3 className="text-h3 font-bold text-gray-900 dark:text-white leading-tight">
                                                 {job.jobTitle} | {job.company}
                                             </h3>
-                                            <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400 mt-1 mb-3">
+                                            <div className="flex items-center gap-3 text-small text-gray-500 dark:text-gray-400 mt-1 mb-3">
                                                 <span className="flex items-center gap-1"><Briefcase className="w-3 h-3" /> {job.jobType || 'Full-time'}</span>
                                                 <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> Applied {job.appliedDate ? new Date(job.appliedDate).toLocaleDateString() : 'recently'}</span>
                                             </div>
@@ -333,17 +333,17 @@ const InterviewCoachContainer: React.FC<InterviewCoachContainerProps> = ({ userI
                                     {/* Middle: Next Up */}
                                     <div className="hidden md:flex flex-col w-48 border-l border-gray-100 dark:border-gray-800 pl-6">
                                         <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400 uppercase mb-1">Next Up</span>
-                                        <span className="text-sm font-bold text-gray-900 dark:text-white truncate">
+                                        <span className="text-small font-bold text-gray-900 dark:text-white truncate">
                                             {job.interviewCoach?.status === 'ready' ? 'Continue Module' : 'Generate Plan'}
                                         </span>
-                                        <span className="text-xs text-gray-500">{job.interviewCoach?.questions?.length || 0} questions</span>
+                                        <span className="text-small text-gray-500">{job.interviewCoach?.questions?.length || 0} questions</span>
                                     </div>
 
                                     {/* Right: Actions */}
                                     <div className="flex items-center gap-3 w-full md:w-auto">
                                         <button 
                                             onClick={() => handleStartPractice(job._id)}
-                                            className="flex-1 md:flex-none px-6 py-2.5 bg-purple-600 hover:bg-purple-700 text-white text-sm font-bold rounded-xl shadow-sm transition-colors flex items-center justify-center gap-2"
+                                            className="flex-1 md:flex-none px-6 py-2.5 bg-purple-600 hover:bg-purple-700 text-white text-small font-bold rounded-xl shadow-sm transition-colors flex items-center justify-center gap-2"
                                         >
                                             <Play className="w-4 h-4 fill-current" />
                                             Continue Practice
@@ -370,7 +370,7 @@ const InterviewCoachContainer: React.FC<InterviewCoachContainerProps> = ({ userI
                                 </div>
                                 <div>
                                     <h3 className="font-bold text-gray-900 dark:text-white">Improve Your Performance</h3>
-                                    <p className="text-xs text-gray-500">Focus on these areas to boost your interview success.</p>
+                                    <p className="text-small text-gray-500">Focus on these areas to boost your interview success.</p>
                                 </div>
                             </div>
                             
@@ -404,11 +404,11 @@ const InterviewCoachContainer: React.FC<InterviewCoachContainerProps> = ({ userI
                                     <Lightbulb className="w-5 h-5 text-purple-500" />
                                 </div>
                                 <div>
-                                    <h3 className="font-bold text-gray-900 dark:text-white text-sm">Daily Tip</h3>
-                                    <p className="text-xs text-gray-500">Use the STAR method (Situation, Task, Action, Result) to structure your behavioral answers.</p>
+                                    <h3 className="font-bold text-gray-900 dark:text-white text-small">Daily Tip</h3>
+                                    <p className="text-small text-gray-500">Use the STAR method (Situation, Task, Action, Result) to structure your behavioral answers.</p>
                                 </div>
                             </div>
-                            <button className="px-4 py-2 border border-purple-200 dark:border-purple-800 text-purple-600 dark:text-purple-400 rounded-lg text-xs font-bold hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors whitespace-nowrap">
+                            <button className="px-4 py-2 border border-purple-200 dark:border-purple-800 text-purple-600 dark:text-purple-400 rounded-lg text-small font-bold hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors whitespace-nowrap">
                                 View All Tips
                             </button>
                         </div>
@@ -422,7 +422,7 @@ const InterviewCoachContainer: React.FC<InterviewCoachContainerProps> = ({ userI
                             </div>
                             <div>
                                 <h3 className="font-bold text-gray-900 dark:text-white mb-1">Not sure where to start?</h3>
-                                <p className="text-sm text-gray-500 leading-relaxed">Follow these steps to get the most out of Interview Coach.</p>
+                                <p className="text-small text-gray-500 leading-relaxed">Follow these steps to get the most out of Interview Coach.</p>
                             </div>
                         </div>
 
@@ -438,7 +438,7 @@ const InterviewCoachContainer: React.FC<InterviewCoachContainerProps> = ({ userI
                                         {step.icon}
                                     </div>
                                     <div className="flex flex-col">
-                                        <span className="text-xs font-bold text-gray-900 dark:text-white mb-0.5">{step.title}</span>
+                                        <span className="text-small font-bold text-gray-900 dark:text-white mb-0.5">{step.title}</span>
                                         <span className="text-[10px] text-gray-500 leading-tight">{step.desc}</span>
                                     </div>
                                     <ChevronDown className="w-3 h-3 text-gray-400 -rotate-90 ml-auto self-center opacity-0 group-hover:opacity-100 transition-opacity" />

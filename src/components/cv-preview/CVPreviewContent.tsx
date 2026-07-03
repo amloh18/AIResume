@@ -341,6 +341,39 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
             background: #ffffff;
           }
           
+          /* Standard text wrap and overflow prevention */
+          .cv-document, .cv-page-custom {
+            overflow-wrap: break-word !important;
+            word-wrap: break-word !important;
+            white-space: normal !important;
+          }
+          .cv-document *, .cv-page-custom * {
+            min-width: 0 !important;
+            max-width: 100% !important;
+            box-sizing: border-box !important;
+            word-break: normal !important;
+            hyphens: none !important;
+          }
+          
+          /* Specific handle for name in header - allow shrinking */
+          .cv-header-name {
+            display: inline-block !important;
+            max-width: 100% !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+            white-space: nowrap !important;
+            word-break: normal !important;
+            overflow-wrap: normal !important;
+          }
+          @supports (font-size: clamp(1rem, 5vw, 3rem)) {
+            .cv-header-name {
+              font-size: clamp(1.2rem, 4vw, 3.5rem) !important;
+              white-space: normal !important;
+              word-break: normal !important;
+              overflow-wrap: normal !important;
+            }
+          }
+
           /* ATS MODE - Force green text on black bg */
           .mode-ats,
           .mode-ats * {
@@ -526,7 +559,7 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
                   {/* Content Container - uses translateY to show correct portion */}
                   <div style={{
                     transform: renderMode === 'pages' && pageIndex > 0
-                      ? `translateY(calc(-${pageIndex} * (${pageDimensions.height} - ${isFullBleed ? '0px' : (pagePadding.top + pagePadding.bottom) + 'px'})))`
+                      ? `translateY(calc(-${pageIndex} * (${pageDimensions.heightPx}px - ${isFullBleed ? '0px' : (pagePadding.top + pagePadding.bottom) + 'px'})))`
                       : 'none'
                   }}>
                     <CustomRenderer
@@ -819,7 +852,7 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
               <div style={{
                 color: '#111827',
                 transform: renderMode === 'pages' && pageIndex > 0
-                  ? `translateY(calc(-${pageIndex} * (${pageDimensions.height} - ${pagePadding.top + pagePadding.bottom}px)))`
+                  ? `translateY(calc(-${pageIndex} * (${pageDimensions.heightPx}px - ${pagePadding.top + pagePadding.bottom}px)))`
                   : 'none'
               }}>
                 {/* Render appropriate layout based on template type */}

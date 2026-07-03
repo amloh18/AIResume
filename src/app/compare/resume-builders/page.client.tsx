@@ -1,31 +1,17 @@
 'use client'
-
+ 
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { CheckCircle, XCircle, ArrowRight } from 'lucide-react'
+import CardNav from '@/components/landing/CardNav'
+import Footer from '@/components/landing/Footer'
+import { navLinks } from '@/data/navigation'
 
 export default function CompareResumeBuildersPage() {
   return (
     <div className="min-h-screen bg-[#0d1209]">
       {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0d1209]/90 backdrop-blur-md border-b border-white/5">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="flex items-center justify-between h-16">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-[#81ff00] rounded-lg flex items-center justify-center">
-                <span className="text-black font-bold text-sm">CV</span>
-              </div>
-              <span className="text-white font-bold text-lg">CVCircle</span>
-            </Link>
-            <div className="hidden md:flex items-center gap-8">
-              <Link href="/#features" className="text-gray-400 hover:text-white text-sm">Features</Link>
-              <Link href="/templates" className="text-gray-400 hover:text-white text-sm">Templates</Link>
-              <Link href="/blog" className="text-gray-400 hover:text-white text-sm">Blog</Link>
-              <Link href="/sign-up" className="bg-[#81ff00] text-black px-4 py-2 rounded-full font-bold text-sm">Start Free</Link>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <CardNav logo="CVCircle" links={navLinks} />
 
       <section className="relative pt-32 pb-16 px-4">
         <div className="absolute inset-0 z-0 pointer-events-none">
@@ -129,20 +115,7 @@ export default function CompareResumeBuildersPage() {
       </section>
 
       {/* Footer */}
-      <footer className="py-8 px-4 border-t border-white/5 mt-16">
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-[#81ff00] rounded">
-              <span className="text-black font-bold text-xs">CV</span>
-            </div>
-            <span className="text-gray-500 text-sm">© 2026 CVCircle</span>
-          </div>
-          <div className="flex gap-6">
-            <Link href="/privacy-policy" className="text-gray-500 text-sm">Privacy</Link>
-            <Link href="/terms" className="text-gray-500 text-sm">Terms</Link>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   )
 }

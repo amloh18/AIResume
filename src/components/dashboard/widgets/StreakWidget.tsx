@@ -48,10 +48,10 @@ export default function StreakWidget({ className }: StreakWidgetProps) {
             <Flame size={18} className="text-white" />
           </div>
           <div>
-            <h3 className="text-base font-bold text-gray-900 dark:text-white">
+            <h3 className="text-body font-bold text-gray-900 dark:text-white">
               Application Streak
             </h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
+            <p className="text-small text-gray-500 dark:text-gray-400">
               Keep the momentum going!
             </p>
           </div>
@@ -80,7 +80,7 @@ export default function StreakWidget({ className }: StreakWidgetProps) {
             </div>
           </div>
 
-          <p className="text-center text-xs text-gray-500 dark:text-gray-400 mb-4 relative z-10">
+          <p className="text-center text-small text-gray-500 dark:text-gray-400 mb-4 relative z-10">
             day{streak.current !== 1 ? 's' : ''} streak 🔥
           </p>
 
@@ -88,14 +88,14 @@ export default function StreakWidget({ className }: StreakWidgetProps) {
           <div className="relative z-10 grid grid-cols-2 gap-4 mb-4">
             <div className="flex flex-col items-center p-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10">
               <Calendar size={14} className="text-violet-600 dark:text-violet-400 mb-1" />
-              <span className="text-lg font-bold text-gray-900 dark:text-white">
+              <span className="text-h3 font-bold text-gray-900 dark:text-white">
                 {streak.applicationsThisWeek}
               </span>
               <span className="text-[10px] text-gray-500">weekly apps</span>
             </div>
             <div className="flex flex-col items-center p-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10">
               <Trophy size={14} className="text-amber-600 dark:text-amber-400 mb-1" />
-              <span className="text-lg font-bold text-gray-900 dark:text-white">{streak.longest}</span>
+              <span className="text-h3 font-bold text-gray-900 dark:text-white">{streak.longest}</span>
               <span className="text-[10px] text-gray-500">best ever</span>
             </div>
           </div>
@@ -103,10 +103,10 @@ export default function StreakWidget({ className }: StreakWidgetProps) {
           {/* Weekly progress */}
           <div className="relative z-10">
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-xs font-medium text-gray-600 dark:text-gray-300">
+              <span className="text-small font-medium text-gray-600 dark:text-gray-300">
                 Weekly Goal
               </span>
-              <span className="text-xs text-gray-500">
+              <span className="text-small text-gray-500">
                 {streak.applicationsThisWeek}/{streak.weeklyGoal}
               </span>
             </div>
@@ -126,7 +126,7 @@ export default function StreakWidget({ className }: StreakWidgetProps) {
           {/* Milestone celebration */}
           {streak.current >= 7 && (
             <div className="mt-3 pt-3 border-t border-orange-100 dark:border-orange-900/30 relative z-10">
-              <p className="text-xs font-medium text-orange-600 dark:text-orange-400 flex items-center gap-1">
+              <p className="text-small font-medium text-orange-600 dark:text-orange-400 flex items-center gap-1">
                 🎉 {streak.current}-day streak! You&apos;re on fire!
               </p>
             </div>

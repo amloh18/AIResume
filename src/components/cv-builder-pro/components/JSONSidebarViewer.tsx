@@ -226,7 +226,7 @@ export const JSONSidebarViewer = ({ data, focusedPath, onChange, rainbowHighligh
 
   return (
     <div className="w-full h-full flex flex-col bg-[#0a0a0a]">
-      {error && <div className="bg-red-900/50 border-b border-red-500/50 text-red-400 p-2 text-xs font-mono">{error}</div>}
+      {error && <div className="bg-red-900/50 border-b border-red-500/50 text-red-400 p-2 text-small font-mono">{error}</div>}
       {rainbowHighlight && !isEditing ? (
         <div
           className="flex-1 overflow-auto p-4 font-mono text-[11px] leading-relaxed custom-scrollbar cursor-text"
@@ -247,7 +247,7 @@ export const JSONSidebarViewer = ({ data, focusedPath, onChange, rainbowHighligh
       {isEditing && (
         <button
           onClick={() => setIsEditing(false)}
-          className="absolute top-4 right-4 text-xs text-gray-400 hover:text-gray-200 bg-[#1a1a1a] px-2 py-1 rounded transition-colors z-10"
+          className="absolute top-4 right-4 text-small text-gray-400 hover:text-gray-200 bg-[#1a1a1a] px-2 py-1 rounded transition-colors z-10"
         >
           Done
         </button>

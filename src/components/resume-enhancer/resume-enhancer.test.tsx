@@ -35,7 +35,7 @@ describe('Resume Enhancer Integration', () => {
     describe('Master CV Enforcement', () => {
         it('should block JD input for Master CV', () => {
             // Plan:
-            // 1. Render Step3BuilderSurgeon with cvType='master'
+            // 1. Render Step3CV with cvType='master'
             // 2. Verify MasterCVJDBlocker is present
             // 3. Verify textarea is not present or disabled
             expect(true).toBe(true);

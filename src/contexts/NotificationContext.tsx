@@ -102,8 +102,6 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
   // Safely check authentication - handle null/undefined cases
   // Also check that we're not on a public route (like landing page)
   const isAuthenticated = isMounted &&
-    !isAdminRoute &&
-    !isPublicRoute &&
     status === 'authenticated' &&
     !!session?.user;
 
@@ -708,29 +706,20 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
         return; // Already polling
       }
       
-      console.log('🔄 NotificationContext - Starting fallback polling (SSE may not be working)');
+      console.log('🔄 NotificationContext - Starting fallback polling (runs in background)');
       pollIntervalRef.current = setInterval(async () => {
+        const now = Date.now();
         // Check if SSE is connected
         const currentEventSource = eventSourceRef.current;
         const isSSEConnected = currentEventSource && currentEventSource.readyState === EventSource.OPEN;
-        
-        if (!isSSEConnected) {
-          const now = Date.now();
-          // Poll every 5 seconds for new notifications (faster than 10 seconds)
-          if (now - lastPollTime >= 5000) {
-            lastPollTime = now;
-            console.log('🔄 NotificationContext - Polling for new notifications (SSE fallback)');
-            await fetchNotifications();
-          }
-        } else {
-          // SSE is working, stop polling
-          if (pollIntervalRef.current) {
-            console.log('✅ NotificationContext - SSE is working, stopping polling');
-            clearInterval(pollIntervalRef.current);
-            pollIntervalRef.current = null;
-          }
+        const pollFrequency = isSSEConnected ? 20000 : 5000; // Poll every 20s if SSE is active, every 5s if inactive
+
+        if (now - lastPollTime >= pollFrequency) {
+          lastPollTime = now;
+          console.log(`🔄 NotificationContext - Polling for updates (SSE connected: ${!!isSSEConnected})`);
+          await fetchNotifications();
         }
-      }, 5000); // Poll every 5 seconds (faster polling)
+      }, 5000);
     };
 
     // Start polling immediately (don't wait for SSE)
@@ -738,8 +727,7 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
     const pollTimer = setTimeout(() => {
       if (isAuthenticated) {
         // Always start polling as a fallback
-        // It will stop automatically if SSE connects
-        console.log('🔄 NotificationContext - Starting polling fallback (will stop if SSE connects)', {
+        console.log('🔄 NotificationContext - Starting polling fallback', {
           isAuthenticated,
           status,
           pathname,
