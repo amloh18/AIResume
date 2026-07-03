@@ -1428,7 +1428,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
       clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => {
         measureAndPaginate();
-      }, 150);
+      }, 30);
     });
     observer.observe(docElement, { childList: true, subtree: true, characterData: true });
 
@@ -2375,24 +2375,30 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
         });
 
         return (
-          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
-            <div className={`rounded-2xl shadow-2xl w-full max-w-6xl overflow-hidden flex flex-col max-h-[90vh] border ${isDarkUI ? 'bg-[#141414] border-[#2a2a2a]' : 'bg-white border-gray-200'}`}>
+          <>
+            {/* Backdrop Overlay */}
+            <div 
+              className="fixed inset-0 bg-black/40 backdrop-blur-xs z-[110] transition-opacity duration-300"
+              onClick={() => setReplacingSnippet(null)}
+            />
+            {/* Right Side Panel */}
+            <div className={`fixed top-0 right-0 h-full w-full max-w-[420px] shadow-2xl z-[120] flex flex-col border-l transition-all duration-300 ease-in-out ${isDarkUI ? 'bg-[#111111] border-[#2a2a2a]' : 'bg-white border-gray-200'}`}>
               <div className={`p-4 border-b flex justify-between items-center ${isDarkUI ? 'bg-[#111] border-[#2a2a2a]' : 'bg-white border-gray-200'}`}>
                 <h3 className={`font-bold text-body flex items-center gap-2 ${textPrimary}`}>{replacingSnippet.isAdd ? <PlusCircle size={18} className="text-emerald-500"/> : <RefreshCw size={18} className="text-blue-500"/>}{replacingSnippet.isAdd ? 'Add Snippet' : `Replace ${replacingSnippet.category}`}</h3>
                 <button onClick={() => setReplacingSnippet(null)} className={`p-1.5 rounded-full ${isDarkUI ? 'bg-[#222] text-gray-300 hover:bg-[#333]' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'} transition-colors`}><X size={18}/></button>
               </div>
               {replacingSnippet.isAdd && (
-                <div className={`px-5 pt-4 pb-2 flex flex-wrap gap-2 border-b ${isDarkUI ? 'border-[#2a2a2a]' : 'border-gray-200'}`}>
+                <div className={`px-4 py-3 flex flex-wrap gap-1.5 border-b ${isDarkUI ? 'border-[#2a2a2a]' : 'border-gray-200'} bg-[#f9f9f9] dark:bg-[#0d0d0d]`}>
                   {['All', 'Header', 'Summary', 'Experience', 'Education', 'Projects', 'Certifications', 'Awards', 'Skills', 'Languages', 'Interests', 'Publications', 'Volunteer', 'References', 'Sidebar']
                     .filter(cat => cat === 'All' || !currentCategories.includes(cat))
                     .map(cat => (
-                    <button key={cat} onClick={() => setReplacingSnippet({...replacingSnippet, filterCategory: cat === 'All' ? null : cat})} className={`px-3 py-1.5 text-small font-bold rounded-full uppercase tracking-wider border ${replacingSnippet.filterCategory === cat || (!replacingSnippet.filterCategory && cat === 'All') ? 'bg-emerald-500/20 text-emerald-500 border-emerald-500/50' : (isDarkUI ? 'bg-[#222] text-gray-400 border-[#333]' : 'bg-white text-gray-600 border-gray-200')}`}>{cat}</button>
+                    <button key={cat} onClick={() => setReplacingSnippet({...replacingSnippet, filterCategory: cat === 'All' ? null : cat})} className={`px-2.5 py-1 text-[11px] font-bold rounded-full uppercase tracking-wider border transition-all ${replacingSnippet.filterCategory === cat || (!replacingSnippet.filterCategory && cat === 'All') ? 'bg-emerald-500/20 text-emerald-500 border-emerald-500/50' : (isDarkUI ? 'bg-[#1e1e1e] text-gray-400 border-[#2a2a2a] hover:bg-[#252525]' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50')}`}>{cat}</button>
                   ))}
                   {(!replacingSnippet.filterCategory || replacingSnippet.filterCategory === 'Skills') && (
                     <button
                       type="button"
                       onClick={() => void openSkillsSuggestions()}
-                      className="ml-auto px-3 py-1.5 text-small font-bold rounded-full uppercase tracking-wider border border-emerald-400/50 bg-emerald-500/10 text-emerald-500 flex items-center gap-1.5"
+                      className="w-full mt-2 justify-center px-3 py-1.5 text-xs font-bold rounded-lg uppercase tracking-wider border border-emerald-400/50 bg-emerald-500/10 text-emerald-500 flex items-center gap-1.5 hover:bg-emerald-500/20 transition-all"
                     >
                       <Sparkles size={12} />
                       AI Skill Recommendations
@@ -2400,54 +2406,49 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
                   )}
                 </div>
               )}
-              <div className={`p-5 overflow-y-auto flex-1 custom-scrollbar ${isDarkUI ? 'bg-[#0a0a0a]' : 'bg-gray-100'}`}>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                  {sortedSnippets.map(snippet => {
-                    const targetZoneId = replacingSnippet.zoneId;
-                    const isTargetDark = activeTemplate.type.includes('dark') && targetZoneId === 'sidebar';
-                    const isSidebar = ['sidebar', 'left', 'right'].includes(targetZoneId);
-                    const styleKey = isSidebar && activeTemplate.sidebarTitleStyle ? activeTemplate.sidebarTitleStyle : activeTemplate.titleStyle;
-                    const TitleRenderer = TITLE_STYLES[styleKey] || TITLE_STYLES['standard'];
-                    
-                    const isCurrent = snippet.id === replacingSnippet.currentType;
-                    const isRecommended = recommendedFamily && SNIPPET_FAMILIES[recommendedFamily].some(k => snippet.id.includes(k));
-                    const isATS = ATS_SNIPPETS.includes(snippet.id);
-                    
-                    // Dynamic scaling based on category to prevent tiny previews
-                    const isHeader = snippet.category === 'Header';
-                    const isCompact = ['Languages', 'Interests', 'Skills', 'Awards'].includes(snippet.category);
-                    const scale = isHeader ? 0.6 : 0.65;
-                    const wrapperWidth = isSidebar ? '200%' : (isHeader ? '166%' : '153%');
-                    const height = isHeader ? '160px' : (isCompact ? '180px' : '240px');
+              <div className={`p-4 overflow-y-auto flex-1 custom-scrollbar space-y-4 ${isDarkUI ? 'bg-[#0a0a0a]' : 'bg-gray-50'}`}>
+                {sortedSnippets.map(snippet => {
+                  const targetZoneId = replacingSnippet.zoneId;
+                  const isTargetDark = false; // Always light theme for snippet previews
+                  const isSidebar = ['sidebar', 'left', 'right'].includes(targetZoneId);
+                  const styleKey = isSidebar && activeTemplate.sidebarTitleStyle ? activeTemplate.sidebarTitleStyle : activeTemplate.titleStyle;
+                  const TitleRenderer = TITLE_STYLES[styleKey] || TITLE_STYLES['standard'];
+                  
+                  const isCurrent = snippet.id === replacingSnippet.currentType;
+                  const isRecommended = recommendedFamily && SNIPPET_FAMILIES[recommendedFamily].some(k => snippet.id.includes(k));
+                  const isATS = ATS_SNIPPETS.includes(snippet.id);
+                  
+                  const isHeader = snippet.category === 'Header';
+                  const scale = isHeader ? 0.5 : 0.4;
+                  const wrapperWidth = isSidebar ? '250%' : (isHeader ? '200%' : '250%');
 
-                    return (
-                      <div key={snippet.id} onClick={() => executeReplaceOrAdd(snippet.id)} className={`group relative rounded-xl border-2 cursor-pointer transition-all overflow-hidden flex flex-col hover:-translate-y-1 hover:shadow-xl ${isDarkUI ? 'bg-[#111]' : 'bg-white'} ${isCurrent ? 'border-emerald-500 ring-2 ring-emerald-500/20' : (isRecommended && !isCurrent ? 'border-amber-400 ring-2 ring-amber-400/20' : (isDarkUI ? 'border-[#333] hover:border-gray-500' : 'border-gray-200 hover:border-gray-400'))}`}>
-                        <div className={`p-4 flex flex-col gap-2 z-10 ${isDarkUI ? 'bg-[#111]' : 'bg-white'}`}>
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <div className={`font-bold text-[15px] ${textPrimary}`}>{snippet.name}</div>
-                              <div className={`text-[10px] mt-1 font-semibold uppercase tracking-wider ${textMuted}`}>{snippet.category}</div>
-                            </div>
-                            <div className="flex flex-col gap-1 items-end">
-                              {isCurrent && <span className="bg-emerald-500/20 text-emerald-500 text-[9px] px-2 py-1 rounded font-bold tracking-widest uppercase">CURRENT</span>}
-                              {isRecommended && !isCurrent && <span className="bg-amber-400/20 text-amber-600 text-[9px] px-2 py-1 rounded font-bold tracking-widest uppercase flex items-center gap-1"><Sparkles size={10}/> FOR YOUR STYLE</span>}
-                              {isATS && <span className="bg-blue-500/10 text-blue-600 border border-blue-500/20 text-[9px] px-2 py-1 rounded font-bold tracking-widest uppercase flex items-center gap-1"><Check size={10}/> ATS READY</span>}
-                            </div>
+                  return (
+                    <div key={snippet.id} onClick={() => executeReplaceOrAdd(snippet.id)} className={`group relative rounded-xl border-2 cursor-pointer transition-all overflow-hidden flex flex-col hover:shadow-lg ${isDarkUI ? 'bg-[#111]' : 'bg-white'} ${isCurrent ? 'border-emerald-500 ring-2 ring-emerald-500/20' : (isRecommended && !isCurrent ? 'border-amber-400 ring-2 ring-amber-400/20' : (isDarkUI ? 'border-[#222] hover:border-gray-500' : 'border-gray-200 hover:border-gray-300'))}`}>
+                      <div className={`p-3 flex flex-col gap-1.5 z-10 ${isDarkUI ? 'bg-[#111]' : 'bg-white'} border-b ${isDarkUI ? 'border-[#222]' : 'border-gray-100'}`}>
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <div className={`font-bold text-sm ${textPrimary}`}>{snippet.name}</div>
+                            <div className={`text-[9px] mt-0.5 font-semibold uppercase tracking-wider ${textMuted}`}>{snippet.category}</div>
                           </div>
-                        </div>
-                        
-                        <div className="relative w-full overflow-hidden border-t border-gray-800" style={{ height, backgroundColor: isTargetDark ? design.sidebarBgColor : '#f9f9f9', '--cv-font': design.font, '--cv-base-size': `${design.fontSize}px`, '--cv-spacing': design.spacing, '--cv-accent': design.accentColor, '--cv-sidebar-bg': design.sidebarBgColor, '--cv-section-gap': `${design.sectionGap}px` } as React.CSSProperties}>
-                          <div className={`absolute top-0 left-0 origin-top-left pointer-events-none px-6 py-6 opacity-95 group-hover:opacity-100 transition-opacity cv-document ${isTargetDark ? 'text-gray-200' : 'text-gray-900'}`} style={{ width: wrapperWidth, transform: `scale(${scale})` }}>
-                            <snippet.render data={previewData} Editable={ReadOnlyWrapper} zoneId={targetZoneId} isDark={isTargetDark} design={design} showIcons={true} layoutZones={zones} Title={({ titleKey }: any) => <TitleRenderer isDark={isTargetDark}><ReadOnlyWrapper path={`sectionTitles.${titleKey}`} nowrap /></TitleRenderer>} moveEntry={() => {}} deleteEntry={() => {}} readOnly={true} />
+                          <div className="flex flex-col gap-1 items-end">
+                            {isCurrent && <span className="bg-emerald-500/20 text-emerald-500 text-[8px] px-1.5 py-0.5 rounded font-bold tracking-widest uppercase">CURRENT</span>}
+                            {isRecommended && !isCurrent && <span className="bg-amber-400/20 text-amber-600 text-[8px] px-1.5 py-0.5 rounded font-bold tracking-widest uppercase flex items-center gap-0.5"><Sparkles size={8}/> RECOMMEND</span>}
+                            {isATS && <span className="bg-blue-500/10 text-blue-600 border border-blue-500/20 text-[8px] px-1.5 py-0.5 rounded font-bold tracking-widest uppercase flex items-center gap-0.5"><Check size={8}/> ATS</span>}
                           </div>
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
+                      
+                      <div className="relative w-full aspect-[16/9] overflow-hidden bg-[#f9f9f9]" style={{ '--cv-font': design.font, '--cv-base-size': `${design.fontSize}px`, '--cv-spacing': design.spacing, '--cv-accent': design.accentColor, '--cv-sidebar-bg': '#ffffff', '--cv-section-gap': `${design.sectionGap}px` } as React.CSSProperties}>
+                        <div className="absolute top-0 left-0 origin-top-left pointer-events-none p-4 opacity-95 group-hover:opacity-100 transition-opacity cv-document text-gray-900" style={{ width: wrapperWidth, transform: `scale(${scale})` }}>
+                          <snippet.render data={previewData} Editable={ReadOnlyWrapper} zoneId={targetZoneId} isDark={isTargetDark} design={design} showIcons={true} layoutZones={zones} Title={({ titleKey }: any) => <TitleRenderer isDark={isTargetDark}><ReadOnlyWrapper path={`sectionTitles.${titleKey}`} nowrap /></TitleRenderer>} moveEntry={() => {}} deleteEntry={() => {}} readOnly={true} />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
-          </div>
+          </>
         );
       })()}
 
@@ -2617,8 +2618,17 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
         }
         @keyframes fadeInUp { from { opacity: 0; transform: translate(-50%, 10px); } to { opacity: 1; transform: translate(-50%, 0); } }
         .animate-fade-in-up { animation: fadeInUp 0.2s ease-out forwards; }
-        @keyframes snippetEntrance { from { opacity: 0; } to { opacity: 1; } }
-        .snippet-anim { animation: snippetEntrance 0.3s ease-out forwards; }
+        @keyframes snippetEntrance { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+        .snippet-anim { 
+          animation: snippetEntrance 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards; 
+          transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .cv-page {
+          transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .cv-section, .cv-item {
+          transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
       `}} />
       </div>
     </CanvasContext.Provider>
