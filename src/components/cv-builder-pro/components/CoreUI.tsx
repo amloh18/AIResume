@@ -166,7 +166,7 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
   };
 
   let wrapClass = 'whitespace-normal';
-  if (nowrap) wrapClass = 'whitespace-normal'; // Force wrap but only at whitespace
+  if (nowrap) wrapClass = 'whitespace-nowrap'; // Force no wrap
   if (breakAll) wrapClass = 'break-all whitespace-normal';
   if (multiline) wrapClass = 'whitespace-pre-wrap';
 
@@ -220,7 +220,7 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
   const editHoverClass = isEditable ? 'hover:bg-emerald-50/30 focus:bg-white focus:ring-2 focus:ring-emerald-500/50 focus:shadow-md border border-transparent hover:border-gray-300 focus:border-emerald-400 focus:text-gray-900 rounded-[3px] px-1 py-0.5 -mx-1 -my-0.5' : '';
 
   return (
-      <span ref={contentRef} data-path={path} data-empty-text={emptyText} contentEditable={isEditable} suppressContentEditableWarning onPaste={handlePaste} onInput={handleInput} onKeyDown={handleKeyDown} onFocus={handleFocus} onBlur={handleBlur} onClick={handleClick} className={`outline-none transition-all duration-200 ${multiline ? 'block w-full' : 'inline-block max-w-full'} ${finalClassName} ${moriHoverClass} ${editHoverClass} z-40 relative empty:min-w-[60px] ${multiline ? 'empty:block' : 'empty:inline-block'} empty:border-dashed empty:border-gray-300 empty:after:content-[attr(data-empty-text)] empty:after:text-gray-400 empty:after:italic`} style={{ minHeight: '1.2em' }} />
+      <span ref={contentRef} data-path={path} data-empty-text={emptyText} contentEditable={isEditable} suppressContentEditableWarning onPaste={handlePaste} onInput={handleInput} onKeyDown={handleKeyDown} onFocus={handleFocus} onBlur={handleBlur} onClick={handleClick} className={`outline-none transition-all duration-200 ${multiline ? 'block w-full' : 'inline'} ${finalClassName} ${moriHoverClass} ${editHoverClass} z-40 relative empty:min-w-[60px] ${multiline ? 'empty:block' : 'empty:inline-block'} empty:border-dashed empty:border-gray-300 empty:after:content-[attr(data-empty-text)] empty:after:text-gray-400 empty:after:italic`} style={{ minHeight: '1.2em' }} />
     );
   };
   
