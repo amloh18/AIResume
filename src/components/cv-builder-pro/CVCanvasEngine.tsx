@@ -391,9 +391,10 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     headerLinks: {} as Record<string, boolean>, 
     sidebarBgColor: '#f8fafc', 
     sectionGap: 16, 
+    itemGap: 12, // Gap between items/child containers
     pageSize: 'A4' as 'A4' | 'Letter', 
     dateFormat: 'MMM YYYY',
-    splitContactInSidebar: true
+    splitContactInSidebar: false
   });
   const [activeSidebar, setActiveSidebar] = useState<string | null>(null);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
@@ -2490,7 +2491,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
           max-width: 100%;
           overflow: visible !important;
           text-overflow: clip;
-          white-space: normal !important;
+          white-space: nowrap !important;
           word-break: normal;
           overflow-wrap: normal;
         }

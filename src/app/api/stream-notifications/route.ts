@@ -132,24 +132,24 @@ export async function GET(request: NextRequest) {
                             createdAt: { $gt: new Date(Date.now() - 5 * 60 * 1000) },
                         }).sort({ createdAt: 1 }).lean();
 
-                        for (const notification of newNotifications) {
-                            const notifId = notification._id.toString();
-                            if (!sentNotificationIds.has(notifId)) {
-                                sentNotificationIds.add(notifId);
-                                const data = JSON.stringify({ type: 'notification', notification });
-                                controller.enqueue(encoder.encode(`data: ${data}\n\n`));
-                            }
-                        }
+                         for (const notification of newNotifications) {
+                             const notifId = (notification as any)._id.toString();
+                             if (!sentNotificationIds.has(notifId)) {
+                                 sentNotificationIds.add(notifId);
+                                 const data = JSON.stringify({ type: 'notification', notification });
+                                 controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+                             }
+                         }
 
-                        // 2. Check for new activities (fetch from last 5 minutes)
-                        const newActivities = await ActivityLog.find({
-                            userId: userIdObjectId,
-                            logType: 'user_action',
-                            timestamp: { $gt: new Date(Date.now() - 5 * 60 * 1000) }
-                        }).sort({ timestamp: 1 }).lean();
+                         // 2. Check for new activities (fetch from last 5 minutes)
+                         const newActivities = await ActivityLog.find({
+                             userId: userIdObjectId,
+                             logType: 'user_action',
+                             timestamp: { $gt: new Date(Date.now() - 5 * 60 * 1000) }
+                         }).sort({ timestamp: 1 }).lean();
 
-                        for (const activity of newActivities) {
-                            const actId = activity._id.toString();
+                         for (const activity of newActivities) {
+                             const actId = (activity as any)._id.toString();
                             if (!sentActivityIds.has(actId)) {
                                 sentActivityIds.add(actId);
                                 const mapped = mapActivity(activity);

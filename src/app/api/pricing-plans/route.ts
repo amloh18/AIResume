@@ -121,8 +121,20 @@ export async function GET(request: NextRequest) {
       else if (plan.key?.includes('quarterly')) durationInfo = { durationInDays: 90, durationType: 'quarter', displayText: '3 months' };
       else if (plan.key?.includes('yearly'))   durationInfo = { durationInDays: 365, durationType: 'year',   displayText: '1 year' };
 
+      // Dynamically add/remove "Mori AI chat" as feature for all plans except focused_monthly
+      const currentFeatures = Array.isArray(plan.features) ? [...plan.features] : [];
+      let updatedFeatures = currentFeatures;
+      if (plan.key !== 'focused_monthly') {
+        if (!currentFeatures.some((f: string) => f.toLowerCase().includes('mori'))) {
+          updatedFeatures.push('Mori AI chat');
+        }
+      } else {
+        updatedFeatures = currentFeatures.filter((f: string) => !f.toLowerCase().includes('mori'));
+      }
+
       return {
         ...plan,
+        features: updatedFeatures,
         // Canonical USD price — use this for checkout amount validation
         usdPrice: effectiveUsdPrice,
         baseUsdPrice: usdPrice,
