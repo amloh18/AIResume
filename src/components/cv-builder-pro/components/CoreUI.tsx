@@ -373,7 +373,7 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
   const isHeader = SnippetComponent?.category === 'Header';
   const isSkillsSnippet = SnippetComponent?.category === 'Skills';
   const primaryTitleKey = (SnippetComponent?.category || '').toLowerCase();
-  const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
+  const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId.replace(/_page_\d+$/, ''));
   const showDropLine = !readOnly && isDropTarget && !(dragState.sourceZoneId === zoneId && (dragState.overIndex === dragState.sourceIndex || dragState.overIndex === dragState.sourceIndex + 1));
   const zoneBlockCount = Array.isArray(layoutZones?.[zoneId]) ? layoutZones[zoneId].length : 0;
   const isLastSnippetInZone = index === Math.max(0, zoneBlockCount - 1);
@@ -453,13 +453,17 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
   };
 
   const headerUnitId = `${instance.id}_header`;
-  const assignedPage = ctx?.pageAssignments?.[headerUnitId] ?? 0;
+  const assignedPage = ctx?.pageAssignments?.[headerUnitId] ?? ctx?.pageAssignments?.[instance.id] ?? 0;
   const isHeaderPage = assignedPage === pageIdx;
 
   const showInlineControls = !readOnly && !ctx?.moriChatMode && primaryTitleKey && isHeaderPage;
   const canAddListEntry = SnippetComponent && ['Experience', 'Education', 'Projects', 'Certifications', 'Awards', 'Publications', 'Volunteer', 'References'].includes(SnippetComponent.category);
   const controls = showInlineControls ? (
-    <div className="absolute top-1 right-1 opacity-0 group-hover/inner:opacity-100 transition-all duration-200 flex items-center gap-0 z-[200] no-print">
+    <div className={`absolute opacity-0 group-hover/inner:opacity-100 transition-all duration-200 flex items-center gap-0 z-[200] no-print ${
+      isHeader || isNarrow
+        ? 'top-[-24px] right-1 bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-700/50 rounded px-0.5 py-0.5'
+        : 'top-1 right-1'
+    }`}>
       {/* Action icons group */}
       {isHeader && instance.type !== 'header-accent' && (
         <button
@@ -656,7 +660,7 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
     }));
   };
 
-  const content = SnippetComponent.render({ data: cvData, Editable: EditableWrapper, zoneId, isDark, Title, moveEntry, deleteEntry, showIcons: ctx?.design?.showContactIcons ?? true, design: ctx?.design, activeTemplate, layoutZones, readOnly });
+  const content = SnippetComponent.render({ data: cvData, Editable: EditableWrapper, zoneId: zoneId.replace(/_page_\d+$/, ''), isDark, Title, moveEntry, deleteEntry, showIcons: ctx?.design?.showContactIcons ?? true, design: ctx?.design, activeTemplate, layoutZones, readOnly });
   
   const moriHoverClass = ctx?.moriChatMode ? 'hover:bg-emerald-500/10 hover:shadow-[0_0_0_2px_rgba(16,185,129,0.4)] cursor-pointer rounded-lg transition-all' : '';
   

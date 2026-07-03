@@ -927,6 +927,10 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
         cvContext: { path, text: originalText, sectionName }
       }
     }));
+    window.dispatchEvent(new CustomEvent('mori-cv-selection', {
+      detail: { path, text: `(${sectionName}): ${originalText}` }
+    }));
+    window.dispatchEvent(new CustomEvent('open-mori-chat'));
   };
 
   useEffect(() => {
