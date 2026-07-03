@@ -516,7 +516,7 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
     <div className="snippet-anim cv-section"><Title titleKey="summary" /><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><Editable path="basics.summary" multiline /></div></div>
   )},
   'summary-highlight': { id: 'summary-highlight', name: 'Left Accent Highlight', category: 'Summary', render: ({ data, Editable, isDark, Title }: any) => (
-    <div className="snippet-anim cv-section"><Title titleKey="summary" /><div className={`p-4 border-l-[4px] rounded-r-lg cv-accent-border cv-keep-with-next shadow-sm ${isDark ? 'bg-slate-800' : 'bg-slate-50'}`}><div className={`${TYPOGRAPHY.body} italic ${isDark ? 'text-slate-200' : 'text-gray-800'}`}><Editable path="basics.summary" multiline /></div></div></div>
+    <div className="snippet-anim cv-section"><Title titleKey="summary" /><div className="p-4 border-l-[4px] rounded-r-lg cv-accent-border cv-keep-with-next shadow-sm bg-gray-500/5"><div className={`${TYPOGRAPHY.body} italic opacity-90`}><Editable path="basics.summary" multiline /></div></div></div>
   )},
   'summary-quote': { id: 'summary-quote', name: 'Quotation Mark', category: 'Summary', render: ({ data, Editable, isDark, Title }: any) => (
     <div className="snippet-anim flex gap-4 items-start cv-section"><div className={`shrink-0 pt-1 cv-accent-text opacity-50`}><Quote size={28} fill="currentColor"/></div><div className="flex-1"><Title titleKey="summary" /><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><Editable path="basics.summary" multiline /></div></div></div>

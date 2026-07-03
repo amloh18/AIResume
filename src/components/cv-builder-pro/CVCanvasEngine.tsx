@@ -1727,7 +1727,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
                       </div>
                     )}
                     <div className="flex flex-1 relative z-10 items-start gap-[var(--cv-column-gap)]" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)', paddingTop: pageIdx === 0 && safeZones['header'] ? 'var(--cv-section-gap, 16px)' : 'var(--cv-page-margin)' }}>
-                      <div className="absolute left-[var(--cv-page-margin)] top-[var(--cv-section-gap,16px)] bottom-0 rounded-lg z-[-1]" style={{ backgroundColor: 'var(--cv-sidebar-bg)', width: 'calc(32% - 1rem)' }}></div>
+                      <div className="absolute left-[var(--cv-page-margin)] top-[var(--cv-section-gap,16px)] bottom-0 rounded-lg z-[-1]" style={{ backgroundColor: 'var(--cv-sidebar-bg)', width: 'calc(32% - 16px)' }}></div>
                       <div className={`w-[32%] min-w-0 ${isDarkSidebar ? 'cv-dark-sidebar text-white' : ''}`} style={{ paddingRight: '5mm' }}>
                         {renderPageZone('sidebar', pageIdx, 'h-max', isDarkSidebar)}
                       </div>
@@ -1749,7 +1749,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
                       <div className="w-[68%] min-w-0">
                         {renderPageZone('main', pageIdx, 'h-max')}
                       </div>
-                      <div className="absolute right-[var(--cv-page-margin)] top-[var(--cv-section-gap,16px)] bottom-0 rounded-lg z-[-1]" style={{ backgroundColor: 'var(--cv-sidebar-bg)', width: 'calc(32% - 1rem)' }}></div>
+                      <div className="absolute right-[var(--cv-page-margin)] top-[var(--cv-section-gap,16px)] bottom-0 rounded-lg z-[-1]" style={{ backgroundColor: 'var(--cv-sidebar-bg)', width: 'calc(32% - 16px)' }}></div>
                       <div className={`w-[32%] min-w-0 ${isDarkSidebar ? 'cv-dark-sidebar text-white' : ''}`} style={{ paddingLeft: '5mm' }}>
                         {renderPageZone('sidebar', pageIdx, 'h-max', isDarkSidebar)}
                       </div>
@@ -2563,9 +2563,9 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
         .cv-accent-text { color: var(--cv-accent) !important; }
         .cv-accent-bg { background-color: var(--cv-accent) !important; }
         .cv-accent-border { border-color: var(--cv-accent) !important; }
-        .cv-document .cv-gap-sm { gap: calc(0.5rem * var(--cv-spacing)) !important; }
-        .cv-document .cv-gap-md { gap: calc(0.75rem * var(--cv-spacing)) !important; }
-        .cv-document .cv-gap-lg { gap: calc(1rem * var(--cv-spacing)) !important; }
+        .cv-document .cv-gap-sm { gap: calc(8px * var(--cv-spacing)) !important; }
+        .cv-document .cv-gap-md { gap: calc(12px * var(--cv-spacing)) !important; }
+        .cv-document .cv-gap-lg { gap: calc(16px * var(--cv-spacing)) !important; }
         
         /* Layout formats */
         .cv-format-bullets-only .cv-prose p {
