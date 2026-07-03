@@ -44,26 +44,12 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
         displayValue = formatCVDate(value, dateFormat);
       }
       
-      // Fix pasted white text issues by removing bad tags and inline styles but preserving formatting
+      // Fix pasted white text issues by removing bad tags and inline styles, while preserving text alignments
       if (displayValue) {
-        // Remove bad elements like font, but keep span, div, p etc. that carry style or structure
-        displayValue = displayValue.replace(/<\/?font[^>]*>/gi, '');
-        // Sanitize inline styles: only keep text-align and list-style configurations
-        displayValue = displayValue.replace(/style="([^"]*)"/gi, (match, styleContent) => {
-          const declarations = styleContent.split(';');
-          const cleanDeclarations = declarations.filter((decl: string) => {
-            const trimmed = decl.trim().toLowerCase();
-            return trimmed.startsWith('text-align') || trimmed.startsWith('list-style') || trimmed.includes('text-align');
-          });
-          return cleanDeclarations.length > 0 ? `style="${cleanDeclarations.join(';')}"` : '';
-        });
-        displayValue = displayValue.replace(/style='([^']*)'/gi, (match, styleContent) => {
-          const declarations = styleContent.split(';');
-          const cleanDeclarations = declarations.filter((decl: string) => {
-            const trimmed = decl.trim().toLowerCase();
-            return trimmed.startsWith('text-align') || trimmed.startsWith('list-style') || trimmed.includes('text-align');
-          });
-          return cleanDeclarations.length > 0 ? `style="${cleanDeclarations.join(';')}"` : '';
+        displayValue = displayValue.replace(/<\/?(?:span|div|font|label)[^>]*>/gi, '');
+        displayValue = displayValue.replace(/style=(["'])(.*?)\1/gi, (match, quote, styleContent) => {
+          const alignMatch = styleContent.match(/text-align\s*:\s*(left|center|right|justify)/i);
+          return alignMatch ? `style="text-align: ${alignMatch[1].toLowerCase()};"` : '';
         });
       }
 

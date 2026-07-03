@@ -146,8 +146,9 @@ export async function downloadCanvasAsPDF(
       .replace(/currentColor/g, color);
       
     // Create an image to replace the SVG
+    const base64Svg = btoa(unescape(encodeURIComponent(svgString)));
     const img = document.createElement('img');
-    img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgString)}`;
+    img.src = `data:image/svg+xml;base64,${base64Svg}`;
     img.style.width = width;
     img.style.height = height;
     img.style.display = 'inline-block';
@@ -162,14 +163,37 @@ export async function downloadCanvasAsPDF(
   container.appendChild(clone);
 
   try {
-    // Generate the PDF directly, parsing the DOM to keep text selectable
-    await doc.html(clone, {
-      x: 0,
-      y: 0,
-      width: dims.widthPx,
-      windowWidth: dims.widthPx,
-      autoPaging: 'text',
-    });
+    const html2canvasModule = await import('html2canvas');
+    const html2canvas = html2canvasModule.default || html2canvasModule;
+
+    const pages = clone.querySelectorAll('.cv-page, .cover-letter-document');
+    if (pages.length > 0) {
+      for (let i = 0; i < pages.length; i++) {
+        const page = pages[i] as HTMLElement;
+        const canvas = await html2canvas(page, {
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+          logging: false,
+          backgroundColor: '#ffffff'
+        });
+        const imgData = canvas.toDataURL('image/jpeg', 0.95);
+        if (i > 0) {
+          doc.addPage([dims.widthPx, dims.heightPx], 'portrait');
+        }
+        doc.addImage(imgData, 'JPEG', 0, 0, dims.widthPx, dims.heightPx);
+      }
+    } else {
+      const canvas = await html2canvas(clone, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+        backgroundColor: '#ffffff'
+      });
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      doc.addImage(imgData, 'JPEG', 0, 0, dims.widthPx, dims.heightPx);
+    }
     doc.save(filename);
   } catch (error) {
     console.error('Error generating PDF:', error);

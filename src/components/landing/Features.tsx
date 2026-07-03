@@ -198,17 +198,23 @@ const Features = () => {
           </motion.div>
 
           <motion.h2
-            className="!text-[2rem] tablet:!text-[2.5rem] desktop:!text-[3rem] font-extrabold text-white mb-4 tracking-tighter !leading-[1.05] max-w-5xl"
+            className="!text-[2rem] tablet:!text-[2.5rem] desktop:!text-[3rem] font-extrabold text-white mb-3 tracking-tighter !leading-[1.05] max-w-5xl"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.1 }}
           >
-            Everyday <span className="text-transparent bg-clip-text bg-gradient-to-r from-lime-400 to-lime-500">superpowers</span>.{' '}
-            <span className="text-white/70 font-normal">
-              Light enough for daily applications but powerful enough for landing your dream job.
-            </span>
+            Everyday <span className="text-transparent bg-clip-text bg-gradient-to-r from-lime-400 to-lime-500">superpowers</span>.
           </motion.h2>
+          <motion.p
+            className="text-h3 text-gray-400 max-w-2xl leading-relaxed text-left"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.15 }}
+          >
+            Light enough for daily applications but powerful enough for landing your dream job.
+          </motion.p>
         </div>
 
         {/* Group 1: LinkedIn + AI Coach (Row 1 - Large 2-col) */}

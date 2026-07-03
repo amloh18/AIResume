@@ -106,7 +106,7 @@ const CompetitorComparison: React.FC = () => {
           </motion.div>
 
           <motion.h2
-            className="!text-[2rem] tablet:!text-[2.5rem] desktop:!text-[3rem] font-extrabold text-white mb-4 tracking-tighter !leading-[1.05]"
+            className="!text-[2rem] tablet:!text-[2.5rem] desktop:!text-[3rem] font-extrabold text-white mb-3 tracking-tighter !leading-[1.05]"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -115,11 +115,17 @@ const CompetitorComparison: React.FC = () => {
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-lime-400 to-lime-500">
               We go further
             </span>{' '}
-            than the competition.{' '}
-            <span className="text-white/70 font-normal">
-              Most resume builders stop at templates — CVCircle gives you the full stack.
-            </span>
+            than the competition.
           </motion.h2>
+          <motion.p
+            className="text-h3 text-gray-400 max-w-2xl leading-relaxed text-left"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.15 }}
+          >
+            Most resume builders stop at templates — CVCircle gives you the full stack.
+          </motion.p>
         </div>
 
         {/* ── Score summary cards ── */}

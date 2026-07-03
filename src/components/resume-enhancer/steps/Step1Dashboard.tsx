@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import Logo from '@/components/ui/Logo';
 import { Upload, FileText, Files, Gauge, Edit3, CheckCircle2, Loader2, Briefcase, Sparkles, AlertTriangle, FolderOpen, Edit2, Copy, Plus, Grid, List, LayoutGrid, Trash2, SlidersHorizontal, ChevronDown, ChevronRight, CornerDownRight } from 'lucide-react';
+import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
 import { CVJourneyLookupService } from '@/lib/services/cvJourneyLookupService';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
 import { UnifiedCVDataStructure, DEFAULT_UNIFIED_CV_DATA } from '@/types/unified-cv-schema';
@@ -342,6 +343,7 @@ export default function Step1Dashboard({
 }: Step1DashboardProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { isDesktopExpanded } = useMobileSidebar();
   const { state, dispatch, setFresherMode, detectFresherMode, determineCVType, setJdText, goToStep, setTemplateOverlayOpen } = useResumeEnhancer();
   const { user } = useUnifiedAuth();
   const [parseMethod, setParseMethod] = useState<'upload' | 'manual' | 'job' | 'linkedin' | null>(null);
@@ -362,6 +364,7 @@ export default function Step1Dashboard({
   const [forcedCvType, setForcedCvType] = useState<'master' | 'journey' | 'standalone' | null>(null);
   const [isCreatingBlank, setIsCreatingBlank] = useState(false);
   const [viewLayout, setViewLayout] = useState<'grid' | 'list' | 'compact'>('grid');
+  const [isDocumentsPanelExpanded, setIsDocumentsPanelExpanded] = useState(false);
   const [cvJourneysMap, setCvJourneysMap] = useState<Map<string, any>>(new Map());
 
   useEffect(() => {
@@ -1252,16 +1255,38 @@ export default function Step1Dashboard({
           </div>
         </div>
 
-        {/* Continue Editing Section */}
+        {/* Continue Editing Section (Floats on bottom, pullable drawer sheet layout) */}
         {!isGuestMode && (
-          <div className="step-one-documents mx-6 sm:mx-12 mb-12 sm:mb-[72px] rounded-2xl sm:rounded-3xl pt-4 sm:pt-6 bg-[var(--bg-primary)] relative shadow-sm">
-            <div className="w-full max-w-7xl mx-auto px-4 sm:px-8 pb-32">
-              <motion.div
-                initial={{ opacity: 0, y: 40 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-100px" }}
-                transition={{ type: 'spring', bounce: 0.4, duration: 0.8 }}
-              >
+          <motion.div 
+            layout
+            initial={{ y: '30vh' }}
+            animate={{ 
+              y: isDocumentsPanelExpanded ? 0 : 'calc(100% - 450px)',
+            }}
+            transition={{ type: 'spring', damping: 28, stiffness: 220 }}
+            className={`fixed bottom-0 left-0 right-0 mx-auto w-[96vw] h-[85vh] z-[90] flex flex-col bg-[var(--bg-primary)] border-t border-x border-[color:var(--border-primary)] shadow-[0_-20px_50px_rgba(0,0,0,0.18)] rounded-t-[32px] overflow-hidden no-print transition-all duration-300 ${
+              isDesktopExpanded ? 'lg:left-[280px] lg:w-[calc(100vw-320px)]' : 'lg:left-[84px] lg:w-[calc(100vw-120px)]'
+            }`}
+          >
+            {/* Drawer Pull Grab Handle Bar */}
+            <div 
+              onClick={() => setIsDocumentsPanelExpanded(!isDocumentsPanelExpanded)}
+              className="w-full py-4 shrink-0 flex flex-col items-center cursor-pointer hover:bg-gray-500/5 transition-colors border-b border-[color:var(--border-primary)] select-none bg-[var(--bg-primary)]"
+            >
+              <div className="w-14 h-1.5 bg-gray-300 dark:bg-gray-700 rounded-full transition-all duration-300 group-hover:bg-emerald-500" />
+              <div className="flex items-center gap-1.5 mt-2.5">
+                <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-widest text-[#80FF00] flex items-center gap-1">
+                  Your Documents
+                </span>
+                <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                  • {isDocumentsPanelExpanded ? 'Click to Minimize' : 'Pull Up to View All Resumes & Cover Letters'}
+                </span>
+              </div>
+            </div>
+
+            {/* Scrollable Container inside sheet */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-6 sm:p-12 pb-32">
+              <div className="w-full max-w-7xl mx-auto">
                 <div className="step-one-documents-header flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-5 pb-5 border-b border-[color:var(--border-primary)] pt-5">
                   <div>
                     <h3 className="mt-1 text-xs sm:text-sm text-[color:var(--text-secondary)]">Your Documents</h3>
@@ -1747,9 +1772,9 @@ export default function Step1Dashboard({
                 </div>
               )}
 
-            </motion.div>
+            </div>
           </div>
-          </div>
+        </motion.div>
         )}
         </motion.div>
       )}

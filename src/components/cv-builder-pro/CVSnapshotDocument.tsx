@@ -59,9 +59,9 @@ const SNAPSHOT_STYLES = `
   .cv-snapshot-wrapper .cv-header-role {
     display: inline-block;
     max-width: 100%;
-    overflow: hidden;
+    overflow: visible !important;
     text-overflow: clip;
-    white-space: nowrap !important;
+    white-space: normal !important;
     word-break: normal;
     overflow-wrap: normal;
   }
@@ -90,12 +90,25 @@ const SNAPSHOT_STYLES = `
   }
   .cv-snapshot-wrapper .cv-prose p { margin-bottom: calc(0.3em * var(--cv-spacing)) !important; }
   .cv-snapshot-wrapper .cv-prose ul {
-    list-style-type: disc;
-    padding-left: 1.2em;
+    list-style-type: disc !important;
+    padding-left: 1.25rem !important;
     margin-top: calc(0.25em * var(--cv-spacing)) !important;
     margin-bottom: calc(0.25em * var(--cv-spacing)) !important;
   }
-  .cv-snapshot-wrapper .cv-prose li { margin-bottom: calc(0.15em * var(--cv-spacing)) !important; }
+  .cv-snapshot-wrapper .cv-prose li { display: list-item !important; margin-bottom: calc(0.15em * var(--cv-spacing)) !important; }
+  .cv-snapshot-wrapper .cv-document p,
+  .cv-snapshot-wrapper .cv-document ul,
+  .cv-snapshot-wrapper .cv-document li {
+    font-size: inherit !important;
+    line-height: inherit !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  .cv-snapshot-wrapper .cv-document ul { list-style-type: disc !important; padding-left: 1.25rem !important; }
+  .cv-snapshot-wrapper .cv-document li { display: list-item !important; }
+  .cv-snapshot-wrapper .cv-document svg, .cv-snapshot-wrapper .cv-document .lucide { vertical-align: middle !important; display: inline-block !important; }
+  .cv-snapshot-wrapper .cv-document .cv-contact span, .cv-snapshot-wrapper .cv-document .cv-contact svg { display: inline-flex !important; align-items: center !important; }
+  .cv-snapshot-wrapper .cv-document .cv-contact svg { margin-top: -0.1em !important; }
   .cv-snapshot-wrapper .cv-accent-text { color: var(--cv-accent) !important; }
   .cv-snapshot-wrapper .cv-accent-bg { background-color: var(--cv-accent) !important; }
   .cv-snapshot-wrapper .cv-accent-border { border-color: var(--cv-accent) !important; }

@@ -201,8 +201,6 @@ export default function CoverLetterLayoutEngine({
   const recentAssignmentsRef = useRef<string[]>([]);
 
   useEffect(() => {
-    if (isEditing) return;
-
     const docElement = document.querySelector('.cover-letter-wrapper');
     if (!docElement) return;
 
@@ -305,7 +303,7 @@ export default function CoverLetterLayoutEngine({
       clearTimeout(debounceTimer);
       observer.disconnect();
     };
-  }, [bodyContent, pageFormat, activeDesign, letterBlocks.length, isEditing]);
+  }, [bodyContent, pageFormat, activeDesign, letterBlocks.length]);
 
   const maxPage = Object.values(pageAssignments).reduce((max, p) => Math.max(max, p), 0);
   const totalPages = maxPage + 1;
@@ -445,14 +443,6 @@ export default function CoverLetterLayoutEngine({
                   </div>
                 )}
               </div>
-
-              {/* Footer Snippet / Layout */}
-              {((isEditing && pageIdx === 0) || (!isEditing && (pageAssignments['footer'] ?? 0) === pageIdx)) && (
-                <div data-unit-id="footer" className="pt-4 border-t border-gray-100 text-black w-full mt-4">
-                  <p className="mb-2">{footerContent || 'Sincerely,'}</p>
-                  <p className="font-bold text-lg tracking-tight">{headerProps.name}</p>
-                </div>
-              )}
             </div>
           </div>
         );

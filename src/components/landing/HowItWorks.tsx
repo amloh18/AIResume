@@ -97,20 +97,23 @@ const HowItWorks = () => {
 
           {/* Headline */}
           <motion.h2
-            className="!text-[2rem] tablet:!text-[2.5rem] desktop:!text-[3rem] font-extrabold text-white mb-4 tracking-tighter !leading-[1.05]"
+            className="!text-[2rem] tablet:!text-[2.5rem] desktop:!text-[3rem] font-extrabold text-white mb-3 tracking-tighter !leading-[1.05]"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.1 }}
           >
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-lime-400 to-lime-500">
-              Stop juggling five different apps.
-            </span>
-            <br />
-            <span className="text-white/70 font-normal">
-              CVCircle makes it simple to manage your entire job application.
-            </span>
+            Stop juggling <span className="text-transparent bg-clip-text bg-gradient-to-r from-lime-400 to-lime-500">five different apps.</span>
           </motion.h2>
+          <motion.p
+            className="text-h3 text-gray-400 max-w-2xl leading-relaxed text-left"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.15 }}
+          >
+            CVCircle makes it simple to manage your entire job application.
+          </motion.p>
         </div>
 
         <div className="flex flex-col desktop:flex-row items-center desktop:items-start gap-8 tablet:gap-12 desktop:gap-20">

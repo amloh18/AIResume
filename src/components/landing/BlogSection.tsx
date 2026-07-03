@@ -221,23 +221,7 @@ export default function BlogSection() {
           </div>
         </div>
 
-        {/* CTA to full blog */}
-        <MotionDiv
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.4, delay: 0.3 }}
-          className="flex justify-center mt-12"
-        >
-          <Link
-            href="/blog"
-            className="inline-flex items-center gap-2.5 px-7 py-3.5 bg-[#1a1f1a] text-white border border-white/10 rounded-full text-small font-semibold hover:border-[#81ff00]/40 hover:text-[#81ff00] hover:bg-[#1f2a1f] transition-all duration-300 group"
-          >
-            <BookOpen className="w-4 h-4 text-[#81ff00]" />
-            View All Articles
-            <ChevronRight className="w-4 h-4 text-gray-500 group-hover:translate-x-0.5 group-hover:text-[#81ff00] transition-all" />
-          </Link>
-        </MotionDiv>
+
       </div>
     </section>
   );

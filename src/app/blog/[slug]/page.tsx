@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Footer from '@/components/landing/Footer';
 import { notFound } from 'next/navigation';
 import { ArrowLeft, ArrowRight, Calendar, Clock, Tag, BookOpen, Sparkles, CheckCircle, FileText, Briefcase, Chrome, Globe, LayoutDashboard } from 'lucide-react';
 import { getArticleBySlug, getAllArticles } from '@/data/blogs';
@@ -397,22 +398,45 @@ export default async function BlogPostPage(props: {
           </div>
         </div>
 
-        <section className="px-4 pb-12">
-          <div className="max-w-3xl mx-auto">
-            <MotionDiv initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }} className="relative rounded-2xl overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-br from-[#81ff00]/15 via-green-900/10 to-transparent" />
-              <div className="absolute inset-0 border border-[#81ff00]/20 rounded-2xl" />
-              <div className="relative p-10 text-center">
-                <div className="w-12 h-12 bg-[#81ff00]/15 rounded-xl flex items-center justify-center mx-auto mb-5 border border-[#81ff00]/20">
-                  <span className="text-[#81ff00] font-bold text-small">CV</span>
-                </div>
-                <h2 className="text-h2 font-bold text-white mb-3">Ready to Build Your CV?</h2>
-                <p className="text-gray-400 mb-7 max-w-lg mx-auto leading-relaxed">
+        <section className="px-4 pb-24">
+          <div className="max-w-7xl mx-auto">
+            <MotionDiv
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+              className="relative rounded-3xl overflow-hidden group shadow-2xl shadow-[#81ff00]/5 border border-[#81ff00]/20 bg-black/60 backdrop-blur-md"
+            >
+              {/* Dynamic Animated Glow Backdrops */}
+              <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-gradient-to-br from-[#81ff00]/25 via-emerald-950/20 to-transparent rounded-full blur-3xl opacity-70 group-hover:opacity-90 transition-opacity duration-1000 -mr-20 -mt-20 pointer-events-none animate-pulse" style={{ animationDuration: '6s' }} />
+              <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-gradient-to-tr from-emerald-950/40 via-lime-950/20 to-transparent rounded-full blur-3xl opacity-50 group-hover:opacity-75 transition-opacity duration-1000 -ml-20 -mb-20 pointer-events-none" />
+              <div className="absolute inset-0 bg-[radial-gradient(circle_1000px_at_50%_-100px,#81ff00/15,transparent_75%)] opacity-100 pointer-events-none" />
+
+              {/* Abstract Glowing Tech Circuit / Waves Overlay */}
+              <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                <svg className="absolute w-[150%] h-[150%] -left-[25%] -top-[25%] text-[#81ff00]/10 opacity-30 group-hover:opacity-40 transition-opacity duration-700" viewBox="0 0 100 100" preserveAspectRatio="none">
+                  <path d="M0,50 Q25,20 50,50 T100,50" fill="none" stroke="currentColor" strokeWidth="0.5" className="animate-pulse" style={{ animationDuration: '8s' }} />
+                  <path d="M0,40 Q25,70 50,40 T100,40" fill="none" stroke="currentColor" strokeWidth="0.25" className="animate-pulse" style={{ animationDuration: '12s' }} />
+                </svg>
+                {/* Large abstract glowing orb graphic */}
+                <div className="absolute w-72 h-72 bg-gradient-to-tr from-[#81ff00]/10 to-emerald-500/10 rounded-full blur-2xl top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 group-hover:scale-125 transition-transform duration-1000 pointer-events-none" />
+              </div>
+
+              <div className="relative p-12 md:p-20 text-center z-10 flex flex-col items-center">
+                <h2 className="text-3xl md:text-6xl font-black text-white mb-6 tracking-tight leading-none max-w-3xl">
+                  Ready to Build Your <span className="text-[#81ff00] bg-clip-text bg-gradient-to-r from-[#81ff00] via-[#a2ff54] to-emerald-400">Perfect Resume?</span>
+                </h2>
+                <p className="text-gray-300 mb-10 max-w-3xl text-body md:text-h2 leading-relaxed">
                   Apply the strategies from this article in CVCircle&apos;s AI-powered resume builder. Build your ATS-optimised resume in minutes — free to start.
                 </p>
-                <div className="flex flex-wrap gap-3 justify-center">
-                  <Link href="/sign-up" className="inline-flex items-center gap-2 bg-[#81ff00] text-black px-7 py-3 rounded-full font-bold hover:bg-lime-400 transition-colors text-small shadow-[0_0_20px_rgba(129,255,0,0.25)]">Build My CV Free</Link>
-                  <Link href="/ai-resume-builder" className="inline-flex items-center gap-2 bg-white/10 text-white border border-white/15 px-7 py-3 rounded-full font-bold hover:bg-white/15 transition-colors text-small">Try AI Resume Builder</Link>
+                <div className="flex flex-col sm:flex-row gap-5 justify-center w-full sm:w-auto">
+                  <Link href="/sign-up" className="inline-flex items-center justify-center gap-2.5 bg-[#81ff00] text-black px-12 py-5 rounded-full font-extrabold hover:bg-lime-400 hover:text-black active:scale-[0.98] transition-all text-body shadow-[0_0_40px_rgba(129,255,0,0.4)] group/btn">
+                    Build My CV Free
+                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1.5 transition-transform" />
+                  </Link>
+                  <Link href="/ai-resume-builder" className="inline-flex items-center justify-center gap-2 bg-white/5 text-white border border-white/10 px-10 py-4.5 rounded-full font-extrabold hover:bg-white/10 hover:border-white/20 active:scale-[0.98] transition-all text-body">
+                    Try AI Resume Builder
+                  </Link>
                 </div>
               </div>
             </MotionDiv>
@@ -425,21 +449,7 @@ export default async function BlogPostPage(props: {
           </div>
         </section>
 
-        <footer className="py-8 px-4 border-t border-white/5">
-          <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 bg-[#81ff00] rounded flex items-center justify-center shadow-[0_0_8px_rgba(129,255,0,0.3)]">
-                <span className="text-black font-bold text-small">CV</span>
-              </div>
-              <span className="text-gray-500 text-small">© 2026 CVCircle by Morigrid Labs</span>
-            </div>
-            <div className="flex gap-6">
-              <Link href="/privacy-policy" className="text-gray-500 hover:text-white text-small transition-colors">Privacy</Link>
-              <Link href="/terms" className="text-gray-500 hover:text-white text-small transition-colors">Terms</Link>
-              <Link href="/blog" className="text-gray-500 hover:text-white text-small transition-colors">All Posts</Link>
-            </div>
-          </div>
-        </footer>
+        <Footer />
 
         <style dangerouslySetInnerHTML={{
           __html: `

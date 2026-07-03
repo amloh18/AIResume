@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileText, Sparkles, CheckCircle, Briefcase, Chrome, Globe, LayoutDashboard, BookOpen } from 'lucide-react';
+import { FileText, Sparkles, CheckCircle, Briefcase, Chrome, Globe, LayoutDashboard, BookOpen, Linkedin } from 'lucide-react';
 
 export interface SubmenuItem {
   label: string;
@@ -64,6 +64,13 @@ export const navLinks: NavLink[] = [
         href: '#features', 
         ariaLabel: 'Job tracker',
         icon: <Briefcase className="w-6 h-6 text-orange-400" />
+      },
+      { 
+        label: 'LinkedIn Enhancer', 
+        description: 'Optimize your LinkedIn profile and headlines for maximum visibility to recruiters.', 
+        href: '#features', 
+        ariaLabel: 'LinkedIn Profile Enhancer',
+        icon: <Linkedin className="w-6 h-6 text-blue-500" />
       },
     ],
     featured: {

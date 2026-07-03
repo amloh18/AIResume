@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { motion, useAnimation } from 'framer-motion';
-import { ArrowRight, Star } from 'lucide-react';
+import { motion, useAnimation, AnimatePresence } from 'framer-motion';
+import { ArrowRight, Star, X, Volume2, VolumeX } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
@@ -27,6 +27,8 @@ const JOB_SITES = [
 const Hero = () => {
   const router = useRouter();
   const [isVideoLoaded, setIsVideoLoaded] = useState(false);
+  const [isPopupOpen, setIsPopupOpen] = useState(false);
+  const [isPopupMuted, setIsPopupMuted] = useState(false);
 
   return (
     <section
@@ -59,11 +61,6 @@ const Hero = () => {
               ))}
             </div>
             <div className="flex items-center gap-2 leading-none">
-              <div className="flex items-center gap-0.5 mr-1">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <Star key={i} className="w-3 h-3 fill-[#81ff00] text-[#81ff00]" />
-                ))}
-              </div>
               <p className="text-small tablet:text-small font-semibold text-white/90">
                 <span className="text-[#81ff00]">15,000+</span> professionals celebrating new jobs
               </p>
@@ -72,15 +69,15 @@ const Hero = () => {
 
           {/* Headline & CTAs */}
           <motion.h1
-            className="!text-[2rem] tablet:!text-[2.5rem] desktop:!text-[3rem] font-extrabold text-white mb-12 tracking-tighter !leading-none w-full text-center px-4"
+            className="!text-[1.8rem] sm:!text-[2.2rem] tablet:!text-[2.8rem] desktop:!text-[3.2rem] font-extrabold text-white mb-10 tracking-tighter leading-[1.1] sm:leading-none w-full text-center px-2"
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, ease: "easeOut" }}
           >
-            <span className="relative inline-block">
-              <span className="relative z-10 block py-4 px-8 whitespace-nowrap">
-                Get Job ready with one platform,<br />
-                Unlimited Resume, Cover Letters for free
+            <span className="relative inline-block w-full sm:w-auto">
+              <span className="relative z-10 block py-3 px-4 sm:px-8 whitespace-normal sm:whitespace-nowrap">
+                All Job tools in one Platform,<br className="hidden sm:block" />
+                Start Creating CV now
               </span>
               
               {/* Realistic Single Brush Shape */}
@@ -138,39 +135,99 @@ const Hero = () => {
         </div>
 
         {/* Bottom: Image/Video Container */}
-        <motion.div
-          className="relative w-full max-w-6xl flex-1 flex flex-col items-center justify-center mx-auto"
-          initial={{ opacity: 0, y: 60 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.6, ease: "easeOut" }}
-        >
-          <div className="relative w-full aspect-video group rounded-2xl overflow-hidden shadow-2xl border border-white/10 bg-black">
-            <div className="absolute -inset-1 bg-gradient-to-r from-purple-500/20 to-lime-500/20 rounded-2xl blur-2xl opacity-50 group-hover:opacity-75 transition duration-1000 group-hover:duration-200"></div>
-            
-            {/* Placeholder Image */}
-            <Image
-              src="/images/herobanner.webp"
-              alt="CVCircle Dashboard"
-              fill
-              className={`object-cover transition-opacity duration-1000 ${isVideoLoaded ? 'opacity-0' : 'opacity-100'}`}
-              priority
-              quality={100}
-            />
+        <div className="relative w-full flex justify-center mb-8">
+          <motion.div
+            className="relative w-[140%] sm:w-full max-w-6xl flex flex-col items-center justify-center cursor-pointer overflow-visible shrink-0"
+            initial={{ opacity: 0, y: 60 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.6, ease: "easeOut" }}
+            onClick={() => setIsPopupOpen(true)}
+          >
+            <div className="relative w-full aspect-video group rounded-2xl overflow-hidden shadow-2xl border border-white/10 bg-black">
+              <div className="absolute -inset-1 bg-gradient-to-r from-purple-500/20 to-lime-500/20 rounded-2xl blur-2xl opacity-50 group-hover:opacity-75 transition duration-1000 group-hover:duration-200"></div>
+              
+              {/* Expand Button Overlay */}
+              <div className="absolute top-4 right-4 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <div className="w-12 h-12 bg-black/60 text-[#81ff00] rounded-full flex items-center justify-center border border-[#81ff00]/30 shadow-[0_0_20px_rgba(129,255,0,0.3)] transform scale-90 group-hover:scale-100 transition-transform duration-300">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 8V4m0 0h4M4 4l5 5m12-5V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m12 5v-4m0 4h-4m4 0l-5-5" />
+                  </svg>
+                </div>
+              </div>
 
-            {/* YouTube Embed */}
-            <div className={`absolute inset-0 w-full h-full transition-opacity duration-1000 pointer-events-none overflow-hidden ${isVideoLoaded ? 'opacity-100' : 'opacity-0'}`}>
-              <iframe
-                src="https://www.youtube-nocookie.com/embed/U1ElC0WlJWQ?autoplay=1&mute=1&loop=1&playlist=U1ElC0WlJWQ&controls=0&showinfo=0&rel=0&modestbranding=1&iv_load_policy=3&disablekb=1&enablejsapi=1&origin=https://cvcircle.io&playsinline=1"
-                title="CVCircle Demo"
-                className="absolute top-0 left-0 w-full h-full border-0 pointer-events-none"
-                allow="autoplay; encrypted-media"
-                onLoad={() => setIsVideoLoaded(true)}
+              {/* Placeholder Image */}
+              <Image
+                src="/images/herobanner.webp"
+                alt="CVCircle Dashboard"
+                fill
+                className="object-cover transition-opacity duration-1000"
+                priority
+                quality={100}
               />
+
+              {/* YouTube Embed */}
+              <div className={`absolute inset-0 w-full h-full transition-opacity duration-1000 pointer-events-none overflow-hidden ${isVideoLoaded ? 'opacity-100' : 'opacity-0'}`}>
+                <iframe
+                  src="https://www.youtube-nocookie.com/embed/U1ElC0WlJWQ?autoplay=1&mute=1&loop=1&playlist=U1ElC0WlJWQ&controls=0&showinfo=0&rel=0&modestbranding=1&iv_load_policy=3&disablekb=1&enablejsapi=1&origin=https://cvcircle.io&playsinline=1"
+                  title="CVCircle Demo"
+                  className="absolute inset-0 w-full h-full border-0 pointer-events-none"
+                  allow="autoplay; encrypted-media"
+                  onLoad={() => setIsVideoLoaded(true)}
+                />
+              </div>
             </div>
-          </div>
-        </motion.div>
+          </motion.div>
+        </div>
       </div>
 
+      {/* Lightbox / Video Popup overlay with Mute/Unmute */}
+      <AnimatePresence>
+        {isPopupOpen && (
+          <motion.div
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setIsPopupOpen(false)}
+          >
+            <motion.div
+              className="relative w-full max-w-5xl aspect-video rounded-3xl overflow-hidden border border-white/10 bg-black shadow-2xl"
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              transition={{ type: 'spring', damping: 25 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Close and Sound Controls bar */}
+              <div className="absolute top-4 right-4 z-50 flex items-center gap-2">
+                <button
+                  onClick={() => setIsPopupMuted(!isPopupMuted)}
+                  className="p-3 rounded-full bg-black/60 text-white border border-white/10 hover:bg-lime-400 hover:text-black transition-colors"
+                  title={isPopupMuted ? "Unmute" : "Mute"}
+                >
+                  {isPopupMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+                </button>
+                <button
+                  onClick={() => setIsPopupOpen(false)}
+                  className="p-3 rounded-full bg-black/60 text-white border border-white/10 hover:bg-lime-400 hover:text-black transition-colors"
+                  title="Close Video"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* YouTube embed inside popup */}
+              <iframe
+                src={`https://www.youtube-nocookie.com/embed/U1ElC0WlJWQ?autoplay=1&mute=${isPopupMuted ? '1' : '0'}&controls=1&showinfo=0&rel=0&modestbranding=1&enablejsapi=1`}
+                title="CVCircle Demo Popup"
+                className="w-full h-full border-0"
+                allow="autoplay; encrypted-media; picture-in-picture"
+                allowFullScreen
+              />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       {/* Ticker - Stays absolute bottom overlay */}
       <motion.div
         className="absolute bottom-0 left-0 right-0 z-30 overflow-hidden w-full pb-4 pt-8 backdrop-blur-sm border-t border-white/5"
