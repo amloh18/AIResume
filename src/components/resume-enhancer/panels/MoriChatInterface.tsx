@@ -143,9 +143,10 @@ const MoriChatInterface: React.FC = () => {
     const isEditIntent = editKeywords.some(kw => textLower.includes(kw));
 
     if (!currentSelection && isEditIntent) {
-      const isConfirmWholeCV = textLower.includes('apply to whole') || textLower.includes('apply to the whole') || textLower.includes('entire cv') || textLower.includes('proceed');
+      const isConfirmWholeCV = textLower.includes('apply to whole') || textLower.includes('apply to the whole') || textLower.includes('entire cv') || textLower.includes('proceed') || textLower.includes('about');
+      const isQuickOption = messages.length > 1 && messages[messages.length - 1].options?.some(opt => opt.prompt === textToSend || opt.label === textToSend);
       
-      if (!isConfirmWholeCV) {
+      if (!isConfirmWholeCV && !isQuickOption) {
         const userMsg: Message = {
           id: Date.now().toString(),
           role: 'user',
@@ -615,7 +616,7 @@ const MoriChatInterface: React.FC = () => {
                   {m.role === 'user' ? <User className="w-4 h-4 text-white" /> : <Sparkles className="w-4 h-4 text-emerald-500" />}
                 </div>
                 <div className="space-y-1">
-                  <div className={`px-3.5 py-2.5 rounded-2xl text-[13px] leading-relaxed ${
+                  <div className={`px-3.5 py-2.5 rounded-2xl text-[13px] leading-relaxed break-words max-w-full overflow-hidden [word-break:break-word] ${
                     m.role === 'user' 
                       ? 'bg-emerald-500 text-white rounded-tr-none shadow-sm' 
                       : 'bg-white dark:bg-[var(--bg-primary)] text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-white/10 rounded-tl-none shadow-sm'
