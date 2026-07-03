@@ -309,13 +309,13 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
 
           const getMobilePlanPriceDisplay = (plan: DatabasePricingPlan) => {
             if (plan.key === 'starter_monthly') {
-              return '$0.00';
+              return 'FREE';
             }
             const regionalPrice = getRegionalPrice(plan);
             if (plan.key === 'starter_yearly') {
-              const base = regionalPrice.endsWith('*') ? regionalPrice.slice(0, -1) : regionalPrice;
-              const suffix = regionalPrice.endsWith('*') ? '/yr*' : '/yr';
-              return `${base}${suffix}`;
+              const symbol = plan.regionalPricing?.currencySymbol || '$';
+              const yearlyTotalVal = plan.price_yearly || 19.99;
+              return `${symbol}${(yearlyTotalVal / 12).toFixed(2)}/mo`;
             }
             const monthlyEquivalent = getMonthlyEquivalent(plan);
             return monthlyEquivalent.showMonthly ? monthlyEquivalent.price : regionalPrice;
@@ -325,19 +325,22 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
             if (plan.key === 'starter_monthly') {
               return (
                 <div className="flex flex-col items-center text-center">
-                  <span className="text-[8px] text-gray-400 font-normal mt-0.5">monthly subscription</span>
-                  <span className="text-[7px] text-indigo-500 font-semibold mt-0.5 leading-tight">*polar $0 invoices sent</span>
+                  <span className="text-[8px] text-gray-400 line-through font-normal">$3.99/mo</span>
                 </div>
               );
             }
             if (plan.key === 'starter_yearly') {
+              const rPrice = getRegionalPrice(plan);
               return (
                 <div className="flex flex-col items-center">
-                  {plan.isPromotionActive && (
+                  {plan.isPromotionActive && plan.price_yearly !== 19.99 && plan.price_yearly !== 39.99 && (
                     <span className="text-[8px] text-gray-400 line-through font-normal">
                       {plan.regionalPricing?.currencySymbol || '$'}{plan.price_yearly || 39.99} total
                     </span>
                   )}
+                  <span className="text-[8px] text-gray-500 dark:text-white/60 font-normal">
+                    {rPrice.endsWith('*') ? `${rPrice.slice(0, -1)} total*` : `${rPrice} total`}
+                  </span>
                   <span className="text-[8px] text-gray-400 font-normal mt-0.5">billed annually</span>
                 </div>
               );
@@ -491,19 +494,21 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
                                 </div>
                               ) : plan.key === 'starter_monthly' ? (
                                 <div className="flex flex-col items-center">
-                                  <span className="text-h3 tablet:text-h2 font-extrabold text-gray-900 dark:text-white leading-tight">$0.00</span>
-                                  <span className="text-[9px] text-gray-400 mt-0.5 font-normal">monthly subscription*</span>
-                                  <span className="text-[8px] text-indigo-500 mt-0.5 font-semibold text-center leading-tight">*polar $0 invoices sent</span>
+                                  <span className="text-small text-gray-400 line-through font-normal mb-0.5">$3.99/mo</span>
+                                  <span className="text-h3 tablet:text-h2 font-extrabold text-lime-600 dark:text-lime-400 leading-tight">FREE</span>
                                 </div>
                               ) : plan.key === 'starter_yearly' ? (
                                 <div className="flex flex-col items-center">
-                                  {plan.isPromotionActive && (
+                                  {plan.isPromotionActive && plan.price_yearly !== 19.99 && plan.price_yearly !== 39.99 && (
                                     <span className="text-small text-gray-400 line-through font-normal mb-0.5">
                                       {plan.regionalPricing?.currencySymbol || '$'}{plan.price_yearly || 39.99}
                                     </span>
                                   )}
                                   <span className="text-h3 tablet:text-h2 font-extrabold text-gray-900 dark:text-white leading-tight">
-                                    {regionalPrice.endsWith('*') ? `${regionalPrice.slice(0, -1)}/yr*` : `${regionalPrice}/yr`}
+                                    {plan.regionalPricing?.currencySymbol || '$'}{( (plan.price_yearly || 19.99) / 12 ).toFixed(2)}/mo
+                                  </span>
+                                  <span className="text-[9px] text-gray-500 dark:text-white/60 mt-0.5 font-normal">
+                                    {regionalPrice.endsWith('*') ? `${regionalPrice.slice(0, -1)} total*` : `${regionalPrice} total`}
                                   </span>
                                   <span className="text-[9px] text-gray-400 mt-0.5 font-normal">billed annually</span>
                                 </div>

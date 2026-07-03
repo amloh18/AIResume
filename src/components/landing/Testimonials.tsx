@@ -80,10 +80,49 @@ export const DEFAULT_TESTIMONIALS: TestimonialData[] = [
   }
 ];
 
-// Re-usable Small Testimonial Snippet
-export const TestimonialSnippet = ({ index }: { index: number }) => {
-  const testimonial = DEFAULT_TESTIMONIALS[index % DEFAULT_TESTIMONIALS.length];
-  
+// Re-usable Small Testimonial Snippet with auto-rotation, dissolve-in transitions, and typing effect
+export const TestimonialSnippet = ({ index: initialIndex }: { index: number }) => {
+  const [currIndex, setCurrIndex] = useState(initialIndex);
+  const [typedMessage, setTypedMessage] = useState("");
+  const [isTyping, setIsTyped] = useState(false);
+  const [isFading, setIsFading] = useState(false);
+
+  const currentTestimonial = DEFAULT_TESTIMONIALS[currIndex % DEFAULT_TESTIMONIALS.length];
+
+  // Rotate index every 8 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setIsFading(true);
+      setTimeout(() => {
+        setCurrIndex((prev) => (prev + 1) % DEFAULT_TESTIMONIALS.length);
+        setIsFading(false);
+      }, 500); // Wait for transition dissolve before index shifts
+    }, 8000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Typewriter effect on message
+  useEffect(() => {
+    setTypedMessage("");
+    setIsTyped(false);
+    let i = 0;
+    const fullText = currentTestimonial.message;
+    const intervalTime = Math.max(10, Math.min(30, 1500 / fullText.length)); // scale speed to complete fast but look satisfying
+
+    const typingTimer = setInterval(() => {
+      if (i < fullText.length) {
+        // Append next slice
+        setTypedMessage(fullText.substring(0, i + 1));
+        i++;
+      } else {
+        clearInterval(typingTimer);
+        setIsTyped(true);
+      }
+    }, intervalTime);
+
+    return () => clearInterval(typingTimer);
+  }, [currIndex]);
+
   return (
     <div className="w-full py-16 relative overflow-hidden flex justify-center bg-transparent">
       {/* Subtle quote icons for context without breaking the flow */}
@@ -96,43 +135,39 @@ export const TestimonialSnippet = ({ index }: { index: number }) => {
         className="absolute -right-10 top-1/2 -translate-y-1/2 text-white/[0.02] rotate-12 pointer-events-none transform scale-x-[-1]" 
       />
 
-      <motion.div 
-        className="relative z-10 max-w-4xl px-6 flex flex-col tablet:flex-row items-center gap-8 tablet:gap-12"
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.8, ease: "easeOut" }}
+      <div 
+        className={`relative z-10 max-w-4xl px-6 flex flex-col tablet:flex-row items-center gap-8 tablet:gap-12 transition-all duration-500 ease-in-out ${isFading ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}
       >
         <div className="flex-shrink-0 flex flex-col items-center gap-3">
            <div className="flex -space-x-3">
               {[...Array(3)].map((_, i) => (
                 <div key={i} className="w-12 h-12 rounded-full border-2 border-[#141810] bg-gray-800 overflow-hidden shadow-xl ring-1 ring-white/10">
-                  <img src={`https://i.pravatar.cc/100?u=snippet${index}-${i}`} alt="user" className="w-full h-full object-cover opacity-80" />
+                  <img src={`https://i.pravatar.cc/100?u=snippet${currIndex}-${i}`} alt="user" className="w-full h-full object-cover opacity-80" />
                 </div>
               ))}
            </div>
            <div className="flex items-center gap-1">
              {[...Array(5)].map((_, i) => (
-               <Star key={i} size={10} className="text-[#81ff00] fill-current opacity-80" />
+               <Star key={i} size={10} className="text-[#81ff00] fill-current opacity-90" />
              ))}
            </div>
         </div>
 
-        <div className="flex-1 text-center tablet:text-left relative">
-          <p className="text-white/90 text-body tablet:text-h3 italic font-medium leading-relaxed tracking-tight">
-            "{testimonial.message}"
+        <div className="flex-1 flex flex-col justify-center min-h-[120px]">
+          <p className="text-body sm:text-h3 font-medium italic leading-relaxed tracking-tight text-white/90">
+            "{typedMessage}"<span className={`inline-block ml-0.5 w-1 h-4 bg-[#81ff00] ${isTyping ? 'animate-pulse' : ''}`} style={{ verticalAlign: 'middle' }} />
           </p>
-          <div className="mt-4 flex flex-col tablet:flex-row tablet:items-center gap-1 tablet:gap-3">
-            <span className="text-[#81ff00]/90 text-[11px] uppercase tracking-[0.2em] font-black">
+          <div className="flex items-center gap-2 mt-4 leading-none">
+            <p className="text-small tablet:text-small font-black text-lime-400 uppercase tracking-widest">
               Verified Experience
-            </span>
-            <span className="hidden tablet:block text-white/10 text-small">|</span>
-            <p className="text-white/40 text-[11px] uppercase tracking-widest font-bold">
-              {testimonial.username} • {testimonial.designation}
+            </p>
+            <span className="text-white/10 text-small">|</span>
+            <p className="text-white/40 text-small font-bold uppercase tracking-wider">
+              {currentTestimonial.username} • {currentTestimonial.designation}
             </p>
           </div>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 };

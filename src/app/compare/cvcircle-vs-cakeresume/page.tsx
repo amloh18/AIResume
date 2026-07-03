@@ -5,6 +5,7 @@ import { Check, X, ArrowRight, Sparkles, Target, Zap, Shield, BarChart3, Clock }
 import CardNav from '@/components/landing/CardNav';
 import Footer from '@/components/landing/Footer';
 import { MotionDiv, MotionH1, MotionP } from '@/components/ui/motion-wrapper';
+import { navLinks } from '@/data/navigation';
 
 export const metadata: Metadata = {
   title: 'CVCircle vs CakeResume Comparison | Best AI Resume Builder 2026',
@@ -70,7 +71,7 @@ export default function ComparisonPage() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
       
       <div className="min-h-screen bg-[#0d1209]">
-        <CardNav logo="CVCircle" links={[]} />
+        <CardNav logo="CVCircle" links={navLinks} />
 
         {/* Hero */}
         <section className="pt-32 pb-16 px-4">

@@ -721,11 +721,49 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
   }},
   'skills-pills': { id: 'skills-pills', name: 'Solid Pills', category: 'Skills', render: ({ data, Editable, isDark, Title }: any) => {
     const allSkills = flattenSkillItems(data?.skills);
-    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-wrap gap-2 cv-gap-sm">{allSkills.map((skill: any, i: number) => (<span key={i} className={`px-3 py-1.5 text-[0.85em] font-semibold rounded-md border cv-item-avoid ${isDark ? 'bg-slate-700 border-slate-600 text-slate-200' : 'bg-slate-100 border-slate-200 text-slate-700'}`}><Editable path={skill.pathSkills} overrideValue={skill.label} arrayIndex={skill.skillIndex} nowrap /></span>))}</div></div>);
+    if (allSkills.length > 10) {
+      const groups = normalizeSkillGroups(data?.skills);
+      if (groups.length === 0) return null;
+      return (
+        <div className="snippet-anim cv-section">
+          <Title titleKey="skills" />
+          <div className="flex flex-col gap-2 cv-gap-sm">
+            {groups.map((group, index) => (
+              <div key={`${group.category}-${index}`} className={`${TYPOGRAPHY.body} ${isDark ? "text-gray-300" : "text-gray-700"} cv-item-avoid`}>
+                <span className={`${TYPOGRAPHY.itemTitle} ${isDark ? "text-gray-100" : "text-gray-900"} mr-2`}>
+                  {group.pathCategory ? <Editable path={group.pathCategory} nowrap /> : group.category}
+                </span>
+                {group.pathSkills ? <Editable path={group.pathSkills} /> : group.skillsText}
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-wrap gap-2 cv-gap-sm">{allSkills.map((skill: any, i: number) => (<span key={i} className={`px-3 py-1.5 text-[0.85em] font-semibold rounded-md border cv-item-avoid ${isDark ? "bg-slate-700 border-slate-600 text-slate-200" : "bg-slate-100 border-slate-200 text-slate-700"}`}><Editable path={skill.pathSkills} overrideValue={skill.label} arrayIndex={skill.skillIndex} nowrap /></span>))}</div></div>);
   }},
   'skills-round-pills': { id: 'skills-round-pills', name: 'Round Pills', category: 'Skills', render: ({ data, Editable, isDark, Title }: any) => {
     const allSkills = flattenSkillItems(data?.skills);
-    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-wrap gap-2 cv-gap-sm">{allSkills.map((skill: any, i: number) => (<span key={i} className={`px-4 py-1.5 text-[0.85em] font-semibold rounded-full border cv-item-avoid ${isDark ? 'bg-slate-700 border-slate-600 text-slate-200' : 'bg-slate-100 border-slate-200 text-slate-700'}`}><Editable path={skill.pathSkills} overrideValue={skill.label} arrayIndex={skill.skillIndex} nowrap /></span>))}</div></div>);
+    if (allSkills.length > 10) {
+      const groups = normalizeSkillGroups(data?.skills);
+      if (groups.length === 0) return null;
+      return (
+        <div className="snippet-anim cv-section">
+          <Title titleKey="skills" />
+          <div className="flex flex-col gap-2 cv-gap-sm">
+            {groups.map((group, index) => (
+              <div key={`${group.category}-${index}`} className={`${TYPOGRAPHY.body} ${isDark ? "text-gray-300" : "text-gray-700"} cv-item-avoid`}>
+                <span className={`${TYPOGRAPHY.itemTitle} ${isDark ? "text-gray-100" : "text-gray-900"} mr-2`}>
+                  {group.pathCategory ? <Editable path={group.pathCategory} nowrap /> : group.category}
+                </span>
+                {group.pathSkills ? <Editable path={group.pathSkills} /> : group.skillsText}
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-wrap gap-2 cv-gap-sm">{allSkills.map((skill: any, i: number) => (<span key={i} className={`px-4 py-1.5 text-[0.85em] font-semibold rounded-full border cv-item-avoid ${isDark ? "bg-slate-700 border-slate-600 text-slate-200" : "bg-slate-100 border-slate-200 text-slate-700"}`}><Editable path={skill.pathSkills} overrideValue={skill.label} arrayIndex={skill.skillIndex} nowrap /></span>))}</div></div>);
   }},
   'skills-dots': { id: 'skills-dots', name: 'Dot Rating', category: 'Skills', render: ({ data, Editable, isDark, Title }: any) => {
     const allSkills = flattenSkillItems(data?.skills).slice(0, 6);

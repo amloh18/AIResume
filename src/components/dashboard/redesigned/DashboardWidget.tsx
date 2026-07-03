@@ -28,8 +28,7 @@ export default function DashboardWidget({
   };
 
   return (
-    <motion.div
-      layout
+    <div
       className={cn(
         'relative bg-white dark:bg-[#111317] rounded-[32px] border border-gray-100 dark:border-white/5 shadow-sm overflow-hidden flex flex-col',
         isExpanded ? 'z-50' : 'z-0',
@@ -166,6 +165,6 @@ export default function DashboardWidget({
           </div>
         </div>
       )}
-    </motion.div>
+    </div>
   );
 }

@@ -2488,9 +2488,9 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
         .cv-header-name, .cv-header-role {
           display: inline-block;
           max-width: 100%;
-          overflow: hidden;
+          overflow: visible !important;
           text-overflow: clip;
-          white-space: nowrap !important;
+          white-space: normal !important;
           word-break: normal;
           overflow-wrap: normal;
         }
@@ -2561,9 +2561,14 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
         }
         .cv-body { font-size: inherit; line-height: calc(1.6 * var(--cv-spacing)); }
         .cv-document p, .cv-document ul, .cv-document li { font-size: inherit !important; line-height: inherit !important; margin: 0; padding: 0; }
+        .cv-document ul { list-style-type: disc !important; padding-left: 1.25rem !important; }
+        .cv-document li { display: list-item !important; }
+        .cv-document svg, .cv-document .lucide { vertical-align: middle !important; display: inline-block !important; }
+        .cv-document .cv-contact span, .cv-document .cv-contact svg { display: inline-flex !important; align-items: center !important; }
+        .cv-document .cv-contact svg { margin-top: -0.1em !important; }
         .cv-prose p { margin-bottom: calc(0.3em * var(--cv-spacing)) !important; }
-        .cv-prose ul { list-style-type: disc; padding-left: 1.2em; margin-top: calc(0.25em * var(--cv-spacing)) !important; margin-bottom: calc(0.25em * var(--cv-spacing)) !important; }
-        .cv-prose li { margin-bottom: calc(0.15em * var(--cv-spacing)) !important; }
+        .cv-prose ul { list-style-type: disc !important; padding-left: 1.25rem !important; margin-top: calc(0.25em * var(--cv-spacing)) !important; margin-bottom: calc(0.25em * var(--cv-spacing)) !important; }
+        .cv-prose li { display: list-item !important; margin-bottom: calc(0.15em * var(--cv-spacing)) !important; }
         [contenteditable]:empty:before { content: attr(placeholder); color: #9ca3af; pointer-events: none; display: block; }
         .cv-accent-text { color: var(--cv-accent) !important; }
         .cv-accent-bg { background-color: var(--cv-accent) !important; }
