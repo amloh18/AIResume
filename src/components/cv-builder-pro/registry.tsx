@@ -45,7 +45,7 @@ const OVERFLOW_WRAP_ANYWHERE: React.CSSProperties = { overflowWrap: 'anywhere', 
 
 interface EntryHeaderProps {
   isNarrow?: boolean;
-  title: React.ReactNode;
+  title?: React.ReactNode;
   subtitle?: React.ReactNode;
   date?: React.ReactNode;
   titleClass?: string;
@@ -355,7 +355,6 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
     return (
       <div className={`flex flex-col snippet-anim w-full cv-keep-with-next gap-5 pb-4 border-b ${isNarrow ? alignClass : 'items-center'} ${isDark ? 'border-slate-700 text-gray-300' : 'border-gray-200 text-gray-600'}`}>
         <Title titleKey="header" overrideClass="hidden" />
-        {data?.basics?.showAvatar && <AvatarEditable data={data} sizeClass={isNarrow ? 'w-24 h-24 mb-3' : 'w-20 h-20'} shapeClass="rounded-full shadow-md" borderClass={isDark ? 'border-2 border-slate-700' : ''} readOnly={readOnly} />}
         <div className={`min-w-0 w-full flex flex-col ${alignClass}`}>
           <h1 className={`${isNarrow ? TYPOGRAPHY.nameNarrow : TYPOGRAPHY.name} ${isDark ? 'text-white' : 'text-gray-900'} mb-1 uppercase tracking-widest pr-1`}><Editable path="basics.name" nowrap={!isNarrow} /></h1>
           <h2 className={`${TYPOGRAPHY.role} ${isDark ? 'text-gray-400' : ''} mb-3 pr-1`}><Editable path="basics.title" nowrap={!isNarrow} /></h2>

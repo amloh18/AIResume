@@ -2,7 +2,7 @@
 
 
 import React, { useRef, useEffect, useState } from 'react';
-import { ImageIcon, Plus, RefreshCw, ChevronUp, ChevronDown, Trash2, PlusCircle, Wand2, Bold, Italic, Underline, List, AlignLeft, AlignCenter, AlignRight, AlignJustify, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ImageIcon, Plus, RefreshCw, ChevronUp, ChevronDown, Trash2, PlusCircle, Wand2, Bold, Italic, Underline, List, AlignLeft, AlignCenter, AlignRight, AlignJustify, Sparkles, ChevronLeft, ChevronRight, Columns } from 'lucide-react';
 import { SNIPPETS, TITLE_STYLES } from '../registry';
 import { getNestedValue, escapeRegExp, formatCVDate } from '../helpers';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -44,11 +44,27 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
         displayValue = formatCVDate(value, dateFormat);
       }
       
-      // Fix pasted white text issues by removing bad tags and inline styles
+      // Fix pasted white text issues by removing bad tags and inline styles but preserving formatting
       if (displayValue) {
-        displayValue = displayValue.replace(/<\/?(?:span|div|font|label)[^>]*>/gi, '');
-        displayValue = displayValue.replace(/\s*style="[^"]*"/gi, '');
-        displayValue = displayValue.replace(/\s*style='[^']*'/gi, '');
+        // Remove bad elements like font, but keep span, div, p etc. that carry style or structure
+        displayValue = displayValue.replace(/<\/?font[^>]*>/gi, '');
+        // Sanitize inline styles: only keep text-align and list-style configurations
+        displayValue = displayValue.replace(/style="([^"]*)"/gi, (match, styleContent) => {
+          const declarations = styleContent.split(';');
+          const cleanDeclarations = declarations.filter((decl: string) => {
+            const trimmed = decl.trim().toLowerCase();
+            return trimmed.startsWith('text-align') || trimmed.startsWith('list-style') || trimmed.includes('text-align');
+          });
+          return cleanDeclarations.length > 0 ? `style="${cleanDeclarations.join(';')}"` : '';
+        });
+        displayValue = displayValue.replace(/style='([^']*)'/gi, (match, styleContent) => {
+          const declarations = styleContent.split(';');
+          const cleanDeclarations = declarations.filter((decl: string) => {
+            const trimmed = decl.trim().toLowerCase();
+            return trimmed.startsWith('text-align') || trimmed.startsWith('list-style') || trimmed.includes('text-align');
+          });
+          return cleanDeclarations.length > 0 ? `style="${cleanDeclarations.join(';')}"` : '';
+        });
       }
 
       const relevantIssues = aiIssues.filter((i: any) => i.path === path);
@@ -465,7 +481,7 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
         : 'top-1 right-1'
     }`}>
       {/* Action icons group */}
-      {isHeader && instance.type !== 'header-accent' && (
+      {isHeader && instance.type !== 'header-accent' && instance.type !== 'header-minimal' && (
         <button
           onClick={onTogglePhoto}
           className="w-7 h-7 flex items-center justify-center text-blue-500 hover:text-blue-600 transition-all duration-150 hover:scale-110 active:scale-95"
@@ -639,6 +655,28 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
                   >
                     <ChevronRight size={12} />
                   </button>
+                )}
+                {tplType === 'hybrid-split' && (
+                  <>
+                    <div className="w-[1px] h-3 bg-slate-200 dark:bg-slate-700 mx-1" />
+                    {bareZoneId === 'main' ? (
+                      <button
+                        onClick={() => onMoveToZone?.(index, 'left')}
+                        className={`${btnCls} text-blue-500 hover:text-blue-600`}
+                        title="Convert to 50:50 Columns"
+                      >
+                        <Columns size={12} />
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => onMoveToZone?.(index, 'main')}
+                        className={`${btnCls} text-blue-500 hover:text-blue-600`}
+                        title="Convert to Full Width"
+                      >
+                        <AlignJustify size={12} />
+                      </button>
+                    )}
+                  </>
                 )}
               </div>
             );
