@@ -5,6 +5,48 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer utilities {
+  .text-display {
+    font-size: var(--font-size-display);
+    line-height: 1.1;
+    font-weight: var(--weight-semibold, 600);
+    letter-spacing: -0.04em;
+  }
+  
+  .text-h1 {
+    font-size: var(--font-size-h1);
+    line-height: 1.2;
+    font-weight: var(--weight-semibold, 600);
+    letter-spacing: -0.03em;
+  }
+  
+  .text-h2 {
+    font-size: var(--font-size-h2);
+    line-height: 1.3;
+    font-weight: var(--weight-semibold, 600);
+    letter-spacing: -0.02em;
+  }
+  
+  .text-h3 {
+    font-size: var(--font-size-h3);
+    line-height: 1.4;
+    font-weight: var(--weight-medium, 500);
+    letter-spacing: -0.01em;
+  }
+  
+  .text-body {
+    font-size: var(--font-size-body);
+    line-height: 1.6;
+    font-weight: var(--weight-regular, 400);
+  }
+  
+  .text-small {
+    font-size: var(--font-size-small);
+    line-height: 1.5;
+    font-weight: var(--weight-medium, 500);
+  }
+}
+
 /* ==========================================================================
    GEIST TYPOGRAPHY SYSTEM
    Scoped to .geist-ui — applied only on dashboard, editor & auth pages.
@@ -14,6 +56,14 @@
 .geist-ui {
   /* Font stack — Geist variable loaded via next/font, falls back gracefully */
   --font-sans: var(--font-geist, 'Geist', 'Inter', system-ui, -apple-system, sans-serif);
+
+  /* Phase 1: 6-Tier Fluid Typography Scale */
+  --font-size-display: clamp(2.5rem, 2rem + 2.5vw, 4rem);     /* 40px - 64px */
+  --font-size-h1:      clamp(1.75rem, 1.5rem + 1.25vw, 2.5rem);  /* 28px - 40px */
+  --font-size-h2:      clamp(1.25rem, 1.1rem + 0.75vw, 1.75rem); /* 20px - 28px */
+  --font-size-h3:      clamp(1.125rem, 1rem + 0.5vw, 1.35rem);   /* 18px - 22px */
+  --font-size-body:    clamp(0.9375rem, 0.9rem + 0.25vw, 1.0625rem); /* 15px - 17px */
+  --font-size-small:   clamp(0.75rem, 0.7rem + 0.15vw, 0.875rem);    /* 12px - 14px */
 
   /* Modern type scale (px values match the spec) */
   --text-xs:   0.75rem;   /* 12px */
@@ -276,7 +326,7 @@
 
 .dark {
   /* Dark theme colors - Updated specifications */
-  --bg-primary: #1a230f;
+  --bg-primary: #191c1b;
   --bg-secondary: #141810;
   --bg-tertiary: #313a28;
   --text-primary: #ffffff;
@@ -304,7 +354,7 @@
   --modal-bg: #141810;
   --modal-border: rgba(255, 255, 255, 0.08);
 
-  --background: 82 38% 9%;
+  --background: 160 6% 10%;
   --foreground: 0 0% 98%;
   --card: 82 30% 11%;
   --card-foreground: 0 0% 98%;
@@ -327,11 +377,11 @@
 }
 
 /* Editor step one: token-driven dashboard surfaces */
-.resume-enhancer-page,
-.resume-enhancer-page .editor-header,
-.resume-enhancer-page .step-one-shell,
-.resume-enhancer-page .step-one-stat,
-.resume-enhancer-page .step-one-action {
+.cv-builder-pro-page,
+.cv-builder-pro-page .editor-header,
+.cv-builder-pro-page .step-one-shell,
+.cv-builder-pro-page .step-one-stat,
+.cv-builder-pro-page .step-one-action {
   transition-property: background-color, border-color, color, box-shadow;
   transition-duration: 320ms;
   transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
@@ -462,9 +512,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .resume-enhancer-page *,
-  .resume-enhancer-page *::before,
-  .resume-enhancer-page *::after {
+  .cv-builder-pro-page *,
+  .cv-builder-pro-page *::before,
+  .cv-builder-pro-page *::after {
     scroll-behavior: auto !important;
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
@@ -666,7 +716,7 @@ body:not(.dark) {
 
 /* Dark theme solid background */
 body.dark {
-  background: #1a230f;
+  background: #191c1b;
   background-attachment: fixed;
 }
 
@@ -678,8 +728,81 @@ body.dark {
 }
 
 .dark .dashboard-page {
-  background: #1a230f;
-  /* Matches dark:bg-[#1a230f] from layout */
+  background: #191c1b;
+  /* Matches dark:bg-[#191c1b] from layout */
+}
+
+/* Application-wide page background class to ensure visual consistency */
+.app-page-bg {
+  background-color: #f3f2ee;
+}
+.dark .app-page-bg {
+  background-color: #191c1b !important;
+}
+
+/* LinkedIn Enhancer theme-aware mappings (applied globally for light/dark theme variables) */
+.linkedin-enhancer {
+  --linkedin-panel-bg: #ffffff;
+  --linkedin-panel-bg-alt: #f9fafb;
+  --linkedin-panel-bg-hover: #f3f4f6;
+}
+
+.dark .linkedin-enhancer {
+  --linkedin-panel-bg: var(--bg-secondary); /* #141810 */
+  --linkedin-panel-bg-alt: var(--bg-primary); /* #191c1b */
+  --linkedin-panel-bg-hover: var(--bg-tertiary); /* #313a28 */
+}
+
+.linkedin-enhancer .bg-white {
+  background-color: var(--linkedin-panel-bg) !important;
+}
+
+.linkedin-enhancer .bg-gray-50,
+.linkedin-enhancer .bg-gray-50\/50,
+.linkedin-enhancer .bg-gray-100\/50,
+.linkedin-enhancer .bg-gray-50\/80 {
+  background-color: var(--linkedin-panel-bg-alt) !important;
+}
+
+.linkedin-enhancer .bg-gray-100 {
+  background-color: var(--linkedin-panel-bg-hover) !important;
+}
+
+.linkedin-enhancer .border-gray-200,
+.linkedin-enhancer .border-gray-100 {
+  border-color: var(--border-primary) !important;
+}
+
+.linkedin-enhancer .divide-gray-100 > * + *,
+.linkedin-enhancer .divide-gray-200 > * + * {
+  border-color: var(--border-primary) !important;
+}
+
+.linkedin-enhancer .text-gray-900,
+.linkedin-enhancer .text-gray-800 {
+  color: var(--text-primary) !important;
+}
+
+.linkedin-enhancer .text-gray-700,
+.linkedin-enhancer .text-gray-600 {
+  color: var(--text-secondary) !important;
+}
+
+.linkedin-enhancer .text-gray-500 {
+  color: var(--text-tertiary) !important;
+}
+
+.linkedin-enhancer input,
+.linkedin-enhancer textarea,
+.linkedin-enhancer select {
+  background-color: var(--linkedin-panel-bg-alt) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-primary) !important;
+}
+
+.linkedin-enhancer .hover\:bg-gray-50:hover,
+.linkedin-enhancer .hover\:bg-gray-100:hover {
+  background-color: var(--linkedin-panel-bg-hover) !important;
 }
 
 /*
@@ -687,7 +810,7 @@ body.dark {
   not like the marketing pages (green gradient background).
   We do this by overriding surface variables ONLY when html is NOT dark.
 */
-html:not(.dark) .resume-enhancer-page {
+html:not(.dark) .cv-builder-pro-page {
   background-color: #f3f2ee;
 
   /* App shell surfaces (light) */
@@ -728,144 +851,33 @@ html:not(.dark) .cover-letter-editor-page {
 }
 
 .dark .cover-letter-editor-page {
-  background: #1a230f;
+  background: #191c1b;
 }
 
-/* Dashboard text colors to match design - Dark theme only */
-.dark .dashboard-page h1,
-.dark .dashboard-page h2,
-.dark .dashboard-page h3,
-.dark .dashboard-page h4,
-.dark .dashboard-page h5,
-.dark .dashboard-page h6 {
+/* Dashboard text colors to match design - Dark theme only (excluding CV preview elements to prevent visual leakage) */
+.dark .dashboard-page h1:not(.cv-document *):not(.cv-page *):not(.cv-page-custom *):not(.builder-preview *):not(.cv-container *):not(.live-preview-container *):not(.cover-letter-document *),
+.dark .dashboard-page h2:not(.cv-document *):not(.cv-page *):not(.cv-page-custom *):not(.builder-preview *):not(.cv-container *):not(.live-preview-container *):not(.cover-letter-document *),
+.dark .dashboard-page h3:not(.cv-document *):not(.cv-page *):not(.cv-page-custom *):not(.builder-preview *):not(.cv-container *):not(.live-preview-container *):not(.cover-letter-document *),
+.dark .dashboard-page h4:not(.cv-document *):not(.cv-page *):not(.cv-page-custom *):not(.builder-preview *):not(.cv-container *):not(.live-preview-container *):not(.cover-letter-document *),
+.dark .dashboard-page h5:not(.cv-document *):not(.cv-page *):not(.cv-page-custom *):not(.builder-preview *):not(.cv-container *):not(.live-preview-container *):not(.cover-letter-document *),
+.dark .dashboard-page h6:not(.cv-document *):not(.cv-page *):not(.cv-page-custom *):not(.builder-preview *):not(.cv-container *):not(.live-preview-container *):not(.cover-letter-document *) {
   color: #ffffff;
 }
 
-.dark .dashboard-page .text-gray-900 {
+.dark .dashboard-page .text-gray-900:not(.cv-document *):not(.cv-page *):not(.cv-page-custom *):not(.builder-preview *):not(.cv-container *):not(.live-preview-container *):not(.cover-letter-document *) {
   color: #ffffff !important;
 }
 
-.dark .dashboard-page .text-gray-600 {
+.dark .dashboard-page .text-gray-600:not(.cv-document *):not(.cv-page *):not(.cv-page-custom *):not(.builder-preview *):not(.cv-container *):not(.live-preview-container *):not(.cover-letter-document *) {
   color: #757575 !important;
 }
 
-.dark .dashboard-page .text-gray-500 {
+.dark .dashboard-page .text-gray-500:not(.cv-document *):not(.cv-page *):not(.cv-page-custom *):not(.builder-preview *):not(.cv-container *):not(.live-preview-container *):not(.cover-letter-document *) {
   color: #757575 !important;
 }
 
-.dark .dashboard-page .text-gray-400 {
+.dark .dashboard-page .text-gray-400:not(.cv-document *):not(.cv-page *):not(.cv-page-custom *):not(.builder-preview *):not(.cv-container *):not(.live-preview-container *):not(.cover-letter-document *) {
   color: #757575 !important;
-}
-
-/* ═══════════════════════════════════════════
-   CV PREVIEW TEXT VISIBILITY PROTECTION
-   Ensures CV preview text is always dark/visible
-   even when rendered inside dark-mode dashboard
-   ═══════════════════════════════════════════ */
-.cv-page,
-.cv-page-custom,
-.builder-preview,
-.cv-container,
-.cv-document,
-.live-preview-container {
-  color: #111827 !important;
-}
-
-.dark .cv-page,
-.dark .cv-page-custom,
-.dark .builder-preview,
-.dark .cv-container,
-.dark .cv-document,
-.dark .live-preview-container {
-  color: #111827 !important;
-}
-
-/* Protect headings in CV preview from dark mode overrides */
-.dark .cv-page h1, .dark .cv-page h2, .dark .cv-page h3,
-.dark .cv-page h4, .dark .cv-page h5, .dark .cv-page h6,
-.dark .cv-page-custom h1, .dark .cv-page-custom h2, .dark .cv-page-custom h3,
-.dark .cv-page-custom h4, .dark .cv-page-custom h5, .dark .cv-page-custom h6,
-.dark .builder-preview h1, .dark .builder-preview h2, .dark .builder-preview h3,
-.dark .builder-preview h4, .dark .builder-preview h5, .dark .builder-preview h6,
-.dark .cv-container h1, .dark .cv-container h2, .dark .cv-container h3,
-.dark .cv-container h4, .dark .cv-container h5, .dark .cv-container h6,
-.dark .cv-document h1, .dark .cv-document h2, .dark .cv-document h3,
-.dark .cv-document h4, .dark .cv-document h5, .dark .cv-document h6,
-.dark .live-preview-container h1, .dark .live-preview-container h2, .dark .live-preview-container h3,
-.dark .live-preview-container h4, .dark .live-preview-container h5, .dark .live-preview-container h6,
-.dark .dashboard-page .cv-page h1, .dark .dashboard-page .cv-page h2, .dark .dashboard-page .cv-page h3,
-.dark .dashboard-page .cv-page h4, .dark .dashboard-page .cv-page h5, .dark .dashboard-page .cv-page h6,
-.dark .dashboard-page .cv-page-custom h1, .dark .dashboard-page .cv-page-custom h2, .dark .dashboard-page .cv-page-custom h3,
-.dark .dashboard-page .cv-page-custom h4, .dark .dashboard-page .cv-page-custom h5, .dark .dashboard-page .cv-page-custom h6,
-.dark .dashboard-page .builder-preview h1, .dark .dashboard-page .builder-preview h2, .dark .dashboard-page .builder-preview h3,
-.dark .dashboard-page .builder-preview h4, .dark .dashboard-page .builder-preview h5, .dark .dashboard-page .builder-preview h6,
-.dark .dashboard-page .cv-container h1, .dark .dashboard-page .cv-container h2, .dark .dashboard-page .cv-container h3,
-.dark .dashboard-page .cv-container h4, .dark .dashboard-page .cv-container h5, .dark .dashboard-page .cv-container h6,
-.dark .dashboard-page .cv-document h1, .dark .dashboard-page .cv-document h2, .dark .dashboard-page .cv-document h3,
-.dark .dashboard-page .cv-document h4, .dark .dashboard-page .cv-document h5, .dark .dashboard-page .cv-document h6,
-.dark .dashboard-page .live-preview-container h1, .dark .dashboard-page .live-preview-container h2, .dark .dashboard-page .live-preview-container h3,
-.dark .dashboard-page .live-preview-container h4, .dark .dashboard-page .live-preview-container h5, .dark .dashboard-page .live-preview-container h6 {
-  color: #111827 !important;
-}
-
-.dark .cv-page .text-gray-900,
-.dark .cv-page-custom .text-gray-900,
-.dark .builder-preview .text-gray-900,
-.dark .cv-container .text-gray-900,
-.dark .cv-document .text-gray-900,
-.dark .live-preview-container .text-gray-900,
-.dark .dashboard-page .cv-page .text-gray-900,
-.dark .dashboard-page .cv-page-custom .text-gray-900,
-.dark .dashboard-page .builder-preview .text-gray-900,
-.dark .dashboard-page .cv-container .text-gray-900,
-.dark .dashboard-page .cv-document .text-gray-900,
-.dark .dashboard-page .live-preview-container .text-gray-900 {
-  color: #111827 !important;
-}
-
-.dark .cv-page .text-gray-600,
-.dark .cv-page-custom .text-gray-600,
-.dark .builder-preview .text-gray-600,
-.dark .cv-container .text-gray-600,
-.dark .cv-document .text-gray-600,
-.dark .live-preview-container .text-gray-600,
-.dark .dashboard-page .cv-page .text-gray-600,
-.dark .dashboard-page .cv-page-custom .text-gray-600,
-.dark .dashboard-page .builder-preview .text-gray-600,
-.dark .dashboard-page .cv-container .text-gray-600,
-.dark .dashboard-page .cv-document .text-gray-600,
-.dark .dashboard-page .live-preview-container .text-gray-600 {
-  color: #4b5563 !important;
-}
-
-.dark .cv-page .text-gray-500,
-.dark .cv-page-custom .text-gray-500,
-.dark .builder-preview .text-gray-500,
-.dark .cv-container .text-gray-500,
-.dark .cv-document .text-gray-500,
-.dark .live-preview-container .text-gray-500,
-.dark .dashboard-page .cv-page .text-gray-500,
-.dark .dashboard-page .cv-page-custom .text-gray-500,
-.dark .dashboard-page .builder-preview .text-gray-500,
-.dark .dashboard-page .cv-container .text-gray-500,
-.dark .dashboard-page .cv-document .text-gray-500,
-.dark .dashboard-page .live-preview-container .text-gray-500 {
-  color: #6b7280 !important;
-}
-
-.dark .cv-page .text-gray-400,
-.dark .cv-page-custom .text-gray-400,
-.dark .builder-preview .text-gray-400,
-.dark .cv-container .text-gray-400,
-.dark .cv-document .text-gray-400,
-.dark .live-preview-container .text-gray-400,
-.dark .dashboard-page .cv-page .text-gray-400,
-.dark .dashboard-page .cv-page-custom .text-gray-400,
-.dark .dashboard-page .builder-preview .text-gray-400,
-.dark .dashboard-page .cv-container .text-gray-400,
-.dark .dashboard-page .cv-document .text-gray-400,
-.dark .dashboard-page .live-preview-container .text-gray-400 {
-  color: #9ca3af !important;
 }
 
 /* Dashboard accent colors - Dark theme only */
@@ -1474,7 +1486,11 @@ nav {
 }
 
 @media print {
-  .cl-container {
+  .cl-container,
+  .cv-document,
+  .cv-page,
+  .template-wrapper,
+  .cv-page-wrapper {
     padding: 0 !important;
     margin: 0 !important;
     box-shadow: none !important;
@@ -3112,3 +3128,15 @@ mark[data-type="highlight"] {
   animation: mori-pulse-highlight-kf 1.5s ease-out;
   border-radius: 4px;
 }
+
+@layer utilities {
+  .fluid-h1 { font-size: clamp(1.5rem, 5cqi, 3rem); }
+  .fluid-h2 { font-size: clamp(1.25rem, 4cqi, 2rem); }
+  .fluid-p  { font-size: clamp(0.875rem, 2.5cqi, 1.125rem); }
+  
+  /* Glassmorphism Panel Base */
+  .panel-glass {
+    @apply bg-white/70 dark:bg-[#141414]/70 backdrop-blur-glass border border-white/20 dark:border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.05)];
+  }
+}
+
