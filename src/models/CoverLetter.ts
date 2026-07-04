@@ -29,6 +29,8 @@ export interface ICoverLetter extends Document {
     atsScore?: number;
     atsScoreDate?: Date;
     structuredBody?: any; // JSON object: { header, sections: { introduction, experience_bridge_1, ... }, metadata }
+    templateType?: string;
+    design?: any;
   };
 }
 
@@ -151,6 +153,14 @@ const coverLetterSchema = new Schema<ICoverLetter>({
     },
     structuredBody: {
       type: Schema.Types.Mixed, // Stores the JSON object: { header, sections: { introduction, experience_bridge_1, ... }, metadata }
+      default: null
+    },
+    templateType: {
+      type: String,
+      default: 'modern'
+    },
+    design: {
+      type: Schema.Types.Mixed,
       default: null
     }
   }

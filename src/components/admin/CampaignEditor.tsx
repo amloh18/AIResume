@@ -53,7 +53,7 @@ interface Campaign {
   subject: string;
   htmlContent: string;
   plainTextContent?: string;
-  status: "draft" | "scheduled" | "sent" | "cancelled";
+  status: "draft" | "scheduled" | "sent" | "cancelled" | "sending" | "recurring" | "archived";
   targetFilters: any;
   targetedUserCount?: number;
   scheduledAt?: string;

@@ -1,7 +1,7 @@
 'use client';
 
 
-import React, { useState, useEffect, useImperativeHandle, forwardRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useImperativeHandle, forwardRef, useMemo, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { GripVertical, Download, Plus, LayoutTemplate, Save, RefreshCw, Layers, Check, Search, Filter, Briefcase, PlusCircle, Trash2, ChevronUp, ChevronDown, ImageIcon, ArrowRight, Loader2, PlayCircle, Eye, MousePointer2, Wand2, Quote, FileText, Palette, FileJson, X, Sparkles, Copy, CopyCheck, AlertCircle, Undo, Redo } from 'lucide-react';
 import { CANVAS_TEMPLATES, TEMPLATE_CATEGORIES, SNIPPETS, TITLE_STYLES, SNIPPET_FAMILIES, ATS_SNIPPETS } from './registry';
@@ -366,7 +366,9 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
   const [activeTemplate, setActiveTemplate] = useState(cvData?.metadata?.canvasTemplate || template || CANVAS_TEMPLATES[0]);
   const [focusedNode, setFocusedNode] = useState<HTMLElement | null>(null);
   const [zones, setZones] = useState<Record<string, any[]>>(() => {
-    const raw: Record<string, any[]> = cvData?.metadata?.canvasZones || {};
+    const activeId = cvData?.metadata?.canvasTemplate?.id || (template?.id || CANVAS_TEMPLATES[0].id);
+    const cachedZones = cvData?.metadata?.canvasTemplatesZones?.[activeId];
+    const raw: Record<string, any[]> = cachedZones || cvData?.metadata?.canvasZones || {};
     // Deduplicate blocks within each zone to prevent React duplicate-key warnings
     const deduped: Record<string, any[]> = {};
     Object.keys(raw).forEach(zoneId => {
@@ -380,21 +382,25 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     return deduped;
   });
   const [templateAnimKey, setTemplateAnimKey] = useState(0);
-  const [design, setDesign] = useState(cvData?.metadata?.canvasDesign || { 
-    font: 'Inter', 
-    fontSize: 12, 
-    spacing: 1.0, 
-    accentColor: '#22c55e', 
-    pageMargin: 40, 
-    showContactIcons: true, 
-    showHeaderIcons: true, 
-    headerLinks: {} as Record<string, boolean>, 
-    sidebarBgColor: '#f8fafc', 
-    sectionGap: 16, 
-    itemGap: 12, // Gap between items/child containers
-    pageSize: 'A4' as 'A4' | 'Letter', 
-    dateFormat: 'MMM YYYY',
-    splitContactInSidebar: false
+  const [design, setDesign] = useState(() => {
+    const activeId = cvData?.metadata?.canvasTemplate?.id || (template?.id || CANVAS_TEMPLATES[0].id);
+    const cachedDesign = cvData?.metadata?.canvasTemplatesDesign?.[activeId];
+    return cachedDesign || cvData?.metadata?.canvasDesign || { 
+      font: 'Inter', 
+      fontSize: 12, 
+      spacing: 1.0, 
+      accentColor: '#22c55e', 
+      pageMargin: 40, 
+      showContactIcons: true, 
+      showHeaderIcons: true, 
+      headerLinks: {} as Record<string, boolean>, 
+      sidebarBgColor: '#f8fafc', 
+      sectionGap: 16, 
+      itemGap: 12, // Gap between items/child containers
+      pageSize: 'A4' as 'A4' | 'Letter', 
+      dateFormat: 'MMM YYYY',
+      splitContactInSidebar: false
+    };
   });
   const [activeSidebar, setActiveSidebar] = useState<string | null>(null);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
@@ -484,21 +490,34 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     devicePixelRatio: typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1,
   }));
 
+  const designRef = useRef(design);
+  const zonesRef = useRef(zones);
+
+  useEffect(() => {
+    designRef.current = design;
+  }, [design]);
+
+  useEffect(() => {
+    zonesRef.current = zones;
+  }, [zones]);
+
   // Sync local state with cvData prop changes (external updates like "Fix Now" or "Mori Chat")
   useEffect(() => {
     if (!cvData) return;
 
+    const activeId = activeTemplate.id;
+    const rawZones = cvData.metadata?.canvasTemplatesZones?.[activeId] || cvData.metadata?.canvasZones;
+
     // 1. Sync zones if metadata changed externally
-    if (cvData.metadata?.canvasZones) {
-      const raw = cvData.metadata.canvasZones;
-      const currentZonesStr = JSON.stringify(zones);
-      const nextZonesStr = JSON.stringify(raw);
+    if (rawZones) {
+      const currentZonesStr = JSON.stringify(zonesRef.current);
+      const nextZonesStr = JSON.stringify(rawZones);
       
       if (currentZonesStr !== nextZonesStr) {
         const deduped: Record<string, any[]> = {};
-        Object.keys(raw).forEach(zoneId => {
+        Object.keys(rawZones).forEach(zoneId => {
           const seen = new Set<string>();
-          deduped[zoneId] = (raw[zoneId] || []).filter((block: any) => {
+          deduped[zoneId] = (rawZones[zoneId] || []).filter((block: any) => {
             if (!block?.id || seen.has(block.id)) return false;
             seen.add(block.id);
             return true;
@@ -509,11 +528,12 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     }
 
     // 2. Sync design if metadata changed externally
-    if (cvData.metadata?.canvasDesign) {
-      const currentDesignStr = JSON.stringify(design);
-      const nextDesignStr = JSON.stringify(cvData.metadata.canvasDesign);
+    const rawDesign = cvData.metadata?.canvasTemplatesDesign?.[activeId] || cvData.metadata?.canvasDesign;
+    if (rawDesign) {
+      const currentDesignStr = JSON.stringify(designRef.current);
+      const nextDesignStr = JSON.stringify(rawDesign);
       if (currentDesignStr !== nextDesignStr) {
-        setDesign(cvData.metadata.canvasDesign);
+        setDesign(rawDesign);
       }
     }
 
@@ -521,7 +541,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     if (cvData.metadata?.canvasTemplate && cvData.metadata.canvasTemplate.id !== activeTemplate.id) {
       setActiveTemplate(cvData.metadata.canvasTemplate);
     }
-  }, [cvData.metadata]);
+  }, [cvData.metadata, activeTemplate.id]);
 
   useEffect(() => {
     if (template && template.id !== activeTemplate.id && !cvData?.metadata?.canvasTemplate) {
@@ -535,24 +555,41 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
 
     // Use a small timeout to prevent too many updates, but keep data synced
     const timer = setTimeout(() => {
+      const currentTemplatesZones = cvData?.metadata?.canvasTemplatesZones || {};
+      const currentTemplatesDesign = cvData?.metadata?.canvasTemplatesDesign || {};
+
+      // Ensure current template's state is updated in the caches
+      const updatedTemplatesZones = {
+        ...currentTemplatesZones,
+        [activeTemplate.id]: zones
+      };
+      const updatedTemplatesDesign = {
+        ...currentTemplatesDesign,
+        [activeTemplate.id]: design
+      };
+
       const updatedMetadata = {
         ...cvData?.metadata,
         canvasDesign: design,
         canvasTemplate: activeTemplate,
-        canvasZones: zones
+        canvasZones: zones,
+        canvasTemplatesZones: updatedTemplatesZones,
+        canvasTemplatesDesign: updatedTemplatesDesign
       };
 
       if (
         JSON.stringify(cvData?.metadata?.canvasDesign) !== JSON.stringify(design) ||
         JSON.stringify(cvData?.metadata?.canvasTemplate?.id) !== JSON.stringify(activeTemplate.id) ||
-        JSON.stringify(cvData?.metadata?.canvasZones) !== JSON.stringify(zones)
+        JSON.stringify(cvData?.metadata?.canvasZones) !== JSON.stringify(zones) ||
+        JSON.stringify(cvData?.metadata?.canvasTemplatesZones) !== JSON.stringify(updatedTemplatesZones) ||
+        JSON.stringify(cvData?.metadata?.canvasTemplatesDesign) !== JSON.stringify(updatedTemplatesDesign)
       ) {
         onDataChange({ ...cvData, metadata: updatedMetadata });
       }
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [design, activeTemplate, zones, readOnly]);
+  }, [design, activeTemplate, zones, readOnly, cvData?.metadata]);
 
   useEffect(() => {
     if (readOnly) return;
@@ -798,14 +835,53 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
 
   const loadTemplate = (template: any) => {
     if (!template) return;
+
+    // Save current active template's layout and design into the layout cache before switching
+    const templateCacheZones = cvData?.metadata?.canvasTemplatesZones || {};
+    const templateCacheDesign = cvData?.metadata?.canvasTemplatesDesign || {};
+
+    const updatedTemplatesZones = {
+      ...templateCacheZones,
+      [activeTemplate.id]: zones
+    };
+    const updatedTemplatesDesign = {
+      ...templateCacheDesign,
+      [activeTemplate.id]: design
+    };
+
     setActiveTemplate(template);
-    const initialZones: Record<string, any[]> = {};
-    if (template?.zones) {
-      Object.keys(template.zones).forEach((zoneId: string) => {
-        initialZones[zoneId] = template.zones[zoneId].map((type: string) => ({ id: generateId(), type }));
-      });
+
+    // Load from cache if it exists, otherwise fall back to template defaults
+    if (updatedTemplatesZones[template.id]) {
+      setZones(updatedTemplatesZones[template.id]);
+    } else {
+      const initialZones: Record<string, any[]> = {};
+      if (template?.zones) {
+        Object.keys(template.zones).forEach((zoneId: string) => {
+          initialZones[zoneId] = template.zones[zoneId].map((type: string) => ({ id: generateId(), type }));
+        });
+      }
+      setZones(initialZones);
     }
-    setZones(initialZones);
+
+    if (updatedTemplatesDesign[template.id]) {
+      setDesign(updatedTemplatesDesign[template.id]);
+    }
+
+    const updatedMetadata = {
+      ...cvData?.metadata,
+      canvasDesign: updatedTemplatesDesign[template.id] || design,
+      canvasTemplate: template,
+      canvasZones: updatedTemplatesZones[template.id] || zones,
+      canvasTemplatesZones: updatedTemplatesZones,
+      canvasTemplatesDesign: updatedTemplatesDesign
+    };
+
+    // Trigger onDataChange immediately to save the cached zones
+    if (!readOnly) {
+      onDataChange({ ...cvData, metadata: updatedMetadata });
+    }
+
     const portalTarget = typeof document !== 'undefined' && document.getElementById('builder-utility-panel-portal');
     if (!portalTarget) {
       setIsTemplateModalOpen(false);
@@ -1200,7 +1276,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
         const blockId = blockEl.getAttribute('data-block-id');
         if (!blockId) return;
 
-        const parentHeight = blockEl.getBoundingClientRect().height / scale;
+        const parentHeight = Math.round(blockEl.getBoundingClientRect().height / scale);
 
         // Find all list entry children inside this block
         const entryElements = Array.from(blockEl.querySelectorAll('.cv-item.cv-page-breakable')) as HTMLElement[];
@@ -1211,14 +1287,14 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
           entryElements.forEach((entryEl, idx) => {
             const entryId = entryEl.getAttribute('data-entry-id');
             if (entryId) {
-              const h = entryEl.getBoundingClientRect().height / scale;
+              const h = Math.round(entryEl.getBoundingClientRect().height / scale);
               const unitId = `${blockId}_entry_${entryId}`;
               unitHeights[unitId] = h;
               sumEntriesHeight += h;
               
               if (idx > 0) {
                 const prevEl = entryElements[idx - 1];
-                const gap = (entryEl.getBoundingClientRect().top - prevEl.getBoundingClientRect().bottom) / scale;
+                const gap = Math.round((entryEl.getBoundingClientRect().top - prevEl.getBoundingClientRect().bottom) / scale);
                 sumEntryGaps += Math.max(0, gap);
               }
             }
@@ -1228,10 +1304,10 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
           const blockTop = blockEl.getBoundingClientRect().top;
           const firstEntryTop = entryElements[0].getBoundingClientRect().top;
           const headerUnitId = `${blockId}_header`;
-          unitHeights[headerUnitId] = Math.max(0, (firstEntryTop - blockTop) / scale);
+          unitHeights[headerUnitId] = Math.max(0, Math.round((firstEntryTop - blockTop) / scale));
           
           // Store average entry gap for this block
-          unitHeights[`${blockId}_entryGap`] = entryElements.length > 1 ? (sumEntryGaps / (entryElements.length - 1)) : 16;
+          unitHeights[`${blockId}_entryGap`] = entryElements.length > 1 ? Math.round(sumEntryGaps / (entryElements.length - 1)) : 16;
         } else {
           // Non-list block
           unitHeights[blockId] = parentHeight;

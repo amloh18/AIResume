@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import { User } from '@/models';
 import subscriptionService from '@/lib/services/subscriptionService';
+import mongoose from 'mongoose';
 
 export async function GET(request: NextRequest) {
   try {
@@ -19,11 +20,15 @@ export async function GET(request: NextRequest) {
     const query: any = {};
     
     if (search) {
+      const isObjectId = mongoose.isValidObjectId(search);
       query.$or = [
         { email: { $regex: search, $options: 'i' } },
         { firstName: { $regex: search, $options: 'i' } },
         { lastName: { $regex: search, $options: 'i' } }
       ];
+      if (isObjectId) {
+        query.$or.push({ _id: new mongoose.Types.ObjectId(search) });
+      }
     }
     
     if (role && role !== 'all') {

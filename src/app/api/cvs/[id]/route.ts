@@ -846,13 +846,16 @@ export async function PUT(
       );
 
       if (s3Url) {
-        // Store S3 URL in metadata
-        if (!cv.metadata) {
-          cv.metadata = {} as any;
-        }
-        (cv.metadata as any).s3BackupUrl = s3Url;
-        (cv.metadata as any).s3BackupSavedAt = new Date();
-        await cv.save();
+        // Store S3 URL in metadata via direct update to avoid dirty-document save races
+        await CV.updateOne(
+          { _id: cv._id },
+          {
+            $set: {
+              'metadata.s3BackupUrl': s3Url,
+              'metadata.s3BackupSavedAt': new Date()
+            }
+          }
+        );
         console.log('✅ CV UPDATE API - CV saved to S3:', s3Url);
       }
     } catch (s3Error) {

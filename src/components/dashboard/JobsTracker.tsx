@@ -15,6 +15,7 @@ import toast from 'react-hot-toast';
 import { CVJourney } from '@/types/cv';
 import JobSidebar from './jobs/JobSidebar';
 import EditJobSidebar from './jobs/EditJobSidebar';
+import TrackerOnboarding from './jobs/TrackerOnboarding';
 import type { TrackerSidebarOpenContext } from './jobs/trackerSidebarConfig';
 import JobCreationPaywall from '@/components/payment/JobCreationPaywall';
 import JobsHeader from './jobs/JobsHeader';
@@ -1385,6 +1386,7 @@ const JobsTracker: React.FC = () => {
 
   return (
     <React.Fragment>
+      <TrackerOnboarding />
       <div className="h-full flex flex-col min-w-0 w-full max-w-full overflow-hidden">
         <div className="w-full h-full flex flex-col min-w-0 max-w-full overflow-hidden">
           {/* Enhanced Header - Fixed Width Container */}

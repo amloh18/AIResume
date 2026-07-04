@@ -51,13 +51,17 @@ function injectItemIds(obj: any): any {
 }
 
 export async function POST(req: NextRequest) {
+  let session: any = null;
+  let cvId: string | undefined = undefined;
   try {
-    const session = await getServerSession(authOptions);
+    session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { chatId, messages, cvData, selection, jobData, targetRole, seniorityLevel, cvId, cvType } = await req.json();
+    const body = await req.json();
+    const { chatId, messages, cvData, selection, jobData, targetRole, seniorityLevel, cvType } = body;
+    cvId = body.cvId || undefined;
 
     const incomingLatest = messages[messages.length - 1];
     const latestMessage = {

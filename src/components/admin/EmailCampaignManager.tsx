@@ -29,7 +29,7 @@ interface Campaign {
   campaignName: string;
   subject: string;
   htmlContent: string;
-  status: 'draft' | 'scheduled' | 'sent' | 'cancelled';
+  status: 'draft' | 'scheduled' | 'sent' | 'cancelled' | 'sending' | 'recurring' | 'archived';
   targetFilters: any;
   targetedUserCount: number;
   sentCount: number;
@@ -374,7 +374,22 @@ export default function EmailCampaignManager() {
                         </div>
                       </td>
                       <td className="px-8 py-6">
-                        {campaign.status === 'sent' ? (
+                        {campaign.status === 'sending' ? (
+                          (() => {
+                            const sendProgress = campaign.targetedUserCount > 0 ? Math.round((campaign.sentCount / campaign.targetedUserCount) * 100) : 0;
+                            return (
+                              <div className="flex items-center gap-3">
+                                <div className="flex flex-col">
+                                  <span className="text-xs font-black text-blue-400 animate-pulse">{sendProgress}%</span>
+                                  <span className="text-[9px] font-bold text-blue-400/50 uppercase tracking-tighter text-nowrap animate-pulse">Dispatched</span>
+                                </div>
+                                <div className="w-12 h-1.5 bg-white/5 rounded-full overflow-hidden">
+                                  <div className="h-full bg-blue-500 animate-pulse" style={{ width: `${sendProgress}%` }} />
+                                </div>
+                              </div>
+                            );
+                          })()
+                        ) : campaign.status === 'sent' ? (
                           <div className="flex items-center gap-3">
                             <div className="flex flex-col">
                               <span className="text-xs font-black text-white">{openRate}%</span>

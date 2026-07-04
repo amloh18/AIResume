@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, UserPlus, LogIn, User, Sparkles, Lock } from 'lucide-react';
+import { X, UserPlus, LogIn, User, Sparkles, Lock, AlertTriangle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 
@@ -86,16 +86,29 @@ export default function AuthPromptModal({
 
             {/* Body */}
             <div className="p-6 space-y-4 bg-white dark:bg-[#141810]">
-              <div className="flex items-start space-x-3 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                <Sparkles className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-                <div className="flex-1">
-                  <p className="text-sm text-blue-900 dark:text-blue-100 font-medium">
-                    Your progress is saved!
-                  </p>
-                  <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
-                    Sign up to unlock all features and never lose your work. Your CV will be saved automatically.
-                  </p>
+              <div className="flex flex-col space-y-3 p-4 bg-amber-500/10 dark:bg-amber-500/5 rounded-xl border border-amber-500/20">
+                <div className="flex items-start space-x-3">
+                  <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm text-amber-800 dark:text-amber-300 font-bold uppercase tracking-wider">
+                      Temporary Guest Session
+                    </p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                      You are currently using a guest draft. If you do not sign in to sync your work, you will lose:
+                    </p>
+                  </div>
                 </div>
+                <ul className="space-y-1.5 pl-8 text-xs text-gray-700 dark:text-gray-300 list-disc leading-relaxed">
+                  <li>
+                    <strong className="text-amber-700 dark:text-amber-400">Live ATS History:</strong> All scanned keyword audits, formatting checks, and progress checklists will be permanently cleared.
+                  </li>
+                  <li>
+                    <strong className="text-amber-700 dark:text-amber-400">Mori AI Chats & Letter Guides:</strong> Custom AI-generated cover letters, section guides, and chat logs will be lost.
+                  </li>
+                  <li>
+                    <strong className="text-amber-700 dark:text-amber-400">Cloud Backup & Sync:</strong> Your edits are stored locally in this browser. Clearing cookies or switching devices will wipe your CV draft.
+                  </li>
+                </ul>
               </div>
 
               <div className="space-y-3">

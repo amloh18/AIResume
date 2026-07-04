@@ -100,6 +100,9 @@ export const createTransporter = () => {
     maxMessages: Infinity,
     rateDelta: 1000,
     rateLimit: 100, // 100 sends per second maximum throttling
+    tls: {
+      rejectUnauthorized: false
+    }
   });
 };
 
