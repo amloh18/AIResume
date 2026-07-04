@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import {
     Send, Users, Target, DollarSign, BarChart3, Plus, X, Bell, CheckCircle, 
     XCircle, AlertCircle, Megaphone, Beaker, History, Zap, Shield, Sparkles,
-    TrendingUp, ArrowUpRight, Activity
+    TrendingUp, ArrowUpRight, Activity, Search, Loader2, Gift, Info
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -36,7 +36,44 @@ export default function UnifiedNotificationManager() {
         channels: ['in-app'],
         persistent: false,
         expiresAt: '',
+        userId: '',
     });
+
+    // --- User Search States ---
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchResults, setSearchResults] = useState<any[]>([]);
+    const [searchLoading, setSearchLoading] = useState(false);
+    const [selectedUser, setSelectedUser] = useState<any>(null);
+
+    // --- AI Generator States ---
+    const [showAiPanel, setShowAiPanel] = useState(false);
+    const [aiTopic, setAiTopic] = useState('');
+    const [aiGenerating, setAiGenerating] = useState(false);
+    const [aiGeneratedIcon, setAiGeneratedIcon] = useState('');
+
+    // Debounced search for users by name/email/ID
+    useEffect(() => {
+        if (!searchQuery) {
+            setSearchResults([]);
+            return;
+        }
+        const delayDebounceFn = setTimeout(async () => {
+            setSearchLoading(true);
+            try {
+                const response = await fetch(`/api/admin/users?search=${encodeURIComponent(searchQuery)}&limit=5`);
+                const data = await response.json();
+                if (data.success) {
+                    setSearchResults(data.users || []);
+                }
+            } catch (err) {
+                console.error('Failed to search users:', err);
+            } finally {
+                setSearchLoading(false);
+            }
+        }, 300);
+
+        return () => clearTimeout(delayDebounceFn);
+    }, [searchQuery]);
 
     // --- Test Notification State ---
     const [testUserId, setTestUserId] = useState('');
@@ -53,6 +90,10 @@ export default function UnifiedNotificationManager() {
     const [sendingAllTest, setSendingAllTest] = useState(false);
 
     const handleSendNotification = async () => {
+        if (notificationForm.targetAudience === 'specific' && !notificationForm.userId) {
+            toast({ title: 'User Required', description: 'Please select a specific user to notify.', variant: 'destructive' });
+            return;
+        }
         setSending(true);
         try {
             const response = await fetch('/api/admin/notifications/send', {
@@ -62,7 +103,7 @@ export default function UnifiedNotificationManager() {
             });
 
             if (response.ok) {
-                toast({ title: 'Alert Sent', description: 'All targeted users have been notified.' });
+                toast({ title: 'Alert Sent', description: 'User or target group has been notified.' });
                 setNotificationForm({
                     type: 'system_update',
                     title: '',
@@ -72,12 +113,57 @@ export default function UnifiedNotificationManager() {
                     channels: ['in-app'],
                     persistent: false,
                     expiresAt: '',
+                    userId: '',
                 });
+                setSelectedUser(null);
+                setSearchQuery('');
+                setAiGeneratedIcon('');
+            } else {
+                const data = await response.json();
+                toast({ title: 'Failed to send alert', description: data.error || 'Server error', variant: 'destructive' });
             }
         } catch (error) {
             toast({ title: 'Failed to send alert', variant: 'destructive' });
         } finally {
             setSending(false);
+        }
+    };
+
+    const handleGenerateWithAi = async () => {
+        if (!aiTopic) {
+            toast({ title: 'Context Required', description: 'Please specify the topic or key details for AI generation.', variant: 'destructive' });
+            return;
+        }
+        setAiGenerating(true);
+        try {
+            const response = await fetch('/api/admin/notifications/generate-ai', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    notificationType: notificationForm.type,
+                    topic: aiTopic,
+                    targetAudience: notificationForm.targetAudience
+                })
+            });
+            const result = await response.json();
+            if (result.success) {
+                const { title, message, type, icon } = result.data;
+                setNotificationForm(prev => ({
+                    ...prev,
+                    title,
+                    message,
+                    type: type || prev.type
+                }));
+                setAiGeneratedIcon(icon);
+                toast({ title: 'AI Copy Generated', description: 'Subject and content updated successfully.' });
+                setShowAiPanel(false);
+            } else {
+                toast({ title: 'AI Generation Failed', description: result.error || 'Server error', variant: 'destructive' });
+            }
+        } catch (err: any) {
+            toast({ title: 'AI Call Failed', description: err.message, variant: 'destructive' });
+        } finally {
+            setAiGenerating(false);
         }
     };
 
@@ -231,21 +317,189 @@ export default function UnifiedNotificationManager() {
                                             <SelectItem value="system_update">App Update</SelectItem>
                                             <SelectItem value="discount_offer">Discount Offer</SelectItem>
                                             <SelectItem value="achievement">User Milestone</SelectItem>
+                                            <SelectItem value="job_applied">Status Change</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
                                 <div className="space-y-2">
                                     <Label className="text-[10px] font-black text-white/40 uppercase tracking-widest ml-1">Target Users</Label>
-                                    <Select value={notificationForm.targetAudience} onValueChange={(v) => setNotificationForm({ ...notificationForm, targetAudience: v })}>
+                                    <Select value={notificationForm.targetAudience} onValueChange={(v) => {
+                                        setNotificationForm({ ...notificationForm, targetAudience: v, userId: '' });
+                                        setSearchQuery('');
+                                        setSelectedUser(null);
+                                    }}>
                                         <SelectTrigger className="bg-black/40 border-white/5 focus:ring-emerald-500/20 rounded-2xl py-6 text-white"><SelectValue /></SelectTrigger>
                                         <SelectContent className="bg-[#111111] border-white/10 text-white rounded-xl">
                                             <SelectItem value="all">All Users</SelectItem>
                                             <SelectItem value="free">Free Users</SelectItem>
                                             <SelectItem value="paid">Premium Users</SelectItem>
                                             <SelectItem value="new">New Users</SelectItem>
+                                            <SelectItem value="specific">🔍 Specific User</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
+                            </div>
+
+                            {notificationForm.targetAudience === 'specific' && (
+                                <div className="space-y-2 relative">
+                                    <Label className="text-[10px] font-black text-white/40 uppercase tracking-widest ml-1">Search Specific User</Label>
+                                    <div className="relative">
+                                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30 w-4 h-4" />
+                                        <Input
+                                            value={searchQuery}
+                                            onChange={(e) => {
+                                                setSearchQuery(e.target.value);
+                                                if (selectedUser) {
+                                                    setSelectedUser(null);
+                                                    setNotificationForm(prev => ({ ...prev, userId: '' }));
+                                                }
+                                            }}
+                                            placeholder="Search by name, email, or MongoDB User ID..."
+                                            className="bg-black/40 border-white/5 focus:border-emerald-500/50 rounded-2xl py-6 pl-12 pr-4 text-white placeholder:text-white/20"
+                                        />
+                                        {searchLoading && (
+                                            <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 animate-spin text-emerald-400 w-4 h-4" />
+                                        )}
+                                    </div>
+                                    
+                                    {/* Search Results Dropdown */}
+                                    {searchResults.length > 0 && !selectedUser && (
+                                        <div className="absolute top-full left-0 right-0 mt-2 bg-[#17191d] border border-white/10 rounded-2xl overflow-hidden z-50 shadow-2xl divide-y divide-white/5">
+                                            {searchResults.map((user) => (
+                                                <div
+                                                    key={user._id}
+                                                    onClick={() => {
+                                                        setSelectedUser(user);
+                                                        setNotificationForm(prev => ({ ...prev, userId: user._id }));
+                                                        setSearchQuery(`${user.firstName || ''} ${user.lastName || ''} (${user.email})`);
+                                                        setSearchResults([]);
+                                                    }}
+                                                    className="p-4 hover:bg-white/5 cursor-pointer flex items-center justify-between transition-colors group"
+                                                >
+                                                    <div>
+                                                        <p className="text-xs font-bold text-white group-hover:text-emerald-400">
+                                                            {user.firstName || ''} {user.lastName || ''}
+                                                        </p>
+                                                        <p className="text-[10px] text-white/40 mt-0.5">{user.email}</p>
+                                                    </div>
+                                                    <span className="text-[9px] font-mono text-white/20 bg-white/5 px-2 py-1 rounded">
+                                                        {user._id}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {searchQuery && searchResults.length === 0 && !searchLoading && !selectedUser && (
+                                        <div className="absolute top-full left-0 right-0 mt-2 bg-[#17191d] border border-white/10 rounded-2xl p-4 z-50 text-center text-xs text-white/40">
+                                            No users found matching "{searchQuery}"
+                                        </div>
+                                    )}
+
+                                    {selectedUser && (
+                                        <div className="flex items-center justify-between p-3.5 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400 font-extrabold text-xs">
+                                                    {selectedUser.firstName?.[0] || 'U'}
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs font-bold text-white">
+                                                        {selectedUser.firstName} {selectedUser.lastName}
+                                                    </p>
+                                                    <p className="text-[9px] text-emerald-400 font-medium">{selectedUser.email}</p>
+                                                </div>
+                                            </div>
+                                            <button
+                                                onClick={() => {
+                                                    setSelectedUser(null);
+                                                    setNotificationForm(prev => ({ ...prev, userId: '' }));
+                                                    setSearchQuery('');
+                                                }}
+                                                className="p-1 rounded-lg text-white/30 hover:text-white hover:bg-white/5 transition-colors border-none bg-transparent"
+                                            >
+                                                <X className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* AI Copilot Card */}
+                            <div className="border border-white/5 bg-white/[0.01] hover:bg-white/[0.02] p-6 rounded-3xl transition-all space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <div className="p-2 bg-[#80FF00]/10 rounded-lg text-[#80FF00]">
+                                            <Sparkles className="w-4 h-4" />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-xs font-black uppercase tracking-widest text-white">
+                                                AI Notification Copilot
+                                            </h4>
+                                            <p className="text-[9px] text-white/30 uppercase tracking-wider mt-0.5">
+                                                Generate Copy, Categories & Icons with AI
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <Button
+                                        onClick={() => setShowAiPanel(!showAiPanel)}
+                                        variant="outline"
+                                        className={`px-4 py-1.5 h-auto text-[9px] font-black uppercase tracking-widest rounded-xl transition-all ${
+                                            showAiPanel 
+                                                ? 'bg-[#80FF00]/20 text-[#80FF00] border-[#80FF00]/30' 
+                                                : 'bg-white/5 text-white border-white/10 hover:bg-white/10'
+                                        }`}
+                                    >
+                                        {showAiPanel ? 'Hide Panel' : 'Open Copilot'}
+                                    </Button>
+                                </div>
+
+                                <AnimatePresence>
+                                    {showAiPanel && (
+                                        <motion.div
+                                            initial={{ opacity: 0, height: 0 }}
+                                            animate={{ opacity: 1, height: 'auto' }}
+                                            exit={{ opacity: 0, height: 0 }}
+                                            className="space-y-4 pt-2 overflow-hidden"
+                                        >
+                                            <div className="space-y-2">
+                                                <Label className="text-[9px] font-black text-white/40 uppercase tracking-widest ml-1">
+                                                    What is this notification about?
+                                                </Label>
+                                                <Textarea
+                                                    value={aiTopic}
+                                                    onChange={(e) => setAiTopic(e.target.value)}
+                                                    placeholder="e.g. Server maintenance on Sunday 2 AM UTC for 30 minutes, or discount code SAVE50 to get 50% off monthly subscriptions..."
+                                                    className="bg-black/40 border-white/5 focus:border-[#80FF00]/50 rounded-2xl min-h-[80px] text-xs text-white"
+                                                />
+                                            </div>
+                                            <Button
+                                                onClick={handleGenerateWithAi}
+                                                disabled={aiGenerating || !aiTopic}
+                                                className="w-full bg-[#80FF00] hover:bg-[#70e600] text-black font-black rounded-2xl py-5 text-xs uppercase tracking-widest"
+                                            >
+                                                {aiGenerating ? (
+                                                    <span className="flex items-center gap-2">
+                                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                                        Drafting copy...
+                                                    </span>
+                                                ) : (
+                                                    'Draft Notification with AI'
+                                                )}
+                                            </Button>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+
+                                {aiGeneratedIcon && (
+                                    <div className="flex items-center gap-2.5 p-3 bg-white/5 rounded-2xl">
+                                        <div className="p-2 bg-white/5 rounded-lg text-emerald-400">
+                                            <Sparkles className="w-4 h-4" />
+                                        </div>
+                                        <p className="text-[10px] text-white/60 font-medium">
+                                            AI recommended Lucide Icon: <strong className="text-white font-black">{aiGeneratedIcon}</strong>
+                                        </p>
+                                    </div>
+                                )}
                             </div>
 
                             <div className="space-y-2">

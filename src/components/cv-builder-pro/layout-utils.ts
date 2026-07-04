@@ -56,27 +56,20 @@ export function computeCanvasLayoutMetrics({
   devicePixelRatio?: number;
 }): CanvasLayoutMetrics {
   const dims = PAGE_DIMENSIONS[pageSize] || PAGE_DIMENSIONS.A4;
-  const dpr = Math.max(1, devicePixelRatio || 1);
 
   const isMobile = viewportWidth < 768;
   const isTablet = viewportWidth >= 768 && viewportWidth < 1280;
 
-  const workspacePaddingX = roundToDevicePixel(isMobile ? 16 : isTablet ? 24 : 32, dpr);
-  const workspacePaddingY = roundToDevicePixel(
-    viewportHeight < 820 ? 20 : isMobile ? 24 : 32,
-    dpr
-  );
+  const workspacePaddingX = isMobile ? 16 : isTablet ? 24 : 32;
+  const workspacePaddingY = viewportHeight < 820 ? 20 : isMobile ? 24 : 32;
 
-  const pageGapPx = roundToDevicePixel(
-    clamp(isMobile ? 24 : isTablet ? 32 : 40, 20, 48),
-    dpr
-  );
+  const pageGapPx = clamp(isMobile ? 24 : isTablet ? 32 : 40, 20, 48);
 
   const safeMargin = clamp(pageMargin, 0, 96);
-  const pageMarginPx = roundToDevicePixel(safeMargin, dpr);
-  const normalizedSectionGap = roundToDevicePixel(clamp(sectionGap, 8, 64), dpr);
-  const pageHeightPx = roundToDevicePixel(dims.heightPx, dpr);
-  const pageWidthPx = roundToDevicePixel(dims.widthPx, dpr);
+  const pageMarginPx = safeMargin;
+  const normalizedSectionGap = clamp(sectionGap, 8, 64);
+  const pageHeightPx = dims.heightPx;
+  const pageWidthPx = dims.widthPx;
 
   return {
     pageWidthCss: dims.widthCss,
@@ -90,6 +83,6 @@ export function computeCanvasLayoutMetrics({
     sectionGapPx: normalizedSectionGap,
     workspacePaddingX,
     workspacePaddingY,
-    slotHeightPx: roundToDevicePixel(pageHeightPx + pageGapPx, dpr),
+    slotHeightPx: pageHeightPx + pageGapPx,
   };
 }

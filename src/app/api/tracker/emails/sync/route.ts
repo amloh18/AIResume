@@ -69,7 +69,10 @@ export async function POST(request: NextRequest) {
               user: emailAddress,
               pass: password,
             },
-            connectionTimeout: 8000
+            connectionTimeout: 8000,
+            tls: {
+              rejectUnauthorized: false
+            }
           });
           
           await transporter.verify();

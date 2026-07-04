@@ -57,6 +57,12 @@ export interface ICV extends Document {
     parentMasterId?: mongoose.Types.ObjectId; // For Standalone CVs forked from Master
     isUserMaster?: boolean; // Definitive flag for THE Master CV (single per user)
     fresherMode?: boolean; // Education/Projects first layout (no work experience)
+    // Canvas Layout Engine fields
+    canvasDesign?: any;
+    canvasTemplate?: any;
+    canvasZones?: any;
+    canvasTemplatesZones?: any;
+    canvasTemplatesDesign?: any;
     // Analysis Snapshot for Onboarding & Dashboard
     analysisSnapshot?: {
       healthIndex: number;
@@ -225,6 +231,12 @@ const cvSchema = new Schema<ICV>({
       weaknesses: { type: [String], default: [] },
       generatedAt: { type: Date, default: Date.now }
     },
+    // Canvas Layout Engine fields
+    canvasDesign: { type: Schema.Types.Mixed },
+    canvasTemplate: { type: Schema.Types.Mixed },
+    canvasZones: { type: Schema.Types.Mixed },
+    canvasTemplatesZones: { type: Schema.Types.Mixed },
+    canvasTemplatesDesign: { type: Schema.Types.Mixed },
     // CV Surgeon Analysis Cache
     surgeonAnalysis: {
       score: { type: Number },
@@ -279,7 +291,21 @@ cvSchema.pre('save', async function (next) {
     // Keep cvData in sync for backward compatibility
     // This ensures existing components continue to work
     const { migrateToLegacyFormat } = require('@/lib/migrations/enhanced-resume-migration');
-    this.cvData = migrateToLegacyFormat(this.resumeData);
+    const legacyData = migrateToLegacyFormat(this.resumeData);
+
+    // Preserve any existing canvas-specific metadata and sectionTitles on cvData
+    if (this.cvData) {
+      const existingMetadata = (this.cvData as any).metadata;
+      const existingSectionTitles = (this.cvData as any).sectionTitles;
+      if (existingMetadata) {
+        legacyData.metadata = existingMetadata;
+      }
+      if (existingSectionTitles) {
+        legacyData.sectionTitles = existingSectionTitles;
+      }
+    }
+
+    this.cvData = legacyData;
   }
 
   next();

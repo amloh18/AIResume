@@ -12,7 +12,8 @@ const sendNotificationSchema = z.object({
   type: z.string().min(1, 'Notification type is required'),
   title: z.string().min(1, 'Title is required').max(200),
   message: z.string().min(1, 'Message is required').max(1000),
-  targetAudience: z.enum(['all', 'free', 'paid', 'new']).optional(),
+  targetAudience: z.enum(['all', 'free', 'paid', 'new', 'specific']).optional(),
+  userId: z.string().optional(),
   planFilter: z.string().optional(),
   channels: z.array(z.string()).optional().default(['in-app']),
   persistent: z.boolean().optional().default(false),
@@ -32,6 +33,7 @@ export const POST = withAdminAuth(
       title,
       message,
       targetAudience,
+      userId,
       planFilter,
       channels,
       persistent,
@@ -40,7 +42,12 @@ export const POST = withAdminAuth(
 
     // Determine target users
     let userQuery: any = {};
-    if (targetAudience === 'free') {
+    if (targetAudience === 'specific') {
+      if (!userId) {
+        return errorResponse('BAD_REQUEST', 'User ID is required when targeting a specific user');
+      }
+      userQuery._id = userId;
+    } else if (targetAudience === 'free') {
       userQuery.currentPlanKey = 'free';
     } else if (targetAudience === 'paid') {
       userQuery.currentPlanKey = { $ne: 'free' };

@@ -150,7 +150,11 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
         if (contentType && contentType.includes('application/json')) {
           try {
             const errorData = await response.json();
-            errorMessage = errorData.error || errorData.message || errorMessage;
+            if (errorData.error && typeof errorData.error === 'object') {
+              errorMessage = errorData.error.message || errorData.error.code || errorMessage;
+            } else {
+              errorMessage = errorData.error || errorData.message || errorMessage;
+            }
           } catch {
             // JSON parse failed, use default error message
           }
@@ -206,14 +210,6 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
       console.error('Error fetching notifications:', error);
       // Set empty array on error to prevent UI issues
       setNotifications([]);
-      // Only show toast for non-401 errors (401 means user is not authenticated, which is expected for logged-out users)
-      if (error instanceof Error && !error.message.includes('401')) {
-        toast({
-          title: 'Error',
-          description: 'Failed to load notifications. Please refresh the page.',
-          variant: 'destructive',
-        });
-      }
       // Reset fetch flag on error so we can retry
       hasFetchedRef.current = false;
     } finally {

@@ -46,6 +46,7 @@ import { usePillEngine } from '@/hooks/usePillEngine';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ITemplate } from '@/types/template';
 import { gsap } from 'gsap';
+import EditorOnboarding from '@/components/resume-enhancer/components/EditorOnboarding';
 
 type ViewMode = 'edit' | 'preview' | 'recruiter' | 'ats';
 
@@ -1803,6 +1804,7 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
           />
         )}
 
+        <EditorOnboarding step={3} />
       </div >
     );
   });

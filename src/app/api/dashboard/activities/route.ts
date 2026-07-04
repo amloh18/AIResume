@@ -24,10 +24,14 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get('limit') || '10', 10);
 
-    // Fetch activities from ActivityLog
+    // Fetch activities from ActivityLog - show only resume, cv, job, cover letter related logs
     const activities = await ActivityLog.find({
       userId: userObjectId,
-      logType: 'user_action'
+      logType: 'user_action',
+      $or: [
+        { 'resource.type': { $in: ['cv', 'cover_letter', 'job', 'journey'] } },
+        { action: { $in: ['cv_updated', 'cv_created', 'applied', 'interview', 'ats_check', 'improvement', 'recommendation'] } }
+      ]
     })
     .sort({ timestamp: -1 })
     .limit(limit)

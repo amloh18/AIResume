@@ -15,288 +15,48 @@ interface ATSMeterPanelProps {
   onClose?: () => void;
 }
 
+import {
+  ProfilerDemo,
+  MoriDemo,
+  DesignDemo,
+  LayoutDemo,
+  JsonDemo,
+  Step5ScanDemo
+} from '@/components/resume-enhancer/components/PremiumWorkflowDemos';
+
 const PanelWorkflowDemo: React.FC<{ panelType: string }> = ({ panelType }) => {
-  const [stage, setStage] = useState(0);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setStage((prev) => (prev + 1) % 6);
-    }, 2000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const getStepData = () => {
-    switch (panelType) {
-      case 'role':
-        return [
-          { title: 'Search Target Job', desc: 'Input the job position you are optimizing your CV towards.' },
-          { title: 'Set Professional Level', desc: 'Select your career seniority level (e.g. Lead, Senior, Entry).' },
-          { title: 'Align Analysis Base', desc: 'CV Circle updates keyword targets, grading matrices and checks.' }
-        ];
-      case 'mori':
-        return [
-          { title: 'Open Mori AI Chat', desc: 'Click the Mori Chat icon to open the assistant panel.' },
-          { title: 'Target Resume Section', desc: 'Select any CV section to contextually bind it to your chat context.' },
-          { title: 'Direct Natural Changes', desc: 'Instruct Mori AI in natural language to instantly rewrite bullets in that section.' }
-        ];
-      case 'design':
-        return [
-          { title: 'Switch CV Typography', desc: 'Apply premium font families designed for scanning readability.' },
-          { title: 'Adjust Page Layouts', desc: 'Tune section heights, margins, and letter spaces dynamically.' },
-          { title: 'Accent Branding Theme', desc: 'Select primary color theme accents for headers and icons.' }
-        ];
-      case 'layout':
-        return [
-          { title: 'Browse Template Grid', desc: 'Open layout template library to view modern styling choices.' },
-          { title: 'Instant Rendering', desc: 'See templates render instantly with all your resume details.' },
-          { title: 'Apply New Layout', desc: 'Switch grid structure instantly, preserving all data entries.' }
-        ];
-      case 'json':
-        return [
-          { title: 'Examine CV Schema Code', desc: 'Open raw JSON tree showing direct key-value pairs of your data.' },
-          { title: 'Modify Keys Directly', desc: 'Directly modify key names or text strings in real-time.' },
-          { title: 'Save and Update Canvas', desc: 'Apply data modifications instantly back into the canvas.' }
-        ];
-      case 'refresh':
-        return [
-          { title: 'Deep Audit Formatting Scan', desc: 'Analyze layout bounds, margins, page rules and sections.' },
-          { title: 'Keywords ATS Matching', desc: 'Cross-reference target job terms with your CV text.' },
-          { title: 'Recalculate ATS Health', desc: 'Recalculate your live matching quality checklist rating.' }
-        ];
-      default:
-        return [];
-    }
-  };
-
   const getPanelData = () => {
     switch (panelType) {
       case 'role':
-        return { name: 'Target Position', icon: <Briefcase className="w-3.5 h-3.5" />, desc: 'Configure target position and levels to align ATS keywords.' };
+        return { name: 'Target Position', icon: <Briefcase className="w-3.5 h-3.5" />, desc: 'Set your target role and seniority to align ATS keyword scoring.', component: <ProfilerDemo /> };
       case 'mori':
-        return { name: 'Mori AI Assistant', icon: <Sparkles className="w-3.5 h-3.5" />, desc: 'Co-pilot chat to refine statements, add sections, and fix grammar.' };
+        return { name: 'Mori AI Assistant', icon: <Sparkles className="w-3.5 h-3.5" />, desc: 'AI co-pilot that rewrites CV bullets in natural language.', component: <MoriDemo /> };
       case 'design':
-        return { name: 'Global Design', icon: <Palette className="w-3.5 h-3.5" />, desc: 'Modify global document styling, line spacing, margins, and accents.' };
+        return { name: 'Global Design', icon: <Palette className="w-3.5 h-3.5" />, desc: 'Modify fonts, margins, spacing and accent colors live.', component: <DesignDemo /> };
       case 'layout':
-        return { name: 'Template Library', icon: <LayoutTemplate className="w-3.5 h-3.5" />, desc: 'Hot-swap modular layout templates instantly.' };
+        return { name: 'Template Library', icon: <LayoutTemplate className="w-3.5 h-3.5" />, desc: 'Hot-swap modular layout templates while preserving all data.', component: <LayoutDemo /> };
       case 'json':
-        return { name: 'Raw JSON Editor', icon: <FileJson className="w-3.5 h-3.5" />, desc: 'View and directly edit your raw CV data structure.' };
+        return { name: 'Raw JSON Editor', icon: <FileJson className="w-3.5 h-3.5" />, desc: 'View and directly edit your raw CV data structure.', component: <JsonDemo /> };
       case 'refresh':
-        return { name: 'Refresh Analysis', icon: <RefreshCw className="w-3.5 h-3.5" />, desc: 'Run deep content scanning, grammar audit checks, and ATS scoring.' };
+        return { name: 'Refresh Analysis', icon: <RefreshCw className="w-3.5 h-3.5" />, desc: 'Run deep content scan, grammar audit, and ATS rescoring.', component: <Step5ScanDemo /> };
       default:
-        return { name: '', icon: null, desc: '' };
+        return { name: '', icon: null, desc: '', component: null };
     }
   };
 
-  const steps = getStepData();
-  const stepIndex = Math.floor(stage / 2);
-  const isTextMode = stage % 2 === 0;
-  const currentStep = steps[stepIndex] || { title: '', desc: '' };
   const panelInfo = getPanelData();
 
-  if (isTextMode) {
-    return (
-      <div className="space-y-3">
-        <div className="w-full aspect-video bg-gray-50 dark:bg-black/20 rounded-xl relative overflow-hidden flex flex-col items-center justify-center border border-gray-150 dark:border-white/5 p-4 animate-fadeIn">
-          <span className="text-[7px] font-bold text-teal-600 dark:text-teal-400 uppercase tracking-widest mb-1">Step {stepIndex + 1}</span>
-          <h5 className="text-[11px] font-black text-gray-800 dark:text-gray-200 uppercase tracking-tight leading-tight mb-2 text-center">{currentStep.title}</h5>
-          <p className="text-[9px] text-gray-400 dark:text-gray-500 leading-normal max-w-[85%] text-center">{currentStep.desc}</p>
-        </div>
-        <div className="flex items-center gap-2 pt-1.5 border-t border-gray-100 dark:border-white/[0.04]">
-          <div className="text-teal-600 dark:text-teal-400 shrink-0">{panelInfo.icon}</div>
-          <div className="space-y-0.5 text-left">
-            <div className="text-[9px] font-black text-gray-700 dark:text-gray-200 uppercase tracking-wider">{panelInfo.name}</div>
-            <div className="text-[8px] text-gray-400 dark:text-gray-500 leading-normal">{panelInfo.desc}</div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-3">
-      {/* 16:9 Aspect Ratio Video Box */}
-      <div className="w-full aspect-video bg-gray-50 dark:bg-black/20 rounded-xl relative overflow-hidden flex items-center justify-center border border-gray-150 dark:border-white/5 p-3">
-        <div className="w-full h-full flex items-center justify-center relative overflow-hidden bg-white dark:bg-white/5 rounded-lg border border-gray-200/50 dark:border-white/[0.04] p-2 animate-fadeIn">
-          {/* Render Animation Based on Panel and Step */}
-          {panelType === 'role' && (
-            <div className="w-full h-full flex flex-col justify-center items-center text-center">
-              {stepIndex === 0 && (
-                <div className="flex flex-col items-center gap-1.5 w-full max-w-[100px] animate-fadeIn">
-                  <div className="h-5 w-full bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded flex items-center px-1.5 text-[8px] text-gray-500 font-mono">
-                    <span className="border-r border-teal-500 animate-pulse pr-0.5">Software Eng</span>
-                  </div>
-                </div>
-              )}
-              {stepIndex === 1 && (
-                <div className="flex flex-col gap-0.5 w-full max-w-[90px] bg-white dark:bg-[#191c1b] border border-gray-200 dark:border-white/10 rounded p-1 shadow-md animate-fadeIn">
-                  <div className="h-3 w-full bg-teal-500/10 text-teal-600 rounded-[3px] text-[7px] font-bold flex items-center px-1">Senior Level</div>
-                  <div className="h-3 w-full rounded text-[7px] text-gray-400 flex items-center px-1">Lead Level</div>
-                </div>
-              )}
-              {stepIndex === 2 && (
-                <div className="relative w-10 h-10 flex items-center justify-center animate-fadeIn">
-                  <div className="absolute inset-0 rounded-full border border-dashed border-teal-500/30 animate-spin duration-3000" />
-                  <div className="absolute w-7 h-7 rounded-full bg-teal-500/20 animate-ping" />
-                  <Briefcase className="w-4 h-4 text-teal-500" />
-                </div>
-              )}
-            </div>
-          )}
-
-          {panelType === 'mori' && (
-            <div className="w-full h-full flex flex-col justify-center items-center">
-              {stepIndex === 0 && (
-                <div className="w-full h-full flex flex-row relative rounded border border-gray-250 dark:border-white/5 bg-gray-50 dark:bg-black/25 overflow-hidden animate-fadeIn">
-                  <div className="w-3/5 h-full p-1 border-r border-gray-200 dark:border-white/5 flex flex-col gap-1">
-                    <div className="h-2 w-full bg-gray-200 dark:bg-white/5 rounded-sm" />
-                    <div className="h-4 w-full bg-gray-250 dark:bg-white/10 rounded-sm" />
-                  </div>
-                  <div className="w-2/5 h-full bg-white dark:bg-[#191c1b] p-1 flex flex-col justify-between relative shadow-lg">
-                    <div className="text-[6px] text-emerald-500 font-bold border-b border-gray-100 dark:border-white/5 pb-0.5">Mori Chat</div>
-                    <div className="h-2.5 w-full bg-emerald-500/20 rounded animate-pulse" />
-                  </div>
-                </div>
-              )}
-              {stepIndex === 1 && (
-                <div className="w-full h-full flex flex-col bg-gray-50 dark:bg-black/20 p-1.5 justify-between animate-fadeIn">
-                  <div className="w-full border border-emerald-500/40 bg-emerald-500/5 rounded p-1 cursor-pointer flex flex-col gap-0.5 animate-pulse">
-                    <span className="text-[5px] text-emerald-600 dark:text-emerald-400 font-bold">Education Section</span>
-                    <div className="h-1 bg-emerald-500/20 rounded w-full" />
-                  </div>
-                  <div className="h-3 w-full bg-white dark:bg-[#191c1b] border border-gray-200 dark:border-white/10 rounded flex items-center px-1 gap-1">
-                    <span className="text-[5.5px] bg-emerald-500/20 text-emerald-600 px-0.5 rounded font-black">[Education]</span>
-                    <div className="h-1 bg-gray-300 dark:bg-white/10 rounded-full w-10 animate-pulse" />
-                  </div>
-                </div>
-              )}
-              {stepIndex === 2 && (
-                <div className="w-full h-full flex flex-col justify-between p-1 bg-white dark:bg-[#191c1b] animate-fadeIn border border-gray-200/50 rounded">
-                  <div className="space-y-1">
-                    <div className="text-[6px] font-bold text-gray-500">Education Details:</div>
-                    <div className="flex items-start gap-1 p-0.5">
-                      <div className="w-1 h-1 bg-red-500 rounded-full mt-0.5 shrink-0" />
-                      <div className="text-[5.5px] text-gray-400 line-through">Took classes, studied databases</div>
-                    </div>
-                    <div className="flex items-start gap-1 p-0.5 bg-emerald-500/5 rounded border border-emerald-500/10">
-                      <div className="w-1 h-1 bg-emerald-500 rounded-full mt-0.5 shrink-0" />
-                      <div className="text-[5.5px] text-emerald-600 dark:text-emerald-400 font-bold leading-snug">
-                        Mastered database query performance, optimizing indexing architectures.
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {panelType === 'design' && (
-            <div className="w-full h-full flex flex-col justify-center items-center text-center">
-              {stepIndex === 0 && (
-                <div className="flex flex-col gap-1 items-center animate-fadeIn">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[9px] font-serif text-gray-400">Aa Serif</span>
-                    <ArrowRight className="w-2.5 h-2.5 text-emerald-500" />
-                    <span className="text-[11px] font-sans font-black text-emerald-500">Aa Sans</span>
-                  </div>
-                </div>
-              )}
-              {stepIndex === 1 && (
-                <div className="w-20 h-12 border border-dashed border-teal-500/30 rounded flex items-center justify-center p-1 animate-fadeIn">
-                  <div className="w-full h-full bg-teal-500/10 rounded border border-teal-500/20 flex flex-col justify-between p-1 animate-pulse">
-                    <div className="h-0.5 bg-teal-500/40 rounded-full w-full" />
-                    <div className="h-0.5 bg-teal-500/40 rounded-full w-4/5" />
-                  </div>
-                </div>
-              )}
-              {stepIndex === 2 && (
-                <div className="flex items-center gap-2 animate-fadeIn">
-                  <div className="w-4 h-4 rounded-full bg-blue-500 animate-bounce" />
-                  <div className="w-4 h-4 rounded-full bg-emerald-500 animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <div className="w-4 h-4 rounded-full bg-teal-500 animate-bounce" style={{ animationDelay: '300ms' }} />
-                </div>
-              )}
-            </div>
-          )}
-
-          {panelType === 'layout' && (
-            <div className="w-full h-full flex flex-col justify-center items-center text-center">
-              {stepIndex === 0 && (
-                <div className="grid grid-cols-2 gap-1.5 w-20 animate-fadeIn">
-                  <div className="h-7 border border-gray-200 dark:border-white/10 rounded bg-white dark:bg-white/5 flex flex-col justify-between p-1">
-                    <div className="h-0.5 w-full bg-gray-300 dark:bg-white/10 rounded-full" />
-                  </div>
-                  <div className="h-7 border border-emerald-500/40 rounded bg-emerald-500/5 flex flex-col justify-between p-1">
-                    <div className="h-0.5 w-full bg-emerald-500/40 rounded-full" />
-                  </div>
-                </div>
-              )}
-              {stepIndex === 1 && (
-                <div className="flex flex-col gap-0.5 items-center animate-fadeIn">
-                  <LayoutTemplate className="w-5 h-5 text-emerald-500 animate-bounce" />
-                </div>
-              )}
-              {stepIndex === 2 && (
-                <div className="w-20 h-10 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded p-1 flex animate-fadeIn">
-                  <div className="w-1/3 bg-emerald-500/20 rounded-l mr-1" />
-                  <div className="w-2/3 flex flex-col justify-between p-0.5">
-                    <div className="h-0.5 bg-gray-300 dark:bg-white/10 rounded-full w-full" />
-                    <div className="h-0.5 bg-gray-300 dark:bg-white/10 rounded-full w-5/6" />
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {panelType === 'json' && (
-            <div className="w-full h-full flex flex-col justify-center items-center">
-              {stepIndex === 0 && (
-                <div className="font-mono text-[6px] text-amber-500/80 animate-fadeIn leading-tight select-none">
-                  &#123; "basics": &#123; "name": "..." &#125; &#125;
-                </div>
-              )}
-              {stepIndex === 1 && (
-                <div className="flex items-center justify-center gap-0.5 font-mono text-[7px] animate-fadeIn">
-                  <span className="text-gray-400">"name":</span>
-                  <span className="text-amber-500 bg-amber-500/10 border border-amber-500/20 rounded px-1 animate-pulse">"Jane Dev"</span>
-                </div>
-              )}
-              {stepIndex === 2 && (
-                <div className="flex flex-col gap-1 items-center animate-fadeIn text-center">
-                  <FileJson className="w-4 h-4 text-amber-500" />
-                </div>
-              )}
-            </div>
-          )}
-
-          {panelType === 'refresh' && (
-            <div className="w-full h-full flex flex-col justify-center items-center text-center">
-              {stepIndex === 0 && (
-                <div className="relative w-20 h-10 border border-dashed border-gray-200 dark:border-white/10 rounded flex items-center justify-center overflow-hidden animate-fadeIn">
-                  <div className="absolute top-0 bottom-0 left-0 right-0 bg-gradient-to-b from-teal-500/10 to-transparent animate-pulse" />
-                  <div className="absolute h-0.5 w-full bg-teal-500 top-0 animate-bounce" />
-                </div>
-              )}
-              {stepIndex === 1 && (
-                <div className="flex flex-col gap-0.5 items-center animate-fadeIn">
-                  <span className="text-[7px] px-1 py-0.5 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold rounded">Python</span>
-                </div>
-              )}
-              {stepIndex === 2 && (
-                <div className="flex flex-col gap-1 items-center justify-center animate-fadeIn">
-                  <div className="w-7 h-7 rounded-full border border-teal-500/30 flex items-center justify-center font-black text-[8px] text-teal-600 dark:text-teal-400 relative">
-                    98%
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+    <div className="space-y-2.5">
+      {/* Pure visual animation — no text labels inside the viewport */}
+      <div className="w-full aspect-video bg-gray-50 dark:bg-black/30 rounded-xl relative overflow-hidden flex items-center justify-center border border-gray-150 dark:border-white/5">
+        {panelInfo.component}
       </div>
 
-      {/* Panel Info below the animation container */}
-      <div className="flex items-center gap-2 pt-1.5 border-t border-gray-100 dark:border-white/[0.04]">
+      {/* Bottom strip — icon + name + short description */}
+      <div className="flex items-center gap-2 pt-1 border-t border-gray-100 dark:border-white/[0.04]">
         <div className="text-teal-600 dark:text-teal-400 shrink-0">{panelInfo.icon}</div>
-        <div className="space-y-0.5 text-left">
+        <div className="space-y-0.5 text-left flex-1 min-w-0">
           <div className="text-[9px] font-black text-gray-700 dark:text-gray-200 uppercase tracking-wider">{panelInfo.name}</div>
           <div className="text-[8px] text-gray-400 dark:text-gray-500 leading-normal">{panelInfo.desc}</div>
         </div>
@@ -304,6 +64,7 @@ const PanelWorkflowDemo: React.FC<{ panelType: string }> = ({ panelType }) => {
     </div>
   );
 };
+
 
 const AnalysisSkeleton: React.FC = () => {
   return (
@@ -789,7 +550,7 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ isUtilityPanelOpen
     <div className="h-full flex flex-col bg-[#F9FAFB] dark:bg-[var(--bg-secondary)] rounded-xl border border-gray-200 dark:border-white/[0.06] overflow-y-auto scrollbar-hide text-gray-900 dark:text-white snap-y snap-mandatory scroll-smooth">
 
       {/* ── Header ── */}
-      <div className="sticky top-0 z-20 flex items-center justify-between px-4 py-3 bg-white/95 dark:bg-[var(--bg-secondary)] backdrop-blur-sm border-b border-gray-100 dark:border-white/[0.04]">
+      <div className="sticky top-0 z-20 relative flex items-center justify-between px-4 py-3 bg-white/95 dark:bg-[var(--bg-secondary)] backdrop-blur-sm border-b border-gray-100 dark:border-white/[0.04]">
         <div className="flex items-center gap-2">
           <h3 className="text-xs font-extrabold uppercase tracking-wider text-gray-700 dark:text-gray-200">Analysis</h3>
           {/* Refresh Analysis next to text */}
@@ -807,7 +568,7 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ isUtilityPanelOpen
         
         <div className="flex items-center gap-2">
           {!isUtilityPanelOpen && (
-            <UtilityPanelPill activePanel={null} />
+            <UtilityPanelPill activePanel={null} onHoverPanel={(panel) => setHoveredIcon(panel)} />
           )}
           {onClose && (
             <button
@@ -820,13 +581,14 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ isUtilityPanelOpen
           )}
         </div>
 
-        {/* Floating rich hover info card with animated step-by-step motion graphics */}
+        {/* Floating rich hover info card with animated motion graphics */}
         {hoveredIcon && !isUtilityPanelOpen && (
-          <div className="absolute top-[48px] left-4 right-4 bg-white dark:bg-[#191c1b] border border-gray-200 dark:border-white/[0.08] rounded-2xl p-4 shadow-[0_12px_30px_rgba(0,0,0,0.15)] dark:shadow-[0_12px_30px_rgba(0,0,0,0.5)] z-50 transition-all duration-300 animate-fadeIn pointer-events-none">
+          <div className="absolute top-full left-0 right-0 mt-1 mx-2 bg-white dark:bg-[#191c1b] border border-gray-200 dark:border-white/[0.08] rounded-2xl p-4 shadow-[0_12px_30px_rgba(0,0,0,0.15)] dark:shadow-[0_12px_30px_rgba(0,0,0,0.5)] z-50 animate-fadeIn pointer-events-none">
             <PanelWorkflowDemo panelType={hoveredIcon} />
           </div>
         )}
       </div>
+
 
       <div className="flex-1 p-4 space-y-4">
         {/* ── Inline Target Role Profiler (for non-journey CVs) ── */}
