@@ -35,7 +35,8 @@ class RedisClientManager {
 
     // If already connecting, return the promise
     if (this.isConnecting && this.connectionPromise) {
-      return await this.connectionPromise;
+      const client = await this.connectionPromise;
+      return client?.isReady ? client : null;
     }
 
     // Start new connection
@@ -43,7 +44,8 @@ class RedisClientManager {
       this.connectionPromise = this.connect();
     }
 
-    return await this.connectionPromise;
+    const client = await this.connectionPromise;
+    return client?.isReady ? client : null;
   }
 
   /**
@@ -54,6 +56,11 @@ class RedisClientManager {
   getClientIfReady(): RedisClientType | null {
     if (this.client && this.client.isReady) {
       return this.client;
+    }
+    // If we have a dead connection, clear it
+    if (this.client && !this.client.isReady && !this.isConnecting) {
+      this.client = null;
+      this.connectionPromise = null;
     }
     // Start connection in background if not already connecting
     if (!this.connectionPromise && !this.isConnecting) {
@@ -88,6 +95,7 @@ class RedisClientManager {
 
       const client = createClient({
         url: redisUrl,
+        disableOfflineQueue: true, // Fail fast instead of hanging when disconnected
         socket: {
           connectTimeout: 5000, // 5 second connection timeout to prevent blocking auth
           reconnectStrategy: (retries) => {
@@ -120,13 +128,20 @@ class RedisClientManager {
         }
       });
 
-      // Add timeout to the connection attempt
-      const connectPromise = client.connect();
+      // Wait specifically for the 'ready' event, not just 'connect'
+      const readyPromise = new Promise<RedisClientType>((resolve, reject) => {
+        client.on('ready', () => resolve(client));
+        client.on('error', (err) => reject(err));
+      });
+
       const timeoutPromise = new Promise((_, reject) => {
         setTimeout(() => reject(new Error('Redis connection timeout (5s)')), 5000);
       });
 
-      await Promise.race([connectPromise, timeoutPromise]);
+      // Start the connection process
+      client.connect().catch(err => console.warn('Redis connect catch:', err.message));
+
+      await Promise.race([readyPromise, timeoutPromise]);
       this.client = client;
       this.isConnecting = false;
 
@@ -135,6 +150,7 @@ class RedisClientManager {
       console.warn('⚠️ Redis not available, using in-memory cache fallback:', error);
       this.client = null;
       this.isConnecting = false;
+      this.connectionPromise = null; // Reset promise so it can retry later if needed
       return null;
     }
   }

@@ -14,10 +14,11 @@ const updateNotificationSchema = z.object({
   notificationIds: z.array(z.string()).optional(),
 });
 
-export const GET = withErrorHandling(async (request: NextRequest) => {
+export async function GET(request: NextRequest) {
+  return withErrorHandling(async (request: NextRequest) => {
     const authResult = await getAuthenticatedUser();
     if (!authResult) {
-    return errorResponse('UNAUTHORIZED', 'Authentication required', undefined, 401);
+      return errorResponse('UNAUTHORIZED', 'Authentication required', undefined, 401);
     }
 
     await getConnection();
@@ -54,64 +55,69 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
 
     const total = await Notification.countDocuments(query);
 
-  return successResponse({
+    return successResponse({
       notifications,
       total,
       limit,
       offset,
     });
-});
+  })(request);
+}
 
 /**
  * POST /api/notifications
  * Create a notification (admin only)
  */
-export const POST = withAdminAuth(
-  withValidation(createNotificationSchema, async (request, validatedData) => {
-    await getConnection();
+export async function POST(request: NextRequest) {
+  return withAdminAuth(
+    withValidation(createNotificationSchema, async (request, validatedData) => {
+      await getConnection();
 
-    const notificationService = (await import('@/lib/services/notificationService')).default;
-    const notification = await notificationService.createNotification(validatedData);
+      const notificationService = (await import('@/lib/services/notificationService')).default;
+      const notification = await notificationService.createNotification(validatedData);
 
-    return successResponse({ notification });
-  }) as (request: NextRequest) => Promise<NextResponse>
-);
+      return successResponse({ notification });
+    })
+  )(request);
+}
 
 /**
  * PUT /api/notifications
  * Update notifications (mark as read)
  */
-export const PUT = withErrorHandling(
-  withValidation(updateNotificationSchema, async (request, validatedData) => {
-    const authResult = await getAuthenticatedUser();
-    if (!authResult) {
-      return errorResponse('UNAUTHORIZED', 'Authentication required', undefined, 401);
-    }
+export async function PUT(request: NextRequest) {
+  return withErrorHandling(
+    withValidation(updateNotificationSchema, async (request, validatedData) => {
+      const authResult = await getAuthenticatedUser();
+      if (!authResult) {
+        return errorResponse('UNAUTHORIZED', 'Authentication required', undefined, 401);
+      }
 
-    await getConnection();
+      await getConnection();
 
-    const { action, notificationIds } = validatedData;
+      const { action, notificationIds } = validatedData;
 
-    if (action === 'mark-all-read') {
-      const userId = authResult.userId;
-      await Notification.updateMany(
-        { userId, read: false },
-        { $set: { read: true, readAt: new Date() } }
-      );
+      if (action === 'mark-all-read') {
+        const userId = authResult.userId;
+        await Notification.updateMany(
+          { userId, read: false },
+          { $set: { read: true, readAt: new Date() } }
+        );
 
-      return successResponse({ message: 'All notifications marked as read' });
-    }
+        return successResponse({ message: 'All notifications marked as read' });
+      }
 
-    if (action === 'mark-read' && notificationIds && Array.isArray(notificationIds)) {
-      await Notification.updateMany(
-        { _id: { $in: notificationIds }, userId: authResult.userId },
-        { $set: { read: true, readAt: new Date() } }
-      );
+      if (action === 'mark-read' && notificationIds && Array.isArray(notificationIds)) {
+        await Notification.updateMany(
+          { _id: { $in: notificationIds }, userId: authResult.userId },
+          { $set: { read: true, readAt: new Date() } }
+        );
 
-      return successResponse({ message: 'Notifications marked as read' });
-    }
+        return successResponse({ message: 'Notifications marked as read' });
+      }
 
-    return errorResponse('VALIDATION_ERROR', 'Invalid action', undefined, 400);
-  })
-);
+      return errorResponse('VALIDATION_ERROR', 'Invalid action', undefined, 400);
+    })
+  )(request);
+}
 
