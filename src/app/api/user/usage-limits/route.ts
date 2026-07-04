@@ -9,11 +9,15 @@ import { ErrorCode, createErrorNextResponse } from '@/lib/utils/error-codes';
 import { getAuthenticatedUser } from '@/lib/auth-helpers';
 
 export async function GET(request: NextRequest) {
+  console.log('🔍 GET /api/user/usage-limits - Request started');
   try {
     // Use getAuthenticatedUser for consistent user ID resolution
     // This does a database lookup by email to get the canonical _id
     const authResult = await getAuthenticatedUser();
+    console.log('🔍 usage-limits - Auth check result:', !!authResult);
+
     if (!authResult) {
+      console.warn('⚠️ usage-limits - Unauthorized access attempt');
       return createErrorNextResponse(
         ErrorCode.AUTH_REQUIRED,
         'Authentication required. Please sign in to access usage limits.'
@@ -21,6 +25,8 @@ export async function GET(request: NextRequest) {
     }
 
     const userId = authResult.userId;
+    console.log('🔍 usage-limits - Fetching for user:', userId);
+
     if (!userId) {
       return createErrorNextResponse(
         ErrorCode.MISSING_REQUIRED_FIELD,

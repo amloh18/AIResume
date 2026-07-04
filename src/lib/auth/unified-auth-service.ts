@@ -14,7 +14,9 @@ import User from '@/models/User';
 import { headers } from 'next/headers';
 import { detectUserRegion } from '@/lib/services/regionDetectionService';
 import { encryptToken, decryptToken } from './token-encryption';
-import fetch from 'node-fetch';
+
+// Note: Using global fetch which is available in both Node.js and Edge Runtime
+// import fetch from 'node-fetch'; // Removed to avoid Edge Runtime issues
 
 /**
  * Unified Authentication Service
