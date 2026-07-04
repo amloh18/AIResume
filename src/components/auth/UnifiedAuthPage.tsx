@@ -205,6 +205,8 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
    * Determine the appropriate redirect URL based on user role and setup status
    */
   const determineRedirectUrl = async (user: any, defaultUrl: string): Promise<string> => {
+    if (!user) return defaultUrl;
+    
     // If user is admin, check if they need to see the dashboard selector
     if (user.role === 'admin' || user.role === 'superadmin') {
       // Check if admin has already seen the selector (stored in localStorage client-side)

@@ -711,68 +711,69 @@ export class UnifiedAuthService {
 
       events: {
         async signIn({ user, account, profile, isNewUser }) {
-          // Log sign-in events to activity logs
-          try {
-            const { ActivityLogService } = await import('@/lib/services/activityLogService');
-            const isAdmin = (user as any)?.type === 'admin' || (user as any)?.role === 'admin' || (user as any)?.role === 'superadmin';
+          // Fire and forget logging to avoid blocking the sign-in response
+          (async () => {
+            try {
+              const { ActivityLogService } = await import('@/lib/services/activityLogService');
+              const isAdmin = (user as any)?.type === 'admin' || (user as any)?.role === 'admin' || (user as any)?.role === 'superadmin';
 
-            if (isAdmin) {
-              // Log admin login
-              await ActivityLogService.logAdminAction({
-                adminUserId: user.id || '',
-                adminEmail: user.email || undefined,
-                action: 'admin_login_success',
-                actionType: 'authentication',
-                status: 'success',
-                metadata: {
-                  provider: account?.provider || 'unknown',
-                  isNewUser: isNewUser || false
+              if (isAdmin) {
+                // Log admin login
+                await ActivityLogService.logAdminAction({
+                  adminUserId: user.id || '',
+                  adminEmail: user.email || undefined,
+                  action: 'admin_login_success',
+                  actionType: 'authentication',
+                  status: 'success',
+                  metadata: {
+                    provider: account?.provider || 'unknown',
+                    isNewUser: isNewUser || false
+                  }
+                });
+              } else {
+                // Detect user region from IP
+                let region = 'Unknown';
+                let ipLocation = 'Unknown';
+
+                try {
+                  const headersList = await headers();
+                  const ip = headersList.get('x-forwarded-for') || headersList.get('x-real-ip') || '127.0.0.1';
+                  const regionInfo = await detectUserRegion(ip);
+
+                  if (regionInfo) {
+                    region = regionInfo.countryName;
+                    ipLocation = regionInfo.countryCode;
+
+                    // Update user with region info
+                    await getConnection();
+                    await User.findByIdAndUpdate(user.id, {
+                      region: region,
+                      ip_location: ipLocation,
+                      lastLogin: new Date()
+                    });
+                  }
+                } catch (regionError) {
+                  console.error('Failed to detect/update user region:', regionError);
                 }
-              });
-            } else {
-              // Detect user region from IP
-              let region = 'Unknown';
-              let ipLocation = 'Unknown';
 
-              try {
-                const headersList = await headers();
-                const ip = headersList.get('x-forwarded-for') || headersList.get('x-real-ip') || '127.0.0.1';
-                const regionInfo = await detectUserRegion(ip);
-
-                if (regionInfo) {
-                  region = regionInfo.countryName;
-                  ipLocation = regionInfo.countryCode;
-
-                  // Update user with region info
-                  await getConnection();
-                  await User.findByIdAndUpdate(user.id, {
-                    region: region,
-                    ip_location: ipLocation,
-                    lastLogin: new Date()
-                  });
-                }
-              } catch (regionError) {
-                console.error('Failed to detect/update user region:', regionError);
+                // Log regular user login
+                await ActivityLogService.logUserAction({
+                  userId: user.id || '',
+                  userEmail: user.email || undefined,
+                  action: 'user_login_success',
+                  status: 'success',
+                  metadata: {
+                    provider: account?.provider || 'unknown',
+                    isNewUser: isNewUser || false,
+                    region,
+                    ipLocation
+                  }
+                });
               }
-
-              // Log regular user login
-              await ActivityLogService.logUserAction({
-                userId: user.id || '',
-                userEmail: user.email || undefined,
-                action: 'user_login_success',
-                status: 'success',
-                metadata: {
-                  provider: account?.provider || 'unknown',
-                  isNewUser: isNewUser || false,
-                  region,
-                  ipLocation
-                }
-              });
+            } catch (error) {
+              console.error('Failed to log sign-in event:', error);
             }
-          } catch (error) {
-            // Don't fail sign-in if logging fails
-            console.error('Failed to log sign-in event:', error);
-          }
+          })();
         },
         async signOut({ token }) {
           // Invalidate user cache on sign out

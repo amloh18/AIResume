@@ -16,23 +16,23 @@ export const comprehensiveSignOut = async (): Promise<void> => {
       sessionStorage.setItem('logout-in-progress', 'true');
     }
 
-    // Step 1: Call our custom signout API endpoint FIRST to invalidate server-side cache
+    // Step 1: Call our custom logout API endpoint FIRST to invalidate server-side cache and log activity
     // This needs to happen while the session is still valid to get the user ID
     try {
-      console.log('🔍 Calling custom signout API endpoint...');
-      await fetch('/api/auth/signout', {
+      console.log('🔍 Calling custom logout API endpoint...');
+      await fetch('/api/auth/custom-logout', {
         method: 'POST',
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
       });
-      console.log('✅ Custom signout API endpoint called, cache invalidated');
+      console.log('✅ Custom logout API endpoint called, cache invalidated');
     } catch (error) {
-      console.error('❌ Error calling signout API:', error);
+      console.error('❌ Error calling custom logout API:', error);
     }
 
-    // Step 2: Sign out from NextAuth (this destroys the session)
+    // Step 2: Sign out from NextAuth (this destroys the session and clears cookies)
     try {
       console.log('🔍 Signing out from NextAuth...');
       await signOut({
