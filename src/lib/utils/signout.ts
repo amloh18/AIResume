@@ -20,14 +20,28 @@ export const comprehensiveSignOut = async (): Promise<void> => {
     // This needs to happen while the session is still valid to get the user ID
     try {
       console.log('🔍 Calling custom logout API endpoint...');
+      
+      // Add a timeout to the fetch call to prevent hanging
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+
       await fetch('/api/auth/custom-logout', {
         method: 'POST',
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
+        signal: controller.signal
+      }).catch(err => {
+        if (err.name === 'AbortError') {
+          console.warn('⚠️ Custom logout API timed out');
+        } else {
+          throw err;
+        }
       });
-      console.log('✅ Custom logout API endpoint called, cache invalidated');
+      
+      clearTimeout(timeoutId);
+      console.log('✅ Custom logout API endpoint called');
     } catch (error) {
       console.error('❌ Error calling custom logout API:', error);
     }

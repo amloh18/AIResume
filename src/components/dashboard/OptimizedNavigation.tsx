@@ -144,25 +144,50 @@ const OptimizedNavigation: React.FC = () => {
       return;
     }
 
+    // Prevent multiple simultaneous fetches
+    if (fetchCreditInfo.inProgress) return;
+    fetchCreditInfo.inProgress = true;
+
     setCreditInfoLoading(true);
 
     try {
-      const response = await fetch('/api/user/usage-limits');
+      console.log('🔍 OptimizedNavigation - Fetching usage limits...');
+      
+      // Use AbortController to prevent hanging fetches
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+      const response = await fetch('/api/user/usage-limits', {
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+
       if (response.ok) {
         const data = await response.json();
+        console.log('✅ OptimizedNavigation - Usage limits fetched:', !!data.credits);
         if (data.success && data.credits) {
           setCreditInfo(data.credits);
         } else {
           setCreditInfo(null);
         }
+      } else if (response.status === 401) {
+        console.warn('🔒 OptimizedNavigation - Unauthorized, skipping credit fetch');
+        setCreditInfo(null);
       } else {
+        console.warn('⚠️ OptimizedNavigation - Failed to fetch usage limits:', response.status);
         setCreditInfo(null);
       }
-    } catch (error) {
-      console.error('Error fetching credit info:', error);
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        console.warn('⚠️ OptimizedNavigation - Credit info fetch timed out');
+      } else {
+        console.error('❌ OptimizedNavigation - Error fetching credit info:', error.message || error);
+      }
       setCreditInfo(null);
     } finally {
       setCreditInfoLoading(false);
+      fetchCreditInfo.inProgress = false;
     }
   }, [userData?.id]);
 
