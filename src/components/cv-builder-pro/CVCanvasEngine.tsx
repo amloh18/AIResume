@@ -506,13 +506,18 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     if (!cvData) return;
 
     const activeId = activeTemplate.id;
-    const rawZones = cvData.metadata?.canvasTemplatesZones?.[activeId] || cvData.metadata?.canvasZones;
+    const cachedZones = cvData.metadata?.canvasTemplatesZones?.[activeId];
+    const rawZones = cachedZones || cvData.metadata?.canvasZones;
+
+    if (!cachedZones && !cvData.metadata?.canvasZones) {
+      console.warn('[CVCanvasEngine] No saved canvas zones found for template', activeId, '- falling back to template defaults.');
+    }
 
     // 1. Sync zones if metadata changed externally
     if (rawZones) {
       const currentZonesStr = JSON.stringify(zonesRef.current);
       const nextZonesStr = JSON.stringify(rawZones);
-      
+
       if (currentZonesStr !== nextZonesStr) {
         const deduped: Record<string, any[]> = {};
         Object.keys(rawZones).forEach(zoneId => {
@@ -528,7 +533,11 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     }
 
     // 2. Sync design if metadata changed externally
-    const rawDesign = cvData.metadata?.canvasTemplatesDesign?.[activeId] || cvData.metadata?.canvasDesign;
+    const cachedDesign = cvData.metadata?.canvasTemplatesDesign?.[activeId];
+    const rawDesign = cachedDesign || cvData.metadata?.canvasDesign;
+    if (!cachedDesign && !cvData.metadata?.canvasDesign) {
+      console.warn('[CVCanvasEngine] No saved canvas design found for template', activeId, '- falling back to template defaults.');
+    }
     if (rawDesign) {
       const currentDesignStr = JSON.stringify(designRef.current);
       const nextDesignStr = JSON.stringify(rawDesign);

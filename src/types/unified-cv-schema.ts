@@ -129,6 +129,8 @@ export interface UnifiedCVDataStructure {
   }>;
 
   // Skills
+  // Canonical shape: Array<{ category: string; skills: string[] }>
+  // Legacy/fallback shape accepted during normalization: Array<{ category?: string; name?: string; skills?: string[]; keywords?: string[]; skillsText?: string; level?: string }>
   skills: Array<{
     category: string;
     skills: string[];
@@ -195,7 +197,7 @@ export interface UnifiedCVDocument {
   metadata: {
     isMaster: boolean;
     lastModified: Date;
-    createdFrom?: string;
+    createdFrom?: string | mongoose.Types.ObjectId;
     createdVia?: string; // How the CV was created (e.g., 'ai-career-report', 'journey')
     tags: string[];
     isPublic: boolean;
@@ -207,6 +209,40 @@ export interface UnifiedCVDocument {
     thumbnailGeneratedAt?: Date;
     starred: boolean;
     cvType?: 'master' | 'journey' | 'standalone'; // Also in metadata for backward compatibility
+    atsScoreCap?: number;
+    parentMasterId?: string;
+    isUserMaster?: boolean;
+    fresherMode?: boolean;
+    canvasDesign?: any;
+    canvasTemplate?: any;
+    canvasZones?: any;
+    canvasTemplatesZones?: any;
+    canvasTemplatesDesign?: any;
+    analysisSnapshot?: {
+      healthIndex: number;
+      atsReadability: number;
+      keywordCoverage: number;
+      impactScore: number;
+      strengths: string[];
+      weaknesses: string[];
+      generatedAt: Date;
+    };
+    surgeonAnalysis?: {
+      score: number;
+      fixes: any[];
+      annotations: any[];
+      targetRole: string;
+      seniorityLevel: string;
+      analyzedAt: Date;
+      contentHash: string;
+      jobDataHash?: string;
+      scoreReport?: any;
+    };
+    cvScore?: number;
+    aiAnalysis?: any;
+    documentState?: 'editable' | 'frozen' | 'read-only';
+    frozenAt?: Date;
+    frozenReason?: 'plan_downgrade' | 'limit_exceeded' | 'pass_expired' | 'premium_template_restriction';
   };
 
   // Timestamps

@@ -288,17 +288,25 @@ cvSchema.pre('save', async function (next) {
 
   // Sync resumeData with cvData if resumeData is modified
   if (this.isModified('resumeData') && this.resumeData) {
-    // Keep cvData in sync for backward compatibility
-    // This ensures existing components continue to work
     const { migrateToLegacyFormat } = require('@/lib/migrations/enhanced-resume-migration');
     const legacyData = migrateToLegacyFormat(this.resumeData);
 
-    // Preserve any existing canvas-specific metadata and sectionTitles on cvData
-    if (this.cvData) {
+    if (this.cvData && typeof this.cvData === 'object') {
       const existingMetadata = (this.cvData as any).metadata;
       const existingSectionTitles = (this.cvData as any).sectionTitles;
-      if (existingMetadata) {
-        legacyData.metadata = existingMetadata;
+      if (existingMetadata && typeof existingMetadata === 'object') {
+        legacyData.metadata = {
+          ...(existingMetadata),
+          ...(legacyData.metadata || {}),
+          canvasDesign: existingMetadata.canvasDesign,
+          canvasTemplate: existingMetadata.canvasTemplate,
+          canvasZones: existingMetadata.canvasZones,
+          canvasTemplatesZones: existingMetadata.canvasTemplatesZones,
+          canvasTemplatesDesign: existingMetadata.canvasTemplatesDesign,
+          analysisSnapshot: existingMetadata.analysisSnapshot,
+          surgeonAnalysis: existingMetadata.surgeonAnalysis,
+          lastModified: new Date()
+        };
       }
       if (existingSectionTitles) {
         legacyData.sectionTitles = existingSectionTitles;

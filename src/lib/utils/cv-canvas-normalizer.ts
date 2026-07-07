@@ -44,12 +44,29 @@ export function normalizeCvDataForCanvas(cvData: UnifiedCVDataStructure | null |
     return null;
   }
 
-  const translated = JSON.parse(JSON.stringify(cvData));
+  const clone = (source: any) => {
+    if (typeof structuredClone === 'function') {
+      try {
+        return structuredClone(source);
+      } catch {
+        return JSON.parse(JSON.stringify(source));
+      }
+    }
+    return JSON.parse(JSON.stringify(source));
+  };
+
+  const translated = clone(cvData);
 
   if (translated.basics) {
     if (typeof translated.basics.location === 'object' && translated.basics.location !== null) {
       const loc = translated.basics.location;
-      translated.basics.location = [loc.city, loc.region, loc.countryCode].filter(Boolean).join(', ');
+      translated.basics.location = {
+        city: typeof loc.city === 'string' ? loc.city : '',
+        region: typeof loc.region === 'string' ? loc.region : '',
+        countryCode: typeof loc.countryCode === 'string' ? loc.countryCode : '',
+        address: typeof loc.address === 'string' ? loc.address : '',
+        postalCode: typeof loc.postalCode === 'string' ? loc.postalCode : ''
+      };
     }
     if (!translated.basics.title && translated.basics.label) {
       translated.basics.title = translated.basics.label;
@@ -71,6 +88,7 @@ export function normalizeCvDataForCanvas(cvData: UnifiedCVDataStructure | null |
       id: w.id || `exp-${index}`,
       role: w.position,
       company: w.name,
+      url: w.url || '',
       startDate: w.startDate || '',
       endDate: w.endDate || '',
       description: buildRichTextDescription(w.summary, w.highlights),
@@ -90,6 +108,7 @@ export function normalizeCvDataForCanvas(cvData: UnifiedCVDataStructure | null |
       id: e.id || `edu-${index}`,
       degree: e.studyType ? `${e.studyType} in ${e.area}` : e.area,
       institution: e.institution,
+      url: e.url || '',
       startDate: e.startDate || '',
       endDate: e.endDate || '',
       description: [e.score ? `Score: ${e.score}` : '', e.description || ''].filter(Boolean).join('\n'),
@@ -124,11 +143,11 @@ export function normalizeCvDataForCanvas(cvData: UnifiedCVDataStructure | null |
   }
 
   if (Array.isArray(cvData.languages)) {
-    translated.languages = cvData.languages.map((l: any) => l.language || l).join(', ');
+    translated.languages = cvData.languages.map((l: any) => l.language || l);
   }
 
   if (Array.isArray(cvData.interests)) {
-    translated.interests = cvData.interests.map((i: any) => i.name || i).join(', ');
+    translated.interests = cvData.interests.map((i: any) => i.name || i);
   }
 
   translated.sectionTitles = translated.sectionTitles || {

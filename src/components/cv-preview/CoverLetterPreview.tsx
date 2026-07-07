@@ -5,6 +5,21 @@ import { motion } from 'framer-motion';
 import { FileText, User, Building, Calendar } from 'lucide-react';
 import { CoverLetterTemplate, getCVTemplateStyleForCoverLetter } from '@/lib/templates/cover-letter-templates';
 
+function sanitizeHtml(html: string): string {
+  if (!html) return '';
+  return html
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+const SanitizedHTML: React.FC<{ html: string; style?: React.CSSProperties; className?: string }> = ({ html, style, className }) => {
+  const sanitized = sanitizeHtml(html);
+  return <span style={style} className={className} dangerouslySetInnerHTML={{ __html: sanitized }} />;
+};
+
 interface CoverLetterPreviewProps {
   content: string;
   cvData: any;
@@ -330,7 +345,7 @@ const CoverLetterPreview: React.FC<CoverLetterPreviewProps> = ({
               bodyContent.split('\n\n').map((paragraph, index) => (
                 <div key={index} className={`cl-module ${index === 0 ? 'introduction' : 'bridge'}`} style={{ marginBottom: '12px' }}>
                   {paragraph.trim().split('\n').map((line, lineIndex) => (
-                    <span key={lineIndex} dangerouslySetInnerHTML={{ __html: line }} style={{ display: 'block' }} />
+                    <span key={lineIndex} style={{ display: 'block' }}>{sanitizeHtml(line)}</span>
                   ))}
                 </div>
               ))
@@ -341,8 +356,8 @@ const CoverLetterPreview: React.FC<CoverLetterPreviewProps> = ({
             )}
 
             <div className="cl-signoff" style={{ marginTop: '20px' }}>
-              <div style={{ marginBottom: '20px' }} dangerouslySetInnerHTML={{ __html: sincerelyText }} />
-              <div className="signature-name" dangerouslySetInnerHTML={{ __html: signatureName }} />
+              <div style={{ marginBottom: '20px' }}>{sanitizeHtml(sincerelyText)}</div>
+              <div className="signature-name">{sanitizeHtml(signatureName)}</div>
             </div>
           </section>
         </div>
@@ -485,14 +500,14 @@ const CoverLetterPreview: React.FC<CoverLetterPreviewProps> = ({
                     if (line.trim().startsWith('•')) {
                       return (
                         <div key={lineIndex} style={{ marginLeft: '20px', marginBottom: '8px' }}>
-                          <span dangerouslySetInnerHTML={{ __html: formattedLine }} />
+                          <SanitizedHTML html={formattedLine} />
                         </div>
                       );
                     }
 
                     return (
                       <div key={lineIndex} style={{ marginBottom: '4px', wordWrap: 'break-word', overflowWrap: 'break-word' }}>
-                        <span dangerouslySetInnerHTML={{ __html: formattedLine }} />
+                        <SanitizedHTML html={formattedLine} />
                       </div>
                     );
                   })}

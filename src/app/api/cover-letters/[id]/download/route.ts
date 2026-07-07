@@ -5,7 +5,6 @@ import { authOptions } from '@/lib/auth';
 import { CoverLetter } from '@/models';
 import { downloadAnalyticsService } from '@/lib/services/downloadAnalyticsService';
 import mongoose from 'mongoose';
-// jsPDF will be imported dynamically
 import { Document, Packer, Paragraph, TextRun, AlignmentType } from 'docx';
 import redisRateLimiter from '@/lib/redis-rate-limiter';
 import { configService } from '@/lib/services/configService';
@@ -30,7 +29,6 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
 
-    // Validate parameters
     const validation = validateDownloadParams(
       searchParams.get('format'),
       searchParams.get('paperSize'),
@@ -50,15 +48,13 @@ export async function GET(
     const paperSize = validation.paperSize!;
     const orientation = validation.orientation!;
 
-    // Rate limiting
     const downloadConfig = configService.getDownloadConfig();
     const rateLimitConfig = downloadConfig.rateLimit;
 
-    // Per-user rate limiting
     const userLimitResult = await redisRateLimiter.checkLimit(
       `download:user:${userId}`,
       {
-        windowMs: 3600000, // 1 hour
+        windowMs: 3600000,
         maxRequests: rateLimitConfig.perUser
       }
     );
@@ -85,11 +81,10 @@ export async function GET(
       );
     }
 
-    // Per-IP rate limiting
     const ipLimitResult = await redisRateLimiter.checkLimit(
       `download:ip:${ipAddress}`,
       {
-        windowMs: 3600000, // 1 hour
+        windowMs: 3600000,
         maxRequests: rateLimitConfig.perIP
       }
     );
@@ -117,7 +112,6 @@ export async function GET(
       );
     }
 
-    // Get cover letter
     const coverLetter = await CoverLetter.findOne({
       _id: id,
       userId: new mongoose.Types.ObjectId(session.user.id)
@@ -127,7 +121,6 @@ export async function GET(
       return NextResponse.json({ error: 'Cover letter not found' }, { status: 404 });
     }
 
-    // Generate filename based on cover letter title, then job title, then fallback
     const jobTitle = searchParams.get('jobTitle');
     const coverLetterTitle = coverLetter.title;
     const baseName = sanitizeFilename(
@@ -145,20 +138,18 @@ export async function GET(
     if (format === 'pdf') {
       fileBlob = await generateCoverLetterPDF(coverLetter, paperSize, orientation);
       mimeType = 'application/pdf';
-      filename = `${baseName}|CoverLetter.pdf`;
+      filename = baseName + '_CoverLetter.pdf';
     } else if (format === 'docx' || format === 'doc') {
       fileBlob = await generateCoverLetterDOCX(coverLetter, format);
       mimeType = format === 'doc'
         ? 'application/msword'
         : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-      filename = `${baseName}|CoverLetter.${format}`;
+      filename = baseName + '_CoverLetter.' + format;
     } else {
       return NextResponse.json({ error: 'Unsupported format' }, { status: 400 });
     }
 
-    // Log download analytics
     try {
-      // Validate file size
       const fileSizeValidation = validateFileSize(fileBlob.size);
       if (!fileSizeValidation.valid) {
         logger.warn('File size validation failed', {
@@ -192,11 +183,10 @@ export async function GET(
       console.error('Failed to log download analytics:', analyticsError);
     }
 
-    // Return file
     return new NextResponse(fileBlob, {
       headers: {
         'Content-Type': mimeType,
-        'Content-Disposition': `attachment; filename="${filename}"`,
+        'Content-Disposition': 'attachment; filename="' + filename + '"',
         'Content-Length': fileBlob.size.toString()
       }
     });
@@ -210,9 +200,32 @@ export async function GET(
   }
 }
 
-/**
- * Generate cover letter PDF
- */
+function getLetterContent(coverLetter: any): { header: string; body: string; footer: string } {
+  const header = typeof coverLetter.header === 'string' ? coverLetter.header : '';
+  const body = typeof coverLetter.body === 'string' ? coverLetter.body : '';
+  const footer = typeof coverLetter.footer === 'string' ? coverLetter.footer : '';
+
+  if (header || body || footer) {
+    return { header, body, footer };
+  }
+
+  const content = typeof coverLetter.content === 'string' ? coverLetter.content : '';
+  if (!content) {
+    return { header: '', body: '', footer: '' };
+  }
+
+  const lines = content.split('\n').filter((line: string) => line.trim() !== '');
+  const headerLines = lines.slice(0, 5);
+  const footerLines = lines.slice(-2);
+  const bodyLines = lines.slice(5, lines.length - 2);
+
+  return {
+    header: headerLines.join('\n'),
+    body: bodyLines.join('\n'),
+    footer: footerLines.join('\n')
+  };
+}
+
 async function generateCoverLetterPDF(
   coverLetter: any,
   paperSize: 'A4' | 'Letter',
@@ -225,14 +238,12 @@ async function generateCoverLetterPDF(
     format: paperSize === 'Letter' ? 'letter' : 'a4'
   });
 
-  // Set margins
   const margin = 20;
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
   const contentWidth = pageWidth - (margin * 2);
   let yPos = margin + 20;
 
-  // Date (top right)
   const today = new Date().toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
@@ -243,7 +254,6 @@ async function generateCoverLetterPDF(
   doc.text(today, pageWidth - margin - doc.getTextWidth(today), yPos);
   yPos += 15;
 
-  // Recipient info (if available)
   if (coverLetter.metadata?.targetCompany) {
     doc.setFontSize(11);
     doc.setTextColor(0, 0, 0);
@@ -251,32 +261,32 @@ async function generateCoverLetterPDF(
     yPos += 7;
   }
 
-  // Greeting
   yPos += 10;
   doc.setFontSize(11);
   doc.text('Dear Hiring Manager,', margin, yPos);
   yPos += 10;
 
-  // Content
   doc.setFontSize(11);
   doc.setTextColor(0, 0, 0);
 
-  // Split content into paragraphs
-  const paragraphs = coverLetter.content.split('\n\n').filter(p => p.trim());
+  const { body, header } = getLetterContent(coverLetter);
+  const bodyText = body || header || (typeof coverLetter.content === 'string' ? coverLetter.content : '');
+  const paragraphs = bodyText
+    .split('\n\n')
+    .map((p: string) => p.trim())
+    .filter((p: string) => p.length > 0);
 
   paragraphs.forEach((paragraph: string) => {
-    // Check if we need a new page
     if (yPos > pageHeight - margin - 20) {
       doc.addPage();
       yPos = margin + 20;
     }
 
-    const lines = doc.splitTextToSize(paragraph.trim(), contentWidth);
+    const lines = doc.splitTextToSize(paragraph, contentWidth);
     doc.text(lines, margin, yPos);
-    yPos += lines.length * 6 + 5; // Line height + spacing
+    yPos += lines.length * 6 + 5;
   });
 
-  // Closing
   if (yPos > pageHeight - margin - 30) {
     doc.addPage();
     yPos = margin + 20;
@@ -285,16 +295,11 @@ async function generateCoverLetterPDF(
   yPos += 10;
   doc.text('Sincerely,', margin, yPos);
   yPos += 10;
-
-  // Signature space
   doc.text('[Your Name]', margin, yPos);
 
   return doc.output('blob');
 }
 
-/**
- * Generate cover letter DOCX
- */
 async function generateCoverLetterDOCX(
   coverLetter: any,
   format: 'docx' | 'doc'
@@ -305,53 +310,47 @@ async function generateCoverLetterDOCX(
     day: 'numeric'
   });
 
-  // Split content into paragraphs
-  const paragraphs = coverLetter.content.split('\n\n').filter((p: string) => p.trim());
+  const { body } = getLetterContent(coverLetter);
+  const bodyText = body || (typeof coverLetter.content === 'string' ? coverLetter.content : '');
+  const paragraphs = bodyText
+    .split('\n\n')
+    .map((p: string) => p.trim())
+    .filter((p: string) => p.length > 0);
 
   const doc = new Document({
     sections: [{
       properties: {},
       children: [
-        // Date
         new Paragraph({
           children: [
             new TextRun({
               text: today,
-              size: 22 // 11pt
+              size: 22
             })
           ],
           alignment: AlignmentType.RIGHT,
           spacing: { after: 200 }
         }),
-
-        // Recipient (if available)
         ...(coverLetter.metadata?.targetCompany ? [
           new Paragraph({
             text: coverLetter.metadata.targetCompany,
             spacing: { after: 200 }
           })
         ] : []),
-
-        // Greeting
         new Paragraph({
           text: 'Dear Hiring Manager,',
           spacing: { after: 400 }
         }),
-
-        // Content paragraphs
         ...paragraphs.map((paragraph: string) =>
           new Paragraph({
-            text: paragraph.trim(),
+            text: paragraph,
             spacing: { after: 300 }
           })
         ),
-
-        // Closing
         new Paragraph({
           text: 'Sincerely,',
           spacing: { before: 400, after: 400 }
         }),
-
         new Paragraph({
           text: '[Your Name]'
         })
@@ -366,4 +365,3 @@ async function generateCoverLetterDOCX(
       : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
   });
 }
-

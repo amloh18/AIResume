@@ -727,6 +727,15 @@ export async function PUT(
       updateOperations.$unset = mongoUnset.$unset;
     }
 
+    // CRITICAL: Manually enforce single master CV per user because updateOne bypasses pre-save hook
+    const becomingMaster = updateData.metadata?.isMaster === true || updateData.isMaster === true;
+    if (becomingMaster) {
+      await CV.updateMany(
+        { userId: new mongoose.Types.ObjectId(userId), _id: { $ne: cvId } },
+        { $set: { 'metadata.isMaster': false } }
+      );
+    }
+
     await CV.updateOne(
       { _id: cvId, userId: new mongoose.Types.ObjectId(userId) },
       updateOperations
