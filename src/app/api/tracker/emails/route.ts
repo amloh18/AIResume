@@ -4,6 +4,8 @@ import { authOptions } from '@/lib/auth';
 import { getConnection } from '@/lib/database/connection-manager';
 import { EmailAccount, EmailMessage, EmailThread, SenderJobMemory, StageChangeLog } from '@/models/TrackerEmail';
 import JobApplication from '@/models/JobApplication';
+import User from '@/models/User';
+import { UnifiedEmailSyncService } from '@/lib/services/unifiedEmailSync';
 import mongoose from 'mongoose';
 
 export const dynamic = 'force-dynamic';
@@ -140,15 +142,25 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Job not found' }, { status: 404 });
     }
 
-    // Check if the user has connected an email account
+    // Check if the user has connected an verified email account
     let emailAccount = await EmailAccount.findOne({ userId, syncStatus: 'connected' });
     const isAutomated = !!emailAccount;
 
-    // If there is no email account, we can provision a default mock one for the demo
+    // Seed mock emails only for demo accounts that have an active connection
+    const user = await User.findOne({ _id: userId }).select('hasSeededMockEmails');
+    const hasSeededMockEmails = user?.hasSeededMockEmails || false;
+    if (isAutomated && !hasSeededMockEmails) {
+      const connectedAccount = await EmailAccount.findOne({ userId, syncStatus: 'connected' });
+      if (connectedAccount) {
+        await seedMockEmailsIfNeeded(userId, jobId, job, connectedAccount._id.toString());
+        await User.updateOne({ _id: userId }, { $set: { hasSeededMockEmails: true } });
+      }
+    }
+
+    // Fallback: if still no account, create a disconnected placeholder for frontend state
     if (!emailAccount) {
       emailAccount = await EmailAccount.findOne({ userId });
       if (!emailAccount) {
-        // Create a disconnected account as default to indicate "not connected"
         emailAccount = await EmailAccount.create({
           userId,
           provider: 'gmail',
@@ -157,10 +169,6 @@ export async function GET(request: NextRequest) {
         });
       }
     }
-
-    // Seed mock emails if this is an automated user or if we want to show demonstration emails
-    // Seed them using the connected/disconnected account ID
-    await seedMockEmailsIfNeeded(userId, jobId, job, emailAccount._id.toString());
 
     // Fetch emails
     const messages = await EmailMessage.find({ jobId, userId }).sort({ receivedAt: 1 });
@@ -200,13 +208,41 @@ export async function POST(request: NextRequest) {
 
     // ACTION: SEND/LOG MANUAL REPLY
     if (action === 'send_reply') {
-      const emailAccount = await EmailAccount.findOne({ userId });
-      const accountId = emailAccount ? emailAccount._id : new mongoose.Types.ObjectId();
+      const emailAccount = await EmailAccount.findOne({ userId, syncStatus: 'connected' });
+      if (!emailAccount) {
+        return NextResponse.json({ success: false, error: 'No connected email account found. Please connect an email account first.' }, { status: 400 });
+      }
+
+      const accountId = emailAccount._id.toString();
+      const syncService = new UnifiedEmailSyncService({
+        accessToken: emailAccount.oauthAccessToken || '',
+        refreshToken: emailAccount.oauthRefreshToken,
+        provider: emailAccount.provider,
+        expiresAt: emailAccount.tokenExpiresAt,
+        imapConfig: emailAccount.imapHost ? {
+          host: emailAccount.imapHost,
+          port: emailAccount.imapPort || 993,
+          user: emailAccount.emailAddress,
+          password: emailAccount.password || ''
+        } : undefined,
+        smtpConfig: emailAccount.smtpHost ? {
+          host: emailAccount.smtpHost,
+          port: emailAccount.smtpPort || 465,
+          user: emailAccount.emailAddress,
+          password: emailAccount.password || ''
+        } : undefined,
+      });
+
+      const sendResult = await syncService.sendEmail(recipientEmail, subject || `Re: Communication regarding job`, bodyText, threadId);
+
+      if (!sendResult.success) {
+        return NextResponse.json({ success: false, error: sendResult.error || 'Failed to send email' }, { status: 500 });
+      }
 
       const newMsg = await EmailMessage.create({
         userId,
         accountId,
-        providerMessageId: new mongoose.Types.ObjectId().toString(),
+        providerMessageId: sendResult.messageId || new mongoose.Types.ObjectId().toString(),
         providerThreadId: threadId || new mongoose.Types.ObjectId().toString(),
         jobId,
         matchConfidence: 100,

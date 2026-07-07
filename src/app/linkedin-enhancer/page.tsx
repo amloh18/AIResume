@@ -112,8 +112,18 @@ import OptimizedDashboardLayout from '@/components/dashboard/OptimizedDashboardL
 function LinkedInEnhancerPageContent() {
     const { membership, loading } = useMembership();
 
-    // Show nothing while loading (avoids flash of wrong content)
-    if (loading) return null;
+    if (loading) {
+      return (
+        <OptimizedDashboardLayout>
+          <div className="flex items-center justify-center min-h-[calc(100vh-120px)]">
+            <div className="flex flex-col items-center gap-4">
+              <div className="w-10 h-10 rounded-full border-2 border-[color:var(--border-primary)] border-t-[var(--accent-primary)] animate-spin" />
+              <p className="text-small text-[color:var(--text-secondary)]">Loading LinkedIn Enhancer...</p>
+            </div>
+          </div>
+        </OptimizedDashboardLayout>
+      );
+    }
 
     // Gate: LinkedIn Enhancer requires Focused plan or higher
     // Check linkedinToneChange as the proxy for full enhancer access

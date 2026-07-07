@@ -39,6 +39,7 @@ const AppliedStageView: React.FC<AppliedStageViewProps> = ({
   isFullScreen = false
 }) => {
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
+  const [activityForm, setActivityForm] = useState<{ jobId: string; note: string } | null>(null);
 
   const getDaysSinceApplication = (applicationDate?: Date | string): number => {
     if (!applicationDate) return 0;
@@ -77,14 +78,36 @@ const AppliedStageView: React.FC<AppliedStageViewProps> = ({
     });
   }, [jobs, sortOrder]);
 
-  const handleMarkFollowUpComplete = async (job: JobApplication, e: React.MouseEvent) => {
+  const handleLogActivity = (job: JobApplication, e: React.MouseEvent) => {
     e.stopPropagation();
+    setActivityForm({ jobId: job.id || job._id, note: '' });
+  };
+
+  const submitActivity = async (jobId: string) => {
+    if (!activityForm?.note.trim()) return;
     try {
-      await onJobStatusUpdate(job.id || job._id, job.status || 'applied');
-      toast.success('Follow-up marked as complete');
+      const response = await fetch(`/api/jobs/${jobId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          followUps: {
+            type: 'email',
+            description: activityForm.note.trim(),
+            date: new Date().toISOString(),
+            outcome: 'sent'
+          }
+        }),
+      });
+      if (response.ok) {
+        toast.success('Activity logged');
+        setActivityForm(null);
+        onJobStatusUpdate(jobId, 'applied');
+      } else {
+        toast.error('Failed to log activity');
+      }
     } catch (error) {
-      console.error('Error updating follow-up:', error);
-      toast.error('Failed to update follow-up status');
+      console.error('Error logging activity:', error);
+      toast.error('Failed to log activity');
     }
   };
 
@@ -227,16 +250,37 @@ const AppliedStageView: React.FC<AppliedStageViewProps> = ({
 
                   {/* Action */}
                   <td className="px-6 py-4 whitespace-nowrap text-right" onClick={(e) => e.stopPropagation()}>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        // Trigger log activity or simply open sidebar for now as requested for "Log Activity"
-                        onJobClick(job);
-                      }}
-                      className="px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-small font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors inline-flex items-center gap-1.5"
-                    >
-                      Log Activity
-                    </button>
+                    {activityForm?.jobId === (job.id || job._id) ? (
+                      <div className="flex justify-end gap-2">
+                        <input
+                          type="text"
+                          value={activityForm.note}
+                          onChange={(e) => setActivityForm({ ...activityForm, note: e.target.value })}
+                          placeholder="Log a note..."
+                          className="px-3 py-1.5 text-small border border-[color:var(--border-primary)] rounded-lg bg-[var(--bg-primary)] text-[color:var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]"
+                          autoFocus
+                        />
+                        <button
+                          onClick={() => submitActivity(job.id || job._id)}
+                          className="px-3 py-1.5 bg-[var(--accent-primary)] text-[#141810] text-small font-bold rounded-lg hover:bg-[var(--accent-hover)] transition-colors"
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={() => setActivityForm(null)}
+                          className="px-3 py-1.5 bg-[var(--bg-secondary)] text-[color:var(--text-primary)] text-small rounded-lg hover:bg-[var(--hover-bg)] transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={(e) => handleLogActivity(job, e)}
+                        className="px-3 py-1.5 border border-[color:var(--border-primary)] text-[color:var(--text-primary)] text-small font-medium rounded-lg hover:bg-[var(--hover-bg)] transition-colors inline-flex items-center gap-1.5"
+                      >
+                        Log Activity
+                      </button>
+                    )}
                   </td>
                 </motion.tr>
               );

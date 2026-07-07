@@ -615,6 +615,10 @@ const userSettingsSchema = new Schema<IUserSettings>({
           colorCoding: {
             type: Boolean,
             default: true
+          },
+          includeCreated: {
+            type: Boolean,
+            default: false
           }
         }
       }

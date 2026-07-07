@@ -132,6 +132,9 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
   onUpdateJourney,
   onDelete
 }) => {
+  if (!journey) {
+    return null;
+  }
   const { isDark } = useTheme();
   const { state, updateJourneyStatus, updateJobInfo, updateCurrentStep, updateCVId, updateCoverLetterId, updateAtsScore, updateCurrentJobId, endJourney } = useJobJourney();
   const { hasAI, userProfile } = useUserPlan();
@@ -2180,9 +2183,9 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
           </div>
 
           {/* Mobile: Steps Status, ATS Score, and Details */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2">
             {/* Steps Status */}
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide flex-shrink">
               {steps.map((step) => {
                 const stepId = step.id;
                 const status = getStepStatus(stepId);
@@ -2430,16 +2433,16 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
           >
             <div className="px-6 py-4">
               {generationState && (
-                <div className={`mb-4 rounded-xl border p-4 ${generationAccentClasses}`}>
-                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                <div className={`mb-3 rounded-xl border p-3 ${generationAccentClasses}`}>
+                  <div className="flex flex-wrap items-start gap-3">
                     <div className="space-y-2">
                       <div className="flex flex-wrap items-center gap-2">
                         {isGenerationFailure ? (
-                          <AlertTriangle className="h-4 w-4" />
+                          <AlertTriangle className="h-3.5 w-3.5" />
                         ) : generationState.mode === 'tailored' ? (
-                          <Sparkles className="h-4 w-4" />
+                          <Sparkles className="h-3.5 w-3.5" />
                         ) : (
-                          <CheckCircle2 className="h-4 w-4" />
+                          <CheckCircle2 className="h-3.5 w-3.5" />
                         )}
                         <p className="text-small font-semibold">{generationState.title}</p>
                         {generationBadgeLabel && (
@@ -2458,7 +2461,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                     {generationState.nextAction !== 'wait' && (
                       <motion.button
                         onClick={handleGenerationAction}
-                        className="inline-flex items-center gap-2 rounded-lg border border-current/20 px-3 py-2 text-small font-medium transition-colors hover:bg-white/10"
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-current/20 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider shrink-0 font-medium transition-colors hover:bg-white/10"
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                       >
@@ -2478,7 +2481,38 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                 </div>
               )}
 
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                  {/* Stage badge shown when expanded and jobDetails is loaded */}
+                  {jobDetails?.status && (
+                    <div className="mb-3 flex flex-wrap items-center gap-2">
+                      {(() => {
+                        const s = jobDetails.status;
+                        const badgeMap = {
+                          draft: 'bg-gray-100 text-gray-700 dark:bg-gray-900/40 dark:text-gray-300',
+                          created: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300',
+                          applied: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
+                          screening: 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300',
+                          interview: 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300',
+                          offer: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+                          accepted: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
+                          rejected: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
+                          withdrawn: 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300',
+                        };
+                        return (
+                          <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider ${badgeMap[s] || 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'}`}>
+                            {s.charAt(0).toUpperCase() + s.slice(1)}
+                          </span>
+                        );
+                      })()}
+                      {jobDetails.deadline && (
+                        <span className="text-[10px] font-semibold text-gray-500 dark:text-gray-400">
+                          Deadline: {new Date(jobDetails.deadline).toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'})}
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {/* Step 1: Job */}
                 <div className={`p-3 rounded-lg border ${liveProgress.status === 'completed'
                   ? 'bg-blue-100 dark:bg-blue-800/20 border-blue-300 dark:border-blue-500/30 text-gray-900 dark:text-white'

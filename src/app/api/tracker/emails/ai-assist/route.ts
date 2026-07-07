@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { callAIWithFallback } from '@/lib/utils/ai-api-helper';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import creditService from '@/lib/services/creditService';
 
 export const dynamic = 'force-dynamic';
 
@@ -271,6 +272,16 @@ INPUTS:
     }
 
     try {
+      const creditCheck = await creditService.checkCreditAvailability(session.user.id, 'ai_generation');
+      if (!creditCheck.available) {
+        return NextResponse.json({
+          success: false,
+          error: 'Insufficient AI credits. Please upgrade your plan.',
+          creditsRemaining: creditCheck.creditsRemaining,
+          limit: creditCheck.limit
+        }, { status: 403 });
+      }
+
       const aiResponse = await callAIWithFallback({
         prompt: prompt,
         systemPrompt: UNIVERSAL_SYSTEM_CONTEXT,

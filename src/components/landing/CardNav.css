@@ -32,6 +32,13 @@
   z-index: 10;
 }
 
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  position: relative;
+}
+
 
 
 .card-nav-content {
@@ -144,14 +151,18 @@
 }
 
 /* Mega Menu integrated inside the main nav bar flow */
+.nav-link-wrapper {
+  position: relative;
+}
+
 .submenu-dropdown {
   position: absolute;
   top: 70px;
   left: 0;
   right: 0;
   transform: none !important;
-  width: 100%;
-  max-width: none;
+  width: 100vw;
+  max-width: 1023px;
   background-color: rgb(14, 18, 11); /* fully solid — hero text cannot show through */
   backdrop-filter: none;
   border: none;
@@ -166,6 +177,7 @@
   transition: opacity 0.25s ease, visibility 0.25s ease;
   z-index: 100;
   margin-top: 0;
+  margin-left: calc(-50% + (95vw - 1023px) / 2);
 }
 
 .nav-link-wrapper.hovered .submenu-dropdown {

@@ -17,9 +17,14 @@ import {
   Mail,
   Linkedin,
   GraduationCap,
+  FolderPlus,
+  Send,
+  Award,
+  Archive,
 } from "lucide-react";
 import JourneyTimelineCard from "../JourneyTimelineCard";
 import { CVJourney } from "@/types/cv";
+import { getJobExpiryState } from "@/utils/tracker-expiry";
 import DraftStageView from "./stages/DraftStageView";
 import CreatedStageView from "./stages/CreatedStageView";
 import AppliedStageView from "./stages/AppliedStageView";
@@ -82,13 +87,12 @@ interface JobApplication {
 
 interface JobsKanbanViewProps {
   jobs: JobApplication[];
-  jobsByStatus: {
-    draft: JobApplication[];
-    created: JobApplication[];
+  jobsByPipeline: {
+    pipeline: JobApplication[];
     applied: JobApplication[];
     interview: JobApplication[];
     offer: JobApplication[];
-    rejected: JobApplication[];
+    archive: JobApplication[];
   };
   loading: boolean;
   selectedJobs: Set<string>;
@@ -122,15 +126,8 @@ interface JobsKanbanViewProps {
 }
 
 const isJobExpired = (job: JobApplication) => {
-  const targetDate =
-    job.status === "offer" ? job.offerDetails?.deadline : job.deadline;
-  if (!targetDate) return false;
-  const d = new Date(targetDate);
-  const now = new Date();
-  const diffDays = Math.ceil(
-    (d.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
-  );
-  return diffDays < 0;
+  const expiry = getJobExpiryState(job);
+  return expiry === 'archivable';
 };
 
 const ExpiredJobsAccordion: React.FC<{
@@ -174,7 +171,7 @@ const ExpiredJobsAccordion: React.FC<{
     <div className="mt-4">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between p-2 text-small font-medium text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-[#141810] border border-gray-200 dark:border-gray-800 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors"
+        className="w-full flex items-center justify-between p-2 text-small font-medium text-[color:var(--text-secondary)] bg-[var(--bg-secondary)] border border-[color:var(--border-primary)] rounded-lg hover:bg-[var(--hover-bg)] transition-colors"
       >
         <span>Expired ({jobs.length})</span>
         <ChevronDown
@@ -226,9 +223,56 @@ const ExpiredJobsAccordion: React.FC<{
   );
 };
 
+const STAGE_BLANK_STATES: Record<string, { title: string; desc: string }> = {
+  pipeline: {
+    title: "Start Your Pipeline",
+    desc: "Drag jobs here or click 'Quick Add' to start tailoring your resume.",
+  },
+  applied: {
+    title: "Track Submissions",
+    desc: "Move jobs here once applied to trigger aging alerts & follow-ups.",
+  },
+  interview: {
+    title: "Prepare for Rounds",
+    desc: "Drag jobs here when you get scheduled to log panel info & mock prep.",
+  },
+  offer: {
+    title: "Analyze Offers",
+    desc: "Drag jobs here to break down compensation & track decision deadlines.",
+  },
+  archive: {
+    title: "Archive History",
+    desc: "Your accepted offers, rejections, and withdrawals will be stored here.",
+  },
+};
+
+const StageBlankState: React.FC<{ stage: string }> = ({ stage }) => {
+  const config = STAGE_BLANK_STATES[stage] || STAGE_BLANK_STATES.pipeline;
+  
+  let IconComponent = FolderPlus;
+  if (stage === "applied") IconComponent = Send;
+  if (stage === "interview") IconComponent = Calendar;
+  if (stage === "offer") IconComponent = Award;
+  if (stage === "archive") IconComponent = Archive;
+
+  return (
+    <div className="flex flex-col items-center justify-center p-6 text-center rounded-xl border border-dashed border-[color:var(--border-primary)] bg-[var(--bg-primary)]/40 hover:bg-[var(--bg-primary)]/60 transition-all duration-300 min-h-[160px] my-1 mx-0.5 select-none">
+      <div className="p-3 rounded-full bg-[var(--bg-secondary)] text-[color:var(--text-secondary)] mb-3 transition-transform">
+        <IconComponent size={20} className="opacity-80" />
+      </div>
+      <h4 className="text-small font-bold text-[color:var(--text-primary)] mb-1">
+        {config.title}
+      </h4>
+      <p className="text-[11px] leading-relaxed text-[color:var(--text-secondary)] max-w-[220px]">
+        {config.desc}
+      </p>
+    </div>
+  );
+};
+
 const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
   jobs,
-  jobsByStatus,
+  jobsByPipeline,
   loading,
   selectedJobs,
   setSelectedJobs,
@@ -254,58 +298,93 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
   onImproveATS,
   onDownload,
 }) => {
+  const [collapsedColumns, setCollapsedColumns] = React.useState<Set<string>>(new Set());
+
+  React.useEffect(() => {
+    try {
+      const stored = localStorage.getItem('kanban-collapsed-columns');
+      if (stored) {
+        setCollapsedColumns(new Set(JSON.parse(stored)));
+      } else {
+        setCollapsedColumns(new Set());
+      }
+    } catch {
+      setCollapsedColumns(new Set());
+    }
+  }, []);
+
+  const toggleColumn = (columnId: string) => {
+    setCollapsedColumns(prev => {
+      const next = new Set(prev);
+      if (next.has(columnId)) {
+        next.delete(columnId);
+      } else {
+        next.add(columnId);
+      }
+      try {
+        localStorage.setItem('kanban-collapsed-columns', JSON.stringify([...next]));
+      } catch {
+        // ignore storage errors
+      }
+      return next;
+    });
+  };
+
   // Draft color (used as default for all stages)
   const draftColor =
-    "bg-gray-100 dark:bg-gray-500/20 border-gray-300 dark:border-gray-500/30 text-gray-600 dark:text-white";
+    "bg-[var(--bg-secondary)] border-[color:var(--border-primary)] text-[color:var(--text-primary)]";
 
-  const allStages = [
+  interface StageConfig {
+    status: string;
+    title: string;
+    color: string;
+    hoverColor: string;
+    subStatuses: string[];
+    collapsible?: boolean;
+  }
+
+  const allStages: StageConfig[] = [
     {
-      status: "draft",
-      title: "Draft",
+      status: "pipeline",
+      title: "Pipeline",
       color: draftColor,
-      hoverColor: draftColor,
-    },
-    {
-      status: "created",
-      title: "Staging",
-      color: draftColor,
-      hoverColor:
-        "bg-purple-100 dark:bg-purple-500/20 border-purple-300 dark:border-purple-500/30 text-purple-600 dark:text-white",
+      hoverColor: "bg-[var(--hover-bg)] border-[color:var(--border-secondary)] text-[color:var(--text-primary)]",
+      subStatuses: ["draft", "created"],
     },
     {
       status: "applied",
       title: "Applied",
       color: draftColor,
-      hoverColor:
-        "bg-blue-100 dark:bg-blue-500/20 border-blue-300 dark:border-blue-500/30 text-blue-600 dark:text-white",
+      hoverColor: "bg-blue-500/10 border-blue-500/30 text-blue-600 dark:text-blue-400",
+      subStatuses: ["applied", "screening"],
     },
     {
       status: "interview",
       title: "Interview",
       color: draftColor,
-      hoverColor:
-        "bg-orange-100 dark:bg-orange-500/20 border-orange-300 dark:border-orange-500/30 text-orange-600 dark:text-white",
+      hoverColor: "bg-orange-500/10 border-orange-500/30 text-orange-600 dark:text-orange-400",
+      subStatuses: ["interview"],
     },
     {
       status: "offer",
       title: "Offer",
       color: draftColor,
-      hoverColor:
-        "bg-green-100 dark:bg-green-500/20 border-green-300 dark:border-green-500/30 text-green-600 dark:text-white",
+      hoverColor: "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400",
+      subStatuses: ["offer"],
     },
     {
-      status: "rejected",
-      title: "Rejected",
+      status: "archive",
+      title: "Archive",
       color: draftColor,
-      hoverColor:
-        "bg-red-100 dark:bg-red-500/20 border-red-300 dark:border-red-500/30 text-red-600 dark:text-white",
+      hoverColor: "bg-gray-500/10 border-gray-500/30 text-gray-600 dark:text-gray-400",
+      subStatuses: ["rejected", "withdrawn", "accepted"],
     },
   ];
 
   // Filter stages based on focus mode
   const stages = isFocusMode
     ? allStages.filter(
-        (stage) => stage.status !== "draft" && stage.status !== "rejected",
+        (stage) => stage.status !== "pipeline" && stage.status !== "archive",
       )
     : allStages;
 
@@ -375,18 +454,18 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
             .filter((stage) => stage.status === zoomedStage)
             .map((stage) => {
               const stageJobs =
-                jobsByStatus[stage.status as keyof typeof jobsByStatus];
+                jobsByPipeline[stage.status as keyof typeof jobsByPipeline];
 
               return (
                 <div key={stage.status} className="space-y-4 py-4">
                   {/* Stage Header */}
                   <div
-                    className={`p-3 rounded-xl border-2 border-solid ${stage.color} min-h-[60px] flex items-center justify-center sticky top-0 z-10 backdrop-blur-sm bg-white/80 dark:bg-[#141810]/80 cursor-pointer transition-all duration-200 group`}
+                    className={`p-3 rounded-xl border-2 border-solid ${stage.color} min-h-[60px] flex items-center justify-center sticky top-0 z-10 backdrop-blur-sm bg-[var(--bg-primary)]/80 dark:bg-[var(--bg-primary)]/80 cursor-pointer transition-all duration-200 group`}
                     onMouseEnter={(e) => {
-                      e.currentTarget.className = `p-3 rounded-xl border-2 border-solid ${stage.hoverColor} min-h-[60px] flex items-center justify-center sticky top-0 z-10 backdrop-blur-sm bg-white/80 dark:bg-[#141810]/80 cursor-pointer transition-all duration-200 group`;
+                      e.currentTarget.className = `p-3 rounded-xl border-2 border-solid ${stage.hoverColor} min-h-[60px] flex items-center justify-center sticky top-0 z-10 backdrop-blur-sm bg-[var(--bg-primary)]/80 dark:bg-[var(--bg-primary)]/80 cursor-pointer transition-all duration-200 group`;
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.className = `p-3 rounded-xl border-2 border-solid ${stage.color} min-h-[60px] flex items-center justify-center sticky top-0 z-10 backdrop-blur-sm bg-white/80 dark:bg-[#141810]/80 cursor-pointer transition-all duration-200 group`;
+                      e.currentTarget.className = `p-3 rounded-xl border-2 border-solid ${stage.color} min-h-[60px] flex items-center justify-center sticky top-0 z-10 backdrop-blur-sm bg-[var(--bg-primary)]/80 dark:bg-[var(--bg-primary)]/80 cursor-pointer transition-all duration-200 group`;
                     }}
                     onClick={(e) => {
                       e.stopPropagation();
@@ -394,7 +473,7 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
                     }}
                   >
                     <div className="flex items-center justify-between w-full">
-                      <h3 className="text-small font-medium text-black dark:text-white tracking-tight">
+                      <h3 className="text-small font-medium text-[color:var(--text-primary)] tracking-tight">
                         {stage.title}
                       </h3>
                       <span className="text-small">{stageJobs.length}</span>
@@ -403,23 +482,41 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
 
                   {/* Stage-Specific Content */}
                   <div className="mt-4">
-                    {stage.status === "draft" && onCreateJourney && (
-                      <DraftStageView
-                        jobs={stageJobs as any}
-                        onJobClick={onJobClick as any}
-                        onCreateJourney={onCreateJourney as any}
-                      />
-                    )}
-                    {stage.status === "created" && (
-                      <CreatedStageView
-                        jobs={stageJobs as any}
-                        journeys={journeys}
-                        getJobJourneys={getJobJourneys}
-                        getJourneyProgress={getJourneyProgress}
-                        getJourneyStatusText={getJourneyStatusText}
-                        onJobClick={onJobClick as any}
-                        onRefresh={onRefresh}
-                      />
+                    {(stage.status === "pipeline" || stage.status === "draft") && onCreateJourney && (
+                      <div>
+                        {stageJobs
+                          .filter(job => job.status === 'draft')
+                          .map((job) => {
+                            const jobJourneys = getJobJourneys(job.id);
+                            return (
+                              <JourneyTimelineCard
+                                key={job.id}
+                                journey={jobJourneys[0]}
+                                onResume={() => {}}
+                                onDownload={() => {}}
+                                onDelete={() => {}}
+                                onRefresh={() => {}}
+                                onUpdateJourney={() => {}}
+                              />
+                            );
+                          })}
+                        {stageJobs
+                          .filter(job => job.status === 'created')
+                          .map((job) => {
+                            const jobJourneys = getJobJourneys(job.id);
+                            return (
+                              <JourneyTimelineCard
+                                key={job.id}
+                                journey={jobJourneys[0]}
+                                onResume={() => {}}
+                                onDownload={() => {}}
+                                onDelete={() => {}}
+                                onRefresh={() => {}}
+                                onUpdateJourney={() => {}}
+                              />
+                            );
+                          })}
+                      </div>
                     )}
                     {stage.status === "applied" && onJobStatusUpdate && (
                       <AppliedStageView
@@ -447,7 +544,7 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
                         isFullScreen={!!zoomedStage}
                       />
                     )}
-                    {stage.status === "rejected" && (
+                    {stage.status === "archive" && (
                       <RejectedStageView
                         jobs={stageJobs as any}
                         onJobClick={onJobClick as any}
@@ -464,171 +561,206 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
         <div className="flex flex-row gap-4 h-full min-w-max pb-4 pl-0 sm:pl-2 pr-0 sm:pr-4 overflow-x-auto scrollbar-hide">
           {stages.map((stage) => {
             const stageJobs =
-              jobsByStatus[stage.status as keyof typeof jobsByStatus];
+              jobsByPipeline[stage.status as keyof typeof jobsByPipeline];
+            const isCollapsed = stage.collapsible && collapsedColumns.has(stage.status);
+
             return (
               <div
                 key={stage.status}
-                className="flex flex-col gap-4 w-[320px] flex-shrink-0 h-full max-h-full"
+                className={`flex flex-col gap-4 ${isCollapsed ? 'w-[48px]' : 'w-[320px]'} flex-shrink-0 h-full max-h-full transition-all duration-300`}
               >
                 {/* Stage Header */}
                 <div
-                  className={`flex-shrink-0 p-3 rounded-xl border-2 border-solid ${stage.color} min-h-[60px] flex items-center justify-center cursor-pointer transition-all duration-200 group`}
+                  className={`p-3 rounded-xl border-2 border-solid ${stage.color} ${isCollapsed ? 'h-full py-8' : 'min-h-[60px] flex-shrink-0'} flex items-center justify-center cursor-pointer transition-all duration-200 group`}
                   style={
                     {
                       "--hover-color": stage.hoverColor,
                     } as React.CSSProperties
                   }
                   onMouseEnter={(e) => {
-                    e.currentTarget.className = `p-3 rounded-xl border-2 border-solid ${stage.hoverColor} min-h-[60px] flex items-center justify-center cursor-pointer transition-all duration-200 group`;
+                    e.currentTarget.className = `p-3 rounded-xl border-2 border-solid ${stage.hoverColor} ${isCollapsed ? 'h-full py-8' : 'min-h-[60px] flex-shrink-0'} flex items-center justify-center cursor-pointer transition-all duration-200 group`;
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.className = `p-3 rounded-xl border-2 border-solid ${stage.color} min-h-[60px] flex items-center justify-center cursor-pointer transition-all duration-200 group`;
+                    e.currentTarget.className = `p-3 rounded-xl border-2 border-solid ${stage.color} ${isCollapsed ? 'h-full py-8' : 'min-h-[60px] flex-shrink-0'} flex items-center justify-center cursor-pointer transition-all duration-200 group`;
                   }}
                   onClick={(e) => {
                     e.stopPropagation();
-                    onStageClick(stage.status);
+                    if (stage.collapsible) {
+                      toggleColumn(stage.status);
+                    } else {
+                      onStageClick(stage.status);
+                    }
                   }}
                 >
-                  <div className="flex items-center justify-between w-full">
-                    <h3 className="text-small font-medium text-black dark:text-white tracking-tight">
-                      {stage.title}
-                    </h3>
-                    <span className="text-small">{stageJobs.length}</span>
-                  </div>
+                  {isCollapsed ? (
+                    <div className="flex flex-col items-center justify-between h-full gap-4 select-none">
+                      <div className="flex flex-col items-center gap-2">
+                        <span className="text-small font-bold text-[color:var(--text-primary)] whitespace-nowrap" style={{ writingMode: 'vertical-lr', transform: 'rotate(180deg)' }}>
+                          {stage.title}
+                        </span>
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[var(--bg-secondary)] border border-[color:var(--border-primary)] text-[color:var(--text-secondary)]">
+                          {stageJobs.length}
+                        </span>
+                      </div>
+                      <ChevronDown
+                        size={14}
+                        className="text-gray-400 rotate-90 group-hover:text-[color:var(--text-primary)] transition-colors mt-auto"
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between w-full">
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-small font-medium text-[color:var(--text-primary)] tracking-tight">
+                          {stage.title}
+                        </h3>
+                        {stage.collapsible && (
+                          <ChevronDown
+                            size={14}
+                            className="text-gray-400"
+                          />
+                        )}
+                      </div>
+                      <span className="text-small">{stageJobs.length}</span>
+                    </div>
+                  )}
                 </div>
 
-                {/* Drop Zone */}
-                <div
-                  className={`w-full rounded-xl border-2 border-dashed transition-all duration-300 flex-1 overflow-y-auto scrollbar-hide min-h-0 ${
-                    draggedJob
-                      ? isDraggableStage(stage.status)
-                        ? `border-blue-300 dark:border-[rgb(60,75,60)] bg-blue-50 dark:bg-[rgb(60,75,60)]/20`
-                        : "border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/30 opacity-50"
-                      : "border-transparent"
-                  }`}
-                  onDragOver={onDragOver}
-                  onDrop={(e) => onDrop(e, stage.status)}
-                >
-                  {/* Job Cards */}
+                {!isCollapsed && (
+                  /* Drop Zone */
                   <div
-                    className={
-                      zoomedStage && stage.status === "created"
-                        ? "space-y-4"
-                        : zoomedStage
-                          ? "grid grid-cols-1 tablet:grid-cols-2 desktop:grid-cols-3 gap-4"
-                          : "space-y-3"
-                    }
+                    className={`w-full rounded-xl border-2 border-dashed transition-all duration-300 flex-1 overflow-y-auto scrollbar-hide min-h-0 ${
+                      draggedJob
+                        ? isDraggableStage(stage.status)
+                          ? `border-blue-300 dark:border-[rgb(60,75,60)] bg-blue-50 dark:bg-[rgb(60,75,60)]/20`
+                          : "border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/30 opacity-50"
+                        : "border-transparent"
+                    }`}
+                    onDragOver={onDragOver}
+                    onDrop={(e) => onDrop(e, stage.status)}
                   >
-                    {loading
-                      ? // Skeleton loading
-                        Array.from({ length: 3 }).map((_, i) => (
-                          <div
-                            key={i}
-                            className="bg-[#141810] rounded-xl p-4 animate-pulse"
-                          >
-                            <div className="flex items-center justify-between mb-3">
-                              <div className="space-y-2">
-                                <div className="h-4 bg-white/20 rounded w-32"></div>
-                                <div className="h-3 bg-white/10 rounded w-24"></div>
+                    {/* Job Cards */}
+                    <div
+                      className={
+                        zoomedStage && stage.status === "pipeline"
+                          ? "space-y-4"
+                          : zoomedStage
+                            ? "grid grid-cols-1 tablet:grid-cols-2 desktop:grid-cols-3 gap-4"
+                            : "space-y-3"
+                      }
+                    >
+                      {loading
+                        ? // Skeleton loading
+                          Array.from({ length: 3 }).map((_, i) => (
+                            <div
+                              key={i}
+                              className="bg-[var(--bg-secondary)] rounded-xl p-4 animate-pulse border border-[color:var(--border-primary)]"
+                            >
+                              <div className="flex items-center justify-between mb-3">
+                                <div className="space-y-2">
+                                  <div className="h-4 bg-[var(--bg-tertiary)] rounded w-32"></div>
+                                  <div className="h-3 bg-[var(--bg-tertiary)] rounded w-24"></div>
+                                </div>
+                                <div className="h-6 bg-[var(--bg-tertiary)] rounded w-16"></div>
                               </div>
-                              <div className="h-6 bg-white/20 rounded w-16"></div>
+                              <div className="space-y-2">
+                                <div className="h-3 bg-[var(--bg-tertiary)] rounded w-full"></div>
+                                <div className="h-3 bg-[var(--bg-tertiary)] rounded w-3/4"></div>
+                              </div>
                             </div>
-                            <div className="space-y-2">
-                              <div className="h-3 bg-white/10 rounded w-full"></div>
-                              <div className="h-3 bg-white/10 rounded w-3/4"></div>
-                            </div>
-                          </div>
-                        ))
-                      : (stage.status === "draft" ||
-                            stage.status === "created") &&
-                          zoomedStage
-                        ? // Show journey cards for created stage when zoomed
-                          stageJobs
-                            .map((job) => {
-                              const jobJourneys = getJobJourneys(job.id);
-                              return jobJourneys
-                                .filter((journey) => journey.id)
-                                .map((journey, index) => (
-                                  <JourneyTimelineCard
-                                    key={`${job.id}-${journey.id || `journey-${index}`}`}
-                                    journey={journey}
-                                    onResume={() => {}}
-                                    onDownload={() => {}}
-                                    onDelete={() => {}}
-                                    onRefresh={() => {}}
-                                    onUpdateJourney={() => {}}
-                                  />
-                                ));
-                            })
-                            .flat()
-                        : // Regular job cards
-                          (() => {
-                            const activeJobs = stageJobs.filter(
-                              (job) => !isJobExpired(job),
-                            );
-                            const expiredJobs = stageJobs.filter((job) =>
-                              isJobExpired(job),
-                            );
-
-                            return (
-                              <>
-                                {activeJobs.map((job) => {
-                                  const jobJourneys = getJobJourneys(job.id);
-                                  const isSelected = selectedJobs.has(job.id);
-                                  const isDragging = draggedJob === job.id;
-                                  const canDrag = isJobDraggable(job);
-
-                                  return (
-                                    <JobKanbanCard
-                                      key={job.id}
-                                      job={job}
-                                      stage={stage.status}
-                                      jobJourneys={jobJourneys}
-                                      isSelected={isSelected}
-                                      isDragging={isDragging}
-                                      canDrag={canDrag}
-                                      onClick={onJobClick}
-                                      onDragStart={onDragStart}
-                                      onDragEnd={onDragEnd}
-                                      onDragOver={onDragOver}
-                                      onRefresh={onRefresh}
-                                      onAction={(action, job) => {
-                                        routeTrackerCardAction({
-                                          action: action as any,
-                                          job,
-                                          onCreateJourney,
-                                          onImproveATS,
-                                          onDownload,
-                                          onJobStatusUpdate: onJobStatusUpdate as any,
-                                          onOpenSidebar: onJobClick,
-                                          getJobId: (targetJob) => targetJob.id,
-                                        });
-                                      }}
+                          ))
+                        : stage.status === "pipeline" && zoomedStage
+                          ? // Show journey cards for pipeline stage when zoomed
+                            stageJobs
+                              .map((job) => {
+                                const jobJourneys = getJobJourneys(job.id);
+                                return jobJourneys
+                                  .filter((journey) => journey.id)
+                                  .map((journey, index) => (
+                                    <JourneyTimelineCard
+                                      key={`${job.id}-${journey.id || `journey-${index}`}`}
+                                      journey={journey}
+                                      onResume={() => {}}
+                                      onDownload={() => {}}
+                                      onDelete={() => {}}
+                                      onRefresh={() => {}}
+                                      onUpdateJourney={() => {}}
                                     />
-                                  );
-                                })}
-                                <ExpiredJobsAccordion
-                                  jobs={expiredJobs}
-                                  stage={stage.status}
-                                  getJobJourneys={getJobJourneys}
-                                  selectedJobs={selectedJobs}
-                                  draggedJob={draggedJob}
-                                  isJobDraggable={isJobDraggable}
-                                  onJobClick={onJobClick as any}
-                                  onDragStart={onDragStart}
-                                  onDragEnd={onDragEnd}
-                                  onDragOver={onDragOver}
-                                  onCreateJourney={onCreateJourney as any}
-                                  onImproveATS={onImproveATS as any}
-                                  onDownload={onDownload as any}
-                                  onJobStatusUpdate={onJobStatusUpdate as any}
-                                  onRefresh={onRefresh}
-                                />
-                              </>
-                            );
-                          })()}
+                                  ));
+                              })
+                              .flat()
+                          : // Regular job cards
+                            (() => {
+                              const activeJobs = stageJobs.filter(
+                                (job) => !isJobExpired(job),
+                              );
+                              const expiredJobs = stageJobs.filter((job) =>
+                                isJobExpired(job),
+                              );
+
+                              if (activeJobs.length === 0 && expiredJobs.length === 0) {
+                                return <StageBlankState stage={stage.status} />;
+                              }
+
+                              return (
+                                <>
+                                  {activeJobs.map((job) => {
+                                    const jobJourneys = getJobJourneys(job.id);
+                                    const isSelected = selectedJobs.has(job.id);
+                                    const isDragging = draggedJob === job.id;
+                                    const canDrag = isJobDraggable(job);
+
+                                    return (
+                                      <JobKanbanCard
+                                        key={job.id}
+                                        job={job}
+                                        stage={stage.status}
+                                        jobJourneys={jobJourneys}
+                                        isSelected={isSelected}
+                                        isDragging={isDragging}
+                                        canDrag={canDrag}
+                                        onClick={onJobClick}
+                                        onDragStart={onDragStart}
+                                        onDragEnd={onDragEnd}
+                                        onDragOver={onDragOver}
+                                        onRefresh={onRefresh}
+                                        onAction={(action, job) => {
+                                          routeTrackerCardAction({
+                                            action: action as any,
+                                            job,
+                                            onCreateJourney,
+                                            onImproveATS,
+                                            onDownload,
+                                            onJobStatusUpdate: onJobStatusUpdate as any,
+                                            onOpenSidebar: onJobClick,
+                                            getJobId: (targetJob) => targetJob.id,
+                                          });
+                                        }}
+                                      />
+                                    );
+                                  })}
+                                  <ExpiredJobsAccordion
+                                    jobs={expiredJobs}
+                                    stage={stage.status}
+                                    getJobJourneys={getJobJourneys}
+                                    selectedJobs={selectedJobs}
+                                    draggedJob={draggedJob}
+                                    isJobDraggable={isJobDraggable}
+                                    onJobClick={onJobClick as any}
+                                    onDragStart={onDragStart}
+                                    onDragEnd={onDragEnd}
+                                    onDragOver={onDragOver}
+                                    onCreateJourney={onCreateJourney as any}
+                                    onImproveATS={onImproveATS as any}
+                                    onDownload={onDownload as any}
+                                    onJobStatusUpdate={onJobStatusUpdate as any}
+                                    onRefresh={onRefresh}
+                                  />
+                                </>
+                              );
+                            })()}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             );
           })}

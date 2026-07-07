@@ -1,10 +1,11 @@
 /**
  * AI API Helper Utility
- * Provides unified interface for Google Gemini API calls using gemini_api_key
- * Uses @google/genai package with gemini-2.5-flash-lite (model fallback to gemini-2.5-flash)
+ * Provides unified interface for Vercel AI Gateway calls
+ * Uses @ai-sdk/gateway package with deepseek/deepseek-v4-flash (fallback to google/gemini-2.5-flash-lite)
  */
 
-import { GoogleGenAI } from '@google/genai';
+import { generateText } from 'ai';
+import { gateway } from '@ai-sdk/gateway';
 import { ActivityLogService } from '@/lib/services/activityLogService';
 
 export interface AICallOptions {
@@ -27,105 +28,72 @@ export interface AIResponse {
 }
 
 /**
- * Check if error is a quota/rate limit error (429)
+ * Check if AI Gateway environment variables/tokens are available
  */
-function isQuotaError(error: any): boolean {
-  if (!error) return false;
-
-  const errorMessage = error instanceof Error ? error.message : String(error);
-  const errorString = JSON.stringify(error);
-
-  // Check for 429 status code or quota-related error messages
-  return (
-    errorMessage.includes('429') ||
-    errorMessage.includes('quota') ||
-    errorMessage.includes('Quota exceeded') ||
-    errorMessage.includes('RESOURCE_EXHAUSTED') ||
-    errorMessage.includes('rate limit') ||
-    errorMessage.includes('rate-limit') ||
-    errorString.includes('"code":429') ||
-    errorString.includes('"status":"RESOURCE_EXHAUSTED"')
+export function hasAIApiKeys(): boolean {
+  return Boolean(
+    process.env.VERCEL_OIDC_TOKEN ||
+    process.env.AI_GATEWAY_API_KEY ||
+    process.env.gemini_api_key ||
+    process.env.GEMINI_API_KEY
   );
 }
 
 /**
- * Get available Gemini API key
+ * Get available AI Gateway tokens/keys
  */
-function getGeminiApiKey(): string {
-  const key =
-    process.env.gemini_api_key ||
-    process.env.GEMINI_API_KEY ||
-    process.env.gemini_api_key1 ||
-    process.env.GEMINI_API_KEY1 ||
-    process.env.NEXT_PUBLIC_GEMINI_API_KEY;
-
-  if (!key) {
-    throw new Error('No Gemini API key configured. Please set gemini_api_key.');
-  }
-
-  return key;
+export function getAvailableAIKeys(): string[] {
+  const keys = [];
+  if (process.env.VERCEL_OIDC_TOKEN) keys.push('VERCEL_OIDC_TOKEN');
+  if (process.env.AI_GATEWAY_API_KEY) keys.push('AI_GATEWAY_API_KEY');
+  if (process.env.gemini_api_key || process.env.GEMINI_API_KEY) keys.push('gemini_api_key');
+  return keys;
 }
 
 /**
- * Call Gemini API using @google/genai package
+ * Call Vercel AI Gateway with DeepSeek primary model and Gemini fallback
  */
-async function callGemini(options: AICallOptions, apiKey: string): Promise<string> {
+export async function callAIWithFallback(options: AICallOptions): Promise<AIResponse> {
+  const primaryModel = options.model || 'deepseek/deepseek-v4-flash';
+  const fallbackModel = 'google/gemini-2.5-flash-lite';
+
   try {
-    const genAI = new GoogleGenAI({ apiKey });
+    console.log(`🔑 Attempting AI Gateway call using ${primaryModel} with fallback ${fallbackModel}...`);
+    const callStart = Date.now();
 
-    // Use gemini-2.5-flash-lite as default for speed and cost efficiency
-    const primaryModel = options.model || 'gemini-2.5-flash-lite';
-    const fallbackModel = 'gemini-2.5-flash';
+    // Use Vercel AI SDK generateText with gateway and fallback model
+    const response = await generateText({
+      model: gateway(primaryModel),
+      prompt: options.prompt,
+      system: options.systemPrompt,
+      temperature: options.temperature ?? 0.7,
+      maxOutputTokens: options.maxTokens ?? 2048,
+      providerOptions: {
+        gateway: {
+          models: [fallbackModel],
+        },
+      },
+      ...(options.responseSchema ? {
+        responseFormat: {
+          type: 'json',
+          schema: options.responseSchema,
+        },
+      } : options.responseMimeType === 'application/json' ? {
+        responseFormat: { type: 'json' },
+      } : {}),
+    });
 
-    // Combine system prompt and user prompt
-    let fullPrompt = options.prompt;
-    if (options.systemPrompt) {
-      fullPrompt = `${options.systemPrompt}\n\n${options.prompt}`;
-    }
-
-    let result;
-    let usedModel = primaryModel;
-
-    try {
-      // Generate content using the new SDK API
-      result = await genAI.models.generateContent({
-        model: primaryModel,
-        contents: [{ role: 'user', parts: [{ text: fullPrompt }] }],
-        config: {
-          temperature: options.temperature || 0.7,
-          maxOutputTokens: options.maxTokens || 2048,
-          responseMimeType: options.responseMimeType,
-          responseSchema: options.responseSchema,
-        }
-      });
-    } catch (primaryError) {
-      console.warn(`⚠️ ${primaryModel} failed, trying ${fallbackModel}...`);
-      usedModel = fallbackModel;
-      result = await genAI.models.generateContent({
-        model: fallbackModel,
-        contents: [{ role: 'user', parts: [{ text: fullPrompt }] }],
-        config: {
-          temperature: options.temperature || 0.7,
-          maxOutputTokens: options.maxTokens || 2048,
-          responseMimeType: options.responseMimeType,
-          responseSchema: options.responseSchema,
-        }
-      });
-    }
-
-    const text = result.text;
-
+    const text = response.text;
     if (!text) {
-      throw new Error('Gemini API returned empty response');
+      throw new Error('AI Gateway returned empty response');
     }
 
-    // Try to get token usage if available in the SDK response, otherwise estimate
-    const usageMetadata = (result as any).usageMetadata;
-    const inputTokens = usageMetadata?.promptTokenCount || Math.ceil(fullPrompt.length / 4);
-    const outputTokens = usageMetadata?.candidatesTokenCount || Math.ceil(text.length / 4);
+    const latencySeconds = (Date.now() - callStart) / 1000;
+    const inputTokens = response.usage?.inputTokens || Math.ceil(options.prompt.length / 4);
+    const outputTokens = response.usage?.outputTokens || Math.ceil(text.length / 4);
     const tokensUsed = inputTokens + outputTokens;
-    
-    // Cost constants (using gemini flash lite / 1.5 flash pricing)
+
+    // Cost estimation
     const INPUT_COST_PER_1M = 0.075;
     const OUTPUT_COST_PER_1M = 0.30;
     const cost = (inputTokens / 1_000_000) * INPUT_COST_PER_1M + (outputTokens / 1_000_000) * OUTPUT_COST_PER_1M;
@@ -134,12 +102,12 @@ async function callGemini(options: AICallOptions, apiKey: string): Promise<strin
     try {
       await ActivityLogService.logAI({
         userId: options.userId,
-        model: usedModel,
+        model: response.response?.modelId || primaryModel,
         tokensUsed,
         cost,
-        prompt: fullPrompt.substring(0, 1000), // Log only the first 1000 chars of prompt
+        prompt: options.prompt.substring(0, 1000),
         responseLength: text.length,
-        action: options.action || 'gemini_generation',
+        action: options.action || 'gateway_generation',
         endpoint: options.endpoint || options.action || 'unknown_endpoint',
         status: 'success'
       });
@@ -147,60 +115,39 @@ async function callGemini(options: AICallOptions, apiKey: string): Promise<strin
       console.error('Failed to log AI usage:', logError);
     }
 
-    return text;
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    throw new Error(`Gemini API error: ${errorMessage}`);
-  }
-}
+    try {
+      const { getPostHogClient } = await import('@/lib/posthog-server');
+      const posthog = getPostHogClient();
+      const distinctId = options.userId || 'anonymous';
+      posthog.capture({
+        distinctId,
+        event: '$ai_generation',
+        properties: {
+          $ai_provider: 'vercel-gateway',
+          $ai_model: response.response?.modelId || primaryModel,
+          $ai_input_tokens: inputTokens,
+          $ai_output_tokens: outputTokens,
+          $ai_latency: latencySeconds,
+          $ai_total_cost_usd: cost,
+          $ai_span_name: options.action || options.endpoint || 'gateway_generation',
+        },
+      });
+    } catch (phError) {
+      console.error('PostHog $ai_generation capture error:', phError);
+    }
 
-/**
- * Call Gemini API using the configured key
- */
-export async function callAIWithFallback(options: AICallOptions): Promise<AIResponse> {
-  let apiKey: string;
-  try {
-    apiKey = getGeminiApiKey();
-  } catch {
-    throw new Error('No Gemini API key configured. Please set gemini_api_key.');
-  }
-
-  try {
-    console.log(`🔑 Attempting Gemini API call...`);
-    const content = await callGemini(options, apiKey);
-    console.log(`✅ Gemini API call successful`);
     return {
-      content,
-      provider: 'gemini',
-      apiKeyUsed: 'gemini_api_key'
+      content: text,
+      provider: 'gemini', // Keep 'gemini' for backward compatibility in service parsers
+      apiKeyUsed: process.env.VERCEL_OIDC_TOKEN ? 'VERCEL_OIDC_TOKEN' : 'AI_GATEWAY_API_KEY'
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    throw new Error(`Gemini API error: ${errorMessage}`);
+    console.error(`AI Gateway error: ${errorMessage}`);
+    throw new Error(`AI Gateway error: ${errorMessage}`);
   }
 }
 
-/**
- * Check if Gemini API keys are available
- */
-export function hasAIApiKeys(): boolean {
-  try {
-    return Boolean(getGeminiApiKey());
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Get the name of the available API keys (for logging)
- */
-export function getAvailableAIKeys(): string[] {
-  try {
-    return [getGeminiApiKey() ? 'gemini_api_key' : 'none'];
-  } catch {
-    return [];
-  }
-}
 
 
 

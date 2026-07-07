@@ -185,23 +185,7 @@ export default async function RootLayout({
       <body className={`${geistFont.variable} geist-ui font-sans`}>
         <ViewportMeta />
         <ResourceHints />
-        <React.Suspense fallback={
-          <div className="fixed inset-0 z-[10000] flex flex-col items-center justify-center bg-[#f3f2ee] dark:bg-[#141810] overflow-hidden">
-            <div className="relative w-24 h-24 flex items-center justify-center">
-              {/* Concentric Rotating Rings */}
-              <div className="absolute inset-0 border-[3px] border-transparent border-t-[#81ff00] rounded-full animate-spin" style={{ animationDuration: '1.5s' }} />
-              <div className="absolute inset-2 border-[2px] border-transparent border-b-[#81ff00]/50 rounded-full animate-spin" style={{ animationDirection: 'reverse', animationDuration: '2s' }} />
-              
-              {/* Center "CV" Text */}
-              <div className="relative z-10 flex items-center justify-center">
-                <span className="text-2xl font-black text-black dark:text-white tracking-tighter">CV</span>
-              </div>
-            </div>
-            <div className="mt-8 flex flex-col items-center gap-2">
-              <h3 className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-[0.3em] animate-pulse">Initializing</h3>
-            </div>
-          </div>
-        }>
+        <React.Suspense fallback={null}>
           <ClientProviders session={session}>
             {children}
             <GlobalCommandBar />

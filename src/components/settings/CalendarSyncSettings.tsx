@@ -30,6 +30,7 @@ export default function CalendarSyncSettings({ userSettings, onUpdateSettings }:
       includeInterviews: true,
       includeFollowUps: true,
       includeDeadlines: true,
+      includeCreated: false,
       reminderMinutes: 60,
       colorCoding: true,
     }
@@ -300,6 +301,17 @@ export default function CalendarSyncSettings({ userSettings, onUpdateSettings }:
                             onCheckedChange={(checked) => handleSyncSettingChange('includeDeadlines', checked)}
                           />
                         </div>
+
+                        <div className="flex items-center justify-between">
+                          <Label htmlFor="include-created" className="text-small">
+                            Include Drafts / Created
+                          </Label>
+                          <Switch
+                            id="include-created"
+                            checked={calendarSettings.syncSettings.includeCreated}
+                            onCheckedChange={(checked) => handleSyncSettingChange('includeCreated', checked)}
+                          />
+                        </div>
                         
                         <div className="flex items-center justify-between">
                           <Label htmlFor="color-coding" className="text-small">
@@ -350,7 +362,7 @@ export default function CalendarSyncSettings({ userSettings, onUpdateSettings }:
                       What gets synced to your calendar:
                     </p>
                     <ul className="text-small text-blue-700 space-y-1">
-                      <li>• Job applications (excluding "created" status)</li>
+                      <li>• Job applications (including "created" status when enabled)</li>
                       <li>• Interview schedules and details</li>
                       <li>• Follow-up reminders</li>
                       <li>• Application deadlines</li>

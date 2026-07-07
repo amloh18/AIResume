@@ -36,6 +36,7 @@ import {
   shouldSkipTrackerCreatedStageModalForToday,
   type TrackerCreatedStagePreview,
 } from '@/lib/utils/tracker-created-stage-modal';
+import { getJobExpiryState, getPipelineStatus, isTerminalStatus } from '@/utils/tracker-expiry';
 
 interface JobApplication {
   id: string;
@@ -75,6 +76,13 @@ interface JobApplication {
   interviews?: any[];
   followUps?: any[];
   attachments?: any[];
+  contacts?: Array<{
+    name: string;
+    role?: string;
+    email?: string;
+    phone?: string;
+    linkedin?: string;
+  }>;
   atsScore?: number;
   atsAnalysis?: any;
   statusHistory?: any[];
@@ -376,6 +384,7 @@ const JobsTracker: React.FC = () => {
             interviews: job.interviews || [],
             followUps: job.followUps || [],
             attachments: job.attachments || [],
+            contacts: job.contacts || [],
             atsScore: job.atsScore,
             isArchived: job.isArchived || false,
             createdAt: job.createdAt,
@@ -506,7 +515,7 @@ const JobsTracker: React.FC = () => {
       const matchesSearch = job.jobTitle.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
         job.company.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
         job.location?.toLowerCase().includes(debouncedSearchQuery.toLowerCase());
-      const matchesStatus = filterStatus === 'all' || job.status === filterStatus;
+      const matchesStatus = filterStatus === 'all' || job.status === filterStatus || getPipelineStatus(job) === filterStatus;
 
       const matchesLastUpdated = (() => {
         if (lastUpdatedFilter === 'all') return true;
@@ -585,39 +594,35 @@ const JobsTracker: React.FC = () => {
   // Apply focus mode filter (hide draft and rejected stages)
   const filteredJobsForView = React.useMemo(() => {
     if (isFocusMode) {
-      return filteredAndSortedJobs.filter(job =>
-        job.status !== 'draft' && job.status !== 'rejected'
-      );
+      return filteredAndSortedJobs.filter(job => {
+        const pipeline = getPipelineStatus(job);
+        return pipeline !== 'pipeline' && pipeline !== 'archive';
+      });
     }
     return filteredAndSortedJobs;
   }, [filteredAndSortedJobs, isFocusMode]);
 
-  // Group jobs by status - memoized to ensure reactivity
-  const jobsByStatus = React.useMemo(() => {
-    // Debug logging
-    console.log('🔍 JobsTracker - Filtering jobs:', {
-      total: jobs.length,
-      filtered: filteredJobsForView.length,
-      filterStatus,
-      isFocusMode
-    });
-
+  // Group jobs by pipeline - memoized to ensure reactivity
+  const jobsByPipeline = React.useMemo(() => {
     const grouped = {
-      draft: filteredJobsForView.filter(job => job.status === 'draft'),
-      created: filteredJobsForView.filter(job => job.status === 'created'),
-      applied: filteredJobsForView.filter(job => job.status === 'applied'),
-      interview: filteredJobsForView.filter(job => job.status === 'interview'),
-      offer: filteredJobsForView.filter(job => job.status === 'offer'),
-      rejected: filteredJobsForView.filter(job => job.status === 'rejected')
+      pipeline: [] as JobApplication[],
+      applied: [] as JobApplication[],
+      interview: [] as JobApplication[],
+      offer: [] as JobApplication[],
+      archive: [] as JobApplication[],
     };
 
-    console.log('🔍 JobsTracker - Jobs by status:', {
-      draft: grouped.draft.length,
-      created: grouped.created.length,
+    filteredJobsForView.forEach(job => {
+      const pipeline = getPipelineStatus(job);
+      grouped[pipeline].push(job);
+    });
+
+    console.log('🔍 JobsTracker - Jobs by pipeline:', {
+      pipeline: grouped.pipeline.length,
       applied: grouped.applied.length,
       interview: grouped.interview.length,
       offer: grouped.offer.length,
-      rejected: grouped.rejected.length
+      archive: grouped.archive.length,
     });
 
     return grouped;
@@ -1138,10 +1143,25 @@ const JobsTracker: React.FC = () => {
     return true; // All jobs can be dragged
   };
 
-  const isDraggableStage = (stage: string) => {
-    // Allow dropping on all stages except draft (can move forward from draft)
-    // Allow moving from draft to created, applied, interview, offer, rejected
-    return stage !== 'draft';
+  const isDraggableStage = (pipeline: string) => {
+    const validDropTargets = ['pipeline', 'applied', 'interview', 'offer', 'archive'];
+    return validDropTargets.includes(pipeline);
+  };
+
+  const mapPipelineToStatus = (pipeline: string, currentStatus: string): string => {
+    if (pipeline === 'pipeline') {
+      return ['created'].includes(currentStatus) ? 'created' : 'draft';
+    }
+    if (pipeline === 'applied') {
+      return ['screening'].includes(currentStatus) ? 'screening' : 'applied';
+    }
+    if (pipeline === 'interview') return 'interview';
+    if (pipeline === 'offer') return 'offer';
+    if (pipeline === 'archive') {
+      if (isTerminalStatus(currentStatus)) return currentStatus;
+      return 'rejected';
+    }
+    return currentStatus;
   };
 
   const handleDragStart = (e: React.DragEvent, jobId: string) => {
@@ -1163,14 +1183,14 @@ const JobsTracker: React.FC = () => {
     setDraggedJob(null);
   };
 
-  const handleDrop = async (e: React.DragEvent, newStatus: string) => {
+  const handleDrop = async (e: React.DragEvent, pipeline: string) => {
     e.preventDefault();
     const currentDraggedJob = draggedJob;
     setDraggedJob(null);
 
     if (!currentDraggedJob) return;
 
-    if (!isDraggableStage(newStatus)) {
+    if (!isDraggableStage(pipeline)) {
       return;
     }
 
@@ -1179,6 +1199,7 @@ const JobsTracker: React.FC = () => {
       return;
     }
 
+    const newStatus = mapPipelineToStatus(pipeline, job.status);
     const originalStatus = job.status;
     const isDraftToCreated = originalStatus === 'draft' && newStatus === 'created';
 
@@ -1187,6 +1208,10 @@ const JobsTracker: React.FC = () => {
       if (shouldPauseForInfo) {
         return;
       }
+    }
+
+    if (originalStatus === newStatus) {
+      return;
     }
 
     // Mark job as being updated to prevent data refresh from overwriting
@@ -1557,7 +1582,7 @@ const JobsTracker: React.FC = () => {
                 <div className="h-full w-full overflow-x-auto overflow-y-hidden rounded-lg scrollbar-hide">
                   <JobsKanbanView
                     jobs={filteredJobsForView}
-                    jobsByStatus={jobsByStatus}
+                    jobsByPipeline={jobsByPipeline}
                     loading={loading || userLoading}
                     selectedJobs={selectedJobs}
                     setSelectedJobs={setSelectedJobs}

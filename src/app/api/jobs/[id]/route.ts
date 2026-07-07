@@ -272,6 +272,25 @@ export async function PUT(
       });
     }
 
+    // Auto-schedule follow-up when job enters applied stage
+    if (body.status === 'applied' && currentJob?.status !== 'applied') {
+      const existingFollowUps = currentJob.followUps || [];
+      const hasFollowUp = existingFollowUps.some((fu: any) => fu.type === 'follow_up_email');
+      if (!hasFollowUp) {
+        const followUpDate = new Date();
+        followUpDate.setDate(followUpDate.getDate() + 7);
+        updateData.followUps = [
+          ...existingFollowUps,
+          {
+            type: 'follow_up_email',
+            description: 'Send follow-up email to check on application status',
+            date: followUpDate,
+            outcome: null
+          }
+        ];
+      }
+    }
+
     // Prepare update data with proper date conversion
     const updateData = {
       ...body,
@@ -1136,10 +1155,13 @@ export async function DELETE(
     console.log('🔍 Job DELETE API - Normalized Job ID:', normalizedJobId.toString());
     console.log('🔍 Job DELETE API - Normalized User ID:', normalizedUserId.toString());
 
-    // First, find the job to ensure it exists and user owns it
+    // First, find the job to ensure it exists and user owns it (supporting both String and ObjectId formats)
     const job = await JobApplication.findOne({
-      _id: normalizedJobId,
-      userId: normalizedUserId
+      _id: jobId,
+      $or: [
+        { userId: userId },
+        { userId: normalizedUserId }
+      ]
     });
 
     if (!job) {
@@ -1258,8 +1280,11 @@ export async function DELETE(
     // Step 5: Finally, delete the job itself
     console.log('🔍 Job DELETE API - Deleting job:', jobId);
     const deletedJob = await JobApplication.findOneAndDelete({
-      _id: normalizedJobId,
-      userId: normalizedUserId
+      _id: jobId,
+      $or: [
+        { userId: userId },
+        { userId: normalizedUserId }
+      ]
     });
 
     if (!deletedJob) {
