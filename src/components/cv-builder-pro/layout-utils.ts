@@ -1,5 +1,7 @@
 'use client';
 
+import { PAGE_SIZE, getPageMetrics } from '@/lib/constants/pageMetrics';
+
 export type CanvasPageSize = 'A4' | 'Letter';
 
 export interface CanvasLayoutMetrics {
@@ -16,21 +18,6 @@ export interface CanvasLayoutMetrics {
   workspacePaddingY: number;
   slotHeightPx: number;
 }
-
-const PAGE_DIMENSIONS: Record<CanvasPageSize, { widthCss: string; heightCss: string; widthPx: number; heightPx: number }> = {
-  A4: {
-    widthCss: '210mm',
-    heightCss: '297mm',
-    widthPx: 793.7008,
-    heightPx: 1122.5197,
-  },
-  Letter: {
-    widthCss: '8.5in',
-    heightCss: '11in',
-    widthPx: 816,
-    heightPx: 1056,
-  },
-};
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
@@ -55,7 +42,7 @@ export function computeCanvasLayoutMetrics({
   viewportHeight: number;
   devicePixelRatio?: number;
 }): CanvasLayoutMetrics {
-  const dims = PAGE_DIMENSIONS[pageSize] || PAGE_DIMENSIONS.A4;
+  const dims = getPageMetrics(pageSize);
 
   const isMobile = viewportWidth < 768;
   const isTablet = viewportWidth >= 768 && viewportWidth < 1280;

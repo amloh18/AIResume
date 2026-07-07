@@ -171,12 +171,11 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
         const baseName = state.cvTitle || 'CV';
 
         if (format === 'pdf') {
-          // ── WYSIWYG PDF: capture the live .cv-document DOM element ──────────
-          // This ensures the exported PDF is a pixel-perfect match of the canvas
-          // preview. The server-side export uses the old TemplateRenderer and
-          // does NOT know about CANVAS_TEMPLATES, SNIPPETS, or CSS variables.
-          await downloadCanvasAsPDF(`${baseName}.pdf`, {
+          await downloadCanvasAsPDF({
             paperSize: (state.paperSize as 'A4' | 'Letter') || 'A4',
+            filename: `${baseName}.pdf`,
+            cvData: state.cvData,
+            template: state.selectedTemplate,
           });
           toast.success('Downloaded successfully!');
           setIsPdfExported(true);

@@ -1,10 +1,17 @@
+import { PAGE_SIZE, getPageMetrics } from '@/lib/constants/pageMetrics';
+
 /**
  * Page Break Helper for A4 Preview
  * Provides utilities for smart page breaks that don't split sections
+ *
+ * IMPORTANT: All rules are scoped under `.pdf-preview-mode` so they only
+ * apply during print/export and do NOT affect the live editor canvas.
  */
 
-export const A4_HEIGHT_PX = 1122; // A4 height at 96 DPI (297mm)
-export const A4_WIDTH_PX = 794;  // A4 width at 96 DPI (210mm)
+import { PAGE_SIZE, getPageMetrics } from '@/lib/constants/pageMetrics';
+
+export const A4_WIDTH_PX = getPageMetrics('A4').widthPx;
+export const A4_HEIGHT_PX = getPageMetrics('A4').heightPx;
 
 export interface PageBreakConfig {
   // Minimum space at bottom of page before forcing break (in pixels)
@@ -43,34 +50,34 @@ export const defaultPageBreakConfig: PageBreakConfig = {
  * Generate CSS for smart page breaks in preview
  */
 export function generatePageBreakCSS(config: PageBreakConfig = defaultPageBreakConfig): string {
+  const scope = '.pdf-preview-mode';
   const avoidBreakCSS = config.avoidBreakInside
-    .map(selector => `${selector} { page-break-inside: avoid; break-inside: avoid; }`)
+    .map(selector => `${scope} ${selector} { page-break-inside: avoid; break-inside: avoid; }`)
     .join('\n  ');
-    
+
   const breakBeforeCSS = config.breakBefore
-    .map(selector => `${selector}:not(:first-child) { page-break-before: auto; break-before: auto; }`)
+    .map(selector => `${scope} ${selector}:not(:first-child) { page-break-before: auto; break-before: auto; }`)
     .join('\n  ');
 
   return `
-  /* Smart Page Break Styles */
+  /* Smart Page Break Styles - scoped under .pdf-preview-mode to avoid affecting the live editor */
   @media print {
     ${avoidBreakCSS}
     ${breakBeforeCSS}
-    
-    /* A4 Page configuration */
+
     @page {
       size: A4;
       margin: 0;
     }
-    
+
     body {
       margin: 0;
       padding: 0;
     }
   }
-  
+
   /* Preview mode simulation */
-  .cv-preview-page {
+  ${scope} .cv-preview-page {
     position: relative;
     width: ${A4_WIDTH_PX}px;
     min-height: ${A4_HEIGHT_PX}px;
@@ -80,84 +87,73 @@ export function generatePageBreakCSS(config: PageBreakConfig = defaultPageBreakC
     page-break-after: always;
     break-after: page;
   }
-  
-  .cv-preview-page:last-child {
+  ${scope} .cv-preview-page:last-child {
     page-break-after: auto;
     break-after: auto;
   }
-  
-  /* Avoid breaking inside these elements */
-  ${config.avoidBreakInside.map(selector => `${selector}`).join(',\n  ')} {
+
+  ${config.avoidBreakInside.map(selector => `${scope} ${selector}`).join(',\n  ')} {
     page-break-inside: avoid;
     break-inside: avoid;
     position: relative;
   }
-  
-  /* Section headers stay with content - Never orphan headers */
-  .cv-section-header,
-  .section-header {
+
+  ${scope} .cv-section-header,
+  ${scope} .section-header {
     page-break-after: avoid;
     break-after: avoid;
     orphans: 2;
     widows: 2;
   }
-  
-  /* Keep section header with first entry */
-  .cv-section-header + .cv-section-content,
-  .section-header + .experience-list,
-  .section-header + .education-list,
-  .section-header + .project-list {
+
+  ${scope} .cv-section-header + .cv-section-content,
+  ${scope} .section-header + .experience-list,
+  ${scope} .section-header + .education-list,
+  ${scope} .section-header + .project-list {
     page-break-before: avoid;
     break-before: avoid;
   }
-  
-  /* Entry headers stay with content */
-  .entry-header,
-  .item-header {
+
+  ${scope} .entry-header,
+  ${scope} .item-header {
     page-break-after: avoid;
     break-after: avoid;
   }
-  
-  /* Keep entry header with at least 2 lines of content */
-  .entry-header + .entry-content,
-  .item-header + .item-summary,
-  .item-header + .item-content {
+
+  ${scope} .entry-header + .entry-content,
+  ${scope} .item-header + .item-summary,
+  ${scope} .item-header + .item-content {
     page-break-before: avoid;
     break-before: avoid;
     orphans: 2;
     widows: 2;
   }
-  
-  /* Prevent orphaned lines - minimum 2 lines together */
-  .entry-content,
-  .item-summary,
-  .item-content,
-  .education-description {
+
+  ${scope} .entry-content,
+  ${scope} .item-summary,
+  ${scope} .item-content,
+  ${scope} .education-description {
     orphans: 2;
     widows: 2;
   }
-  
-  /* Work Experience specific rules */
-  .work-experience-item,
-  .experience-item {
+
+  ${scope} .work-experience-item,
+  ${scope} .experience-item {
     page-break-inside: avoid;
     break-inside: avoid;
   }
-  
-  /* Education specific rules */
-  .education-item {
+
+  ${scope} .education-item {
     page-break-inside: avoid;
     break-inside: avoid;
   }
-  
-  /* Project specific rules */
-  .project-item {
+
+  ${scope} .project-item {
     page-break-inside: avoid;
     break-inside: avoid;
   }
-  
-  /* Skills section - keep categories together */
-  .skill-category-group {
+
+  ${scope} .skill-category-group {
     page-break-inside: avoid;
     break-inside: avoid;
   }

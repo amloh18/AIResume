@@ -76,22 +76,17 @@ export async function POST(request: NextRequest) {
             }
         });
 
-        // Attempt to link to journey if journeyId is provided? 
-        // The previous route.ts comment said "Cover Letter-to-Journey linking is now handled by ApplicationPackageService".
-        // But since we are creating it *for* a journey and we passed journeyId to create, it should be linked by the journeyId field on the CL model itself if that schema exists.
-        // However, the Journey model also has a `coverLetterId` field. We should probably update the Journey model too.
-
+        // Link cover letter back to journey for bidirectional discovery
         if (journeyId) {
-            // We should update the journey with this cover letter ID. 
-            // We can call the journey update API or do it directly if we import the Journey model.
-            // For safety/cleanliness, let's just return the ID and let the frontend or another service handle linkage if strict ownership is needed,
-            // BUT usually "check if exists" implies we want the *relationship* to exist.
-            // Let's rely on the frontend reloading or we can try to update the journey here.
-
-            // Ideally, we'd use a Journey service. Since we don't have one handy in this file, let's do a fetch to update it?
-            // Or simpler: The user refreshes Step 5 and it sees the CL because `fetchCoverLetterStatus` in Step5Review 
-            // does `fetch('/api/application-journey/' + journeyId)` and checks `coverLetterId`.
-            // So we MUST update the Journey document.
+            try {
+                const { ApplicationJourney } = await import('@/models/ApplicationJourney');
+                await ApplicationJourney.updateOne(
+                    { _id: toObjectId(journeyId), userId: toObjectId(userId) },
+                    { $set: { coverLetterId: newCoverLetter._id } }
+                );
+            } catch (journeyLinkError) {
+                console.error('Failed to link cover letter to journey:', journeyLinkError);
+            }
         }
 
         return NextResponse.json({ success: true, coverLetterId: newCoverLetter._id, status: 'created', coverLetter: newCoverLetter });

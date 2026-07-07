@@ -346,8 +346,8 @@ export async function GET(request: NextRequest) {
             })) : undefined,
             // Include skills array for completion calculation (include all entries but limit fields)
             skills: Array.isArray(cv.cvData.skills) ? cv.cvData.skills.map((s: any) => ({
-              name: s.name,
-              level: s.level
+              category: s.category,
+              skills: s.skills
             })) : undefined,
             // Include projects array for completion calculation (include all entries but limit fields)
             projects: Array.isArray(cv.cvData.projects) ? cv.cvData.projects.map((p: any) => ({

@@ -350,15 +350,36 @@ const TemplateRendererComponent: React.FC<TemplateRendererProps> = ({
 };
 
 // Memoize TemplateRenderer to prevent unnecessary re-renders
+const shallowArrayEqual = (a?: any[], b?: any[]) => {
+  if (a === b) return true;
+  if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+};
+
+const shallowObjectEqual = (a?: Record<string, any>, b?: Record<string, any>) => {
+  if (a === b) return true;
+  if (!a || !b || typeof a !== 'object' || typeof b !== 'object') return false;
+  const aKeys = Object.keys(a);
+  const bKeys = Object.keys(b);
+  if (aKeys.length !== bKeys.length) return false;
+  for (const key of aKeys) {
+    if ((a as any)[key] !== (b as any)[key]) return false;
+  }
+  return true;
+};
+
 export const TemplateRenderer = memo(TemplateRendererComponent, (prevProps, nextProps) => {
   // Custom comparison for better performance
   return (
     prevProps.cvData === nextProps.cvData &&
     prevProps.template === nextProps.template &&
-    JSON.stringify(prevProps.sectionOrder) === JSON.stringify(nextProps.sectionOrder) &&
-    JSON.stringify(prevProps.sectionVisibility) === JSON.stringify(nextProps.sectionVisibility) &&
-    JSON.stringify(prevProps.enabledSections) === JSON.stringify(nextProps.enabledSections) &&
-    JSON.stringify(prevProps.customStyles) === JSON.stringify(nextProps.customStyles)
+    shallowArrayEqual(prevProps.sectionOrder, nextProps.sectionOrder) &&
+    shallowArrayEqual(prevProps.sectionVisibility, nextProps.sectionVisibility) &&
+    shallowArrayEqual(prevProps.enabledSections, nextProps.enabledSections) &&
+    shallowObjectEqual(prevProps.customStyles, nextProps.customStyles)
   );
 });
 
