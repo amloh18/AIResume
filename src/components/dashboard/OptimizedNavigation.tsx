@@ -25,7 +25,7 @@ import { usePricingPlans } from '@/lib/hooks/usePricingPlans';
 const OptimizedNavigation: React.FC = () => {
   const router = useRouter();
   const pathname = usePathname();
-  const { theme, toggleTheme } = useTheme();
+  const { resolvedTheme, toggleTheme } = useTheme();
   const { isOpen: isMobileMenuOpen, toggleSidebar, setIsOpen, isDesktopExpanded, toggleDesktopSidebar } = useMobileSidebar();
   const { userData } = useUserData();
   const { data: billingData, refetch: refetchBillingData } = useBillingData();
@@ -1226,14 +1226,14 @@ const OptimizedNavigation: React.FC = () => {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >
-            {theme === 'dark' ? (
+            {resolvedTheme === 'dark' ? (
               <Sun className="w-6 h-6 flex-shrink-0" />
             ) : (
               <Moon className="w-6 h-6 flex-shrink-0" />
             )}
             <div className="flex-1 min-w-0">
               <div className="text-body font-medium truncate">
-                {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+                {resolvedTheme === 'dark' ? 'Light Mode' : 'Dark Mode'}
               </div>
               <div className="text-small text-gray-500 dark:text-gray-400 truncate mt-0.5">
                 Switch theme
@@ -1311,7 +1311,7 @@ const OptimizedNavigation: React.FC = () => {
                     whileTap={{ scale: 0.98 }}
                     aria-label="Toggle theme"
                   >
-                    {theme === 'dark' ? (
+                    {resolvedTheme === 'dark' ? (
                       <Sun className="w-5 h-5 flex-shrink-0" />
                     ) : (
                       <Moon className="w-5 h-5 flex-shrink-0" />
@@ -1321,7 +1321,7 @@ const OptimizedNavigation: React.FC = () => {
                   {/* expanded desktop: Toggle switch */}
                   <div className={`hidden ${isDesktopExpanded ? 'lg:flex' : ''} items-center justify-between px-3 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors`}>
                     <div className="flex items-center gap-3">
-                      {theme === 'dark' ? (
+                      {resolvedTheme === 'dark' ? (
                         <Sun className="w-5 h-5 text-gray-600 dark:text-gray-400 flex-shrink-0" />
                       ) : (
                         <Moon className="w-5 h-5 text-gray-600 dark:text-gray-400 flex-shrink-0" />
@@ -1330,7 +1330,7 @@ const OptimizedNavigation: React.FC = () => {
                     </div>
                     <button
                       onClick={toggleTheme}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-lime-500 focus:ring-offset-2 cursor-pointer ${theme === 'dark'
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-lime-500 focus:ring-offset-2 cursor-pointer ${resolvedTheme === 'dark'
                         ? 'bg-lime-500'
                         : 'bg-gray-200 dark:bg-gray-700'
                         }`}
@@ -1338,7 +1338,7 @@ const OptimizedNavigation: React.FC = () => {
                       aria-label="Toggle theme"
                     >
                       <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${theme === 'dark' ? 'translate-x-6' : 'translate-x-1'
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${resolvedTheme === 'dark' ? 'translate-x-6' : 'translate-x-1'
                           }`}
                       />
                     </button>

@@ -10,12 +10,12 @@ interface ThemeToggleProps {
   showLabel?: boolean;
 }
 
-const ThemeToggle: React.FC<ThemeToggleProps> = ({ 
-  variant = 'default', 
+const ThemeToggle: React.FC<ThemeToggleProps> = ({
+  variant = 'default',
   className = '',
-  showLabel = false 
+  showLabel = false
 }) => {
-  const { theme, toggleTheme } = useTheme();
+  const { resolvedTheme, toggleTheme } = useTheme();
 
   const getVariantClasses = () => {
     switch (variant) {
@@ -72,25 +72,25 @@ const ThemeToggle: React.FC<ThemeToggleProps> = ({
 
   return (
     <div className={`${variantClasses.container} ${baseClasses} ${className}`}>
-      <button 
+      <button
         onClick={toggleTheme}
-        className={`${variantClasses.button} ${theme === 'light' ? buttonClasses.light : buttonClasses.dark}`}
-        title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
-        aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
+        className={`${variantClasses.button} ${resolvedTheme === 'light' ? buttonClasses.light : buttonClasses.dark}`}
+        title={`Switch to ${resolvedTheme === 'dark' ? 'light' : 'dark'} theme`}
+        aria-label={`Switch to ${resolvedTheme === 'dark' ? 'light' : 'dark'} theme`}
       >
         <Sun className={variantClasses.icon} />
       </button>
-      <button 
+      <button
         onClick={toggleTheme}
-        className={`${variantClasses.button} ${theme === 'dark' ? buttonClasses.light : buttonClasses.dark}`}
-        title={`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`}
-        aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`}
+        className={`${variantClasses.button} ${resolvedTheme === 'dark' ? buttonClasses.light : buttonClasses.dark}`}
+        title={`Switch to ${resolvedTheme === 'light' ? 'dark' : 'light'} theme`}
+        aria-label={`Switch to ${resolvedTheme === 'light' ? 'dark' : 'light'} theme`}
       >
         <Moon className={variantClasses.icon} />
       </button>
       {showLabel && (
         <span className="ml-2 text-small text-gray-600 dark:text-gray-300">
-          {theme === 'dark' ? 'Dark' : 'Light'}
+          {resolvedTheme === 'dark' ? 'Dark' : 'Light'}
         </span>
       )}
     </div>

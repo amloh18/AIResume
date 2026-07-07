@@ -123,6 +123,7 @@ interface User {
   avatar?: string;
   isEmailVerified?: boolean;
   settings?: {
+    theme?: string;
     company?: string;
     address?: string;
     timezone?: string;
@@ -261,10 +262,13 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
     experience: user.experience || 'mid',
     timezone: user.settings?.timezone || 'UTC +07:00 - Asia / Jakarta',
     languagePreference: user.settings?.languagePreference || 'English',
+    theme: user.settings?.theme === 'auto' ? 'system' : (user.settings?.theme || 'system'),
     dateOfBirth: user.dateOfBirth || '',
     gender: user.gender || '',
     nationality: user.nationality || '',
   });
+
+  const { setTheme } = useTheme();
 
   const [avatar, setAvatar] = useState(user.avatar || user.profilePhoto || '');
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
@@ -280,6 +284,12 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
   // Email verification states
   const [isSendingVerification, setIsSendingVerification] = useState(false);
   const [verificationMessage, setVerificationMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  useEffect(() => {
+    const themeSetting = user.settings?.theme;
+    const mapped = themeSetting === 'auto' ? 'system' : (themeSetting || 'system');
+    setTheme(mapped);
+  }, [user.settings?.theme, setTheme]);
 
   // Cleanup timeout on unmount
   React.useEffect(() => {
@@ -361,6 +371,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
         gender: formData.gender,
         nationality: formData.nationality,
         settings: {
+          theme: formData.theme === 'system' ? 'auto' : formData.theme,
           timezone: formData.timezone,
           languagePreference: formData.languagePreference,
         }
@@ -865,6 +876,21 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
                 <option value="UTC -05:00 - America / New York">UTC -05:00 - America / New York</option>
                 <option value="UTC +00:00 - Europe / London">UTC +00:00 - Europe / London</option>
                 <option value="UTC +08:00 - Asia / Singapore">UTC +08:00 - Asia / Singapore</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-small font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Theme
+              </label>
+              <select
+                value={formData.theme}
+                onChange={(e) => handleInputChange('theme', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-lime-500/20 rounded-lg bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 focus:ring-2 focus:ring-lime-500 focus:border-transparent"
+              >
+                <option value="system">System (follows device)</option>
+                <option value="light">Always Light</option>
+                <option value="dark">Always Dark</option>
               </select>
             </div>
           </div>

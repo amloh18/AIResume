@@ -126,6 +126,7 @@ const AgingTrackerWidget: React.FC<AgingTrackerWidgetProps> = ({
   status = 'applied',
   applicationDate,
   deadline,
+  nextFollowUpAt,
 }) => {
   const nowTime = Date.now();
   const startDate = applicationDate ? new Date(applicationDate) : new Date(nowTime);
@@ -147,6 +148,16 @@ const AgingTrackerWidget: React.FC<AgingTrackerWidgetProps> = ({
   const followUpText = followUpDate
     ? followUpDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
     : null;
+  const followUpCountdown = followUpDate
+    ? Math.ceil((followUpDate.getTime() - nowTime) / (1000 * 60 * 60 * 24))
+    : null;
+  const followUpStatusLabel = followUpCountdown === null
+    ? null
+    : followUpCountdown < 0
+      ? `${Math.abs(followUpCountdown)} day${Math.abs(followUpCountdown) !== 1 ? 's' : ''} overdue`
+      : followUpCountdown === 0
+        ? 'Due today'
+        : `${followUpCountdown} day${followUpCountdown !== 1 ? 's' : ''} until follow-up`;
 
   return (
     <div className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810] flex flex-col gap-4">
@@ -165,6 +176,11 @@ const AgingTrackerWidget: React.FC<AgingTrackerWidgetProps> = ({
           <div className="text-right">
             <p className="text-[11px] text-gray-500">Next follow-up</p>
             <p className="font-bold text-gray-900 dark:text-white text-body">{followUpText}</p>
+            {followUpStatusLabel && (
+              <p className={`text-[10px] font-bold mt-0.5 ${followUpCountdown && followUpCountdown < 0 ? 'text-red-500 dark:text-red-400' : 'text-gray-400'}`}>
+                {followUpStatusLabel}
+              </p>
+            )}
           </div>
         )}
       </div>
