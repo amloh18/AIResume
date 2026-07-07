@@ -44,7 +44,7 @@ const UserAvatarDropdown: React.FC<UserAvatarDropdownProps> = ({ user, openUpwar
   const dropdownRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
-  const { theme, toggleTheme } = useTheme();
+  const { resolvedTheme, toggleTheme } = useTheme();
 
   // Calculate menu position to keep it within viewport
   useEffect(() => {
@@ -326,7 +326,7 @@ const UserAvatarDropdown: React.FC<UserAvatarDropdownProps> = ({ user, openUpwar
 
               <div className="flex items-center justify-between px-4 py-2.5" data-dropdown-content>
                 <div className="flex items-center gap-3">
-                  {theme === 'dark' ? (
+                  {resolvedTheme === 'dark' ? (
                     <Sun className="h-4 w-4 text-gray-600 dark:text-gray-400" />
                   ) : (
                     <Moon className="h-4 w-4 text-gray-600 dark:text-gray-400" />
@@ -342,15 +342,15 @@ const UserAvatarDropdown: React.FC<UserAvatarDropdownProps> = ({ user, openUpwar
                     handleThemeToggle();
                   }}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-lime-500 focus:ring-offset-2 cursor-pointer ${
-                    theme === 'dark' 
-                      ? 'bg-lime-500' 
+                    resolvedTheme === 'dark'
+                      ? 'bg-lime-500'
                       : 'bg-gray-200 dark:bg-gray-700'
                   }`}
                   type="button"
                 >
                   <span
                     className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      theme === 'dark' ? 'translate-x-6' : 'translate-x-1'
+                      resolvedTheme === 'dark' ? 'translate-x-6' : 'translate-x-1'
                     }`}
                   />
                 </button>

@@ -16,7 +16,7 @@ const InterviewCoachHeader: React.FC<InterviewCoachHeaderProps> = ({
     title = 'Interview Coach'
 }) => {
     const router = useRouter();
-    const { theme, toggleTheme } = useTheme();
+    const { resolvedTheme, toggleTheme } = useTheme();
     const { userData } = useUserData();
 
     const handleExit = () => {
@@ -52,9 +52,9 @@ const InterviewCoachHeader: React.FC<InterviewCoachHeaderProps> = ({
                         <button
                             onClick={toggleTheme}
                             className="p-2 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors"
-                            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                            title={resolvedTheme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
                         >
-                            {theme === 'dark' ? (
+                            {resolvedTheme === 'dark' ? (
                                 <Sun className="w-5 h-5 text-yellow-500" />
                             ) : (
                                 <Moon className="w-5 h-5 text-gray-600" />
