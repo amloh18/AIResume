@@ -1,14 +1,28 @@
-        port: Number(account.imapPort || 993),
-        user: account.emailAddress,
-        password: account.password,
-      } : undefined,
-      smtpConfig: account.provider === 'imap' ? {
-        host: account.smtpHost || '',
-        port: Number(account.smtpPort || 465),
-        user: account.emailAddress,
-        password: account.password,
-      } : undefined,
-    });
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { getConnection } from '@/lib/database';
+import EmailAccount from '@/models/EmailAccount';
+import EmailMessage from '@/models/EmailMessage';
+import EmailThread from '@/models/EmailThread';
+import { UnifiedEmailSyncService } from '@/lib/services/unifiedEmailSyncService';
+
+export async function POST(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const userId = session.user.id;
+    const body = await request.json();
+    const { action, jobId, recipientEmail, subject, bodyText, threadId } = body;
+
+    if (action === 'sync') {
+      const account = await EmailAccount.findOne({ userId, syncStatus: 'connected' });
+      if (!account) {
+        return NextResponse.json({ success: false, error: 'No connected email account' }, { status: 400 });
+      }
 
       const syncService = new UnifiedEmailSyncService({
         accessToken: account.oauthAccessToken || '',
@@ -16,8 +30,18 @@
         provider: account.provider as any,
         expiresAt: account.tokenExpiresAt,
         ...(account.provider === 'imap' ? {
-          imapConfig: { host: account.imapHost || '', port: Number(account.imapPort || 993), user: account.emailAddress, password: account.password || '' },
-          smtpConfig: { host: account.smtpHost || '', port: Number(account.smtpPort || 465), user: account.emailAddress, password: account.password || '' },
+          imapConfig: {
+            host: account.imapHost || '',
+            port: Number(account.imapPort || 993),
+            user: account.emailAddress,
+            password: account.password,
+          },
+          smtpConfig: account.provider === 'imap' ? {
+            host: account.smtpHost || '',
+            port: Number(account.smtpPort || 465),
+            user: account.emailAddress,
+            password: account.password,
+          } : undefined,
         } : {}),
       });
 

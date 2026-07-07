@@ -3,6 +3,7 @@
 import { useCallback, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import { useQuery } from '@tanstack/react-query';
+import { usePathname } from 'next/navigation';
 import { PLAN_LIMITS, PlanLimits, getPlanLimits } from '@/lib/utils/subscription-helpers';
 
 /**
@@ -17,13 +18,13 @@ export type MembershipFeature =
     | 'docxExport'
     | 'interviewCoach'
     | 'jobTracker'
-    | 'jobParsing'           // Can parse job descriptions (Pro only)
+    | 'jobParsing'
     | 'prioritySupport'
     | 'advancedAnalytics'
     | 'careerVault'
     | 'unlimitedJobs'
-    | 'linkedinToneChange'   // LinkedIn Enhancer: can change tone
-    | 'linkedinCVSelection'; // LinkedIn Enhancer: can select different CVs
+    | 'linkedinToneChange'
+    | 'linkedinCVSelection';
 
 /**
  * Membership information
@@ -40,25 +41,15 @@ export interface MembershipInfo {
 }
 
 export interface UseMembershipReturn {
-    /** Full membership info */
     membership: MembershipInfo | null;
-    /** Loading state */
     loading: boolean;
-    /** Error message if any */
     error: string | null;
-    /** Check if user can access a specific feature */
     canAccess: (feature: MembershipFeature) => boolean;
-    /** Get reason why a feature is locked */
     getLockedReason: (feature: MembershipFeature) => string | null;
-    /** Whether user is a paid member (not free) */
     isPaidMember: boolean;
-    /** Refresh membership info */
     refreshMembership: () => Promise<void>;
 }
 
-/**
- * Plan key to display name mapping
- */
 const PLAN_NAMES: Record<string, string> = {
     free: 'Free',
     starter_monthly: 'Starter Monthly',
@@ -84,6 +75,24 @@ const defaultMembership: MembershipInfo = {
     isSubscriptionActive: true,
     expiresAt: null,
 };
+
+const publicRoutes = [
+    '/',
+    '/sign-in',
+    '/sign-up',
+    '/b2b/login',
+    '/admin/login',
+    '/custom-signin',
+    '/auth/verify-email',
+    '/auth/error',
+    '/auth/reset-password',
+    '/onboarding',
+    '/onboarding-universal',
+    '/privacy-policy',
+    '/terms',
+    '/cookie-policy',
+    '/force-logout',
+];
 
 async function fetchMembershipInfo(): Promise<MembershipInfo> {
     const response = await fetch('/api/user/usage-limits');
@@ -114,7 +123,6 @@ async function fetchMembershipInfo(): Promise<MembershipInfo> {
         ].includes(planKey) && isActive,
         isLifetimeMember: planKey === 'pro_lifetime' && isActive,
         limits,
-        // Free tier (free + starter_monthly) is always active — no subscription expiry
         isSubscriptionActive: (planKey === 'free' || planKey === 'starter_monthly') ? true : isActive,
         expiresAt: data.subscription?.endDate
             ? new Date(data.subscription.endDate)
@@ -122,13 +130,15 @@ async function fetchMembershipInfo(): Promise<MembershipInfo> {
     };
 }
 
-/**
- * Hook to check user's membership status and feature access
- * Replaces the legacy credit system with membership-based feature locking
- */
 export function useMembership(): UseMembershipReturn {
     const { data: session, status: sessionStatus } = useSession();
+    const pathname = usePathname();
     const hasSession = !!session?.user?.id;
+
+    const isPublicRoute = pathname
+        ? publicRoutes.some((route) => pathname === route || pathname.startsWith(route))
+        : false;
+
     const {
         data: membership = null,
         isPending,
@@ -137,22 +147,18 @@ export function useMembership(): UseMembershipReturn {
     } = useQuery({
         queryKey: ['user', 'usage-limits', session?.user?.id],
         queryFn: fetchMembershipInfo,
-        enabled: sessionStatus === 'authenticated' && hasSession,
+        enabled: sessionStatus === 'authenticated' && hasSession && !isPublicRoute,
         staleTime: 60 * 1000,
         gcTime: 10 * 60 * 1000,
     });
 
-    /**
-     * Check if user can access a specific feature
-     */
     const canAccess = useCallback((feature: MembershipFeature): boolean => {
         if (!membership) return false;
-
         const limits = membership.limits;
 
         switch (feature) {
             case 'journeyCVs':
-                return limits.journeyCVs !== 0; // 0 means not allowed, -1 means unlimited
+                return limits.journeyCVs !== 0;
             case 'standaloneCVs':
                 return limits.standaloneCVs;
             case 'premiumTemplates':
@@ -168,7 +174,7 @@ export function useMembership(): UseMembershipReturn {
             case 'jobTracker':
                 return limits.jobTracker;
             case 'jobParsing':
-                return limits.jobParsing;  // Pro only - can parse job descriptions
+                return limits.jobParsing;
             case 'prioritySupport':
                 return limits.prioritySupport;
             case 'advancedAnalytics':
@@ -178,17 +184,14 @@ export function useMembership(): UseMembershipReturn {
             case 'unlimitedJobs':
                 return limits.maxJobs === -1;
             case 'linkedinToneChange':
-                return limits.linkedinToneChange;  // Pro can change tone
+                return limits.linkedinToneChange;
             case 'linkedinCVSelection':
-                return limits.linkedinCVSelection; // Pro can select CVs
+                return limits.linkedinCVSelection;
             default:
                 return false;
         }
     }, [membership]);
 
-    /**
-     * Get the reason why a feature is locked
-     */
     const getLockedReason = useCallback((feature: MembershipFeature): string | null => {
         if (!membership) return 'Please sign in to access this feature';
 
@@ -230,14 +233,13 @@ export function useMembership(): UseMembershipReturn {
         }
     }, [membership, canAccess]);
 
-    // Derived state
     const isPaidMember = useMemo(() => {
         return membership?.isProMember || false;
     }, [membership]);
 
     return {
         membership,
-        loading: sessionStatus === 'loading' || (hasSession && isPending),
+        loading: sessionStatus === 'loading' || (hasSession && isPending && !isPublicRoute),
         error: queryError instanceof Error ? queryError.message : null,
         canAccess,
         getLockedReason,
@@ -248,9 +250,6 @@ export function useMembership(): UseMembershipReturn {
     };
 }
 
-/**
- * Helper to check if a subscription plan is a pro plan
- */
 export function isProPlan(planKey: string): boolean {
     return [
         'focused_monthly', 'focused_yearly',
@@ -259,9 +258,6 @@ export function isProPlan(planKey: string): boolean {
     ].includes(planKey);
 }
 
-/**
- * Helper to check if a subscription is currently active
- */
 export function isSubscriptionActive(subscription: {
     status?: string;
     endDate?: Date | string;
@@ -272,7 +268,6 @@ export function isSubscriptionActive(subscription: {
 
     const now = new Date();
 
-    // Check end date
     if (subscription.endDate) {
         const endDate = new Date(subscription.endDate);
         if (endDate < now) return false;

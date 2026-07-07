@@ -37,7 +37,7 @@ import type { ATSFeatures } from '@/components/resume-enhancer/panels/ATSModePan
 import { getAnalysisModeWithValidation } from '@/lib/utils/analysis-mode';
 import toast from 'react-hot-toast';
 import FloatingFormEditor from '@/components/resume-enhancer/FloatingFormEditor';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Skeleton } from '@/components/ui/SkeletonLoader';
 
 const CVBuilderProAdapter = lazy(() =>
   import('@/components/cv-builder-pro/CVBuilderProAdapter').then(mod => ({ default: mod.default }))

@@ -1,7 +1,7 @@
 // @ts-nocheck
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useAuthModalStore } from '@/lib/stores/authModalStore';
 import { signIn, useSession } from 'next-auth/react';
 import posthog from 'posthog-js';
@@ -12,6 +12,7 @@ import UnifiedAuthLayout from './UnifiedAuthLayout';
 import UnifiedAuthForm, { emailValidation, passwordValidation, nameValidation, confirmPasswordValidation } from './UnifiedAuthForm';
 import SocialAuthButtons from './SocialAuthButtons';
 import CodeVerificationScreen from './CodeVerificationScreen';
+import { usePathname } from 'next/navigation';
 
 export type AuthMode = 'signin' | 'signup' | 'reset' | 'magic-link' | 'verify-code';
 
@@ -51,16 +52,28 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
   const [resetToken, setResetToken] = useState<string | null>(null);
   const [twoFactorSessionId, setTwoFactorSessionId] = useState<string | null>(null);
   const [twoFactorUserId, setTwoFactorUserId] = useState<string | null>(null);
+  const hasRedirectedRef = useRef(false);
+
+  // Get current pathname to detect sign-in page
+  const pathname = usePathname();
+
+  const isOnSignIn = pathname === '/sign-in';
 
   // Check if user is already signed in
   useEffect(() => {
-    if (status === 'authenticated' && session?.user) {
-      if (!isModal) {
-        // Use window.location for reliable redirect that preserves callbackUrl
+    if (status === 'authenticated' && session?.user && !isModal) {
+      if (isOnSignIn) {
+        console.log('[sign-in] authenticated user on /sign-in - suppressing redirect to avoid loop');
+        return;
+      }
+
+      if (!hasRedirectedRef.current) {
+        hasRedirectedRef.current = true;
+        console.log('[sign-in] redirecting authenticated user to', callbackUrl);
         window.location.href = callbackUrl;
       }
     }
-  }, [status, session?.user, callbackUrl, isModal]);
+  }, [status, session?.user, callbackUrl, isModal, isOnSignIn]);
 
   // Handle redirect after successful sign-in
   useEffect(() => {

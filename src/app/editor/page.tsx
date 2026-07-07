@@ -11,7 +11,7 @@ import ResumeEnhancerContainer from '@/components/resume-enhancer/ResumeEnhancer
 import RouteGuard from '@/components/auth/RouteGuard'
 import { geistFont } from '@/lib/fonts'
 import { MobileSidebarProvider } from '@/contexts/MobileSidebarContext'
-import { Skeleton } from '@/components/ui/skeleton'
+import { Skeleton } from '@/components/ui/SkeletonLoader';
 import { Loader2 } from 'lucide-react'
 
 function SyncIndicator({ visible }: { visible: boolean }) {

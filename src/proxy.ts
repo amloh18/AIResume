@@ -94,7 +94,17 @@ export default async function proxy(req: NextRequest) {
     } catch (tokenError) {
       console.error('❌ Middleware - getToken error:', tokenError);
     }
-    
+
+    if (pathname.startsWith('/dashboard')) {
+      console.log('🔍 Middleware - /dashboard access', {
+        isAuth: !!token,
+        tokenKeys: token ? Object.keys(token) : [],
+        tokenSub: token ? token.sub : undefined,
+        cookieHeader: req.headers.get('cookie')?.slice(0, 120) || 'none',
+        secretUsed: !!process.env.NEXTAUTH_SECRET,
+      });
+    }
+
     const isAuth = !!token;
     const activeToken = token as any;
 

@@ -126,9 +126,13 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
 
   // Fetch notifications from API - only for authenticated users
   const fetchNotifications = useCallback(async (sinceId?: string) => {
-    // Don't fetch if user is not authenticated
-    if (!isAuthenticated) {
-      console.log('🔒 NotificationContext - Skipping fetch: Not authenticated');
+    // Don't fetch if user is not authenticated or on a public route
+    if (!isAuthenticated || isPublicRoute) {
+      console.log('🔒 NotificationContext - Skipping fetch:', {
+        reason: !isAuthenticated ? 'Not authenticated' : 'Public route',
+        isAuthenticated,
+        isPublicRoute
+      });
       setNotifications([]);
       setIsLoading(false);
       hasFetchedRef.current = false;
@@ -548,23 +552,25 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
       isAdminRoute
     });
     
-    // Only set up SSE if we're in the browser and user is authenticated
-    if (typeof window === 'undefined' || !isAuthenticated) {
-      // Close any existing connection if user is not authenticated
+    // Only set up SSE if we're in the browser, user is authenticated, and not on a public route
+    if (typeof window === 'undefined' || !isAuthenticated || isPublicRoute) {
       if (eventSource) {
-        console.log('🔌 NotificationContext - Closing SSE (not authenticated)', {
-          reason: typeof window === 'undefined' ? 'SSR' : 'not authenticated',
+        console.log('🔌 NotificationContext - Closing SSE (not authenticated/public)', {
+          reason: typeof window === 'undefined' ? 'SSR' : isPublicRoute ? 'public route' : 'not authenticated',
           isAuthenticated,
-          status
+          status,
+          isPublicRoute,
+          pathname
         });
         eventSource.close();
         setEventSource(null);
-      } else {
+      } else if (isMounted) {
         console.warn('🚫 NotificationContext - SSE setup blocked:', {
           isWindow: typeof window !== 'undefined',
           isAuthenticated,
           status,
-          pathname
+          pathname,
+          isPublicRoute
         });
       }
       return;
@@ -767,21 +773,24 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
     // Start polling immediately (don't wait for SSE)
     // This ensures notifications are fetched even if SSE never connects
     const pollTimer = setTimeout(() => {
-      if (isAuthenticated) {
+      if (isAuthenticated && !isPublicRoute) {
         // Always start polling as a fallback
         console.log('🔄 NotificationContext - Starting polling fallback', {
           isAuthenticated,
           status,
           pathname,
+          isPublicRoute,
           hasEventSource: !!eventSourceRef.current
         });
         startPolling();
       } else {
-        console.warn('🚫 NotificationContext - Cannot start polling (not authenticated)', {
+        console.warn('🚫 NotificationContext - Cannot start polling', {
           isAuthenticated,
           status,
           pathname,
-          isMounted
+          isPublicRoute,
+          isMounted,
+          reason: !isAuthenticated ? 'not authenticated' : 'public route'
         });
       }
     }, 15000); // Start polling 15s after mount; drawer opens will trigger initial fetch sooner

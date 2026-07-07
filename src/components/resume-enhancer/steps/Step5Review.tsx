@@ -26,7 +26,7 @@ import AuthPromptModal from '../AuthPromptModal';
 import toast from 'react-hot-toast';
 import { COVER_LETTER_TEMPLATES } from '@/lib/templates/cover-letter-templates';
 import EditorOnboarding from '@/components/resume-enhancer/components/EditorOnboarding';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Skeleton } from '@/components/ui/SkeletonLoader';
 
 const CVBuilderProAdapter = lazy(() =>
   import('@/components/cv-builder-pro/CVBuilderProAdapter').then(mod => ({ default: mod.default }))

@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Skeleton } from '@/components/ui/SkeletonLoader';
 
 interface RouteGuardProps {
   children: React.ReactNode;
