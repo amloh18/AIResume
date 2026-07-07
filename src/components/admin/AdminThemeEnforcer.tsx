@@ -4,8 +4,8 @@ import React, { useEffect, useRef } from 'react';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 
 export default function AdminThemeEnforcer({ children }: { children: React.ReactNode }) {
-  const { theme } = useTheme();
-  const initialTheme = useRef(theme);
+  const { resolvedTheme } = useTheme();
+  const initialTheme = useRef(resolvedTheme);
 
   useEffect(() => {
     document.documentElement.classList.remove('dark');
@@ -21,4 +21,3 @@ export default function AdminThemeEnforcer({ children }: { children: React.React
 
   return children;
 }
-
