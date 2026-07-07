@@ -1,4 +1,3 @@
-import { PAGE_SIZE, getPageMetrics } from '@/lib/constants/pageMetrics';
 
 /**
  * Page Break Helper for A4 Preview
