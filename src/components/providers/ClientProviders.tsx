@@ -26,7 +26,7 @@ interface ClientProvidersProps {
   session?: Session | null; // Session from getServerSession
 }
 
-function ConditionalProviders({ children }: ClientProvidersProps) {
+function AppSkinProviders({ children }: { children: ReactNode }) {
   return (
     <ThemeProvider>
       <PaymentModalProvider>
@@ -72,14 +72,12 @@ export default function ClientProviders({ children, session }: ClientProvidersPr
   return (
     <ReactQueryProvider>
       <SessionProvider session={session}>
-        {/* REFACTORED: Flattened provider nesting from 6 levels to 4 levels */}
-        {/* Removed AdminAuthProvider - now deprecated, use useSession() directly */}
+        {/* Flattened outer provider chain: these three must elide auth/session dependencies */}
         <AuthProvider>
-          {/* NotificationProvider must be inside SessionProvider to use useSession */}
-          {/* Wrap NotificationProvider in error boundary to prevent crashes */}
           <ClientErrorBoundary>
             <NotificationProvider>
-              <ConditionalProviders>{children}</ConditionalProviders>
+              {/* App-level UI providers without auth/session dependencies */}
+              <AppSkinProviders>{children}</AppSkinProviders>
             </NotificationProvider>
           </ClientErrorBoundary>
         </AuthProvider>

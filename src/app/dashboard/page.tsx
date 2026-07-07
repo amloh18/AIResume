@@ -1,6 +1,6 @@
 'use client';
 
-import React, { Suspense, useState, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useQuery } from '@tanstack/react-query';
@@ -52,11 +52,9 @@ async function fetchOnboardingData() {
 
 export default function DashboardPage() {
   return (
-    <Suspense fallback={<LoadingFallback />}>
-      <RouteGuard requireAuth={true}>
-        <DashboardContent />
-      </RouteGuard>
-    </Suspense>
+    <RouteGuard requireAuth={true}>
+      <DashboardContent />
+    </RouteGuard>
   );
 }
 

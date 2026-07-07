@@ -41,10 +41,6 @@ export interface UseUserDataReturn {
   refetch: () => Promise<void>;
 }
 
-/**
- * Standardized hook for fetching user data from the database
- * This ensures all dashboard pages use the same user data source
- */
 export function useUserData(): UseUserDataReturn {
   const { data: session, status } = useSession();
   const [userData, setUserData] = useState<UserData | null>(null);
@@ -63,7 +59,6 @@ export function useUserData(): UseUserDataReturn {
 
       console.log('🔍 useUserData - Fetching user data for:', session.user.email);
 
-      // Use the standardized /api/user endpoint
       const response = await authenticatedFetch('/api/user');
 
       if (!response.ok) {
@@ -93,7 +88,6 @@ export function useUserData(): UseUserDataReturn {
     }
   }, [session?.user?.email]);
 
-  // Fetch user data when session is available
   useEffect(() => {
     if (status === 'loading') {
       setLoading(true);
@@ -111,7 +105,6 @@ export function useUserData(): UseUserDataReturn {
     }
   }, [session?.user?.email, status, fetchUserData]);
 
-  // Listen for user profile updates from other components
   useEffect(() => {
     const handleUserProfileUpdate = (event: CustomEvent) => {
       const updatedUser = event.detail.user;
@@ -125,7 +118,6 @@ export function useUserData(): UseUserDataReturn {
         setUserData(prev => ({
           ...prev,
           ...updatedUser,
-          // Ensure we have the correct structure
           id: updatedUser.id || prev?.id,
           firstName: updatedUser.firstName || prev?.firstName,
           lastName: updatedUser.lastName || prev?.lastName,
@@ -141,7 +133,7 @@ export function useUserData(): UseUserDataReturn {
     return () => {
       window.removeEventListener('userProfileUpdated', handleUserProfileUpdate as EventListener);
     };
-  }, []);
+  }, [fetchUserData]);
 
   return {
     userData,
@@ -151,9 +143,6 @@ export function useUserData(): UseUserDataReturn {
   };
 }
 
-/**
- * Helper function to get display name from user data
- */
 export function getUserDisplayName(userData: UserData | null): string {
   if (!userData) return 'User';
 
@@ -172,16 +161,10 @@ export function getUserDisplayName(userData: UserData | null): string {
   return 'User';
 }
 
-/**
- * Helper function to get user email
- */
 export function getUserEmail(userData: UserData | null): string {
   return userData?.email || '';
 }
 
-/**
- * Helper function to get user avatar
- */
 export function getUserAvatar(userData: UserData | null): string {
   return userData?.avatar || '';
 }

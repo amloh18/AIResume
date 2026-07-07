@@ -16,16 +16,16 @@ import NotificationCenter from '@/components/notifications/NotificationCenter';
 interface OptimizedDashboardLayoutProps {
   children?: React.ReactNode;
   noPadding?: boolean;
+  sessionFromServer?: any;
 }
 
 // Inner component that can access contexts
-const DashboardContent: React.FC<{ children?: React.ReactNode; noPadding?: boolean }> = ({ children, noPadding }) => {
+const DashboardContent: React.FC<{ children?: React.ReactNode; noPadding?: boolean; sessionFromServer?: any }> = ({ children, noPadding, sessionFromServer }) => {
   const { user, loading: authLoading } = useUnifiedAuth();
   const { userData, loading: userLoading } = useUserData();
   const { isOpen: isMobileMenuOpen, toggleSidebar, isDesktopExpanded } = useMobileSidebar();
 
   // App Shell Pattern: Render layout structure immediately, regardless of data loading
-  // This provides instant visual feedback and prevents layout shifts
   return (
     <div className="h-macro app-page-bg layout-stable overflow-hidden">
       <div className="flex h-full">
@@ -41,19 +41,19 @@ const DashboardContent: React.FC<{ children?: React.ReactNode; noPadding?: boole
          </div>
 
 {/* Mobile/Small Screen Full-Screen Menu - Hidden on lg and up */}
-          <AnimatePresence>
-            {isMobileMenuOpen && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.2 }}
-                className="fixed inset-0 z-[120] bg-white dark:bg-[#141810] lg:hidden"
-              >
-                <OptimizedNavigation />
-              </motion.div>
-            )}
-          </AnimatePresence>
+           <AnimatePresence>
+             {isMobileMenuOpen && (
+               <motion.div
+                 initial={{ opacity: 0, scale: 0.95 }}
+                 animate={{ opacity: 1, scale: 1 }}
+                 exit={{ opacity: 0, scale: 0.95 }}
+                 transition={{ duration: 0.2 }}
+                 className="fixed inset-0 z-[120] bg-white dark:bg-[#141810] lg:hidden"
+               >
+                 <OptimizedNavigation />
+               </motion.div>
+             )}
+           </AnimatePresence>
 
         {/* Main Content - Always render shell to prevent CLS */}
         {/* Removed padding-left hacks since the sticky sidebar naturally pushes this flex-1 container */}
@@ -101,12 +101,12 @@ const DashboardContent: React.FC<{ children?: React.ReactNode; noPadding?: boole
   );
 };
 
-const OptimizedDashboardLayout: React.FC<OptimizedDashboardLayoutProps> = ({ children, noPadding }) => {
+const OptimizedDashboardLayout: React.FC<OptimizedDashboardLayoutProps> = ({ children, noPadding, sessionFromServer }) => {
   return (
     <MobileSidebarProvider>
       <JobJourneyProvider>
         <DashboardDataProvider>
-          <DashboardContent noPadding={noPadding}>
+          <DashboardContent noPadding={noPadding} sessionFromServer={sessionFromServer}>
             {children}
           </DashboardContent>
         </DashboardDataProvider>

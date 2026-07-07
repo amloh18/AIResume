@@ -265,8 +265,11 @@ const nextConfig: NextConfig = {
       'lodash'
     ],
   },
-  // Turbopack configuration - use webpack for now due to custom webpack config
-  turbopack: {},
+  // Turbopack configuration - root set explicitly so Next.js doesn't infer
+  // the monorepo parent as the workspace root because of sibling lockfiles.
+  turbopack: {
+    root: '.',
+  },
 
   // Force dynamic rendering for all pages to prevent SSR issues
   // Disable static optimization to prevent build errors with React hooks

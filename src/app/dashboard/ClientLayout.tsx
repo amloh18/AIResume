@@ -8,9 +8,10 @@ import MoriAssistant from '@/components/dashboard/MoriAssistant';
 
 interface ClientLayoutProps {
   children: React.ReactNode;
+  session?: any;
 }
 
-const ClientLayoutContent: React.FC<ClientLayoutProps> = ({ children }) => {
+const ClientLayoutContent: React.FC<ClientLayoutProps> = ({ children, session }) => {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -22,7 +23,6 @@ const ClientLayoutContent: React.FC<ClientLayoutProps> = ({ children }) => {
       setSelectedPlanKey(plan);
       setShowPaymentModal(true);
 
-      // Clear the query param
       const newParams = new URLSearchParams(searchParams.toString());
       newParams.delete('plan');
       newParams.delete('returnUrl');
@@ -31,7 +31,7 @@ const ClientLayoutContent: React.FC<ClientLayoutProps> = ({ children }) => {
   }, [searchParams, router]);
 
   return (
-    <OptimizedDashboardLayout>
+    <OptimizedDashboardLayout sessionFromServer={session}>
       {children}
       {selectedPlanKey && (
         <UniversalPaymentModal
@@ -46,10 +46,10 @@ const ClientLayoutContent: React.FC<ClientLayoutProps> = ({ children }) => {
   );
 };
 
-const ClientLayout: React.FC<ClientLayoutProps> = ({ children }) => {
+const ClientLayout: React.FC<ClientLayoutProps> = ({ children, session }) => {
   return (
-    <Suspense fallback={<OptimizedDashboardLayout>{children}</OptimizedDashboardLayout>}>
-      <ClientLayoutContent>{children}</ClientLayoutContent>
+    <Suspense fallback={<OptimizedDashboardLayout sessionFromServer={session}>{children}</OptimizedDashboardLayout>}>
+      <ClientLayoutContent session={session}>{children}</ClientLayoutContent>
     </Suspense>
   );
 };

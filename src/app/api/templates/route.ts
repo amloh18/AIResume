@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createErrorResponse } from '@/lib/db-utils';
 import { getAllTemplates } from '@/lib/templates/template-utils';
 
+export const revalidate = 300;
+
 // GET - List available hardcoded templates only
 export async function GET(request: NextRequest) {
   try {

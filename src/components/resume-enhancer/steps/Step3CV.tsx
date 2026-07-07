@@ -1,7 +1,7 @@
 // @ts-nocheck
 'use client';
 
-import React, { useState, useEffect, useImperativeHandle, forwardRef, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useImperativeHandle, forwardRef, useRef, useMemo, useCallback, Suspense, lazy } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
@@ -20,7 +20,6 @@ import {
 import RoleProfilerModal from '@/components/resume-enhancer/RoleProfilerModal';
 import SurgeonReportModal from '@/components/resume-enhancer/SurgeonReportModal';
 import FieldFixOverlay from '@/components/resume-enhancer/annotations/FieldFixOverlay';
-import CVBuilderProAdapter from '@/components/cv-builder-pro/CVBuilderProAdapter';
 import { validateCVPreview } from '@/lib/validation/cv-preview-validator';
 import type { FixAnnotation } from '@/components/resume-enhancer/annotations/fix-annotation';
 import { AnimatedScore } from '@/components/ui/AnimatedScore';
@@ -38,6 +37,11 @@ import type { ATSFeatures } from '@/components/resume-enhancer/panels/ATSModePan
 import { getAnalysisModeWithValidation } from '@/lib/utils/analysis-mode';
 import toast from 'react-hot-toast';
 import FloatingFormEditor from '@/components/resume-enhancer/FloatingFormEditor';
+import { Skeleton } from '@/components/ui/skeleton';
+
+const CVBuilderProAdapter = lazy(() =>
+  import('@/components/cv-builder-pro/CVBuilderProAdapter').then(mod => ({ default: mod.default }))
+);
 import FloatingPulsePill, { type FloatingPulsePillHandle } from '@/components/resume-enhancer/FloatingPulsePill';
 import ATSMeterPanel from '@/components/resume-enhancer/panels/ATSMeterPanel';
 import MoriChatInterface from '@/components/resume-enhancer/panels/MoriChatInterface';
@@ -1347,27 +1351,29 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
                     </div>
                   </div>
                 </div>
-              ) : (
-                <CVBuilderProAdapter
-                  ref={canvasBuilderRef}
-                  cvData={state.cvData}
-                  template={state.selectedTemplate}
-                  cvId={state.cvId}
-                  jobId={state.jobData?.id || state.jobData?._id || null}
-                  role={state.jobData?.jobTitle || state.jobData?.title || state.targetRole || null}
-                  onDataChange={(updatedData: any) => {
-                    dispatch({ type: 'SET_CV_DATA', payload: updatedData });
-                    setIsSectionEdited(true);
-                  }}
-                  onTemplateChange={(newTemplate: any) => {
-                    setTemplate(newTemplate);
-                    dispatch({ type: 'SET_SELECTED_TEMPLATE', payload: newTemplate });
-                  }}
-                  theme={typeof window !== 'undefined' && document.documentElement.classList.contains('dark') ? 'dark' : 'light'}
-                  moriChatMode={state.moriChatMode}
-                  isGuestMode={isGuestMode}
-                />
-              )}
+                ) : (
+                  <Suspense fallback={<Skeleton className="min-h-[320px] md:min-h-[600px] w-full rounded-2xl" />}>
+                    <CVBuilderProAdapter
+                      ref={canvasBuilderRef}
+                      cvData={state.cvData}
+                      template={state.selectedTemplate}
+                      cvId={state.cvId}
+                      jobId={state.jobData?.id || state.jobData?._id || null}
+                      role={state.jobData?.jobTitle || state.jobData?.title || state.targetRole || null}
+                      onDataChange={(updatedData: any) => {
+                        dispatch({ type: 'SET_CV_DATA', payload: updatedData });
+                        setIsSectionEdited(true);
+                      }}
+                      onTemplateChange={(newTemplate: any) => {
+                        setTemplate(newTemplate);
+                        dispatch({ type: 'SET_SELECTED_TEMPLATE', payload: newTemplate });
+                      }}
+                      theme={typeof window !== 'undefined' && document.documentElement.classList.contains('dark') ? 'dark' : 'light'}
+                      moriChatMode={state.moriChatMode}
+                      isGuestMode={isGuestMode}
+                    />
+                  </Suspense>
+                )}
             </div>
           </div>
           

@@ -67,7 +67,7 @@ const isB2BRoute = (req: NextRequest) => {
   return b2bRoutes.some((route) => req.nextUrl.pathname.startsWith(route))
 }
 
-export default async function middleware(req: NextRequest) {
+export default async function proxy(req: NextRequest) {
   try {
     const startTime = Date.now();
     const pathname = req.nextUrl.pathname;

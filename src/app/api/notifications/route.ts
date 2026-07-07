@@ -27,6 +27,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const read = searchParams.get('read');
     const type = searchParams.get('type');
+    const since = searchParams.get('since');
     const limit = parseInt(searchParams.get('limit') || '50');
     const offset = parseInt(searchParams.get('offset') || '0');
 
@@ -37,6 +38,9 @@ export async function GET(request: NextRequest) {
     }
     if (type) {
       query.type = type;
+    }
+    if (since) {
+      query._id = { $gt: since };
     }
 
     // Filter expired time-sensitive notifications
