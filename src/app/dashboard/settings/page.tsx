@@ -2556,10 +2556,11 @@ const SettingsContent = () => {
     console.log('🔄 Settings - Updating local state with saved user data');
     queryClient.setQueryData(['settings-user', user?.id || user?.email], updatedUser);
 
-    // Dispatch custom event to notify other components of user data update
     window.dispatchEvent(new CustomEvent('userProfileUpdated', {
       detail: { user: updatedUser }
     }));
+
+    router.refresh();
   };
 
   const renderTabContent = () => {

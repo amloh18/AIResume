@@ -1,10 +1,9 @@
 // @ts-nocheck
 'use client';
 
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, lazy, Suspense } from 'react';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
 import { AlertCircle, Eye, Palette, X, FileText, Download, Target, Award, TrendingUp, AlertTriangle, CheckCircle2, Shield, Sparkles, BookOpen, ChevronRight, Zap, Briefcase, Edit2, LayoutTemplate, Calendar, PenTool, ZoomIn, ZoomOut } from 'lucide-react';
-import CVBuilderProAdapter from '@/components/cv-builder-pro/CVBuilderProAdapter';
 import { ITemplate } from '@/types/template';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
@@ -27,6 +26,11 @@ import AuthPromptModal from '../AuthPromptModal';
 import toast from 'react-hot-toast';
 import { COVER_LETTER_TEMPLATES } from '@/lib/templates/cover-letter-templates';
 import EditorOnboarding from '@/components/resume-enhancer/components/EditorOnboarding';
+import { Skeleton } from '@/components/ui/skeleton';
+
+const CVBuilderProAdapter = lazy(() =>
+  import('@/components/cv-builder-pro/CVBuilderProAdapter').then(mod => ({ default: mod.default }))
+);
 
 function getAtsScannedText(cvData: any): string {
   if (!cvData) return 'No resume data found.';
@@ -1054,15 +1058,17 @@ export default function Step5Review({ onSave }: { onSave?: () => Promise<void> }
                     className="relative"
                     style={{ width: paperWidth }}
                   >
-                    <CVBuilderProAdapter
-                      cvData={state.cvData}
-                      template={state.selectedTemplate || state.cvData?.metadata?.canvasTemplate}
-                      theme={typeof window !== 'undefined' && document.documentElement.classList.contains('dark') ? 'dark' : 'light'}
-                      readOnly={true}
-                      cvId={state.cvId}
-                      jobId={state.jobData?._id || state.jobData?.id || state.journeyId}
-                      role={state.targetRole}
-                    />
+                    <Suspense fallback={<Skeleton className="min-h-[320px] md:min-h-[600px] w-full rounded-2xl" />}>
+                      <CVBuilderProAdapter
+                        cvData={state.cvData}
+                        template={state.selectedTemplate || state.cvData?.metadata?.canvasTemplate}
+                        theme={typeof window !== 'undefined' && document.documentElement.classList.contains('dark') ? 'dark' : 'light'}
+                        readOnly={true}
+                        cvId={state.cvId}
+                        jobId={state.jobData?._id || state.jobData?.id || state.journeyId}
+                        role={state.targetRole}
+                      />
+                    </Suspense>
 
                     {/* Heatmap Overlay inside the zoomable container */}
                     {isHeatmapActive && (

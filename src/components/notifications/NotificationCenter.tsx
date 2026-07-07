@@ -20,6 +20,7 @@ export default function NotificationCenter({ variant = 'default' }: Notification
     unreadCount,
     markAsRead,
     markAllAsRead,
+    setDrawerOpen,
   } = useNotifications();
 
   // Safe context access to avoid "must be used within DashboardDataProvider" error
@@ -28,15 +29,17 @@ export default function NotificationCenter({ variant = 'default' }: Notification
   const secondaryLoading = dashboardContext?.secondaryLoading || { activities: false };
   
   // Merge live activities with DB activities
-  const allActivities = [...liveActivities];
-  dbActivities.forEach(dbA => {
-    if (!allActivities.some(a => a.id === dbA.id)) {
-      allActivities.push(dbA);
-    }
-  });
-  
-  // Sort merged activities by timestamp
-  allActivities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  const allActivities = React.useMemo(() => {
+    const merged = [...liveActivities];
+    dbActivities.forEach(dbA => {
+      if (!merged.some(a => a.id === dbA.id)) {
+        merged.push(dbA);
+      }
+    });
+
+    merged.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    return merged;
+  }, [liveActivities, dbActivities]);
 
   const [activeTab, setActiveTab] = useState<TabType>('notifications');
   const [isOpen, setIsOpen] = useState(false);
@@ -54,6 +57,11 @@ export default function NotificationCenter({ variant = 'default' }: Notification
     window.addEventListener('toggle-notification-drawer', handleToggle);
     return () => window.removeEventListener('toggle-notification-drawer', handleToggle);
   }, []);
+
+  // Sync drawer open state with NotificationContext for lazy loading
+  useEffect(() => {
+    setDrawerOpen(isOpen);
+  }, [isOpen, setDrawerOpen]);
 
   const getActivityIcon = (type: string) => {
     switch (type) {

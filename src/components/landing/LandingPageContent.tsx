@@ -1,30 +1,55 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import Hero from '@/components/landing/Hero';
 import CardNav from '@/components/landing/CardNav';
 import { TestimonialSnippet } from '@/components/landing/Testimonials';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { navLinks } from '@/data/navigation';
+import { Skeleton } from '@/components/ui/SkeletonLoader';
 
-// Lazy load non-critical sections
-const Features = dynamic(() => import('@/components/landing/Features'), { ssr: true });
-const ChromeExtension = dynamic(() => import('@/components/landing/ChromeExtension'), { ssr: true });
-const Testimonials = dynamic(() => import('@/components/landing/Testimonials'), { ssr: true });
-const CompetitorComparison = dynamic(() => import('@/components/landing/CompetitorComparison'), { ssr: true });
 const HowItWorks = dynamic(() => import('@/components/landing/HowItWorks'), { ssr: true });
-const Pricing = dynamic(() => import('@/components/landing/Pricing'), { ssr: true });
-const BlogSection = dynamic(() => import('@/components/landing/BlogSection'), { ssr: true });
-const FAQ = dynamic(() => import('@/components/landing/FAQ'), { ssr: true });
+
+// Below-the-fold sections are deferred to avoid competing with the app shell and above-fold paint.
+// They load in two tiers to smooth the network waterfall.
+// Tier 1 loads shortly after mount, tier 2 after a small additional delay.
+const Features = dynamic(() => import('@/components/landing/Features'), {
+  ssr: true,
+  loading: () => <Skeleton className="h-[400px] w-full rounded-2xl" />
+});
+const ChromeExtension = dynamic(() => import('@/components/landing/ChromeExtension'), {
+  ssr: true,
+  loading: () => <Skeleton className="h-[380px] w-full rounded-2xl" />
+});
+const Testimonials = dynamic(() => import('@/components/landing/Testimonials'), {
+  ssr: true,
+  loading: () => <Skeleton className="h-[360px] w-full rounded-2xl" />
+});
+const CompetitorComparison = dynamic(() => import('@/components/landing/CompetitorComparison'), {
+  ssr: true,
+  loading: () => <Skeleton className="h-[500px] w-full rounded-2xl" />
+});
+const Pricing = dynamic(() => import('@/components/landing/Pricing'), {
+  ssr: true,
+  loading: () => <Skeleton className="h-[600px] w-full rounded-2xl" />
+});
+const BlogSection = dynamic(() => import('@/components/landing/BlogSection'), {
+  ssr: true,
+  loading: () => <Skeleton className="h-[420px] w-full rounded-2xl" />
+});
+const FAQ = dynamic(() => import('@/components/landing/FAQ'), {
+  ssr: true,
+  loading: () => <Skeleton className="h-[380px] w-full rounded-2xl" />
+});
 const Footer = dynamic(() => import('@/components/landing/Footer'), { ssr: true });
 
 export default function LandingPageContent() {
   const router = useRouter();
-  
-  // Handle logout cleanup - client-side only
+  const [layer1, setLayer1] = useState(false);
+  const [layer2, setLayer2] = useState(false);
+
   useEffect(() => {
-    // Only run on client side
     if (typeof window === 'undefined') return;
 
     const logoutComplete = sessionStorage.getItem('logout-complete');
@@ -45,8 +70,17 @@ export default function LandingPageContent() {
       sessionStorage.removeItem('logout-in-progress');
       const url = new URL(window.location.href);
       url.searchParams.delete('_t');
-      window.history.replaceState({}, '', url.toString());
+      window.history.replaceState({}, {}, url.toString());
     }
+
+    // Stagger below-the-fold sections to smooth first paint and chunk load waterfall.
+    const layer1Timer = setTimeout(() => setLayer1(true), 50);
+    const layer2Timer = setTimeout(() => setLayer2(true), 300);
+
+    return () => {
+      clearTimeout(layer1Timer);
+      clearTimeout(layer2Timer);
+    };
   }, []);
 
   const handleCtaClick = () => {
@@ -68,27 +102,39 @@ export default function LandingPageContent() {
       </div>
 
       <div className="relative">
+        {/* Above-the-fold: render immediately */}
         <Hero />
         <TestimonialSnippet index={0} />
         <HowItWorks />
         <TestimonialSnippet index={1} />
-        <Features />
-        <TestimonialSnippet index={2} />
-        <ChromeExtension />
-        <Testimonials />
 
-        <CompetitorComparison />
+        {/* Layer 1: just after above-the-fold */}
+        {layer1 && (
+          <>
+            <TestimonialSnippet index={2} />
+            <Features />
+            <ChromeExtension />
+            <Testimonials />
+          </>
+        )}
 
-        <div className="dark">
-          <Pricing onPlanSelect={(plan) => {
-            window.location.href = `/sign-up?plan=${encodeURIComponent(plan.name)}`;
-          }} />
-        </div>
+        {/* Layer 2: deeper sections */}
+        {layer2 && (
+          <>
+            <CompetitorComparison />
 
-        <BlogSection />
+            <div className="dark">
+              <Pricing onPlanSelect={(plan) => {
+                window.location.href = `/sign-up?plan=${encodeURIComponent(plan.name)}`;
+              }} />
+            </div>
 
-        <FAQ />
-        <Footer />
+            <BlogSection />
+
+            <FAQ />
+            <Footer />
+          </>
+        )}
       </div>
     </div>
   );

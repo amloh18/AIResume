@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import { User, Job, JobApplication } from '@/models';
 
+export const revalidate = 300;
+
 export async function GET(request: NextRequest) {
   try {
     await getConnection();

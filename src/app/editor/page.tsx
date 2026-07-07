@@ -1,33 +1,38 @@
-'use client';
+'use client'
 
-import React, { Suspense, useState, useEffect } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
-import { useUnifiedAuth, getUserIdForAPI } from '@/lib/hooks/useUnifiedAuth';
-import { ResumeEnhancerProvider } from '@/contexts/ResumeEnhancerContext';
-import { JobJourneyProvider } from '@/contexts/JobJourneyContext';
-import { ATSProvider } from '@/contexts/ATSContext';
-import { DashboardDataProvider } from '@/contexts/DashboardDataContext';
-import ResumeEnhancerContainer from '@/components/resume-enhancer/ResumeEnhancerContainer';
-import RouteGuard from '@/components/auth/RouteGuard';
-import LoadingOverlay from '@/components/ui/LoadingOverlay';
-import guestCVService from '@/lib/services/guestCVService';
-import { MobileSidebarProvider } from '@/contexts/MobileSidebarContext';
-import { geistFont } from '@/lib/fonts';
+import React, { Suspense, useState, useEffect } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
+import { useUnifiedAuth } from '@/lib/hooks/useUnifiedAuth'
+import { ResumeEnhancerProvider } from '@/contexts/ResumeEnhancerContext'
+import { JobJourneyProvider } from '@/contexts/JobJourneyContext'
+import { ATSProvider } from '@/contexts/ATSContext'
+import { DashboardDataProvider } from '@/contexts/DashboardDataContext'
+import ResumeEnhancerContainer from '@/components/resume-enhancer/ResumeEnhancerContainer'
+import RouteGuard from '@/components/auth/RouteGuard'
+import { geistFont } from '@/lib/fonts'
+import { MobileSidebarProvider } from '@/contexts/MobileSidebarContext'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Loader2 } from 'lucide-react'
+
+function SyncIndicator({ visible }: { visible: boolean }) {
+  if (!visible) return null
+  return (
+    <div className="fixed bottom-4 right-4 z-[60] flex items-center gap-2 rounded-full bg-black/70 px-3 py-1.5 text-white text-xs shadow-lg">
+      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+      Syncing workspace…
+    </div>
+  )
+}
 
 function ResumeEnhancerPageContent() {
-  const router = useRouter();
-  const { user, loading: authLoading, isAuthenticated } = useUnifiedAuth();
-  const searchParams = useSearchParams();
-  const [isGuestMode, setIsGuestMode] = useState(false);
-  const [isCheckingGuestMode, setIsCheckingGuestMode] = useState(true);
-  const [restoreDraft, setRestoreDraft] = useState(false);
+  const router = useRouter()
+  const { user, loading: authLoading, isAuthenticated } = useUnifiedAuth()
+  const searchParams = useSearchParams()
 
-  // Get parameters from URL and sanitize them (avoid literal 'undefined' strings)
-  const typeParam = searchParams.get('type');
-  const rawModeParam = searchParams.get('mode');
-  const rawCvId = searchParams.get('cvId');
-  const rawJourneyId = searchParams.get('journeyId') || searchParams.get('jobJourneyId');
-  // Determine the mode
+  const typeParam = searchParams.get('type')
+  const rawModeParam = searchParams.get('mode')
+  const rawCvId = searchParams.get('cvId')
+  const rawJourneyId = searchParams.get('journeyId') || searchParams.get('jobJourneyId')
   const normalizedLegacyMode =
     rawModeParam === 'cvedit'
       ? (rawJourneyId ? 'journey' : 'edit')
@@ -35,187 +40,177 @@ function ResumeEnhancerPageContent() {
         ? 'edit-cover-letter'
         : (rawModeParam === 'improve' || rawModeParam === 'mode-improve')
           ? 'edit-master'
-          : rawModeParam;
+          : rawModeParam
 
   let mode: 'create' | 'edit' | 'edit-master' | 'journey' | 'edit-cover-letter' | 'create-cover-letter' =
     (normalizedLegacyMode === 'edit' || normalizedLegacyMode === 'edit-master' || normalizedLegacyMode === 'journey' || normalizedLegacyMode === 'edit-cover-letter' || normalizedLegacyMode === 'create-cover-letter')
       ? normalizedLegacyMode
-      : 'create';
+      : 'create'
 
-  const rawClId = searchParams.get('clId') || searchParams.get('coverLetterId');
-  const clId = (rawClId && rawClId !== 'undefined') ? rawClId : undefined;
-  
-  const cvId = (rawCvId && rawCvId !== 'undefined') ? rawCvId : undefined;
-  
-  const journeyId = (rawJourneyId && rawJourneyId !== 'undefined') ? rawJourneyId : undefined;
-  
-  const restoreDraftParam = searchParams.get('restoreDraft') === 'true' || searchParams.get('resumeDraft') === 'true';
+  const rawClId = searchParams.get('clId') || searchParams.get('coverLetterId')
+  const clId = (rawClId && rawClId !== 'undefined') ? rawClId : undefined
+  const cvId = (rawCvId && rawCvId !== 'undefined') ? rawCvId : undefined
+  const journeyId = (rawJourneyId && rawJourneyId !== 'undefined') ? rawJourneyId : undefined
+  const restoreDraftParam = searchParams.get('restoreDraft') === 'true' || searchParams.get('resumeDraft') === 'true'
 
-  // Automatically determine mode if type or ids are present
-  if (typeParam === 'cv' && cvId && mode === 'create') mode = 'edit';
-  if ((typeParam === 'cl' || clId) && mode === 'create') mode = 'edit-cover-letter';
+  if (typeParam === 'cv' && cvId && mode === 'create') mode = 'edit'
+  if ((typeParam === 'cl' || clId) && mode === 'create') mode = 'edit-cover-letter'
 
-  const docParam = searchParams.get('doc');
-  const [isRedirecting, setIsRedirecting] = useState(docParam === 'master-cv');
+  const docParam = searchParams.get('doc')
 
-  // Intercept doc=master-cv query parameter and fetch user's Master CV
-  useEffect(() => {
-    const handleMasterCVRedirect = async () => {
-      if (authLoading) return;
-      
-      if (docParam === 'master-cv') {
-        if (!isAuthenticated) {
-          // If not authenticated, let RouteGuard/Auth Modal handle it, but stop redirection state
-          setIsRedirecting(false);
-          return;
-        }
+  const isGuestMode = !isAuthenticated && ((mode === 'create' || restoreDraftParam) && (!cvId || cvId === 'guest-draft') && !clId && !journeyId)
+  const restoreDraft = restoreDraftParam
 
-        try {
-          const res = await fetch(`/api/cvs/master?userId=${user?.id}`);
-          const result = await res.json();
-          
-          // Capture other params to preserve them (like step)
-          const currentParams = new URLSearchParams(searchParams.toString());
-          currentParams.delete('doc'); // Remove doc=master-cv
-          
-          if (result.success && result.data?.masterCV?.id) {
-            currentParams.set('cvId', result.data.masterCV.id);
-            currentParams.set('mode', 'edit-master');
-            if (!currentParams.has('improve')) currentParams.set('improve', 'true');
-            router.replace(`/editor?${currentParams.toString()}`);
-          } else {
-            console.log('No master CV found, loading editor defaults.');
-            currentParams.set('mode', 'create');
-            router.replace(`/editor?${currentParams.toString()}`);
-          }
-        } catch (error) {
-          console.error('Error fetching master CV for redirect:', error);
-          const currentParams = new URLSearchParams(searchParams.toString());
-          currentParams.delete('doc');
-          currentParams.set('mode', 'create');
-          router.replace(`/editor?${currentParams.toString()}`);
-        }
-      } else {
-        setIsRedirecting(false);
-      }
-    };
+  const [hydrated, setHydrated] = useState(false)
+  const [isHydrating, setIsHydrating] = useState(true)
 
-    handleMasterCVRedirect();
-  }, [authLoading, isAuthenticated, user?.id, docParam, router]);
-
-  // Synchronize fromOnboarding URL parameter to sessionStorage for consistent master CV context
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const fromOnboarding = searchParams.get('fromOnboarding') === 'true';
+      const fromOnboarding = searchParams.get('fromOnboarding') === 'true'
       if (fromOnboarding) {
-        sessionStorage.setItem('fromOnboarding', 'true');
-        console.log('✅ Editor - Synchronized fromOnboarding flag to sessionStorage');
+        sessionStorage.setItem('fromOnboarding', 'true')
       }
     }
-  }, [searchParams]);
+  }, [searchParams])
 
-// Check if user has CVs to determine guest mode
   useEffect(() => {
-    const checkGuestMode = async () => {
-      if (authLoading) return;
+    if (authLoading) return
+
+    let cancelled = false
+    const handleMasterCVRedirect = async () => {
+      setIsHydrating(true)
+
+      if (docParam !== 'master-cv') {
+        setHydrated(true)
+        setIsHydrating(false)
+        return
+      }
+
+      if (!isAuthenticated) {
+        setHydrated(true)
+        setIsHydrating(false)
+        return
+      }
 
       try {
-        if (isAuthenticated && user?.id) {
-          setIsGuestMode(false);
+        const res = await fetch(`/api/cvs/master?userId=${user?.id}`)
+        const result = await res.json()
+
+        const currentParams = new URLSearchParams(searchParams.toString())
+        currentParams.delete('doc')
+
+        if (result.success && result.data?.masterCV?.id) {
+          currentParams.set('cvId', result.data.masterCV.id)
+          currentParams.set('mode', 'edit-master')
+          if (!currentParams.has('improve')) currentParams.set('improve', 'true')
+          router.replace(`/editor?${currentParams.toString()}`)
         } else {
-          // STRICT SECURITY CHECK:
-          // A user can ONLY be a guest if they are explicitly trying to create a NEW CV from scratch or restoring an onboarding draft.
-          // If they pass a cvId, clId, or journeyId, it implies they are trying to access existing authenticated data.
-          // In that case, they MUST authenticate, so we do NOT allow guest mode.
-          if ((mode === 'create' || restoreDraftParam) && (!cvId || cvId === 'guest-draft') && !clId && !journeyId) {
-            setIsGuestMode(true);
-          } else {
-            setIsGuestMode(false); // Force authentication via RouteGuard
-          }
+          currentParams.set('mode', 'create')
+          router.replace(`/editor?${currentParams.toString()}`)
         }
-
-        // Check for restore draft param
-        if (restoreDraftParam) {
-          setRestoreDraft(true);
-        }
-
-        setIsCheckingGuestMode(false);
       } catch (error) {
-        console.error('Error checking guest mode:', error);
-        setIsGuestMode(false);
-        setIsCheckingGuestMode(false);
+        console.error('Error fetching master CV for redirect:', error)
+        const currentParams = new URLSearchParams(searchParams.toString())
+        currentParams.delete('doc')
+        currentParams.set('mode', 'create')
+        router.replace(`/editor?${currentParams.toString()}`)
+      } finally {
+        if (!cancelled) {
+          setHydrated(true)
+          setIsHydrating(false)
+        }
       }
-    };
+    }
 
-    checkGuestMode();
-  }, [authLoading, isAuthenticated, user?.id, mode, cvId, clId, journeyId, restoreDraftParam]);
+    handleMasterCVRedirect()
+    return () => {
+      cancelled = true
+    }
+  }, [authLoading, isAuthenticated, user?.id, docParam, router, searchParams])
 
-// Show loading while checking guest mode or authenticating or redirecting
-if (authLoading || isCheckingGuestMode || isRedirecting) {
-  return <LoadingOverlay message={isRedirecting ? 'Opening Master CV' : 'Loading Editor'} />;
-}
-
-  // For guest mode, resolve mode to 'create' or 'create-cover-letter' because guests don't have database documents to edit.
-  const resolvedMode = isGuestMode 
+  const resolvedMode = isGuestMode
     ? (mode === 'edit-cover-letter' || mode === 'create-cover-letter' ? 'create-cover-letter' : 'create')
-    : mode;
+    : mode
 
-// For guest mode, allow access without authentication
-if (isGuestMode) {
-  return (
-    <JobJourneyProvider>
-      <ResumeEnhancerProvider>
-        <ATSProvider>
-          <DashboardDataProvider>
-            <ResumeEnhancerContainer
-              userId="guest"
-              mode={resolvedMode}
-              cvId={cvId}
-              clId={clId}
-              journeyId={journeyId}
-              isGuestMode={true}
-              restoreDraft={restoreDraft}
-            />
-          </DashboardDataProvider>
-        </ATSProvider>
-      </ResumeEnhancerProvider>
-    </JobJourneyProvider>
-  );
-}
+  const container = hydrated ? (
+    <ResumeEnhancerContainer
+      userId={isGuestMode ? 'guest' : (user?.id || '')}
+      mode={resolvedMode}
+      cvId={cvId}
+      clId={clId}
+      journeyId={journeyId}
+      isGuestMode={isGuestMode}
+      restoreDraft={restoreDraft}
+    />
+  ) : (
+    <div className="mt-8">
+      <Skeleton className="h-[600px] w-full rounded-2xl" />
+      <SyncIndicator visible />
+    </div>
+  )
 
-// For authenticated users or editing existing CVs, require auth
-// We let RouteGuard handle the unauthenticated state so it pops the Auth Modal
+  if (authLoading) {
+    return (
+      <div className="flex flex-col gap-4 p-6">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-4 w-72" />
+        <Skeleton className="h-4 w-64" />
+        <div className="mt-8">
+          <Skeleton className="min-h-[400px] md:min-h-[600px] w-full rounded-2xl" />
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <RouteGuard requireAuth={true}>
-      <JobJourneyProvider>
-        <ResumeEnhancerProvider>
-          <ATSProvider>
-            <DashboardDataProvider>
-              <ResumeEnhancerContainer
-                userId={user?.id || ''}
-                mode={mode}
-                cvId={cvId}
-                clId={clId}
-                journeyId={journeyId}
-                isGuestMode={false}
-                restoreDraft={restoreDraft}
-              />
-            </DashboardDataProvider>
-          </ATSProvider>
-        </ResumeEnhancerProvider>
-      </JobJourneyProvider>
-    </RouteGuard>
-  );
+    <>
+      {isGuestMode ? (
+        <JobJourneyProvider>
+          <ResumeEnhancerProvider>
+            <ATSProvider>
+              <DashboardDataProvider>
+                {container}
+              </DashboardDataProvider>
+            </ATSProvider>
+          </ResumeEnhancerProvider>
+        </JobJourneyProvider>
+      ) : (
+        <RouteGuard requireAuth={true}>
+          <JobJourneyProvider>
+            <ResumeEnhancerProvider>
+              <ATSProvider>
+                <DashboardDataProvider>
+                  {container}
+                </DashboardDataProvider>
+              </ATSProvider>
+            </ResumeEnhancerProvider>
+          </JobJourneyProvider>
+        </RouteGuard>
+      )}
+      {isHydrating && <SyncIndicator visible />}
+    </>
+  )
 }
 
 export default function ResumeEnhancerPage() {
   return (
     <div className={`${geistFont.variable} geist-ui`}>
       <MobileSidebarProvider>
-        <Suspense fallback={<LoadingOverlay message="Loading Editor" />}>
+        <Suspense
+          fallback={
+            <div className="flex flex-col gap-4 p-6">
+              <Skeleton className="h-8 w-48" />
+              <Skeleton className="h-4 w-72" />
+              <Skeleton className="h-4 w-64" />
+              <div className="mt-8">
+                <Skeleton className="min-h-[400px] md:min-h-[600px] w-full rounded-2xl" />
+              </div>
+            </div>
+          }
+        >
           <ResumeEnhancerPageContent />
         </Suspense>
       </MobileSidebarProvider>
     </div>
-  );
+  )
 }

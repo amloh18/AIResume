@@ -135,7 +135,7 @@ export function useMembership(): UseMembershipReturn {
         error: queryError,
         refetch,
     } = useQuery({
-        queryKey: ['membership', session?.user?.id],
+        queryKey: ['user', 'usage-limits', session?.user?.id],
         queryFn: fetchMembershipInfo,
         enabled: sessionStatus === 'authenticated' && hasSession,
         staleTime: 60 * 1000,

@@ -3,7 +3,6 @@ import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import authConfig from '@/lib/auth-config';
 import { getConnection } from '@/lib/database/connection-manager';
-import { userRepository } from '@/lib/repositories/user-repository';
 import ClientLayout from './ClientLayout';
 import { geistFont } from '@/lib/fonts';
 
@@ -18,23 +17,18 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
     redirect('/sign-in?callbackUrl=/dashboard');
   }
 
-  // Centralized Server-Side Onboarding Redirection
   await getConnection();
-  const user = await userRepository.findById(session.user.id);
   
-  if (user?.onboarding) {
-    const activationStatus = user.onboarding.activation_status;
-    const activationRoute = user.onboarding.activation_route;
-    
-    // If onboarding is incomplete, redirect immediately to prevent Flash of Un-onboarded Content
-    if (activationStatus === 'pending' && activationRoute) {
-      redirect(activationRoute);
-    }
+  const onboardingStatus = (session.user as any).onboarding?.activation_status;
+  const onboardingRoute = (session.user as any).onboarding?.activation_route;
+  
+  if (onboardingStatus === 'pending' && onboardingRoute) {
+    redirect(onboardingRoute);
   }
 
   return (
     <div className={`${geistFont.variable} geist-ui`}>
-      <ClientLayout>{children}</ClientLayout>
+      <ClientLayout session={session}>{children}</ClientLayout>
     </div>
   );
 }

@@ -1413,7 +1413,7 @@ const OptimizedNavigation: React.FC = () => {
           setShowSubscriptionModal(false);
           setPreselectedPlanKey(undefined);
           refetchBillingData();
-          // Refresh user data to update plan info
+          router.refresh();
           if (userData) {
             window.dispatchEvent(new CustomEvent('userProfileUpdated', {
               detail: { refreshUserData: true }

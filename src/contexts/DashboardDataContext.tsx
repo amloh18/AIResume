@@ -79,6 +79,8 @@ interface DashboardDataContextType {
   refreshSkillsMarket: () => Promise<void>;
   refreshSalaryInsights: () => Promise<void>;
   refreshJobRecommendations: () => Promise<void>;
+  refreshCritical: () => Promise<void>;
+  refreshDeferred: () => Promise<void>;
   refreshAll: () => Promise<void>;
 }
 
@@ -610,6 +612,38 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
     if (userId) await fetchJobRecommendations(userId);
   }, [user, fetchJobRecommendations]);
 
+  const refreshCritical = useCallback(async () => {
+    const userId = getUserIdForAPI(user);
+    if (!userId) return;
+
+    console.log('🔍 DashboardData - Loading critical tier');
+    await Promise.all([
+      fetchCVs(userId),
+      fetchJobs(userId),
+      fetchProfileStrength(userId),
+    ]);
+    console.log('✅ DashboardData - Critical tier loaded');
+  }, [user, fetchCVs, fetchJobs, fetchProfileStrength]);
+
+  const refreshDeferred = useCallback(async () => {
+    const userId = getUserIdForAPI(user);
+    if (!userId) return;
+
+    console.log('🔍 DashboardData - Loading deferred tier');
+    await Promise.all([
+      fetchCoverLetters(userId),
+      fetchAnalytics(userId),
+      fetchStreak(userId),
+      fetchGoals(userId),
+      fetchActivities(userId),
+      fetchAiInsights(userId),
+      fetchSkillsMarket(userId),
+      fetchSalaryInsights(userId),
+      fetchJobRecommendations(userId),
+    ]);
+    console.log('✅ DashboardData - Deferred tier loaded');
+  }, [user, fetchCoverLetters, fetchAnalytics, fetchStreak, fetchGoals, fetchActivities, fetchAiInsights, fetchSkillsMarket, fetchSalaryInsights, fetchJobRecommendations]);
+
   const refreshAll = useCallback(async () => {
     const userId = getUserIdForAPI(user);
     if (!userId) return;
@@ -633,7 +667,6 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
 
     const startTime = performance.now();
 
-    // Fetch all secondary data in parallel - request deduplication will handle any overlapping calls
     await Promise.all([
       fetchCVs(userId),
       fetchCoverLetters(userId),
@@ -653,7 +686,29 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
     console.log(`✅ DashboardData - All secondary data loaded in ${duration}ms`);
   }, [user, fetchCVs, fetchCoverLetters, fetchJobs, fetchAnalytics, fetchProfileStrength, fetchStreak, fetchGoals, fetchActivities, fetchAiInsights, fetchSkillsMarket, fetchSalaryInsights, fetchJobRecommendations]);
 
-  // CRITICAL PATH LOADING: Wait for auth, then load secondary data
+  const deferredLoadedRef = useRef(false);
+  const mountTimerRef = useRef<number | null>(null);
+
+  const scheduleDeferred = useCallback(() => {
+    if (deferredLoadedRef.current) return;
+    const userId = getUserIdForAPI(user);
+    if (!userId) return;
+
+    mountTimerRef.current = window.setTimeout(() => {
+      console.log('⏱️ DashboardData - Mount timeout reached, loading deferred tier');
+      refreshDeferred();
+      deferredLoadedRef.current = true;
+    }, 0);
+  }, [user, refreshDeferred]);
+
+  const clearDeferredTimer = useCallback(() => {
+    if (mountTimerRef.current) {
+      window.clearTimeout(mountTimerRef.current);
+      mountTimerRef.current = null;
+    }
+  }, []);
+
+  // CRITICAL PATH LOADING: Wait for auth, then load critical data first, deferred data after mount
   useEffect(() => {
     // Wait for authentication to complete
     if (authLoading) {
@@ -681,6 +736,8 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
     if (lastUserIdRef.current && lastUserIdRef.current !== userId) {
       console.log('🔄 DashboardData - User changed, resetting');
       hasLoadedRef.current = false;
+      deferredLoadedRef.current = false;
+      clearDeferredTimer();
       setCvs([]);
       setCoverLetters([]);
       setJobs([]);
@@ -706,13 +763,30 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
       setErrors({});
     }
 
-    // Load secondary data (parallel, after critical data is ready)
-    console.log('🔍 DashboardData - Initial load for user:', userId);
+    // Load critical data immediately in parallel (CVs, jobs, profile strength)
+    console.log('🔍 DashboardData - Initial critical load for user:', userId);
     hasLoadedRef.current = true;
     lastUserIdRef.current = userId;
 
-    refreshAll();
-  }, [authLoading, user?.id, refreshAll]);
+    refreshCritical();
+  }, [authLoading, user?.id, refreshCritical, clearDeferredTimer]);
+
+  // Schedule deferred tier after mount so critical widgets paint first
+  useEffect(() => {
+    if (authLoading || !user?.id || !hasLoadedRef.current) {
+      return;
+    }
+
+    if (deferredLoadedRef.current) {
+      return;
+    }
+
+    scheduleDeferred();
+
+    return () => {
+      clearDeferredTimer();
+    };
+  }, [authLoading, user?.id, hasLoadedRef.current, scheduleDeferred, clearDeferredTimer]);
 
   // Calculate legacy loading state (for backward compatibility)
   const loading = criticalLoading || Object.values(secondaryLoading).some(v => v);
@@ -756,6 +830,8 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
         refreshSkillsMarket,
         refreshSalaryInsights,
         refreshJobRecommendations,
+        refreshCritical,
+        refreshDeferred,
         refreshAll
       }}
     >

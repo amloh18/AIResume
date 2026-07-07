@@ -23,18 +23,14 @@ export default function DeferredAnalytics() {
 
   useEffect(() => {
     // Wait for page to be interactive before loading analytics
+    // Use framework-managed deferral: setTimeout with a small delay to
+    // avoid timing out main-thread work and race with hydration.
     if (typeof window !== 'undefined') {
-      // Use requestIdleCallback if available, otherwise use setTimeout
-      if ('requestIdleCallback' in window) {
-        requestIdleCallback(() => {
-          setShouldLoad(true);
-        });
-      } else {
-        // Fallback for browsers without requestIdleCallback
-        setTimeout(() => {
-          setShouldLoad(true);
-        }, 2000);
-      }
+      const timeoutId = window.setTimeout(() => setShouldLoad(true), 1500);
+
+      return () => {
+        window.clearTimeout(timeoutId);
+      };
     }
   }, []);
 

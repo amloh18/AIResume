@@ -24,6 +24,7 @@ interface NotificationContextType {
   handleNotificationAction: (notificationId: string, actionType: string) => Promise<void>;
   refreshNotifications: () => Promise<void>;
   updateProgress: (id: string, progress: number, message?: string, type?: 'info' | 'progress') => void;
+  setDrawerOpen: (open: boolean) => void;
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
@@ -33,7 +34,8 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
   const [notifications, setNotifications] = useState<INotification[]>([]);
   const [activities, setActivities] = useState<any[]>([]);
   const [progressEvents, setProgressEvents] = useState<Map<string, any>>(new Map());
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const { toast } = useToast();
   // ... rest remains same until SSE onmessage ...
 
@@ -60,7 +62,9 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
   // Track if we've already fetched to prevent duplicate calls
   const hasFetchedRef = useRef(false);
   const lastFetchTimeRef = useRef<number>(0);
-  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null); // Ref to track polling interval
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const lastKnownNotificationIdRef = useRef<string | null>(null);
+  const hasShownBatchToastRef = useRef<boolean>(false); // Ref to track polling interval
 
   // Check if we're on admin route - skip session logic if so
   const isAdminRoute = pathname ? pathname.startsWith('/admin') : false;
@@ -121,13 +125,13 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
   }, []);
 
   // Fetch notifications from API - only for authenticated users
-  const fetchNotifications = useCallback(async () => {
+  const fetchNotifications = useCallback(async (sinceId?: string) => {
     // Don't fetch if user is not authenticated
     if (!isAuthenticated) {
       console.log('🔒 NotificationContext - Skipping fetch: Not authenticated');
       setNotifications([]);
       setIsLoading(false);
-      hasFetchedRef.current = false; // Reset on logout
+      hasFetchedRef.current = false;
       return;
     }
 
@@ -143,7 +147,8 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
 
     try {
       console.log('📥 NotificationContext - Fetching notifications...');
-      const response = await fetch('/api/notifications', { cache: 'no-store' });
+      const url = sinceId ? `/api/notifications?since=${encodeURIComponent(sinceId)}` : '/api/notifications';
+      const response = await fetch(url, { cache: 'no-store' });
       if (!response.ok) {
         const contentType = response.headers.get('content-type');
         let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
@@ -168,39 +173,62 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
       const filtered = filterExpiredNotifications(data.notifications || []);
       console.log(`🧹 NotificationContext - After expiration filter: ${filtered.length}`);
       
-      // Log unread count for debugging
       const unreadCount = filtered.filter((n: INotification) => !n.read).length;
       console.log(`📊 NotificationContext - Unread notifications: ${unreadCount}`);
       
-      // Set notifications - this will trigger the toast display effect
-      setNotifications(filtered);
+      // When catching up via sinceId, append new notifications instead of replacing
+      if (sinceId) {
+        setNotifications(prev => {
+          const existing = new Map(prev.map(n => {
+            const id = n._id ? (typeof n._id === 'string' ? n._id : String(n._id)) : '';
+            return [id, n];
+          }));
+          const merged = [...prev];
+          filtered.forEach(n => {
+            const id = n._id ? (typeof n._id === 'string' ? n._id : String(n._id)) : '';
+            if (!existing.has(id)) {
+              merged.unshift(n);
+            }
+          });
+          return merged.slice(0, 200);
+        });
+      } else {
+        setNotifications(filtered);
+      }
+
+      // Track newest notification id for SSE catch-up
+      if (filtered.length > 0) {
+        const newest = filtered.reduce((a: INotification, b: INotification) => {
+          const aTime = new Date(a.createdAt).getTime();
+          const bTime = new Date(b.createdAt).getTime();
+          return aTime > bTime ? a : b;
+        });
+        const newestId = newest._id ? (typeof newest._id === 'string' ? newest._id : String(newest._id)) : null;
+        if (newestId) {
+          lastKnownNotificationIdRef.current = newestId;
+        }
+      }
       
-      // Manually trigger toast display for unread notifications IMMEDIATELY
-      // This is a fallback when SSE isn't working - show toasts for all unread notifications
-      if (unreadCount > 0) {
-        console.log(`🔄 NotificationContext - Found ${unreadCount} unread notifications, showing toasts immediately`);
-        // Use requestAnimationFrame to ensure DOM is ready, then show toasts
-        requestAnimationFrame(() => {
+      // Batch unread toasts: if more than 3 unread, show a single summary toast instead of many
+      if (unreadCount > 3 && !hasShownBatchToastRef.current) {
+        hasShownBatchToastRef.current = true;
+        toast({
+          title: `${unreadCount} unread notifications`,
+          description: 'Open the notification panel to view them all.',
+        });
+      } else if (unreadCount > 0 && unreadCount <= 3) {
+        // For small counts, still show individual toasts but avoid requestAnimationFrame thrashing
+        setTimeout(() => {
           filtered.forEach((notification: INotification) => {
             const notifId = notification._id ? (typeof notification._id === 'string' ? notification._id : String(notification._id)) : '';
             if (!notification.read && notifId && !displayedToastIdsRef.current.has(notifId)) {
-              // Check if notification has in-app channel (default to true if not set)
               const channels = notification.channels || ['in-app'];
               if (channels.includes('in-app')) {
-                console.log('🍞 NotificationContext - Showing toast for unread notification from fetch:', {
-                  id: notifId,
-                  title: notification.title,
-                  read: notification.read,
-                  channels: notification.channels
-                });
-                // Show toast immediately
                 showToastForNotification(notification);
-              } else {
-                console.log('⏭️ NotificationContext - Skipping toast (no in-app channel):', notification.title);
               }
             }
           });
-        });
+        }, 0);
       }
       } else {
         console.error('Notifications response is not JSON. Content-Type:', contentType);
@@ -468,6 +496,11 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
         return;
       }
 
+      // Skip if batch toast was already shown for this notification set
+      if (hasShownBatchToastRef.current) {
+        return;
+      }
+
       const alreadyShown = displayedToastIdsRef.current.has(notifId);
       if (alreadyShown) {
         return;
@@ -559,6 +592,16 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
 
       es.onopen = () => {
         console.log('🟢 NotificationContext - SSE Connection established successfully!');
+        // Catch up on missed notifications since last known id
+        const sinceId = lastKnownNotificationIdRef.current;
+        if (sinceId && isAuthenticated) {
+          console.log('🔌 NotificationContext - SSE connected, catching up since:', sinceId);
+          fetch(`/api/notifications?since=${encodeURIComponent(sinceId)}`, { 
+            cache: 'no-store'
+          }).catch(err => 
+            console.error('Notification SSE catch-up failed:', err)
+          );
+        }
       };
 
       es.onmessage = (event) => {
@@ -592,8 +635,11 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
             const filtered = filterExpiredNotifications([notification]);
             if (filtered.length > 0) {
               const newNotification = filtered[0];
+              const notificationId = newNotification._id ? (typeof newNotification._id === 'string' ? newNotification._id : String(newNotification._id)) : '';
+              if (notificationId) {
+                lastKnownNotificationIdRef.current = notificationId;
+              }
               setNotifications((prev) => {
-                const notificationId = newNotification._id ? (typeof newNotification._id === 'string' ? newNotification._id : String(newNotification._id)) : '';
                 const exists = prev.some((n) => {
                   const nId = n._id ? (typeof n._id === 'string' ? n._id : String(n._id)) : '';
                   return nId === notificationId;
@@ -686,11 +732,11 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
       eventSourceRef.current = es; // Update ref as well
     };
 
-    // Add a small delay to ensure session is fully loaded
+    // Add a small delay to ensure critical dashboard data is loaded first
     const setupTimer = setTimeout(() => {
       console.log('⏰ NotificationContext - Setting up SSE after delay...');
       setupSSE();
-    }, 500);
+    }, 1500);
 
     // Fallback: Poll for new notifications when SSE isn't working
     // This ensures notifications appear even if SSE connection fails
@@ -708,7 +754,7 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
         // Check if SSE is connected
         const currentEventSource = eventSourceRef.current;
         const isSSEConnected = currentEventSource && currentEventSource.readyState === EventSource.OPEN;
-        const pollFrequency = isSSEConnected ? 20000 : 5000; // Poll every 20s if SSE is active, every 5s if inactive
+        const pollFrequency = isSSEConnected ? 45000 : 5000; // Poll every 45s if SSE is active, every 5s if inactive
 
         if (now - lastPollTime >= pollFrequency) {
           lastPollTime = now;
@@ -738,7 +784,7 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
           isMounted
         });
       }
-    }, 2000); // Start polling 2 seconds after mount (even faster start)
+    }, 15000); // Start polling 15s after mount; drawer opens will trigger initial fetch sooner
 
     // Cleanup on unmount or when authentication changes
     return () => {
@@ -768,30 +814,37 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
         eventSource.close();
         setEventSource(null);
       }
-      // Reset fetch flag when on public route
-      if (isPublicRoute) {
+      // Reset fetch flags when on public route or logout
+      if (isPublicRoute || status === 'unauthenticated') {
         hasFetchedRef.current = false;
+        hasShownBatchToastRef.current = false;
+        lastKnownNotificationIdRef.current = null;
       }
     }
   }, [status, eventSource, isPublicRoute]);
 
-  // Initial fetch - only if authenticated
+  // Lazy-load notifications when the drawer opens instead of eager fetch on mount
   useEffect(() => {
-    // Wait for session to load before deciding whether to fetch
-    if (status === 'loading') {
-      return; // Don't fetch while session is loading
-    }
-
-    // Only fetch if authenticated and we haven't fetched yet (or user just logged in)
-    if (isAuthenticated && (!hasFetchedRef.current || status === 'authenticated')) {
-      fetchNotifications();
-    } else if (!isAuthenticated) {
-      // Reset on logout
-      hasFetchedRef.current = false;
+    if (!drawerOpen) return;
+    if (!isAuthenticated) {
       setNotifications([]);
       setIsLoading(false);
+      return;
     }
-  }, [isAuthenticated, status, fetchNotifications]);
+
+    // Reset batch toast flag when drawer opens so user sees fresh batch toast if still >3 unread
+    hasShownBatchToastRef.current = false;
+
+    const sinceId = lastKnownNotificationIdRef.current;
+    fetchNotifications(sinceId || undefined);
+  }, [drawerOpen, isAuthenticated, fetchNotifications]);
+
+  // Clear batch toast flag when notifications change significantly
+  useEffect(() => {
+    if (notifications.length === 0) {
+      hasShownBatchToastRef.current = false;
+    }
+  }, [notifications.length]);
 
 
   // Calculate unread count (only non-expired notifications)
@@ -811,6 +864,7 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
         handleNotificationAction,
         refreshNotifications,
         updateProgress,
+        setDrawerOpen,
       }}
     >
       {children}
