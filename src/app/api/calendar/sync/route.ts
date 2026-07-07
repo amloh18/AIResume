@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { CalendarService } from '@/lib/services/calendarService';
+import { UnifiedCalendarSyncService } from '@/lib/services/unifiedCalendarSync';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getConnection } from '@/lib/database';
 import Job from '@/models/Job';
 import { ApplicationJourney } from '@/models/ApplicationJourney';
+import UserSettings from '@/models/UserSettings';
 
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user?.id) {
       return NextResponse.json(
         { success: false, error: 'Authentication required' },
@@ -19,12 +20,14 @@ export async function POST(request: NextRequest) {
 
     let accessToken: string | undefined;
     let refreshToken: string | undefined;
+    let calendarProvider: 'google' | 'outlook' = 'google';
 
     try {
       const body = await request.json();
       accessToken = body.accessToken;
       refreshToken = body.refreshToken;
-    } catch (e) {
+      calendarProvider = body.provider || calendarProvider;
+    } catch {
       // Body may be empty, which is fine since we fallback to database settings
     }
 
@@ -32,12 +35,12 @@ export async function POST(request: NextRequest) {
     const userId = session.user.id;
 
     if (!accessToken) {
-      const UserSettings = (await import('@/models/UserSettings')).default;
       const userSettings = await UserSettings.findOne({ userId });
       const calendar = userSettings?.advanced?.integrations?.calendar;
       if (calendar?.connected && calendar?.accessToken) {
         accessToken = calendar.accessToken;
         refreshToken = calendar.refreshToken;
+        calendarProvider = calendar.provider === 'outlook' ? 'outlook' : 'google';
       }
     }
 
@@ -48,13 +51,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Fetch job applications (excluding 'created' status)
-    const jobs = await Job.find({ 
-      userId,
-      status: { $ne: 'created' }
-    }).sort({ updatedAt: -1 });
+    const userSettings = await UserSettings.findOne({ userId });
+    const syncSettings = userSettings?.advanced?.integrations?.calendar?.syncSettings || {};
+    const includeCreated = syncSettings.includeCreated === true;
 
-    // Convert jobs to calendar events format
+    const query: any = { userId };
+    if (!includeCreated) {
+      query.status = { $ne: 'created' };
+    }
+
+    const jobs = await Job.find(query).sort({ updatedAt: -1 });
+
     const jobApplications = jobs.map(job => ({
       jobId: job._id.toString(),
       jobTitle: job.jobTitle,
@@ -66,18 +73,20 @@ export async function POST(request: NextRequest) {
       followUps: job.followUps || [],
     }));
 
-    // Initialize calendar service
-    const calendarService = new CalendarService(accessToken, refreshToken);
-    
-    // Sync to calendar
-    await calendarService.syncJobApplicationsToCalendar(jobApplications);
+    const syncService = new UnifiedCalendarSyncService(accessToken, refreshToken, calendarProvider);
+    const result = await syncService.syncEvents(jobApplications);
 
     return NextResponse.json({
-      success: true,
-      message: 'Job applications synced to calendar successfully',
+      success: result.success,
+      ...(result.success ? {} : { error: result.errors.join(', ') }),
+      provider: result.provider,
       syncedCount: jobApplications.length,
+      created: result.created,
+      updated: result.updated,
+      deleted: result.deleted,
+      errors: result.errors,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error syncing to calendar:', error);
     return NextResponse.json(
       { success: false, error: 'Failed to sync to calendar' },
@@ -89,7 +98,7 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user?.id) {
       return NextResponse.json(
         { success: false, error: 'Authentication required' },
@@ -99,7 +108,7 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const accessToken = searchParams.get('accessToken');
-    
+
     if (!accessToken) {
       return NextResponse.json(
         { success: false, error: 'Access token is required' },
@@ -107,15 +116,12 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Initialize calendar service
-    const calendarService = new CalendarService(accessToken);
-    
-    // Get existing calendar events
-    const events = await calendarService.getJobApplicationEvents();
+    const syncService = new UnifiedCalendarSyncService(accessToken);
+    const result = await syncService.syncEvents([]);
 
     return NextResponse.json({
       success: true,
-      events,
+      events: [],
     });
   } catch (error) {
     console.error('Error fetching calendar events:', error);

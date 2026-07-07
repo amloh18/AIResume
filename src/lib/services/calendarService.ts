@@ -21,6 +21,10 @@ export interface CalendarEvent {
   }>;
   location?: string;
   colorId?: string;
+  extendedProperties?: {
+    private?: Record<string, string>;
+    shared?: Record<string, string>;
+  };
   reminders?: {
     useDefault: boolean;
     overrides?: Array<{
@@ -85,6 +89,11 @@ export class CalendarService {
       end: eventTime.end,
       location: jobApp.company,
       colorId: this.getColorIdForStatus(jobApp.status),
+      extendedProperties: {
+        private: {
+          cvcircleJobId: jobApp.jobId,
+        },
+      },
       reminders: {
         useDefault: false,
         overrides: [
@@ -122,6 +131,11 @@ export class CalendarService {
       end: eventTime.end,
       location: jobApp.company,
       colorId: this.getColorIdForStatus(jobApp.status),
+      extendedProperties: {
+        private: {
+          cvcircleJobId: jobApp.jobId,
+        },
+      },
       reminders: {
         useDefault: false,
         overrides: [
@@ -264,7 +278,7 @@ export class CalendarService {
   }
 
   private getEventDescription(jobApp: JobApplicationEvent): string {
-    let description = `Job Application Status: ${jobApp.status}\n\n`;
+    let description = `Job Application Status: ${jobApp.status}\n`;
     
     if (jobApp.applicationDate) {
       description += `Application Date: ${jobApp.applicationDate.toLocaleDateString()}\n`;
@@ -342,9 +356,6 @@ export class CalendarService {
   }
 
   private extractJobIdFromEvent(event: CalendarEvent): string {
-    // Extract job ID from event description or summary
-    // This is a simple implementation - you might want to store job ID in event extended properties
-    const match = event.description?.match(/Job ID: (\w+)/);
-    return match ? match[1] : '';
+    return event.extendedProperties?.private?.['cvcircleJobId'] || '';
   }
 }

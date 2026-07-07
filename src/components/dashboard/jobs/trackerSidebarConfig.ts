@@ -69,6 +69,8 @@ export interface TrackerSidebarJourneyCard {
   toneClasses: string;
   accentClasses: string;
   stats: TrackerSidebarMetric[];
+  stageLabel?: string;
+  stageBadge?: { label: string; colorClasses: string };
 }
 
 export interface TrackerSidebarActionPayload {
@@ -165,6 +167,21 @@ function capitalize(value?: string | null) {
 
 function compact<T>(items: Array<T | null | undefined | false>): T[] {
   return items.filter(Boolean) as T[];
+}
+
+function stageBadgeConfig(stage: TrackerStage): { label: string; colorClasses: string } {
+  const map: Record<TrackerStage, { label: string; colorClasses: string }> = {
+    draft:      { label: 'Draft',       colorClasses: 'bg-gray-100 text-gray-700 dark:bg-gray-900/40 dark:text-gray-300' },
+    created:    { label: 'Staging',     colorClasses: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300' },
+    applied:    { label: 'Applied',     colorClasses: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' },
+    screening:  { label: 'Screening',   colorClasses: 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300' },
+    interview:  { label: 'Interview',   colorClasses: 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300' },
+    offer:      { label: 'Offer',       colorClasses: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' },
+    accepted:   { label: 'Accepted',    colorClasses: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' },
+    rejected:   { label: 'Rejected',    colorClasses: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' },
+    withdrawn:  { label: 'Withdrawn',   colorClasses: 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300' },
+  };
+  return map[stage] || { label: capitalize(stage), colorClasses: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400' };
 }
 
 function hasMeaningfulInsights(
@@ -359,16 +376,12 @@ export function buildTrackerSidebarConfig({
       primaryLabel: 'Move to Created Stage',
       primaryActionId: 'move_to_created',
       primaryAction: handlers.move_to_created,
-      secondaryLabel:
-        trackerGenerationPreview?.mode === 'fallback' ? 'Preview Free Output' : 'Edit Job Details',
-      secondaryActionId:
-        trackerGenerationPreview?.mode === 'fallback' ? 'preview_free_output' : 'edit_job',
-      secondaryAction:
-        trackerGenerationPreview?.mode === 'fallback'
-          ? handlers.preview_free_output
-          : handlers.edit_job,
+      secondaryLabel: 'Edit Job Details',
+      secondaryActionId: 'edit_job',
+      secondaryAction: handlers.edit_job,
       toneClasses: 'border-blue-200 bg-[linear-gradient(180deg,_#ffffff,_#f7fbff)] dark:bg-none dark:border-blue-500/30 dark:bg-[#131c2e]',
       accentClasses: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
+      stageBadge: stageBadgeConfig(stage),
       stats: compact<TrackerSidebarMetric>([
         {
           label: 'AI Mode',
@@ -425,6 +438,7 @@ export function buildTrackerSidebarConfig({
         generationState?.mode === 'fallback'
           ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
           : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
+      stageBadge: stageBadgeConfig(stage),
       stats: compact<TrackerSidebarMetric>([
         {
           label: 'CV',
@@ -445,6 +459,7 @@ export function buildTrackerSidebarConfig({
       ]),
     };
   } else if (stage === 'applied' || stage === 'screening') {
+    const stageBadge_ = stageBadgeConfig(stage);
     journeyCard = {
       eyebrow: stage === 'screening' ? 'Screening Stage' : 'Applied Stage',
       title: stage === 'screening' ? 'You are in recruiter review' : 'Your application is now in motion',
@@ -457,7 +472,7 @@ export function buildTrackerSidebarConfig({
           ? `Current keyword match is ${keywordMatchScore}%.`
           : 'Application insights will explain your match score once analysis is available.',
       ]),
-      primaryLabel: primaryJourney ? 'Resume Documents' : 'View Full Details',
+      primaryLabel: primaryJourney ? 'Documents' : 'View Full Details',
       primaryActionId: primaryJourney ? 'continue_journey' : 'open_details',
       primaryAction: primaryJourney ? handlers.continue_journey : handlers.open_details,
       secondaryLabel: 'Application Insights',
@@ -465,6 +480,7 @@ export function buildTrackerSidebarConfig({
       secondaryAction: handlers.open_insights,
       toneClasses: 'border-indigo-200 bg-[linear-gradient(180deg,_#ffffff,_#f8f9ff)] dark:bg-none dark:border-indigo-500/30 dark:bg-[#13142a]',
       accentClasses: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300',
+      stageBadge: stageBadge_,
       stats: compact<TrackerSidebarMetric>([
         { label: 'Success Probability', value: `${successProb}%` },
         keywordMatchScore > 0 ? { label: 'Match Score', value: `${keywordMatchScore}%` } : null,
@@ -488,11 +504,12 @@ export function buildTrackerSidebarConfig({
       primaryLabel: 'Open Interview Prep',
       primaryActionId: 'open_interview_prep',
       primaryAction: handlers.open_interview_prep,
-      secondaryLabel: primaryJourney ? 'Resume Journey' : 'View Full Details',
+      secondaryLabel: 'Resume Journey',
       secondaryActionId: primaryJourney ? 'continue_journey' : 'open_details',
       secondaryAction: primaryJourney ? handlers.continue_journey : handlers.open_details,
       toneClasses: 'border-violet-200 bg-[linear-gradient(180deg,_#ffffff,_#faf7ff)] dark:bg-none dark:border-violet-500/30 dark:bg-[#18112a]',
       accentClasses: 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300',
+      stageBadge: stageBadgeConfig(stage),
       stats: compact<TrackerSidebarMetric>([
         { label: 'Success Probability', value: `${successProb}%` },
         keywordMatchScore > 0 ? { label: 'Match Score', value: `${keywordMatchScore}%` } : null,
@@ -513,14 +530,15 @@ export function buildTrackerSidebarConfig({
         'Keep your application package handy for negotiation or clarification calls.',
         'Use notes to capture questions or decision factors while the offer is active.',
       ],
-      primaryLabel: 'View Full Details',
+      primaryLabel: 'Review Offer Details',
       primaryActionId: 'open_details',
       primaryAction: handlers.open_details,
-      secondaryLabel: primaryJourney ? 'Open Journey' : 'Application Insights',
+      secondaryLabel: primaryJourney ? 'Open Journey Docs' : 'Application Insights',
       secondaryActionId: primaryJourney ? 'continue_journey' : 'open_insights',
       secondaryAction: primaryJourney ? handlers.continue_journey : handlers.open_insights,
       toneClasses: 'border-amber-200 bg-[linear-gradient(180deg,_#ffffff,_#fffaf1)] dark:bg-none dark:border-amber-500/30 dark:bg-[#1e1a10]',
       accentClasses: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+      stageBadge: stageBadgeConfig(stage),
       stats: compact<TrackerSidebarMetric>([
         job.priority ? { label: 'Priority', value: capitalize(job.priority) } : null,
         formattedDeadline && formattedDeadline !== 'No deadline set'
@@ -546,28 +564,26 @@ export function buildTrackerSidebarConfig({
       primaryLabel: job.isArchived ? 'Unarchive Job' : 'Archive Job',
       primaryActionId: 'archive_job',
       primaryAction: handlers.archive_job,
-      secondaryLabel: 'View Full Details',
-      secondaryActionId: 'open_details',
-      secondaryAction: handlers.open_details,
+      secondaryLabel: 'Duplicate This Job',
+      secondaryActionId: 'duplicate_job',
+      secondaryAction: handlers.duplicate_job,
       toneClasses: 'border-emerald-200 bg-[linear-gradient(180deg,_#ffffff,_#f5fff7)] dark:bg-none dark:border-emerald-500/30 dark:bg-[#111e14]',
       accentClasses: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
+      stageBadge: stageBadgeConfig(stage),
       stats: [{ label: 'Outcome', value: 'Accepted' }],
     };
-  } else {
-    const outcomeLabel = stage === 'rejected' ? 'Rejected' : 'Withdrawn';
+  } else if (stage === 'rejected') {
     journeyCard = {
-      eyebrow: outcomeLabel,
-      title: stage === 'rejected' ? 'This application has closed' : 'This application is no longer active',
+      eyebrow: 'Rejected',
+      title: 'This application has closed',
       summary:
-        stage === 'rejected'
-          ? 'Use what you learned from this role to improve the next application quickly.'
-          : 'This tracker item is closed, but the details and journey documents remain available for reference.',
+        'Use what you learned from this role to improve the next application quickly.',
       bullets: [
         'Review notes, insights, and journey outputs to understand what to reuse next time.',
         'Duplicate the job if you want to create a fresh version for a similar opening.',
         'Archive the item once you are done reviewing it.',
       ],
-      primaryLabel: 'Duplicate Job',
+      primaryLabel: 'Duplicate This Job',
       primaryActionId: 'duplicate_job',
       primaryAction: handlers.duplicate_job,
       secondaryLabel: 'View Full Details',
@@ -575,9 +591,35 @@ export function buildTrackerSidebarConfig({
       secondaryAction: handlers.open_details,
       toneClasses: 'border-slate-200 bg-[linear-gradient(180deg,_#ffffff,_#f8fafc)] dark:bg-none dark:border-white/10 dark:bg-[#181d16]',
       accentClasses: 'bg-slate-100 text-slate-700 dark:bg-white/10 dark:text-slate-300',
+      stageBadge: stageBadgeConfig(stage),
+      stats: compact<TrackerSidebarMetric>([
+        { label: 'Outcome', value: 'Rejected' },
+        keywordMatchScore > 0 ? { label: 'Match Score', value: `${keywordMatchScore}%` } : null,
+      ]),
+    };
+  } else {
+    const outcomeLabel = stage === 'withdrawn' ? 'Withdrawn' : 'Closed';
+    journeyCard = {
+      eyebrow: outcomeLabel,
+      title: stage === 'withdrawn' ? 'This application is no longer active' : 'Application closed',
+      summary:
+        'The details and journey documents remain available for reference or duplication.',
+      bullets: [
+        'Review notes, insights, and journey outputs for patterns to apply next time.',
+        'Duplicate this job for a similar opening to avoid starting from scratch.',
+        'Archive the item once you are done reviewing it.',
+      ],
+      primaryLabel: 'View Full Details',
+      primaryActionId: 'open_details',
+      primaryAction: handlers.open_details,
+      secondaryLabel: 'Duplicate This Job',
+      secondaryActionId: 'duplicate_job',
+      secondaryAction: handlers.duplicate_job,
+      toneClasses: 'border-orange-100 bg-[linear-gradient(180deg,_#ffffff,_#fefaf5)] dark:bg-none dark:border-orange-500/10 dark:bg-[#1a1510]',
+      accentClasses: 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300',
+      stageBadge: stageBadgeConfig(stage),
       stats: compact<TrackerSidebarMetric>([
         { label: 'Outcome', value: outcomeLabel },
-        keywordMatchScore > 0 ? { label: 'Match Score', value: `${keywordMatchScore}%` } : null,
       ]),
     };
   }

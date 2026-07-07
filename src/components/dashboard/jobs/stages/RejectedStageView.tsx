@@ -17,6 +17,7 @@ interface JobApplication {
   matchScore?: number;
   atsScore?: number;
   notes?: string;
+  isArchived?: boolean;
 }
 
 interface RejectedStageViewProps {
@@ -46,8 +47,17 @@ const RejectedStageView: React.FC<RejectedStageViewProps> = ({
   const handleArchive = async (job: JobApplication, e: React.MouseEvent) => {
     e.stopPropagation();
     try {
-      // Archive functionality would be implemented here
-      toast.success('Job archived');
+      const response = await fetch(`/api/jobs/${job.id || job._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isArchived: !job.isArchived }),
+      });
+      if (response.ok) {
+        toast.success(job.isArchived ? 'Job unarchived' : 'Job archived');
+        onJobClick(job);
+      } else {
+        toast.error('Failed to archive job');
+      }
     } catch (error) {
       console.error('Error archiving job:', error);
       toast.error('Failed to archive job');

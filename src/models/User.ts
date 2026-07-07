@@ -58,6 +58,7 @@ export interface IUser extends Document {
   isAnonymous: boolean;
   anonymousToken?: string;
   userLifecycleState: UserLifecycleState;
+  hasSeededMockEmails?: boolean;
 
   // Note: Authentication tokens are now stored in separate VerificationToken collection
 
@@ -330,6 +331,10 @@ const userSchema = new Schema<IUser>({
     ],
     default: 'NEW',
     index: true
+  },
+  hasSeededMockEmails: {
+    type: Boolean,
+    default: false
   },
   // Token fields removed - now handled by VerificationToken collection
   // STANDARDIZED: Consistent plan key format across all models

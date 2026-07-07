@@ -96,6 +96,7 @@ export default async function middleware(req: NextRequest) {
     }
     
     const isAuth = !!token;
+    const activeToken = token as any;
 
     if (pathname.startsWith('/api/')) {
       if (pathname.startsWith('/api/auth/')) {
@@ -130,9 +131,9 @@ export default async function middleware(req: NextRequest) {
           return NextResponse.json({ error: 'Unauthorized', message: 'Please sign in to access this resource' }, { status: 401 })
         }
 
-        const isUserAdmin = token.type === 'admin' || token.role === 'admin' || token.role === 'superadmin';
+        const isUserAdmin = activeToken.type === 'admin' || activeToken.role === 'admin' || activeToken.role === 'superadmin';
         if (!isUserAdmin) {
-          log.warn('Unauthorized admin API access attempt', { pathname, method, userId: token.id });
+          log.warn('Unauthorized admin API access attempt', { pathname, method, userId: activeToken.id });
           return NextResponse.json({ error: 'Forbidden', message: 'Admin access required' }, { status: 403 })
         }
         return NextResponse.next();
@@ -153,8 +154,8 @@ export default async function middleware(req: NextRequest) {
       log.debug('Authenticated API access', {
         pathname,
         method,
-        userId: token.id,
-        role: token.role
+        userId: activeToken.id,
+        role: activeToken.role
       });
       return NextResponse.next()
     }
@@ -168,15 +169,15 @@ export default async function middleware(req: NextRequest) {
         return NextResponse.redirect(new URL('/admin/login', req.url));
       }
 
-      const isUserAdmin = token.type === 'admin' || token.role === 'admin' || token.role === 'superadmin';
+      const isUserAdmin = activeToken.type === 'admin' || activeToken.role === 'admin' || activeToken.role === 'superadmin';
       if (!isUserAdmin) {
         log.warn('Insufficient permissions for admin access', {
           pathname,
-          userId: token.id,
-          role: token.role,
-          type: token.type || 'none',
+          userId: activeToken.id,
+          role: activeToken.role,
+          type: activeToken.type || 'none',
         });
-        if (token.isB2b) {
+        if (activeToken.isB2b) {
           return NextResponse.redirect(new URL('/b2b/dashboard', req.url))
         }
         return NextResponse.redirect(new URL('/dashboard', req.url))
@@ -184,8 +185,8 @@ export default async function middleware(req: NextRequest) {
 
       log.debug('Admin access granted', {
         pathname,
-        userId: token.id,
-        role: token.role
+        userId: activeToken.id,
+        role: activeToken.role
       });
       return NextResponse.next()
     }
@@ -199,9 +200,9 @@ export default async function middleware(req: NextRequest) {
         return NextResponse.redirect(new URL('/b2b/login', req.url));
       }
 
-      const isUserAdmin = token.type === 'admin' || token.role === 'admin' || token.role === 'superadmin';
-      if (!token.isB2b) {
-        log.warn('Insufficient permissions for B2B access', { pathname, userId: token.id });
+      const isUserAdmin = activeToken.type === 'admin' || activeToken.role === 'admin' || activeToken.role === 'superadmin';
+      if (!activeToken.isB2b) {
+        log.warn('Insufficient permissions for B2B access', { pathname, userId: activeToken.id });
         if (isUserAdmin) {
           return NextResponse.redirect(new URL('/admin/dashboard', req.url));
         }
@@ -217,10 +218,10 @@ export default async function middleware(req: NextRequest) {
         return NextResponse.redirect(new URL('/sign-in', req.url));
       }
 
-      const isUserAdmin = token.type === 'admin' || token.role === 'admin' || token.role === 'superadmin';
+      const isUserAdmin = activeToken.type === 'admin' || activeToken.role === 'admin' || activeToken.role === 'superadmin';
       // Admin users are allowed to access consumer routes if they want to
       // They will have a "Switch to Admin" button in their navigation
-      if (token.isB2b && !isUserAdmin) {
+      if (activeToken.isB2b && !isUserAdmin) {
         log.debug('B2B user attempted to access consumer route, redirecting', { pathname });
         return NextResponse.redirect(new URL('/b2b/dashboard', req.url));
       }
@@ -234,8 +235,8 @@ export default async function middleware(req: NextRequest) {
 
       log.debug('Protected route accessed', {
         pathname,
-        userId: token.id,
-        role: token.role
+        userId: activeToken.id,
+        role: activeToken.role
       });
       return NextResponse.next()
     }

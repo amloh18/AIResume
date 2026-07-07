@@ -279,6 +279,10 @@ export async function PUT(
       journey.currentStep = body.currentStep;
     }
     
+    if (body.notes !== undefined) {
+      journey.notes = body.notes;
+    }
+    
     // Update metadata
     if (body.metadata) {
       journey.metadata = {

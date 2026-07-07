@@ -33,13 +33,17 @@ interface CreatedStageViewProps {
   getJourneyStatusText: (jobJourneys: CVJourney[], jobStatus?: string) => string;
   onJobClick: (job: JobApplication) => void;
   onRefresh?: () => void;
+  onImproveATS?: (job: JobApplication) => void;
+  onDownload?: (job: JobApplication) => void;
 }
 
 const CreatedStageView: React.FC<CreatedStageViewProps> = ({
   jobs,
   getJobJourneys,
   onJobClick,
-  onRefresh
+  onRefresh,
+  onImproveATS,
+  onDownload,
 }) => {
   const [showReadyOnly, setShowReadyOnly] = useState(false);
 
@@ -214,15 +218,21 @@ const CreatedStageView: React.FC<CreatedStageViewProps> = ({
                   <td className="px-6 py-4 whitespace-nowrap text-right" onClick={(e) => e.stopPropagation()}>
                     <div className="flex justify-end gap-2">
                       <button
-                        onClick={() => console.log('Inject Data', job.id)}
-                        className="p-1.5 bg-lime-500/10 text-lime-600 dark:text-lime-400 rounded-lg hover:bg-lime-500/20 transition-colors"
-                        title="Inject Data"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onImproveATS?.(job);
+                        }}
+                        className="p-1.5 bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] rounded-lg hover:bg-[var(--accent-primary)]/20 transition-colors"
+                        title="Improve ATS"
                       >
                         <Zap size={16} />
                       </button>
                       <button
-                        onClick={() => console.log('Download', job.id)}
-                        className="p-1.5 bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-white/20 transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDownload?.(job);
+                        }}
+                        className="p-1.5 bg-[var(--bg-secondary)] text-[color:var(--text-primary)] rounded-lg hover:bg-[var(--hover-bg)] transition-colors"
                         title="Download Docs"
                       >
                         <Download size={16} />

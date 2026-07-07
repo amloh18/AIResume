@@ -2,6 +2,7 @@
 export const getAuthHeaders = async () => {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
+    'Accept': 'application/json',
   };
 
   // Firebase authentication removed - using NextAuth only

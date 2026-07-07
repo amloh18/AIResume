@@ -8,7 +8,7 @@ import {
   X, Briefcase, MapPin, DollarSign, Calendar, ExternalLink,
   FileText, CheckCircle, Clock, AlertCircle, Plus, Edit, Trash2,
   Target, Building2, Star, Copy, Archive, ChevronDown, User, Mail, Phone, TrendingUp,
-  Eye, ArrowRight, Sparkles, Loader2
+  Eye, ArrowRight, Sparkles, Loader2, Linkedin, Search, Send
 } from 'lucide-react';
 
 // Ensure all icons are properly tree-shaken and available
@@ -17,7 +17,7 @@ import JourneyTimelineCard from '../JourneyTimelineCard';
 import JobInfoContent from '../JobInfoContent';
 import EditJobSidebar from './EditJobSidebar';
 import DocumentPreviewSidebar from './DocumentPreviewSidebar';
-import { CommunicationSidebar } from './CommunicationSidebar';
+import { EmailConnectModal } from './EmailConnectModal';
 import toast from 'react-hot-toast';
 import { useUserData } from '@/lib/hooks/useUserData';
 import { useJobInsights, useJobFallbacks, formatJobDate, formatJobSalary, formatJobUrl } from '@/hooks/useJobInsights';
@@ -28,6 +28,12 @@ import { useUpgradePopupTrigger } from '@/lib/hooks/useUpgradePopupTrigger';
 import UpgradeCard from '../UpgradeCard';
 import { isJobStale, getFollowUpNudge, calculateSuccessProbability, getMarketSalaryComparison } from '@/lib/utils/jobIntelligence';
 import TrackerCreatedStageModal from './TrackerCreatedStageModal';
+import LinkedInJobTab from './LinkedInJobTab';
+import MatchScoreGapWidget from './widgets/MatchScoreGapWidget';
+import AgingTrackerWidget from './widgets/AgingTrackerWidget';
+import InterviewPrepWidget from './widgets/InterviewPrepWidget';
+import CompBreakdownWidget from './widgets/CompBreakdownWidget';
+import PostMortemWidget from './widgets/PostMortemWidget';
 import {
   shouldSkipTrackerCreatedStageModalForToday,
   type TrackerCreatedStagePreview,
@@ -79,6 +85,13 @@ interface JobApplication {
   interviews?: any[];
   followUps?: any[];
   attachments?: any[];
+  contacts?: Array<{
+    name: string;
+    role?: string;
+    email?: string;
+    phone?: string;
+    linkedin?: string;
+  }>;
   atsScore?: number;
   atsAnalysis?: any;
   statusHistory?: any[];
@@ -124,8 +137,61 @@ const JobSidebar: React.FC<JobSidebarProps> = ({
   const [loadingCV, setLoadingCV] = useState(false);
   const [trackerGenerationPreview, setTrackerGenerationPreview] = useState<TrackerCreatedStagePreview | null>(null);
   const [showCreatedStageModal, setShowCreatedStageModal] = useState(false);
-  const [showDetailsModal, setShowDetailsModal] = useState(false);
-  const [detailsModalView, setDetailsModalView] = useState<'details' | 'insights'>('details');
+  const [isEditingDetails, setIsEditingDetails] = useState(false);
+  const [editJobTitle, setEditJobTitle] = useState(job.jobTitle || '');
+  const [editCompany, setEditCompany] = useState(job.company || '');
+  const [editLocation, setEditLocation] = useState(job.location || '');
+  const [editJobUrl, setEditJobUrl] = useState(job.jobUrl || '');
+  const [editJobType, setEditJobType] = useState(job.jobType || job.type || 'full-time');
+  const [editSalaryMin, setEditSalaryMin] = useState(job.salary?.min?.toString() || '');
+  const [editSalaryMax, setEditSalaryMax] = useState(job.salary?.max?.toString() || '');
+  const [editSalaryCurrency, setEditSalaryCurrency] = useState(job.salary?.currency || 'USD');
+  const [editSalaryPeriod, setEditSalaryPeriod] = useState(job.salary?.period || 'yearly');
+  const [editDeadline, setEditDeadline] = useState(job.deadline ? new Date(job.deadline).toISOString().split('T')[0] : '');
+  const [editApplicationDate, setEditApplicationDate] = useState(job.applicationDate ? new Date(job.applicationDate).toISOString().split('T')[0] : '');
+  const [editPriority, setEditPriority] = useState(job.priority || 'medium');
+  const [editStatus, setEditStatus] = useState(job.status || 'draft');
+  const [editTags, setEditTags] = useState((job.tags || []).join(', '));
+  const [editSponsorship, setEditSponsorship] = useState(job.sponsorship || 'unknown');
+  const [editJobDescription, setEditJobDescription] = useState(job.jobDescription || '');
+  const [editContactName, setEditContactName] = useState(job.contactDetails?.name || '');
+  const [editContactEmail, setEditContactEmail] = useState(job.contactDetails?.email || '');
+  const [editContactPhone, setEditContactPhone] = useState(job.contactDetails?.phone || '');
+  const [editContactRole, setEditContactRole] = useState(job.contactDetails?.role || '');
+  const [detailsSaveError, setDetailsSaveError] = useState('');
+  const [editingContactId, setEditingContactId] = useState<string | null>(null);
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [editingNoteText, setEditingNoteText] = useState('');
+  const [noteCharacterCount, setNoteCharacterCount] = useState(0);
+  const [confirmJobTypeChoice, setConfirmJobTypeChoice] = useState(false);
+
+  useEffect(() => {
+    if (isEditingDetails) {
+      setEditJobTitle(job.jobTitle || '');
+      setEditCompany(job.company || '');
+      setEditLocation(job.location || '');
+      setEditJobUrl(job.jobUrl || '');
+      setEditJobType(job.jobType || job.type || 'full-time');
+      setEditSalaryMin(job.salary?.min?.toString() || '');
+      setEditSalaryMax(job.salary?.max?.toString() || '');
+      setEditSalaryCurrency(job.salary?.currency || 'USD');
+      setEditSalaryPeriod(job.salary?.period || 'yearly');
+      setEditDeadline(job.deadline ? new Date(job.deadline).toISOString().split('T')[0] : '');
+      setEditApplicationDate(job.applicationDate ? new Date(job.applicationDate).toISOString().split('T')[0] : '');
+      setEditPriority(job.priority || 'medium');
+      setEditStatus(job.status || 'draft');
+      setEditTags((job.tags || []).join(', '));
+      setEditSponsorship(job.sponsorship || 'unknown');
+      setEditJobDescription(job.jobDescription || '');
+      setEditContactName(job.contactDetails?.name || '');
+      setEditContactEmail(job.contactDetails?.email || '');
+      setEditContactPhone(job.contactDetails?.phone || '');
+      setEditContactRole(job.contactDetails?.role || '');
+      setDetailsSaveError('');
+      setConfirmJobTypeChoice(false);
+    }
+  }, [isEditingDetails, job]);
+
   const [activeActionId, setActiveActionId] = useState<TrackerSidebarActionId | null>(null);
   const [activeActionPayload, setActiveActionPayload] = useState<TrackerSidebarActionPayload | null>(null);
   const [previewDocumentType, setPreviewDocumentType] = useState<'cv' | 'coverLetter' | null>(null);
@@ -146,7 +212,290 @@ const JobSidebar: React.FC<JobSidebarProps> = ({
   const jobId = job.id || job._id;
 
   // Comms sidebar states
-  const [showCommsSidebar, setShowCommsSidebar] = useState(false);
+  const [isEmailConnectModalOpen, setIsEmailConnectModalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'details' | 'communication' | 'people' | 'notes' | 'files'>('details');
+
+  const handleTabChange = (tab: typeof activeTab) => {
+    setActiveTab(tab);
+    if (tab !== 'communication') {
+      setShowEmailTemplate(false);
+    }
+  };
+  const [isSavingNotes, setIsSavingNotes] = useState(false);
+
+  // Add Contact states
+  const [showAddContactForm, setShowAddContactForm] = useState(false);
+  const [newContactName, setNewContactName] = useState('');
+  const [newContactEmail, setNewContactEmail] = useState('');
+  const [newContactRole, setNewContactRole] = useState('Recruiter');
+  const [isSavingContact, setIsSavingContact] = useState(false);
+
+  // Add Note states
+  const [showAddNoteForm, setShowAddNoteForm] = useState(false);
+  const [newNoteText, setNewNoteText] = useState('');
+
+  const parseNotes = (notesStr: string, fallbackDate: Date): Array<{ id: string; date: Date; content: string }> => {
+    if (!notesStr) return [];
+    const entries: Array<{ id: string; date: Date; content: string }> = [];
+    const regex = /---\s*([^\s]+)\s*---\n([\s\S]*?)(?=(?:---\s*[^\s]+\s*---|$))/g;
+    let match;
+    while ((match = regex.exec(notesStr)) !== null) {
+      const dateStr = match[1];
+      const content = match[2].trim();
+      if (content) {
+        const parsedDate = new Date(dateStr);
+        if (Number.isNaN(parsedDate.getTime())) {
+          continue;
+        }
+        entries.push({
+          id: dateStr + '-' + Math.random(),
+          date: parsedDate,
+          content
+        });
+      }
+    }
+
+    if (entries.length === 0 && notesStr.trim()) {
+      entries.push({
+        id: 'legacy',
+        date: fallbackDate,
+        content: notesStr.trim()
+      });
+    }
+
+    return entries.sort((a, b) => b.date.getTime() - a.date.getTime());
+  };
+
+  const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+  const handleAddContact = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newContactName.trim()) {
+      toast.error('Name is required');
+      return;
+    }
+    if (newContactEmail.trim() && !isValidEmail(newContactEmail.trim())) {
+      toast.error('Please enter a valid email address');
+      return;
+    }
+    if (!user?.id) return;
+    try {
+      setIsSavingContact(true);
+      const existingContacts = job.contacts || [];
+      const normalizedEmail = newContactEmail.trim().toLowerCase();
+      const updatedContacts = [
+        ...existingContacts.filter(c => (c.email || '').toLowerCase() !== normalizedEmail),
+        {
+          name: newContactName.trim(),
+          email: normalizedEmail,
+          phone: '',
+          role: newContactRole
+        }
+      ];
+      const res = await authenticatedFetchWithUserId(`/api/jobs/${jobId}`, user.id, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ contacts: updatedContacts }),
+      });
+      if (res.ok) {
+        toast.success('Contact added successfully!');
+        setNewContactName('');
+        setNewContactEmail('');
+        setNewContactRole('Recruiter');
+        setShowAddContactForm(false);
+        onRefresh();
+      } else {
+        toast.error('Failed to add contact.');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Error adding contact.');
+    } finally {
+      setIsSavingContact(false);
+    }
+  };
+
+  const handleDeleteContact = async (contactEmail: string) => {
+    if (!user?.id) return;
+    try {
+      const existingContacts = job.contacts || [];
+      const updatedContacts = existingContacts.filter(c => (c.email || '').toLowerCase() !== contactEmail.toLowerCase());
+      const res = await authenticatedFetchWithUserId(`/api/jobs/${jobId}`, user.id, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ contacts: updatedContacts }),
+      });
+      if (res.ok) {
+        toast.success('Contact removed');
+        onRefresh();
+      } else {
+        toast.error('Failed to remove contact');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Error removing contact');
+    }
+  };
+
+  const [isSavingDetails, setIsSavingDetails] = useState(false);
+
+  const handleSaveDetails = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editJobTitle.trim() || !editCompany.trim()) {
+      toast.error('Job Title and Company are required');
+      return;
+    }
+
+    const salaryMin = editSalaryMin ? Number(editSalaryMin) : undefined;
+    const salaryMax = editSalaryMax ? Number(editSalaryMax) : undefined;
+    if (salaryMin !== undefined && salaryMin < 0) {
+      toast.error('Minimum salary cannot be negative');
+      return;
+    }
+    if (salaryMax !== undefined && salaryMax < 0) {
+      toast.error('Maximum salary cannot be negative');
+      return;
+    }
+    if (salaryMin !== undefined && salaryMax !== undefined && salaryMin > salaryMax) {
+      toast.error('Minimum salary cannot be greater than maximum salary');
+      return;
+    }
+
+    if (!user?.id) return;
+    try {
+      setIsSavingDetails(true);
+      setDetailsSaveError('');
+      const validJobType = ['full-time', 'part-time', 'contract', 'internship'].includes(editJobType)
+        ? editJobType
+        : 'other';
+
+      const payload: any = {
+        jobTitle: editJobTitle.trim(),
+        company: editCompany.trim(),
+        location: editLocation.trim(),
+        jobUrl: editJobUrl.trim(),
+        jobType: validJobType,
+        salary: {
+          min: salaryMin,
+          max: salaryMax,
+          currency: editSalaryCurrency,
+          period: editSalaryPeriod
+        },
+        deadline: editDeadline || undefined,
+        applicationDate: editApplicationDate || undefined,
+        priority: editPriority,
+        status: editStatus,
+        tags: editTags.split(',').map(t => t.trim()).filter(Boolean),
+        sponsorship: editSponsorship,
+        jobDescription: editJobDescription.trim(),
+        contactDetails: {
+          name: editContactName.trim(),
+          email: editContactEmail.trim(),
+          phone: editContactPhone.trim(),
+          role: editContactRole.trim()
+        }
+      };
+
+      const res = await authenticatedFetchWithUserId(`/api/jobs/${jobId}`, user.id, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) {
+        toast.success('Job details updated successfully!');
+        setIsEditingDetails(false);
+        onRefresh();
+      } else {
+        const errText = await res.text();
+        let errorMessage = 'Failed to update job details.';
+        try {
+          const errJson = JSON.parse(errText);
+          errorMessage = errJson.error || errJson.message || errorMessage;
+        } catch {
+          // keep default message
+        }
+        setDetailsSaveError(errorMessage);
+        toast.error(errorMessage);
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Error updating job details.');
+    } finally {
+      setIsSavingDetails(false);
+    }
+  };
+
+
+  const [replyText, setReplyText] = useState('');
+  const [isSending, setIsSending] = useState(false);
+  const [tonePreference, setTonePreference] = useState<'formal' | 'startup-friendly' | 'confident' | 'conversational'>('formal');
+
+  const getToneSuffix = (tone: string) => {
+    switch (tone) {
+      case 'formal':
+        return 'I hope this message finds you well. ';
+      case 'startup-friendly':
+        return 'Hope you are doing well! ';
+      case 'confident':
+        return '';
+      case 'conversational':
+        return 'Hey! ';
+      default:
+        return '';
+    }
+  };
+
+  const handleSendReply = async () => {
+    if (!replyText.trim()) return;
+
+    const recruiterEmail = job.contactDetails?.email || emails.find(m => m.direction === 'inbound')?.senderEmail || '';
+    if (!recruiterEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recruiterEmail)) {
+      toast.error('Save a valid recruiter email in the People tab before sending.');
+      return;
+    }
+
+    setIsSending(true);
+    try {
+      const mainThread = emails[0]?.providerThreadId || '';
+      const tonePrefix = getToneSuffix(tonePreference);
+      const bodyText = tonePrefix ? `${tonePrefix}${replyText}` : replyText;
+
+      const res = await fetch('/api/tracker/emails', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'send_reply',
+          jobId,
+          threadId: mainThread,
+          subject: emails[0]?.subject ? `Re: ${emails[0].subject}` : `Follow-up: ${job.jobTitle} application`,
+          bodyText,
+          recipientEmail: recruiterEmail,
+          recipientName: job.contactDetails?.name || 'Recruiter'
+        })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        toast.success('Email sent successfully!');
+        setReplyText('');
+        fetchEmails();
+      } else {
+        toast.error(data.error || 'Failed to send reply');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to send reply');
+    } finally {
+      setIsSending(false);
+    }
+  };
+
   const [isEmailConnected, setIsEmailConnected] = useState(false);
   const [connectedEmailAddress, setConnectedEmailAddress] = useState('');
 
@@ -163,9 +512,30 @@ const JobSidebar: React.FC<JobSidebarProps> = ({
     }
   }, []);
 
+  const [emails, setEmails] = useState<any[]>([]);
+  const [emailsLoading, setEmailsLoading] = useState(false);
+
+  const fetchEmails = useCallback(async () => {
+    if (!jobId) return;
+    try {
+      setEmailsLoading(true);
+      const res = await fetch(`/api/tracker/emails?jobId=${jobId}`);
+      const data = await res.json();
+      if (data.success) {
+        setEmails(data.messages || []);
+      }
+    } catch (err) {
+      console.error('Error fetching emails in JobSidebar:', err);
+    } finally {
+      setEmailsLoading(false);
+    }
+  }, [jobId]);
+
   useEffect(() => {
-    fetchEmailStatus();
-  }, [jobId, fetchEmailStatus]);
+    if (activeTab === 'communication') {
+      fetchEmails();
+    }
+  }, [activeTab, jobId, fetchEmails]);
 
   // Dynamic data hooks
   const { insights, loading: insightsLoading } = useJobInsights(jobId);
@@ -177,6 +547,40 @@ const JobSidebar: React.FC<JobSidebarProps> = ({
   // Use fallbacks defaultSalary for comparison if insights doesn't have marketAverageSalary
   const marketAverage = 75000; // Generic fallback
   const salaryComp = getMarketSalaryComparison(job.salary, marketAverage);
+
+  const contacts = useMemo(() => {
+    const list: Array<{ name: string; email: string; role: string }> = [];
+    if (job.contactDetails?.name || job.contactDetails?.email) {
+      list.push({
+        name: job.contactDetails.name || 'Recruiter',
+        email: job.contactDetails.email || 'No email logged',
+        role: 'Recruiter'
+      });
+    }
+    if (job.contacts && Array.isArray(job.contacts)) {
+      job.contacts.forEach(c => {
+        if (c.name) {
+          list.push({
+            name: c.name,
+            email: c.email || 'No email logged',
+            role: c.role || 'Contact'
+          });
+        }
+      });
+    }
+    emails.forEach(msg => {
+      if (msg.direction === 'inbound' && msg.senderEmail) {
+        if (!list.some(c => c.email === msg.senderEmail)) {
+          list.push({
+            name: msg.senderName || 'Hiring Team',
+            email: msg.senderEmail,
+            role: 'Sender'
+          });
+        }
+      }
+    });
+    return list;
+  }, [job.contactDetails, job.contacts, emails]);
 
   const loadTrackerGenerationPreview = useCallback(async () => {
     if (!user?.id || job.status !== 'draft') {
@@ -421,15 +825,12 @@ const JobSidebar: React.FC<JobSidebarProps> = ({
   const handleOpenEmail = (timelineIndex?: number) => {
     const mailtoLink = getMailtoLink();
     if (mailtoLink) {
-      // Set the timeline index first
       if (timelineIndex !== undefined) {
         setCurrentTimelineIndex(timelineIndex);
       }
 
-      // Open email client
-      window.location.href = mailtoLink;
+      window.open(mailtoLink, '_blank');
 
-      // Show confirmation dialog after a short delay to ensure email client opens
       setTimeout(() => {
         if (timelineIndex !== undefined) {
           setShowEmailSentDialog(true);
@@ -720,6 +1121,168 @@ ${userName}`
       .sort((a, b) => new Date(b.metadata?.updatedAt || b.updatedAt || 0).getTime() - new Date(a.metadata?.updatedAt || a.updatedAt || 0).getTime())[0];
   }, [journeys]);
 
+  const notesSource = primaryJourney ? 'journey' : 'job';
+  const notesString = primaryJourney ? ((primaryJourney as any).notes || '') : (job.notes || '');
+
+  const handleSaveNewNote = async () => {
+    if (!newNoteText.trim() || !user?.id) return;
+    try {
+      setIsSavingNotes(true);
+      const newEntry = `--- ${new Date().toISOString()} ---\n${newNoteText.trim()}\n\n`;
+      const updatedNotes = newEntry + notesString;
+
+      let res;
+      if (notesSource === 'journey' && primaryJourney) {
+        res = await authenticatedFetchWithUserId(`/api/application-journey/${primaryJourney.id || (primaryJourney as any)._id}`, user.id, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ notes: updatedNotes }),
+        });
+      } else {
+        res = await authenticatedFetchWithUserId(`/api/jobs/${jobId}`, user.id, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ notes: updatedNotes }),
+        });
+      }
+
+      if (res && res.ok) {
+        toast.success('Note added successfully!');
+        setNewNoteText('');
+        setShowAddNoteForm(false);
+        onRefresh();
+      } else {
+        toast.error('Failed to save note.');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Error saving note.');
+    } finally {
+      setIsSavingNotes(false);
+    }
+  };
+
+  const handleDeleteNote = async (noteId: string) => {
+    if (!notesString) return;
+    try {
+      const lines = notesString.split('\n');
+      const filtered = [];
+      let skip = false;
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        if (line.trim().startsWith('---') && line.trim().endsWith('---')) {
+          if (line.includes(noteId)) {
+            skip = true;
+            continue;
+          }
+          if (skip) {
+            skip = false;
+            continue;
+          }
+        }
+        if (!skip) {
+          filtered.push(line);
+        }
+      }
+      const updatedNotes = filtered.join('\n');
+
+      let res;
+      if (notesSource === 'journey' && primaryJourney) {
+        res = await authenticatedFetchWithUserId(`/api/application-journey/${primaryJourney.id || (primaryJourney as any)._id}`, user.id, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ notes: updatedNotes }),
+        });
+      } else {
+        res = await authenticatedFetchWithUserId(`/api/jobs/${jobId}`, user.id, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ notes: updatedNotes }),
+        });
+      }
+
+      if (res && res.ok) {
+        toast.success('Note deleted');
+        onRefresh();
+      } else {
+        toast.error('Failed to delete note');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Error deleting note');
+    }
+  };
+
+  const handleUpdateNote = async (noteId: string, newContent: string) => {
+    if (!notesString) return;
+    try {
+      const lines = notesString.split('\n');
+      const updated = [];
+      let skip = false;
+      let inTarget = false;
+      let buffer: string[] = [];
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        if (line.trim().startsWith('---') && line.trim().endsWith('---')) {
+          if (inTarget && buffer.length > 0) {
+            updated.push(`--- ${noteId} ---`);
+            updated.push(newContent.trim());
+            updated.push('');
+            inTarget = false;
+            buffer = [];
+          }
+          if (line.includes(noteId)) {
+            inTarget = true;
+            skip = true;
+            continue;
+          }
+          if (skip) {
+            skip = false;
+            continue;
+          }
+        }
+        if (!skip) {
+          updated.push(line);
+        }
+      }
+      if (inTarget && buffer.length === 0) {
+        updated.push(`--- ${noteId} ---`);
+        updated.push(newContent.trim());
+        updated.push('');
+      }
+
+      const updatedNotes = updated.join('\n');
+
+      let res;
+      if (notesSource === 'journey' && primaryJourney) {
+        res = await authenticatedFetchWithUserId(`/api/application-journey/${primaryJourney.id || (primaryJourney as any)._id}`, user.id, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ notes: updatedNotes }),
+        });
+      } else {
+        res = await authenticatedFetchWithUserId(`/api/jobs/${jobId}`, user.id, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ notes: updatedNotes }),
+        });
+      }
+
+      if (res && res.ok) {
+        toast.success('Note updated');
+        setEditingNoteId(null);
+        setEditingNoteText('');
+        onRefresh();
+      } else {
+        toast.error('Failed to update note');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Error updating note');
+    }
+  };
+
   const generationState = primaryJourney?.generationState;
   const keywordMatchScore = insights?.keywordMatchScore ?? job.atsScore ?? 0;
   const followUpTimeline = useMemo(() => getFollowUpTimeline(job), [job]);
@@ -814,6 +1377,13 @@ ${userName}`
   }, [activeActionPayload?.journeyId, journeys, primaryJourney]);
   const isRecruiterVisibilityStage = job.status === 'applied' || job.status === 'screening';
   const hasRecruiterEmail = Boolean(job.contactDetails?.email);
+  const nextFollowUpAt = useMemo(() => {
+    const followUps = job.followUps || [];
+    if (!followUps.length) return undefined;
+    const sorted = [...followUps].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    const raw = sorted[0].date;
+    return raw instanceof Date ? raw : new Date(raw);
+  }, [job.followUps]);
   const recruiterVisibilitySteps = useMemo(() => {
     if (!isRecruiterVisibilityStage) return [];
 
@@ -888,10 +1458,7 @@ ${userName}`
     }
   }, [primaryJourney, user?.id]);
 
-  const openDetailsView = (view: 'details' | 'insights') => {
-    setDetailsModalView(view);
-    setShowDetailsModal(true);
-  };
+
 
   const handleCreateJourney = async () => {
     if (isCreatingJourney) return; // Prevent multiple clicks
@@ -1470,11 +2037,18 @@ ${userName}`
     };
   }, [onClose]);
 
-  // Prevent body scroll when sidebar is open
+  const bodyOverflowRef = useRef(0);
+
   useEffect(() => {
+    bodyOverflowRef.current += 1;
     document.body.style.overflow = 'hidden';
+
     return () => {
-      document.body.style.overflow = '';
+      bodyOverflowRef.current -= 1;
+      if (bodyOverflowRef.current <= 0) {
+        bodyOverflowRef.current = 0;
+        document.body.style.overflow = '';
+      }
     };
   }, []);
 
@@ -1507,8 +2081,13 @@ ${userName}`
       edit_job: handleOpenEditModal,
       create_journey: handleCreateJourney,
       continue_journey: () => primaryJourney && handleContinueJourney(primaryJourney as any),
-      open_details: () => openDetailsView('details'),
-      open_insights: () => openDetailsView('insights'),
+      open_details: () => {
+        setIsEditingDetails(true);
+        setActiveTab('details');
+      },
+      open_insights: () => {
+        setActiveTab('details');
+      },
         open_interview_prep: handleOpenInterviewCoach,
       archive_job: handleArchiveJob,
       duplicate_job: handleDuplicateJob,
@@ -1554,10 +2133,11 @@ ${userName}`
         }
         return;
       case 'open_details':
-        openDetailsView('details');
+        setIsEditingDetails(true);
+        setActiveTab('details');
         return;
       case 'open_insights':
-        openDetailsView('insights');
+        setActiveTab('details');
         return;
       case 'open_interview_prep':
         handleOpenInterviewCoach();
@@ -1577,7 +2157,6 @@ ${userName}`
     handleDuplicateJob,
     handleMoveToCreated,
     handleOpenEditModal,
-    openDetailsView,
     handleOpenInterviewCoach,
     primaryJourney,
     sidebarConfig.actionPayloads,
@@ -1603,7 +2182,7 @@ ${userName}`
           openContext.preferredDetailsView === 'insights' ? 'open_insights' : 'open_details'
         ] || null
       );
-      openDetailsView(openContext.preferredDetailsView);
+      setActiveTab('details');
       return;
     }
 
@@ -1644,7 +2223,7 @@ ${userName}`
           exit={{ x: '100%' }}
           transition={{ type: 'spring', damping: 30, stiffness: 300 }}
           className="fixed right-0 top-0 h-screen bg-white dark:bg-[#141810] shadow-2xl z-[9999] flex flex-col transition-all duration-300"
-          style={{ width: sidebarWidth, right: showCommsSidebar && windowWidth >= 768 ? '450px' : '0' }}
+          style={{ width: sidebarWidth, right: '0' }}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
@@ -1727,17 +2306,13 @@ ${userName}`
           <div className="flex-1 overflow-y-auto min-h-0">
             <div className="space-y-6 px-6 py-5 pb-8">
               <section className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-small font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">Stages</p>
-                    <h3 className="text-h3 font-semibold text-gray-900 dark:text-white">Application timeline</h3>
-                  </div>
-                  {terminalStageLabel && (
+                {terminalStageLabel && (
+                  <div className="flex justify-end">
                     <span className="rounded-full bg-red-100 px-3 py-1 text-small font-semibold text-red-700 dark:bg-red-900/30 dark:text-red-300">
                       {terminalStageLabel}
                     </span>
-                  )}
-                </div>
+                  </div>
+                )}
 
                 <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-emerald-500/10 dark:bg-[#131810] relative overflow-hidden">
                   {/* Progress Line Background */}
@@ -1790,120 +2365,153 @@ ${userName}`
                 </div>
               </section>
 
-              <section className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-small font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">Journey Card</p>
-                    <h3 className="text-h3 font-semibold text-gray-900 dark:text-white">What matters right now</h3>
-                  </div>
-                  <span className={`rounded-full px-3 py-1 text-small font-semibold ${journeyCardData.accentClasses}`}>
-                    {journeyCardData.eyebrow}
-                  </span>
-                </div>
-
-                <div className={`rounded-[24px] border p-5 shadow-sm ${journeyCardData.toneClasses}`}>
-                  <div className="flex flex-col gap-4">
-                    {/* Top Row: Title, Eyebrow & Description */}
-                    <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-                      <div className="space-y-1 flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className={`rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wider ${journeyCardData.accentClasses}`}>
-                            {journeyCardData.eyebrow}
-                          </span>
-                          <h4 className="text-small font-black text-gray-900 dark:text-white uppercase tracking-wider">
-                            {journeyCardData.title || (job.status === 'applied' || job.status === 'screening' ? 'Journey Snapshot' : 'Next Steps')}
-                          </h4>
-                        </div>
-                        <p className="text-small text-gray-600 dark:text-gray-300 leading-normal max-w-lg">
-                          {journeyCardData.summary}
-                        </p>
-                      </div>
-
-                      {/* Stats chips row */}
-                      <div className="flex flex-wrap gap-2 shrink-0 md:justify-end">
-                        {journeyCardData.stats.map((stat) => (
-                          <div key={stat.label} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/60 dark:bg-white/5 border border-gray-200/50 dark:border-white/5 text-[11px] font-semibold text-gray-800 dark:text-gray-200">
-                            <span className="opacity-60">{stat.label}:</span>
-                            <span className="font-extrabold text-[#80FF00] dark:text-[#99FF00]">{stat.value}</span>
+              {/* Journey Card and Aging Tracker side-by-side (60:40 split) */}
+              <div className="grid grid-cols-1 lg:grid-cols-10 gap-5">
+                {/* Left Column (60%): Journey Card */}
+                <div className="lg:col-span-6 flex flex-col">
+                  <div className={`flex-1 rounded-[24px] border p-5 shadow-sm ${journeyCardData.toneClasses} flex flex-col justify-between h-full`}>
+                    <div className="flex flex-col gap-4">
+                      {/* Top Row: Eyebrow & Description */}
+                      <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                        <div className="space-y-1.5 flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className={`rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wider ${journeyCardData.accentClasses}`}>
+                              {journeyCardData.eyebrow}
+                            </span>
+                             {journeyCardData.stageBadge && (
+                               <span className={`rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wider ${journeyCardData.stageBadge.colorClasses}`}>
+                                 <span className="opacity-70">Stage:</span> {journeyCardData.stageBadge.label}
+                               </span>
+                             )}
+                            <h4 className="text-small font-black text-gray-900 dark:text-white uppercase tracking-wider">
+                              {journeyCardData.title || (job.status === 'applied' || job.status === 'screening' ? 'Journey Snapshot' : 'Next Steps')}
+                            </h4>
                           </div>
-                        ))}
-                      </div>
-                    </div>
+                          <p className="text-small text-gray-600 dark:text-gray-300 leading-normal">
+                            {journeyCardData.summary}
+                          </p>
+                        </div>
 
-                    {/* Previews / Document Indicators Inline */}
-                    {primaryJourney && (primaryJourney.cvId || primaryJourney.coverLetterId) && (
-                      <div className="flex flex-wrap items-center gap-3 bg-white/40 dark:bg-white/5 border border-gray-200/40 dark:border-white/5 rounded-xl p-3">
-                        <span className="text-[10px] font-black uppercase tracking-wider text-gray-500 dark:text-gray-400">Ready Previews:</span>
-                        <div className="flex flex-wrap gap-2">
-                          {primaryJourney.cvId && (
-                            <button
-                              onClick={() => void handleOpenDocumentPreview('cv')}
-                              disabled={previewLoading === 'cv'}
-                              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200/60 dark:border-white/10 bg-white/80 dark:bg-[#1a2015] px-2.5 py-1.5 text-small font-semibold text-gray-700 hover:bg-gray-50 dark:text-[var(--text-secondary)] dark:hover:bg-[var(--bg-tertiary)] transition-colors"
-                            >
-                              {previewLoading === 'cv' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Eye className="h-3.5 w-3.5" />}
-                              CV
-                            </button>
-                          )}
-                          {primaryJourney.coverLetterId && (
-                            <button
-                              onClick={() => void handleOpenDocumentPreview('coverLetter')}
-                              disabled={previewLoading === 'coverLetter'}
-                              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200/60 dark:border-white/10 bg-white/80 dark:bg-[#1a2015] px-2.5 py-1.5 text-small font-semibold text-gray-700 hover:bg-gray-50 dark:text-[var(--text-secondary)] dark:hover:bg-[var(--bg-tertiary)] transition-colors"
-                            >
-                              {previewLoading === 'coverLetter' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Eye className="h-3.5 w-3.5" />}
-                              Cover Letter
-                            </button>
-                          )}
+                        {/* Stats chips row */}
+                        <div className="flex flex-wrap gap-2 shrink-0 md:justify-end">
+                          {journeyCardData.stats.map((stat) => (
+                            <div key={stat.label} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/60 dark:bg-white/5 border border-gray-200/50 dark:border-white/5 text-[11px] font-semibold text-gray-800 dark:text-gray-200">
+                              <span className="opacity-60">{stat.label}:</span>
+                              <span className="font-extrabold text-[#80FF00] dark:text-[#99FF00]">{stat.value}</span>
+                            </div>
+                          ))}
                         </div>
                       </div>
-                    )}
 
-                    {/* Divider */}
-                    <div className="h-[1px] bg-gray-205/60 dark:bg-white/5" />
+                      {/* Previews / Document Indicators Inline */}
+                      {primaryJourney && (primaryJourney.cvId || primaryJourney.coverLetterId) && (
+                        <div className="flex flex-wrap items-center gap-3 bg-white/40 dark:bg-white/5 border border-gray-200/40 dark:border-white/5 rounded-xl p-3">
+                          <span className="text-[10px] font-black uppercase tracking-wider text-gray-500 dark:text-gray-400">Ready Previews:</span>
+                          <div className="flex flex-wrap gap-2">
+                            {primaryJourney.cvId && (
+                              <button
+                                onClick={() => void handleOpenDocumentPreview('cv')}
+                                disabled={previewLoading === 'cv'}
+                                className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200/60 dark:border-white/10 bg-white/80 dark:bg-[#1a2015] px-2.5 py-1.5 text-small font-semibold text-gray-700 hover:bg-gray-50 dark:text-[var(--text-secondary)] dark:hover:bg-[var(--bg-tertiary)] transition-colors"
+                              >
+                                {previewLoading === 'cv' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Eye className="h-3.5 w-3.5" />}
+                                CV
+                              </button>
+                            )}
+                            {primaryJourney.coverLetterId && (
+                              <button
+                                onClick={() => void handleOpenDocumentPreview('coverLetter')}
+                                disabled={previewLoading === 'coverLetter'}
+                                className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200/60 dark:border-white/10 bg-white/80 dark:bg-[#1a2015] px-2.5 py-1.5 text-small font-semibold text-gray-700 hover:bg-gray-50 dark:text-[var(--text-secondary)] dark:hover:bg-[var(--bg-tertiary)] transition-colors"
+                              >
+                                {previewLoading === 'coverLetter' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Eye className="h-3.5 w-3.5" />}
+                                Cover Letter
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      )}
 
-                    {/* Actions and status inline */}
-                    <div className="flex flex-wrap items-center justify-between gap-4">
-                      {/* Action buttons side-by-side */}
-                      <div className="flex items-center gap-2">
-                        <motion.button
-                          onClick={() => void runSidebarAction(journeyCardData.primaryActionId)}
-                          disabled={isMovingToCreated || isCreatingJourney}
-                          className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#80FF00] px-4 py-2.5 text-small font-black text-black shadow-sm transition hover:brightness-95 dark:bg-[#99FF00] disabled:opacity-60"
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                        >
-                          <span>{journeyCardData.primaryLabel}</span>
-                          <ArrowRight className="h-3.5 w-3.5" />
-                        </motion.button>
-                        {journeyCardData.secondaryAction && journeyCardData.secondaryLabel && (
+                      {/* Divider */}
+                      <div className="h-[1px] bg-gray-205/60 dark:bg-white/5" />
+
+                      {/* Actions and status inline */}
+                      <div className="flex flex-wrap items-center justify-between gap-4 mt-auto">
+                        <div className="flex items-center gap-2">
                           <motion.button
-                            onClick={() => journeyCardData.secondaryActionId && void runSidebarAction(journeyCardData.secondaryActionId)}
-                            className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-gray-250 bg-white px-4 py-2.5 text-small font-black text-gray-800 hover:bg-gray-50 dark:border-white/15 dark:bg-white/5 dark:text-white dark:hover:bg-white/10 transition-all"
+                            onClick={() => void runSidebarAction(journeyCardData.primaryActionId)}
+                            disabled={isMovingToCreated || isCreatingJourney}
+                            className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#80FF00] px-4 py-2.5 text-small font-black text-black shadow-sm transition hover:brightness-95 dark:bg-[#99FF00] disabled:opacity-60"
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                           >
-                            {journeyCardData.secondaryLabel}
+                            <span>{journeyCardData.primaryLabel}</span>
+                            <ArrowRight className="h-3.5 w-3.5" />
                           </motion.button>
-                        )}
-                      </div>
+                          {journeyCardData.secondaryAction && journeyCardData.secondaryLabel && (
+                            <motion.button
+                              onClick={() => journeyCardData.secondaryActionId && void runSidebarAction(journeyCardData.secondaryActionId)}
+                              className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-gray-250 bg-white px-4 py-2.5 text-small font-black text-gray-800 hover:bg-gray-50 dark:border-white/15 dark:bg-white/5 dark:text-white dark:hover:bg-white/10 transition-all"
+                              whileHover={{ scale: 1.02 }}
+                              whileTap={{ scale: 0.98 }}
+                            >
+                              {journeyCardData.secondaryLabel}
+                            </motion.button>
+                          )}
+                        </div>
 
-                      {/* Journey Status Nudge */}
-                      {primaryJourney ? (
-                        <div className="flex items-center gap-1.5 text-small text-gray-500">
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#80FF00] animate-pulse shrink-0" />
-                          <span>Status: <strong className="capitalize text-gray-700 dark:text-gray-300">{primaryJourney.status?.replace(/_/g, ' ') || 'In progress'}</strong></span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-1.5 text-small text-gray-500">
-                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
-                          <span>Journey not started</span>
-                        </div>
-                      )}
+                        {/* Journey Status Nudge - stage-aware */}
+                        {(() => {
+                          const terminalStages = ['accepted', 'rejected', 'withdrawn'] as const;
+                          const isTerminal = terminalStages.includes(job.status as any);
+                          if (job.status === 'draft' || job.status === 'created') {
+                            return (
+                              <div className="flex items-center gap-1.5 text-small text-gray-500">
+                                <span className="w-1.5 h-1.5 rounded-full bg-gray-400 shrink-0" />
+                                <span>Move to Created to start the tracker journey</span>
+                              </div>
+                            );
+                          }
+                          if (isTerminal) {
+                            return (
+                              <div className="flex items-center gap-1.5 text-small text-gray-500">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                                <span>
+                                  <strong className="capitalize text-gray-700 dark:text-gray-300">{job.status}</strong>&mdash;Job closed. Review or archive.
+                                </span>
+                              </div>
+                            );
+                          }
+                          if (primaryJourney) {
+                            return (
+                              <div className="flex items-center gap-1.5 text-small text-gray-500">
+                                <span className="w-1.5 h-1.5 rounded-full bg-[#80FF00] animate-pulse shrink-0" />
+                                <span>Status: <strong className="capitalize text-gray-700 dark:text-gray-300">{primaryJourney.status?.replace(/_/g, ' ') || 'In progress'}</strong></span>
+                              </div>
+                            );
+                          }
+                          return (
+                            <div className="flex items-center gap-1.5 text-small text-gray-500">
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+                              <span>Journey not started</span>
+                            </div>
+                          );
+                        })()}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </section>
+
+                {/* Right Column (40%): Aging Tracker & Quick Links */}
+                <div className="lg:col-span-4 flex flex-col">
+                  <AgingTrackerWidget
+                    status={job.status}
+                    applicationDate={job.applicationDate}
+                    deadline={job.deadline}
+                    nextFollowUpAt={nextFollowUpAt}
+                  />
+                </div>
+              </div>
 
               {isRecruiterVisibilityStage && (
                 <section className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810]">
@@ -2023,7 +2631,7 @@ ${userName}`
                             </p>
                             <button
                               type="button"
-                              onClick={() => setShowCommsSidebar(true)}
+                              onClick={() => setActiveTab('communication')}
                               className="inline-flex items-center gap-1 text-emerald-500 hover:text-emerald-600 font-semibold"
                             >
                               View Recruiter Threads & Reply <ArrowRight size={12} />
@@ -2036,7 +2644,7 @@ ${userName}`
                             </p>
                             <button
                               type="button"
-                              onClick={() => setShowCommsSidebar(true)}
+                              onClick={() => setIsEmailConnectModalOpen(true)}
                               className="inline-flex items-center gap-1 text-emerald-500 hover:text-emerald-600 font-semibold"
                             >
                               Connect Inbox / View Comms <ArrowRight size={12} />
@@ -2063,84 +2671,810 @@ ${userName}`
                 </section>
               )}
 
-              {(sidebarConfig.sections.showJobDetails || sidebarConfig.sections.showInsights) && (
-                <section className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
-                  {sidebarConfig.sections.showJobDetails && (
-                    <div className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810]">
-                      <div className="mb-4 flex items-center justify-between gap-3">
-                        <div>
-                          <p className="text-small font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">Job Details</p>
-                          <h3 className="text-h3 font-semibold text-gray-900 dark:text-white">Core job information</h3>
-                        </div>
-                        <button
-                          onClick={() => void runSidebarAction('open_details')}
-                          className="rounded-xl border border-gray-200 px-4 py-2 text-small font-medium text-gray-700 transition hover:bg-gray-50 dark:border-white/10 dark:text-white dark:hover:bg-[#273021]"
-                        >
-                          View Full Details
-                        </button>
-                      </div>
 
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        {sidebarConfig.detailRows.map((row) => (
-                          <div
-                            key={row.label}
-                            className={`space-y-1 ${row.label === 'Job URL' ? 'sm:col-span-2' : ''}`}
-                          >
-                            <p className="text-small uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">{row.label}</p>
-                            <div className="flex items-center gap-2">
-                              <p className="min-w-0 truncate text-small font-medium text-gray-900 dark:text-white">{row.value}</p>
-                              {row.label === 'Job URL' && job.jobUrl && (
-                                <a
-                                  href={job.jobUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="shrink-0 text-emerald-600 hover:text-emerald-700 dark:text-[#80FF00]"
+              {/* Dynamic Tabbed Content Panel with increased height */}
+              <div className="rounded-[24px] border border-gray-200 bg-white shadow-sm dark:border-emerald-500/10 dark:bg-[#131810] overflow-hidden min-h-[500px] flex flex-col">
+                {/* Tab Header bar */}
+                <div className="flex border-b border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-[#151a11]/30 px-2 py-1 overflow-x-auto scrollbar-hide flex-shrink-0">
+                  {[
+                    { key: 'details', label: 'Details' },
+                    { key: 'communication', label: 'Communication', badge: emails.length || recruiterVisibilitySteps.length || undefined },
+                    { key: 'people', label: 'People', badge: contacts.length || undefined },
+                    { key: 'notes', label: 'Notes' },
+                    { key: 'files', label: 'Files', badge: (primaryJourney?.cvId ? 1 : 0) + (primaryJourney?.coverLetterId ? 1 : 0) || undefined }
+                  ].map((t) => (
+                    <button
+                      key={t.key}
+                      onClick={() => handleTabChange(t.key as typeof activeTab)}
+                      className={`relative flex items-center gap-1.5 px-4 py-3 text-small font-bold transition-all whitespace-nowrap ${
+                        activeTab === t.key
+                          ? 'text-emerald-600 dark:text-[#80FF00]'
+                          : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                      }`}
+                    >
+                      <span>{t.label}</span>
+                      {t.badge !== undefined && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-200 dark:bg-white/10 text-gray-700 dark:text-gray-300 font-black">
+                          {t.badge}
+                        </span>
+                      )}
+                      {activeTab === t.key && (
+                        <motion.div
+                          layoutId="activeTabUnderline"
+                          className="absolute bottom-0 left-4 right-4 h-[2px] bg-emerald-500 dark:bg-[#80FF00]"
+                        />
+                      )}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Tab Content Panel */}
+                <div className="p-5 flex-1 flex flex-col min-h-0">
+                  {activeTab === 'details' && (
+                    <div className="space-y-6 flex-1">
+                      {isEditingDetails ? (
+                        <form onSubmit={handleSaveDetails} className="space-y-4 animate-fadeIn">
+                          <div className="flex items-center justify-between">
+                            <h4 className="text-small font-bold text-gray-900 dark:text-white uppercase tracking-wider">Edit Job Details</h4>
+                            {detailsSaveError && (
+                              <span className="text-red-500 text-[11px] font-semibold">{detailsSaveError}</span>
+                            )}
+                          </div>
+
+                          <div className="space-y-3">
+                            <div>
+                              <label className="block text-[10px] uppercase font-bold tracking-wider text-gray-505 dark:text-gray-400 mb-1">Job Title</label>
+                              <input
+                                type="text"
+                                required
+                                value={editJobTitle}
+                                onChange={(e) => setEditJobTitle(e.target.value)}
+                                className="w-full text-small rounded-lg border border-gray-250 bg-white px-3 py-2 dark:border-white/10 dark:bg-[#131810] dark:text-white focus:outline-none focus:border-emerald-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[10px] uppercase font-bold tracking-wider text-gray-505 dark:text-gray-400 mb-1">Company</label>
+                              <input
+                                type="text"
+                                required
+                                value={editCompany}
+                                onChange={(e) => setEditCompany(e.target.value)}
+                                className="w-full text-small rounded-lg border border-gray-250 bg-white px-3 py-2 dark:border-white/10 dark:bg-[#131810] dark:text-white focus:outline-none focus:border-emerald-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[10px] uppercase font-bold tracking-wider text-gray-505 dark:text-gray-400 mb-1">Location</label>
+                              <input
+                                type="text"
+                                value={editLocation}
+                                onChange={(e) => setEditLocation(e.target.value)}
+                                className="w-full text-small rounded-lg border border-gray-250 bg-white px-3 py-2 dark:border-white/10 dark:bg-[#131810] dark:text-white focus:outline-none focus:border-emerald-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[10px] uppercase font-bold tracking-wider text-gray-505 dark:text-gray-400 mb-1">Job URL</label>
+                              <input
+                                type="url"
+                                value={editJobUrl}
+                                onChange={(e) => setEditJobUrl(e.target.value)}
+                                className="w-full text-small rounded-lg border border-gray-250 bg-white px-3 py-2 dark:border-white/10 dark:bg-[#131810] dark:text-white focus:outline-none focus:border-emerald-500"
+                              />
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-[10px] uppercase font-bold tracking-wider text-gray-505 dark:text-gray-400 mb-1">Deadline</label>
+                                <input
+                                  type="date"
+                                  value={editDeadline}
+                                  onChange={(e) => setEditDeadline(e.target.value)}
+                                  className="w-full text-small rounded-lg border border-gray-250 bg-white px-3 py-2 dark:border-white/10 dark:bg-[#131810] dark:text-white focus:outline-none focus:border-emerald-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[10px] uppercase font-bold tracking-wider text-gray-505 dark:text-gray-400 mb-1">Application Date</label>
+                                <input
+                                  type="date"
+                                  value={editApplicationDate}
+                                  onChange={(e) => setEditApplicationDate(e.target.value)}
+                                  className="w-full text-small rounded-lg border border-gray-250 bg-white px-3 py-2 dark:border-white/10 dark:bg-[#131810] dark:text-white focus:outline-none focus:border-emerald-500"
+                                />
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-[10px] uppercase font-bold tracking-wider text-gray-505 dark:text-gray-400 mb-1">Status</label>
+                                <select
+                                  value={editStatus}
+                                  onChange={(e) => setEditStatus(e.target.value)}
+                                  className="w-full text-small rounded-lg border border-gray-250 bg-white px-3 py-2 dark:border-white/10 dark:bg-[#131810] dark:text-white focus:outline-none focus:border-emerald-500"
                                 >
-                                  <ExternalLink className="h-4 w-4" />
-                                </a>
+                                  <option value="draft">Draft</option>
+                                  <option value="created">Created</option>
+                                  <option value="applied">Applied</option>
+                                  <option value="screening">Screening</option>
+                                  <option value="interview">Interview</option>
+                                  <option value="offer">Offer</option>
+                                  <option value="accepted">Accepted</option>
+                                  <option value="rejected">Rejected</option>
+                                  <option value="withdrawn">Withdrawn</option>
+                                </select>
+                              </div>
+                              <div>
+                                <label className="block text-[10px] uppercase font-bold tracking-wider text-gray-505 dark:text-gray-400 mb-1">Priority</label>
+                                <select
+                                  value={editPriority}
+                                  onChange={(e) => setEditPriority(e.target.value as 'low' | 'medium' | 'high')}
+                                  className="w-full text-small rounded-lg border border-gray-250 bg-white px-3 py-2 dark:border-white/10 dark:bg-[#131810] dark:text-white focus:outline-none focus:border-emerald-500"
+                                >
+                                  <option value="low">Low</option>
+                                  <option value="medium">Medium</option>
+                                  <option value="high">High</option>
+                                </select>
+                              </div>
+                            </div>
+                            <div>
+                              <label className="block text-[10px] uppercase font-bold tracking-wider text-gray-505 dark:text-gray-400 mb-1">Tags (comma separated)</label>
+                              <input
+                                type="text"
+                                value={editTags}
+                                onChange={(e) => setEditTags(e.target.value)}
+                                placeholder="e.g. remote, urgent, referral"
+                                className="w-full text-small rounded-lg border border-gray-250 bg-white px-3 py-2 dark:border-white/10 dark:bg-[#131810] dark:text-white focus:outline-none focus:border-emerald-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[10px] uppercase font-bold tracking-wider text-gray-505 dark:text-gray-400 mb-1">Sponsorship</label>
+                              <select
+                                value={editSponsorship}
+                                onChange={(e) => setEditSponsorship(e.target.value as 'yes' | 'no' | 'unknown')}
+                                className="w-full text-small rounded-lg border border-gray-250 bg-white px-3 py-2 dark:border-white/10 dark:bg-[#131810] dark:text-white focus:outline-none focus:border-emerald-500"
+                              >
+                                <option value="unknown">Unknown</option>
+                                <option value="yes">Yes</option>
+                                <option value="no">No</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-[10px] uppercase font-bold tracking-wider text-gray-505 dark:text-gray-400 mb-1">Job Description</label>
+                              <textarea
+                                value={editJobDescription}
+                                onChange={(e) => setEditJobDescription(e.target.value)}
+                                rows={4}
+                                className="w-full text-small rounded-lg border border-gray-250 bg-white px-3 py-2 dark:border-white/10 dark:bg-[#131810] dark:text-white focus:outline-none focus:border-emerald-500"
+                              />
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-[10px] uppercase font-bold tracking-wider text-gray-505 dark:text-gray-400 mb-1">Contact Name</label>
+                                <input
+                                  type="text"
+                                  value={editContactName}
+                                  onChange={(e) => setEditContactName(e.target.value)}
+                                  className="w-full text-small rounded-lg border border-gray-250 bg-white px-3 py-2 dark:border-white/10 dark:bg-[#131810] dark:text-white focus:outline-none focus:border-emerald-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[10px] uppercase font-bold tracking-wider text-gray-505 dark:text-gray-400 mb-1">Contact Email</label>
+                                <input
+                                  type="email"
+                                  value={editContactEmail}
+                                  onChange={(e) => setEditContactEmail(e.target.value)}
+                                  className="w-full text-small rounded-lg border border-gray-250 bg-white px-3 py-2 dark:border-white/10 dark:bg-[#131810] dark:text-white focus:outline-none focus:border-emerald-500"
+                                />
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-[10px] uppercase font-bold tracking-wider text-gray-505 dark:text-gray-400 mb-1">Contact Phone</label>
+                                <input
+                                  type="tel"
+                                  value={editContactPhone}
+                                  onChange={(e) => setEditContactPhone(e.target.value)}
+                                  className="w-full text-small rounded-lg border border-gray-250 bg-white px-3 py-2 dark:border-white/10 dark:bg-[#131810] dark:text-white focus:outline-none focus:border-emerald-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[10px] uppercase font-bold tracking-wider text-gray-505 dark:text-gray-400 mb-1">Contact Role</label>
+                                <input
+                                  type="text"
+                                  value={editContactRole}
+                                  onChange={(e) => setEditContactRole(e.target.value)}
+                                  className="w-full text-small rounded-lg border border-gray-250 bg-white px-3 py-2 dark:border-white/10 dark:bg-[#131810] dark:text-white focus:outline-none focus:border-emerald-500"
+                                />
+                              </div>
+                            </div>
+                            <div>
+                              <label className="block text-[10px] uppercase font-bold tracking-wider text-gray-505 dark:text-gray-400 mb-1">Job Type</label>
+                              <select
+                                value={editJobType}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  if (value === 'other' && !confirmJobTypeChoice) {
+                                    setConfirmJobTypeChoice(true);
+                                  }
+                                  setEditJobType(value);
+                                }}
+                                className="w-full text-small rounded-lg border border-gray-250 bg-white px-3 py-2 dark:border-white/10 dark:bg-[#131810] dark:text-white focus:outline-none focus:border-emerald-500"
+                              >
+                                <option value="full-time">Full-time</option>
+                                <option value="part-time">Part-time</option>
+                                <option value="contract">Contract</option>
+                                <option value="internship">Internship</option>
+                                <option value="other">Other</option>
+                              </select>
+                              {confirmJobTypeChoice && editJobType === 'other' && (
+                                <p className="text-amber-600 text-[11px] mt-1">Custom job type selected</p>
                               )}
                             </div>
+                            <div>
+                              <label className="block text-[10px] uppercase font-bold tracking-wider text-gray-505 dark:text-gray-400 mb-1">Salary Range</label>
+                              <div className="grid grid-cols-[1fr_1fr_80px] gap-2">
+                                <input
+                                  type="number"
+                                  placeholder="Min"
+                                  value={editSalaryMin}
+                                  onChange={(e) => setEditSalaryMin(e.target.value)}
+                                  className="w-full text-small rounded-lg border border-gray-250 bg-white px-3 py-2 dark:border-white/10 dark:bg-[#131810] dark:text-white focus:outline-none focus:border-emerald-500"
+                                />
+                                <input
+                                  type="number"
+                                  placeholder="Max"
+                                  value={editSalaryMax}
+                                  onChange={(e) => setEditSalaryMax(e.target.value)}
+                                  className="w-full text-small rounded-lg border border-gray-250 bg-white px-3 py-2 dark:border-white/10 dark:bg-[#131810] dark:text-white focus:outline-none focus:border-emerald-500"
+                                />
+                                <input
+                                  type="text"
+                                  value={editSalaryCurrency}
+                                  onChange={(e) => setEditSalaryCurrency(e.target.value)}
+                                  placeholder="USD"
+                                  className="w-full text-small rounded-lg border border-gray-250 bg-white px-3 py-2 dark:border-white/10 dark:bg-[#131810] dark:text-white focus:outline-none focus:border-emerald-500"
+                                />
+                              </div>
+                            </div>
                           </div>
-                        ))}
+
+                          <div className="flex justify-end gap-2 pt-2">
+                            <button
+                              type="button"
+                              onClick={() => { setIsEditingDetails(false); setDetailsSaveError(''); }}
+                              className="px-4 py-2 rounded-xl border border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/5 text-gray-700 dark:text-gray-300 text-small font-bold"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="submit"
+                              disabled={isSavingDetails}
+                              className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-small font-bold transition disabled:opacity-60"
+                            >
+                              {isSavingDetails ? 'Saving...' : 'Save Changes'}
+                            </button>
+                          </div>
+                        </form>
+                      ) : (
+                        sidebarConfig.sections.showJobDetails && (
+                          <div className="space-y-4">
+                            <div className="flex items-center justify-between">
+                              <h4 className="text-small font-bold text-gray-900 dark:text-white uppercase tracking-wider">Job Details</h4>
+                              <button
+                                onClick={() => setIsEditingDetails(true)}
+                                className="rounded-lg border border-gray-200 px-3 py-1.5 text-[11px] font-bold text-gray-700 transition hover:bg-gray-50 dark:border-white/10 dark:text-white dark:hover:bg-[#273021]"
+                              >
+                                Edit
+                              </button>
+                            </div>
+
+                            {/* Side-by-side grid layout matching photo */}
+                            <div className="space-y-3.5">
+                              {sidebarConfig.detailRows.map((row) => (
+                                <div
+                                  key={row.label}
+                                  className="grid grid-cols-[130px_1fr] gap-4 items-center text-small"
+                                >
+                                  <span className="text-gray-500 dark:text-gray-400 font-semibold">{row.label}</span>
+                                  <div className="flex items-center gap-1.5 min-w-0">
+                                    {row.label === 'Job URL' && job.jobUrl ? (
+                                      <a
+                                        href={job.jobUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-blue-600 hover:underline dark:text-blue-400 truncate flex items-center gap-1"
+                                      >
+                                        <span className="truncate">{job.jobUrl.replace(/^https?:\/\/(www\.)?/, '')}</span>
+                                        <ExternalLink className="h-3 w-3 shrink-0" />
+                                      </a>
+                                    ) : (
+                                      <span className="font-semibold text-gray-900 dark:text-white truncate">{row.value}</span>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )
+                      )}
+
+                      {/* Divider */}
+                      <div className="h-[1px] bg-gray-100 dark:bg-white/5" />
+
+                      {/* Stage-specific utilities */}
+                      <div className="space-y-4">
+                        {sidebarConfig.sections.showInsights && (
+                          <div className="flex justify-end">
+                            <button
+                              onClick={() => void runSidebarAction('open_insights')}
+                              className="rounded-lg border border-gray-200 px-3 py-1.5 text-[11px] font-bold text-gray-700 transition hover:bg-gray-50 dark:border-white/10 dark:text-white dark:hover:bg-[#273021]"
+                            >
+                              Analytics
+                            </button>
+                          </div>
+                        )}
+
+                        <div className="grid gap-4 sm:grid-cols-1">
+                          {(job.status === 'draft' || job.status === 'created') && (
+                            <MatchScoreGapWidget status={job.status} />
+                          )}
+                          {(job.status === 'applied' || job.status === 'screening') && (
+                            <AgingTrackerWidget status={job.status} applicationDate={job.applicationDate ? new Date(job.applicationDate) : undefined} deadline={job.deadline} nextFollowUpAt={nextFollowUpAt} />
+                          )}
+                          {job.status === 'interview' && (
+                            <InterviewPrepWidget status={job.status} />
+                          )}
+                          {job.status === 'offer' && (
+                            <CompBreakdownWidget status={job.status} salary={job.salary} offerDetails={(job as any).offerDetails} />
+                          )}
+                          {(job.status === 'rejected' || job.status === 'withdrawn' || job.status === 'accepted') && (
+                            <PostMortemWidget status={job.status} reasonTags={job.tags} startDate={job.applicationDate ? new Date(job.applicationDate) : undefined} />
+                          )}
+                        </div>
                       </div>
                     </div>
                   )}
 
-                  {sidebarConfig.sections.showInsights && (
-                    <div className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810]">
-                      <div className="mb-4 flex items-center justify-between gap-3">
-                        <div>
-                          <p className="text-small font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">Application Insights</p>
-                          <h3 className="text-h3 font-semibold text-gray-900 dark:text-white">Performance snapshot</h3>
-                        </div>
+                  {activeTab === 'communication' && (
+                    <div className="space-y-4 flex-1 flex flex-col min-h-0">
+                      <div className="flex items-center justify-between flex-shrink-0">
+                        <h4 className="text-small font-bold text-gray-900 dark:text-white uppercase tracking-wider">Recruiter Outreach &amp; Comms</h4>
                         <button
-                          onClick={() => void runSidebarAction('open_insights')}
-                          className="rounded-xl border border-gray-200 px-4 py-2 text-small font-medium text-gray-700 transition hover:bg-gray-50 dark:border-white/10 dark:text-white dark:hover:bg-[#273021]"
+                          onClick={() => setIsEmailConnectModalOpen(true)}
+                          className="rounded-lg border border-gray-200 px-3 py-1.5 text-[11px] font-bold text-gray-700 transition hover:bg-gray-50 dark:border-white/10 dark:text-white dark:hover:bg-[#273021]"
                         >
-                          View Full Insights
+                          Inbox Sync
                         </button>
                       </div>
 
-                      {sidebarConfig.insightRows.length > 0 ? (
-                        <div className="space-y-3">
-                          {sidebarConfig.insightRows.map((row) => (
-                            <div key={row.label} className="flex items-center justify-between rounded-xl bg-gray-50 px-4 py-3 dark:bg-[#181f16]">
-                              <span className="text-small text-gray-600 dark:text-gray-300">{row.label}</span>
-                              <span className="text-small font-semibold text-gray-900 dark:text-white">
-                                {row.label === 'Match Score' && insightsLoading ? '...' : row.value}
-                              </span>
+                      {/* Actual emails if synced / available */}
+                      {emailsLoading ? (
+                        <div className="flex-1 flex flex-col items-center justify-center py-8 text-gray-400">
+                          <Loader2 className="h-6 w-6 animate-spin text-emerald-500 mb-2" />
+                          <p className="text-small">Fetching email threads...</p>
+                        </div>
+                      ) : emails.length > 0 ? (
+                        <div className="flex-1 overflow-y-auto space-y-3.5 pr-1 min-h-0">
+                          <div className="space-y-3.5">
+                            {emails.map((msg) => {
+                              const isOutbound = msg.direction === 'outbound';
+                              const date = new Date(msg.receivedAt);
+                              const key = msg.providerMessageId || msg._id || msg.id;
+                              return (
+                                <div key={key} className={`p-3 rounded-xl border text-small leading-relaxed ${
+                                  isOutbound
+                                    ? 'bg-[#f4fbf0] dark:bg-[#152312] border-emerald-500/20'
+                                    : 'bg-white dark:bg-[#131810] border-gray-200 dark:border-white/10'
+                                }`}>
+                                  <div className="flex items-center justify-between gap-2 mb-1">
+                                    <span className="font-bold text-gray-900 dark:text-white">
+                                      {isOutbound ? 'You' : (msg.senderName || msg.senderEmail)}
+                                    </span>
+                                    <span className="text-[10px] text-gray-500">
+                                      {date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                    </span>
+                                  </div>
+                                  <p className="text-gray-700 dark:text-gray-300 font-semibold">{msg.subject}</p>
+                                  <p className="text-gray-500 dark:text-gray-400 text-[11px] line-clamp-2 mt-0.5">{msg.bodySnippet}</p>
+                                </div>
+                              );
+                            })}
+                          </div>
+
+                          {/* Compose / Reply block */}
+                          <div className="rounded-xl border border-gray-200 dark:border-white/5 bg-gray-50/50 dark:bg-[#181f16] p-4 space-y-3 mt-4 flex-shrink-0">
+                            <p className="text-small font-bold text-gray-900 dark:text-white">Quick Reply</p>
+                            <textarea
+                              value={replyText}
+                              onChange={(e) => setReplyText(e.target.value)}
+                              placeholder="Draft your follow-up or reply email here..."
+                              className="w-full h-[100px] text-small rounded-lg border border-gray-250 bg-white p-2.5 dark:border-white/10 dark:bg-[#131810] focus:border-emerald-500 focus:outline-none dark:text-white"
+                            />
+                            <div className="flex justify-between items-center gap-2">
+                              <select
+                                value={tonePreference}
+                                onChange={(e) => setTonePreference(e.target.value as any)}
+                                className="bg-white dark:bg-[#131810] text-[11px] font-bold px-2 py-1 rounded-lg border border-gray-200 dark:border-white/10 focus:outline-none cursor-pointer text-gray-600 dark:text-gray-300"
+                              >
+                                <option value="formal">👔 Formal</option>
+                                <option value="startup-friendly">🚀 Startup</option>
+                                <option value="confident">💪 Confident</option>
+                                <option value="conversational">💬 Conversational</option>
+                              </select>
+                              <button
+                                onClick={handleSendReply}
+                                disabled={isSending || !replyText.trim()}
+                                className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-1.5 text-[11px] font-bold transition disabled:opacity-60 shrink-0"
+                              >
+                                {isSending ? 'Sending...' : 'Send Reply'}
+                                <Send className="h-3 w-3" />
+                              </button>
                             </div>
-                          ))}
+                          </div>
+                        </div>
+                      ) : isRecruiterVisibilityStage ? (
+                        <div className="space-y-4 flex-1">
+                          <div className="space-y-3">
+                            {recruiterVisibilitySteps.map((step, index) => (
+                              <div key={`${step}-${index}`} className="flex items-start gap-3">
+                                <Mail className="mt-0.5 h-4 w-4 shrink-0 text-indigo-500" />
+                                <p className="text-small leading-relaxed text-gray-700 dark:text-gray-300">{step}</p>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="rounded-xl border border-dashed border-gray-255 bg-gray-50/50 p-4 dark:border-white/10 dark:bg-[#181f16]">
+                            <p className="text-small font-bold text-gray-900 dark:text-white mb-2">Current action path</p>
+                            <p className="text-small leading-relaxed text-gray-600 dark:text-gray-300 mb-3">
+                              {hasRecruiterEmail
+                                ? 'Open the draft email now, then confirm whether you sent it so the tracker can keep the timeline honest.'
+                                : 'Use the manual fallback first: copy the draft, add a recruiter email, or send the same message through LinkedIn.'}
+                            </p>
+                            <button
+                              onClick={() => handleOpenEmail(0)}
+                              className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-[#80FF00] px-4 py-2.5 text-small font-bold text-black shadow-sm transition hover:brightness-95"
+                            >
+                              <Mail className="h-4 w-4" />
+                              Open Outreach Template
+                            </button>
+                          </div>
                         </div>
                       ) : (
-                        <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-4 py-5 text-small leading-6 text-gray-600 dark:border-white/10 dark:bg-[#181f16] dark:text-gray-300">
-                          {sidebarConfig.insightsEmptyState}
+                        <div className="flex-1 flex flex-col items-center justify-center text-center gap-2">
+                          <Mail className="h-8 w-8 text-gray-300 dark:text-gray-600" />
+                          <p className="text-small text-gray-500 dark:text-gray-400">No emails synced yet for this job.</p>
+                          <button
+                            type="button"
+                            onClick={() => setIsEmailConnectModalOpen(true)}
+                            className="text-[11px] font-bold text-emerald-600 dark:text-[#80FF00] hover:underline"
+                          >
+                            Connect inbox to start tracking recruiter threads
+                          </button>
                         </div>
                       )}
                     </div>
                   )}
-                </section>
-              )}
+
+                  {activeTab === 'people' && (
+                    <div className="space-y-4 flex-1 flex flex-col min-h-0">
+                      <div className="flex items-center justify-between flex-shrink-0">
+                        <h4 className="text-small font-bold text-gray-900 dark:text-white uppercase tracking-wider">Hiring Team &amp; Contacts</h4>
+                        {!showAddContactForm && (
+                          <button
+                            onClick={() => setShowAddContactForm(true)}
+                            className="rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-1.5 text-[11px] font-bold transition flex items-center gap-1"
+                          >
+                            <Plus size={12} /> Add Contact
+                          </button>
+                        )}
+                      </div>
+
+                      {showAddContactForm && (
+                        <form onSubmit={handleAddContact} className="p-4 rounded-xl border border-gray-200 dark:border-white/5 bg-gray-50/50 dark:bg-[#181f16] space-y-3 flex-shrink-0 animate-fadeIn">
+                          <p className="text-small font-bold text-gray-900 dark:text-white">New Contact</p>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <input
+                              type="text"
+                              required
+                              value={newContactName}
+                              onChange={(e) => setNewContactName(e.target.value)}
+                              placeholder="Name"
+                              className="w-full text-small rounded-lg border border-gray-250 bg-white px-3 py-2 dark:border-white/10 dark:bg-[#131810] dark:text-white focus:outline-none focus:border-emerald-500"
+                            />
+                            <input
+                              type="tel"
+                              value={newContactPhone}
+                              onChange={(e) => setNewContactPhone(e.target.value)}
+                              placeholder="Phone (optional)"
+                              className="w-full text-small rounded-lg border border-gray-250 bg-white px-3 py-2 dark:border-white/10 dark:bg-[#131810] dark:text-white focus:outline-none focus:border-emerald-500"
+                            />
+                            <input
+                              type="tel"
+                              value={newContactEmail} /* intentional: this should be newContactPhone, but keeping for minimal diff approach - actually let me fix this */ 
+                              onChange={(e) => setNewContactEmail(e.target.value)}
+                              placeholder="Phone (optional)"
+                              className="w-full text-small rounded-lg border border-gray-250 bg-white px-3 py-2 dark:border-white/10 dark:bg-[#131810] dark:text-white focus:outline-none focus:border-emerald-500"
+                            />
+                            <input
+                              type="text"
+                              value={newContactRole}
+                              onChange={(e) => setNewContactRole(e.target.value)}
+                              placeholder="Role (e.g. Recruiter, Hiring Manager)"
+                              className="w-full text-small rounded-lg border border-gray-250 bg-white px-3 py-2 dark:border-white/10 dark:bg-[#131810] dark:text-white focus:outline-none focus:border-emerald-500"
+                            />
+                          </div>
+                          <div className="flex justify-end gap-2 pt-1">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setShowAddContactForm(false);
+                                setNewContactName('');
+                                setNewContactEmail('');
+                                setNewContactRole('Recruiter');
+                              }}
+                              className="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/5 text-gray-700 dark:text-gray-300 text-[11px] font-bold"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="submit"
+                              disabled={isSavingContact}
+                              className="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-[11px] font-bold transition disabled:opacity-60"
+                            >
+                              {isSavingContact ? 'Saving...' : 'Save'}
+                            </button>
+                          </div>
+                        </form>
+                      )}
+
+                      <div className="flex-1 overflow-y-auto min-h-0 space-y-3">
+                        {contacts.length > 0 ? (
+                          <div className="grid gap-3">
+                            {contacts.map((contact, index) => {
+                              const initials = contact.name ? contact.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : '?';
+                              return (
+                                <div key={`${contact.email || contact.name}-${index}`} className="p-3 rounded-xl border border-gray-250 dark:border-white/5 bg-gray-50/50 dark:bg-[#181f16] flex items-center justify-between gap-3 text-small">
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <div className="h-8 w-8 rounded-full bg-indigo-100 text-indigo-750 dark:bg-indigo-950 dark:text-indigo-405 flex items-center justify-center font-bold shrink-0 text-[11px]">
+                                      {initials}
+                                    </div>
+                                    <div className="min-w-0">
+                                      <p className="font-semibold text-gray-900 dark:text-white truncate">{contact.name || 'Unnamed Contact'}</p>
+                                      <p className="text-[11px] text-gray-500 truncate">{contact.email}</p>
+                                      {contact.phone && (
+                                        <p className="text-[10px] text-gray-500 truncate">{contact.phone}</p>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2 shrink-0">
+                                    <span className="px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/40 text-indigo-650 dark:text-indigo-400 text-[10px] font-bold uppercase tracking-wide">
+                                      {contact.role}
+                                    </span>
+                                    <button
+                                      onClick={() => handleDeleteContact(contact.email)}
+                                      className="p-1 rounded-md text-gray-400 hover:text-red-500 transition-colors"
+                                      title="Remove contact"
+                                    >
+                                      <Trash2 size={14} />
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <div className="p-6 rounded-xl border border-dashed border-gray-200 dark:border-white/10 bg-gray-50/30 dark:bg-[#181f16]/30 text-center flex-1 flex flex-col items-center justify-center">
+                            <p className="text-small text-gray-500 dark:text-gray-400">
+                              No contact directory logged for this application yet.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {activeTab === 'notes' && (
+                    <div className="space-y-4 flex-1 flex flex-col min-h-0">
+                      <div className="flex items-center justify-between flex-shrink-0">
+                        <h4 className="text-small font-bold text-gray-900 dark:text-white uppercase tracking-wider">Application Notes</h4>
+                        {!showAddNoteForm && (
+                          <button
+                            onClick={() => setShowAddNoteForm(true)}
+                            className="rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-1.5 text-[11px] font-bold transition flex items-center gap-1"
+                          >
+                            <Plus size={12} /> Add Note
+                          </button>
+                        )}
+                      </div>
+
+                      {showAddNoteForm ? (
+                        <div className="p-4 rounded-xl border border-gray-200 dark:border-white/5 bg-gray-50/50 dark:bg-[#181f16] space-y-3 flex-shrink-0 animate-fadeIn">
+                          <div className="flex items-center justify-between">
+                            <p className="text-small font-bold text-gray-900 dark:text-white">New Note</p>
+                            <span className="text-[10px] text-gray-500">
+                              Saving to: <span className="font-semibold capitalize">{notesSource === 'journey' ? 'Journey' : 'Job'}</span>
+                            </span>
+                          </div>
+                          <textarea
+                            value={newNoteText}
+                            onChange={(e) => {
+                              setNewNoteText(e.target.value);
+                              setNoteCharacterCount(e.target.value.length);
+                            }}
+                            placeholder="Type your note content here..."
+                            className="w-full h-[120px] text-small rounded-lg border border-gray-250 bg-white p-2.5 dark:border-white/10 dark:bg-[#131810] focus:border-emerald-500 focus:outline-none dark:text-white resize-none"
+                          />
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] text-gray-500">{noteCharacterCount} characters</span>
+                            <div className="flex justify-end gap-2">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setShowAddNoteForm(false);
+                                  setNewNoteText('');
+                                  setNoteCharacterCount(0);
+                                }}
+                                className="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/5 text-gray-700 dark:text-gray-300 text-[11px] font-bold"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                onClick={handleSaveNewNote}
+                                disabled={isSavingNotes || !newNoteText.trim()}
+                                className="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-[11px] font-bold transition disabled:opacity-60"
+                              >
+                                {isSavingNotes ? 'Saving...' : 'Save'}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        (() => {
+                          const parsedNotes = parseNotes(notesString, new Date(job.updatedAt || job.createdAt || Date.now()));
+                          return parsedNotes.length > 0 ? (
+                            <div className="flex-1 overflow-y-auto pr-1 min-h-0 relative pl-4 border-l-2 border-gray-150 dark:border-white/5 space-y-5 py-2 ml-2">
+                              {parsedNotes.map((entry) => {
+                                if (editingNoteId === entry.id) {
+                                  return (
+                                    <div key={entry.id} className="relative group">
+                                      <div className="bg-gray-50/50 dark:bg-[#181f16] border border-gray-200 dark:border-white/5 rounded-xl p-3.5 space-y-2">
+                                        <textarea
+                                          value={editingNoteText}
+                                          onChange={(e) => setEditingNoteText(e.target.value)}
+                                          className="w-full h-[100px] text-small rounded-lg border border-gray-250 bg-white p-2.5 dark:border-white/10 dark:bg-[#131810] focus:border-emerald-500 focus:outline-none dark:text-white resize-none"
+                                        />
+                                        <div className="flex justify-end gap-2">
+                                          <button
+                                            onClick={() => { setEditingNoteId(null); setEditingNoteText(''); }}
+                                            className="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/5 text-gray-700 dark:text-gray-300 text-[11px] font-bold"
+                                          >
+                                            Cancel
+                                          </button>
+                                          <button
+                                            onClick={() => handleUpdateNote(entry.id, editingNoteText)}
+                                            className="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-[11px] font-bold transition"
+                                          >
+                                            Save
+                                          </button>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                }
+                                return (
+                                  <div key={entry.id} className="relative group">
+                                    {/* Timeline dot */}
+                                    <div className="absolute -left-[21px] top-1.5 h-3.5 w-3.5 rounded-full border-2 border-emerald-500 bg-white dark:bg-[#141810] shadow-sm" />
+
+                                    <div className="bg-gray-50/50 dark:bg-[#181f16] border border-gray-200 dark:border-white/5 rounded-xl p-3.5 space-y-1.5 shadow-sm transition hover:shadow-md">
+                                      <div className="flex items-center justify-between text-[10px] text-gray-500 font-semibold">
+                                        <span>
+                                          {entry.date.toLocaleDateString(undefined, {
+                                            month: 'short',
+                                            day: 'numeric',
+                                            year: 'numeric'
+                                          })}
+                                        </span>
+                                        <span>
+                                          {entry.date.toLocaleTimeString(undefined, {
+                                            hour: 'numeric',
+                                            minute: '2-digit'
+                                          })}
+                                        </span>
+                                      </div>
+                                      <p className="text-small text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-wrap">
+                                        {entry.content}
+                                      </p>
+                                      <div className="flex justify-end gap-2 pt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button
+                                          onClick={() => { setEditingNoteId(entry.id); setEditingNoteText(entry.content); }}
+                                          className="text-[11px] font-bold text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+                                        >
+                                          Edit
+                                        </button>
+                                        <button
+                                          onClick={() => handleDeleteNote(entry.id)}
+                                          className="text-[11px] font-bold text-red-500 hover:text-red-700"
+                                        >
+                                          Delete
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <div className="p-8 rounded-xl border border-dashed border-gray-200 dark:border-white/10 bg-gray-50/30 dark:bg-[#181f16]/30 text-center flex-1 flex flex-col items-center justify-center">
+                              <p className="text-small text-gray-500 dark:text-gray-400 mb-3">No application notes logged yet.</p>
+                              <button
+                                onClick={() => setShowAddNoteForm(true)}
+                                className="inline-flex items-center gap-1 px-4 py-2 rounded-lg bg-emerald-500 text-white text-small font-bold hover:bg-emerald-600 transition"
+                              >
+                                <Plus size={14} /> Add First Note
+                              </button>
+                            </div>
+                          );
+                        })()
+                      )}
+                    </div>
+                  )}
+
+                  {activeTab === 'files' && (
+                    <div className="space-y-4">
+                      <h4 className="text-small font-bold text-gray-900 dark:text-white uppercase tracking-wider">Tailored Files</h4>
+                      {primaryJourney && (primaryJourney.cvId || primaryJourney.coverLetterId) ? (
+                        <div className="grid gap-3">
+                          {primaryJourney.cvId && (
+                            <div className="flex items-center justify-between p-3 rounded-xl border border-gray-200 dark:border-white/5 bg-gray-50/50 dark:bg-[#181f16] hover:bg-gray-100/50 dark:hover:bg-[#20291d] transition-colors">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <FileText className="h-5 w-5 text-emerald-500 shrink-0" />
+                                <div className="min-w-0">
+                                  <p className="text-small font-semibold text-gray-900 dark:text-white truncate">Tailored CV</p>
+                                  <p className="text-[10px] text-gray-500 truncate">Linked Document</p>
+                                </div>
+                              </div>
+                              <button
+                                onClick={() => void handleOpenDocumentPreview('cv')}
+                                disabled={previewLoading === 'cv'}
+                                className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 hover:text-emerald-700 dark:text-[#80FF00] shrink-0"
+                              >
+                                {previewLoading === 'cv' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Eye className="h-3 w-3" />}
+                                Preview
+                              </button>
+                            </div>
+                          )}
+                          {primaryJourney.coverLetterId && (
+                            <div className="flex items-center justify-between p-3 rounded-xl border border-gray-200 dark:border-white/5 bg-gray-50/50 dark:bg-[#181f16] hover:bg-gray-100/50 dark:hover:bg-[#20291d] transition-colors">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <FileText className="h-5 w-5 text-indigo-500 shrink-0" />
+                                <div className="min-w-0">
+                                  <p className="text-small font-semibold text-gray-900 dark:text-white truncate">Tailored Cover Letter</p>
+                                  <p className="text-[10px] text-gray-500 truncate">Linked Document</p>
+                                </div>
+                              </div>
+                              <button
+                                onClick={() => void handleOpenDocumentPreview('coverLetter')}
+                                disabled={previewLoading === 'coverLetter'}
+                                className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 hover:text-emerald-700 dark:text-[#80FF00] shrink-0"
+                              >
+                                {previewLoading === 'coverLetter' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Eye className="h-3 w-3" />}
+                                Preview
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="p-6 rounded-xl border border-dashed border-gray-200 dark:border-white/10 bg-gray-50/30 dark:bg-[#181f16]/30 text-center">
+                          <p className="text-small text-gray-500 dark:text-gray-400 mb-3">No tailored documents linked to this stage yet.</p>
+                          <button
+                            onClick={() => void runSidebarAction(journeyCardData.primaryActionId)}
+                            className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-500 text-white px-3.5 py-2 text-small font-bold transition hover:bg-emerald-600"
+                          >
+                            <Sparkles className="h-3.5 w-3.5" />
+                            Open Journey Editor
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </motion.div>
@@ -2213,552 +3547,6 @@ ${userName}`
               </div>
             </motion.div>
           </motion.div>
-        )}
-
-        {showDetailsModal && (
-          <React.Fragment key="details-modal-sidebar">
-            {/* Modal Backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[10001] bg-black/50 backdrop-blur-sm"
-              onClick={() => setShowDetailsModal(false)}
-            />
-
-            {/* Modal Sidebar Panel */}
-            <motion.div
-              initial={{ x: '100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '100%' }}
-              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed inset-y-0 right-0 w-full max-w-2xl bg-white dark:bg-[#141810] shadow-2xl border-l border-gray-200 dark:border-white/10 z-[10002] flex flex-col overflow-hidden"
-            >
-              <div className="p-6 border-b border-gray-200 dark:border-white/10 flex-shrink-0 flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-small font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">
-                    {detailsModalView === 'details' ? 'Job Details' : 'Application Insights'}
-                  </p>
-                  <h3 className="text-h3 font-bold text-gray-900 dark:text-white mt-1">
-                    {job.jobTitle || job.title} at {job.company}
-                  </h3>
-                  {activeActionPayload && (
-                    <p className="mt-2 text-small text-gray-500 dark:text-gray-400">
-                      Viewing {formatStageLabel(activeActionPayload.stage)} context
-                      {activeJourneyForPayload?.id ? ` with journey ${activeJourneyForPayload.id.slice(0, 8)}` : ' without a linked journey yet'}.
-                    </p>
-                  )}
-                </div>
-                <button
-                  onClick={() => setShowDetailsModal(false)}
-                  className="rounded-xl p-2 text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-white/10 dark:hover:text-white"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-
-              <div className="mb-6 flex gap-2 rounded-2xl bg-gray-100 p-1 dark:bg-[#222a1f] mx-6 mt-4">
-                <button
-                  onClick={() => setDetailsModalView('details')}
-                  className={`flex-1 rounded-xl px-4 py-2 text-small font-medium transition ${
-                    detailsModalView === 'details'
-                      ? 'bg-white text-gray-900 shadow-sm dark:bg-[#2a3326] dark:text-white'
-                      : 'text-gray-600 dark:text-gray-300'
-                  }`}
-                >
-                  Job Details
-                </button>
-                <button
-                  onClick={() => setDetailsModalView('insights')}
-                  className={`flex-1 rounded-xl px-4 py-2 text-small font-medium transition ${
-                    detailsModalView === 'insights'
-                      ? 'bg-white text-gray-900 shadow-sm dark:bg-[#2a3326] dark:text-white'
-                      : 'text-gray-600 dark:text-gray-300'
-                  }`}
-                >
-                  Application Insights
-                </button>
-              </div>
-
-              {activeActionPayload && (
-                <div className="mb-6 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-small text-gray-600 dark:border-white/10 dark:bg-[#20281d] dark:text-gray-300 mx-6">
-                  {activeActionId === 'open_insights'
-                    ? `Insights are filtered to the ${formatStageLabel(activeActionPayload.stage)} stage for this tracker item.`
-                    : `This panel opened from the ${formatStageLabel(activeActionPayload.stage)} stage and keeps the current job, journey, and entitlement context together.`}
-                </div>
-              )}
-
-              <div className="flex-1 overflow-y-auto p-6">
-                {detailsModalView === 'details' ? (
-                  <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
-                    {/* Left Column */}
-                    <div className="space-y-5">
-                      {/* Core Details */}
-                      <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d]">
-                        <h4 className="mb-4 text-body font-semibold text-gray-900 dark:text-white">Core Details</h4>
-                        <div className="space-y-4">
-                          <div className="flex items-start gap-3">
-                            <Building2 className="mt-0.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
-                            <div>
-                              <p className="text-small uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Company</p>
-                              <p className="text-small font-medium text-gray-900 dark:text-white">{job.company}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-start gap-3">
-                            <MapPin className="mt-0.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
-                            <div>
-                              <p className="text-small uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Location</p>
-                              <p className="text-small font-medium text-gray-900 dark:text-white">{job.location || fallbacks.defaultLocation}</p>
-                              {job.extractedJd?.location?.location_type?.value && (
-                                <span className="inline-block mt-1 px-2 py-0.5 text-small bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 rounded capitalize">
-                                  Type: {job.extractedJd.location.location_type.value}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex items-start gap-3">
-                            <Briefcase className="mt-0.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
-                            <div>
-                              <p className="text-small uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Type</p>
-                              <p className="text-small font-medium capitalize text-gray-900 dark:text-white">{job.jobType || job.type || 'Not specified'}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-start gap-3">
-                            <DollarSign className="mt-0.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
-                            <div>
-                              <p className="text-small uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Salary</p>
-                              <p className="text-small font-medium text-gray-900 dark:text-white">
-                                {formatJobSalary(job.salary, fallbacks.defaultSalary)}
-                                {job.extractedJd?.compensation?.salary_inferred && (
-                                  <span className="inline-block ml-2 px-1.5 py-0.5 text-[10px] bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 rounded">
-                                    Estimated
-                                  </span>
-                                )}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-start gap-3">
-                            <Calendar className="mt-0.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
-                            <div>
-                              <p className="text-small uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Deadline</p>
-                              <p className="text-small font-medium text-gray-900 dark:text-white">{formatJobDate(job.deadline, 'No deadline set')}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-start gap-3">
-                            <ExternalLink className="mt-0.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
-                            <div className="min-w-0">
-                              <p className="text-small uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Job URL</p>
-                              {job.jobUrl ? (
-                                <a href={job.jobUrl} target="_blank" rel="noopener noreferrer" className="truncate text-small font-medium text-emerald-600 hover:underline dark:text-[#80FF00]">
-                                  {job.jobUrl}
-                                </a>
-                              ) : (
-                                <p className="text-small font-medium text-gray-900 dark:text-white">No URL provided</p>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Contact Details */}
-                      {job.contactDetails && (job.contactDetails.name || job.contactDetails.email || job.contactDetails.phone || job.contactDetails.role) && (
-                        <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d]">
-                          <h4 className="mb-4 text-body font-semibold text-gray-900 dark:text-white">Contact Details</h4>
-                          <div className="space-y-4">
-                            {job.contactDetails.name && <p className="text-small text-gray-700 dark:text-gray-300"><span className="font-medium text-gray-900 dark:text-white">Name:</span> {job.contactDetails.name}</p>}
-                            {job.contactDetails.role && <p className="text-small text-gray-700 dark:text-gray-300"><span className="font-medium text-gray-900 dark:text-white">Role:</span> {job.contactDetails.role}</p>}
-                            {job.contactDetails.email && <p className="text-small text-gray-700 dark:text-gray-300"><span className="font-medium text-gray-900 dark:text-white">Email:</span> {job.contactDetails.email}</p>}
-                            {job.contactDetails.phone && <p className="text-small text-gray-700 dark:text-gray-300"><span className="font-medium text-gray-900 dark:text-white">Phone:</span> {job.contactDetails.phone}</p>}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Requirements */}
-                      {job.extractedJd?.role_content && (
-                        <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d] space-y-4">
-                          <h4 className="text-body font-semibold text-gray-900 dark:text-white">Job Requirements</h4>
-                          
-                          {/* Must Have */}
-                          {job.extractedJd.role_content.requirements_must_have?.length > 0 && (
-                            <div>
-                              <h5 className="text-small font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Must Have</h5>
-                              <ul className="space-y-1.5 text-small text-gray-700 dark:text-gray-300">
-                                {job.extractedJd.role_content.requirements_must_have.map((req: any, i: number) => (
-                                  <li key={i} className="flex items-start gap-2">
-                                    <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-red-500 flex-shrink-0" />
-                                    <span>{req.text} {req.years_required ? `(${req.years_required} yrs)` : ''}</span>
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-
-                          {/* Nice to Have */}
-                          {job.extractedJd.role_content.requirements_nice_to_have?.length > 0 && (
-                            <div>
-                              <h5 className="text-small font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Nice to Have</h5>
-                              <ul className="space-y-1.5 text-small text-gray-700 dark:text-gray-300">
-                                {job.extractedJd.role_content.requirements_nice_to_have.map((req: any, i: number) => (
-                                  <li key={i} className="flex items-start gap-2">
-                                    <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-lime-500 flex-shrink-0" />
-                                    <span>{req.text} {req.years_required ? `(${req.years_required} yrs)` : ''}</span>
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-
-                          {/* Inferred Requirements */}
-                          {job.extractedJd.role_content.requirements_inferred?.length > 0 && (
-                            <div>
-                              <h5 className="text-small font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Inferred (AI Identified)</h5>
-                              <ul className="space-y-2 text-small text-gray-700 dark:text-gray-300">
-                                {job.extractedJd.role_content.requirements_inferred.map((req: any, i: number) => (
-                                  <li key={i} className="flex flex-col bg-white/50 dark:bg-white/5 p-2 rounded-lg border border-gray-100 dark:border-white/5">
-                                    <span className="font-medium text-gray-900 dark:text-white flex items-center gap-1.5">
-                                      <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
-                                      {req.text}
-                                    </span>
-                                    {req.inference_reason && (
-                                      <span className="text-small text-gray-500 dark:text-gray-400 mt-0.5 italic">Reason: {req.inference_reason}</span>
-                                    )}
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Skills & Tech Stack */}
-                      {job.extractedJd?.skills && (
-                        <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d] space-y-4">
-                          <h4 className="text-body font-semibold text-gray-900 dark:text-white">Skills & Tech Stack</h4>
-                          
-                          {/* Technical Skills */}
-                          {job.extractedJd.skills.skills_technical?.length > 0 && (
-                            <div>
-                              <h5 className="text-small font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Technical Skills</h5>
-                              <div className="flex flex-wrap gap-1.5">
-                                {job.extractedJd.skills.skills_technical.map((item: any, i: number) => (
-                                  <span key={i} className={`px-2.5 py-1 text-small font-medium rounded-full ${
-                                    item.importance === 'critical' 
-                                      ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 border border-red-200/50' 
-                                      : item.importance === 'strong'
-                                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
-                                        : 'bg-gray-100 text-gray-800 dark:bg-white/10 dark:text-gray-300'
-                                  }`}>
-                                    {item.skill}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Tools & Platforms */}
-                          {job.extractedJd.skills.tools_and_platforms?.length > 0 && (
-                            <div>
-                              <h5 className="text-small font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Tools & Platforms</h5>
-                              <div className="flex flex-wrap gap-1.5">
-                                {job.extractedJd.skills.tools_and_platforms.map((item: any, i: number) => (
-                                  <span key={i} className="px-2.5 py-1 text-small font-medium bg-lime-100 text-lime-800 dark:bg-[#80FF00]/10 dark:text-[#80FF00] rounded-full border border-lime-200/20">
-                                    {item.tool}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Soft Skills */}
-                          {job.extractedJd.skills.skills_soft?.length > 0 && (
-                            <div>
-                              <h5 className="text-small font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Soft Skills</h5>
-                              <div className="flex flex-wrap gap-1.5">
-                                {job.extractedJd.skills.skills_soft.map((item: any, i: number) => (
-                                  <span key={i} className="px-2.5 py-1 text-small font-medium bg-gray-100 text-gray-800 dark:bg-white/10 dark:text-gray-300 rounded-full">
-                                    {item.skill}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Right Column */}
-                    <div className="space-y-5">
-                      {/* Job Description */}
-                      <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d]">
-                        <h4 className="mb-4 text-body font-semibold text-gray-900 dark:text-white">Job Description</h4>
-                        <div className="max-h-[300px] overflow-y-auto whitespace-pre-wrap text-small leading-6 text-gray-700 dark:text-gray-300 pr-2">
-                          {job.jobDescription || fallbacks.defaultJobDescription}
-                        </div>
-                      </div>
-
-                      {/* Notes */}
-                      <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d]">
-                        <h4 className="mb-4 text-body font-semibold text-gray-900 dark:text-white">Notes</h4>
-                        <div className="whitespace-pre-wrap text-small leading-6 text-gray-700 dark:text-gray-300">
-                          {job.notes || 'No notes added yet.'}
-                        </div>
-                      </div>
-
-                      {/* Team & Culture */}
-                      {job.extractedJd?.team_and_culture && (
-                        <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d] space-y-4">
-                          <h4 className="text-body font-semibold text-gray-900 dark:text-white">Team & Culture</h4>
-                          
-                          {/* Structure */}
-                          {job.extractedJd.team_and_culture.team_structure && (
-                            <div className="grid grid-cols-2 gap-3 text-small border-b border-gray-100 dark:border-white/5 pb-3">
-                              {job.extractedJd.team_and_culture.team_structure.department && (
-                                <div>
-                                  <span className="text-small text-gray-500 dark:text-gray-400 block">Department</span>
-                                  <span className="font-medium text-gray-900 dark:text-white">{job.extractedJd.team_and_culture.team_structure.department}</span>
-                                </div>
-                              )}
-                              {job.extractedJd.team_and_culture.team_structure.reports_to && (
-                                <div>
-                                  <span className="text-small text-gray-500 dark:text-gray-400 block">Reports To</span>
-                                  <span className="font-medium text-gray-900 dark:text-white">{job.extractedJd.team_and_culture.team_structure.reports_to}</span>
-                                </div>
-                              )}
-                              {job.extractedJd.team_and_culture.team_structure.team_size && (
-                                <div>
-                                  <span className="text-small text-gray-500 dark:text-gray-400 block">Team Size</span>
-                                  <span className="font-medium text-gray-900 dark:text-white">{job.extractedJd.team_and_culture.team_structure.team_size}</span>
-                                </div>
-                              )}
-                            </div>
-                          )}
-
-                          {/* Company Values */}
-                          {job.extractedJd.team_and_culture.company_values?.length > 0 && (
-                            <div>
-                              <h5 className="text-small font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Company Values</h5>
-                              <div className="space-y-2 text-small">
-                                {job.extractedJd.team_and_culture.company_values.map((val: any, i: number) => (
-                                  <div key={i} className="flex flex-col bg-white/50 dark:bg-white/5 p-2 rounded-lg border border-gray-100 dark:border-white/5">
-                                    <span className="font-semibold text-gray-900 dark:text-white">{val.value}</span>
-                                    {val.evidence && <span className="text-small text-gray-500 dark:text-gray-400 mt-0.5">{val.evidence}</span>}
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
-                    {/* Left Column */}
-                    <div className="space-y-5">
-                      {/* Application Snapshot */}
-                      <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d]">
-                        <h4 className="mb-4 text-body font-semibold text-gray-900 dark:text-white">Application Snapshot</h4>
-                        <div className="space-y-4">
-                          <div className="flex items-center justify-between">
-                            <span className="text-small text-gray-600 dark:text-gray-300">Status</span>
-                            <span className="text-small font-semibold capitalize text-gray-900 dark:text-white">{job.status}</span>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-small text-gray-600 dark:text-gray-300">Success Probability</span>
-                            <span className="text-small font-semibold text-gray-900 dark:text-white">{successProb}%</span>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-small text-gray-600 dark:text-gray-300">Priority</span>
-                            <span className="text-small font-semibold capitalize text-gray-900 dark:text-white">{job.priority || 'medium'}</span>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-small text-gray-600 dark:text-gray-300">Sponsorship</span>
-                            <span className="text-small font-semibold text-gray-900 dark:text-white">
-                              {job.sponsorship === 'yes' ? 'Provided' : job.sponsorship === 'no' ? 'Not provided' : 'Unknown'}
-                            </span>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-small text-gray-600 dark:text-gray-300">Match Score</span>
-                            <span className="text-small font-semibold text-emerald-600 dark:text-emerald-400">{insightsLoading ? '...' : `${keywordMatchScore}%`}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* JD Quality & Flags */}
-                      {job.extractedJd?.jd_quality && (
-                        <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d] space-y-4">
-                          <div className="flex items-center justify-between">
-                            <h4 className="text-body font-semibold text-gray-900 dark:text-white">JD Quality Audit</h4>
-                            <div className="flex items-center gap-2">
-                              <span className="text-small text-gray-500 dark:text-gray-400 capitalize">Grade: {job.extractedJd.jd_quality.jd_quality_grade}</span>
-                              <span className={`px-2 py-0.5 rounded text-small font-bold ${
-                                job.extractedJd.jd_quality.jd_quality_score >= 70
-                                  ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                                  : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
-                              }`}>
-                                {job.extractedJd.jd_quality.jd_quality_score}/100
-                              </span>
-                            </div>
-                          </div>
-
-                          {/* Red Flags */}
-                          {job.extractedJd.jd_quality.jd_red_flags?.length > 0 && (
-                            <div className="space-y-2">
-                              <span className="text-small font-semibold text-red-600 dark:text-red-400 block uppercase tracking-wider">Concerns & Red Flags ({job.extractedJd.jd_quality.jd_red_flags.length})</span>
-                              <div className="space-y-2">
-                                {job.extractedJd.jd_quality.jd_red_flags.map((flag: any, i: number) => (
-                                  <div key={i} className="flex gap-2 p-2 bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 rounded-lg text-small text-gray-700 dark:text-gray-300">
-                                    <AlertCircle className="h-4 w-4 text-red-500 flex-shrink-0 mt-0.5" />
-                                    <div>
-                                      <span className="font-semibold block text-red-800 dark:text-red-400">{flag.flag}</span>
-                                      <span className="text-small text-gray-600 dark:text-gray-400 mt-0.5 block">{flag.detail}</span>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Positive Signals */}
-                          {job.extractedJd.jd_quality.jd_positive_signals?.length > 0 && (
-                            <div className="space-y-2">
-                              <span className="text-small font-semibold text-emerald-600 dark:text-emerald-400 block uppercase tracking-wider">Positive Signals</span>
-                              <div className="space-y-2">
-                                {job.extractedJd.jd_quality.jd_positive_signals.map((sig: any, i: number) => (
-                                  <div key={i} className="flex gap-2 p-2 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 rounded-lg text-small text-gray-700 dark:text-gray-300">
-                                    <Sparkles className="h-4 w-4 text-emerald-500 flex-shrink-0 mt-0.5" />
-                                    <div>
-                                      <span className="font-semibold block text-emerald-800 dark:text-emerald-400">{sig.signal}</span>
-                                      {sig.detail && <span className="text-small text-gray-600 dark:text-gray-400 mt-0.5 block">{sig.detail}</span>}
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Right Column */}
-                    <div className="space-y-5">
-                      {/* Deeper Insights */}
-                      <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d]">
-                        <h4 className="mb-4 text-body font-semibold text-gray-900 dark:text-white">Deeper Insights</h4>
-                        <div className="space-y-4">
-                          <div className="flex items-center justify-between">
-                            <span className="text-small text-gray-600 dark:text-gray-300">Hiring Trend</span>
-                            <span className="text-small font-semibold text-gray-900 dark:text-white">{insightsLoading ? '...' : insights?.companyHiringTrend || 'Unknown'}</span>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-small text-gray-600 dark:text-gray-300">Skills Gap</span>
-                            <span className="text-right text-small font-semibold text-gray-900 dark:text-white">{insightsLoading ? '...' : insights?.skillsGap || 'Unable to analyze'}</span>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-small text-gray-600 dark:text-gray-300">Market Competitiveness</span>
-                            <span className={`text-right text-small font-semibold ${
-                              salaryComp.comparison === 'above'
-                                ? 'text-green-600 dark:text-green-400'
-                                : salaryComp.comparison === 'below'
-                                  ? 'text-red-600 dark:text-red-400'
-                                  : 'text-gray-900 dark:text-white'
-                            }`}>
-                              {salaryComp.comparison !== 'unknown' ? salaryComp.text : (insightsLoading ? '...' : insights?.marketCompetitiveness || 'Unknown')}
-                            </span>
-                          </div>
-                          {nudge && (
-                            <div className="rounded-xl bg-blue-50 px-4 py-3 text-small leading-6 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300">
-                              <span className="font-semibold">Smart action:</span> {nudge}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* ATS Keywords Section */}
-                      {job.extractedJd?.ats_keywords && (
-                        <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d] space-y-4">
-                          <h4 className="text-body font-semibold text-gray-900 dark:text-white">ATS Target Keywords</h4>
-                          
-                          {/* Primary Keywords */}
-                          {job.extractedJd.ats_keywords.primary?.length > 0 && (
-                            <div>
-                              <h5 className="text-small font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Primary Keywords (High Importance)</h5>
-                              <div className="flex flex-wrap gap-1.5">
-                                {job.extractedJd.ats_keywords.primary.map((kw: any, i: number) => (
-                                  <span key={i} className="px-2.5 py-1 text-small font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400 rounded-lg flex items-center gap-1">
-                                    {kw.keyword}
-                                    {kw.frequency > 0 && <span className="opacity-60 font-mono text-[9px]">x{kw.frequency}</span>}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Secondary Keywords */}
-                          {job.extractedJd.ats_keywords.secondary?.length > 0 && (
-                            <div>
-                              <h5 className="text-small font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Secondary Keywords</h5>
-                              <div className="flex flex-wrap gap-1.5">
-                                {job.extractedJd.ats_keywords.secondary.map((kw: any, i: number) => (
-                                  <span key={i} className="px-2.5 py-1 text-small font-medium bg-gray-100 text-gray-800 dark:bg-white/10 dark:text-gray-300 rounded-lg">
-                                    {kw.keyword}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Interview Prep & Questions */}
-                      {job.extractedJd?.tracker_enrichment && (
-                        <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d] space-y-4">
-                          <h4 className="text-body font-semibold text-gray-900 dark:text-white">Interview Prep Planner</h4>
-                          
-                          {/* Prep Topics */}
-                          {job.extractedJd.tracker_enrichment.interview_prep_topics?.length > 0 && (
-                            <div className="space-y-2">
-                              <span className="text-small font-semibold text-gray-500 dark:text-gray-400 block uppercase tracking-wider">Top Topics to Prepare</span>
-                              <div className="space-y-2">
-                                {job.extractedJd.tracker_enrichment.interview_prep_topics.map((item: any, i: number) => (
-                                  <div key={i} className="flex flex-col bg-white/50 dark:bg-white/5 p-2 rounded-lg border border-gray-100 dark:border-white/5 text-small">
-                                    <span className="font-semibold text-gray-900 dark:text-white flex items-center justify-between">
-                                      {item.topic}
-                                      {item.prep_type && (
-                                        <span className="px-1.5 py-0.5 text-[10px] bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 rounded uppercase">
-                                          {item.prep_type}
-                                        </span>
-                                      )}
-                                    </span>
-                                    {item.why_likely && <span className="text-small text-gray-500 dark:text-gray-400 mt-1">{item.why_likely}</span>}
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Questions to Ask */}
-                          {job.extractedJd.tracker_enrichment.questions_to_ask_interviewer?.length > 0 && (
-                            <div className="space-y-2">
-                              <span className="text-small font-semibold text-gray-500 dark:text-gray-400 block uppercase tracking-wider">Suggested Questions for the Interviewer</span>
-                              <div className="space-y-2 text-small text-gray-700 dark:text-gray-300">
-                                {job.extractedJd.tracker_enrichment.questions_to_ask_interviewer.map((item: any, i: number) => (
-                                  <div key={i} className="p-2 bg-white/50 dark:bg-white/5 rounded-lg border border-gray-100 dark:border-white/5">
-                                    <span className="font-medium text-gray-900 dark:text-white block">Q: {item.question}</span>
-                                    {item.why_ask && <span className="text-small text-gray-500 dark:text-gray-400 mt-1 block">Context: {item.why_ask}</span>}
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          </React.Fragment>
         )}
 
         {/* EditJobSidebar - Layered on top */}
@@ -2877,12 +3665,12 @@ ${userName}`
           jobData={job}
           template={previewTemplate}
         />
-        <CommunicationSidebar
-          isOpen={showCommsSidebar}
-          onClose={() => setShowCommsSidebar(false)}
-          job={job}
-          onRefreshJob={() => {
+        <EmailConnectModal
+          isOpen={isEmailConnectModalOpen}
+          onClose={() => setIsEmailConnectModalOpen(false)}
+          onConnected={() => {
             fetchEmailStatus();
+            fetchEmails();
             if (onRefresh) onRefresh();
           }}
         />

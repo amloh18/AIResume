@@ -312,8 +312,8 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
             setAnalytics(result.data);
           }
         } else {
-          console.error('Analytics response is not JSON. Content-Type:', contentType);
-          throw new Error('Invalid response format');
+          console.warn('Analytics response is not JSON. Content-Type:', contentType);
+          setAnalytics(null);
         }
       } catch (err: any) {
         console.error('❌ DashboardData - Error fetching analytics:', err);
@@ -348,8 +348,8 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
             setProfileStrength(result.data.strength);
           }
         } else {
-          console.error('Profile strength response is not JSON. Content-Type:', contentType);
-          throw new Error('Invalid response format');
+          console.warn('Profile strength response is not JSON. Content-Type:', contentType);
+          setProfileStrength(0);
         }
       } catch (err: any) {
         console.error('❌ DashboardData - Error fetching profile strength:', err);
