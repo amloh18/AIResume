@@ -221,6 +221,7 @@ const CardNav = ({
                                   src={link.featured.image} 
                                   alt={link.featured.title}
                                   fill
+                                  sizes="(max-width: 768px) 100vw, 400px"
                                   className="object-cover"
                                 />
                                 {link.featured.badge && (

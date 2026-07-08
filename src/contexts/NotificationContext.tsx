@@ -251,13 +251,13 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
 
   // Periodic trigger checks (Stale jobs, engagement) - Run once on mount/auth
   useEffect(() => {
-    if (isAuthenticated && !hasFetchedRef.current) {
+    if (isAuthenticated && !isPublicRoute && !hasFetchedRef.current) {
       // Run checks in background
       fetch('/api/notifications/check-triggers', { method: 'POST' }).catch(err =>
         console.error('Failed to run notification checks:', err)
       );
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, isPublicRoute]);
 
   // Refresh notifications
   const refreshNotifications = useCallback(async () => {

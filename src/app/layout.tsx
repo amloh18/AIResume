@@ -9,6 +9,7 @@ import GlobalCommandBar from '@/components/ui/GlobalCommandBar'
 import { getServerSession } from 'next-auth'
 import { authConfig } from '@/lib/auth-config'
 import { geistFont } from '@/lib/fonts'
+import { headers } from 'next/headers'
 
 // Allow Next.js to determine rendering strategy (SSG vs SSR) automatically
 export const dynamic = 'auto'
@@ -159,8 +160,14 @@ export default async function RootLayout({
   children: React.ReactNode
 }) {
   // Fetch session on the server to prevent auth race conditions and flashes
-  // This initializes the ClientProviders (SessionProvider) with the correct state immediately
-  const session = await getServerSession(authConfig);
+  // This initializes the ClientProviders (SessionProvider) with the correct state immediately.
+  // Skip this heavy session lookup for public routes so the landing page does not
+  // block SSR on JWT/DB work when no session is needed.
+  const headersList = await headers();
+  const pathname = headersList.get('x-middleware-path') || headersList.get('referer') || '/';
+  const isPublicRoute = pathname === '/' || pathname.startsWith('/sign-in') || pathname.startsWith('/sign-up') || pathname.startsWith('/onboarding');
+
+  const session = isPublicRoute ? null : await getServerSession(authConfig);
 
   return (
     <html lang="en">

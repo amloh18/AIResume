@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { usePathname } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 
 // Dynamically import analytics components only on client side after page is interactive
 const Analytics = dynamic(() => import('@vercel/analytics/next').then(mod => ({ default: mod.Analytics })), {
@@ -15,11 +16,12 @@ const SpeedInsights = dynamic(() => import('@vercel/speed-insights/next').then(m
 
 /**
  * DeferredAnalytics Component
- * Loads analytics scripts only after the page is interactive to improve initial load performance
+ * Loads analytics scripts only after client side after page is interactive to improve initial load performance
  */
 export default function DeferredAnalytics() {
   const [shouldLoad, setShouldLoad] = useState(false);
   const pathname = usePathname();
+  const { status } = useSession();
 
   useEffect(() => {
     // Wait for page to be interactive before loading analytics
@@ -36,6 +38,7 @@ export default function DeferredAnalytics() {
 
   useEffect(() => {
     if (!shouldLoad) return;
+    if (status !== 'authenticated') return;
 
     // Track page views in the local database
     const trackPageView = async () => {
@@ -57,13 +60,13 @@ export default function DeferredAnalytics() {
             }
           })
         });
-      } catch (err) {
+      } catch {
         // Fail silently
       }
     };
 
     trackPageView();
-  }, [pathname, shouldLoad]);
+  }, [pathname, shouldLoad, status]);
 
   if (!shouldLoad) {
     return null;
@@ -76,4 +79,3 @@ export default function DeferredAnalytics() {
     </>
   );
 }
-

@@ -232,6 +232,7 @@ const HowItWorks = () => {
                       src={feature.image}
                       alt={feature.title}
                       fill
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                       className="object-contain object-center"
                       quality={85}
                       priority={index === 0}
