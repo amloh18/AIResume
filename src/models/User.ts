@@ -228,6 +228,14 @@ export interface IUser extends Document {
     completed_stages?: string[];
     onboarding_version?: number;
     primary_cv_id?: string | mongoose.Types.ObjectId;
+
+    // Editor feature discovery checklist
+    editor_checklist?: {
+      layout?: { completed: boolean; completedAt?: string };
+      design?: { completed: boolean; completedAt?: string };
+      aiChat?: { completed: boolean; completedAt?: string };
+      review?: { completed: boolean; completedAt?: string };
+    };
   };
 
   createdAt: Date;
@@ -760,7 +768,27 @@ const userSchema = new Schema<IUser>({
     current_stage: { type: String },
     completed_stages: { type: [String], default: [] },
     onboarding_version: { type: Number, default: 1 },
-    primary_cv_id: { type: Schema.Types.ObjectId, ref: 'CV' }
+    primary_cv_id: { type: Schema.Types.ObjectId, ref: 'CV' },
+
+    // Editor feature discovery checklist
+    editor_checklist: {
+      layout: {
+        completed: { type: Boolean, default: false },
+        completedAt: { type: String }
+      },
+      design: {
+        completed: { type: Boolean, default: false },
+        completedAt: { type: String }
+      },
+      aiChat: {
+        completed: { type: Boolean, default: false },
+        completedAt: { type: String }
+      },
+      review: {
+        completed: { type: Boolean, default: false },
+        completedAt: { type: String }
+      }
+    }
   }
 }, {
   timestamps: true,

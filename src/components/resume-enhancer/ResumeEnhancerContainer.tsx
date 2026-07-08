@@ -412,6 +412,16 @@ export default function ResumeEnhancerContainer({
 
   // Track if we've attempted to fetch skill gap analysis to prevent loops
   const skillGapFetchAttemptedRef = useRef<string | null>(null);
+  // Track previous step to detect review step entry
+  const prevStepRef = useRef<number | null>(null);
+
+  // Fire review checklist event when user enters step 5
+  useEffect(() => {
+    if (state.currentStep === 5 && prevStepRef.current !== 5) {
+      window.dispatchEvent(new CustomEvent('checklist:review-completed'));
+    }
+    prevStepRef.current = state.currentStep;
+  }, [state.currentStep]);
   const skillGapErrorRef = useRef<string | null>(null); // Track which job had the error
   const skillGapFetchingRef = useRef<boolean>(false); // Track if currently fetching
 
@@ -2272,7 +2282,6 @@ export default function ResumeEnhancerContainer({
   const handleStep4Complete = () => {
     setCompletedSteps([...completedSteps, 4]);
 
-    // Guest mode: Save draft before moving to Step 5
     if (isGuestMode) {
       guestCVService.saveGuestDraft({
         cvData: state.cvData,
@@ -2902,10 +2911,8 @@ export default function ResumeEnhancerContainer({
   };
 
   const handleStepNavigation = async (targetStep: number, openOverlay: boolean) => {
-    // Save CV first
     await handleSmartSave();
     
-    // Perform navigation
     setTemplateOverlayOpen(openOverlay);
     if (targetStep === 3) {
       goToStepSafely(3);
