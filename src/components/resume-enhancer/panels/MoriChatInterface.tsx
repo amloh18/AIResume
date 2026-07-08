@@ -240,6 +240,8 @@ const MoriChatInterface: React.FC = () => {
         fetchHistory(); // Refresh history to show new chat
       }
 
+      window.dispatchEvent(new CustomEvent('checklist:ai-completed'));
+
       if (result.updatedCV) {
         const oldCV = state.cvData;
         const newCV = result.updatedCV;

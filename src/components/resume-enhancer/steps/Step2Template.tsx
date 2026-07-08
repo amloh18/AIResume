@@ -50,21 +50,23 @@ export default function Step2Template({ onComplete }: Step2TemplateProps) {
 
   const handleTemplateSelect = (template: any) => {
     const scoreCap = getTemplateATSScoreCap(template);
-    
+
     if (isJourneyCV && scoreCap < 80) {
       setPendingTemplate(template);
       setShowATSWarning(true);
       return;
     }
-    
+
     setTemplate(template);
     setAtsScoreCap(scoreCap);
     dispatch({ type: 'SET_ATS_SCORE_CAP', payload: scoreCap });
     dispatch({ type: 'SET_SELECTED_TEMPLATE', payload: template });
-    
+
     setTimeout(() => {
       onComplete();
     }, 500);
+
+    window.dispatchEvent(new CustomEvent('checklist:layout-completed'));
   };
 
   const confirmLowATSTemplate = () => {
@@ -80,6 +82,8 @@ export default function Step2Template({ onComplete }: Step2TemplateProps) {
       setTimeout(() => {
         onComplete();
       }, 500);
+
+      window.dispatchEvent(new CustomEvent('checklist:layout-completed'));
     }
   };
 

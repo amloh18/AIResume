@@ -70,7 +70,7 @@ export default function LandingPageContent() {
       sessionStorage.removeItem('logout-in-progress');
       const url = new URL(window.location.href);
       url.searchParams.delete('_t');
-      window.history.replaceState({}, {}, url.toString());
+      window.history.replaceState({} as any, '', url.toString());
     }
 
     // Stagger below-the-fold sections to smooth first paint and chunk load waterfall.

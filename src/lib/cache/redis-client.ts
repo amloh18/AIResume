@@ -150,7 +150,8 @@ class RedisClientManager {
       console.warn('⚠️ Redis not available, using in-memory cache fallback:', error);
       this.client = null;
       this.isConnecting = false;
-      this.connectionPromise = null; // Reset promise so it can retry later if needed
+      // Do NOT reset connectionPromise here; keep the failed promise so callers
+      // do not immediately start another TCP connect attempt on the next request.
       return null;
     }
   }

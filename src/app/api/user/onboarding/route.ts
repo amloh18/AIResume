@@ -79,6 +79,35 @@ export async function PATCH(request: NextRequest) {
     if (onboardingData.activation_route) updateFields['onboarding.activation_route'] = onboardingData.activation_route;
     if (onboardingData.dashboard_layout_type) updateFields['onboarding.dashboard_layout_type'] = onboardingData.dashboard_layout_type;
 
+    // Support nested editor_checklist updates
+    if (onboardingData.editor_checklist) {
+      const checklist = onboardingData.editor_checklist;
+      if (checklist.layout !== undefined) {
+        updateFields['onboarding.editor_checklist.layout'] = {
+          completed: checklist.layout.completed,
+          completedAt: checklist.layout.completedAt
+        };
+      }
+      if (checklist.design !== undefined) {
+        updateFields['onboarding.editor_checklist.design'] = {
+          completed: checklist.design.completed,
+          completedAt: checklist.design.completedAt
+        };
+      }
+      if (checklist.aiChat !== undefined) {
+        updateFields['onboarding.editor_checklist.aiChat'] = {
+          completed: checklist.aiChat.completed,
+          completedAt: checklist.aiChat.completedAt
+        };
+      }
+      if (checklist.review !== undefined) {
+        updateFields['onboarding.editor_checklist.review'] = {
+          completed: checklist.review.completed,
+          completedAt: checklist.review.completedAt
+        };
+      }
+    }
+
     if (body.userLifecycleState) updateFields['userLifecycleState'] = body.userLifecycleState;
     if (body.hasSeenWelcome !== undefined) updateFields['settings.hasSeenWelcome'] = body.hasSeenWelcome;
 

@@ -1,115 +1,156 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import usageLimitsService from '@/lib/services/usageLimitsService';
-import creditService from '@/lib/services/creditService';
+import usageLimitsService from "@/lib/services/usageLimitsService";
 import { connectToDatabase } from '@/lib/database';
 import User from '@/models/User';
 import { ErrorCode, createErrorNextResponse } from '@/lib/utils/error-codes';
-import { getAuthenticatedUser } from '@/lib/auth-helpers';
+
+const USER_PROJECTION = {
+  currentPlanKey: 1,
+  subscription: 1,
+  usage: 1,
+  credits: 1,
+  updatedAt: 1,
+};
+
+const UNLIMITED_PLAN_KEYS = new Set([
+  'focused_monthly',
+  'focused_yearly',
+  'smart_quarterly',
+  'smart_yearly',
+  'pro_monthly',
+  'pro_quarterly',
+  'pro_yearly',
+  'pro_lifetime',
+  'pro',
+  'starter_yearly',
+]);
 
 export async function GET(request: NextRequest) {
-  console.log('🔍 GET /api/user/usage-limits - Request started');
   try {
-    // Use getAuthenticatedUser for consistent user ID resolution
-    // This does a database lookup by email to get the canonical _id
-    const authResult = await getAuthenticatedUser();
-    console.log('🔍 usage-limits - Auth check result:', !!authResult);
-
-    if (!authResult) {
-      console.warn('⚠️ usage-limits - Unauthorized access attempt');
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
       return createErrorNextResponse(
         ErrorCode.AUTH_REQUIRED,
         'Authentication required. Please sign in to access usage limits.'
       );
     }
 
-    const userId = authResult.userId;
-    console.log('🔍 usage-limits - Fetching for user:', userId);
+    await connectToDatabase();
 
-    if (!userId) {
-      return createErrorNextResponse(
-        ErrorCode.MISSING_REQUIRED_FIELD,
-        'User ID not found in session. Please sign in again.'
-      );
-    }
-
-    // Support conditional requests (If-Modified-Since)
-    const ifModifiedSince = request.headers.get('if-modified-since');
-    if (ifModifiedSince) {
-      try {
-        const modifiedSinceDate = new Date(ifModifiedSince);
-        await connectToDatabase();
-        const user = await User.findById(userId).select('updatedAt');
-
-        if (user && user.updatedAt) {
-          // If user hasn't been updated since the provided date, return 304 Not Modified
-          if (user.updatedAt <= modifiedSinceDate) {
-            return new NextResponse(null, { status: 304 });
-          }
-        }
-      } catch (dateError) {
-        // Invalid date, continue with normal request
-        console.warn('Invalid If-Modified-Since header:', dateError);
-      }
-    }
-
-    // Get user usage information
-    const usage = await usageLimitsService.getUserUsage(userId);
-    if (!usage) {
+    const userId = session.user.id;
+    const user = await User.findById(userId).select(USER_PROJECTION);
+    if (!user) {
       return createErrorNextResponse(
         ErrorCode.DB_RECORD_NOT_FOUND,
         'User not found. Please ensure you are signed in with a valid account.'
       );
     }
 
-    // Get time-based access information
-    const timeAccess = await usageLimitsService.checkTimeBasedAccess(userId);
+    const planKey = user.currentPlanKey || 'free';
 
-    // Get user subscription for additional info
-    await connectToDatabase();
-    const user = await User.findById(userId);
-    const subscription = user?.subscription;
+    // Support conditional requests (If-Modified-Since)
+    const ifModifiedSince = request.headers.get('if-modified-since');
+    if (ifModifiedSince) {
+      try {
+        const modifiedSinceDate = new Date(ifModifiedSince);
+        if (user.updatedAt && user.updatedAt <= modifiedSinceDate) {
+          return new NextResponse(null, { status: 304 });
+        }
+      } catch {
+        // ignore invalid date
+      }
+    }
 
-    // Count actual jobs from database for accurate metrics
-    const { JobApplication } = await import('@/models');
-    const actualJobCount = await JobApplication.countDocuments({
-      userId: userId,
-      status: 'created'  // Only count active created jobs
-    });
+    // Derive usage stats directly from the cached user document.
+    const planLimits = {
+      maxCVs: planKey === 'free' ? 1 : -1,
+      maxExports: planKey === 'free' ? 5 : -1,
+      storageLimit: planKey === 'free' ? 50 : -1,
+    };
 
-    // Get credit information (include usage for all plans)
-    let creditInfo = null;
-    const planKey = user?.currentPlanKey || 'free';
-    const creditStatus = await creditService.getCreditStatus(userId);
-    if (creditStatus) {
-      // Always call checkCreditAvailability for accurate limit info
-      // For unlimited plans this returns { limit: -1, creditsRemaining: -1 }
-      const creditCheck = await creditService.checkCreditAvailability(userId, 'job_create');
-      const remaining = creditCheck.creditsRemaining;
-      const limit = creditCheck.limit;
+    const usage = {
+      cvJourneyCount: user.usage?.cvJourneyCount ?? 0,
+      cvCreatedCount: user.usage?.cvCreatedCount ?? 0,
+      exportCount: user.usage?.exportCount ?? 0,
+      atsCheckCount: user.usage?.atsCheckCount ?? 0,
+      planLimits,
+    };
 
-      // Use actual job count from DB instead of historical counter
-      const totalCreatedJobs = actualJobCount;
-      const used = limit === -1
-        ? totalCreatedJobs
-        : Math.max(0, limit - (remaining === -1 ? 0 : remaining));
+    // Time-based access: inline the same logic as checkTimeBasedAccess but
+    // without another DB fetch because we already have the user document.
+    const subscription = user.subscription;
+    let timeAccess: any = { hasAccess: true };
 
-      // Get AI credits availability
-      const aiCreditCheck = await creditService.checkCreditAvailability(userId, 'ai_generation');
-      const aiCreditsRemaining = aiCreditCheck.creditsRemaining;
-      const aiCreditsLimit = aiCreditCheck.limit;
+    if (planKey === 'free') {
+      timeAccess = { hasAccess: true, subscription, reason: 'Free tier access' };
+    } else if (!subscription || subscription.status === 'cancelled' || subscription.status === 'inactive') {
+      timeAccess = { hasAccess: true, subscription, reason: 'No active subscription, using free tier access' };
+    } else if (planKey === 'pro_lifetime') {
+      timeAccess = { hasAccess: true, subscription, reason: 'Lifetime access' };
+    } else if ((planKey === 'pro_quarterly' || planKey === 'pro_lifetime') && subscription.accessExpiresAt) {
+      const expiresAt = new Date(subscription.accessExpiresAt);
+      const daysRemaining = Math.max(0, (expiresAt.getTime() - Date.now()) / 86400000);
+
+      if (new Date().getTime() > new Date(expiresAt).getTime()) {
+        const gracePeriodEndsAt = new Date(expiresAt.getTime() + 3 * 24 * 60 * 60 * 1000);
+        timeAccess = new Date().getTime() <= new Date(gracePeriodEndsAt).getTime()
+          ? { hasAccess: true, isInGracePeriod: true, gracePeriodEndsAt, daysRemaining: 0, subscription, reason: 'Subscription expired, in grace period' }
+          : { hasAccess: false, reason: 'Subscription has expired', expiredAt: expiresAt, daysRemaining: 0, requiresRenewal: true };
+      } else {
+        timeAccess = { hasAccess: true, daysRemaining: Math.round(daysRemaining * 10) / 10, subscription, expiredAt: expiresAt };
+      }
+    } else if (planKey === 'pro_monthly' && subscription.currentPeriodEnd) {
+      const periodEnd = new Date(subscription.currentPeriodEnd);
+      const daysRemaining = Math.max(0, (periodEnd.getTime() - Date.now()) / 86400000);
+
+      if (new Date().getTime() > new Date(periodEnd).getTime()) {
+        const gracePeriodEndsAt = new Date(periodEnd.getTime() + 3 * 24 * 60 * 60 * 1000);
+        if (subscription.autoRenew && subscription.status === 'active' && new Date().getTime() <= new Date(gracePeriodEndsAt).getTime()) {
+          timeAccess = { hasAccess: true, isInGracePeriod: true, gracePeriodEndsAt, daysRemaining: 0, subscription, reason: 'Subscription renewal pending, in grace period' };
+        } else {
+          timeAccess = { hasAccess: false, reason: 'Subscription period has ended', expiredAt: periodEnd, daysRemaining: 0, requiresRenewel: true };
+        }
+      } else {
+        timeAccess = { hasAccess: true, daysRemaining: Math.round(daysRemaining * 10) / 10, subscription, expiredAt: periodEnd };
+      }
+    } else {
+      timeAccess = { hasAccess: false, reason: 'Unable to determine subscription status', requiresRenewal: true };
+    }
+
+    // Credit info: inline the same logic as creditService but avoid extra DB fetches.
+    const isUnlimited = UNLIMITED_PLAN_KEYS.has(planKey);
+    let creditInfo: any = null;
+
+    if (!isUnlimited) {
+      const { JobApplication } = await import('@/models');
+      const totalCreatedJobs = await JobApplication.countDocuments({
+        userId,
+        status: 'created',
+      });
+
+      const jobCredits = user.credits?.jobCredits ?? 0;
+      const aiCredits = user.credits?.aiCredits ?? 0;
 
       creditInfo = {
-        remaining,
-        limit,
-        used,
+        remaining: jobCredits,
+        limit: 1,
+        used: totalCreatedJobs,
         totalCreated: totalCreatedJobs,
-        aiCreditsRemaining,
-        aiCreditsLimit,
+        aiCreditsRemaining: aiCredits,
+        aiCreditsLimit: 3,
         planKey,
-        nextResetDate: creditStatus.nextResetDate,
-        resetSchedule: creditStatus.resetSchedule
+      };
+    } else {
+      creditInfo = {
+        remaining: -1,
+        limit: -1,
+        used: user.usage?.cvCreatedCount ?? 0,
+        totalCreated: user.usage?.cvCreatedCount ?? 0,
+        aiCreditsRemaining: -1,
+        aiCreditsLimit: -1,
+        planKey,
       };
     }
 
@@ -123,38 +164,37 @@ export async function GET(request: NextRequest) {
         daysRemaining: timeAccess.daysRemaining,
         expiredAt: timeAccess.expiredAt,
         isInGracePeriod: timeAccess.isInGracePeriod,
-        gracePeriodEndsAt: timeAccess.gracePeriodEndsAt
+        gracePeriodEndsAt: timeAccess.gracePeriodEndsAt,
       },
-      subscription: subscription ? {
-        planKey: subscription.planKey,
-        status: subscription.status,
-        accessExpiresAt: subscription.accessExpiresAt,
-        currentPeriodEnd: subscription.currentPeriodEnd,
-        autoRenew: subscription.autoRenew
-      } : null,
-      lastUpdated: user?.updatedAt ? new Date(user.updatedAt).toISOString() : new Date().toISOString()
+      subscription: subscription
+        ? {
+            planKey: (subscription as any).planKey,
+            status: subscription.status,
+            accessExpiresAt: subscription.accessExpiresAt,
+            currentPeriodEnd: subscription.currentPeriodEnd,
+            autoRenew: subscription.autoRenew,
+          }
+        : null,
+      lastUpdated: user.updatedAt ? new Date(user.updatedAt).toISOString() : new Date().toISOString(),
     };
 
     const response = NextResponse.json(responseData);
 
-    // Add Last-Modified header for conditional requests
-    if (user?.updatedAt) {
+    if (user.updatedAt) {
       response.headers.set('Last-Modified', new Date(user.updatedAt).toUTCString());
     }
 
     return response;
-
   } catch (error: any) {
     console.error('Error fetching user usage limits:', error);
 
-    // Check for database connection errors
     if (error?.name === 'MongoNetworkError' || error?.name === 'MongoServerSelectionError') {
       return createErrorNextResponse(
         ErrorCode.DB_CONNECTION_FAILED,
         'Database connection failed. Please try again later.',
         { error: error.message },
-        true, // Retryable
-        60 // Retry after 60 seconds
+        true,
+        60
       );
     }
 
@@ -168,16 +208,15 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    // Use getAuthenticatedUser for consistent user ID resolution
-    const authResult = await getAuthenticatedUser();
-    if (!authResult) {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
       return createErrorNextResponse(
         ErrorCode.AUTH_REQUIRED,
         'Authentication required. Please sign in to check usage limits.'
       );
     }
 
-    const userId = authResult.userId;
+    const userId = session.user.id;
     if (!userId) {
       return createErrorNextResponse(
         ErrorCode.MISSING_REQUIRED_FIELD,
@@ -196,11 +235,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check usage limit
     const usageCheck = await usageLimitsService.checkUsageLimit({
       userId,
       action,
-      deviceFingerprint
+      deviceFingerprint,
     });
 
     return NextResponse.json({
@@ -209,20 +247,18 @@ export async function POST(request: NextRequest) {
       reason: usageCheck.reason,
       currentUsage: usageCheck.currentUsage,
       limit: usageCheck.limit,
-      resetTime: usageCheck.resetTime
+      resetTime: usageCheck.resetTime,
     });
-
   } catch (error: any) {
     console.error('Error checking usage limit:', error);
 
-    // Check for database connection errors
     if (error?.name === 'MongoNetworkError' || error?.name === 'MongoServerSelectionError') {
       return createErrorNextResponse(
         ErrorCode.DB_CONNECTION_FAILED,
         'Database connection failed. Please try again later.',
         { error: error.message },
-        true, // Retryable
-        60 // Retry after 60 seconds
+        true,
+        60
       );
     }
 
