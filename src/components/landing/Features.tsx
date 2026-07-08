@@ -30,6 +30,7 @@ const MultiImageFeature = ({ images, title, showFrame = true }: { images: string
           src={images[currentIndex]}
           alt={`${title} - view ${currentIndex + 1}`}
           fill
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           className={`group-hover:scale-105 transition-transform duration-500 ${showFrame ? 'object-cover object-top' : 'object-contain object-center'}`}
           quality={80}
         />

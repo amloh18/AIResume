@@ -160,6 +160,7 @@ const Hero = () => {
                 src="/images/herobanner.webp"
                 alt="CVCircle Dashboard"
                 fill
+                sizes="100vw"
                 className="object-cover transition-opacity duration-1000"
                 priority
                 quality={100}

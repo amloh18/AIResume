@@ -127,6 +127,7 @@ export default async function proxy(req: NextRequest) {
         '/api/cvs',
         '/api/cv/analysis-snapshot',
         '/api/pricing-plans',
+        '/api/pricing/regional',
         '/api/user/subscription',
         '/api/user/usage-limits', // Added to public routes for debugging if needed
       ];

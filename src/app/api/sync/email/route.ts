@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getConnection } from '@/lib/database';
-import EmailAccount from '@/models/EmailAccount';
-import EmailMessage from '@/models/EmailMessage';
-import EmailThread from '@/models/EmailThread';
-import { UnifiedEmailSyncService } from '@/lib/services/unifiedEmailSyncService';
+import { EmailAccount } from '@/models/TrackerEmail';
+import { EmailMessage } from '@/models/TrackerEmail';
+import { EmailThread } from '@/models/TrackerEmail';
+import { UnifiedEmailSyncService } from '@/lib/services/unifiedEmailSync';
 
 export async function POST(request: NextRequest) {
   try {
