@@ -36,7 +36,6 @@
   display: flex;
   align-items: center;
   gap: 2rem;
-  position: relative;
 }
 
 
@@ -143,7 +142,8 @@
   overflow: visible;
   border-radius: 35px;
   height: 480px;
-  background-color: rgb(14, 18, 11); /* 100% solid — no alpha bleed */
+  background-color: rgb(14, 18, 11) !important; /* 100% solid — no alpha bleed */
+  opacity: 1 !important;
   backdrop-filter: none;             /* kill blur so nothing shows through */
   -webkit-backdrop-filter: none;
   border-color: rgba(255, 255, 255, 0.18);
@@ -152,7 +152,7 @@
 
 /* Mega Menu integrated inside the main nav bar flow */
 .nav-link-wrapper {
-  position: relative;
+  position: static;
 }
 
 .submenu-dropdown {
@@ -160,14 +160,14 @@
   top: 70px;
   left: 0;
   right: 0;
+  bottom: 0;
   transform: none !important;
-  width: 100vw;
-  max-width: 1023px;
+  width: 100%;
   background-color: rgb(14, 18, 11); /* fully solid — hero text cannot show through */
   backdrop-filter: none;
   border: none;
-  border-radius: 0 0 35px 35px;
-  box-shadow: none;
+  border-radius: 0 0 33px 33px;
+  box-sizing: border-box;
   padding: 1.5rem 2rem;
   display: flex;
   gap: 1.5rem;
@@ -177,7 +177,7 @@
   transition: opacity 0.25s ease, visibility 0.25s ease;
   z-index: 100;
   margin-top: 0;
-  margin-left: calc(-50% + (95vw - 1023px) / 2);
+  margin-left: 0;
 }
 
 .nav-link-wrapper.hovered .submenu-dropdown {

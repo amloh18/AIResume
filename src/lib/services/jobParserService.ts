@@ -473,7 +473,7 @@ export class JobParserService {
         }
       }
 
-      const { callGeminiWithFallback } = await import('@/lib/utils/gemini-api-helper');
+      const { callAIWithFallback } = await import('@/lib/utils/ai-api-helper');
       const systemPrompt = `You are an expert job description analyst. Extracts structured data from any JD, however vague. Keep all text fields, descriptions, and list items extremely concise (under 120 characters each) to fit output token limits. Return ONLY valid JSON, no markdown, no code fences. Fill in all fields, handling missing information gracefully by setting defaults or marked as unknown.`;
       
       let userPrompt = '';
@@ -505,19 +505,18 @@ export class JobParserService {
         userPrompt = `Extract structured job data from the following job description: ${jobText}`;
       }
  
-      const result = await callGeminiWithFallback({
+      const result = await callAIWithFallback({
         prompt: userPrompt,
         systemPrompt,
         temperature: 0.1,
         maxTokens: 8192, // Use model maximum to prevent truncation issues
-        model: 'gemini-2.5-flash',
         responseMimeType: 'application/json'
       });
  
       if (!result || !result.content) {
-        throw new Error('Gemini API returned empty or invalid response');
+        throw new Error('AI API returned empty or invalid response');
       }
- 
+  
       let jsonText = result.content;
       jsonText = jsonText
         .replace(/```json[\s\S]*?\n/g, '')

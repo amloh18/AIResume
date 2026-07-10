@@ -435,10 +435,9 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     dragPreviewRef.current = dragPreview;
   }, [dragPreview]);
 
-  // Use the new smart auto-scaling hook
   const { containerRef: workspaceRef, zoom, setZoom, isAutoFit, triggerAutoFit } = useCanvasFit({
-    documentPixelWidth: 794, // Standard A4 width in pixels
-    paddingPx: 64, // 32px padding per side
+    documentPixelHeight: 1123, // Standard A4 height in pixels
+    paddingPx: 64, // 32px padding top/bottom combined
     maxScale: 2.0,
     minScale: 0.5
   });

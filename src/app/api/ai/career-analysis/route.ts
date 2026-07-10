@@ -194,13 +194,13 @@ export async function POST(request: NextRequest) {
       const promptLength = JSON.stringify(cvData).length + (jobData ? JSON.stringify(jobData).length : 0);
       const responseLength = JSON.stringify(analysis).length;
       const estimatedTokens = Math.ceil((promptLength + responseLength) / 4);
-      // Estimate cost (Gemini 2.5 Flash Lite: ~$0.075 per 1M input tokens, ~$0.30 per 1M output tokens)
+      // Estimate cost
       const estimatedCost = (promptLength / 4 / 1000000 * 0.075) + (responseLength / 4 / 1000000 * 0.30);
       
       await ActivityLogService.logAI({
         userId: userId,
         userEmail: userEmail,
-        model: 'gemini-2.5-flash-lite',
+        model: 'deepseek-v4-flash',
         tokensUsed: estimatedTokens,
         cost: estimatedCost,
         responseLength: responseLength,
@@ -596,6 +596,7 @@ async function analyzeCareerCoherence(cvText: string, jobData?: any) {
   
   const jobContext = jobData ? `
 Target Job: ${jobData.title || jobData.jobTitle || 'Position'}
+Company: ${jobData.company || jobData.companyName || 'Company'}
 Job Description: ${jobDescription || 'No description available'}
 
 ` : '';
@@ -665,6 +666,7 @@ async function analyzeCVOptimization(cvText: string, jobData?: any) {
   
   const jobContext = jobData ? `
 Target Job: ${jobData.title || jobData.jobTitle || 'Position'}
+Company: ${jobData.company || jobData.companyName || 'Company'}
 Job Description: ${jobDescription || 'No description available'}
 
 ` : '';
@@ -825,6 +827,7 @@ async function analyzeSeniorTranslation(cvText: string, jobData?: any) {
   
   const jobContext = jobData ? `
 Target Job: ${jobData.title || jobData.jobTitle || 'Position'}
+Company: ${jobData.company || jobData.companyName || 'Company'}
 Job Description: ${jobDescription || 'No description available'}
 
 ` : '';
@@ -905,6 +908,7 @@ async function analyzeIndustrySpecialization(cvText: string, jobData?: any) {
   
   const jobContext = jobData ? `
 Target Job: ${jobData.title || jobData.jobTitle || 'Position'}
+Company: ${jobData.company || jobData.companyName || 'Company'}
 Job Description: ${jobDescription || 'No description available'}
 
 ` : '';

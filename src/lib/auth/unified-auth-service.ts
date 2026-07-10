@@ -48,23 +48,6 @@ export class UnifiedAuthService {
         updateAge: 24 * 60 * 60, // 24 hours
       },
 
-      useSecureCookies: (process.env.NODE_ENV === 'production' && NEXTAUTH_URL.startsWith('https://')),
-      cookies: {
-        sessionToken: {
-          name:
-            (process.env.NODE_ENV === 'production' && NEXTAUTH_URL.startsWith('https://'))
-              ? '__Secure-next-auth.session-token'
-              : 'next-auth.session-token',
-          options: {
-            httpOnly: true,
-            sameSite: 'lax',
-            path: '/',
-            secure: (process.env.NODE_ENV === 'production' && NEXTAUTH_URL.startsWith('https://')),
-            maxAge: 30 * 24 * 60 * 60, // 30 days
-          },
-        },
-      },
-
       secret: NEXTAUTH_SECRET,
 
       providers: [
@@ -528,7 +511,7 @@ export class UnifiedAuthService {
           return true;
         },
 
-         async jwt({ token, user }) {
+         async jwt({ token, user, account }) {
           // Initial sign-in - store minimal data only (id, email)
           // CRITICAL: Keep JWT token minimal to prevent cookie size issues
           // The JWT token is what gets stored in the cookie, so it must be tiny
@@ -538,6 +521,20 @@ export class UnifiedAuthService {
             // Ensure all values are strings and limited in length
             token.id = String(user.id || '').substring(0, 100);
             token.email = String(user.email || '').substring(0, 255);
+
+            // For OAuth logins (Google, LinkedIn, etc.), user.id is the provider's ID.
+            // We need to map it to the MongoDB User ID so that subsequent database lookups work.
+            if (account && account.provider !== 'credentials' && account.provider !== 'passwordless') {
+              try {
+                await getConnection();
+                const dbUser = await User.findOne({ email: token.email.toLowerCase() }).lean().exec();
+                if (dbUser) {
+                  token.id = String((dbUser as any)._id.toString());
+                }
+              } catch (e) {
+                console.error('❌ Failed to map OAuth user ID in JWT callback:', e);
+              }
+            }
 
             // Capture role from the user object (set by authorize or OAuth callback)
             const userRole = (user as any).role || 'user';

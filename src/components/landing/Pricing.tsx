@@ -16,6 +16,189 @@ interface PricingProps {
   onSuccess?: () => void;
 }
 
+const HARDCODED_PLANS: DatabasePricingPlan[] = [
+  {
+    _id: 'starter_monthly',
+    key: 'starter_monthly',
+    name: 'Starter',
+    description: 'Ideal for basic resume building and standard editing.',
+    price_monthly: 0,
+    price: 0,
+    currency: 'USD',
+    features: [
+      'Access to All Templates',
+      'CV & Cover Letter Editing',
+      'Spelling-only ATS Scoring',
+      'Snippets',
+      'Custom ATS Templates',
+      'Standard Customer Support'
+    ],
+    notIncludedFeatures: [
+      'AI Cover Letter Generator',
+      'LinkedIn Enhancer (Optimizer)',
+      'Mori AI Chat',
+      'AI Interview Coach Simulator',
+      'Job Application Tracker',
+      'Auto Job Application Bot',
+      'Permanent Career Vault'
+    ],
+    isPopular: false,
+    isBestValue: false,
+    displayOnLanding: true,
+    targetAudience: 'all'
+  },
+  {
+    _id: 'starter_yearly',
+    key: 'starter_yearly',
+    name: 'Starter',
+    description: 'Ideal for basic resume building and standard editing.',
+    price_yearly: 19.99,
+    price: 19.99,
+    currency: 'USD',
+    features: [
+      'Access to All Templates',
+      'CV & Cover Letter Editing',
+      'Spelling-only ATS Scoring',
+      'Snippets',
+      'Custom ATS Templates',
+      'Standard Customer Support',
+      'Mori AI chat'
+    ],
+    notIncludedFeatures: [
+      'AI Cover Letter Generator',
+      'LinkedIn Enhancer (Optimizer)',
+      'AI Interview Coach Simulator',
+      'Job Application Tracker',
+      'Auto Job Application Bot',
+      'Permanent Career Vault'
+    ],
+    isPopular: false,
+    isBestValue: false,
+    displayOnLanding: true,
+    targetAudience: 'all'
+  },
+  {
+    _id: 'focused_monthly',
+    key: 'focused_monthly',
+    name: 'Focused',
+    description: 'Best for active job hunters who want AI assistance.',
+    price_monthly: 9.99,
+    price: 9.99,
+    currency: 'USD',
+    features: [
+      'Access to All Templates',
+      'CV & Cover Letter Editing',
+      'Live ATS Scoring & Editor',
+      'AI Cover Letter Generator',
+      'LinkedIn Enhancer (Optimizer)',
+      'AI Interview Coach Simulator',
+      'Job Application Tracker (Full)',
+      'Snippets',
+      'Custom ATS Templates',
+      'Priority Customer Support'
+    ],
+    notIncludedFeatures: [
+      'Mori AI Chat',
+      'Auto Job Application Bot',
+      'Permanent Career Vault'
+    ],
+    isPopular: true,
+    isBestValue: false,
+    displayOnLanding: true,
+    targetAudience: 'all'
+  },
+  {
+    _id: 'focused_yearly',
+    key: 'focused_yearly',
+    name: 'Focused',
+    description: 'Best for active job hunters who want AI assistance.',
+    price_yearly: 79.99,
+    price: 79.99,
+    currency: 'USD',
+    features: [
+      'Access to All Templates',
+      'CV & Cover Letter Editing',
+      'Live ATS Scoring & Editor',
+      'AI Cover Letter Generator',
+      'LinkedIn Enhancer (Optimizer)',
+      'Mori AI chat',
+      'AI Interview Coach Simulator',
+      'Job Application Tracker (Full)',
+      'Snippets',
+      'Custom ATS Templates',
+      'Priority Customer Support'
+    ],
+    notIncludedFeatures: [
+      'Auto Job Application Bot',
+      'Permanent Career Vault'
+    ],
+    isPopular: true,
+    isBestValue: false,
+    displayOnLanding: true,
+    targetAudience: 'all'
+  },
+  {
+    _id: 'smart_quarterly',
+    key: 'smart_quarterly',
+    name: 'Smart',
+    description: 'Our premium tier with automated applications.',
+    price_quarterly: 59.99,
+    price: 59.99,
+    currency: 'USD',
+    features: [
+      'Access to All Templates',
+      'CV & Cover Letter Editing',
+      'Live ATS Scoring & Editor',
+      'AI Cover Letter Generator',
+      'LinkedIn Enhancer (Optimizer)',
+      'Mori AI chat',
+      'AI Interview Coach Simulator',
+      'Job Application Tracker (Full)',
+      'Auto Job Application Bot',
+      'Snippets',
+      'Custom ATS Templates',
+      'VIP 24/7 Support'
+    ],
+    notIncludedFeatures: [
+      'Permanent Career Vault'
+    ],
+    isPopular: false,
+    isBestValue: true,
+    displayOnLanding: true,
+    targetAudience: 'all'
+  },
+  {
+    _id: 'smart_yearly',
+    key: 'smart_yearly',
+    name: 'Smart',
+    description: 'Our premium tier with automated applications.',
+    price_yearly: 199.00,
+    price: 199.00,
+    currency: 'USD',
+    features: [
+      'Access to All Templates',
+      'CV & Cover Letter Editing',
+      'Live ATS Scoring & Editor',
+      'AI Cover Letter Generator',
+      'LinkedIn Enhancer (Optimizer)',
+      'Mori AI chat',
+      'AI Interview Coach Simulator',
+      'Job Application Tracker (Full)',
+      'Auto Job Application Bot',
+      'Snippets',
+      'Custom ATS Templates',
+      'VIP 24/7 Support'
+    ],
+    notIncludedFeatures: [
+      'Permanent Career Vault'
+    ],
+    isPopular: false,
+    isBestValue: true,
+    displayOnLanding: true,
+    targetAudience: 'all'
+  }
+];
+
 const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -36,19 +219,24 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
 
   // Use the shared pricing hook
   const {
-    plans: pricingPlans,
+    plans: databasePlans,
     promotionalOffers,
     locationData,
     regionalPricing,
     selectedCurrency,
-    loading,
-    error,
+    loading: dbLoading,
+    error: dbError,
     getRegionalPrice,
     getMonthlyEquivalent,
     getCurrencySymbol,
     getEffectivePrice,
     hasPromotionalPricing
   } = usePricingPlans({ publicOnly: true });
+
+  const pricingPlans = HARDCODED_PLANS;
+  const loading = false;
+  const error = null;
+
 
   // Get plan icon
   const getPlanIcon = (planKey: string) => {
@@ -138,7 +326,7 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
       <div className="flex items-center justify-center py-32">
         <div className="text-gray-900 dark:text-white text-center">
           <p className="text-red-400 mb-2">Error loading pricing plans</p>
-          <p className="text-small text-gray-500 dark:text-white/60">{error}</p>
+          <p className="text-small text-gray-500 dark:text-white/60">{typeof error === 'object' && error.message ? error.message : String(error)}</p>
         </div>
       </div>
     );

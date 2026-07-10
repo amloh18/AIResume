@@ -1,4 +1,4 @@
-import { callGeminiWithAllKeysFallback } from '@/lib/utils/gemini-api-fallback';
+import { callAIWithFallback } from '@/lib/utils/ai-api-helper';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { ScoreResult } from '@/lib/pill-engine/CentralScoreManager';
 import { KeywordGapAnalysisResult } from '@/types/keyword-gap';
@@ -11,7 +11,7 @@ export interface AnalysisSummaryItem {
 
 export class B2BScoringExplainService {
   /**
-   * Explains the CV score by generating an analysis summary using Google Gemini.
+   * Explains the CV score by generating an analysis summary using AI.
    */
   static async explainScore(
     cvData: UnifiedCVDataStructure,
@@ -64,14 +64,14 @@ Each object must follow this structure:
 Generate 3 to 5 highly relevant summary items.
       `;
 
-      const responseText = await callGeminiWithAllKeysFallback(prompt, {
-        model: 'gemini-2.5-flash-lite',
+      const responseText = await callAIWithFallback({
+        prompt,
         temperature: 0.3,
         action: 'b2b_score_explain'
       });
 
       // Robust JSON extraction
-      let jsonStr = responseText.trim();
+      let jsonStr = responseText.content.trim();
       
       // Remove markdown blocks if present
       if (jsonStr.startsWith('```')) {
@@ -96,7 +96,7 @@ Generate 3 to 5 highly relevant summary items.
       
       throw new Error('Parsed result is not an array');
     } catch (error) {
-      console.error('B2BScoringExplainService: Error generating analysis summary with Gemini:', error);
+      console.error('B2BScoringExplainService: Error generating analysis summary with AI:', error);
       // Graceful fallback
       return [
         {

@@ -111,7 +111,6 @@ export default function LandingPageContent() {
         {/* Layer 1: just after above-the-fold */}
         {layer1 && (
           <>
-            <TestimonialSnippet index={2} />
             <Features />
             <ChromeExtension />
             <Testimonials />

@@ -357,7 +357,7 @@ export async function POST(req: NextRequest) {
       await ActivityLogService.logAI({
         userId: session.user.id,
         userEmail: session.user.email,
-        model: 'gemini-1.5-flash',
+        model: 'deepseek-v4-flash',
         tokensUsed: 0,
         cost: 0,
         prompt: 'Optimize my CV command',
@@ -572,7 +572,7 @@ Strict Rules for CV updates:
     await ActivityLogService.logAI({
       userId: session.user.id,
       userEmail: session.user.email,
-      model: 'gemini-1.5-flash',
+      model: 'deepseek-v4-flash',
       tokensUsed: 0,
       cost: 0,
       prompt: latestMessage.content,

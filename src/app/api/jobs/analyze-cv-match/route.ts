@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import { CV } from '@/models';
 import mongoose from 'mongoose';
-import { callGeminiWithFallback } from '@/lib/utils/gemini-api-helper';
+import { callAIWithFallback } from '@/lib/utils/ai-api-helper';
 import { formatExtensionError, formatExtensionSuccess, ExtensionErrorCode } from '@/lib/utils/extension-errors';
 import { rateLimiter, rateLimitConfigs } from '@/lib/rate-limiter';
 import crypto from 'crypto';
@@ -81,22 +81,25 @@ export async function POST(request: NextRequest) {
       
       if (!rateLimitResult.allowed) {
         console.log('❌ CV Match Analysis API - Rate limit exceeded for user:', userId);
-        return NextResponse.json(
-          formatExtensionError(
-            ExtensionErrorCode.RATE_LIMIT_EXCEEDED,
-            `Too many CV match requests. Please wait ${Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000)} seconds.`,
-            undefined,
-            true,
-            Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000)
-          ),
-          { 
-            status: 429,
-            headers: {
-              'Retry-After': Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000).toString(),
-              'X-RateLimit-Limit': rateLimitConfigs.ai.maxRequests.toString(),
-              'X-RateLimit-Remaining': rateLimitResult.remaining.toString()
+        return setCorsHeaders(
+          NextResponse.json(
+            formatExtensionError(
+              ExtensionErrorCode.RATE_LIMIT_EXCEEDED,
+              `Too many CV match requests. Please wait ${Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000)} seconds.`,
+              undefined,
+              true,
+              Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000)
+            ),
+            { 
+              status: 429,
+              headers: {
+                'Retry-After': Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000).toString(),
+                'X-RateLimit-Limit': rateLimitConfigs.ai.maxRequests.toString(),
+                'X-RateLimit-Remaining': rateLimitResult.remaining.toString()
+              }
             }
-          }
+          ),
+          request
         );
       }
     }
@@ -106,17 +109,23 @@ export async function POST(request: NextRequest) {
     
     if (!jobDescription) {
       if (source === 'extension') {
-        return NextResponse.json(
-          formatExtensionError(
-            ExtensionErrorCode.JOB_VALIDATION_FAILED,
-            'Job description is required'
+        return setCorsHeaders(
+          NextResponse.json(
+            formatExtensionError(
+              ExtensionErrorCode.JOB_VALIDATION_FAILED,
+              'Job description is required'
+            ),
+            { status: 400 }
           ),
-          { status: 400 }
+          request
         );
       }
-      return NextResponse.json(
-        { error: 'Job description is required' },
-        { status: 400 }
+      return setCorsHeaders(
+        NextResponse.json(
+          { error: 'Job description is required' },
+          { status: 400 }
+        ),
+        request
       );
     }
     
@@ -145,17 +154,23 @@ export async function POST(request: NextRequest) {
     
     if (!masterCV || !masterCV.metadata?.aiAnalysis) {
       if (source === 'extension') {
-        return NextResponse.json(
-          formatExtensionError(
-            ExtensionErrorCode.CV_NOT_FOUND,
-            'Master CV or AI analysis not found. Please create a master CV on cvcircle.io'
+        return setCorsHeaders(
+          NextResponse.json(
+            formatExtensionError(
+              ExtensionErrorCode.CV_NOT_FOUND,
+              'Master CV or AI analysis not found. Please create a master CV on cvcircle.io'
+            ),
+            { status: 404 }
           ),
-          { status: 404 }
+          request
         );
       }
-      return NextResponse.json(
-        { error: 'Master CV or AI analysis not found. Please create a master CV on cvcircle.io' },
-        { status: 404 }
+      return setCorsHeaders(
+        NextResponse.json(
+          { error: 'Master CV or AI analysis not found. Please create a master CV on cvcircle.io' },
+          { status: 404 }
+        ),
+        request
       );
     }
     
@@ -373,11 +388,10 @@ Be thorough and accurate. Consider:
 - Quantifiable achievements`;
 
   try {
-    const result = await callGeminiWithFallback({
+    const result = await callAIWithFallback({
       prompt,
       temperature: 0.7,
       maxTokens: 2048,
-      model: 'gemini-2.5-flash-lite'
     });
     
     const text = result.content;
@@ -460,4 +474,3 @@ function fallbackKeywordMatching(cvProfile: any, jobDescription: string) {
     cvRecommendations: []
   };
 }
-

@@ -148,7 +148,7 @@ const CardNav = ({
 
   return (
     <div className={`card-nav-container ${className} ${isAnySubmenuOpen ? 'submenu-open' : ''} ${!isVisible && !isMobileMenuOpen ? 'nav-hidden' : ''}`}>
-      <nav ref={navRef} className="card-nav">
+      <nav ref={navRef} className="card-nav" onMouseLeave={() => setHoveredLink(null)}>
         <div className="card-nav-content">
            <button 
             className="logo-container"
@@ -164,7 +164,7 @@ const CardNav = ({
             </div>
           </button>
 
-          <div className="nav-links" onMouseLeave={() => setHoveredLink(null)}>
+          <div className="nav-links">
             {links.map((link, index) => {
               const hasSubmenu = link.submenu && link.submenu.length > 0;
               const isHovered = hoveredLink === link.label;

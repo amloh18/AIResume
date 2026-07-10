@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import { authenticateRequest } from '@/lib/utils/auth-helpers-api';
-import { callGeminiWithFallback } from '@/lib/utils/gemini-api-helper';
+import { callAIWithFallback } from '@/lib/utils/ai-api-helper';
 import JobApplication from '@/models/JobApplication';
 import CV from '@/models/CV';
 import ApplicationJourney from '@/models/ApplicationJourney';
@@ -191,12 +191,11 @@ Focus on:
 - Questions that test both technical and soft skills
 - Providing "star example" answers that demonstrate exceptional responses`;
 
-    const result = await callGeminiWithFallback({
+    const result = await callAIWithFallback({
       prompt: userPrompt,
       systemPrompt,
       temperature: 0.7,
-      maxTokens: 4096, // Increased for comprehensive answers
-      model: 'gemini-2.5-flash-lite'
+      maxTokens: 4096,
     });
 
     // Robust JSON parsing with error handling
@@ -362,4 +361,3 @@ Focus on:
     );
   }
 }
-

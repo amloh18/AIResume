@@ -192,8 +192,6 @@ class DatabaseConnectionManager {
       socketTimeoutMS: 45000,
       connectTimeoutMS: 30000,
       retryWrites: true,
-      ssl: true,
-      tlsAllowInvalidCertificates: false,
       ...this.config.options,
     };
 
