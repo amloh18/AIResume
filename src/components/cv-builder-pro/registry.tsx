@@ -16,6 +16,17 @@ const TYPOGRAPHY = {
   body: "cv-body cv-prose text-gray-700",
 };
 
+const parseStringList = (val: any): string[] => {
+  if (!val) return [];
+  if (Array.isArray(val)) {
+    return val.map((s: any) => String(s || '').trim()).filter(Boolean);
+  }
+  if (typeof val === 'string') {
+    return val.split(',').map((s: string) => s.trim()).filter(Boolean);
+  }
+  return [];
+};
+
 // ==========================================
 // ENTRY HEADER — Smart cascade layout
 // Title · Subtitle · Date on one row.
@@ -794,19 +805,19 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
     <div className="snippet-anim cv-section cv-item-avoid"><Title titleKey="languages" /><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><Editable path="languages" /></div></div>
   )},
   'languages-dots': { id: 'languages-dots', name: 'Dot Rating', category: 'Languages', render: ({ data, isDark, Title }: any) => {
-    const items = (data.languages || '').split(',').map((s: string) => s.trim()).filter(Boolean);
+    const items = parseStringList(data.languages);
     return (<div className="snippet-anim w-full cv-section cv-item-avoid"><Title titleKey="languages" /><div className="grid grid-cols-1 gap-y-2 gap-x-4 cv-gap-sm">{items.map((item: string, i: number) => { const rating = i % 2 === 0 ? 5 : 4; return (<div key={i} className={`flex justify-between items-center ${TYPOGRAPHY.body}`}><span className={`truncate font-medium ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>{item.split('(')[0]}</span><div className="flex gap-1.5">{[...Array(5)].map((_, dotIdx) => (<div key={dotIdx} className={`w-2 h-2 rounded-full ${dotIdx < rating ? 'cv-accent-bg' : (isDark ? 'bg-slate-700' : 'bg-gray-200')}`}></div>))}</div></div>); })}</div></div>);
   }},
   'languages-bars': { id: 'languages-bars', name: 'Progress Bars', category: 'Languages', render: ({ data, isDark, Title }: any) => {
-    const items = (data.languages || '').split(',').map((s: string) => s.trim()).filter(Boolean);
+    const items = parseStringList(data.languages);
     return (<div className="snippet-anim w-full cv-section cv-item-avoid"><Title titleKey="languages" /><div className="flex flex-col gap-3 cv-gap-sm">{items.map((item: string, i: number) => { const widths = ['w-[95%]', 'w-[85%]', 'w-[65%]', 'w-[50%]']; return (<div key={i} className={`flex justify-between items-center ${TYPOGRAPHY.body}`}><span className={`w-1/2 truncate font-medium ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>{item.split('(')[0]}</span><div className={`w-1/2 h-2 rounded-full overflow-hidden ${isDark ? 'bg-slate-800' : 'bg-gray-200'}`}><div className={`h-full cv-accent-bg ${widths[i] || 'w-[70%]'}`}></div></div></div>); })}</div></div>);
   }},
   'languages-pills': { id: 'languages-pills', name: 'Solid Pills', category: 'Languages', render: ({ data, isDark, Title }: any) => {
-    const items = (data.languages || '').split(',').map((s: string) => s.trim()).filter(Boolean);
+    const items = parseStringList(data.languages);
     return (<div className="snippet-anim cv-section cv-item-avoid"><Title titleKey="languages" /><div className="flex flex-wrap gap-2 cv-gap-sm">{items.map((item: string, i: number) => (<span key={i} className={`px-3 py-1.5 text-[0.85em] font-semibold rounded-md border ${isDark ? 'bg-slate-700 border-slate-600 text-slate-200' : 'bg-slate-100 border-slate-200 text-slate-700'}`}>{item.split('(')[0]}</span>))}</div></div>);
   }},
   'languages-round-pills': { id: 'languages-round-pills', name: 'Round Pills', category: 'Languages', render: ({ data, isDark, Title }: any) => {
-    const items = (data.languages || '').split(',').map((s: string) => s.trim()).filter(Boolean);
+    const items = parseStringList(data.languages);
     return (<div className="snippet-anim cv-section cv-item-avoid"><Title titleKey="languages" /><div className="flex flex-wrap gap-2 cv-gap-sm">{items.map((item: string, i: number) => (<span key={i} className={`px-4 py-1.5 text-[0.85em] font-semibold rounded-full border ${isDark ? 'bg-slate-700 border-slate-600 text-slate-200' : 'bg-slate-100 border-slate-200 text-slate-700'}`}>{item.split('(')[0]}</span>))}</div></div>);
   }},
 
@@ -815,7 +826,7 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
     <div className="snippet-anim cv-section cv-item-avoid"><Title titleKey="interests" /><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><Editable path="interests" /></div></div>
   )},
   'interests-pills': { id: 'interests-pills', name: 'Outline Pills', category: 'Interests', render: ({ data, isDark, Title }: any) => {
-    const items = (data.interests || '').split(',').map((s: string) => s.trim()).filter(Boolean);
+    const items = parseStringList(data.interests);
     return (<div className="snippet-anim cv-section cv-item-avoid"><Title titleKey="interests" /><div className="flex flex-wrap gap-2 cv-gap-sm">{items.map((item: string, i: number) => (<span key={i} className={`px-3 py-1.5 text-[0.85em] font-medium border rounded-full ${isDark ? 'border-slate-500 text-slate-200' : 'border-gray-400 text-gray-800'}`}>{item}</span>))}</div></div>);
   }},
 
@@ -1175,23 +1186,23 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
   // NEW SNIPPETS — INTERESTS (5 new)
   // =======================================================
   ,'interests-accent-pills': { id: 'interests-accent-pills', name: 'Accent Pills', category: 'Interests', render: ({ data, isDark, Title }: any) => {
-    const items = typeof data?.interests === 'string' ? data.interests.split(',').filter(Boolean) : []; if (items.length === 0) return null;
+    const items = parseStringList(data?.interests); if (items.length === 0) return null;
     return (<div className="snippet-anim cv-section"><Title titleKey="interests" /><div className="flex flex-wrap gap-2">{items.map((item: string, i: number) => (<span key={i} className={`px-3 py-1 rounded-full text-[0.85em] font-medium border ${isDark ? 'border-slate-600 text-gray-300' : 'border-gray-200 text-gray-600'} cv-accent-text-hover`}>{item.trim()}</span>))}</div></div>);
   }}
   ,'interests-icon-grid': { id: 'interests-icon-grid', name: 'Icon Grid', category: 'Interests', render: ({ data, isDark, Title }: any) => {
-    const items = typeof data?.interests === 'string' ? data.interests.split(',').filter(Boolean) : []; if (items.length === 0) return null;
+    const items = parseStringList(data?.interests); if (items.length === 0) return null;
     return (<div className="snippet-anim cv-section"><Title titleKey="interests" /><div className="grid grid-cols-2 gap-2">{items.map((item: string, i: number) => (<div key={i} className={`flex items-center gap-2 ${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><span className="text-[1.2em] opacity-80">✦</span>{item.trim()}</div>))}</div></div>);
   }}
   ,'interests-minimal-bold': { id: 'interests-minimal-bold', name: 'Minimal Bold List', category: 'Interests', render: ({ data, isDark, Title }: any) => {
-    const items = typeof data?.interests === 'string' ? data.interests.split(',').filter(Boolean) : []; if (items.length === 0) return null;
+    const items = parseStringList(data?.interests); if (items.length === 0) return null;
     return (<div className="snippet-anim cv-section"><Title titleKey="interests" /><p className={`${TYPOGRAPHY.body} font-bold ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>{items.map((item: string, i: number) => <span key={i}>{item.trim()}{i < items.length - 1 && <span className={`mx-1.5 font-normal ${isDark ? 'text-gray-600' : 'text-gray-300'}`}>·</span>}</span>)}</p></div>);
   }}
   ,'interests-card': { id: 'interests-card', name: 'Card Layout', category: 'Interests', render: ({ data, isDark, Title }: any) => {
-    const items = typeof data?.interests === 'string' ? data.interests.split(',').filter(Boolean) : []; if (items.length === 0) return null;
+    const items = parseStringList(data?.interests); if (items.length === 0) return null;
     return (<div className="snippet-anim cv-section"><Title titleKey="interests" /><div className="flex flex-wrap gap-2">{items.map((item: string, i: number) => (<div key={i} className={`px-3 py-1.5 rounded-lg border ${TYPOGRAPHY.body} ${isDark ? 'border-slate-700 bg-slate-800/50 text-gray-300' : 'border-gray-200 bg-gray-50 text-gray-700'}`}>{item.trim()}</div>))}</div></div>);
   }}
   ,'interests-two-col': { id: 'interests-two-col', name: 'Two Column', category: 'Interests', render: ({ data, isDark, Title }: any) => {
-    const items = typeof data?.interests === 'string' ? data.interests.split(',').filter(Boolean) : []; if (items.length === 0) return null;
+    const items = parseStringList(data?.interests); if (items.length === 0) return null;
     return (<div className="snippet-anim cv-section"><Title titleKey="interests" /><div className="grid grid-cols-2 gap-x-4 gap-y-1">{items.map((item: string, i: number) => (<div key={i} className={`flex items-center gap-1.5 ${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><span className="cv-accent-text text-[10px] shrink-0">▸</span>{item.trim()}</div>))}</div></div>);
   }}
 

@@ -603,19 +603,8 @@ export default function ResumeEnhancerContainer({
   };
 
   const queueCurrentThumbnailSnapshot = useCallback((targetCvId?: string | null) => {
-    const snapshotCvId = targetCvId || state.cvId || cvId || null;
-    const currentTemplate = state.selectedTemplate || state.cvData?.metadata?.canvasTemplate;
-    if (isGuestMode || !snapshotCvId || !state.cvData || !currentTemplate) {
-      return;
-    }
-
-    queueCvThumbnailSnapshotUpload({
-      cvId: snapshotCvId,
-      cvData: state.cvData,
-      template: currentTemplate,
-      forceRegenerate: true,
-    });
-  }, [cvId, isGuestMode, state.cvData, state.cvId, state.selectedTemplate]);
+    // Disabled S3 thumbnail upload
+  }, []);
 
   const openEditorDashboard = useCallback(() => {
     queueCurrentThumbnailSnapshot();
@@ -2804,21 +2793,8 @@ export default function ResumeEnhancerContainer({
              console.error("Failed to save cover letter:", clErr);
           }
       }
-      
-      const thumbnailCvId = savedCvId || effectiveCvId;
-      const currentTemplate = state.selectedTemplate || state.cvData?.metadata?.canvasTemplate;
-      if (thumbnailCvId && currentTemplate) {
-        try {
-          await saveCvThumbnailSnapshot({
-            cvId: thumbnailCvId,
-            cvData: state.cvData,
-            template: currentTemplate,
-            forceRegenerate: true,
-          });
-        } catch (thumbnailError) {
-          console.warn('Failed to save CV thumbnail snapshot after explicit save', thumbnailError);
-        }
-      }
+      // Disabled CV S3 thumbnail generation as requested
+
 
       // Invalidate step 1 cache so it re-fetches when navigating back to step 1
       invalidateStep1Cache();
@@ -2924,17 +2900,17 @@ export default function ResumeEnhancerContainer({
   };
 
   // Auto save CV on step transition for authenticated users
-  const prevStepRef = useRef({ step: state.currentStep, overlay: state.isTemplateOverlayOpen });
+  const prevStepAndOverlayRef = useRef({ step: state.currentStep, overlay: state.isTemplateOverlayOpen });
   useEffect(() => {
-    const stepChanged = prevStepRef.current.step !== state.currentStep;
-    const overlayChanged = prevStepRef.current.overlay !== state.isTemplateOverlayOpen;
+    const stepChanged = prevStepAndOverlayRef.current.step !== state.currentStep;
+    const overlayChanged = prevStepAndOverlayRef.current.overlay !== state.isTemplateOverlayOpen;
     
     if (stepChanged || overlayChanged) {
       if (!isGuestMode && state.cvData && state.cvId) {
         console.log('Auto-saving on step transition');
         handleSmartSave().catch(err => console.error('Auto-save on step transition failed:', err));
       }
-      prevStepRef.current = { step: state.currentStep, overlay: state.isTemplateOverlayOpen };
+      prevStepAndOverlayRef.current = { step: state.currentStep, overlay: state.isTemplateOverlayOpen };
     }
   }, [state.currentStep, state.isTemplateOverlayOpen, isGuestMode, state.cvData, state.cvId]);
 

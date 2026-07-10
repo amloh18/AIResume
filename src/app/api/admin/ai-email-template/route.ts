@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { callGeminiWithAllKeysFallback } from '@/lib/utils/gemini-api-fallback';
+import { callAIWithFallback } from '@/lib/utils/ai-api-helper';
 
 export async function POST(request: NextRequest) {
   try {
@@ -31,28 +31,18 @@ Additional Context: ${context || 'None'}`;
 
     const fullPrompt = `${systemPrompt}\n\n${userPrompt}`;
 
-    let generatedText: string | null = null;
-    try {
-      generatedText = await callGeminiWithAllKeysFallback(fullPrompt, {
-        model: 'gemini-2.5-flash-lite',
-        temperature: 0.7,
-        maxTokens: 2048,
-      });
-    } catch (error) {
-      // Fallback model if the first one fails
-       generatedText = await callGeminiWithAllKeysFallback(fullPrompt, {
-        model: 'gemini-2.5-flash',
-        temperature: 0.7,
-        maxTokens: 2048,
-      });
-    }
+    const generatedText = await callAIWithFallback({
+      prompt: fullPrompt,
+      temperature: 0.7,
+      maxTokens: 2048,
+    });
 
     if (!generatedText) {
       return NextResponse.json({ error: 'No content generated from AI' }, { status: 500 });
     }
 
     // Clean up potential markdown formatting
-    let cleanedText = generatedText.trim();
+    let cleanedText = generatedText.content.trim();
     if (cleanedText.startsWith('```json')) {
       cleanedText = cleanedText.replace(/^```json/, '').replace(/```$/, '').trim();
     } else if (cleanedText.startsWith('```')) {
@@ -63,7 +53,7 @@ Additional Context: ${context || 'None'}`;
     try {
       parsedResult = JSON.parse(cleanedText);
     } catch (e) {
-      console.error('Failed to parse Gemini JSON output:', cleanedText);
+      console.error('Failed to parse AI JSON output:', cleanedText);
       return NextResponse.json({ error: 'AI returned invalid JSON format' }, { status: 500 });
     }
 

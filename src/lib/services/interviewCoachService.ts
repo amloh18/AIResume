@@ -110,7 +110,7 @@ export class InterviewCoachService {
 Your goal is to generate a highly personalized interview preparation plan in JSON format.
 
 INPUT DATA:
-----------------
+---------------
 TARGET JOB:
 Title: ${jobTitle}
 Company: ${company}
@@ -119,7 +119,7 @@ ${skillGapsContext}
 
 CANDIDATE CV:
 ${cvContext}
-----------------
+---------------
 
 INSTRUCTIONS:
 
@@ -149,7 +149,6 @@ INSTRUCTIONS:
             const result = await callAIWithFallback({
                 prompt: prompt,
                 temperature: 0.4,
-                model: 'gemini-2.5-flash-lite', // Match other services
                 responseMimeType: 'application/json',
                 responseSchema: interviewSchema,
                 maxTokens: 8192 // Prevent truncation for large outputs
@@ -351,7 +350,6 @@ Professional, encouraging, and luxury-focused. Avoid generic advice; be hyper-sp
                 prompt: userPrompt,
                 systemPrompt,
                 temperature: 0.6,
-                model: 'gemini-2.5-flash-lite'
             });
 
             return parseRobustJson(result.content);

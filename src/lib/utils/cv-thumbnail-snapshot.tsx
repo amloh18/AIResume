@@ -88,24 +88,8 @@ export async function saveCvThumbnailSnapshot({
   template: any;
   forceRegenerate?: boolean;
 }) {
-  if (!cvId || !cvData || !template) {
-    return null;
-  }
-
-  const svgContent = await captureCvThumbnailSvgDataUrl({ cvData, template });
-  const response = await fetch('/api/cv/thumbnail/generate-on-exit', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ cvId, svgContent, forceRegenerate }),
-    keepalive: true,
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to save thumbnail snapshot: HTTP ${response.status}`);
-  }
-
-  const result = await response.json();
-  return result.thumbnailUrl || null;
+  // Disabled as per user request to not save thumbnails in S3
+  return null;
 }
 
 export function queueCvThumbnailSnapshotUpload({
@@ -119,29 +103,7 @@ export function queueCvThumbnailSnapshotUpload({
   template: any;
   forceRegenerate?: boolean;
 }) {
-  if (!cvId || !cvData || !template || typeof navigator === 'undefined' || typeof window === 'undefined') {
-    return;
-  }
-
-  window.setTimeout(async () => {
-    try {
-      const svgContent = await captureCvThumbnailSvgDataUrl({ cvData, template });
-      const payload = JSON.stringify({ cvId, svgContent, forceRegenerate });
-
-      if (typeof navigator.sendBeacon === 'function') {
-        const blob = new Blob([payload], { type: 'application/json' });
-        navigator.sendBeacon('/api/cv/thumbnail/generate-on-exit', blob);
-        return;
-      }
-
-      await fetch('/api/cv/thumbnail/generate-on-exit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: payload,
-        keepalive: true,
-      });
-    } catch (error) {
-      console.warn('Failed to queue CV thumbnail snapshot upload', error);
-    }
-  }, 0);
+  // Disabled as per user request to not save thumbnails in S3
+  return;
 }
+
