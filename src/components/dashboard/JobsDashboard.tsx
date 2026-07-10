@@ -15,8 +15,10 @@ import { AutoApplyPanel } from '@/components/jobs/AutoApplyPanel';
 import { ApplicationsPanel } from '@/components/jobs/ApplicationsPanel';
 import { motion } from 'framer-motion';
 import { useSearchParams } from 'next/navigation';
+import { useUserData } from '@/lib/hooks/useUserData';
 
 export default function JobsDashboard() {
+  const { userData } = useUserData();
   const [activeTab, setActiveTab] = useState<'discover' | 'metrics' | 'autoapply' | 'applications' | 'settings'>('discover');
   const searchParams = useSearchParams();
 
@@ -42,10 +44,11 @@ export default function JobsDashboard() {
   const [selectedJob, setSelectedJob] = useState<JobListing | null>(null);
 
   const fetchMetrics = useCallback(async () => {
+    if (!userData?.id) return;
     try {
       const response = await fetch('/api/jobs/metrics', {
         headers: {
-          'x-user-id': 'temp-user-id',
+          'x-user-id': userData.id,
         },
       });
 
@@ -61,9 +64,10 @@ export default function JobsDashboard() {
       console.error('Error fetching metrics:', err);
       setError(err.message);
     }
-  }, []);
+  }, [userData?.id]);
 
   const fetchJobs = useCallback(async () => {
+    if (!userData?.id) return;
     try {
       setLoading(true);
       const params = new URLSearchParams({
@@ -91,7 +95,7 @@ export default function JobsDashboard() {
 
       const response = await fetch(`/api/jobs/list?${params}`, {
         headers: {
-          'x-user-id': 'temp-user-id',
+          'x-user-id': userData.id,
         },
       });
 
@@ -113,7 +117,7 @@ export default function JobsDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [filters, page, pageSize]);
+  }, [filters, page, pageSize, userData?.id]);
 
   useEffect(() => {
     fetchMetrics();

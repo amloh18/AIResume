@@ -120,7 +120,7 @@ export async function GET(request: NextRequest) {
       email: user.email,
       username: !isAdminAuthUser ? user.username : undefined,
       avatar: !isAdminAuthUser ? user.avatar : undefined,
-      role: user.role,
+      role: user.role || (isAdminAuthUser ? 'admin' : 'user'),
       isEmailVerified: !isAdminAuthUser ? user.isEmailVerified : true,
       authProvider: !isAdminAuthUser ? user.authProvider : 'local',
       currentPlanKey,

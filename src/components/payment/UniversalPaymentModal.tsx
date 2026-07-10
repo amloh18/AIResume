@@ -1577,49 +1577,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                             </div>
                           </div>
 
-                          {/* Coupon Code Section */}
-                          <div className="w-full max-w-md mx-auto mb-6 text-left">
-                            <p className="text-gray-900 dark:text-white mb-2 text-xs font-mono uppercase tracking-wider text-center">[ Have a coupon code? ]</p>
-                            <div className="flex gap-2">
-                              <input
-                                type="text"
-                                value={discountCode}
-                                onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
-                                placeholder="Enter code here"
-                                className="flex-1 px-4 py-2.5 rounded-xl text-sm bg-gray-50 dark:bg-[#232f1c] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 border border-gray-300 dark:border-white/20 focus:outline-none focus:ring-2 focus:ring-lime-500 dark:focus:ring-[#80FF00]/50 focus:border-lime-500 dark:focus:border-[#80FF00]/50 transition-colors"
-                              />
-                              <button
-                                onClick={applyDiscountCode}
-                                disabled={!discountCode.trim() || loading}
-                                className="px-6 py-2.5 bg-gray-950 dark:bg-lime-500 hover:bg-gray-900 dark:hover:bg-lime-600 text-white dark:text-black rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-bold text-sm"
-                              >
-                                Apply
-                              </button>
-                            </div>
 
-                            {appliedDiscount && (
-                              <div className="mt-3 flex items-center justify-between rounded-xl p-3 bg-lime-50 dark:bg-lime-900/20 border border-lime-300 dark:border-lime-500/30">
-                                <div className="flex items-center">
-                                  <Gift className="w-4 h-4 mr-2 text-lime-600 dark:text-lime-400" />
-                                  <span className="text-sm text-lime-700 dark:text-lime-300">
-                                    {appliedDiscount.description}
-                                  </span>
-                                </div>
-                                <button
-                                  onClick={removeDiscountCode}
-                                  className="text-lime-600 dark:text-lime-400 hover:opacity-80 transition-opacity"
-                                >
-                                  <X className="w-4 h-4" />
-                                </button>
-                              </div>
-                            )}
-
-                            {discountError && (
-                              <div className="mt-2 text-sm text-red-600 dark:text-red-400">
-                                {discountError}
-                              </div>
-                            )}
-                          </div>
 
                           {/* Price Summary */}
                           <div className="w-full max-w-md mx-auto mb-6 space-y-3 p-4 bg-gray-50/30 dark:bg-white/5 rounded-2xl border border-gray-200/40 dark:border-white/5">
