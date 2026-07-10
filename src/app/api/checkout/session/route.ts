@@ -317,6 +317,26 @@ async function handleProPlanPayment(
     return activatePlanWithCoupon({ user, planKey, interval, regionInfo, currency, couponDiscount, priceInMinorUnits: amount, returnUrl });
   }
 
+  // Check if we are using placeholder IDs (not valid UUIDs) in local development
+  const isUUID = (str?: string) => str ? /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str) : false;
+  const isDevelopment = process.env.NODE_ENV !== 'production' || process.env.POLAR_MODE === 'sandbox' || !process.env.POLAR_ACCESS_TOKEN;
+  const hasValidIds = isUUID(priceId) || isUUID(productId);
+
+  if (isDevelopment && !hasValidIds) {
+    console.warn(`⚠️ [DEVELOPMENT BYPASS] Polar Price ID '${priceId}' or Product ID '${productId}' is not a valid UUID.`);
+    console.warn(`👉 Activating plan '${planKey}' directly to bypass Polar checkout verification.`);
+    return activatePlanWithCoupon({ 
+      user, 
+      planKey, 
+      interval, 
+      regionInfo, 
+      currency, 
+      couponDiscount: { code: 'DEV-BYPASS', description: 'Development Checkout Bypass' }, 
+      priceInMinorUnits: 0, 
+      returnUrl 
+    });
+  }
+
   if (!priceId && !productId) {
     return NextResponse.json({ error: `No payment configuration found for ${planKey}` }, { status: 400 });
   }

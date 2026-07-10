@@ -21,8 +21,10 @@ import PaymentPastDueBanner from './PaymentPastDueBanner';
 import { getPlanName } from '@/lib/utils/userPlanUtils';
 import { useBillingData } from '@/lib/hooks/useBillingData';
 import { usePricingPlans } from '@/lib/hooks/usePricingPlans';
+import { useSession } from 'next-auth/react';
 
 const OptimizedNavigation: React.FC = () => {
+  const { data: session } = useSession();
   const router = useRouter();
   const pathname = usePathname();
   const { resolvedTheme, toggleTheme } = useTheme();
@@ -256,7 +258,7 @@ const OptimizedNavigation: React.FC = () => {
   }, [userData?.id, fetchCreditInfo]);
 
   // Check if user is admin or superadmin
-  const isAdmin = userData?.role === 'admin' || userData?.role === 'superadmin';
+  const isAdmin = userData?.role === 'admin' || userData?.role === 'superadmin' || (session?.user as any)?.role === 'admin' || (session?.user as any)?.role === 'superadmin';
 
   // Prefetch routes on mount for faster navigation
   useEffect(() => {
