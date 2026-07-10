@@ -237,7 +237,7 @@ export class PolarService {
       return {
         success: true,
         orders: orders.items || [],
-        total: orders.pagination.totalCount
+        total: orders.pagination?.totalCount || orders.items?.length || 0
       };
     } catch (error) {
       console.error('Polar listOrders error:', error);

@@ -57,10 +57,136 @@ export async function GET(request: NextRequest) {
       query.targetAudience   = 'all';
     }
 
-    const plans = await PricingPlanModel.find(query).sort({ sortOrder: 1 }).lean();
+    let plans = await PricingPlanModel.find(query).sort({ sortOrder: 1 }).lean();
 
     if (!plans?.length) {
-      throw new Error('No pricing plans found in database');
+      console.warn('⚠️ No pricing plans found in database, falling back to default hardcoded plans.');
+      plans = [
+        {
+          key: 'starter_monthly',
+          name: 'Starter',
+          description: 'Ideal for basic resume building and standard editing.',
+          features: [
+            'Access to All Templates',
+            'CV & Cover Letter Editing',
+            'Spelling-only ATS Scoring',
+            'Snippets',
+            'Custom ATS Templates',
+            'Standard Customer Support'
+          ],
+          isPopular: false,
+          isBestValue: false,
+          displayOnLanding: true,
+          targetAudience: 'all'
+        },
+        {
+          key: 'starter_yearly',
+          name: 'Starter',
+          description: 'Ideal for basic resume building and standard editing.',
+          features: [
+            'Access to All Templates',
+            'CV & Cover Letter Editing',
+            'Spelling-only ATS Scoring',
+            'Snippets',
+            'Custom ATS Templates',
+            'Standard Customer Support',
+            'Mori AI chat'
+          ],
+          isPopular: false,
+          isBestValue: false,
+          displayOnLanding: true,
+          targetAudience: 'all'
+        },
+        {
+          key: 'focused_monthly',
+          name: 'Focused',
+          description: 'Best for active job hunters who want AI assistance.',
+          features: [
+            'Access to All Templates',
+            'CV & Cover Letter Editing',
+            'Live ATS Scoring & Editor',
+            'AI Cover Letter Generator',
+            'LinkedIn Enhancer (Optimizer)',
+            'AI Interview Coach Simulator',
+            'Job Application Tracker (Full)',
+            'Snippets',
+            'Custom ATS Templates',
+            'Priority Customer Support'
+          ],
+          isPopular: true,
+          isBestValue: false,
+          displayOnLanding: true,
+          targetAudience: 'all'
+        },
+        {
+          key: 'focused_yearly',
+          name: 'Focused',
+          description: 'Best for active job hunters who want AI assistance.',
+          features: [
+            'Access to All Templates',
+            'CV & Cover Letter Editing',
+            'Live ATS Scoring & Editor',
+            'AI Cover Letter Generator',
+            'LinkedIn Enhancer (Optimizer)',
+            'Mori AI chat',
+            'AI Interview Coach Simulator',
+            'Job Application Tracker (Full)',
+            'Snippets',
+            'Custom ATS Templates',
+            'Priority Customer Support'
+          ],
+          isPopular: true,
+          isBestValue: false,
+          displayOnLanding: true,
+          targetAudience: 'all'
+        },
+        {
+          key: 'smart_quarterly',
+          name: 'Smart',
+          description: 'Our premium tier with automated applications.',
+          features: [
+            'Access to All Templates',
+            'CV & Cover Letter Editing',
+            'Live ATS Scoring & Editor',
+            'AI Cover Letter Generator',
+            'LinkedIn Enhancer (Optimizer)',
+            'Mori AI chat',
+            'AI Interview Coach Simulator',
+            'Job Application Tracker (Full)',
+            'Auto Job Application Bot',
+            'Snippets',
+            'Custom ATS Templates',
+            'VIP 24/7 Support'
+          ],
+          isPopular: false,
+          isBestValue: true,
+          displayOnLanding: true,
+          targetAudience: 'all'
+        },
+        {
+          key: 'smart_yearly',
+          name: 'Smart',
+          description: 'Our premium tier with automated applications.',
+          features: [
+            'Access to All Templates',
+            'CV & Cover Letter Editing',
+            'Live ATS Scoring & Editor',
+            'AI Cover Letter Generator',
+            'LinkedIn Enhancer (Optimizer)',
+            'Mori AI chat',
+            'AI Interview Coach Simulator',
+            'Job Application Tracker (Full)',
+            'Auto Job Application Bot',
+            'Snippets',
+            'Custom ATS Templates',
+            'VIP 24/7 Support'
+          ],
+          isPopular: false,
+          isBestValue: true,
+          displayOnLanding: true,
+          targetAudience: 'all'
+        }
+      ] as any;
     }
 
     // Dynamic Sync from Polar Dashboard Products catalog
