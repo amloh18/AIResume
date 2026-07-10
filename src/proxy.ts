@@ -73,19 +73,28 @@ export default async function proxy(req: NextRequest) {
     const pathname = req.nextUrl.pathname;
     const method = req.method;
 
+    // Set header for Next.js server components to know the actual request pathname
+    req.headers.set('x-middleware-path', pathname);
+
+    const next = () => NextResponse.next({
+      request: {
+        headers: req.headers
+      }
+    });
+
     const secret = process.env.NEXTAUTH_SECRET || 'fallback-secret-key-for-development';
 
     if (pathname.startsWith('/studio')) {
-      return NextResponse.next()
+      return next()
     }
 
     if (isPublicRoute(req)) {
       log.debug('Public route accessed', { pathname, method });
-      return NextResponse.next()
+      return next()
     }
 
     if (pathname.startsWith('/_next') || pathname.startsWith('/public')) {
-      return NextResponse.next()
+      return next()
     }
 
     let token = null;
@@ -111,7 +120,7 @@ export default async function proxy(req: NextRequest) {
     if (pathname.startsWith('/api/')) {
       if (pathname.startsWith('/api/auth/')) {
         log.debug('Auth API route accessed', { pathname, method });
-        return NextResponse.next()
+        return next()
       }
 
       const publicApiRoutes = [
@@ -134,7 +143,7 @@ export default async function proxy(req: NextRequest) {
 
       if (publicApiRoutes.some(route => pathname.startsWith(route))) {
         log.debug('Public API route accessed', { pathname, method });
-        return NextResponse.next()
+        return next()
       }
 
       if (pathname.startsWith('/api/admin/')) {
@@ -147,7 +156,7 @@ export default async function proxy(req: NextRequest) {
           log.warn('Unauthorized admin API access attempt', { pathname, method, userId: activeToken.id });
           return NextResponse.json({ error: 'Forbidden', message: 'Admin access required' }, { status: 403 })
         }
-        return NextResponse.next();
+        return next();
       }
 
       if (!isAuth) {
@@ -168,7 +177,7 @@ export default async function proxy(req: NextRequest) {
         userId: activeToken.id,
         role: activeToken.role
       });
-      return NextResponse.next()
+      return next()
     }
 
     if (isAdminRoute(req)) {
@@ -199,7 +208,7 @@ export default async function proxy(req: NextRequest) {
         userId: activeToken.id,
         role: activeToken.role
       });
-      return NextResponse.next()
+      return next()
     }
 
     if (isB2BRoute(req)) {
@@ -220,7 +229,7 @@ export default async function proxy(req: NextRequest) {
         return NextResponse.redirect(new URL('/dashboard', req.url));
       }
 
-      return NextResponse.next();
+      return next();
     }
 
     if (isProtectedRoute(req)) {
@@ -249,7 +258,7 @@ export default async function proxy(req: NextRequest) {
         userId: activeToken.id,
         role: activeToken.role
       });
-      return NextResponse.next()
+      return next()
     }
 
     const duration = Date.now() - startTime;
@@ -257,12 +266,12 @@ export default async function proxy(req: NextRequest) {
       log.performance('proxy', duration, { pathname, method });
     }
 
-    return NextResponse.next()
+    return next()
   } catch (error) {
     console.error('❌ Middleware error:', error);
     // If middleware fails, allow the request to continue but log it
     // This prevents "Failed to fetch" on the client
-    return NextResponse.next();
+    return next();
   }
 }
 
