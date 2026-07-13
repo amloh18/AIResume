@@ -7,7 +7,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { UnifiedCVDataStructure, DEFAULT_UNIFIED_CV_DATA } from '@/types/unified-cv-schema';
 import { sanitizeErrorMessage } from '@/lib/api/error-handler';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { rateLimiter, rateLimitConfigs } from '@/lib/rate-limiter';
 import { getAuthenticatedUser } from '@/lib/auth-helpers';
 
@@ -1323,7 +1322,6 @@ export async function POST(request: NextRequest) {
 
     const formData = await request.formData();
     const file = formData.get('file') as File;
-    const saveDocument = formData.get('saveDocument') === 'true'; // Optional flag to save document to S3
 
     if (!file) {
       console.error('No file provided in request');
@@ -1371,108 +1369,4 @@ export async function POST(request: NextRequest) {
 
     // Optionally save document to S3 if user is authenticated and saveDocument flag is true
     let documentUrl: string | undefined;
-    if (userId && saveDocument) {
-      try {
-        const { getS3Client, getS3PublicUrl } = await import('@/lib/s3-client');
-        const s3Client = getS3Client();
-
-        const timestamp = Date.now();
-        const sanitizedFilename = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-        const s3Key = `documents/${userId}/${timestamp}-${sanitizedFilename}`;
-
-        const command = new PutObjectCommand({
-          Bucket: process.env.AWS_S3_BUCKET_NAME!,
-          Key: s3Key,
-          ContentType: file.type,
-          Body: buffer,
-          Metadata: {
-            userId: userId,
-            originalFilename: file.name,
-            uploadedAt: new Date().toISOString(),
-            purpose: 'cv-parsing',
-          },
-        });
-
-        await s3Client.send(command);
-        documentUrl = getS3PublicUrl(s3Key);
-        console.log('Document saved to S3:', documentUrl);
-      } catch (s3Error) {
-        console.error('Failed to save document to S3:', s3Error);
-        // Continue with parsing even if S3 upload fails
-      }
-    }
-
-    // Run the robust parser
-    const parseResult = await robustDocumentParser(buffer, file.type);
-
-    const parseTime = Date.now() - startTime;
-
-    // Handle parsing errors
-    if (parseResult.error) {
-      console.error('Parsing failed:', parseResult.error);
-      return NextResponse.json(
-        {
-          error: parseResult.error,
-          details: parseResult.details,
-          _parseTime: parseTime
-        },
-        { status: 500 }
-      );
-    }
-
-    // Validate parsing results
-    const hasPersonalInfo = !!(parseResult.cvData?.basics?.name || parseResult.cvData?.basics?.email);
-    const hasWorkExperience = (parseResult.cvData?.work?.length || 0) > 0;
-    const hasEducation = (parseResult.cvData?.education?.length || 0) > 0;
-    const hasSkills = (parseResult.cvData?.skills?.length || 0) > 0;
-
-    console.log('=== PARSING VALIDATION ===');
-    console.log('Has personal info:', hasPersonalInfo);
-    console.log('Has work experience:', hasWorkExperience);
-    console.log('Has education:', hasEducation);
-    console.log('Has skills:', hasSkills);
-
-    // Ensure we always return a valid structure
-    const responseData = {
-      ...parseResult.cvData!,
-      _parsed: true, // Flag to indicate this was parsed
-      _timestamp: new Date().toISOString(),
-      _parseTime: parseTime,
-      _fileInfo: {
-        name: file.name,
-        type: file.type,
-        size: file.size
-      },
-      _validation: {
-        hasPersonalInfo,
-        hasWorkExperience,
-        hasEducation,
-        hasSkills
-      },
-      ...(documentUrl && { _documentUrl: documentUrl }) // Include document URL if saved
-    };
-
-    console.log('Returning parsed data to client');
-    return NextResponse.json(responseData);
-  } catch (error) {
-    console.error('═══════════════════════════════════════════════════════');
-    console.error('❌ CV parsing API error (top-level catch)');
-    console.error('═══════════════════════════════════════════════════════');
-    console.error('Error type:', error instanceof Error ? error.constructor.name : typeof error);
-    console.error('Error message:', error instanceof Error ? error.message : String(error));
-    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
-
-    // Return proper error response - sanitize for user display
-    const rawErrorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-    const errorMessage = sanitizeErrorMessage(rawErrorMessage, 'Failed to parse CV. Please try again.');
-
-    return NextResponse.json(
-      {
-        error: errorMessage,
-        _errorType: error instanceof Error ? error.constructor.name : typeof error,
-        _errorStack: error instanceof Error ? error.stack : undefined
-      },
-      { status: 500 }
-    );
-  }
-}
+    // S3 document saving is disabled

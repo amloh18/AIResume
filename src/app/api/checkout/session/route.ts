@@ -64,7 +64,8 @@ async function activatePlanWithCoupon({
     paymentReference,
     regionCode,
     normalizedCurrency,
-    priceInPrimaryUnits
+    priceInPrimaryUnits,
+    paymentReference // Pass paymentReference as providerSubscriptionId
   );
 
   if (!activationResult.success) {
@@ -174,6 +175,16 @@ export async function POST(request: NextRequest) {
     }
 
     if (planKey === 'free') {
+      // Activate the free plan properly — update the user's subscription in DB
+      await User.findByIdAndUpdate(user._id, {
+        $set: {
+          currentPlanKey: 'free',
+          'subscription.planKey': 'free',
+          'subscription.status': 'active',
+          'subscription.provider': 'none',
+          'subscription.interval': 'one-time',
+        }
+      });
       return NextResponse.json({ success: true, message: 'Free plan activated', planKey: 'free' });
     }
 
@@ -317,29 +328,16 @@ async function handleProPlanPayment(
     return activatePlanWithCoupon({ user, planKey, interval, regionInfo, currency, couponDiscount, priceInMinorUnits: amount, returnUrl });
   }
 
-  // Check if we are using placeholder IDs (not valid UUIDs) in local development
-  const isUUID = (str?: string) => str ? /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str) : false;
-  const isDevelopment = process.env.NODE_ENV !== 'production' || process.env.POLAR_MODE === 'sandbox' || !process.env.POLAR_ACCESS_TOKEN;
-  const hasValidIds = isUUID(priceId) || isUUID(productId);
-
-  if (isDevelopment && !hasValidIds) {
-    console.warn(`⚠️ [DEVELOPMENT BYPASS] Polar Price ID '${priceId}' or Product ID '${productId}' is not a valid UUID.`);
-    console.warn(`👉 Activating plan '${planKey}' directly to bypass Polar checkout verification.`);
-    return activatePlanWithCoupon({ 
-      user, 
-      planKey, 
-      interval, 
-      regionInfo, 
-      currency, 
-      couponDiscount: { code: 'DEV-BYPASS', description: 'Development Checkout Bypass' }, 
-      priceInMinorUnits: 0, 
-      returnUrl 
-    });
-  }
-
   if (!priceId && !productId) {
     return NextResponse.json({ error: `No payment configuration found for ${planKey}` }, { status: 400 });
   }
+
+  const isUUID = (str?: string) => str ? /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str) : false;
+  const productIdToUse = productId || priceId;
+  if (!isUUID(productIdToUse)) {
+    return NextResponse.json({ error: `Invalid payment configuration: '${productIdToUse}' is not a valid Polar UUID. You must use real Polar Product/Price IDs in your database.` }, { status: 400 });
+  }
+
 
   try {
     const successUrl = constructSuccessUrl(returnUrl || `${process.env.NEXTAUTH_URL || ''}/dashboard`, {
@@ -386,9 +384,10 @@ async function handleProPlanPayment(
       url: checkoutResponse.url 
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Polar Checkout Session error:', error);
-    return NextResponse.json({ error: 'Payment setup failed' }, { status: 500 });
+    const errorMessage = error?.message || (typeof error === 'string' ? error : 'Payment setup failed');
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
 
@@ -396,13 +395,15 @@ async function handleProPlanPayment(
 function constructSuccessUrl(base: string, params: Record<string, string>): string {
   try {
     const isRelative = !base.startsWith('http://') && !base.startsWith('https://');
-    const url = new URL(base, isRelative ? 'http://localhost' : undefined);
+    const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const absoluteBase = isRelative ? `${baseUrl}${base.startsWith('/') ? '' : '/'}${base}` : base;
+    const url = new URL(absoluteBase);
     
     for (const [key, value] of Object.entries(params)) {
       url.searchParams.set(key, value);
     }
     
-    return isRelative ? `${url.pathname}${url.search}${url.hash}` : url.toString();
+    return url.toString();
   } catch (e) {
     const separator = base.includes('?') ? '&' : '?';
     const queryStr = Object.entries(params)

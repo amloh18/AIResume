@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
     ] = await Promise.all([
       // Fetch user data with settings and usage limits
       UserModel.findById(userObjectId)
-        .select('name email subscription usageLimits credits settings preferences')
+        .select('name email subscription usageLimits credits settings preferences trialState')
         .lean(),
       
       // Fetch CVs (conditional)
@@ -101,7 +101,29 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const { currentPlanKey, subscription, isExpired } = subscriptionService.getEffectivePlan(user);
+    const hasActiveTrial = user.trialState?.token && user.trialState.expiresAt && new Date(user.trialState.expiresAt) > new Date();
+    
+    let currentPlanKey;
+    let subscription;
+    let isExpired = false;
+    
+    if (hasActiveTrial) {
+      currentPlanKey = 'starter_monthly';
+      subscription = {
+        planKey: 'starter_monthly',
+        status: 'active',
+        endDate: user.trialState.expiresAt,
+        accessExpiresAt: user.trialState.expiresAt,
+        currentPeriodStart: new Date(),
+        currentPeriodEnd: user.trialState.expiresAt,
+        purchasePrice: 0
+      };
+    } else {
+      const effective = subscriptionService.getEffectivePlan(user);
+      currentPlanKey = effective.currentPlanKey;
+      subscription = effective.subscription;
+      isExpired = effective.isExpired;
+    }
 
     // Calculate usage limits and counts
     const cvCount = includeCVs ? await CV.countDocuments({ userId: userObjectId }) : 0;

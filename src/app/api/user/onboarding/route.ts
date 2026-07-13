@@ -108,6 +108,14 @@ export async function PATCH(request: NextRequest) {
       }
     }
 
+    if (onboardingData.seen_tours) {
+      const seenTours = onboardingData.seen_tours;
+      if (seenTours.step_3 !== undefined) updateFields['onboarding.seen_tours.step_3'] = !!seenTours.step_3;
+      if (seenTours.step_4 !== undefined) updateFields['onboarding.seen_tours.step_4'] = !!seenTours.step_4;
+      if (seenTours.step_5 !== undefined) updateFields['onboarding.seen_tours.step_5'] = !!seenTours.step_5;
+      if (seenTours.tracker !== undefined) updateFields['onboarding.seen_tours.tracker'] = !!seenTours.tracker;
+    }
+
     if (body.userLifecycleState) updateFields['userLifecycleState'] = body.userLifecycleState;
     if (body.hasSeenWelcome !== undefined) updateFields['settings.hasSeenWelcome'] = body.hasSeenWelcome;
 

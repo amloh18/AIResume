@@ -547,8 +547,8 @@ const OptimizedNavigation: React.FC = () => {
             </h3>
           </div>
 
-          {/* Tile Grid: 2-col expanded, 1-col collapsed */}
-          <div className={`grid gap-2 px-1 ${isDesktopExpanded ? 'lg:grid-cols-2' : 'lg:grid-cols-1'} grid-cols-2`}>
+          {/* Tile Grid: 3-col expanded, 1-col collapsed */}
+          <div className={`grid gap-2 px-1 ${isDesktopExpanded ? 'lg:grid-cols-3' : 'lg:grid-cols-1'} grid-cols-2`}>
             {toolSections.map((section) => {
               const Icon = section.icon;
               const isActive = activeSection === section.id;
@@ -587,7 +587,7 @@ const OptimizedNavigation: React.FC = () => {
                   title={section.name}
                   className={`relative group flex flex-col items-center justify-center rounded-2xl border transition-all duration-200 cursor-pointer outline-none focus:outline-none focus:ring-0 !shadow-none
                     ${isDesktopExpanded
-                      ? 'p-3 gap-2 aspect-square'
+                      ? 'p-2 gap-1.5 aspect-square'
                       : 'lg:p-3 lg:gap-1 lg:aspect-square p-3 gap-2 aspect-square'
                     }
                     ${isActive
@@ -606,8 +606,8 @@ const OptimizedNavigation: React.FC = () => {
                   )}
 
                   {/* Icon container */}
-                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-all duration-200 ${isActive ? 'scale-110' : ''} ${bgClass}`}>
-                    <Icon className={`w-5 h-5 ${isActive ? 'text-[rgb(129,255,0)] dark:text-[rgb(129,255,0)]' : 'text-gray-500 dark:text-gray-400'}`} />
+                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 transition-all duration-200 ${isActive ? 'scale-110' : ''} ${bgClass}`}>
+                    <Icon className={`w-4 h-4 ${isActive ? 'text-[rgb(129,255,0)] dark:text-[rgb(129,255,0)]' : 'text-gray-500 dark:text-gray-400'}`} />
                   </div>
 
                   {/* Label — shown in expanded mode */}

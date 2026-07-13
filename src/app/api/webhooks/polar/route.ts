@@ -118,6 +118,14 @@ export async function POST(request: NextRequest) {
           await handleChargeRefunded(event.data);
           break;
 
+        case 'subscription.updated':
+          await handleSubscriptionUpdated(event.data);
+          break;
+
+        case 'subscription.cancelled':
+          await handleSubscriptionCancelled(event.data);
+          break;
+
         default:
           console.log(`Unhandled Polar event type: ${event.type}`);
       }
@@ -184,10 +192,32 @@ async function handleCheckoutCompleted(checkout: any) {
   if (!pricingPlan && metadata.planName) {
     pricingPlan = await PricingPlan.findOne({ name: metadata.planName });
   }
+  if (!pricingPlan && productId) {
+    pricingPlan = await PricingPlan.findOne({
+      $or: [
+        { polarProductId_monthly: productId },
+        { polarProductId_yearly: productId },
+        { polarProductId_quarterly: productId },
+        { polarProductId_one_time: productId },
+        { 'regionalPricing.polarProductId': productId }
+      ]
+    });
+  }
+  if (!pricingPlan && productPriceId) {
+    pricingPlan = await PricingPlan.findOne({
+      $or: [
+        { polarPriceId_monthly: productPriceId },
+        { polarPriceId_yearly: productPriceId },
+        { polarPriceId_quarterly: productPriceId },
+        { polarPriceId_one_time: productPriceId },
+        { 'regionalPricing.polarPriceId': productPriceId }
+      ]
+    });
+  }
 
   if (!pricingPlan) {
-    console.error(`Pricing plan not found: ID=${metadata.planId}, Key=${metadata.planKey}, Name=${metadata.planName}`);
-    throw new Error(`Pricing plan not found for checkout metadata`);
+    console.error(`Pricing plan not found: ID=${metadata.planId}, Key=${metadata.planKey}, Name=${metadata.planName}, PolarProductId=${productId}`);
+    throw new Error(`Pricing plan not found for checkout metadata or Polar IDs`);
   }
 
   const finalPlanName = pricingPlan.name || metadata.planName || 'Unknown Plan';
@@ -201,8 +231,11 @@ async function handleCheckoutCompleted(checkout: any) {
     const coupon = await Coupon.findById(metadata.discountCodeId);
     if (coupon) {
       discountCodeId = coupon._id;
+      // amount is already in minor units (cents/pence). Convert to major for discount.
+      const amountInMajor = amount / 100;
       if (coupon.discountType === 'percentage') {
-        discountAmount = (amount / 100) * (coupon.discountValue / (100 - coupon.discountValue));
+        // Correct formula: discount = amountInMajor * (value / 100)
+        discountAmount = amountInMajor * (coupon.discountValue / 100);
       } else if (coupon.discountType === 'fixed') {
         discountAmount = coupon.discountValue;
       }
@@ -210,6 +243,26 @@ async function handleCheckoutCompleted(checkout: any) {
   }
 
   const finalAmount = amount / 100;
+
+  // --- Resolve Actual Subscription ID ---
+  let actualSubscriptionId = checkout.subscriptionId || checkout.subscription_id || checkout.subscription?.id;
+  if (!actualSubscriptionId) {
+    try {
+      const { default: PolarService } = await import('@/lib/payment/polar');
+      const polar = (PolarService as any).getPolar();
+      if (polar) {
+        const polarSubscriptions = await polar.subscriptions.list({
+          customerEmail: customerEmail,
+          limit: 1
+        });
+        const activeSub = (polarSubscriptions.items || []).find((s: any) => s.status === 'active');
+        if (activeSub) actualSubscriptionId = activeSub.id;
+      }
+    } catch (err) {
+      console.error('Failed to query actual Polar subscription ID:', err);
+    }
+  }
+  actualSubscriptionId = actualSubscriptionId || checkoutId;
 
   await withTransaction(async (session) => {
     const subscription = await subscriptionService.createSubscription(
@@ -219,7 +272,7 @@ async function handleCheckoutCompleted(checkout: any) {
       finalAmount,
       currency.toUpperCase(),
       'polar',
-      checkoutId,
+      actualSubscriptionId,
       discountCodeId,
       discountAmount,
       {
@@ -332,8 +385,136 @@ async function handleCheckoutExpired(checkout: any) {
   }
 }
 
+async function handleSubscriptionUpdated(subscription: any) {
+  console.log('Processing Polar subscription.updated event:', subscription.id);
+
+  const customerEmail = subscription.customer?.email;
+  if (!customerEmail) {
+    console.error('subscription.updated: No customer email found');
+    return;
+  }
+
+  const user = await User.findOne({ email: customerEmail });
+  if (!user) {
+    console.error(`subscription.updated: User not found for email ${customerEmail}`);
+    return;
+  }
+
+  const status = subscription.status; // 'active' | 'canceled' | 'past_due' | 'unpaid'
+
+  if (status === 'active') {
+    // Subscription renewed or reactivated — ensure user is not on free
+    const PricingPlan = await getAdminPricingPlan();
+    const productId = subscription.product?.id;
+    let pricingPlan = null;
+
+    if (productId) {
+      pricingPlan = await PricingPlan.findOne({
+        $or: [
+          { 'regionalPricing.polarProductId': productId },
+          { polarProductId_monthly: productId },
+          { polarProductId_yearly: productId },
+          { polarProductId_quarterly: productId },
+        ]
+      });
+    }
+
+    if (pricingPlan) {
+      const newPlanKey = pricingPlan.key;
+      await User.findByIdAndUpdate(user._id, {
+        $set: {
+          currentPlanKey: newPlanKey,
+          'subscription.planKey': newPlanKey,
+          'subscription.status': 'active',
+          'subscription.providerSubscriptionId': subscription.id,
+          'subscription.currentPeriodStart': subscription.currentPeriodStart
+            ? new Date(subscription.currentPeriodStart)
+            : undefined,
+          'subscription.currentPeriodEnd': subscription.currentPeriodEnd
+            ? new Date(subscription.currentPeriodEnd)
+            : undefined,
+        }
+      });
+      console.log(`subscription.updated: synced user ${user._id} to plan ${newPlanKey}`);
+    } else {
+      // Just update the subscription status to active
+      await User.findByIdAndUpdate(user._id, {
+        $set: {
+          'subscription.status': 'active',
+          'subscription.providerSubscriptionId': subscription.id,
+        }
+      });
+      console.log(`subscription.updated: updated status to active for user ${user._id}`);
+    }
+  } else if (status === 'canceled' || status === 'past_due' || status === 'unpaid') {
+    // Mark subscription as cancelled/expired — revert to free
+    await User.findByIdAndUpdate(user._id, {
+      $set: {
+        currentPlanKey: 'free',
+        'subscription.planKey': 'free',
+        'subscription.status': status === 'canceled' ? 'cancelled' : 'expired',
+        'subscription.providerSubscriptionId': subscription.id,
+      }
+    });
+    console.log(`subscription.updated: reverted user ${user._id} to free (Polar status: ${status})`);
+  }
+}
+
+async function handleSubscriptionCancelled(subscription: any) {
+  console.log('Processing Polar subscription.cancelled event:', subscription.id);
+
+  const customerEmail = subscription.customer?.email;
+  if (!customerEmail) {
+    console.error('subscription.cancelled: No customer email found');
+    return;
+  }
+
+  const user = await User.findOne({ email: customerEmail });
+  if (!user) {
+    console.error(`subscription.cancelled: User not found for email ${customerEmail}`);
+    return;
+  }
+
+  // Keep the user on their plan until the period ends (access stays until currentPeriodEnd)
+  const periodEnd = subscription.currentPeriodEnd
+    ? new Date(subscription.currentPeriodEnd)
+    : null;
+
+  const updateFields: any = {
+    'subscription.autoRenew': false,
+    'subscription.downgradeStatus': 'pending',
+    'subscription.pendingDowngradePlanKey': 'free',
+  };
+
+  if (periodEnd) {
+    updateFields['subscription.currentPeriodEnd'] = periodEnd;
+    updateFields['subscription.endDate'] = periodEnd;
+  }
+
+  await User.findByIdAndUpdate(user._id, { $set: updateFields });
+
+  console.log(`subscription.cancelled: user ${user._id} cancellation scheduled. Access until ${periodEnd?.toISOString() ?? 'unknown'}`);
+
+  try {
+    const { getPostHogClient } = await import('@/lib/posthog-server');
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: user._id.toString(),
+      event: 'subscription_cancelled',
+      properties: {
+        subscription_id: subscription.id,
+        payment_provider: 'polar',
+        period_end: periodEnd?.toISOString(),
+      },
+    });
+  } catch (phError) {
+    console.error('PostHog capture error (subscription_cancelled):', phError);
+  }
+}
+
 async function handleChargeRefunded(charge: any) {
   console.log('Processing Polar charge.refunded event:', charge.id);
+
   
   const checkoutId = charge.checkout?.id;
   

@@ -66,6 +66,12 @@ export interface IUser extends Document {
   // STANDARDIZED: All plan keys use underscore format for consistency
   currentPlanKey: UserPlanKey;
   monthlyGoal?: number;
+  trialState?: {
+    token: string | null;
+    expiresAt: Date | null;
+    hasConsumedTrial: boolean;
+    features?: string[];
+  };
   usage: {
     cvJourneyCount: number;
     cvCreatedCount: number;
@@ -228,13 +234,20 @@ export interface IUser extends Document {
     completed_stages?: string[];
     onboarding_version?: number;
     primary_cv_id?: string | mongoose.Types.ObjectId;
-
     // Editor feature discovery checklist
     editor_checklist?: {
       layout?: { completed: boolean; completedAt?: string };
       design?: { completed: boolean; completedAt?: string };
       aiChat?: { completed: boolean; completedAt?: string };
       review?: { completed: boolean; completedAt?: string };
+    };
+
+    // Seen feature walkthrough tours
+    seen_tours?: {
+      step_3?: boolean;
+      step_4?: boolean;
+      step_5?: boolean;
+      tracker?: boolean;
     };
   };
 
@@ -356,6 +369,12 @@ const userSchema = new Schema<IUser>({
     default: 20,
     min: 1,
     max: 100
+  },
+  trialState: {
+    token: { type: String, default: null },
+    expiresAt: { type: Date, default: null },
+    hasConsumedTrial: { type: Boolean, default: false },
+    features: [{ type: String }]
   },
   usage: {
     cvJourneyCount: {
@@ -788,6 +807,13 @@ const userSchema = new Schema<IUser>({
         completed: { type: Boolean, default: false },
         completedAt: { type: String }
       }
+    },
+    // Seen feature walkthrough tours
+    seen_tours: {
+      step_3: { type: Boolean, default: false },
+      step_4: { type: Boolean, default: false },
+      step_5: { type: Boolean, default: false },
+      tracker: { type: Boolean, default: false }
     }
   }
 }, {

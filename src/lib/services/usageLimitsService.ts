@@ -2,6 +2,7 @@ import { connectToDatabase } from '@/lib/database';
 import User from '@/models/User';
 import { getAdminPricingPlan } from '@/models/admin-models';
 import creditService from './creditService';
+import { isFreeTierPlan } from '@/lib/utils/subscription-helpers';
 
 export interface UsageLimitResult {
   allowed: boolean;
@@ -64,10 +65,62 @@ class UsageLimitsService {
         };
       }
 
+      // Check active trial token state first
+      const hasActiveTrial = user.trialState?.token && user.trialState.expiresAt && new Date(user.trialState.expiresAt) > new Date();
+      if (hasActiveTrial) {
+        return {
+          hasAccess: true,
+          reason: 'Active trial token access'
+        };
+      }
+
+      // Consult Polar API as a runtime verification fallback
+      try {
+        const { default: PolarService } = await import('@/lib/payment/polar');
+        const liveDetails = await PolarService.getActiveSubscriptionDetails(user.email);
+        
+        const mongoActive = user.subscription && (user.subscription.status === 'active' || user.subscription.status === 'trialing') && user.currentPlanKey !== 'free';
+        
+        if (liveDetails.hasActiveSub !== mongoActive) {
+          console.log(`🔄 UsageLimitService - Stale MongoDB subscription state detected for ${user.email}. Reconciling...`);
+          if (liveDetails.hasActiveSub) {
+            const resolvedPlanKey = liveDetails.planKey || 'starter_monthly';
+            await User.findByIdAndUpdate(user._id, {
+              $set: {
+                currentPlanKey: resolvedPlanKey,
+                'subscription.planKey': resolvedPlanKey,
+                'subscription.status': 'active',
+                'subscription.accessExpiresAt': liveDetails.subscription?.currentPeriodEnd || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+                'subscription.currentPeriodEnd': liveDetails.subscription?.currentPeriodEnd
+              }
+            });
+            user.currentPlanKey = resolvedPlanKey;
+            user.subscription = user.subscription || {};
+            user.subscription.planKey = resolvedPlanKey;
+            user.subscription.status = 'active';
+          } else {
+            if (user.currentPlanKey !== 'free') {
+              await User.findByIdAndUpdate(user._id, {
+                $set: {
+                  currentPlanKey: 'free',
+                  'subscription.status': 'inactive'
+                }
+              });
+              user.currentPlanKey = 'free';
+              if (user.subscription) {
+                user.subscription.status = 'inactive';
+              }
+            }
+          }
+        }
+      } catch (polarErr) {
+        console.error('⚠️ UsageLimitService - Failed Polar runtime fallback reconciliation:', polarErr);
+      }
+
       const subscription = user.subscription;
 
       // Allow free tier users to have access (they use credits, not subscription status)
-      if (user.currentPlanKey === 'free') {
+      if (isFreeTierPlan(user.currentPlanKey)) {
         return {
           hasAccess: true,
           subscription,
@@ -176,7 +229,7 @@ class UsageLimitsService {
       }
 
       // Free plan: always has access
-      if (user.currentPlanKey === 'free') {
+      if (isFreeTierPlan(user.currentPlanKey)) {
         return {
           hasAccess: true,
           subscription
@@ -217,9 +270,12 @@ class UsageLimitsService {
         };
       }
 
+      const hasActiveTrial = user.trialState?.token && user.trialState.expiresAt && new Date(user.trialState.expiresAt) > new Date();
+      const effectivePlanKey = hasActiveTrial ? 'starter_monthly' : user.currentPlanKey;
+
       // Focused / Smart / Pro / Starter-Yearly plans are NEVER usage-limited.
       // Subscription expiry is a separate concern handled by checkTimeBasedAccess.
-      if (UNLIMITED_PLAN_KEYS.includes(user.currentPlanKey)) {
+      if (UNLIMITED_PLAN_KEYS.includes(effectivePlanKey)) {
         return {
           allowed: true,
           currentUsage: -1,
@@ -239,7 +295,7 @@ class UsageLimitsService {
       }
 
       const PricingPlan = await getAdminPricingPlan();
-      const plan = await PricingPlan.findOne({ key: user.currentPlanKey });
+      const plan = await PricingPlan.findOne({ key: effectivePlanKey });
       if (!plan) {
         return {
           allowed: false,
@@ -319,13 +375,16 @@ class UsageLimitsService {
         return null;
       }
 
+      const hasActiveTrial = user.trialState?.token && user.trialState.expiresAt && new Date(user.trialState.expiresAt) > new Date();
+      const effectivePlanKey = hasActiveTrial ? 'starter_monthly' : user.currentPlanKey;
+
       const PricingPlan = await getAdminPricingPlan();
-      const plan = await PricingPlan.findOne({ key: user.currentPlanKey });
+      const plan = await PricingPlan.findOne({ key: effectivePlanKey });
       
       // Fallback defaults if plan is missing in database
-      const maxCVs = plan ? plan.maxCVs : (user.currentPlanKey === 'free' ? 1 : -1);
-      const maxExports = plan ? plan.maxExports : (user.currentPlanKey === 'free' ? 5 : -1);
-      const storageLimit = plan ? plan.storageLimit : (user.currentPlanKey === 'free' ? 50 : -1);
+      const maxCVs = plan ? plan.maxCVs : (effectivePlanKey === 'free' ? 1 : -1);
+      const maxExports = plan ? plan.maxExports : (effectivePlanKey === 'free' ? 5 : -1);
+      const storageLimit = plan ? plan.storageLimit : (effectivePlanKey === 'free' ? 50 : -1);
 
       return {
         cvJourneyCount: user.usage.cvJourneyCount,

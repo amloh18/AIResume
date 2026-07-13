@@ -20,15 +20,17 @@ export interface PlanLimits {
   aiSurgeonMode: 'spelling_only' | 'full';  // AI mode restriction
   coverLetterAI: boolean;       // Cover letter generator access
   docxExport: boolean;          // DOCX export
-  interviewCoach: boolean;      // Interview Coach access
+  interviewCoach: boolean;      // Interview Coach access (focused_monthly+)
   jobTracker: boolean;          // Job Application Tracker access (add/track jobs)
   jobParsing: boolean;          // Can parse job descriptions
   prioritySupport: boolean;     // Priority support
   advancedAnalytics: boolean;   // Advanced analytics
   hasVault?: boolean;           // Career Vault feature (Lifetime only)
-  // LinkedIn Enhancer restrictions
+  moriChatLimit: number;        // Max Mori AI chat messages per reset period (-1 = unlimited, 5 for starter_monthly)
+  // LinkedIn Enhancer restrictions (focused_monthly+ only)
   linkedinToneChange: boolean;  // Can change tone in LinkedIn Enhancer
   linkedinCVSelection: boolean; // Can select different CVs in LinkedIn Enhancer
+  linkedinEnhancer: boolean;    // Access to LinkedIn Enhancer at all
   autoApplyBot: boolean;        // Auto Job Application Bot access
 }
 
@@ -67,6 +69,8 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     jobParsing: true,
     prioritySupport: false,
     advancedAnalytics: false,
+    moriChatLimit: 5,
+    linkedinEnhancer: false,
     linkedinToneChange: false,
     linkedinCVSelection: false,
     autoApplyBot: false
@@ -83,11 +87,13 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     aiSurgeonMode: 'spelling_only',
     coverLetterAI: false,
     docxExport: false,
-    interviewCoach: false,
-    jobTracker: true,    // same as free — starter_monthly IS the free plan
-    jobParsing: true,    // same as free — starter_monthly IS the free plan
+    interviewCoach: false,     // gated — requires focused_monthly+
+    jobTracker: true,
+    jobParsing: true,
     prioritySupport: false,
     advancedAnalytics: false,
+    moriChatLimit: 5,          // 5 messages then upgrade prompt
+    linkedinEnhancer: false,   // gated — requires focused_monthly+
     linkedinToneChange: false,
     linkedinCVSelection: false,
     autoApplyBot: false
@@ -104,11 +110,13 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     aiSurgeonMode: 'full',
     coverLetterAI: true,
     docxExport: true,
-    interviewCoach: false,
+    interviewCoach: false,     // gated — requires focused_monthly+
     jobTracker: false,
     jobParsing: false,
     prioritySupport: false,
     advancedAnalytics: false,
+    moriChatLimit: -1,         // unlimited Mori chat
+    linkedinEnhancer: false,   // gated — requires focused_monthly+
     linkedinToneChange: false,
     linkedinCVSelection: false,
     autoApplyBot: false
@@ -130,6 +138,8 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     jobParsing: true,
     prioritySupport: true,
     advancedAnalytics: true,
+    moriChatLimit: -1,
+    linkedinEnhancer: true,
     linkedinToneChange: true,
     linkedinCVSelection: true,
     autoApplyBot: false
@@ -151,6 +161,8 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     jobParsing: true,
     prioritySupport: true,
     advancedAnalytics: true,
+    moriChatLimit: -1,
+    linkedinEnhancer: true,
     linkedinToneChange: true,
     linkedinCVSelection: true,
     autoApplyBot: false
@@ -172,6 +184,8 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     jobParsing: true,
     prioritySupport: true,
     advancedAnalytics: true,
+    moriChatLimit: -1,
+    linkedinEnhancer: true,
     linkedinToneChange: true,
     linkedinCVSelection: true,
     autoApplyBot: true
@@ -193,6 +207,8 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     jobParsing: true,
     prioritySupport: true,
     advancedAnalytics: true,
+    moriChatLimit: -1,
+    linkedinEnhancer: true,
     linkedinToneChange: true,
     linkedinCVSelection: true,
     autoApplyBot: true
@@ -214,6 +230,8 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     jobParsing: true,
     prioritySupport: false,
     advancedAnalytics: true,
+    moriChatLimit: -1,
+    linkedinEnhancer: true,
     linkedinToneChange: true,
     linkedinCVSelection: true,
     autoApplyBot: false,
@@ -236,6 +254,8 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     jobParsing: true,
     prioritySupport: true,
     advancedAnalytics: true,
+    moriChatLimit: -1,
+    linkedinEnhancer: true,
     linkedinToneChange: true,
     linkedinCVSelection: true,
     autoApplyBot: false,
@@ -258,6 +278,8 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     jobParsing: true,
     prioritySupport: true,
     advancedAnalytics: true,
+    moriChatLimit: -1,
+    linkedinEnhancer: true,
     linkedinToneChange: true,
     linkedinCVSelection: true,
     autoApplyBot: false,
@@ -281,6 +303,8 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     prioritySupport: true,
     advancedAnalytics: true,
     hasVault: true,
+    moriChatLimit: -1,
+    linkedinEnhancer: true,
     linkedinToneChange: true,
     linkedinCVSelection: true,
     autoApplyBot: false
@@ -302,6 +326,8 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     jobParsing: true,
     prioritySupport: false,
     advancedAnalytics: true,
+    moriChatLimit: -1,
+    linkedinEnhancer: true,
     linkedinToneChange: true,
     linkedinCVSelection: true,
     autoApplyBot: false,

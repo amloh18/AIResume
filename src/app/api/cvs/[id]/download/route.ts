@@ -11,6 +11,8 @@ import mongoose from 'mongoose';
 import redisRateLimiter from '@/lib/redis-rate-limiter';
 import { configService } from '@/lib/services/configService';
 import { validateDownloadParams, sanitizeFilename, validateFileSize } from '@/lib/utils/downloadValidation';
+import User from '@/models/User';
+import { getPlanAccess } from '@/lib/utils/plan-access';
 // Safely import logger to handle potential circular dependencies
 import { logger as originalLogger } from '@/lib/structured-logger';
 
@@ -137,6 +139,18 @@ export async function GET(
     // Verify ownership
     if (cvWithTemplate.userId.toString() !== session.user.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    }
+
+    // Plan gate: DOCX export requires starter_yearly+ plan
+    if (format === 'docx') {
+      const dbUser = await User.findById(session.user.id)
+        .select('currentPlanKey subscription')
+        .lean();
+      if (dbUser) {
+        const planAccess = getPlanAccess(dbUser);
+        const denied = planAccess.gate('docxExport');
+        if (denied) return denied;
+      }
     }
 
     // Resolve template using the unified TemplateResolutionService

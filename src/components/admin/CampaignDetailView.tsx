@@ -16,9 +16,11 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import DOMPurify from 'isomorphic-dompurify';
 import CampaignPerformancePanel from './CampaignPerformancePanel';
 import { ADMIN_THEME } from '@/lib/config/adminTheme';
 
@@ -486,7 +488,7 @@ export default function CampaignDetailView({ campaign, onClose }: CampaignDetail
                             </h3>
                         </div>
                         <div className="bg-white p-4 max-h-[500px] overflow-y-auto text-slate-900 border border-slate-200">
-                            <div dangerouslySetInnerHTML={{ __html: campaign.htmlContent }} />
+                            <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(campaign.htmlContent) }} />
                         </div>
                     </Card>
 

@@ -51,6 +51,7 @@ import PageHeader from '@/components/dashboard/PageHeader';
 import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
 import { useUserData } from '@/lib/hooks/useUserData';
 import { getPlanName } from '@/lib/utils/userPlanUtils';
+import { isFreeTierPlan } from '@/lib/utils/subscription-helpers';
 import toast from 'react-hot-toast';
 import EmailConnectModal from '@/components/dashboard/jobs/EmailConnectModal';
 
@@ -2125,7 +2126,7 @@ const MembershipBilling = ({ user }: { user: User }) => {
                   })()}
 
                   {(() => {
-                    const isFree = currentPlanKey === 'free';
+                    const isFree = isFreeTierPlan(currentPlanKey);
                     const isStarter = currentPlanKey === 'starter_monthly';
                     
                     if (isFree) {

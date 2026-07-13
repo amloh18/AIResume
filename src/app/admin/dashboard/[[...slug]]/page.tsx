@@ -66,14 +66,14 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     if (status === 'unauthenticated') {
-      window.location.href = '/admin/login';
+      router.push('/admin/login');
       return;
     }
     if (status === 'authenticated' && !isAdmin) {
-      window.location.href = '/dashboard';
+      router.push('/dashboard');
       return;
     }
-  }, [status, isAdmin]);
+  }, [status, isAdmin, router]);
 
   const fetchActivities = async () => {
     try {

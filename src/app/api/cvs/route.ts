@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
+import pLimit from 'p-limit';
 import { getConnection } from '@/lib/database';
 import { CV, Template } from '@/models';
 import { createPaginationOptions, paginateQuery, createErrorResponse } from '@/lib/db-utils';
@@ -119,7 +120,7 @@ export async function GET(request: NextRequest) {
 
     // Apply limit if specified
     if (limit) {
-      query = query.limit(parseInt(limit));
+      query = query.limit(parseInt(limit, 10));
     }
 
     // Apply projection for list view (minimal fields)
@@ -181,31 +182,7 @@ export async function GET(request: NextRequest) {
     }
     console.log('🔍 CV API - Query executed, found CVs:', cvs.length);
 
-    // Trigger async thumbnail generation for CVs missing thumbnails
-    // Use service function instead of HTTP call to avoid authentication issues
-    cvs.forEach(async (cv) => {
-      const thumbnailAge = cv.metadata?.thumbnailGeneratedAt
-        ? Date.now() - new Date(cv.metadata.thumbnailGeneratedAt).getTime()
-        : Infinity;
-
-      const needsThumbnail = !cv.metadata?.thumbnailUrl || thumbnailAge > 7 * 24 * 60 * 60 * 1000; // 7 days
-
-      if (needsThumbnail) {
-        // Use service function for server-side thumbnail generation (no auth needed)
-        setImmediate(async () => {
-          try {
-            const { CVThumbnailService } = await import('@/lib/services/cvThumbnailService');
-            await CVThumbnailService.generateAndSaveThumbnail(
-              cv._id.toString(),
-              userId,
-              false // Don't force regenerate if recent
-            );
-          } catch (error) {
-            console.error(`Failed to generate thumbnail for CV ${cv._id}:`, error);
-          }
-        });
-      }
-    });
+    // S3 thumbnail generation has been disabled.
 
     // Debug: Show all found CVs
     cvs.forEach((cv, index) => {
@@ -221,19 +198,30 @@ export async function GET(request: NextRequest) {
     });
 
     // Handle count queries efficiently
-    let countBaseQuery = {
+    const countBaseQuery = {
       userId: new mongoose.Types.ObjectId(userId)
     };
 
-    const counts = await Promise.all([
-      CV.countDocuments(countBaseQuery),
-      CV.countDocuments({ ...countBaseQuery, status: 'draft' }),
-      CV.countDocuments({ ...countBaseQuery, status: 'published' }),
-      CV.countDocuments({ ...countBaseQuery, status: 'archived' }),
-      CV.countDocuments({ ...countBaseQuery, 'metadata.starred': true })
+    // Use aggregation for status counts
+    const statusCounts = await CV.aggregate([
+      { $match: countBaseQuery },
+      { $group: { _id: '$status', count: { $sum: 1 } } }
     ]);
 
-    const [total, drafts, publishedCount, archived, starredCount] = counts;
+    let total = 0;
+    let drafts = 0;
+    let publishedCount = 0;
+    let archived = 0;
+
+    statusCounts.forEach((statusObj) => {
+      total += statusObj.count;
+      if (statusObj._id === 'draft') drafts = statusObj.count;
+      else if (statusObj._id === 'published') publishedCount = statusObj.count;
+      else if (statusObj._id === 'archived') archived = statusObj.count;
+    });
+
+    // Handle starred count separately
+    const starredCount = await CV.countDocuments({ ...countBaseQuery, 'metadata.starred': true });
 
     // Transform data for response
     const transformedCvs = cvs.map(cv => {
@@ -844,8 +832,10 @@ export async function POST(request: NextRequest) {
     if (isFromResumeEnhancer || finalCvType === 'standalone' || isCreatingMasterCV || finalCvType === 'master') {
       const User = (await import('@/models/User')).default;
       const userForCredit = await User.findById(userId);
+      const hasActiveTrial = userForCredit?.trialState?.token && userForCredit.trialState.expiresAt && new Date(userForCredit.trialState.expiresAt) > new Date();
+      const effectivePlanKey = hasActiveTrial ? 'starter_monthly' : userForCredit?.currentPlanKey;
 
-      if (userForCredit && userForCredit.currentPlanKey === 'free') {
+      if (userForCredit && effectivePlanKey === 'free') {
         if (isCreatingMasterCV || finalCvType === 'master' || (finalCvType === 'standalone' && isFromResumeEnhancer)) {
           const { default: creditService } = await import('@/lib/services/creditService');
           const creditSpent = await creditService.spendCredit(userId, 'job_create');

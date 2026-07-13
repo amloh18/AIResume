@@ -3,7 +3,8 @@ import {
   processRenewals,
   processDunning,
   retryFailedPayments,
-  sendDunningEmails
+  sendDunningEmails,
+  reconcilePolarSubscriptions
 } from '@/lib/services/billingSchedulerService';
 
 /**
@@ -55,6 +56,11 @@ export async function GET(request: NextRequest) {
     // Send dunning emails
     if (action === 'all' || action === 'emails') {
       results.emails = await sendDunningEmails();
+    }
+
+    // Reconcile live Polar subscriptions
+    if (action === 'all' || action === 'reconcile') {
+      results.reconcile = await reconcilePolarSubscriptions();
     }
 
     return NextResponse.json({

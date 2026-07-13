@@ -19,6 +19,7 @@ import CoverLetterPreview from '@/components/cv-preview/CoverLetterPreview';
 import CoverLetterLayoutEngine from '../../cover-letter-engine/CoverLetterLayoutEngine';
 import ScoreBreakdown from '@/components/ui/ScoreBreakdown';
 import { useUserData } from '@/lib/hooks/useUserData';
+import { useMembership } from '@/lib/hooks/useMembership';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useSession } from 'next-auth/react';
 import { downloadCanvasAsPDF } from '@/lib/utils/downloadCanvas';
@@ -26,6 +27,7 @@ import AuthPromptModal from '../AuthPromptModal';
 import toast from 'react-hot-toast';
 import { COVER_LETTER_TEMPLATES } from '@/lib/templates/cover-letter-templates';
 import EditorOnboarding from '@/components/resume-enhancer/components/EditorOnboarding';
+import EditorStepsNavOverlay from '@/components/resume-enhancer/components/EditorStepsNavOverlay';
 import { Skeleton } from '@/components/ui/SkeletonLoader';
 
 const CVBuilderProAdapter = lazy(() =>
@@ -275,6 +277,7 @@ export default function Step5Review({ onSave }: { onSave?: () => Promise<void> }
   const { openPaymentModal } = usePaymentModal();
   const { data: session } = useSession();
   const { userData } = useUserData();
+  const { membership, refreshMembership } = useMembership();
   const [zoom, setZoom] = useState(0.5); // Will be recalculated on mount
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [showDownloadModal, setShowDownloadModal] = useState(false);
@@ -672,24 +675,17 @@ export default function Step5Review({ onSave }: { onSave?: () => Promise<void> }
 
     // Check if this is a master CV and if we should trigger the paywall
     const isMasterCV = state.cvType === 'master';
-    if (isMasterCV && (!userData || userData.currentPlanKey === 'free')) {
+    const isFree = !membership || membership.isFreePlan || membership.planKey === 'free';
+    if (isMasterCV && isFree) {
       openPaymentModal({
         preselectedPlanKey: 'focused_monthly',
         triggerContext: 'onboarding-exit',
         onSuccess: async () => {
+          await refreshMembership();
           await proceedDownload();
         },
-        onClose: async () => {
-          try {
-            await fetch('/api/user/subscription', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ planKey: 'starter_monthly' })
-            });
-          } catch (err) {
-            console.error('Failed to auto-assign starter plan on download close:', err);
-          }
-          await proceedDownload();
+        onClose: () => {
+          console.log('Payment modal closed without subscribing');
         }
       });
       return;
@@ -1342,6 +1338,7 @@ export default function Step5Review({ onSave }: { onSave?: () => Promise<void> }
             <CheckCircle2 className="w-5 h-5 text-black" />
             <span>Finish &amp; Exit</span>
           </button>
+          <EditorStepsNavOverlay />
         </div>
       </div>
 

@@ -53,6 +53,7 @@ import { gsap } from 'gsap';
 import EditorOnboarding from '@/components/resume-enhancer/components/EditorOnboarding';
 import EditorChecklist, { type EditorChecklistProgress } from '@/components/resume-enhancer/components/EditorChecklist';
 import { useEditorChecklist } from '@/lib/hooks/useEditorChecklist';
+import EditorStepsNavOverlay from '@/components/resume-enhancer/components/EditorStepsNavOverlay';
 
 type ViewMode = 'edit' | 'preview' | 'recruiter' | 'ats';
 
@@ -1390,11 +1391,13 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
             style={{ order: isControlPanelOpen ? 1 : 2 }}
           >
             {(() => {
-              const { progress: checklistProgress, markComplete } = useEditorChecklist();
+              const { progress: checklistProgress, markComplete, isComplete } = useEditorChecklist();
 
               const handleItemComplete = useCallback((id: 'layout' | 'design' | 'aiChat' | 'review') => {
                 markComplete(id);
               }, [markComplete]);
+
+              if (isComplete) return null;
 
               return (
                 <EditorChecklist
@@ -1413,6 +1416,7 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
             <div className="flex-1 min-h-0">
               <ATSMeterPanel isUtilityPanelOpen={!!activeUtilityPanel} onClose={() => setActiveUtilityPanel(null)} />
             </div>
+            {!isControlPanelOpen && <EditorStepsNavOverlay />}
           </div>
 
           {/* Unified Utility Panel (Mori Chat, Design, JSON, Layout) */}
@@ -1456,6 +1460,7 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
               id="builder-utility-panel-portal"
               className={`flex-grow flex flex-col h-full overflow-hidden ${activeUtilityPanel === 'mori' ? 'hidden' : ''}`}
             />
+            {isControlPanelOpen && <EditorStepsNavOverlay />}
           </div>
 
           {/* Mobile unified bottom navigation pill */}

@@ -48,7 +48,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const planKey = user.currentPlanKey || 'free';
+    const hasActiveTrial = user.trialState?.token && user.trialState.expiresAt && new Date(user.trialState.expiresAt) > new Date();
+    const planKey = hasActiveTrial ? 'starter_monthly' : (user.currentPlanKey || 'free');
 
     // Support conditional requests (If-Modified-Since)
     const ifModifiedSince = request.headers.get('if-modified-since');
@@ -166,7 +167,15 @@ export async function GET(request: NextRequest) {
         isInGracePeriod: timeAccess.isInGracePeriod,
         gracePeriodEndsAt: timeAccess.gracePeriodEndsAt,
       },
-      subscription: subscription
+      subscription: hasActiveTrial
+        ? {
+            planKey: 'starter_monthly',
+            status: 'active',
+            accessExpiresAt: user.trialState.expiresAt,
+            currentPeriodEnd: user.trialState.expiresAt,
+            autoRenew: false,
+          }
+        : (subscription
         ? {
             planKey: (subscription as any).planKey,
             status: subscription.status,
@@ -174,7 +183,7 @@ export async function GET(request: NextRequest) {
             currentPeriodEnd: subscription.currentPeriodEnd,
             autoRenew: subscription.autoRenew,
           }
-        : null,
+        : null),
       lastUpdated: user.updatedAt ? new Date(user.updatedAt).toISOString() : new Date().toISOString(),
     };
 

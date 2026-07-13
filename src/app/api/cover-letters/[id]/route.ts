@@ -12,18 +12,14 @@ export async function GET(
   try {
     await getConnection();
     const { id } = await params;
-    const { searchParams } = new URL(request.url);
-    let userId = searchParams.get('userId');
-    if (!userId) {
-      const authResult = await getAuthenticatedUser(request);
-      if (!authResult) {
-        return NextResponse.json(
-          { success: false, error: 'Unauthorized' },
-          { status: 401 }
-        );
-      }
-      userId = authResult.userId;
+    const authResult = await getAuthenticatedUser(request);
+    if (!authResult) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
     }
+    const userId = authResult.userId;
 
     // Validate ObjectIds
     if (!mongoose.Types.ObjectId.isValid(id) || !mongoose.Types.ObjectId.isValid(userId)) {
@@ -74,6 +70,14 @@ export async function PUT(
     const body = await request.json();
     const { jobId, userId, title, content, header, body: bodyContent, footer, status, metadata, targetCompany, targetPosition, keywords, cvId, journeyId } = body;
 
+    const authResult = await getAuthenticatedUser(request);
+    if (!authResult) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     // Fetch the cover letter document
     const coverLetter = await CoverLetter.findById(id);
 
@@ -81,6 +85,13 @@ export async function PUT(
       return NextResponse.json(
         { success: false, error: 'Cover letter not found' },
         { status: 404 }
+      );
+    }
+
+    if (coverLetter.userId.toString() !== authResult.userId) {
+      return NextResponse.json(
+        { success: false, error: 'Forbidden' },
+        { status: 403 }
       );
     }
 
@@ -159,18 +170,18 @@ export async function DELETE(
   try {
     await getConnection();
     const { id } = await params;
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
+    
+    const authResult = await getAuthenticatedUser(request);
+    if (!authResult) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+    const userId = authResult.userId;
 
     // CRITICAL: Log to stderr to ensure it appears even if stdout is buffered
     console.error('🔍 DELETE Cover Letter - Request:', JSON.stringify({ id, userId }));
-
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, error: 'User ID is required' },
-        { status: 400 }
-      );
-    }
 
     // Validate ObjectIds
     if (!mongoose.Types.ObjectId.isValid(id) || !mongoose.Types.ObjectId.isValid(userId)) {

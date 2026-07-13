@@ -34,6 +34,7 @@ import FilterPresets from "./FilterPresets";
 import ABTestingConfig from "./ABTestingConfig";
 import { campaignTemplates, CampaignTemplate, BASE_TEMPLATE } from "@/lib/campaign-templates";
 import { Card, CardContent } from "@/components/ui/card";
+import DOMPurify from 'isomorphic-dompurify';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -798,7 +799,7 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
                   {activeDesignTab === "preview" && (
                     <section className="bg-white rounded-[2.5rem] p-10 shadow-2xl min-h-[500px] border border-white/10">
                         <div dangerouslySetInnerHTML={{ 
-                          __html: formData.htmlContent.replace(/{{appUrl}}/g, window.location.origin) 
+                          __html: DOMPurify.sanitize(formData.htmlContent.replace(/{{appUrl}}/g, window.location.origin) || '<div>Email preview will appear here</div>')
                         }} />
                     </section>
                   )}

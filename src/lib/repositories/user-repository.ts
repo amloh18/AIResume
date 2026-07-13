@@ -121,9 +121,10 @@ export class UserRepository extends BaseRepository<IUser> {
    * Verify user password
    */
   async verifyPassword(userId: string, password: string): Promise<boolean> {
-    const user = await this.model.findById(userId).select('+password');
+    const user = await this.model.findById(userId).select('+password').lean();
     if (!user || !user.password) return false;
-    return user.comparePassword(password);
+    const bcrypt = await import('bcryptjs');
+    return bcrypt.compare(password, (user as any).password);
   }
 
   /**

@@ -8,6 +8,7 @@ import TableOfContentsClient from '@/components/blog/TableOfContentsClient';
 import { MotionDiv, MotionH1 } from '@/components/ui/motion-wrapper';
 import CardNav from '@/components/landing/CardNav';
 import { Metadata } from 'next';
+import DOMPurify from 'isomorphic-dompurify';
 
 export async function generateMetadata(props: {
   params: Promise<{ slug: string }>;
@@ -349,12 +350,12 @@ export default async function BlogPostPage(props: {
                     >
                       <h2 className="text-h2 md:text-h1 font-bold text-white mb-5 leading-tight">{section.heading}</h2>
                       {section.content && (
-                        <div className="prose-content text-gray-300 leading-relaxed" dangerouslySetInnerHTML={{ __html: section.content }} />
+                        <div className="prose-content text-gray-300 leading-relaxed" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(section.content) }} />
                       )}
                       {section.subSections?.map((sub, si) => (
                         <div key={si} className="mt-6">
                           <h3 className="text-h3 font-bold text-white mb-3">{sub.heading}</h3>
-                          <div className="prose-content text-gray-300" dangerouslySetInnerHTML={{ __html: sub.content }} />
+                          <div className="prose-content text-gray-300" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(sub.content) }} />
                         </div>
                       ))}
                     </MotionDiv>

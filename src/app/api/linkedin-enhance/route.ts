@@ -3,6 +3,9 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { callAIWithFallback } from '@/lib/utils/ai-api-helper';
 import LinkedInSnapshot from '@/models/LinkedInSnapshot';
+import User from '@/models/User';
+import { connectToDatabase } from '@/lib/database';
+import { getPlanAccess } from '@/lib/utils/plan-access';
 import fs from 'fs';
 import path from 'path';
 
@@ -25,6 +28,17 @@ export async function POST(request: NextRequest) {
         { success: false, error: 'Unauthorized' },
         { status: 401 }
       );
+    }
+
+    // Plan gate: LinkedIn Enhancer requires focused_monthly+
+    await connectToDatabase();
+    const dbUser = await User.findById(session.user.id)
+      .select('currentPlanKey subscription')
+      .lean();
+    if (dbUser) {
+      const planAccess = getPlanAccess(dbUser);
+      const denied = planAccess.gate('linkedinEnhancer');
+      if (denied) return denied;
     }
 
     const body = await request.json();

@@ -358,6 +358,7 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
         <>
           {/* Backdrop */}
           <motion.div
+            key="job-parser-backdrop"
             initial={{ opacity: 0 }}
             animate={{ opacity: 0.5 }}
             exit={{ opacity: 0 }}
@@ -367,6 +368,7 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
 
           {/* Sidebar Panel */}
           <motion.div
+            key="job-parser-sidebar-panel"
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}

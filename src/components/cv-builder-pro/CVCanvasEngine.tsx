@@ -368,7 +368,19 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
   const [zones, setZones] = useState<Record<string, any[]>>(() => {
     const activeId = cvData?.metadata?.canvasTemplate?.id || (template?.id || CANVAS_TEMPLATES[0].id);
     const cachedZones = cvData?.metadata?.canvasTemplatesZones?.[activeId];
-    const raw: Record<string, any[]> = cachedZones || cvData?.metadata?.canvasZones || {};
+    let raw: Record<string, any[]> = cachedZones || cvData?.metadata?.canvasZones || {};
+    
+    if (Object.keys(raw).length === 0) {
+      const activeTpl = cvData?.metadata?.canvasTemplate || template || CANVAS_TEMPLATES[0];
+      const initialZones: Record<string, any[]> = {};
+      if (activeTpl?.zones) {
+        Object.keys(activeTpl.zones).forEach((zoneId: string) => {
+          initialZones[zoneId] = activeTpl.zones[zoneId].map((type: string) => ({ id: generateId(), type }));
+        });
+      }
+      raw = initialZones;
+    }
+
     // Deduplicate blocks within each zone to prevent React duplicate-key warnings
     const deduped: Record<string, any[]> = {};
     Object.keys(raw).forEach(zoneId => {
@@ -529,6 +541,14 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
         });
         setZones(deduped);
       }
+    } else if (Object.keys(zonesRef.current).length === 0) {
+      const initialZones: Record<string, any[]> = {};
+      if (activeTemplate?.zones) {
+        Object.keys(activeTemplate.zones).forEach((zoneId: string) => {
+          initialZones[zoneId] = activeTemplate.zones[zoneId].map((type: string) => ({ id: generateId(), type }));
+        });
+      }
+      setZones(initialZones);
     }
 
     // 2. Sync design if metadata changed externally
@@ -2727,4 +2747,25 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
 
 CVCanvasEngine.displayName = 'CVCanvasEngine';
 
-export default CVCanvasEngine;
+import { ErrorBoundary } from 'react-error-boundary';
+
+function ErrorFallback({ error, resetErrorBoundary }: any) {
+  return (
+    <div role="alert" className="p-8 border border-red-200 rounded-lg bg-red-50 h-full flex flex-col justify-center items-center text-center">
+      <h2 className="text-xl font-bold text-red-800">Something went wrong in the Canvas Editor</h2>
+      <pre className="mt-4 text-sm text-red-600 bg-white p-4 rounded border border-red-100 max-w-full overflow-auto text-left w-full shadow-sm">{error.message}</pre>
+      <button onClick={resetErrorBoundary} className="mt-6 px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded shadow transition-colors">
+        Try again
+      </button>
+    </div>
+  );
+}
+
+const CVCanvasEngineWithErrorBoundary = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>((props, ref) => (
+  <ErrorBoundary FallbackComponent={ErrorFallback}>
+    <CVCanvasEngine {...props} ref={ref} />
+  </ErrorBoundary>
+));
+CVCanvasEngineWithErrorBoundary.displayName = 'CVCanvasEngineWithErrorBoundary';
+
+export default CVCanvasEngineWithErrorBoundary;

@@ -6,6 +6,8 @@ import { getConnection } from '@/lib/database';
 import { User, Subscription, PaymentMethod, Invoice, Transaction } from '@/models';
 import InvoiceItem from '@/models/InvoiceItem';
 import PolarService from '@/lib/payment/polar';
+import { getPlanName } from '@/lib/utils/userPlanUtils';
+import { isFreeTierPlan } from '@/lib/utils/subscription-helpers';
 
 /**
  * Unified billing data API
@@ -34,6 +36,55 @@ export async function GET(request: NextRequest) {
     }
 
     const userId = user._id.toString();
+
+    // --- Live Polar Reconciliation Check ---
+    let liveDetails: any = { hasActiveSub: false, planKey: undefined, subscription: undefined };
+    try {
+      const { default: PolarService } = await import('@/lib/payment/polar');
+      liveDetails = await PolarService.getActiveSubscriptionDetails(user.email);
+    } catch (polarErr) {
+      console.error('Failed to query Polar details in billing-data route:', polarErr);
+    }
+
+    if (liveDetails.hasActiveSub) {
+      const resolvedPlanKey = liveDetails.planKey || 'starter_monthly';
+      const mongoActive = user.subscription && (user.subscription.status === 'active' || user.subscription.status === 'trialing') && user.currentPlanKey !== 'free';
+      if (!mongoActive) {
+        console.log(`🔄 Billing Data API - Reconciling active Polar subscription for ${user.email} in MongoDB...`);
+        const expiresAt = liveDetails.subscription?.currentPeriodEnd || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+        
+        await User.findByIdAndUpdate(user._id, {
+          $set: {
+            currentPlanKey: resolvedPlanKey,
+            'subscription.planKey': resolvedPlanKey,
+            'subscription.status': 'active',
+            'subscription.accessExpiresAt': expiresAt,
+            'subscription.currentPeriodEnd': expiresAt
+          }
+        });
+        
+        const SubscriptionModel = (await import('@/models/Subscription')).default;
+        const { getAdminPricingPlan } = await import('@/models/admin-models');
+        const PricingPlan = await getAdminPricingPlan();
+        const plan = await PricingPlan.findOne({ key: resolvedPlanKey });
+        
+        await SubscriptionModel.findOneAndUpdate(
+          { userId: user._id },
+          {
+            $set: {
+              status: 'active',
+              planKey: resolvedPlanKey,
+              planId: plan?._id,
+              currentPeriodStart: liveDetails.subscription?.currentPeriodStart || new Date(),
+              currentPeriodEnd: expiresAt,
+              providerSubscriptionId: liveDetails.subscription?.id || 'polar_sub_reconciled'
+            }
+          },
+          { upsert: true }
+        );
+      }
+    }
+    // --- End Live Polar Reconciliation Check ---
 
     // Fetch all billing data in parallel
     const [subscription, paymentMethods, invoices, transactions] = await Promise.all([
@@ -86,11 +137,22 @@ export async function GET(request: NextRequest) {
       return acc;
     }, {});
 
-    // Format subscription
+    // Format subscription — prefer populated planId.key, then subscription.planKey (direct field),
+    // then user.currentPlanKey (most authoritative source, updated by reconciliation)
+    const resolvedPlanKey =
+      (subscription as any)?.planId?.key ||
+      (subscription as any)?.planKey ||
+      user.currentPlanKey ||
+      'free';
+    const resolvedPlanName =
+      (subscription as any)?.planId?.name ||
+      getPlanName(resolvedPlanKey) ||
+      'Free Plan';
+
     const subscriptionData = subscription ? {
       id: subscription._id,
-      planName: (subscription as any).planId?.name || 'Unknown Plan',
-      planKey: (subscription as any).planId?.key || 'free',
+      planName: resolvedPlanName,
+      planKey: resolvedPlanKey,
       status: subscription.status,
       billingCycle: subscription.billingCycle,
       amount: subscription.amount,
@@ -108,7 +170,24 @@ export async function GET(request: NextRequest) {
           maxExports: (subscription as any).planId?.maxExports || 0
         }
       }
-    } : null;
+    } : {
+      // No Subscription document, but user may still have an active plan key (e.g. reconciled from Polar)
+      id: null,
+      planName: getPlanName(user.currentPlanKey as any) || 'Free Plan',
+      planKey: user.currentPlanKey || 'free',
+      status: user.subscription?.status || 'inactive',
+      billingCycle: user.subscription?.interval || 'monthly',
+      amount: 0,
+      discountAmount: 0,
+      finalAmount: 0,
+      currency: 'USD',
+      startDate: null,
+      endDate: user.subscription?.accessExpiresAt || null,
+      nextBillingDate: null,
+      currentPeriodStart: null,
+      currentPeriodEnd: user.subscription?.currentPeriodEnd || null,
+      planDetails: { features: { maxCVs: 0, maxExports: 0 } }
+    };
 
     // Format payment methods
     const paymentMethodsData = paymentMethods.map((pm: any) => ({
@@ -214,7 +293,9 @@ export async function GET(request: NextRequest) {
         subscription: subscriptionData,
         paymentMethods: paymentMethodsData,
         invoices: invoicesData,
-        transactions: transactionsData
+        transactions: transactionsData,
+        // Include user's authoritative plan key at top level for components that need it
+        currentPlanKey: user.currentPlanKey || 'free'
       }
     });
   } catch (error: any) {

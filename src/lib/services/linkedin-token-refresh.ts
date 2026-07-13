@@ -146,7 +146,7 @@ export class LinkedInTokenRefreshService {
     const params = new URLSearchParams({
       response_type: 'code',
       client_id: process.env.LINKEDIN_CLIENT_ID || '',
-      redirect_uri: redirectUri || process.env.LINKEDIN_REDIRECT_URI || 'http://localhost:3000/api/auth/callback/linkedin',
+      redirect_uri: redirectUri || process.env.LINKEDIN_REDIRECT_URI || `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/auth/callback/linkedin`,
       scope: 'r_liteprofile r_emailaddress w_member_social',
       state: `reauth_${Date.now()}`,
     });

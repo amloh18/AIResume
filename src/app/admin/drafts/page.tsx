@@ -16,16 +16,16 @@ export default function AdminDraftsPage() {
   useEffect(() => {
     // Redirect if not authenticated or not an admin
     if (status === 'unauthenticated') {
-      window.location.href = '/admin/login';
+      router.push('/admin/login');
       return;
     }
 
     if (status === 'authenticated' && !isAdmin) {
       console.error('User is not an admin');
-      window.location.href = '/dashboard';
+      router.push('/dashboard');
       return;
     }
-  }, [status, isAdmin]);
+  }, [status, isAdmin, router]);
 
   // Show loading state while checking authentication
   if (status === 'loading') {

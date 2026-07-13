@@ -114,12 +114,12 @@ const JobsTracker: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
-  const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [showFilters, setShowFilters] = useState(false);
-  const [viewMode, setViewMode] = useState<'kanban' | 'list'>('list');
-
   // Use persistence hook
   const { preferences, savePreferences } = useJobsPersistence();
+
+  const [filterStatus, setFilterStatus] = useState<string>(() => preferences?.filterStatus || 'all');
+  const [showFilters, setShowFilters] = useState(false);
+  const [viewMode, setViewMode] = useState<'kanban' | 'list'>(() => preferences?.mode || 'kanban');
 
   // Focus mode
   const { isFocusMode, toggleFocusMode } = useFocusMode();
@@ -154,35 +154,11 @@ const JobsTracker: React.FC = () => {
     };
   }, [membership, jobCount]);
 
-  // Initialize from persisted preferences
-  useEffect(() => {
-    if (preferences.mode) {
-      setViewMode(preferences.mode);
-    }
-    if (preferences.filterStatus) {
-      setFilterStatus(preferences.filterStatus);
-    }
-    if (preferences.sortBy) {
-      setSortBy(preferences.sortBy);
-    }
-    if (preferences.lastUpdatedFilter) {
-      setLastUpdatedFilter(preferences.lastUpdatedFilter);
-    }
-    if (preferences.followUpFilter) {
-      setFollowUpFilter(preferences.followUpFilter);
-    }
-    if (preferences.salaryRangeFilter) {
-      setSalaryRangeFilter(preferences.salaryRangeFilter);
-    }
-    if (preferences.priorityFilter) {
-      setPriorityFilter(preferences.priorityFilter);
-    }
-  }, []); // Only on mount
-  const [sortBy, setSortBy] = useState<'lastUpdated' | 'followUpDate' | 'salaryRange' | 'priority'>('lastUpdated');
-  const [lastUpdatedFilter, setLastUpdatedFilter] = useState<'today' | 'last7days' | 'last30days' | 'all'>('all');
-  const [followUpFilter, setFollowUpFilter] = useState<'upcoming' | 'overdue' | 'all'>('all');
-  const [salaryRangeFilter, setSalaryRangeFilter] = useState<'all' | 'under50k' | '50k-75k' | '75k-100k' | '100k-150k' | '150k-200k' | 'over200k'>('all');
-  const [priorityFilter, setPriorityFilter] = useState<'high' | 'medium' | 'low' | 'all'>('all');
+  const [sortBy, setSortBy] = useState<'lastUpdated' | 'followUpDate' | 'salaryRange' | 'priority'>(() => preferences?.sortBy || 'lastUpdated');
+  const [lastUpdatedFilter, setLastUpdatedFilter] = useState<'today' | 'last7days' | 'last30days' | 'all'>(() => preferences?.lastUpdatedFilter || 'all');
+  const [followUpFilter, setFollowUpFilter] = useState<'upcoming' | 'overdue' | 'all'>(() => preferences?.followUpFilter || 'all');
+  const [salaryRangeFilter, setSalaryRangeFilter] = useState<'all' | 'under50k' | '50k-75k' | '75k-100k' | '100k-150k' | '150k-200k' | 'over200k'>(() => preferences?.salaryRangeFilter || 'all');
+  const [priorityFilter, setPriorityFilter] = useState<'high' | 'medium' | 'low' | 'all'>(() => preferences?.priorityFilter || 'all');
   const [selectedJobs, setSelectedJobs] = useState<Set<string>>(new Set());
   const [showBulkActions, setShowBulkActions] = useState(false);
   const [draggedJob, setDraggedJob] = useState<string | null>(null);

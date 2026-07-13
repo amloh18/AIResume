@@ -5,6 +5,7 @@ import { authenticateRequest } from '@/lib/utils/auth-helpers-api';
 import { JobApplication, CV, User } from '@/models';
 import { InterviewCoachService } from '@/lib/services/interviewCoachService';
 import { setCorsHeaders } from '@/lib/utils/cors-helpers';
+import { getPlanAccess } from '@/lib/utils/plan-access';
 import mongoose from 'mongoose';
 
 // Increase timeout for AI
@@ -20,6 +21,17 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        // Plan gate: interviewCoach requires focused_monthly+
+        await getConnection();
+        const dbUser = await User.findById(auth.userId)
+            .select('currentPlanKey subscription')
+            .lean();
+        if (dbUser) {
+            const planAccess = getPlanAccess(dbUser);
+            const denied = planAccess.gate('interviewCoach');
+            if (denied) return setCorsHeaders(denied, request);
+        }
+
         const { questionId, answer, jobId } = await request.json();
 
         if (!questionId || !answer || !jobId) {
@@ -29,7 +41,6 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        await getConnection();
 
         const jobIdQuery = mongoose.Types.ObjectId.isValid(jobId)
             ? new mongoose.Types.ObjectId(jobId)

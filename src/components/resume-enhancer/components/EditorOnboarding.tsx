@@ -93,16 +93,43 @@ export default function EditorOnboarding({ step }: EditorOnboardingProps) {
   const [currentSlide, setCurrentSlide] = useState(0);
 
   useEffect(() => {
-    // Check if onboarding seen
-    const seen = localStorage.getItem(`cvcircle_onboarding_seen_step_${step}`);
-    if (!seen) {
-      setIsOpen(true);
-    }
+    const fetchTourStatus = async () => {
+      try {
+        const res = await fetch('/api/user/onboarding');
+        if (res.ok) {
+          const json = await res.json();
+          const seenTours = json?.data?.onboarding?.seen_tours || {};
+          const tourKey = `step_${step}`;
+          if (!seenTours[tourKey]) {
+            setIsOpen(true);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch onboarding state from server:', err);
+        const seen = localStorage.getItem(`cvcircle_onboarding_seen_step_${step}`);
+        if (!seen) setIsOpen(true);
+      }
+    };
+    fetchTourStatus();
   }, [step]);
 
-  const handleClose = () => {
-    localStorage.setItem(`cvcircle_onboarding_seen_step_${step}`, 'true');
+  const handleClose = async () => {
     setIsOpen(false);
+    localStorage.setItem(`cvcircle_onboarding_seen_step_${step}`, 'true');
+    try {
+      const tourKey = `step_${step}`;
+      await fetch('/api/user/onboarding', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          seen_tours: {
+            [tourKey]: true
+          }
+        })
+      });
+    } catch (err) {
+      console.error('Failed to save seen tour to server:', err);
+    }
   };
 
   const slides = ONBOARDING_SLIDES_DATA[step];

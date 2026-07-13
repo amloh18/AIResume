@@ -12,7 +12,7 @@ import UnifiedAuthLayout from './UnifiedAuthLayout';
 import UnifiedAuthForm, { emailValidation, passwordValidation, nameValidation, confirmPasswordValidation } from './UnifiedAuthForm';
 import SocialAuthButtons from './SocialAuthButtons';
 import CodeVerificationScreen from './CodeVerificationScreen';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 
 export type AuthMode = 'signin' | 'signup' | 'reset' | 'magic-link' | 'verify-code';
 
@@ -26,6 +26,21 @@ export interface AuthPageProps {
 export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false, layoutVariant = 'default', callbackUrl: propCallbackUrl }: AuthPageProps) {
   const { data: session, status } = useSession();
   const globalCallbackUrl = useAuthModalStore(state => state.callbackUrl);
+  const router = useRouter();
+
+  const safeRedirect = useCallback((url: string) => {
+    try {
+      const ALLOWED_CALLBACK_HOSTS = ['cvcircle.io', 'localhost:3000', 'localhost'];
+      const parsed = new URL(url, window.location.origin);
+      if (parsed.origin === window.location.origin || ALLOWED_CALLBACK_HOSTS.includes(parsed.hostname)) {
+        router.push(url);
+      } else {
+        router.push('/dashboard');
+      }
+    } catch {
+      router.push('/dashboard');
+    }
+  }, [router]);
 
   // Get callbackUrl from search params, default to dashboard
   const callbackUrl = useMemo(() => {
@@ -70,7 +85,7 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
       if (!hasRedirectedRef.current) {
         hasRedirectedRef.current = true;
         console.log('[sign-in] redirecting authenticated user to', callbackUrl);
-        window.location.href = callbackUrl;
+        safeRedirect(callbackUrl);
       }
     }
   }, [status, session?.user, callbackUrl, isModal, isOnSignIn]);
@@ -81,7 +96,7 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
       if (!isModal) {
         // Use window.location for reliable redirect that preserves callbackUrl
         const timer = setTimeout(() => {
-          window.location.href = callbackUrl;
+          safeRedirect(callbackUrl);
         }, 1000);
         return () => clearTimeout(timer);
       }
@@ -389,7 +404,7 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
         setSuccess('Sign in successful! Redirecting...');
         setTimeout(() => {
           if (!isModal) {
-            window.location.href = callbackUrl;
+            safeRedirect(callbackUrl);
           }
         }, 1000);
         return;
@@ -423,7 +438,7 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
               });
               setTimeout(() => {
                 if (!isModal) {
-                  window.location.href = callbackUrl;
+                  safeRedirect(callbackUrl);
                 }
               }, 800);
             } else {
@@ -568,7 +583,7 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
                 if (signInResult?.ok) {
                   setSuccess('Signed in! Redirecting...');
                   setTimeout(() => {
-                    window.location.href = callbackUrl;
+                    safeRedirect(callbackUrl);
                   }, 500);
                 } else {
                   setError('Verification succeeded but sign-in failed. Please try signing in manually.');
@@ -590,7 +605,7 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
                 // This ensures NextAuth recognizes the session
                 setTimeout(() => {
                   if (!isModal) {
-                    window.location.href = callbackUrl;
+                    safeRedirect(callbackUrl);
                   }
                 }, 500);
               } else {
@@ -634,7 +649,7 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
             // Redirect to callbackUrl
             setTimeout(() => {
               if (!isModal) {
-                window.location.href = callbackUrl;
+                safeRedirect(callbackUrl);
               }
             }, 1500);
           } else {

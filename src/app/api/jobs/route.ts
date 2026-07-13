@@ -314,10 +314,18 @@ export async function POST(request: NextRequest) {
           }
 
           const { checkJobLimit } = await import('@/lib/utils/subscription-helpers');
+          const hasActiveTrial = user.trialState?.token && user.trialState.expiresAt && new Date(user.trialState.expiresAt) > new Date();
+          const currentPlanKey = hasActiveTrial ? 'starter_monthly' : (user.currentPlanKey || 'free');
+
           const jobLimitCheck = await checkJobLimit(
             normalizedUserId.toString(),
-            user.currentPlanKey || 'free',
-            user.subscription
+            currentPlanKey,
+            hasActiveTrial ? {
+              planKey: 'starter_monthly',
+              status: 'active',
+              accessExpiresAt: user.trialState.expiresAt,
+              currentPeriodEnd: user.trialState.expiresAt
+            } : user.subscription
           );
 
           console.log(`🔍 [${source.toUpperCase()}] Job POST API - Job limit check result (in transaction):`, {
@@ -541,12 +549,19 @@ export async function POST(request: NextRequest) {
         // Check if job limit is approaching and send notification (non-blocking) - only for 'created' jobs
         try {
           const { checkJobLimit } = await import('@/lib/utils/subscription-helpers');
-          const updatedUser = await User.findById(normalizedUserId).select('currentPlanKey subscription');
+          const updatedUser = await User.findById(normalizedUserId).select('currentPlanKey subscription trialState');
           if (updatedUser) {
+            const hasActiveTrial = updatedUser.trialState?.token && updatedUser.trialState.expiresAt && new Date(updatedUser.trialState.expiresAt) > new Date();
+            const currentPlanKey = hasActiveTrial ? 'starter_monthly' : (updatedUser.currentPlanKey || 'free');
             const jobLimitCheck = await checkJobLimit(
               normalizedUserId.toString(),
-              updatedUser.currentPlanKey || 'free',
-              updatedUser.subscription
+              currentPlanKey,
+              hasActiveTrial ? {
+                planKey: 'starter_monthly',
+                status: 'active',
+                accessExpiresAt: updatedUser.trialState.expiresAt,
+                currentPeriodEnd: updatedUser.trialState.expiresAt
+              } : updatedUser.subscription
             );
 
             // Send notification if limit is approaching (1 or 2 remaining) and not unlimited
@@ -604,12 +619,19 @@ export async function POST(request: NextRequest) {
         const { checkJobLimit } = await import('@/lib/utils/subscription-helpers');
         let limitInfo: any = {};
         try {
-          const user = await User.findById(normalizedUserId).select('currentPlanKey subscription');
+          const user = await User.findById(normalizedUserId).select('currentPlanKey subscription trialState');
           if (user) {
+            const hasActiveTrial = user.trialState?.token && user.trialState.expiresAt && new Date(user.trialState.expiresAt) > new Date();
+            const currentPlanKey = hasActiveTrial ? 'starter_monthly' : (user.currentPlanKey || 'free');
             const jobLimitCheck = await checkJobLimit(
               normalizedUserId.toString(),
-              user.currentPlanKey || 'free',
-              user.subscription
+              currentPlanKey,
+              hasActiveTrial ? {
+                planKey: 'starter_monthly',
+                status: 'active',
+                accessExpiresAt: user.trialState.expiresAt,
+                currentPeriodEnd: user.trialState.expiresAt
+              } : user.subscription
             );
             limitInfo = {
               currentCount: jobLimitCheck.currentCount,
