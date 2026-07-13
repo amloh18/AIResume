@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getConnection } from '@/lib/database';
 import MoriChat from '@/models/MoriChat';
-import { isFreeTierPlan } from '@/lib/utils/subscription-helpers';
+import { getPlanAccess } from '@/lib/utils/plan-access';
 
 export async function GET(req: NextRequest) {
   try {
@@ -30,15 +30,16 @@ export async function GET(req: NextRequest) {
 
     // Check limits for starter_monthly user
     const User = (await import('@/models/User')).default;
-    const user = await User.findById(session.user.id).select('currentPlanKey credits.lastResetDate').lean() as any;
+    const user = await User.findById(session.user.id).select('currentPlanKey subscription credits.lastResetDate').lean() as any;
     
     let limitExhausted = false;
-    let planKey = 'free';
+    let planKey = 'starter_monthly';
 
     if (user) {
-      planKey = user.currentPlanKey || 'free';
-      // Apply message limit for free-tier users (free + starter_monthly are the same plan)
-      if (isFreeTierPlan(planKey)) {
+      const planAccess = getPlanAccess(user);
+      planKey = planAccess.planKey;
+      // If plan lacks unlimited moriChat (starter_monthly)
+      if (!planAccess.can('moriChat')) {
         const lastResetDate = user.credits?.lastResetDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
         
         // Count messages since lastResetDate

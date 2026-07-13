@@ -38,6 +38,7 @@ import { useSession } from 'next-auth/react';
 import toast from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import { useUserPlan } from '@/lib/hooks/useUserPlan';
+import { useMembership } from '@/lib/hooks/useMembership';
 import MoveToAppliedModal from '@/components/modals/MoveToAppliedModal';
 // CelebrationModal removed - simplified UX
 import { JourneyAnalyticsService } from '@/lib/utils/journeyAnalytics';
@@ -138,6 +139,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
   const { isDark } = useTheme();
   const { state, updateJourneyStatus, updateJobInfo, updateCurrentStep, updateCVId, updateCoverLetterId, updateAtsScore, updateCurrentJobId, endJourney } = useJobJourney();
   const { hasAI, userProfile } = useUserPlan();
+  const { membership } = useMembership();
   const { data: session } = useSession();
   const router = useRouter();
   const { openPaymentModal } = usePaymentModal();
@@ -1425,7 +1427,8 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
   const { refreshATSScore } = useATS();
 
   const fetchATSScore = async (cvId: string, jobId: string, forceRecalculate: boolean = false) => {
-    if (userProfile?.currentPlanKey === 'free' || !userProfile?.subscription || userProfile.subscription.status !== 'active') {
+    const isFree = !membership || membership.isFreePlan || membership.planKey === 'free';
+    if (isFree) {
         openPaymentModal({ preselectedPlanKey: 'pro_monthly', triggerContext: 'ats-score' });
         return;
     }
@@ -2878,7 +2881,8 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                             {(!jobDetails?.status || !['applied', 'interview', 'offer', 'rejected'].includes(jobDetails.status)) && (
                               <motion.button
                                 onClick={() => {
-                                  if (userProfile?.currentPlanKey === 'free' || !userProfile?.subscription || userProfile.subscription.status !== 'active') {
+                                  const isFree = !membership || membership.isFreePlan || membership.planKey === 'free';
+                                  if (isFree) {
                                       openPaymentModal({ preselectedPlanKey: 'pro_monthly', triggerContext: 'cover-letter-edit' });
                                       return;
                                   }

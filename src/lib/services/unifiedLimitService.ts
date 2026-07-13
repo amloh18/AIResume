@@ -61,6 +61,11 @@ class UnifiedLimitService {
 
     // DEPRECATED: Use getPlanLimits from subscription-helpers instead
     // This local method is kept as a private helper that wraps the shared utility
+    private resolveUserPlanKey(user: any): string {
+        const hasActiveTrial = user.trialState?.token && user.trialState.expiresAt && new Date(user.trialState.expiresAt) > new Date();
+        return hasActiveTrial ? 'starter_monthly' : user.currentPlanKey;
+    }
+
     private getPlanLimits(planKey: string) {
         // Import dynamically to avoid circular dependencies if any
         // In a real refactor, we would import at top level, but for now we follow the structure
@@ -95,7 +100,7 @@ class UnifiedLimitService {
                 return { allowed: false, current: 0, limit: 0, reason: 'User not found' };
             }
 
-            const limits = this.getPlanLimits(user.currentPlanKey);
+            const limits = this.getPlanLimits(this.resolveUserPlanKey(user));
             const editableMasterCVs = await CV.countDocuments({
                 userId,
                 cvType: 'master',
@@ -137,7 +142,7 @@ class UnifiedLimitService {
                 return { allowed: false, current: 0, limit: 0, reason: 'User not found' };
             }
 
-            const limits = this.getPlanLimits(user.currentPlanKey);
+            const limits = this.getPlanLimits(this.resolveUserPlanKey(user));
             const editableJourneyCVs = await CV.countDocuments({
                 userId,
                 cvType: 'journey',
@@ -179,7 +184,7 @@ class UnifiedLimitService {
                 return { allowed: false, current: 0, limit: 0, reason: 'User not found' };
             }
 
-            const limits = this.getPlanLimits(user.currentPlanKey);
+            const limits = this.getPlanLimits(this.resolveUserPlanKey(user));
             const editableStandaloneCVs = await CV.countDocuments({
                 userId,
                 cvType: 'standalone',
@@ -239,7 +244,7 @@ class UnifiedLimitService {
                 return { allowed: false, current: 0, limit: 0, reason: 'User not found' };
             }
 
-            const limits = this.getPlanLimits(user.currentPlanKey);
+            const limits = this.getPlanLimits(this.resolveUserPlanKey(user));
 
             // Count only active (non-archived) jobs
             const activeJobs = await Job.countDocuments({
@@ -292,7 +297,7 @@ class UnifiedLimitService {
                 return { hasAccess: false, tier: 'free', reason: 'Template not found' };
             }
 
-            const limits = this.getPlanLimits(user.currentPlanKey);
+            const limits = this.getPlanLimits(this.resolveUserPlanKey(user));
 
             // Free templates always accessible
             if (template.tier === 'free') {
@@ -359,7 +364,7 @@ class UnifiedLimitService {
                 }
 
                 if (template?.tier === 'premium') {
-                    const limits = this.getPlanLimits(user.currentPlanKey);
+                    const limits = this.getPlanLimits(this.resolveUserPlanKey(user));
                     if (limits.templates !== 'all') {
                         return {
                             allowed: false,
@@ -385,7 +390,7 @@ class UnifiedLimitService {
             const user = await User.findById(userId);
             if (!user) return;
 
-            const limits = this.getPlanLimits(user.currentPlanKey);
+            const limits = this.getPlanLimits(this.resolveUserPlanKey(user));
 
             // Freeze excess CVs by type
             for (const cvType of ['master', 'journey', 'standalone'] as DocumentType[]) {
@@ -460,7 +465,7 @@ class UnifiedLimitService {
                 return { available: false, creditsRemaining: 0, limit: 0, reason: 'User not found' };
             }
 
-            const limits = this.getPlanLimits(user.currentPlanKey);
+            const limits = this.getPlanLimits(this.resolveUserPlanKey(user));
 
             // Paid plans have unlimited credits
             if (limits.aiCredits === -1) {

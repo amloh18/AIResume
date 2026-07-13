@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { UserService } from '@/lib/auth/user-service';
 import { generateAndSendTwoFactorCode, isTwoFactorEnabled } from '@/lib/services/twoFactorService';
+import { authRateLimit } from '@/lib/rate-limiter';
 
 /**
  * Verify credentials and check if 2FA is required
@@ -13,6 +14,14 @@ import { generateAndSendTwoFactorCode, isTwoFactorEnabled } from '@/lib/services
  */
 export async function POST(request: NextRequest) {
   try {
+    const rateLimit = await authRateLimit(request);
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { success: false, error: 'Too many attempts. Please try again later.', code: 'RATE_LIMIT_EXCEEDED' },
+        { status: 429 }
+      );
+    }
+
     const { email, password, portal } = await request.json();
 
     if (!email || !password) {
@@ -106,7 +115,7 @@ export async function POST(request: NextRequest) {
       email: authResult.user.email,
     });
   } catch (error: any) {
-    console.error('❌ Error verifying credentials:', error);
+    console.error('❌ Error verifying credentials for email:', error.message || 'Unknown error');
     return NextResponse.json(
       { success: false, error: error.message || 'Authentication failed', code: 'SERVER_ERROR' },
       { status: 500 }

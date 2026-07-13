@@ -190,58 +190,9 @@ const CVCardOverlayComponent: React.FC<CVCardOverlayProps> = ({
     thumbnailGenerationInProgressRef.current = true;
     setThumbnailLoading(true);
 
-    console.log('🖼️ CVCardOverlay - Generating thumbnail on-demand for CV:', {
-      cvId: cv.id,
-      hasCvData: !!cv.cvData,
-      cvDataKeys: cv.cvData ? Object.keys(cv.cvData) : 'none',
-      userId: session?.user?.id
-    });
-
-    // Trigger thumbnail generation using authenticated fetch
-    authenticatedFetch(`/api/cv/${cv.id}/generate-thumbnail`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
-    })
-      .then(async (res) => {
-        if (!res.ok) {
-          const errorText = await res.text();
-          let errorData;
-          try {
-            errorData = JSON.parse(errorText);
-          } catch {
-            errorData = { error: errorText || `HTTP ${res.status}` };
-          }
-          console.error('❌ CVCardOverlay - API error:', {
-            status: res.status,
-            statusText: res.statusText,
-            error: errorData
-          });
-          throw new Error(errorData.error || `HTTP ${res.status}: ${res.statusText}`);
-        }
-        return res.json();
-      })
-      .then((data) => {
-        if (data.success && data.thumbnailUrl) {
-          console.log('✅ CVCardOverlay - Thumbnail generated successfully:', data.thumbnailUrl);
-          setThumbnailUrl(data.thumbnailUrl);
-        } else {
-          console.warn('⚠️ CVCardOverlay - Thumbnail generation returned no URL:', data);
-        }
-      })
-      .catch((error) => {
-        console.error('❌ CVCardOverlay - Failed to generate thumbnail:', {
-          cvId: cv.id,
-          error: error.message,
-          stack: error.stack
-        });
-        // Reset the attempted flag so we can retry later
-        thumbnailFetchAttemptedRef.current = null;
-        // Don't set thumbnailUrl to null - keep existing state
-      })
-      .finally(() => {
-        setThumbnailLoading(false);
-        thumbnailGenerationInProgressRef.current = false;
-      });
+    // S3 thumbnail generation has been disabled
+    setThumbnailLoading(false);
+    thumbnailGenerationInProgressRef.current = false;
   }, [cv.id, thumbnailUrl, thumbnailLoading, session?.user?.id]);
 
   const formatDate = (dateString: string) => {

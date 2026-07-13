@@ -10,15 +10,23 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
-    const user = await User.findById(authResult.userId).select('currentPlanKey subscription');
+    const user = await User.findById(authResult.userId).select('currentPlanKey subscription trialState');
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
     
+    const hasActiveTrial = user.trialState?.token && user.trialState.expiresAt && new Date(user.trialState.expiresAt) > new Date();
+    const currentPlanKey = hasActiveTrial ? 'starter_monthly' : (user.currentPlanKey || 'free');
+
     const limitCheck = await checkJobLimit(
       authResult.userId,
-      user.currentPlanKey || 'free',
-      user.subscription
+      currentPlanKey,
+      hasActiveTrial ? {
+        planKey: 'starter_monthly',
+        status: 'active',
+        accessExpiresAt: user.trialState.expiresAt,
+        currentPeriodEnd: user.trialState.expiresAt
+      } : user.subscription
     );
     
     return NextResponse.json({

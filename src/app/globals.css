@@ -255,6 +255,7 @@
 /* CSS Variables */
 :root {
   --navbar-height: 80px;
+  --documents-panel-peek-height: 450px;
 
   /* Modern type scale */
   --text-xs:   0.75rem;   /* 12px */
@@ -485,6 +486,18 @@
 
 .step-one-documents {
   border: 1px solid var(--border-primary);
+}
+
+@media (max-height: 850px) {
+  :root {
+    --documents-panel-peek-height: 70px;
+  }
+}
+
+@media (max-width: 1024px) {
+  :root {
+    --documents-panel-peek-height: 70px;
+  }
 }
 
 @media (max-width: 639px) {

@@ -6,7 +6,7 @@ import { authOptions } from '@/lib/auth';
 import { getConnection } from '@/lib/database';
 import MoriChat from '@/models/MoriChat';
 import CV from '@/models/CV';
-import { isFreeTierPlan } from '@/lib/utils/subscription-helpers';
+import { getPlanAccess } from '@/lib/utils/plan-access';
 import crypto from 'crypto';
 import { ANALYSIS_AGENT_PROMPT, CV_TAILOR_AGENT_PROMPT } from '@/lib/prompts/promptTemplates';
 import { ActivityLogService } from '@/lib/services/activityLogService';
@@ -75,10 +75,13 @@ export async function POST(req: NextRequest) {
     await getConnection();
 
     const User = (await import('@/models/User')).default;
-    const user = await User.findById(session.user.id).select('currentPlanKey credits.lastResetDate').lean() as any;
-    // Apply 5-message limit for free-tier users (free + starter_monthly are the same plan)
-    if (user && isFreeTierPlan(user.currentPlanKey || 'free')) {
-      const lastResetDate = user.credits?.lastResetDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const user = await User.findById(session.user.id).select('currentPlanKey subscription credits.lastResetDate').lean() as any;
+
+    if (user) {
+      const planAccess = getPlanAccess(user);
+      // If the plan does not have unlimited moriChat (e.g. starter_monthly), enforce 5-message limit
+      if (!planAccess.can('moriChat')) {
+        const lastResetDate = user.credits?.lastResetDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
       
       const userChats = await MoriChat.find({
         userId: session.user.id,
@@ -107,6 +110,7 @@ export async function POST(req: NextRequest) {
           limitExhausted: true
         }, { status: 403 });
       }
+    }
     }
     
     let masterCVData = null;

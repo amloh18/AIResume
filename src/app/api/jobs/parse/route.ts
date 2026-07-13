@@ -47,7 +47,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Check membership for job parsing access
-    const planKey = user.currentPlanKey || 'free';
+    const hasActiveTrial = user.trialState?.token && user.trialState.expiresAt && new Date(user.trialState.expiresAt) > new Date();
+    const planKey = hasActiveTrial ? 'starter_monthly' : (user.currentPlanKey || 'free');
     const planLimits = getPlanLimits(planKey);
 
     if (!planLimits.jobParsing) {

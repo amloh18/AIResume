@@ -55,8 +55,66 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const effective = subscriptionService.getEffectivePlan(user);
-    const { currentPlanKey, subscription: effectiveSub } = effective;
+    const hasActiveTrial = user.trialState?.token && user.trialState.expiresAt && new Date(user.trialState.expiresAt) > new Date();
+    
+    let currentPlanKey;
+    let effectiveSub;
+    
+    if (hasActiveTrial) {
+      currentPlanKey = 'starter_monthly';
+      effectiveSub = {
+        planKey: 'starter_monthly',
+        status: 'active',
+        endDate: user.trialState.expiresAt,
+        currentPeriodStart: new Date(),
+        currentPeriodEnd: user.trialState.expiresAt,
+        purchasePrice: 0,
+        downgradeStatus: 'none',
+        pendingDowngradePlanKey: null
+      };
+    } else {
+      // Live Polar fallback check
+      let liveDetails: any = { hasActiveSub: false };
+      try {
+        const { default: PolarService } = await import('@/lib/payment/polar');
+        liveDetails = await PolarService.getActiveSubscriptionDetails(user.email);
+      } catch (polarErr) {
+        console.error('Failed to query Polar details in subscription route:', polarErr);
+      }
+
+      if (liveDetails.hasActiveSub) {
+        currentPlanKey = liveDetails.planKey || 'starter_monthly';
+        effectiveSub = {
+          planKey: currentPlanKey,
+          status: 'active',
+          endDate: liveDetails.subscription?.currentPeriodEnd || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+          currentPeriodStart: liveDetails.subscription?.currentPeriodStart || new Date(),
+          currentPeriodEnd: liveDetails.subscription?.currentPeriodEnd || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+          purchasePrice: 0,
+          downgradeStatus: 'none',
+          pendingDowngradePlanKey: null
+        };
+
+        // Reconcile MongoDB in background
+        const mongoActive = user.subscription && (user.subscription.status === 'active' || user.subscription.status === 'trialing') && user.currentPlanKey !== 'free';
+        if (!mongoActive) {
+          console.log(`🔄 Subscription API - Reconciling active Polar subscription for ${user.email} in MongoDB...`);
+          await User.findByIdAndUpdate(user._id, {
+            $set: {
+              currentPlanKey,
+              'subscription.planKey': currentPlanKey,
+              'subscription.status': 'active',
+              'subscription.accessExpiresAt': effectiveSub.currentPeriodEnd,
+              'subscription.currentPeriodEnd': effectiveSub.currentPeriodEnd
+            }
+          });
+        }
+      } else {
+        const effective = subscriptionService.getEffectivePlan(user);
+        currentPlanKey = effective.currentPlanKey;
+        effectiveSub = effective.subscription;
+      }
+    }
 
     // Get the current plan details from database
     const PricingPlan = await getAdminPricingPlan();
@@ -146,7 +204,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
     }
 
-    // Activate the free plan
+    // Verify trial reuse loophole
+    if (user.trialState?.hasConsumedTrial) {
+      return NextResponse.json({
+        success: false,
+        error: 'Trial limit reached. You have already consumed your trial period.'
+      }, { status: 403 });
+    }
+
+    // Find the Starter plan config
     const PricingPlan = await getAdminPricingPlan();
     const plan = await PricingPlan.findOne({ key: 'starter_monthly' });
     if (!plan) {
@@ -154,31 +220,48 @@ export async function POST(request: NextRequest) {
     }
 
     const now = new Date();
-    const expiresAt = new Date(now);
-    expiresAt.setMonth(expiresAt.getMonth() + 1);
+    // 24 hour short-lived trial token
+    const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    const token = 'trial_' + Math.random().toString(36).substring(2, 15);
 
     await User.findByIdAndUpdate(user._id, {
       $set: {
-        currentPlanKey: 'starter_monthly',
-        'subscription.planKey': 'starter_monthly',
-        'subscription.status': 'active',
-        'subscription.startDate': now,
-        'subscription.accessExpiresAt': expiresAt,
-        'subscription.currentPeriodStart': now,
-        'subscription.currentPeriodEnd': expiresAt,
-        'subscription.usageResetDate': expiresAt,
-        'subscription.provider': 'none',
-        'subscription.interval': 'monthly',
-        'subscription.purchasePrice': 0,
-        'subscription.autoRenew': true
+        'trialState.token': token,
+        'trialState.expiresAt': expiresAt,
+        'trialState.hasConsumedTrial': true,
+        'trialState.features': ['journeyCVs', 'coverLetterAI', 'jobTracker']
       }
     });
 
-    // Initialize credits for the new plan
+    // Initialize credits for the new trial plan
     const creditService = (await import('@/lib/services/creditService')).default;
     await creditService.initializeCredits(user._id.toString(), 'starter_monthly');
 
-    return NextResponse.json({ success: true, message: 'Starter plan activated' });
+    // Build the updated subscription payload
+    const trialSubscription = {
+      planName: 'Starter Monthly (Trial)',
+      planKey: 'starter_monthly',
+      status: 'active',
+      credits: plan?.features?.maxCVs || 20,
+      endDate: expiresAt.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      }),
+      planId: plan?._id || null,
+      planDetails: plan,
+      downgradeStatus: 'none',
+      pendingDowngradePlanKey: null,
+      currentPeriodStart: now,
+      currentPeriodEnd: expiresAt,
+      purchasePrice: 0
+    };
+
+    return NextResponse.json({
+      success: true,
+      message: 'Trial plan activated successfully',
+      subscription: trialSubscription
+    });
   } catch (error) {
     console.error('Error activating starter plan:', error);
     return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });

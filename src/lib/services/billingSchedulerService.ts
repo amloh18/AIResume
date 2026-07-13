@@ -337,3 +337,131 @@ function calculateNextBillingDate(
   return nextDate;
 }
 
+/**
+ * Reconcile Polar subscriptions with MongoDB records to fix drift/webhook failures
+ */
+export async function reconcilePolarSubscriptions(): Promise<{
+  totalPolarSubscriptions: number;
+  reconciledUpgrades: number;
+  reconciledDowngrades: number;
+  errors: string[];
+}> {
+  const results = {
+    totalPolarSubscriptions: 0,
+    reconciledUpgrades: 0,
+    reconciledDowngrades: 0,
+    errors: [] as string[]
+  };
+
+  try {
+    await getConnection();
+    const { default: PolarService } = await import('@/lib/payment/polar');
+    const polar = (PolarService as any).getPolar();
+    if (!polar) {
+      results.errors.push('Polar is not initialized');
+      return results;
+    }
+
+    console.log('Fetching live subscriptions from Polar...');
+    const polarSubscriptions = await polar.subscriptions.list({
+      limit: 100
+    });
+
+    const activePolarSubs = (polarSubscriptions.items || []).filter((sub: any) =>
+      sub.status === 'active' || sub.status === 'trialing'
+    );
+    results.totalPolarSubscriptions = activePolarSubs.length;
+
+    const activeEmails = new Set<string>();
+
+    const { getAdminPricingPlan } = await import('@/models/admin-models');
+    const PricingPlan = await getAdminPricingPlan();
+
+    for (const sub of activePolarSubs) {
+      const email = sub.customer?.email || sub.customerEmail;
+      if (!email) continue;
+      activeEmails.add(email.toLowerCase());
+
+      try {
+        const user = await User.findOne({ email: new RegExp(`^${email}$`, 'i') });
+        if (!user) continue;
+
+        const productId = sub.productId;
+        const priceId = sub.priceId;
+
+        const plan = await PricingPlan.findOne({
+          $or: [
+            { polarProductId_monthly: productId },
+            { polarProductId_yearly: productId },
+            { polarProductId_quarterly: productId },
+            { polarProductId_one_time: productId },
+            { polarPriceId_monthly: priceId },
+            { polarPriceId_yearly: priceId },
+            { polarPriceId_quarterly: priceId },
+            { polarPriceId_one_time: priceId },
+            { 'regionalPricing.polarProductId': productId },
+            { 'regionalPricing.polarPriceId': priceId }
+          ]
+        });
+
+        const targetPlanKey = plan ? plan.key : 'starter_monthly';
+        const mongoActive = user.subscription && (user.subscription.status === 'active' || user.subscription.status === 'trialing') && user.currentPlanKey !== 'free';
+
+        if (!mongoActive || user.currentPlanKey !== targetPlanKey) {
+          console.log(`[Reconciler] Upgrading/updating user ${email} to ${targetPlanKey}`);
+          await User.findByIdAndUpdate(user._id, {
+            $set: {
+              currentPlanKey: targetPlanKey,
+              'subscription.planKey': targetPlanKey,
+              'subscription.status': 'active',
+              'subscription.accessExpiresAt': sub.currentPeriodEnd || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+              'subscription.currentPeriodEnd': sub.currentPeriodEnd
+            }
+          });
+          results.reconciledUpgrades++;
+        }
+      } catch (err: any) {
+        results.errors.push(`Error reconciling active sub for ${email}: ${err.message}`);
+      }
+    }
+
+    const activeMongoUsers = await User.find({
+      currentPlanKey: { $ne: 'free' },
+      'subscription.status': { $in: ['active', 'trialing'] }
+    });
+
+    for (const user of activeMongoUsers) {
+      if (user.trialState?.token && user.trialState.expiresAt && new Date(user.trialState.expiresAt) > new Date()) {
+        continue;
+      }
+      
+      const email = user.email.toLowerCase();
+      if (!activeEmails.has(email)) {
+        try {
+          console.log(`[Reconciler] Double-checking candidate for downgrade: ${email}`);
+          const liveDetails = await PolarService.getActiveSubscriptionDetails(user.email);
+          
+          if (!liveDetails.hasActiveSub) {
+            console.log(`[Reconciler] Downgrading user ${email} to free`);
+            await User.findByIdAndUpdate(user._id, {
+              $set: {
+                currentPlanKey: 'free',
+                'subscription.status': 'inactive'
+              }
+            });
+            results.reconciledDowngrades++;
+          }
+        } catch (err: any) {
+          results.errors.push(`Error double-checking downgrade for ${email}: ${err.message}`);
+        }
+      }
+    }
+
+  } catch (error: any) {
+    console.error('Error in reconcilePolarSubscriptions:', error);
+    results.errors.push(`Fatal error: ${error.message}`);
+  }
+
+  return results;
+}
+

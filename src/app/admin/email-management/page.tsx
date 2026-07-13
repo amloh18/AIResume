@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import DOMPurify from 'isomorphic-dompurify';
 import { 
   Mail, 
   Send, 
@@ -499,7 +500,7 @@ export default function EmailManagementPage() {
               <div className="border border-gray-700 rounded-lg overflow-hidden">
                 <div 
                   className="w-full"
-                  dangerouslySetInnerHTML={{ __html: previewTemplate.previewHtml }}
+                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(previewTemplate.previewHtml) }}
                 />
               </div>
             </div>

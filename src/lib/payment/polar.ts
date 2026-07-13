@@ -124,6 +124,19 @@ export class PolarService {
           status: error.status,
           statusText: error.statusText,
         });
+
+        try {
+          // Attempt to parse JSON error message if it's a validation error dump
+          if (error.message.includes('API error occurred: {')) {
+            const jsonPart = error.message.substring(error.message.indexOf('{'));
+            const parsed = JSON.parse(jsonPart);
+            if (parsed.detail && Array.isArray(parsed.detail) && parsed.detail.length > 0) {
+              errorMessage = `Polar API Error: ${parsed.detail[0].msg} (Field: ${parsed.detail[0].loc?.join('.') || 'unknown'})`;
+            }
+          }
+        } catch (e) {
+          // Ignore parsing errors
+        }
         
         if (error.message?.toLowerCase().includes('api key') || 
             error.message?.toLowerCase().includes('authentication')) {
@@ -333,6 +346,93 @@ export class PolarService {
       console.error('Polar deleteDiscount error:', error);
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
+  }
+
+  // Simple in-memory cache for subscription details (Key: email, Value: { data: any, expiresAt: number })
+  static subscriptionCache = new Map<string, { data: { hasActiveSub: boolean; planKey?: string; subscription?: any }; expiresAt: number }>();
+
+  static async getActiveSubscriptionDetails(customerEmail: string): Promise<{ hasActiveSub: boolean; planKey?: string; subscription?: any }> {
+    if (!customerEmail) return { hasActiveSub: false };
+
+    const cached = this.subscriptionCache.get(customerEmail);
+    if (cached && cached.expiresAt > Date.now()) {
+      console.log('polar.ts getActiveSubscriptionDetails (cache hit):', customerEmail, cached.data.hasActiveSub);
+      return cached.data;
+    }
+
+    const polarInstance = getPolarInstance();
+    if (!polarInstance) {
+      return { hasActiveSub: false };
+    }
+
+    try {
+      console.log('polar.ts getActiveSubscriptionDetails (cache miss): fetching live state for', customerEmail);
+      
+      const subscriptions = await polarInstance.subscriptions.list({
+        customerEmail: customerEmail,
+        limit: 10
+      });
+
+      const activeSub = (subscriptions.items || []).find(sub => 
+        sub.status === 'active' || sub.status === 'trialing'
+      );
+
+      if (!activeSub) {
+        const result = { hasActiveSub: false };
+        this.subscriptionCache.set(customerEmail, {
+          data: result,
+          expiresAt: Date.now() + 5 * 60 * 1000
+        });
+        return result;
+      }
+
+      const productId = activeSub.productId;
+      const priceId = activeSub.priceId;
+
+      const { getAdminPricingPlan } = await import('@/models/admin-models');
+      const PricingPlan = await getAdminPricingPlan();
+      
+      const plan = await PricingPlan.findOne({
+        $or: [
+          { polarProductId_monthly: productId },
+          { polarProductId_yearly: productId },
+          { polarProductId_quarterly: productId },
+          { polarProductId_one_time: productId },
+          { polarPriceId_monthly: priceId },
+          { polarPriceId_yearly: priceId },
+          { polarPriceId_quarterly: priceId },
+          { polarPriceId_one_time: priceId },
+          { 'regionalPricing.polarProductId': productId },
+          { 'regionalPricing.polarPriceId': priceId }
+        ]
+      });
+
+      const result = {
+        hasActiveSub: true,
+        planKey: plan ? plan.key : 'starter_monthly',
+        subscription: activeSub
+      };
+
+      this.subscriptionCache.set(customerEmail, {
+        data: result,
+        expiresAt: Date.now() + 5 * 60 * 1000
+      });
+
+      return result;
+    } catch (error) {
+      console.error('Polar getActiveSubscriptionDetails error:', error);
+      const result = { hasActiveSub: false };
+      this.subscriptionCache.set(customerEmail, {
+        data: result,
+        expiresAt: Date.now() + 60 * 1000
+      });
+      return result;
+    }
+  }
+
+  static async verifySubscriptionAtRuntime(customerEmail: string): Promise<boolean> {
+    const details = await this.getActiveSubscriptionDetails(customerEmail);
+    return details.hasActiveSub;
   }
 }
 

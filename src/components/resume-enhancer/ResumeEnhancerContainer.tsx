@@ -26,6 +26,7 @@ import GlobalSearchBar from '@/components/layout/GlobalSearchBar';
 import OptimizedNavigation from '@/components/dashboard/OptimizedNavigation';
 import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
 import { useUserData, getUserDisplayName, getUserAvatar } from '@/lib/hooks/useUserData';
+import { useMembership } from '@/lib/hooks/useMembership';
 import { useSession } from 'next-auth/react';
 import SidebarMembershipCard from '@/components/resume-enhancer/SidebarMembershipCard';
 import { CVSurgeonService } from '@/lib/services/cv-surgeon-service';
@@ -80,7 +81,7 @@ interface ResumeEnhancerContainerProps {
   restoreDraft?: boolean;
 }
 
-export default function ResumeEnhancerContainer({
+function ResumeEnhancerContainerBase({
   userId,
   mode = 'create',
   cvId,
@@ -115,6 +116,7 @@ export default function ResumeEnhancerContainer({
   const [isSidebarAnalyzing, setIsSidebarAnalyzing] = useState(false);
   const { data: session, status: sessionStatus } = useSession();
   const { userData, refetch } = useUserData();
+  const { membership, refreshMembership } = useMembership();
   const { openPaymentModal } = usePaymentModal();
   const { theme, toggleTheme } = useTheme();
   const [isUserMenuExpanded, setIsUserMenuExpanded] = useState(false);
@@ -2829,25 +2831,18 @@ export default function ResumeEnhancerContainer({
   };
 
   // Intercept manual save for authenticated users on free plan trying to save their master CV
-  if (isManualClick && !isGuestMode && isMasterCV && (!userData || userData.currentPlanKey === 'free')) {
+  const isFree = !membership || membership.isFreePlan || membership.planKey === 'free';
+  if (isManualClick && !isGuestMode && isMasterCV && isFree) {
     openPaymentModal({
       preselectedPlanKey: 'focused_monthly',
       triggerContext: 'onboarding-exit',
       onSuccess: async () => {
+        await refreshMembership();
+        await refetch();
         await executeSave();
       },
-      onClose: async () => {
-        try {
-          await fetch('/api/user/subscription', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ planKey: 'starter_monthly' })
-          });
-          await refetch();
-        } catch (err) {
-          console.error('Failed to auto-assign starter plan on save close:', err);
-        }
-        await executeSave();
+      onClose: () => {
+        console.log('Payment modal closed without subscribing');
       }
     });
     return;
@@ -3321,8 +3316,8 @@ export default function ResumeEnhancerContainer({
                 </div>
               </div>
 
-              {/* Center Column: Dynamic Stepper */}
-              {renderHeaderStepper()}
+              {/* Center Column: Spacing placeholder */}
+              <div className="flex-1" />
             </>
           ) : (
             <div className="flex items-center flex-1 min-w-0 gap-4">
@@ -3447,41 +3442,6 @@ export default function ResumeEnhancerContainer({
                 </button>
               )}
 
-              {/* Mobile Step Dropdown Trigger */}
-              <div className="relative md:hidden z-[120]">
-                <button
-                  onClick={() => setIsMobileStepsOpen(!isMobileStepsOpen)}
-                  className="w-10 h-10 rounded-xl bg-white dark:bg-[#1a2312] border border-lime-200 dark:border-lime-900/30 flex items-center justify-center text-lime-600 dark:text-lime-400 hover:bg-lime-50 dark:hover:bg-lime-950/20 active:scale-95 transition-all duration-200 shadow-sm border-none bg-transparent"
-                  title="Navigate Steps"
-                >
-                  <ClipboardList className="w-5 h-5 text-lime-600 dark:text-lime-400" />
-                </button>
-                
-                {isMobileStepsOpen && (
-                  <div className="absolute right-0 top-12 z-[130] w-56 bg-white dark:bg-[#11160d] border border-gray-200 dark:border-lime-500/20 rounded-xl shadow-2xl p-2.5 flex flex-col gap-1">
-                    <div className="text-[9px] font-bold text-gray-400 dark:text-lime-400 uppercase tracking-widest px-2.5 py-1.5 border-b border-gray-100 dark:border-lime-500/10 mb-1">
-                      Navigate Steps
-                    </div>
-                    {getHeaderSteps().map((step) => (
-                      <button
-                        key={step.id}
-                        onClick={() => {
-                          handleStepNavigation(step.targetStep, !!step.openTemplateOverlay);
-                          setIsMobileStepsOpen(false);
-                        }}
-                        className={`flex items-center justify-between p-2 rounded-lg transition-all text-left w-full border-none shadow-none bg-transparent hover:bg-gray-100 dark:hover:bg-white/5 ${
-                          step.isActive 
-                            ? 'bg-[#f1f9ec] dark:bg-[#1a2312] text-lime-800 dark:text-lime-400 font-bold' 
-                            : 'text-gray-700 dark:text-gray-300'
-                        }`}
-                      >
-                        <span className="text-xs">{step.label}</span>
-                        {step.isActive && <span className="w-1.5 h-1.5 rounded-full bg-lime-500" />}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
             </>
           )}
 
@@ -3756,5 +3716,27 @@ export default function ResumeEnhancerContainer({
       {/* Mode Transition Panel moved to ATSMeterPanel */}
       </div>
     </div>
+  );
+}
+
+import { ErrorBoundary as ReactErrorBoundary } from 'react-error-boundary';
+
+function ErrorFallback({ error, resetErrorBoundary }: any) {
+  return (
+    <div role="alert" className="p-8 border border-red-200 rounded-lg bg-red-50 h-screen flex flex-col justify-center items-center text-center">
+      <h2 className="text-xl font-bold text-red-800">Something went wrong in the Resume Enhancer</h2>
+      <pre className="mt-4 text-sm text-red-600 bg-white p-4 rounded border border-red-100 max-w-2xl overflow-auto text-left w-full shadow-sm">{error.message}</pre>
+      <button onClick={resetErrorBoundary} className="mt-6 px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded shadow transition-colors">
+        Try again
+      </button>
+    </div>
+  );
+}
+
+export default function ResumeEnhancerContainer(props: ResumeEnhancerContainerProps) {
+  return (
+    <ReactErrorBoundary FallbackComponent={ErrorFallback}>
+      <ResumeEnhancerContainerBase {...props} />
+    </ReactErrorBoundary>
   );
 }

@@ -30,6 +30,7 @@ import toast from 'react-hot-toast';
 import LetterGuidePanel from '@/components/resume-enhancer/panels/LetterGuidePanel';
 import MoriCoverLetterChat from '@/components/resume-enhancer/panels/MoriCoverLetterChat';
 import EditorOnboarding from '@/components/resume-enhancer/components/EditorOnboarding';
+import EditorStepsNavOverlay from '@/components/resume-enhancer/components/EditorStepsNavOverlay';
 
 function normalizeCoverLetterMetadata(metadata: any): {
   templateType: string;
@@ -486,6 +487,7 @@ export default function Step4CoverLetter({ onComplete }: Step4CoverLetterProps) 
               }}
             />
           )}
+          {!showMoriChat && <EditorStepsNavOverlay />}
         </div>
 
         {/* RIGHT COLUMN - MORI AI ASSISTANT CHAT */}
@@ -503,6 +505,7 @@ export default function Step4CoverLetter({ onComplete }: Step4CoverLetterProps) 
                 onBodyChange={handleBodyChange} 
                 onClose={() => setShowMoriChat(false)}
               />
+              {showMoriChat && <EditorStepsNavOverlay />}
             </motion.div>
           )}
         </AnimatePresence>

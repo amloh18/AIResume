@@ -1,20 +1,48 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import getConnection from '@/lib/database';
+import User from '@/models/User';
 import CoverLetter from '@/models/CoverLetter';
+import { CV, Job } from '@/models';
 import { toObjectId } from '@/lib/db-utils';
 import { aiCoverLetterService } from '@/lib/services/aiCoverLetterService';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
+import { getPlanAccess } from '@/lib/utils/plan-access';
 
 export async function POST(request: NextRequest) {
     try {
+        // Auth guard
+        const session = await getServerSession(authOptions);
+        if (!session?.user?.id) {
+            return NextResponse.json({ success: false, message: 'Authentication required' }, { status: 401 });
+        }
+
         await getConnection();
 
+        // Load user for plan check (uses session.user.id — never trusts body userId)
+        const user = await User.findById(session.user.id)
+            .select('currentPlanKey subscription')
+            .lean();
+
+        if (!user) {
+            return NextResponse.json({ success: false, message: 'User not found' }, { status: 404 });
+        }
+
+        // Plan gate: coverLetterAI requires starter_yearly+
+        const planAccess = getPlanAccess(user);
+        const denied = planAccess.gate('coverLetterAI');
+        if (denied) return denied;
+
         const body = await request.json();
-        const { userId, journeyId, cvId, jobId } = body;
+        // Always use the authenticated session userId — ignore any userId in the body
+        const userId = session.user.id;
+        const { journeyId, cvId, jobId } = body;
 
         if (!userId) {
             return NextResponse.json({ success: false, message: 'User ID is required' }, { status: 400 });
         }
+
 
         // Check if cover letter already exists
         if (journeyId) {
@@ -29,18 +57,16 @@ export async function POST(request: NextRequest) {
         let jobData: any = null;
 
         if (cvId) {
-            const cvRes = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/cvs/${cvId}?userId=${userId}`);
-            if (cvRes.ok) {
-                const json = await cvRes.json();
-                cvData = json.data?.cv?.cvData || json.cv?.cvData;
+            const cv = await CV.findById(toObjectId(cvId)).lean();
+            if (cv && cv.userId.toString() === userId) {
+                cvData = (cv as any).cvData;
             }
         }
 
         if (jobId) {
-            const jobRes = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/jobs/${jobId}?userId=${userId}`);
-            if (jobRes.ok) {
-                const json = await jobRes.json();
-                jobData = json.data?.job || json.job;
+            const job = await Job.findById(toObjectId(jobId)).lean();
+            if (job && job.userId.toString() === userId) {
+                jobData = job;
             }
         }
 

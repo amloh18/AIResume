@@ -407,16 +407,20 @@ export async function PUT(
             throw new Error('User not found');
           }
 
+          const hasActiveTrial = user.trialState?.token && user.trialState.expiresAt && new Date(user.trialState.expiresAt) > now;
+          const currentPlanKey = hasActiveTrial ? 'starter_monthly' : (user.currentPlanKey || 'free');
+
           // Check time-based access quickly
-          const now = new Date();
           let hasTimeAccess = true;
-          if (user.subscription?.accessExpiresAt) {
+          if (hasActiveTrial) {
+            hasTimeAccess = true;
+          } else if (user.subscription?.accessExpiresAt) {
             hasTimeAccess = new Date(user.subscription.accessExpiresAt) > now;
           } else if (user.subscription?.currentPeriodEnd) {
             hasTimeAccess = new Date(user.subscription.currentPeriodEnd) > now;
           }
 
-          if (!hasTimeAccess && user.currentPlanKey !== 'free') {
+          if (!hasTimeAccess && currentPlanKey !== 'free') {
             throw new Error('Subscription access expired');
           }
 
@@ -424,8 +428,13 @@ export async function PUT(
           const { checkJobLimit } = await import('@/lib/utils/subscription-helpers');
           const jobLimitCheck = await checkJobLimit(
             normalizedUserId.toString(),
-            user.currentPlanKey || 'free',
-            user.subscription
+            currentPlanKey,
+            hasActiveTrial ? {
+              planKey: 'starter_monthly',
+              status: 'active',
+              accessExpiresAt: user.trialState.expiresAt,
+              currentPeriodEnd: user.trialState.expiresAt
+            } : user.subscription
           );
           jobLimitInfo = jobLimitCheck;
 
@@ -559,12 +568,19 @@ export async function PUT(
           const { checkJobLimit } = await import('@/lib/utils/subscription-helpers');
           let limitInfo: any = {};
           try {
-            const user = await User.findById(normalizedUserId).select('currentPlanKey subscription');
+            const user = await User.findById(normalizedUserId).select('currentPlanKey subscription trialState');
             if (user) {
+              const hasActiveTrial = user.trialState?.token && user.trialState.expiresAt && new Date(user.trialState.expiresAt) > new Date();
+              const currentPlanKey = hasActiveTrial ? 'starter_monthly' : (user.currentPlanKey || 'free');
               const jobLimitCheck = await checkJobLimit(
                 normalizedUserId.toString(),
-                user.currentPlanKey || 'free',
-                user.subscription
+                currentPlanKey,
+                hasActiveTrial ? {
+                  planKey: 'starter_monthly',
+                  status: 'active',
+                  accessExpiresAt: user.trialState.expiresAt,
+                  currentPeriodEnd: user.trialState.expiresAt
+                } : user.subscription
               );
               limitInfo = {
                 currentCount: jobLimitCheck.currentCount,

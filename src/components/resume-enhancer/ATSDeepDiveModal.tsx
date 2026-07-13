@@ -26,6 +26,7 @@ import { useAIStore } from '@/lib/stores/aiStore';
 import { useATS } from '@/contexts/ATSContext';
 import { usePaymentModal } from '@/contexts/PaymentModalContext';
 import { useUserData } from '@/lib/hooks/useUserData';
+import { useMembership } from '@/lib/hooks/useMembership';
 
 // ScorecardPanel - Shows ATS score breakdown and knockout factors
 const ScorecardPanel = ({ atsResult, isLoading }: { atsResult: any; isLoading: boolean }) => {
@@ -318,6 +319,7 @@ function ATSDeepDiveContent({ isOpen, onClose, userId }: ATSDeepDiveModalProps) 
   const { setATSScore } = useAIStore();
   const { openPaymentModal } = usePaymentModal();
   const { userData } = useUserData();
+  const { membership } = useMembership();
   const {
     atsScore,
     atsAnalysis,
@@ -377,7 +379,8 @@ function ATSDeepDiveContent({ isOpen, onClose, userId }: ATSDeepDiveModalProps) 
       return;
     }
 
-    if (userData?.currentPlanKey === 'free' || !userData?.subscription || userData.subscription.status !== 'active') {
+    const isFree = !membership || membership.isFreePlan || membership.planKey === 'free';
+    if (isFree) {
       openPaymentModal({ preselectedPlanKey: 'pro_monthly', triggerContext: 'ats-score' });
       return;
     }

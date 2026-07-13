@@ -366,6 +366,17 @@ export default function Step1Dashboard({
   const [viewLayout, setViewLayout] = useState<'grid' | 'list' | 'compact'>('grid');
   const [isDocumentsPanelExpanded, setIsDocumentsPanelExpanded] = useState(false);
   const [cvJourneysMap, setCvJourneysMap] = useState<Map<string, any>>(new Map());
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
 
   useEffect(() => {
     const saved = localStorage.getItem('editor_view_layout');
@@ -378,53 +389,97 @@ export default function Step1Dashboard({
     localStorage.setItem('editor_view_layout', viewLayout);
   }, [viewLayout]);
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
+  const documentsSectionRef = React.useRef<HTMLDivElement>(null);
+
+  const scrollToDocuments = () => {
+    documentsSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   const firstName = user?.name ? user.name.split(' ')[0] : 'Guest';
 
   const handleDeleteCV = async (cvId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!window.confirm('Are you sure you want to delete this resume?')) return;
-    try {
-      const response = await fetch(`/api/cvs/${cvId}`, {
-        method: 'DELETE',
-      });
-      if (response.ok) {
-        toast.success('Resume deleted successfully');
-        setExistingCVs(prev => prev.filter(cv => (cv.id || cv._id) !== cvId));
-        if (cachedExistingCVs) {
-          cachedExistingCVs = cachedExistingCVs.filter(cv => (cv.id || cv._id) !== cvId);
+    setDeleteConfirmation({
+      isOpen: true,
+      title: 'Delete Resume',
+      message: 'Are you sure you want to delete this resume? This action cannot be undone.',
+      onConfirm: async () => {
+        try {
+          const response = await fetch(`/api/cvs/${cvId}`, {
+            method: 'DELETE',
+          });
+          if (response.ok) {
+            toast.success('Resume deleted successfully');
+            setExistingCVs(prev => prev.filter(cv => (cv.id || cv._id) !== cvId));
+            if (cachedExistingCVs) {
+              cachedExistingCVs = cachedExistingCVs.filter(cv => (cv.id || cv._id) !== cvId);
+            }
+          } else {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to delete resume');
+          }
+        } catch (error: any) {
+          console.error('Error deleting CV:', error);
+          toast.error(error.message || 'Failed to delete resume');
         }
-      } else {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to delete resume');
+        setDeleteConfirmation(prev => ({ ...prev, isOpen: false }));
       }
-    } catch (error: any) {
-      console.error('Error deleting CV:', error);
-      toast.error(error.message || 'Failed to delete resume');
-    }
+    });
   };
 
   const handleDeleteCoverLetter = async (clId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!window.confirm('Are you sure you want to delete this cover letter?')) return;
-    try {
-      const response = await fetch(`/api/cover-letters/${clId}?userId=${user?.id || ''}`, {
-        method: 'DELETE',
-      });
-      if (response.ok) {
-        toast.success('Cover letter deleted successfully');
-        setExistingCoverLetters(prev => prev.filter(cl => (cl.id || cl._id) !== clId));
-        if (cachedExistingCoverLetters) {
-          cachedExistingCoverLetters = cachedExistingCoverLetters.filter(cl => (cl.id || cl._id) !== clId);
+    setDeleteConfirmation({
+      isOpen: true,
+      title: 'Delete Cover Letter',
+      message: 'Are you sure you want to delete this cover letter? This action cannot be undone.',
+      onConfirm: async () => {
+        try {
+          const response = await fetch(`/api/cover-letters/${clId}?userId=${user?.id || ''}`, {
+            method: 'DELETE',
+          });
+          if (response.ok) {
+            toast.success('Cover letter deleted successfully');
+            setExistingCoverLetters(prev => prev.filter(cl => (cl.id || cl._id) !== clId));
+            if (cachedExistingCoverLetters) {
+              cachedExistingCoverLetters = cachedExistingCoverLetters.filter(cl => (cl.id || cl._id) !== clId);
+            }
+          } else {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to delete cover letter');
+          }
+        } catch (error: any) {
+          console.error('Error deleting cover letter:', error);
+          toast.error(error.message || 'Failed to delete cover letter');
         }
-      } else {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to delete cover letter');
+        setDeleteConfirmation(prev => ({ ...prev, isOpen: false }));
       }
-    } catch (error: any) {
-      console.error('Error deleting cover letter:', error);
-      toast.error(error.message || 'Failed to delete cover letter');
-    }
+    });
+  };
+
+  const handleDeleteDraft = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setDeleteConfirmation({
+      isOpen: true,
+      title: 'Delete Draft',
+      message: 'Are you sure you want to delete this unsaved draft? This action cannot be undone.',
+      onConfirm: async () => {
+        try {
+          const response = await fetch('/api/cv-draft/delete', { method: 'DELETE' });
+          if (response.ok) {
+            setDraftCV(null);
+            cachedDraftCV = null;
+            toast.success('Draft deleted successfully');
+          } else {
+            throw new Error('Failed to delete draft');
+          }
+        } catch (err: any) {
+          console.error('Failed to delete draft:', err);
+          toast.error(err.message || 'Failed to delete draft');
+        }
+        setDeleteConfirmation(prev => ({ ...prev, isOpen: false }));
+      }
+    });
   };
 
   const handleDuplicateCV = async (cvId: string, sourceTitle: string, e: React.MouseEvent) => {
@@ -1093,9 +1148,12 @@ export default function Step1Dashboard({
                 <div className="flex items-center justify-start lg:justify-end gap-6 sm:gap-8 shrink-0 lg:ml-auto w-full lg:w-auto">
                  <button
                    type="button"
-                   onClick={() => setActiveTab('cvs')}
+                   onClick={() => {
+                     setActiveTab('cvs');
+                     setTimeout(scrollToDocuments, 100);
+                   }}
                    aria-label={`Show ${existingCVs.length} resumes`}
-                   className="flex flex-col items-start gap-0.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
+                   className="flex flex-col items-start gap-0.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] hover:opacity-80 transition-opacity"
                  >
                    <span className="text-xl font-black text-gray-900 dark:text-white">{existingCVs.length}</span>
                    <span className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider">Resumes</span>
@@ -1103,9 +1161,12 @@ export default function Step1Dashboard({
 
                  <button
                    type="button"
-                   onClick={() => setActiveTab('cover-letters')}
+                   onClick={() => {
+                     setActiveTab('cover-letters');
+                     setTimeout(scrollToDocuments, 100);
+                   }}
                    aria-label={`Show ${existingCoverLetters.length} cover letters`}
-                   className="flex flex-col items-start gap-0.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
+                   className="flex flex-col items-start gap-0.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] hover:opacity-80 transition-opacity"
                  >
                    <span className="text-xl font-black text-gray-900 dark:text-white">{existingCoverLetters.length}</span>
                    <span className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider">Cover Letters</span>
@@ -1255,42 +1316,17 @@ export default function Step1Dashboard({
           </div>
         </div>
 
-        {/* Continue Editing Section (Floats on bottom, pullable drawer sheet layout) */}
+        {/* Continue Editing Section (Integrated inline on page) */}
         {!isGuestMode && (
-          <motion.div 
-            layout
-            initial={{ y: '30vh' }}
-            animate={{ 
-              y: isDocumentsPanelExpanded ? 0 : 'calc(100% - 450px)',
-            }}
-            transition={{ type: 'spring', damping: 28, stiffness: 220 }}
-            className={`fixed bottom-0 left-0 right-0 mx-auto w-[96vw] h-[85vh] z-[90] flex flex-col bg-[var(--bg-primary)] border-t border-x border-[color:var(--border-primary)] shadow-[0_-20px_50px_rgba(0,0,0,0.18)] rounded-t-[32px] overflow-hidden no-print transition-all duration-300 ${
-              isDesktopExpanded ? 'lg:left-[280px] lg:w-[calc(100vw-320px)]' : 'lg:left-[84px] lg:w-[calc(100vw-120px)]'
-            }`}
+          <div 
+            ref={documentsSectionRef}
+            className="w-full mt-12 border-t border-[color:var(--border-primary)] pt-12 pb-24 px-4 sm:px-8 no-print"
           >
-            {/* Drawer Pull Grab Handle Bar */}
-            <div 
-              onClick={() => setIsDocumentsPanelExpanded(!isDocumentsPanelExpanded)}
-              className="w-full py-4 shrink-0 flex flex-col items-center cursor-pointer hover:bg-gray-500/5 transition-colors border-b border-[color:var(--border-primary)] select-none bg-[var(--bg-primary)]"
-            >
-              <div className="w-14 h-1.5 bg-gray-300 dark:bg-gray-700 rounded-full transition-all duration-300 group-hover:bg-emerald-500" />
-              <div className="flex items-center gap-1.5 mt-2.5">
-                <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-widest text-[#80FF00] flex items-center gap-1">
-                  Your Documents
-                </span>
-                <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">
-                  • {isDocumentsPanelExpanded ? 'Click to Minimize' : 'Pull Up to View All Resumes & Cover Letters'}
-                </span>
-              </div>
-            </div>
-
-            {/* Scrollable Container inside sheet */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-6 sm:p-12 pb-32">
-              <div className="w-full max-w-7xl mx-auto">
-                <div className="step-one-documents-header flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-5 pb-5 border-b border-[color:var(--border-primary)] pt-5">
+            <div className="w-full max-w-7xl mx-auto">
+              <div className="step-one-documents-header flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-5 pb-5 border-b border-[color:var(--border-primary)] pt-5">
                   <div>
-                    <h3 className="mt-1 text-xs sm:text-sm text-[color:var(--text-secondary)]">Your Documents</h3>
-                    <p className="text-xl sm:text-2xl font-black text-[color:var(--text-primary)] tracking-tight text-left">All your resumes and cover letters in one place.</p>
+                    <h2 className="text-2xl sm:text-3xl font-black text-[color:var(--text-primary)] tracking-tight text-left">Your Documents</h2>
+                    <p className="text-xs sm:text-sm text-[color:var(--text-secondary)] mt-1.5">All your resumes and cover letters in one place.</p>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2 sm:gap-3">
@@ -1419,20 +1455,7 @@ export default function Step1Dashboard({
   
                         <div 
                           className="absolute bottom-2 sm:bottom-4 right-2 sm:right-4 z-40 w-8 h-8 sm:w-10 sm:h-10 bg-red-500/80 backdrop-blur-md rounded-lg sm:rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 shadow-2xl hover:bg-red-650"
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            if (window.confirm('Are you sure you want to delete this draft?')) {
-                              try {
-                                const response = await fetch('/api/cv-draft/delete', { method: 'DELETE' });
-                                if (response.ok) {
-                                  setDraftCV(null);
-                                  cachedDraftCV = null;
-                                }
-                              } catch (err) {
-                                console.error('Failed to delete draft:', err);
-                              }
-                            }
-                          }}
+                          onClick={(e) => handleDeleteDraft(e)}
                         >
                           <Trash2 className="text-white w-4 h-4 sm:w-5 sm:h-5" />
                         </div>
@@ -1576,20 +1599,7 @@ export default function Step1Dashboard({
                               <td className="px-6 py-4 text-right">
                                 <div className="flex items-center justify-end gap-1.5">
                                   <button
-                                    onClick={async (e) => {
-                                      e.stopPropagation();
-                                      if (window.confirm('Are you sure you want to delete this draft?')) {
-                                        try {
-                                          const response = await fetch('/api/cv-draft/delete', { method: 'DELETE' });
-                                          if (response.ok) {
-                                            setDraftCV(null);
-                                            cachedDraftCV = null;
-                                          }
-                                        } catch (err) {
-                                          console.error('Failed to delete draft:', err);
-                                        }
-                                      }
-                                    }}
+                                    onClick={(e) => handleDeleteDraft(e)}
                                     className="p-2 bg-gray-155 hover:bg-red-500 hover:text-white dark:bg-[#1a230f]/60 dark:hover:bg-red-650 dark:hover:text-white text-red-500 dark:text-red-400 rounded-lg transition-all"
                                     title="Delete Draft"
                                   >
@@ -1774,7 +1784,6 @@ export default function Step1Dashboard({
 
             </div>
           </div>
-        </motion.div>
         )}
         </motion.div>
       )}
@@ -1954,6 +1963,51 @@ export default function Step1Dashboard({
         </div>
       </motion.div>
       )}
+
+      {/* Custom Delete Confirmation Modal */}
+      <AnimatePresence>
+        {deleteConfirmation.isOpen && (
+          <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setDeleteConfirmation(prev => ({ ...prev, isOpen: false }))}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            {/* Modal Box */}
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 15 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 15 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 350 }}
+              className="relative w-full max-w-md bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/5 rounded-3xl p-6 shadow-2xl z-10"
+            >
+              <h3 className="text-lg sm:text-xl font-black text-gray-900 dark:text-white mb-2 tracking-tight">
+                {deleteConfirmation.title}
+              </h3>
+              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 font-medium leading-relaxed mb-6">
+                {deleteConfirmation.message}
+              </p>
+              <div className="flex items-center justify-end gap-3">
+                <button
+                  onClick={() => setDeleteConfirmation(prev => ({ ...prev, isOpen: false }))}
+                  className="px-4 py-2 text-xs sm:text-sm font-bold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors rounded-full"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={deleteConfirmation.onConfirm}
+                  className="px-5 py-2 text-xs sm:text-sm font-bold bg-red-500 hover:bg-red-600 text-white rounded-full transition-colors shadow-lg shadow-red-500/20"
+                >
+                  Delete
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </AnimatePresence>
   );
 }

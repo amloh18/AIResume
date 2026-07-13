@@ -3,13 +3,23 @@ import getConnection from '@/lib/database';
 import CoverLetter from '@/models/CoverLetter';
 import { toObjectId } from '@/lib/db-utils';
 import mongoose from 'mongoose';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   try {
     await getConnection();
 
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { success: false, message: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+    const userId = session.user.id;
+
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
     const status = searchParams.get('status');
     const sort = searchParams.get('sort') || 'updatedAt';
     const limit = searchParams.get('limit');
@@ -17,13 +27,6 @@ export async function GET(request: NextRequest) {
 
     const cvId = searchParams.get('cvId');
     const journeyId = searchParams.get('journeyId');
-
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, message: 'User ID is required' },
-        { status: 400 }
-      );
-    }
 
     // Create base query - ensure userId is ObjectId for index usage
     const normalizedUserId = mongoose.Types.ObjectId.isValid(userId)
@@ -66,7 +69,7 @@ export async function GET(request: NextRequest) {
 
     // Apply limit if specified
     if (limit) {
-      query = query.limit(parseInt(limit));
+      query = query.limit(parseInt(limit, 10));
     }
 
     // Execute query
@@ -130,6 +133,15 @@ export async function POST(request: NextRequest) {
   try {
     await getConnection();
 
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { success: false, message: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+    const userId = session.user.id;
+
     const body = await request.json();
     console.log('📝 POST /api/cover-letters - Payload:', JSON.stringify(body, null, 2));
 
@@ -138,11 +150,11 @@ export async function POST(request: NextRequest) {
     console.log('🔍 Debug: CoverLetter schema path "content" required:', schemaContentPath?.isRequired);
     console.log('🔍 Debug: CoverLetter schema path "content" options:', schemaContentPath?.options);
 
-    const { userId, title, content, header, body: bodyContent, footer, targetCompany, targetPosition, keywords, jobId, cvId, journeyId, status, metadata } = body;
+    const { title, content, header, body: bodyContent, footer, targetCompany, targetPosition, keywords, jobId, cvId, journeyId, status, metadata } = body;
 
-    if (!userId || !title) {
+    if (!title) {
       return NextResponse.json(
-        { success: false, message: 'User ID and title are required' },
+        { success: false, message: 'Title is required' },
         { status: 400 }
       );
     }

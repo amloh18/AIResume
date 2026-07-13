@@ -3,8 +3,6 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import CV from '@/models/CV';
 import { authenticatedFetch } from '@/lib/utils/apiUtils';
-import { PutObjectCommand } from '@aws-sdk/client-s3';
-import { getS3Client, getS3PublicUrl } from '@/lib/s3-client';
 
 export async function POST(
   request: NextRequest,
@@ -67,45 +65,8 @@ export async function POST(
 }
 
 async function generateCVSnapshot(cv: any): Promise<string> {
-  try {
-    // Generate SVG-based thumbnail
-    const svgContent = generateCVThumbnailSVG(cv);
-    
-    // Get S3 client
-    const s3Client = getS3Client();
-
-    // Create S3 key for thumbnail
-    const userId = cv.userId?.toString() || 'unknown';
-    const cvId = cv._id?.toString() || 'unknown';
-    const timestamp = Date.now();
-    const s3Key = `thumbnails/${userId}/cv-snapshot-${cvId}-${timestamp}.svg`;
-
-    // Upload SVG to S3
-    const command = new PutObjectCommand({
-      Bucket: process.env.AWS_S3_BUCKET_NAME!,
-      Key: s3Key,
-      ContentType: 'image/svg+xml',
-      Body: Buffer.from(svgContent),
-      Metadata: {
-        cvId: cvId,
-        userId: userId,
-        generatedAt: new Date().toISOString(),
-        type: 'cv-snapshot',
-      },
-    });
-
-    await s3Client.send(command);
-
-    // Return public URL using centralized utility
-    return getS3PublicUrl(s3Key);
-
-  } catch (error) {
-    console.error('Error creating CV snapshot:', error);
-    // Fallback to data URL if S3 upload fails
-    const svgContent = generateCVThumbnailSVG(cv);
-    const svgDataUrl = `data:image/svg+xml;base64,${Buffer.from(svgContent).toString('base64')}`;
-    return svgDataUrl;
-  }
+  // S3 generation disabled. Return a local placeholder.
+  return '/images/templates/modern-preview.jpg';
 }
 
 function generateCVThumbnailSVG(cv: any): string {

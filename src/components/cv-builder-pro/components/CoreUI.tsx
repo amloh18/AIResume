@@ -688,7 +688,7 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
     <SnippetContext.Provider value={{ blockId: instance.id, pageIdx, pageAssignments: ctx?.pageAssignments || {} }}>
       <motion.div
         layout="position"
-        layoutId={instance.id}
+        layoutId={`${instance.id}_page_${pageIdx}`}
         initial={{ opacity: 0, y: 12, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95, y: -8 }}
@@ -743,6 +743,8 @@ const InsertSnippetHandle = ({ onAddSnippet, zoneId, index, alwaysVisible = fals
 };
 
 export const CanvasZone = ({ readOnly = false, zoneId, blocks, cvData, EditableWrapper, handleDrop, moveSnippet, removeSnippet, onReplace, onAddSnippet, onTogglePhoto, onAddListEntry, moveEntry, deleteEntry, dragState, activeTemplate, layoutZones, isDark = false, className = "", onOpenSkillsSuggestions, isDropAllowed, onMoveToZone }: any) => {
+  const pageIdxMatch = zoneId.match(/_page_(\d+)$/);
+  const pageIdx = pageIdxMatch ? parseInt(pageIdxMatch[1], 10) : 0;
   const [isOverZone, setIsOverZone] = useState(false);
   const [dropIntent, setDropIntent] = useState<'valid' | 'invalid' | null>(null);
   const onDragOver = (e: React.DragEvent) => {
@@ -801,9 +803,9 @@ export const CanvasZone = ({ readOnly = false, zoneId, blocks, cvData, EditableW
       <div className={`${dragHighlightClass} ${dropStateClass} transition-all duration-300 pb-0 ${className}`} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}>
         
         <div className="flex flex-col gap-0">
-          <AnimatePresence mode="popLayout">
+
             {blocks.map((instance: any, index: number) => (
-              <React.Fragment key={instance?.id || `snippet-${index}`}>
+              <React.Fragment key={`${instance?.id || `snippet-${index}`}_page_${pageIdx}`}>
                 <CanvasSnippet
                   readOnly={readOnly}
                   instance={instance}
@@ -836,7 +838,7 @@ export const CanvasZone = ({ readOnly = false, zoneId, blocks, cvData, EditableW
                 )}
               </React.Fragment>
             ))}
-          </AnimatePresence>
+
         </div>
         {showAppendLine && <div className="w-full min-h-[34px] bg-emerald-50/95 border-2 border-dashed border-emerald-400 rounded-xl mt-4 pointer-events-none shadow-[0_10px_30px_rgba(16,185,129,0.12)] flex items-center justify-center"><span className="px-3 py-1 rounded-full bg-white text-[10px] font-bold uppercase tracking-[0.22em] text-emerald-700">Insert Here</span></div>}
       </div>
