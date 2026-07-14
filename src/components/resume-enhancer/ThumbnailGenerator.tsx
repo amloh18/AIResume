@@ -295,30 +295,36 @@ export const ThumbnailGenerator: React.FC<ThumbnailGeneratorProps> = ({
       const html2canvasModule = await import('html2canvas');
       const html2canvas = html2canvasModule.default || html2canvasModule;
       
-      // Create a temporary element for rendering
-      const tempElement = document.createElement('div');
-      tempElement.style.position = 'fixed';
-      tempElement.style.left = '-9999px';
-      tempElement.style.top = '0';
-      tempElement.style.width = '300px';
-      tempElement.style.height = '400px';
-      tempElement.style.background = 'white';
-      tempElement.style.transform = 'scale(0.3)';
-      tempElement.style.transformOrigin = 'top left';
-      document.body.appendChild(tempElement);
+      let tempElement: HTMLDivElement | null = null;
+      try {
+        // Create a temporary element for rendering
+        tempElement = document.createElement('div');
+        tempElement.style.position = 'fixed';
+        tempElement.style.left = '-9999px';
+        tempElement.style.top = '0';
+        tempElement.style.width = '300px';
+        tempElement.style.height = '400px';
+        tempElement.style.background = 'white';
+        tempElement.style.transform = 'scale(0.3)';
+        tempElement.style.transformOrigin = 'top left';
+        document.body.appendChild(tempElement);
 
-      // Use CVPreviewThumbnail component for rendering
-      const thumbnail = await html2canvas(tempElement, {
-        width: 300,
-        height: 400,
-        backgroundColor: '#ffffff',
-        scale: 1,
-        useCORS: true,
-        allowTaint: true,
-      });
+        // Use CVPreviewThumbnail component for rendering
+        const thumbnail = await html2canvas(tempElement, {
+          width: 300,
+          height: 400,
+          backgroundColor: '#ffffff',
+          scale: 1,
+          useCORS: true,
+          allowTaint: true,
+        });
 
-      document.body.removeChild(tempElement);
-      return thumbnail.toDataURL('image/png', 0.9);
+        return thumbnail.toDataURL('image/png', 0.9);
+      } finally {
+        if (tempElement && document.body.contains(tempElement)) {
+          document.body.removeChild(tempElement);
+        }
+      }
     } catch (err) {
       console.error('DOM thumbnail generation failed:', err);
       return null;

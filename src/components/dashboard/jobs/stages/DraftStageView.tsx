@@ -3,28 +3,9 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { FileText, Building, MapPin, TrendingUp, Sparkles, DollarSign, MoreHorizontal, Award, Globe, Calendar } from 'lucide-react';
+import { JobApplication } from '@/types/job';
 
-interface JobApplication {
-  id: string;
-  _id: string;
-  jobTitle: string;
-  title?: string;
-  company: string;
-  companyLogo?: string;
-  location?: string;
-  salary?: {
-    min?: number;
-    max?: number;
-    currency?: string;
-  };
-  jobDescription?: string;
-  description?: string;
-  matchScore?: number;
-  atsScore?: number;
-  sponsorship?: 'yes' | 'no' | 'unknown';
-  source?: string;
-  createdAt: string;
-}
+
 
 interface DraftStageViewProps {
   jobs: JobApplication[];

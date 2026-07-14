@@ -65,10 +65,6 @@ import ModeValidationBanner from '@/components/resume-enhancer/components/ModeVa
 import ModeTransitionDialog from '@/components/resume-enhancer/components/ModeTransitionDialog';
 import { getAnalysisModeWithValidation, hasAnalysisContextChanged, type AnalysisMode } from '@/lib/utils/analysis-mode';
 import { invalidateStep1Cache } from './steps/Step1Dashboard';
-import {
-  queueCvThumbnailSnapshotUpload,
-  saveCvThumbnailSnapshot,
-} from '@/lib/utils/cv-thumbnail-snapshot';
 import { extractBodyFromContent } from '@/lib/utils/coverLetterUtils';
 
 interface ResumeEnhancerContainerProps {
@@ -604,12 +600,7 @@ function ResumeEnhancerContainerBase({
     setIsUserMenuExpanded(false);
   };
 
-  const queueCurrentThumbnailSnapshot = useCallback((targetCvId?: string | null) => {
-    // Disabled S3 thumbnail upload
-  }, []);
-
   const openEditorDashboard = useCallback(() => {
-    queueCurrentThumbnailSnapshot();
     resetState();
     goToStep(1);
 
@@ -621,7 +612,7 @@ function ResumeEnhancerContainerBase({
     currentParams.delete('mode');
     currentParams.set('step', '1');
     router.replace(`${pathname}?${currentParams.toString()}`);
-  }, [goToStep, pathname, queueCurrentThumbnailSnapshot, resetState, router, searchParams]);
+  }, [goToStep, pathname, resetState, router, searchParams]);
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -635,8 +626,6 @@ function ResumeEnhancerContainerBase({
   const confirmNavigation = async (saveBeforeLeaving: boolean) => {
     if (saveBeforeLeaving) {
       await handleSmartSave();
-    } else {
-      queueCurrentThumbnailSnapshot();
     }
     
     if (pendingNavigation) {
@@ -1130,6 +1119,9 @@ function ResumeEnhancerContainerBase({
       initializedRef.current.cvId === cvId) {
       return;
     }
+    
+    // Set synchronously to prevent double invocation from stale closures
+    initializedRef.current = { mode, cvId };
 
     const initializeEnhancer = async () => {
       if (requestedStep === 1 && !restoreDraft) {
@@ -1145,7 +1137,7 @@ function ResumeEnhancerContainerBase({
         dispatch({ type: 'SET_MODE', payload: 'create' });
         dispatch({ type: 'SET_CV_TYPE', payload: 'standalone' });
         goToStepSafely(4, { silent: true });
-        setCompletedSteps([1, 2, 3]);
+        setCompletedSteps(prev => [...new Set([...prev, 1, 2, 3])]);
         initializedRef.current = { mode, cvId };
         return;
       }
@@ -1215,7 +1207,7 @@ function ResumeEnhancerContainerBase({
             });
             dispatch({ type: 'SET_CV_TYPE', payload: 'standalone' });
             goToStepSafely(4, { silent: true });
-            setCompletedSteps([1, 2, 3]);
+            setCompletedSteps(prev => [...new Set([...prev, 1, 2, 3])]);
             initializedRef.current = { mode, cvId };
             setIsLoading(false);
             return;
@@ -1390,7 +1382,7 @@ function ResumeEnhancerContainerBase({
           if (mode === 'edit-cover-letter') {
             const allowedCoverLetterStep = !isMasterCV && resolvedCvType !== 'master';
             goToStepSafely(requestedStep || (allowedCoverLetterStep ? 4 : 3), { silent: false });
-            setCompletedSteps(allowedCoverLetterStep ? [1, 2, 3] : [1, 2]);
+            setCompletedSteps(prev => [...new Set([...prev, ...(allowedCoverLetterStep ? [1, 2, 3] : [1, 2])])]);
           } else {
             // Skip to requested step or default to Step 3 for editing
             const targetStep = requestedStep || 3;
@@ -1406,7 +1398,7 @@ function ResumeEnhancerContainerBase({
             // Set completed steps based on target step
             const completed = [];
             for (let i = 1; i < targetStep; i++) completed.push(i);
-            setCompletedSteps(completed);
+            setCompletedSteps(prev => [...new Set([...prev, ...completed])]);
           }
 
           // Update URL to include mode parameter
@@ -1415,15 +1407,17 @@ function ResumeEnhancerContainerBase({
             ? 'edit-cover-letter'
             : (resolvedCvType === 'master' ? 'edit-master' : 'edit');
           const currentParams = new URLSearchParams(window.location.search);
-          if (currentParams.get('mode') !== urlMode || currentParams.get('cvId') !== actualCvId) {
+          const resolvedCvId = actualCvId;
+          if (currentParams.get('mode') !== urlMode || currentParams.get('cvId') !== resolvedCvId) {
             currentParams.set('mode', urlMode);
-            currentParams.set('cvId', actualCvId);
-            const newUrl = `${pathname}?${currentParams.toString()}`;
-            router.replace(newUrl);
+            if (resolvedCvId) {
+              currentParams.set('cvId', resolvedCvId);
+            }
+            router.replace(`${pathname}?${currentParams.toString()}`);
           }
 
           // Mark as initialized
-          initializedRef.current = { mode, cvId };
+          initializedRef.current = { mode, cvId: actualCvId };
         } catch (error) {
           console.error('Failed to load CV:', error);
           toast.error('Failed to load CV. Redirecting to Editor.');
@@ -1503,7 +1497,7 @@ function ResumeEnhancerContainerBase({
               goToStepSafely(targetStep as any, { silent: true });
             }
             
-            setCompletedSteps([1, 2]);
+            setCompletedSteps(prev => [...new Set([...prev, 1, 2])]);
 
             initializedRef.current = { mode, cvId };
           } catch (error) {
@@ -1620,7 +1614,7 @@ function ResumeEnhancerContainerBase({
 
                         // Skip directly to Step 3
                         goToStep(3);
-                        setCompletedSteps([1, 2]);
+                        setCompletedSteps(prev => [...new Set([...prev, 1, 2])]);
 
                         // Exit early - don't proceed with creation flow
                         return;
@@ -1700,18 +1694,20 @@ function ResumeEnhancerContainerBase({
 
   const handleStep1Complete = (cvData: UnifiedCVDataStructure) => {
     dispatch({ type: 'SET_CV_DATA', payload: cvData });
-    setCompletedSteps([...completedSteps, 1]);
+    setCompletedSteps(prev => [...new Set([...prev, 1])]);
 
     // Generate automatic title based on CV type
     const cvType = state.cvType || (isGuestMode ? 'master' : 'standalone');
-    const autoTitle = generateCVTitle(cvType, cvData, state.jobData);
-    dispatch({ type: 'SET_CV_TITLE', payload: autoTitle });
-    console.log('✅ Auto-generated CV title:', autoTitle, 'for cvType:', cvType);
+    if (mode === 'create' || !state.cvTitle) {
+      const autoTitle = generateCVTitle(cvType, cvData, state.jobData);
+      dispatch({ type: 'SET_CV_TITLE', payload: autoTitle });
+      console.log('✅ Auto-generated CV title:', autoTitle, 'for cvType:', cvType);
+    }
 
     // For create mode, set initial data when first data is entered
     if (mode === 'create') {
       initialCVDataRef.current = JSON.parse(JSON.stringify(cvData));
-      initialCVTitleRef.current = autoTitle;
+      initialCVTitleRef.current = state.cvTitle;
     }
 
     // Auto-extract role from CV data for master and standalone CVs in edit mode
@@ -2216,6 +2212,7 @@ function ResumeEnhancerContainerBase({
   };
 
   const handleStep2Complete = () => {
+    setCompletedSteps(prev => [...new Set([...prev, 2])]);
     setTemplateOverlayOpen(false);
 
     // Guest mode: Save draft after template selection
@@ -2231,14 +2228,13 @@ function ResumeEnhancerContainerBase({
         cvTitle: state.cvTitle
       }).catch(err => console.error('Failed to save draft:', err));
     }
-    setCompletedSteps([...completedSteps, 2]);
 
     // For create mode, update initial template when Step 2 completes
     if (mode === 'create' && state.selectedTemplate && !initialTemplateRef.current) {
       initialTemplateRef.current = state.selectedTemplate;
     }
 
-    goToStep(3);
+    goToStepSafely(3);
   };
 
 
@@ -2249,7 +2245,7 @@ function ResumeEnhancerContainerBase({
       return;
     }
 
-    setCompletedSteps([...completedSteps, 3]);
+    setCompletedSteps(prev => [...new Set([...prev, 3])]);
 
     // Guest mode: Save draft before moving to Step 4
     if (isGuestMode) {
@@ -2271,7 +2267,7 @@ function ResumeEnhancerContainerBase({
   };
 
   const handleStep4Complete = () => {
-    setCompletedSteps([...completedSteps, 4]);
+    setCompletedSteps(prev => [...new Set([...prev, 4])]);
 
     if (isGuestMode) {
       guestCVService.saveGuestDraft({
@@ -2795,9 +2791,6 @@ function ResumeEnhancerContainerBase({
              console.error("Failed to save cover letter:", clErr);
           }
       }
-      // Disabled CV S3 thumbnail generation as requested
-
-
       // Invalidate step 1 cache so it re-fetches when navigating back to step 1
       invalidateStep1Cache();
 

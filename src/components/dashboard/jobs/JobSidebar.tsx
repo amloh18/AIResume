@@ -34,6 +34,7 @@ import AgingTrackerWidget from './widgets/AgingTrackerWidget';
 import InterviewPrepWidget from './widgets/InterviewPrepWidget';
 import CompBreakdownWidget from './widgets/CompBreakdownWidget';
 import PostMortemWidget from './widgets/PostMortemWidget';
+import { JobApplication } from '@/types/job';
 import {
   shouldSkipTrackerCreatedStageModalForToday,
   type TrackerCreatedStagePreview,
@@ -45,58 +46,7 @@ import {
   type TrackerSidebarOpenContext,
 } from './trackerSidebarConfig';
 
-interface JobApplication {
-  id: string;
-  _id: string;
-  userId: string;
-  jobTitle: string;
-  title?: string; // For compatibility
-  company: string;
-  status: 'draft' | 'created' | 'applied' | 'screening' | 'interview' | 'offer' | 'rejected' | 'accepted' | 'withdrawn';
-  jobDescription?: string;
-  description?: string; // For compatibility
-  location?: string;
-  jobUrl?: string;
-  salary?: {
-    min?: number;
-    max?: number;
-    currency?: string;
-    period?: 'hourly' | 'monthly' | 'yearly';
-  };
-  jobType?: 'full-time' | 'part-time' | 'contract' | 'internship';
-  type?: string; // For compatibility
-  source?: string;
-  postedDate?: Date;
-  applicationDate?: Date;
-  deadline?: Date;
-  priority: 'low' | 'medium' | 'high';
-  notes?: string;
-  sponsorship?: 'yes' | 'no' | 'unknown';
-  tags?: string[];
-  isArchived?: boolean;
-  contactDetails?: {
-    name?: string;
-    email?: string;
-    phone?: string;
-    role?: string;
-  };
-  createdAt: string;
-  updatedAt: string;
-  interviews?: any[];
-  followUps?: any[];
-  attachments?: any[];
-  contacts?: Array<{
-    name: string;
-    role?: string;
-    email?: string;
-    phone?: string;
-    linkedin?: string;
-  }>;
-  atsScore?: number;
-  atsAnalysis?: any;
-  statusHistory?: any[];
-  extractedJd?: any;
-}
+
 
 
 

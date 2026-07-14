@@ -4,31 +4,9 @@ import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle, Building, DollarSign, Calendar, Clock, AlertCircle, Eye, MapPin, TrendingUp, XCircle, Handshake } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { JobApplication } from '@/types/job';
 
-interface JobApplication {
-  id: string;
-  _id: string;
-  jobTitle: string;
-  title?: string;
-  company: string;
-  companyLogo?: string;
-  location?: string;
-  salary?: {
-    min?: number;
-    max?: number;
-    currency?: string;
-    period?: 'hourly' | 'monthly' | 'yearly';
-  };
-  offerDetails?: {
-    salary?: number;
-    bonus?: string | number;
-    equity?: string | number;
-  };
-  deadline?: Date | string;
-  updatedAt: string;
-  notes?: string;
-  status: 'draft' | 'created' | 'applied' | 'screening' | 'interview' | 'offer' | 'rejected' | 'accepted' | 'withdrawn';
-}
+
 
 interface OfferStageViewProps {
   jobs: JobApplication[];

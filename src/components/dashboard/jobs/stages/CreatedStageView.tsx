@@ -4,26 +4,9 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { FileText, Building, MapPin, Download, Zap, TrendingUp, AlertTriangle, CheckCircle, Shield, Globe, Calendar, DollarSign } from 'lucide-react';
 import { CVJourney } from '@/types/cv';
+import { JobApplication } from '@/types/job';
 
-interface JobApplication {
-  id: string;
-  _id: string;
-  jobTitle: string;
-  title?: string;
-  company: string;
-  companyLogo?: string;
-  location?: string;
-  salary?: {
-    min?: number;
-    max?: number;
-    currency?: string;
-  };
-  jobDescription?: string;
-  trustSnapshot?: {
-    ghostRiskLevel?: 'low' | 'medium' | 'high';
-  };
-  createdAt: string;
-}
+
 
 interface CreatedStageViewProps {
   jobs: JobApplication[];

@@ -27,60 +27,9 @@ import {
 } from "lucide-react";
 import { CVJourney } from "@/types/cv";
 import { isJobStale, getFollowUpNudge, calculateSuccessProbability } from "@/lib/utils/jobIntelligence";
+import { JobApplication } from '@/types/job';
 
-interface JobApplication {
-  id: string;
-  _id: string;
-  userId: string;
-  jobTitle: string;
-  title?: string;
-  company: string;
-  companyLogo?: string;
-  status:
-    | "draft"
-    | "created"
-    | "applied"
-    | "screening"
-    | "interview"
-    | "offer"
-    | "rejected"
-    | "accepted"
-    | "withdrawn";
-  location?: string;
-  salary?: {
-    min?: number;
-    max?: number;
-    currency?: string;
-    period?: "hourly" | "monthly" | "yearly";
-  };
-  offerDetails?: {
-    salary?: number;
-    bonus?: string;
-    equity?: string;
-    deadline?: Date;
-    status?: string;
-  };
-  interviews?: Array<{
-    type: string;
-    date: Date | string;
-    interviewer?: string;
-  }>;
-  applicationDate?: Date;
-  deadline?: Date;
-  createdAt: string;
-  updatedAt: string;
-  matchScore?: number;
-  sponsorship?: "yes" | "no" | "unknown";
-  jobUrl?: string;
-  atsScore?: number;
-  jobDescription?: string;
-  trustScore?: number;
-  trustSnapshot?: {
-    ghostRiskLevel?: "low" | "medium" | "high";
-  };
-  source?: string;
-  priority: "low" | "medium" | "high";
-}
+
 
 interface JobKanbanCardProps {
   job: JobApplication;

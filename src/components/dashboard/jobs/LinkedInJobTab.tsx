@@ -2,21 +2,9 @@
 
 import React from 'react';
 import { Linkedin, ExternalLink, Mail, Search } from 'lucide-react';
+import { JobApplication } from '@/types/job';
 
-interface JobApplication {
-  id: string;
-  _id: string;
-  jobTitle: string;
-  title?: string;
-  company: string;
-  location?: string;
-  contactDetails?: {
-    name?: string;
-    email?: string;
-    role?: string;
-  };
-  jobUrl?: string;
-}
+
 
 interface LinkedInJobTabProps {
   job: JobApplication;

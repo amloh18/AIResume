@@ -434,51 +434,6 @@ export default function Step5Review({ onSave }: { onSave?: () => Promise<void> }
 
             if (coverLetterId) {
               dispatch({ type: 'SET_AUTO_COVER_LETTER', payload: { draft: '', coverLetterId } });
-            } else {
-              // --- AUTO-GENERATE IF MISSING ---
-              // User requested backend auto-creation without clicking 'Generate'.
-              // We trigger it here if it doesn't exist.
-              console.log('🔄 Step5Review - Auto-generating missing cover letter...');
-
-              // We need userId for the request - assuming it's available in context or params, 
-              // but Step5Review doesn't usually have userId prop explicitly passed in all usages or it uses session.
-              // However, the `auto-generate` endpoint expects userId in body.
-              // We'll try to get it from state.cvData.userId if available or skipped?
-              // `Step5Review` might not have userId readily available in `state`.
-              // We can rely on server session, but `route.ts` expects explicit userId in body.
-              // Let's check props. Step5Review doesn't receive Props in the export default function Step5Review() line 19.
-              // Ah, ResumeEnhancerContext might have it? `state` has `cvData`.
-              // `state.cvData.userId` might be there? UnifiedSchema doesn't always have root userId.
-              // Wait, the new `Step5Review` file content I viewed has `userId`? No, line 19 is `export default function Step5Review()`.
-              // But line 440 of `CoverLetterEditorContainer` passes `userId`. That's different file.
-              // `NotificationCenter` metadata says `Step5Review.tsx` active? No.
-
-              // Let's assume we can get userId from the API session implicitly if we update API to use session. 
-              // BUT my new API expects `userId` in body.
-              // If I cannot get userId here easily, this is a blocker for "backend auto" from Client.
-              // Wait, `journey.userId` likely exists in the response I just got!
-              const journeyUserId = journey?.userId;
-
-              if (journeyUserId) {
-                const genResponse = await fetch('/api/cover-letters/auto-generate', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    userId: journeyUserId,
-                    journeyId: state.journeyId,
-                    cvId: state.cvId, // or journey.cvId
-                    jobId: state.jobData?.id || state.jobData?._id // or journey.jobId
-                  })
-                });
-
-                if (genResponse.ok) {
-                  const genResult = await genResponse.json();
-                  if (genResult.success && genResult.coverLetterId) {
-                    console.log('✅ Step5Review - Auto-generated cover letter:', genResult.coverLetterId);
-                    dispatch({ type: 'SET_AUTO_COVER_LETTER', payload: { draft: '', coverLetterId: genResult.coverLetterId } });
-                  }
-                }
-              }
             }
           }
         } catch (error) {
@@ -604,6 +559,9 @@ export default function Step5Review({ onSave }: { onSave?: () => Promise<void> }
               throw new Error(errorData.error || `Download failed with status ${response.status}`);
             }
             const blob = await response.blob();
+            if (blob.size === 0) {
+              throw new Error('Received empty file from server');
+            }
             const downloadUrl = window.URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = downloadUrl;
@@ -695,19 +653,32 @@ export default function Step5Review({ onSave }: { onSave?: () => Promise<void> }
   };
 
   const calculateCompletionPercentage = () => {
+    const visibleSections = state.cvData.structure?.sections?.filter(s => s.visible);
+    if (!visibleSections || visibleSections.length === 0) {
+      let filledSections = 0;
+      const totalSections = 8;
+      if (state.cvData.basics?.name && state.cvData.basics?.email) filledSections++;
+      if (state.cvData.work && state.cvData.work.length > 0) filledSections++;
+      if (state.cvData.education && state.cvData.education.length > 0) filledSections++;
+      if (state.cvData.skills && state.cvData.skills.length > 0) filledSections++;
+      if (state.cvData.projects && state.cvData.projects.length > 0) filledSections++;
+      if (state.cvData.certificates && state.cvData.certificates.length > 0) filledSections++;
+      if (state.cvData.languages && state.cvData.languages.length > 0) filledSections++;
+      if (state.cvData.volunteer && state.cvData.volunteer.length > 0) filledSections++;
+      return Math.round((filledSections / totalSections) * 100);
+    }
+    
+    const totalSections = visibleSections.length;
     let filledSections = 0;
-    const totalSections = 8;
-
-    if (state.cvData.basics?.name && state.cvData.basics?.email) filledSections++;
-    if (state.cvData.work && state.cvData.work.length > 0) filledSections++;
-    if (state.cvData.education && state.cvData.education.length > 0) filledSections++;
-    if (state.cvData.skills && state.cvData.skills.length > 0) filledSections++;
-    if (state.cvData.projects && state.cvData.projects.length > 0) filledSections++;
-    if (state.cvData.certificates && state.cvData.certificates.length > 0) filledSections++;
-    if (state.cvData.languages && state.cvData.languages.length > 0) filledSections++;
-    if (state.cvData.volunteer && state.cvData.volunteer.length > 0) filledSections++;
-
-    return Math.round((filledSections / totalSections) * 100);
+    visibleSections.forEach(section => {
+      if (section.type === 'basics') {
+        if (state.cvData.basics?.name && state.cvData.basics?.email) filledSections++;
+      } else {
+        const data = state.cvData[section.type as keyof typeof state.cvData] as any;
+        if (Array.isArray(data) && data.length > 0) filledSections++;
+      }
+    });
+    return totalSections > 0 ? Math.round((filledSections / totalSections) * 100) : 0;
   };
 
   const completionPercentage = calculateCompletionPercentage();
@@ -1003,17 +974,17 @@ export default function Step5Review({ onSave }: { onSave?: () => Promise<void> }
                 <div className="max-w-md rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 bg-white/80 dark:bg-[#141810] px-6 py-8 text-center shadow-sm">
                   <FileText className="w-10 h-10 text-gray-400 mx-auto mb-3" />
                   <p className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
-                    No linked cover letter
+                    No cover letter yet
                   </p>
                   <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                    Create or link a cover letter from the previous step to preview it here.
+                    Generate a tailored cover letter from the previous step.
                   </p>
                   <button
-                    onClick={handleEditCoverLetter}
+                    onClick={() => goToStep(4)}
                     className="inline-flex items-center gap-2 rounded-lg bg-[#8bc34a] px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-[#7cb342]"
                   >
                     <Edit2 className="w-4 h-4" />
-                    Open Cover Letter Step
+                    Generate Cover Letter in Step 4
                   </button>
                 </div>
               </div>

@@ -4,21 +4,9 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { XCircle, Building, Calendar, TrendingUp, Archive, RefreshCw, BarChart3, Eye } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { JobApplication } from '@/types/job';
 
-interface JobApplication {
-  id: string;
-  _id: string;
-  jobTitle: string;
-  title?: string;
-  company: string;
-  companyLogo?: string;
-  applicationDate?: Date | string;
-  updatedAt: string;
-  matchScore?: number;
-  atsScore?: number;
-  notes?: string;
-  isArchived?: boolean;
-}
+
 
 interface RejectedStageViewProps {
   jobs: JobApplication[];
