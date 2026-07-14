@@ -197,7 +197,7 @@ export interface UnifiedCVDocument {
   metadata: {
     isMaster: boolean;
     lastModified: Date;
-    createdFrom?: string | mongoose.Types.ObjectId;
+    createdFrom?: string | any;
     createdVia?: string; // How the CV was created (e.g., 'ai-career-report', 'journey')
     tags: string[];
     isPublic: boolean;

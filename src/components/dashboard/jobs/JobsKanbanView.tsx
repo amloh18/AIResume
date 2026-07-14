@@ -1,5 +1,6 @@
 "use client";
 
+import { getDaysSinceLastUpdate, isFollowUpNeeded, getFollowUpEmailSubject } from '@/lib/utils/job-intelligence';
 import React from "react";
 import { motion } from "framer-motion";
 import {
@@ -257,11 +258,15 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
 
   React.useEffect(() => {
     try {
-      const stored = localStorage.getItem('kanban-collapsed-columns');
-      if (stored) {
-        setCollapsedColumns(new Set(JSON.parse(stored)));
-      } else {
-        setCollapsedColumns(new Set());
+      if (typeof window !== 'undefined') {
+        const stored = localStorage.getItem('kanban-collapsed-columns');
+        if (stored) {
+          try {
+            setCollapsedColumns(new Set(JSON.parse(stored)));
+          } catch (e) {
+            console.error('Failed to parse kanban-collapsed-columns:', e);
+          }
+        }
       }
     } catch {
       setCollapsedColumns(new Set());
@@ -276,10 +281,12 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
       } else {
         next.add(columnId);
       }
-      try {
-        localStorage.setItem('kanban-collapsed-columns', JSON.stringify([...next]));
-      } catch {
-        // ignore storage errors
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('kanban-collapsed-columns', JSON.stringify([...next]));
+        } catch (e) {
+          console.warn('Failed to save kanban state:', e);
+        }
       }
       return next;
     });
@@ -343,21 +350,7 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
       )
     : allStages;
 
-  const getDaysSinceLastUpdate = (job: JobApplication) => {
-    const lastUpdate = new Date(job.updatedAt);
-    const now = new Date();
-    return Math.floor(
-      (now.getTime() - lastUpdate.getTime()) / (1000 * 60 * 60 * 24),
-    );
-  };
 
-  const isFollowUpNeeded = (job: JobApplication) => {
-    const days = getDaysSinceLastUpdate(job);
-    return (
-      ["applied", "interview", "offer"].includes(job.status) &&
-      (days >= 3 || days >= 7)
-    );
-  };
 
   // Get follow-up timeline for applied jobs
   const getFollowUpTimeline = (job: JobApplication) => {
@@ -634,10 +627,10 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
                                     <JourneyTimelineCard
                                       key={`${job.id}-${journey.id || `journey-${index}`}`}
                                       journey={journey}
-                                      onResume={() => {}}
-                                      onDownload={() => {}}
+                                      onResume={() => { if (onImproveATS) onImproveATS(job); }}
+                                      onDownload={() => { if (onDownload) onDownload(job); }}
                                       onDelete={() => {}}
-                                      onRefresh={() => {}}
+                                      onRefresh={() => { if (onRefresh) onRefresh(); }}
                                       onUpdateJourney={() => {}}
                                     />
                                   ));

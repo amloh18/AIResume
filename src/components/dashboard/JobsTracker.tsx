@@ -1,5 +1,6 @@
 'use client';
 
+import { loadTrackerGenerationPreview } from '@/lib/utils/tracker-generation-preview';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 // Force HMR update
 import { motion, AnimatePresence } from 'framer-motion';
@@ -192,56 +193,19 @@ const JobsTracker: React.FC = () => {
     }
   };
 
-  const loadTrackerGenerationPreview = useCallback(async () => {
-    if (!userId) {
-      return null;
-    }
-
-    try {
-      const response = await authenticatedFetch('/api/jobs/tracker-generation-preview');
-      const result = await response.json();
-      const preview = result?.preview;
-
-      if (result?.success && preview) {
-        const normalizedPreview: TrackerCreatedStagePreview = {
-          mode: preview.mode,
-          entitlementReasonCode: result.entitlementReasonCode,
-          title: preview.title,
-          summary: preview.summary,
-          supportMessage: preview.supportMessage,
-          aiCreditsRemaining: preview.aiCreditsRemaining,
-          aiCreditsLimit: preview.aiCreditsLimit,
-          isTailoredEligible: preview.isTailoredEligible
-        };
-        setTrackerCreatedStagePreview(normalizedPreview);
-        return normalizedPreview;
-      }
-    } catch (error) {
-      console.error('Failed to load tracker generation preview:', error);
-    }
-
-    const fallbackPreview: TrackerCreatedStagePreview = {
-      mode: 'tailored',
-      title: 'Documents will be generated',
-      summary: 'Moving this job to Created will start CV and cover letter generation for this tracker journey.',
-      supportMessage: 'The tracker will show whether the generated drafts are tailored or fallback once processing begins.'
-    };
-    setTrackerCreatedStagePreview(fallbackPreview);
-    return fallbackPreview;
-  }, [userId]);
 
   useEffect(() => {
     if (userId) {
-      loadTrackerGenerationPreview();
+      loadTrackerGenerationPreview(userId).then(setTrackerCreatedStagePreview);
     }
-  }, [loadTrackerGenerationPreview, userId]);
+  }, [userId]);
 
   const shouldOpenCreatedStageModal = useCallback(async (job: JobApplication) => {
     if (job.status !== 'draft') {
       return false;
     }
 
-    const preview = trackerCreatedStagePreview || await loadTrackerGenerationPreview();
+    const preview = trackerCreatedStagePreview || await loadTrackerGenerationPreview(userId || undefined);
     if (
       preview?.mode === 'fallback' &&
       !shouldSkipTrackerCreatedStageModalForToday()
@@ -251,7 +215,7 @@ const JobsTracker: React.FC = () => {
     }
 
     return false;
-  }, [loadTrackerGenerationPreview, trackerCreatedStagePreview]);
+  }, [trackerCreatedStagePreview]);
 
 
   const loadData = async () => {
@@ -735,7 +699,7 @@ const JobsTracker: React.FC = () => {
     setShowAddJobModal(false);
     setEditingJob(null);
     loadData();
-    toast.success(editingJob ? 'Job updated successfully!' : 'Job added successfully!');
+    toast.success(job.id || job._id ? 'Job updated successfully!' : 'Job added successfully!');
   };
 
   const handleJobClick = (job: JobApplication, openContext?: TrackerSidebarOpenContext) => {
@@ -1566,6 +1530,8 @@ const JobsTracker: React.FC = () => {
         existingJobs={jobs} // Pass existing jobs for duplicate detection
         editingJob={editingJob ? {
           id: editingJob.id,
+          _id: editingJob.id,
+          userId: user?.id || '',
           jobTitle: editingJob.jobTitle,
           company: editingJob.company,
           location: editingJob.location,
@@ -1574,8 +1540,8 @@ const JobsTracker: React.FC = () => {
           notes: editingJob.notes,
           priority: editingJob.priority,
           status: editingJob.status,
-          deadline: editingJob.deadline ? (typeof editingJob.deadline === 'string' ? editingJob.deadline : new Date(editingJob.deadline).toISOString().split('T')[0]) : undefined,
-          applicationDate: editingJob.applicationDate ? (typeof editingJob.applicationDate === 'string' ? editingJob.applicationDate : new Date(editingJob.applicationDate).toISOString().split('T')[0]) : undefined,
+          deadline: editingJob.deadline ? new Date(editingJob.deadline) : undefined,
+          applicationDate: editingJob.applicationDate ? new Date(editingJob.applicationDate) : undefined,
           salary: editingJob.salary,
           sponsorship: editingJob.sponsorship,
           tags: editingJob.tags,

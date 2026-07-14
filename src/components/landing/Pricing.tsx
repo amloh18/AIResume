@@ -326,7 +326,7 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
       <div className="flex items-center justify-center py-32">
         <div className="text-gray-900 dark:text-white text-center">
           <p className="text-red-400 mb-2">Error loading pricing plans</p>
-          <p className="text-small text-gray-500 dark:text-white/60">{typeof error === 'object' && error.message ? error.message : String(error)}</p>
+          <p className="text-small text-gray-500 dark:text-white/60">{typeof error === 'object' && (error as any)?.message ? (error as any).message : String(error)}</p>
         </div>
       </div>
     );

@@ -58,14 +58,14 @@ export async function POST(request: NextRequest) {
 
         if (cvId) {
             const cv = await CV.findById(toObjectId(cvId)).lean();
-            if (cv && cv.userId.toString() === userId) {
+            if (cv && (cv as any).userId.toString() === userId) {
                 cvData = (cv as any).cvData;
             }
         }
-
+        
         if (jobId) {
-            const job = await Job.findById(toObjectId(jobId)).lean();
-            if (job && job.userId.toString() === userId) {
+            const job = await Job.findById(jobId);
+            if (job && (job as any).userId.toString() === userId) {
                 jobData = job;
             }
         }

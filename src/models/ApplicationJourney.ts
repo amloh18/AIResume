@@ -62,6 +62,7 @@ export interface IApplicationJourney extends Document {
     completedAt?: Date;
     tags?: string[];
     notes?: string;
+    noteEntries?: Array<{ id: string; content: string; date: Date }>;
   };
 }
 

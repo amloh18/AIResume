@@ -1,6 +1,8 @@
-// @ts-nocheck
 'use client';
+import toast from 'react-hot-toast';
 
+import { loadTrackerGenerationPreview } from '@/lib/utils/tracker-generation-preview';
+import { getJobDeadlineString } from '@/lib/utils/job-deadline';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -29,7 +31,6 @@ import {
 } from 'lucide-react';
 import { useUnifiedAuth } from '@/lib/hooks/useUnifiedAuth';
 import { authenticatedFetchWithUserId } from '@/lib/utils/apiUtils';
-import { v4 as uuidv4 } from 'uuid';
 import { ApplicationPackageService } from '@/lib/services/applicationPackageService';
 import { useCreditExhaustionHandler } from '@/hooks/useCreditExhaustionHandler';
 import { getCountryFlag } from '@/lib/config/adminConstants';
@@ -44,73 +45,7 @@ import {
   type TrackerCreatedStagePreview
 } from '@/lib/utils/tracker-created-stage-modal';
 
-interface Job {
-  id?: string;
-  userId?: string;
-  jobTitle?: string;
-  company?: string;
-  location?: string;
-  jobUrl?: string;
-  jobDescription?: string;
-  notes?: string;
-  priority?: 'low' | 'medium' | 'high';
-  status?: 'draft' | 'created' | 'applied' | 'screening' | 'interview' | 'offer' | 'rejected' | 'accepted' | 'withdrawn';
-  deadline?: string;
-  applicationDate?: string;
-  sponsorship?: 'yes' | 'no' | 'unknown';
-  tags?: string[];
-  salary?: {
-    min?: number;
-    max?: number;
-    currency?: string;
-    period?: 'hourly' | 'monthly' | 'yearly';
-  };
-  contactDetails?: {
-    name?: string;
-    email?: string;
-    phone?: string;
-    role?: string;
-  };
-  interviews?: Array<{
-    type: 'phone' | 'video' | 'onsite' | 'technical' | 'behavioral';
-    date: Date;
-    duration?: number;
-    interviewer?: string;
-    notes?: string;
-    outcome?: 'scheduled' | 'completed' | 'cancelled' | 'no-show';
-    feedback?: string;
-  }>;
-  followUps?: Array<{
-    date: Date;
-    type: 'email' | 'phone' | 'linkedin' | 'other';
-    description: string;
-    outcome?: string;
-  }>;
-  attachments?: Array<{
-    name: string;
-    type: 'cv' | 'cover-letter' | 'certificate' | 'portfolio' | 'other';
-    url: string;
-    size: number;
-    uploadedAt: Date;
-  }>;
-  source?: 'linkedin' | 'indeed' | 'company-website' | 'referral' | 'other';
-  sourceUrl?: string;
-  atsScore?: number;
-  atsAnalysis?: {
-    matchedKeywords: string[];
-    missingKeywords: string[];
-    suggestions: string[];
-    analyzedAt: Date;
-  };
-  statusHistory?: Array<{
-    status: string;
-    changedAt: Date;
-    previousStatus?: string;
-  }>;
-  extractedJd?: any;
-  createdAt?: string;
-  updatedAt?: string;
-}
+import { JobApplication as Job } from '@/types/job';
 
 interface EditJobSidebarProps {
   isOpen: boolean;
@@ -156,15 +91,9 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 768);
-  const [locationFlag, setLocationFlag] = useState<string>('');
-  const [userCurrency, setUserCurrency] = useState<string>('USD');
+  const [locationFlag, setLocationFlag] = useState<any>('');
+  const [userCurrency, setUserCurrency] = useState<any>('USD');
 
-  // Helper function to get date string in YYYY-MM-DD format
-  const getDateString = (daysFromNow: number): string => {
-    const date = new Date();
-    date.setDate(date.getDate() + daysFromNow);
-    return date.toISOString().split('T')[0];
-  };
 
   // Helper function to get currency symbol
   const getCurrencySymbol = (currency: string): string => {
@@ -291,7 +220,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
   }, []); // Only run once on mount
 
   // Form state
-  const [formData, setFormData] = useState<Partial<Job>>({
+  const [formData, setFormData] = useState<any>({
     jobTitle: '',
     company: '',
     location: '',
@@ -300,7 +229,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
     notes: '',
     priority: 'medium',
     status: 'created',
-    deadline: getDateString(15), // Default to 15 days from now
+    deadline: getJobDeadlineString(15), // Default to 15 days from now
     sponsorship: 'unknown',
     tags: [],
     salary: {
@@ -330,7 +259,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
   // Set currency from geolocation when userCurrency is available and no location/currency set
   useEffect(() => {
     if (userCurrency) {
-      setFormData(prev => {
+      setFormData((prev: any) => {
         // Only update if no location and no currency is set
         if (!prev.location && !prev.salary?.currency) {
           return {
@@ -370,7 +299,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
 
         const currency = countryCurrencies[countryCode];
         if (currency) {
-          setFormData(prev => ({
+          setFormData((prev: any) => ({
             ...prev,
             salary: { ...prev.salary, currency, period: prev.salary?.period || 'yearly' }
           }));
@@ -486,14 +415,14 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
         atsAnalysis: editingJob.atsAnalysis || undefined,
         statusHistory: editingJob.statusHistory || [],
         // Set default deadline if not present
-        deadline: editingJob.deadline || getDateString(15)
+        deadline: editingJob.deadline || getJobDeadlineString(15)
       };
       setFormData(data);
       lastSavedDataRef.current = data;
     } else {
       // Creating new job - reset to clean defaults
       const newJobData = {
-        id: uuidv4(),
+        id: crypto.randomUUID(),
         jobTitle: '',
         company: '',
         location: '',
@@ -502,7 +431,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
         notes: '',
         priority: 'medium' as 'low' | 'medium' | 'high',
         status: 'created' as 'draft' | 'created' | 'applied' | 'screening' | 'interview' | 'offer' | 'rejected' | 'accepted' | 'withdrawn',
-        deadline: getDateString(15), // Default to 15 days from now
+        deadline: getJobDeadlineString(15), // Default to 15 days from now
         sponsorship: 'unknown' as 'yes' | 'no' | 'unknown',
         tags: [],
         salary: {
@@ -593,7 +522,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
   };
 
   const handleFormChange = (field: string, value: any) => {
-    setFormData(prev => ({
+    setFormData((prev: any) => ({
       ...prev,
       [field]: value
     }));
@@ -1028,7 +957,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
       notes: '',
       priority: 'medium',
       status: 'created',
-      deadline: getDateString(15), // Default to 15 days from now
+      deadline: getJobDeadlineString(15), // Default to 15 days from now
       sponsorship: 'unknown',
       tags: [],
       salary: {
@@ -1287,7 +1216,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
                       {/* Quick Options */}
                       <div className="flex flex-wrap gap-2 mb-3">
                         {[5, 10, 15, 30].map((days) => {
-                          const dateStr = getDateString(days);
+                          const dateStr = getJobDeadlineString(days);
                           const isSelected = formData.deadline === dateStr;
                           return (
                             <motion.button
@@ -1312,7 +1241,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
                         <div className="relative flex-1">
                           <input
                             type="date"
-                            value={formData.deadline || ''}
+                            value={(formData.deadline as any) || ''}
                             onChange={(e) => handleFormChange('deadline', e.target.value)}
                             className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 rounded-md text-gray-900 dark:text-white text-small focus:border-lime-500 dark:focus:border-lime-400/50 focus:outline-none"
                             placeholder="Select date"

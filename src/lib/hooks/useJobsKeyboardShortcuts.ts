@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 
 interface KeyboardShortcuts {
   onToggleView?: () => void;
@@ -21,11 +21,30 @@ export const useJobsKeyboardShortcuts = ({
   onSelectAll,
   enabled = true
 }: KeyboardShortcuts) => {
+  const handlersRef = useRef({
+    onToggleView,
+    onAddJob,
+    onToggleFilters,
+    onFocusSearch,
+    onCloseModal,
+    onSelectAll
+  });
+
+  useEffect(() => {
+    handlersRef.current = {
+      onToggleView,
+      onAddJob,
+      onToggleFilters,
+      onFocusSearch,
+      onCloseModal,
+      onSelectAll
+    };
+  });
+
   useEffect(() => {
     if (!enabled) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Prevent shortcuts when typing in inputs, textareas, or contenteditable elements
       const target = e.target as HTMLElement;
       if (
         target.tagName === 'INPUT' ||
@@ -35,42 +54,38 @@ export const useJobsKeyboardShortcuts = ({
         return;
       }
 
-      // K - Toggle Kanban/List
+      const { onToggleView, onAddJob, onToggleFilters, onFocusSearch, onCloseModal, onSelectAll } = handlersRef.current;
+
       if (e.key === 'k' && !e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey) {
         e.preventDefault();
         onToggleView?.();
         return;
       }
 
-      // N - Add new job
       if (e.key === 'n' && !e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey) {
         e.preventDefault();
         onAddJob?.();
         return;
       }
 
-      // F - Open filters
       if (e.key === 'f' && !e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey) {
         e.preventDefault();
         onToggleFilters?.();
         return;
       }
 
-      // Cmd/Ctrl + K - Focus search
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
         e.preventDefault();
         onFocusSearch?.();
         return;
       }
 
-      // Escape - Close modals/filters
       if (e.key === 'Escape') {
         e.preventDefault();
         onCloseModal?.();
         return;
       }
 
-      // Cmd/Ctrl + A - Select all visible jobs
       if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
         e.preventDefault();
         onSelectAll?.();
@@ -80,6 +95,6 @@ export const useJobsKeyboardShortcuts = ({
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [enabled, onToggleView, onAddJob, onToggleFilters, onFocusSearch, onCloseModal, onSelectAll]);
+  }, [enabled]);
 };
 

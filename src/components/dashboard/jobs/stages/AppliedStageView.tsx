@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { Calendar, Clock, AlertCircle, CheckCircle, Building, Eye, Globe, MapPin, Bell, TrendingUp } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { JobApplication } from '@/types/job';
+import { JobTable, JobTableHeader, JobTableRow, JobTableCompanyCell, JobTableRoleCell, JobTableLocationCell, JobTableCompCell } from './JobTablePrimitives';
 
 
 
@@ -43,14 +44,6 @@ const AppliedStageView: React.FC<AppliedStageViewProps> = ({
     const daysSince = getDaysSinceApplication(job.applicationDate);
     const daysSinceUpdate = getDaysSinceApplication(job.updatedAt);
     return daysSince >= 7 && daysSinceUpdate >= 7;
-  };
-
-  const getCompRange = (job: JobApplication) => {
-    if (!job.salary?.min && !job.salary?.max) return '-';
-    const currency = job.salary.currency || '$';
-    const min = job.salary.min ? `${currency}${job.salary.min >= 1000 ? (job.salary.min / 1000).toFixed(0) + 'k' : job.salary.min}` : '';
-    const max = job.salary.max ? `${currency}${job.salary.max >= 1000 ? (job.salary.max / 1000).toFixed(0) + 'k' : job.salary.max}` : '';
-    return min && max ? `${min} - ${max}` : min || max;
   };
 
   const sortedJobs = useMemo(() => {
@@ -121,156 +114,110 @@ const AppliedStageView: React.FC<AppliedStageViewProps> = ({
         </button>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-gray-50 dark:bg-[#1c2018]">
-            <tr>
-              {/* Universal Columns */}
-              <th className="px-6 py-4 text-left text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Company</th>
-              <th className="px-6 py-4 text-left text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Role</th>
-              <th className="px-6 py-4 text-left text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Location</th>
-              <th className="px-6 py-4 text-left text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Comp Range</th>
+      <JobTable
+        headers={
+          <>
+            <JobTableHeader label="Company" />
+            <JobTableHeader label="Role" />
+            <JobTableHeader label="Location" />
+            <JobTableHeader label="Comp Range" />
+            <JobTableHeader label="Applied On" />
+            <JobTableHeader label="Elapsed Time" />
+            <JobTableHeader label="Platform" />
+            <JobTableHeader label="Next Follow-up" />
+            <JobTableHeader label="Action" align="right" />
+          </>
+        }
+      >
+        {sortedJobs.map((job) => {
+          const daysSinceApplication = getDaysSinceApplication(job.applicationDate);
+          const needsFollowUp = isFollowUpNeeded(job);
+          const appliedDate = job.applicationDate ? (typeof job.applicationDate === 'string' ? new Date(job.applicationDate) : job.applicationDate) : null;
 
-              {/* Stage Specific Columns */}
-              <th className="px-6 py-4 text-left text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Applied On</th>
-              <th className="px-6 py-4 text-left text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Elapsed Time</th>
-              <th className="px-6 py-4 text-left text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Platform</th>
-              <th className="px-6 py-4 text-left text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Next Follow-up</th>
+          // Calculate follow up date (7 days after last update/application)
+          const lastUpdate = job.updatedAt ? new Date(job.updatedAt) : new Date();
+          const followUpDate = new Date(lastUpdate);
+          followUpDate.setDate(followUpDate.getDate() + 7);
 
-              <th className="px-6 py-4 text-right text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Action</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200 dark:divide-white/10">
-            {sortedJobs.map((job) => {
-              const daysSinceApplication = getDaysSinceApplication(job.applicationDate);
-              const needsFollowUp = isFollowUpNeeded(job);
-              const appliedDate = job.applicationDate ? (typeof job.applicationDate === 'string' ? new Date(job.applicationDate) : job.applicationDate) : null;
+          return (
+            <JobTableRow key={job.id || job._id} job={job} onClick={() => onJobClick(job)}>
+              <JobTableCompanyCell job={job} />
+              <JobTableRoleCell job={job} />
+              <JobTableLocationCell job={job} />
+              <JobTableCompCell job={job} />
 
-              // Calculate follow up date (7 days after last update/application)
-              const lastUpdate = job.updatedAt ? new Date(job.updatedAt) : new Date();
-              const followUpDate = new Date(lastUpdate);
-              followUpDate.setDate(followUpDate.getDate() + 7);
+              {/* Applied On */}
+              <td className="px-6 py-4 whitespace-nowrap">
+                <div className="flex items-center gap-1.5 text-small text-gray-500 dark:text-gray-400">
+                  <Calendar size={14} />
+                  <span>{appliedDate ? appliedDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '-'}</span>
+                </div>
+              </td>
 
-              return (
-                <motion.tr
-                  key={job.id || job._id}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="group hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer"
-                  onClick={() => onJobClick(job)}
-                >
-                  {/* Company */}
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-white/10 flex items-center justify-center text-small font-bold text-gray-500 dark:text-gray-400 overflow-hidden">
-                        {job.companyLogo ? (
-                          <img
-                            src={job.companyLogo}
-                            alt={`${job.company} logo`}
-                            className="w-full h-full object-contain"
-                            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-                          />
-                        ) : null}
-                        <span style={{ display: job.companyLogo ? 'none' : 'block' }}>
-                          {job.company.substring(0, 2).toUpperCase()}
-                        </span>
-                      </div>
-                      <span className="text-small font-semibold text-gray-900 dark:text-white">{job.company}</span>
-                    </div>
-                  </td>
+              {/* Elapsed Time */}
+              <td className="px-6 py-4 whitespace-nowrap">
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-small font-medium ${daysSinceApplication > 14 ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' :
+                  daysSinceApplication > 7 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                    'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
+                  }`}>
+                  {daysSinceApplication} days ago
+                </span>
+              </td>
 
-                  {/* Role */}
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-small text-gray-900 dark:text-white">{job.jobTitle || job.title}</span>
-                  </td>
+              {/* Platform */}
+              <td className="px-6 py-4 whitespace-nowrap">
+                <div className="flex items-center gap-1.5 text-small text-gray-500 dark:text-gray-400">
+                  <Globe size={14} />
+                  <span>{job.source || 'Manual'}</span>
+                </div>
+              </td>
 
-                  {/* Location */}
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-1.5 text-small text-gray-500 dark:text-gray-400">
-                      <MapPin size={14} />
-                      <span className="truncate max-w-[150px]">{job.location || '-'}</span>
-                    </div>
-                  </td>
+              {/* Next Follow-up */}
+              <td className="px-6 py-4 whitespace-nowrap">
+                <div className={`flex items-center gap-1.5 text-small ${needsFollowUp ? 'text-orange-600 dark:text-orange-400 font-medium' : 'text-gray-500 dark:text-gray-400'}`}>
+                  <Bell size={14} />
+                  <span>{followUpDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+                </div>
+              </td>
 
-                  {/* Comp Range */}
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-small text-gray-600 dark:text-gray-300">{getCompRange(job)}</span>
-                  </td>
-
-                  {/* Applied On */}
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-1.5 text-small text-gray-500 dark:text-gray-400">
-                      <Calendar size={14} />
-                      <span>{appliedDate ? appliedDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '-'}</span>
-                    </div>
-                  </td>
-
-                  {/* Elapsed Time */}
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-small font-medium ${daysSinceApplication > 14 ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' :
-                      daysSinceApplication > 7 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' :
-                        'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
-                      }`}>
-                      {daysSinceApplication} days ago
-                    </span>
-                  </td>
-
-                  {/* Platform */}
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-1.5 text-small text-gray-500 dark:text-gray-400">
-                      <Globe size={14} />
-                      <span>{job.source || 'Manual'}</span>
-                    </div>
-                  </td>
-
-                  {/* Next Follow-up */}
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className={`flex items-center gap-1.5 text-small ${needsFollowUp ? 'text-orange-600 dark:text-orange-400 font-medium' : 'text-gray-500 dark:text-gray-400'}`}>
-                      <Bell size={14} />
-                      <span>{followUpDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
-                    </div>
-                  </td>
-
-                  {/* Action */}
-                  <td className="px-6 py-4 whitespace-nowrap text-right" onClick={(e) => e.stopPropagation()}>
-                    {activityForm?.jobId === (job.id || job._id) ? (
-                      <div className="flex justify-end gap-2">
-                        <input
-                          type="text"
-                          value={activityForm.note}
-                          onChange={(e) => setActivityForm({ ...activityForm, note: e.target.value })}
-                          placeholder="Log a note..."
-                          className="px-3 py-1.5 text-small border border-[color:var(--border-primary)] rounded-lg bg-[var(--bg-primary)] text-[color:var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]"
-                          autoFocus
-                        />
-                        <button
-                          onClick={() => submitActivity(job.id || job._id)}
-                          className="px-3 py-1.5 bg-[var(--accent-primary)] text-[#141810] text-small font-bold rounded-lg hover:bg-[var(--accent-hover)] transition-colors"
-                        >
-                          Save
-                        </button>
-                        <button
-                          onClick={() => setActivityForm(null)}
-                          className="px-3 py-1.5 bg-[var(--bg-secondary)] text-[color:var(--text-primary)] text-small rounded-lg hover:bg-[var(--hover-bg)] transition-colors"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={(e) => handleLogActivity(job, e)}
-                        className="px-3 py-1.5 border border-[color:var(--border-primary)] text-[color:var(--text-primary)] text-small font-medium rounded-lg hover:bg-[var(--hover-bg)] transition-colors inline-flex items-center gap-1.5"
-                      >
-                        Log Activity
-                      </button>
-                    )}
-                  </td>
-                </motion.tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+              {/* Action */}
+              <td className="px-6 py-4 whitespace-nowrap text-right" onClick={(e) => e.stopPropagation()}>
+                {activityForm?.jobId === (job.id || job._id) ? (
+                  <div className="flex justify-end gap-2">
+                    <input
+                      type="text"
+                      value={activityForm.note}
+                      onChange={(e) => setActivityForm({ ...activityForm, note: e.target.value })}
+                      placeholder="Log a note..."
+                      className="px-3 py-1.5 text-small border border-[color:var(--border-primary)] rounded-lg bg-[var(--bg-primary)] text-[color:var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]"
+                      autoFocus
+                    />
+                    <button
+                      onClick={() => submitActivity(job.id || job._id)}
+                      className="px-3 py-1.5 bg-[var(--accent-primary)] text-[#141810] text-small font-bold rounded-lg hover:bg-[var(--accent-hover)] transition-colors"
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={() => setActivityForm(null)}
+                      className="px-3 py-1.5 bg-[var(--bg-secondary)] text-[color:var(--text-primary)] text-small rounded-lg hover:bg-[var(--hover-bg)] transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={(e) => handleLogActivity(job, e)}
+                    className="px-3 py-1.5 border border-[color:var(--border-primary)] text-[color:var(--text-primary)] text-small font-medium rounded-lg hover:bg-[var(--hover-bg)] transition-colors inline-flex items-center gap-1.5"
+                  >
+                    Log Activity
+                  </button>
+                )}
+              </td>
+            </JobTableRow>
+          );
+        })}
+      </JobTable>
     </div>
   );
 };

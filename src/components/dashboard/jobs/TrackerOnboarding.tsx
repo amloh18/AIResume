@@ -960,16 +960,37 @@ export default function TrackerOnboarding({ onClose }: TrackerOnboardingProps) {
         }
       } catch (err) {
         console.error('Failed to fetch tracker onboarding state from server:', err);
-        const seen = localStorage.getItem('cvcircle_tracker_onboarding_seen');
-        if (!seen) setIsOpen(true);
+        if (typeof window !== 'undefined') {
+          const seen = localStorage.getItem('cvcircle_tracker_onboarding_seen');
+          if (!seen) setIsOpen(true);
+        }
       }
     };
     fetchTourStatus();
   }, []);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight') handleNext();
+      if (e.key === 'ArrowLeft' && currentSlide > 0) setCurrentSlide(prev => prev - 1);
+      if (e.key === 'Escape') handleClose();
+    };
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, currentSlide]);
+
+
   const handleClose = async () => {
     setIsOpen(false);
-    localStorage.setItem('cvcircle_tracker_onboarding_seen', 'true');
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('cvcircle_tracker_onboarding_seen', 'true');
+      } catch (e) {
+        console.warn('Failed to save onboarding state:', e);
+      }
+    }
     if (onClose) onClose();
     try {
       await fetch('/api/user/onboarding', {

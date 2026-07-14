@@ -183,6 +183,7 @@ export interface CVSession {
     title: string;
     tags: string[];
     notes?: string;
+    noteEntries?: Array<{ id: string; content: string; date: Date | string }>;
     lastEditSession?: Date;
     editCount: number;
   };
@@ -259,6 +260,7 @@ export interface CVJourney {
     completedAt?: Date;
     tags?: string[];
     notes?: string;
+    noteEntries?: Array<{ id: string; content: string; date: Date | string }>;
   };
   createdAt: string;
   updatedAt: string;

@@ -5,6 +5,9 @@ export interface JobApplication {
   jobTitle: string;
   title?: string;
   company: string;
+  trustSnapshot?: any;
+  companyLogo?: string;
+  matchScore?: number;
   status: 'draft' | 'created' | 'applied' | 'screening' | 'interview' | 'offer' | 'rejected' | 'accepted' | 'withdrawn';
   jobDescription?: string;
   description?: string;
@@ -25,6 +28,7 @@ export interface JobApplication {
   deadline?: Date;
   priority: 'low' | 'medium' | 'high';
   notes?: string;
+  noteEntries?: Array<{ id: string; content: string; date: Date | string }>;
   sponsorship?: 'yes' | 'no' | 'unknown';
   tags?: string[];
   contactDetails?: {

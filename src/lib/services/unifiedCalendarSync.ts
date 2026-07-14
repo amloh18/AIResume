@@ -88,7 +88,7 @@ export class UnifiedCalendarSyncService {
       const existingMap = new Map(
         existingEvents
           .filter(event => event.extendedProperties?.private?.['cvcircleJobId'])
-          .map(event => [event.extendedProperties.private.cvcircleJobId, event])
+          .map(event => [event.extendedProperties?.private?.cvcircleJobId, event])
       );
 
       const currentJobIds = new Set<string>();
@@ -131,13 +131,13 @@ export class UnifiedCalendarSyncService {
             await calendar.events.update({
               calendarId: 'primary',
               eventId: existing.id,
-              resource: eventBody,
+              requestBody: eventBody,
             });
             result.updated++;
           } else {
             await calendar.events.insert({
               calendarId: 'primary',
-              resource: eventBody,
+              requestBody: eventBody,
             });
             result.created++;
           }
@@ -149,7 +149,7 @@ export class UnifiedCalendarSyncService {
 
       // Delete events for jobs that no longer exist
       for (const [jobId, event] of Array.from(existingMap.entries())) {
-        if (!currentJobIds.has(jobId)) {
+        if (jobId && !currentJobIds.has(jobId)) {
           try {
             await calendar.events.delete({
               calendarId: 'primary',
