@@ -1,6 +1,9 @@
+import { JobJourneySnapshot } from './job-relationship';
+
 export interface JobApplication {
   id: string;
   _id: string;
+  relationship?: JobJourneySnapshot | null;
   userId: string;
   jobTitle: string;
   title?: string;

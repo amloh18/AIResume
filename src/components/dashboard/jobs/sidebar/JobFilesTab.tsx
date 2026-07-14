@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { FileText, Eye, Loader2, Sparkles, Edit2, Trash2 } from 'lucide-react';
 import { CVJourney } from '@/types/cv';
+import { JobApplication } from '@/types/job';
 import { authenticatedFetchWithUserId } from '@/lib/utils/apiUtils';
 import CVPreviewThumbnail from '@/components/dashboard/CVPreviewThumbnail';
 import CoverLetterPreview from '@/components/cv-preview/CoverLetterPreview';
@@ -13,6 +14,7 @@ import { DEFAULT_UNIFIED_CV_DATA } from '@/types/unified-cv-schema';
 import toast from 'react-hot-toast';
 
 interface JobFilesTabProps {
+  job: JobApplication;
   primaryJourney: CVJourney | undefined;
   previewLoading: 'cv' | 'coverLetter' | null;
   handleOpenDocumentPreview: (type: 'cv' | 'coverLetter') => Promise<void>;
@@ -150,6 +152,7 @@ const LazyThumbnail = ({ item, isCoverLetter = false, cvData = null }: { item: a
 };
 
 const JobFilesTab: React.FC<JobFilesTabProps> = ({
+  job,
   primaryJourney,
   previewLoading,
   handleOpenDocumentPreview,
@@ -159,6 +162,9 @@ const JobFilesTab: React.FC<JobFilesTabProps> = ({
   onRefresh
 }) => {
   const router = useRouter();
+
+  const cvId = job.relationship?.documents?.cv?.id || primaryJourney?.cvId;
+  const coverLetterId = job.relationship?.documents?.coverLetter?.id || primaryJourney?.coverLetterId;
 
   const [cvDoc, setCvDoc] = useState<any>(null);
   const [cvLoading, setCvLoading] = useState(false);
@@ -172,13 +178,13 @@ const JobFilesTab: React.FC<JobFilesTabProps> = ({
   useEffect(() => {
     const fetchCV = async () => {
       setCvDeletedOrMissing(false);
-      if (!user?.id || !primaryJourney?.cvId) {
+      if (!user?.id || !cvId) {
         setCvDoc(null);
         return;
       }
       setCvLoading(true);
       try {
-        const response = await authenticatedFetchWithUserId(`/api/cvs/${primaryJourney.cvId}`, user.id);
+        const response = await authenticatedFetchWithUserId(`/api/cvs/${cvId}`, user.id);
         if (response.status === 404) {
           setCvDeletedOrMissing(true);
           setCvDoc(null);
@@ -199,19 +205,19 @@ const JobFilesTab: React.FC<JobFilesTabProps> = ({
       }
     };
     void fetchCV();
-  }, [primaryJourney?.cvId, user?.id]);
+  }, [cvId, user?.id]);
 
   // Fetch Tailored Cover Letter
   useEffect(() => {
     const fetchCL = async () => {
       setClDeletedOrMissing(false);
-      if (!user?.id || !primaryJourney?.coverLetterId) {
+      if (!user?.id || !coverLetterId) {
         setClDoc(null);
         return;
       }
       setClLoading(true);
       try {
-        const response = await authenticatedFetchWithUserId(`/api/cover-letters/${primaryJourney.coverLetterId}`, user.id);
+        const response = await authenticatedFetchWithUserId(`/api/cover-letters/${coverLetterId}`, user.id);
         if (response.status === 404) {
           setClDeletedOrMissing(true);
           setClDoc(null);
@@ -232,16 +238,16 @@ const JobFilesTab: React.FC<JobFilesTabProps> = ({
       }
     };
     void fetchCL();
-  }, [primaryJourney?.coverLetterId, user?.id]);
+  }, [coverLetterId, user?.id]);
 
   // Action Handlers
   const handleDeleteCV = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!user?.id || !primaryJourney?.cvId) return;
+    if (!user?.id || !cvId) return;
     if (!window.confirm("Are you sure you want to delete this tailored CV? This action cannot be undone.")) return;
 
     try {
-      const response = await authenticatedFetchWithUserId(`/api/cvs/${primaryJourney.cvId}`, user.id, {
+      const response = await authenticatedFetchWithUserId(`/api/cvs/${cvId}`, user.id, {
         method: 'DELETE'
       });
       if (response.ok) {
@@ -260,11 +266,11 @@ const JobFilesTab: React.FC<JobFilesTabProps> = ({
 
   const handleDeleteCL = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!user?.id || !primaryJourney?.coverLetterId) return;
+    if (!user?.id || !coverLetterId) return;
     if (!window.confirm("Are you sure you want to delete this tailored Cover Letter? This action cannot be undone.")) return;
 
     try {
-      const response = await authenticatedFetchWithUserId(`/api/cover-letters/${primaryJourney.coverLetterId}`, user.id, {
+      const response = await authenticatedFetchWithUserId(`/api/cover-letters/${coverLetterId}`, user.id, {
         method: 'DELETE'
       });
       if (response.ok) {
@@ -285,10 +291,10 @@ const JobFilesTab: React.FC<JobFilesTabProps> = ({
     <div className="space-y-5">
       <h4 className="text-small font-bold text-gray-900 dark:text-white uppercase tracking-wider">Tailored Files</h4>
       
-      {primaryJourney ? (
+      {(job.relationship?.journey || primaryJourney) ? (
         <div className="grid grid-cols-2 gap-4">
           {/* Tailored CV Thumbnail or Regenerate Card */}
-          {primaryJourney.cvId && !cvDeletedOrMissing ? (
+          {cvId && !cvDeletedOrMissing ? (
             <div className="flex flex-col justify-between hover:scale-[1.01] transition-all duration-300 relative overflow-visible group">
               <div className="relative aspect-[1/1.414] w-full rounded-xl overflow-hidden bg-white shadow-md hover:shadow-xl border border-gray-250 dark:border-white/5 transition-all duration-300">
                 {cvLoading || !cvDoc ? (
@@ -310,7 +316,7 @@ const JobFilesTab: React.FC<JobFilesTabProps> = ({
                         {previewLoading === 'cv' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Eye className="h-3.5 w-3.5" />}
                       </button>
                       <button
-                        onClick={() => router.push(`/editor?mode=edit&cvId=${primaryJourney.cvId}`)}
+                        onClick={() => router.push(`/editor?mode=edit&cvId=${cvId}`)}
                         className="w-7 h-7 bg-black/75 backdrop-blur-sm rounded-lg flex items-center justify-center text-white hover:bg-lime-500 hover:text-black transition-colors"
                         title="Edit CV"
                       >
@@ -356,7 +362,7 @@ const JobFilesTab: React.FC<JobFilesTabProps> = ({
           )}
 
           {/* Tailored Cover Letter Thumbnail or Regenerate Card */}
-          {primaryJourney.coverLetterId && !clDeletedOrMissing ? (
+          {coverLetterId && !clDeletedOrMissing ? (
             <div className="flex flex-col justify-between hover:scale-[1.01] transition-all duration-300 relative overflow-visible group">
               <div className="relative aspect-[1/1.414] w-full rounded-xl overflow-hidden bg-white shadow-md hover:shadow-xl border border-gray-250 dark:border-white/5 transition-all duration-300">
                 {clLoading || !clDoc ? (
@@ -378,7 +384,7 @@ const JobFilesTab: React.FC<JobFilesTabProps> = ({
                         {previewLoading === 'coverLetter' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Eye className="h-3.5 w-3.5" />}
                       </button>
                       <button
-                        onClick={() => router.push(`/editor?mode=edit-cover-letter&coverLetterId=${primaryJourney.coverLetterId}`)}
+                        onClick={() => router.push(`/editor?mode=edit-cover-letter&coverLetterId=${coverLetterId}`)}
                         className="w-7 h-7 bg-black/75 backdrop-blur-sm rounded-lg flex items-center justify-center text-white hover:bg-lime-500 hover:text-black transition-colors"
                         title="Edit Cover Letter"
                       >

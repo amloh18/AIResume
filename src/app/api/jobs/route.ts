@@ -6,6 +6,7 @@ import mongoose from 'mongoose';
 import { createJourneyDocuments } from '@/lib/services/journeyDocumentService';
 import { withTransaction } from '@/lib/utils/db-transaction';
 import User from '@/models/User';
+import { JobJourneySnapshotService } from '@/lib/services/jobJourneySnapshotService';
 import { formatExtensionError, formatExtensionSuccess, ExtensionErrorCode } from '@/lib/utils/extension-errors';
 import { ErrorCode, createErrorNextResponse } from '@/lib/utils/error-codes';
 import { setCorsHeaders, handleCorsPreflight } from '@/lib/utils/cors-helpers';
@@ -1076,11 +1077,16 @@ export async function GET(request: NextRequest) {
         // Return job in format expected by extension
         // Extension expects response.data to be the job object directly
         const serialized = serializeJob(job);
+        const relationship = await JobJourneySnapshotService.getSnapshotForJob(job, userId);
+        const serializedWithRelationship = {
+          ...serialized,
+          relationship
+        };
         return setCorsHeaders(
           NextResponse.json({
             success: true,
-            data: serialized, // Extension expects data to be the job directly
-            job: serialized // Keep for backwards compatibility
+            data: serializedWithRelationship, // Extension expects data to be the job directly
+            job: serializedWithRelationship // Keep for backwards compatibility
           }),
           request
         );
@@ -1147,10 +1153,24 @@ export async function GET(request: NextRequest) {
     }
 
     const jobs = jobApplications.map(serializeJob);
+    
+    // Check if relationships should be expanded
+    const expandParams = searchParams.getAll('expand');
+    const shouldExpandRelationship = searchParams.get('expand') === 'relationship' || expandParams.includes('relationship');
+    
+    let finalJobs = jobs;
+    if (shouldExpandRelationship) {
+      const relationships = await JobJourneySnapshotService.getSnapshotsForJobs(jobApplications, userId);
+      finalJobs = jobs.map(j => ({
+        ...j,
+        relationship: relationships.get(j.id) || null
+      }));
+    }
+
     const responsePayload: any = {
       success: true,
       data: {
-        jobs,
+        jobs: finalJobs,
         total
       }
     };

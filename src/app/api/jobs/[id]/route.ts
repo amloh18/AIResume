@@ -6,6 +6,7 @@ import { JobApplication } from '@/models';
 import jwt from 'jsonwebtoken';
 import type { MyJwtPayload } from '@/types/jwt-payload';
 import mongoose from 'mongoose';
+import { JobJourneySnapshotService } from '@/lib/services/jobJourneySnapshotService';
 import {
   createQueuedGenerationState,
   getJourneyGenerationEntitlement
@@ -149,10 +150,16 @@ export async function GET(
       updatedAt: job.updatedAt instanceof Date ? job.updatedAt.toISOString() : job.updatedAt
     };
 
+    const relationship = await JobJourneySnapshotService.getSnapshotForJob(job, userId);
+    const transformedWithRelationship = {
+      ...transformedJob,
+      relationship
+    };
+
     return NextResponse.json({
       success: true,
-      data: { job: transformedJob },
-      job: transformedJob // Keep for backwards compatibility
+      data: { job: transformedWithRelationship },
+      job: transformedWithRelationship // Keep for backwards compatibility
     });
   } catch (error) {
     console.error('Error fetching job:', error);

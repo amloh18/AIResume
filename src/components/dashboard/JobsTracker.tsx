@@ -227,7 +227,7 @@ const JobsTracker: React.FC = () => {
 
       // Load jobs and journeys in parallel
       const [jobsResponse, journeysResponse] = await Promise.all([
-        authenticatedFetchWithUserId('/api/jobs?limit=all', userId || undefined),
+        authenticatedFetchWithUserId('/api/jobs?limit=all&expand=relationship', userId || undefined),
         authenticatedFetchWithUserId('/api/application-journey', userId || undefined, {
           method: 'GET',
           headers: { 'Content-Type': 'application/json' }
