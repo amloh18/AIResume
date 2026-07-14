@@ -69,8 +69,11 @@ Thumbs.db
 /public/images/image_asset
 
 # Plans
-*plan*
-plan-*
+/fix-all-plans.ts
+/fix-free-plan.ts
+/inspect-plans-*.ts
+/inspect-plans.ts
+/scratch/
 
 # Markdown files
 *.md
