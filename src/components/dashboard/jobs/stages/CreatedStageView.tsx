@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { FileText, Building, MapPin, Download, Zap, TrendingUp, AlertTriangle, CheckCircle, Shield, Globe, Calendar, DollarSign } from 'lucide-react';
 import { CVJourney } from '@/types/cv';
 import { JobApplication } from '@/types/job';
+import { JobTable, JobTableHeader, JobTableRow, JobTableCompanyCell, JobTableRoleCell, JobTableLocationCell, JobTableCompCell } from './JobTablePrimitives';
 
 
 
@@ -29,14 +30,6 @@ const CreatedStageView: React.FC<CreatedStageViewProps> = ({
   onDownload,
 }) => {
   const [showReadyOnly, setShowReadyOnly] = useState(false);
-
-  const getCompRange = (job: JobApplication) => {
-    if (!job.salary?.min && !job.salary?.max) return '-';
-    const currency = job.salary.currency || '$';
-    const min = job.salary.min ? `${currency}${job.salary.min >= 1000 ? (job.salary.min / 1000).toFixed(0) + 'k' : job.salary.min}` : '';
-    const max = job.salary.max ? `${currency}${job.salary.max >= 1000 ? (job.salary.max / 1000).toFixed(0) + 'k' : job.salary.max}` : '';
-    return min && max ? `${min} - ${max}` : min || max;
-  };
 
   const filteredJobs = showReadyOnly
     ? jobs.filter(job => {
@@ -76,158 +69,112 @@ const CreatedStageView: React.FC<CreatedStageViewProps> = ({
         </button>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-gray-50 dark:bg-[#1c2018]">
-            <tr>
-              {/* Universal Columns */}
-              <th className="px-6 py-4 text-left text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Company</th>
-              <th className="px-6 py-4 text-left text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Role</th>
-              <th className="px-6 py-4 text-left text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Location</th>
-              <th className="px-6 py-4 text-left text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Comp Range</th>
+      <JobTable
+        headers={
+          <>
+            <JobTableHeader label="Company" />
+            <JobTableHeader label="Role" />
+            <JobTableHeader label="Location" />
+            <JobTableHeader label="Comp Range" />
+            <JobTableHeader label="ATS Score" />
+            <JobTableHeader label="CV Status" align="center" />
+            <JobTableHeader label="CL Status" align="center" />
+            <JobTableHeader label="Risk Factor" />
+            <JobTableHeader label="Actions" align="right" />
+          </>
+        }
+      >
+        {filteredJobs.map((job) => {
+          const journeys = getJobJourneys(job.id);
+          const journey = journeys[0]; // Primary journey
+          const atsScore = journey?.atsScore || (job as any).atsScore || (job as any).matchScore || 0;
+          const hasCV = !!journey?.cvId;
+          const hasCL = !!journey?.coverLetterId;
+          const riskLevel = job.trustSnapshot?.ghostRiskLevel || 'unknown';
 
-              {/* Stage Specific Columns */}
-              <th className="px-6 py-4 text-left text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">ATS Score</th>
-              <th className="px-6 py-4 text-center text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">CV Status</th>
-              <th className="px-6 py-4 text-center text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">CL Status</th>
-              <th className="px-6 py-4 text-left text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Risk Factor</th>
+          return (
+            <JobTableRow key={job.id || job._id} job={job} onClick={() => onJobClick(job)}>
+              <JobTableCompanyCell job={job} />
+              <JobTableRoleCell job={job} />
+              <JobTableLocationCell job={job} />
+              <JobTableCompCell job={job} />
 
-              <th className="px-6 py-4 text-right text-small font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200 dark:divide-white/10">
-            {filteredJobs.map((job) => {
-              const journeys = getJobJourneys(job.id);
-              const journey = journeys[0]; // Primary journey
-              const atsScore = journey?.atsScore || (job as any).atsScore || (job as any).matchScore || 0;
-              const hasCV = !!journey?.cvId;
-              const hasCL = !!journey?.coverLetterId;
-              const riskLevel = job.trustSnapshot?.ghostRiskLevel || 'unknown';
+              {/* ATS Score */}
+              <td className="px-6 py-4 whitespace-nowrap align-middle">
+                <div className="w-24">
+                  <div className="flex justify-between text-small mb-1">
+                    <span className={atsScore >= 80 ? 'text-green-600 dark:text-green-400 font-medium' : 'text-amber-600 dark:text-amber-400'}>
+                      {atsScore}/100
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+                    <div
+                      className={`h-1.5 rounded-full ${atsScore >= 80 ? 'bg-green-500' : 'bg-amber-500'}`}
+                      style={{ width: `${atsScore}%` }}
+                    />
+                  </div>
+                </div>
+              </td>
 
-              return (
-                <motion.tr
-                  key={job.id || job._id}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="group hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer"
-                  onClick={() => onJobClick(job)}
-                >
-                  {/* Company */}
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-white/10 flex items-center justify-center text-small font-bold text-gray-500 dark:text-gray-400 overflow-hidden">
-                        {job.companyLogo ? (
-                          <img
-                            src={job.companyLogo}
-                            alt={`${job.company} logo`}
-                            className="w-full h-full object-contain"
-                            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-                          />
-                        ) : null}
-                        <span style={{ display: job.companyLogo ? 'none' : 'block' }}>
-                          {job.company.substring(0, 2).toUpperCase()}
-                        </span>
-                      </div>
-                      <span className="text-small font-semibold text-gray-900 dark:text-white">{job.company}</span>
-                    </div>
-                  </td>
+              {/* CV Status */}
+              <td className="px-6 py-4 whitespace-nowrap text-center">
+                {hasCV ? (
+                  <CheckCircle className="w-5 h-5 text-green-500 mx-auto" />
+                ) : (
+                  <AlertTriangle className="w-4 h-4 text-amber-500 mx-auto" />
+                )}
+              </td>
 
-                  {/* Role */}
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-small text-gray-900 dark:text-white">{job.jobTitle || job.title}</span>
-                  </td>
+              {/* CL Status */}
+              <td className="px-6 py-4 whitespace-nowrap text-center">
+                {hasCL ? (
+                  <CheckCircle className="w-5 h-5 text-green-500 mx-auto" />
+                ) : (
+                  <AlertTriangle className="w-4 h-4 text-amber-500 mx-auto" />
+                )}
+              </td>
 
-                  {/* Location */}
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-1.5 text-small text-gray-500 dark:text-gray-400">
-                      <MapPin size={14} />
-                      <span className="truncate max-w-[150px]">{job.location || '-'}</span>
-                    </div>
-                  </td>
+              {/* Risk Factor */}
+              <td className="px-6 py-4 whitespace-nowrap">
+                <div className="flex items-center gap-2">
+                  <Shield size={14} className={riskLevel === 'low' ? 'text-blue-500' : 'text-gray-400'} />
+                  <span className={`text-small ${riskLevel === 'low' ? 'text-gray-600 dark:text-gray-300' :
+                    riskLevel === 'high' ? 'text-red-500' : 'text-gray-500'
+                    }`}>
+                    {riskLevel === 'low' ? 'Low Risk' : riskLevel === 'high' ? 'High Risk' : 'Analyzing...'}
+                  </span>
+                </div>
+              </td>
 
-                  {/* Comp Range */}
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-small text-gray-600 dark:text-gray-300">{getCompRange(job)}</span>
-                  </td>
-
-                  {/* ATS Score */}
-                  <td className="px-6 py-4 whitespace-nowrap align-middle">
-                    <div className="w-24">
-                      <div className="flex justify-between text-small mb-1">
-                        <span className={atsScore >= 80 ? 'text-green-600 dark:text-green-400 font-medium' : 'text-amber-600 dark:text-amber-400'}>
-                          {atsScore}/100
-                        </span>
-                      </div>
-                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
-                        <div
-                          className={`h-1.5 rounded-full ${atsScore >= 80 ? 'bg-green-500' : 'bg-amber-500'}`}
-                          style={{ width: `${atsScore}%` }}
-                        />
-                      </div>
-                    </div>
-                  </td>
-
-                  {/* CV Status */}
-                  <td className="px-6 py-4 whitespace-nowrap text-center">
-                    {hasCV ? (
-                      <CheckCircle className="w-5 h-5 text-green-500 mx-auto" />
-                    ) : (
-                      <AlertTriangle className="w-4 h-4 text-amber-500 mx-auto" />
-                    )}
-                  </td>
-
-                  {/* CL Status */}
-                  <td className="px-6 py-4 whitespace-nowrap text-center">
-                    {hasCL ? (
-                      <CheckCircle className="w-5 h-5 text-green-500 mx-auto" />
-                    ) : (
-                      <AlertTriangle className="w-4 h-4 text-amber-500 mx-auto" />
-                    )}
-                  </td>
-
-                  {/* Risk Factor */}
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-2">
-                      <Shield size={14} className={riskLevel === 'low' ? 'text-blue-500' : 'text-gray-400'} />
-                      <span className={`text-small ${riskLevel === 'low' ? 'text-gray-600 dark:text-gray-300' :
-                        riskLevel === 'high' ? 'text-red-500' : 'text-gray-500'
-                        }`}>
-                        {riskLevel === 'low' ? 'Low Risk' : riskLevel === 'high' ? 'High Risk' : 'Analyzing...'}
-                      </span>
-                    </div>
-                  </td>
-
-                  {/* Actions */}
-                  <td className="px-6 py-4 whitespace-nowrap text-right" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex justify-end gap-2">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onImproveATS?.(job);
-                        }}
-                        className="p-1.5 bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] rounded-lg hover:bg-[var(--accent-primary)]/20 transition-colors"
-                        title="Improve ATS"
-                      >
-                        <Zap size={16} />
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onDownload?.(job);
-                        }}
-                        className="p-1.5 bg-[var(--bg-secondary)] text-[color:var(--text-primary)] rounded-lg hover:bg-[var(--hover-bg)] transition-colors"
-                        title="Download Docs"
-                      >
-                        <Download size={16} />
-                      </button>
-                    </div>
-                  </td>
-                </motion.tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+              {/* Actions */}
+              <td className="px-6 py-4 whitespace-nowrap text-right" onClick={(e) => e.stopPropagation()}>
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onImproveATS?.(job);
+                    }}
+                    className="p-1.5 bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] rounded-lg hover:bg-[var(--accent-primary)]/20 transition-colors"
+                    title="Improve ATS"
+                  >
+                    <Zap size={16} />
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDownload?.(job);
+                    }}
+                    className="p-1.5 bg-[var(--bg-secondary)] text-[color:var(--text-primary)] rounded-lg hover:bg-[var(--hover-bg)] transition-colors"
+                    title="Download Docs"
+                  >
+                    <Download size={16} />
+                  </button>
+                </div>
+              </td>
+            </JobTableRow>
+          );
+        })}
+      </JobTable>
     </div>
   );
 };

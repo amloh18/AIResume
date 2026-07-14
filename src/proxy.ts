@@ -267,12 +267,12 @@ export default async function proxy(req: NextRequest) {
       log.performance('proxy', duration, { pathname, method });
     }
 
-    return next()
+    return NextResponse.next()
   } catch (error) {
     console.error('❌ Middleware error:', error);
     // If middleware fails, allow the request to continue but log it
     // This prevents "Failed to fetch" on the client
-    return next();
+    return NextResponse.next();
   }
 }
 

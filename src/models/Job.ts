@@ -25,6 +25,7 @@ export interface IJob extends Document {
   applicationDate?: Date;
   deadline?: Date;
   notes?: string;
+  noteEntries?: Array<{ id: string; content: string; date: Date }>;
   tags?: string[];
   contacts: Array<{
     name: string;
@@ -39,6 +40,7 @@ export interface IJob extends Document {
     duration?: number;
     interviewer?: string;
     notes?: string;
+  noteEntries?: Array<{ id: string; content: string; date: Date }>;
     outcome?: 'scheduled' | 'completed' | 'cancelled' | 'no-show';
     feedback?: string;
   }>;
@@ -180,6 +182,11 @@ const jobSchema = new Schema<IJob>({
     trim: true,
     maxlength: [2000, 'Notes cannot exceed 2000 characters']
   },
+  noteEntries: [{
+    id: String,
+    content: String,
+    date: Date
+  }],
   tags: [{
     type: String,
     trim: true,

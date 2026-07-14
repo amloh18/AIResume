@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
     }));
 
     const syncService = new UnifiedCalendarSyncService(accessToken, refreshToken, calendarProvider);
-    const result = await syncService.syncEvents(jobApplications);
+    const result = await syncService.syncEvents(jobApplications as any);
 
     return NextResponse.json({
       success: result.success,

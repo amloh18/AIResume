@@ -1,4 +1,3 @@
-// @ts-nocheck
 'use client';
 
 import React from 'react';
@@ -19,6 +18,7 @@ interface JobsListViewProps {
   getJobJourneys: (jobId: string) => CVJourney[];
   getJourneyProgress: (journey: CVJourney) => number;
   getJourneyStatusText: (jobJourneys: CVJourney[], jobStatus?: string) => string;
+  onSkillGapAnalysis?: (job: JobApplication) => void;
 }
 
 const JobsListView: React.FC<JobsListViewProps> = ({

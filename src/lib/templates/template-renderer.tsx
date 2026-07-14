@@ -377,8 +377,8 @@ export const TemplateRenderer = memo(TemplateRendererComponent, (prevProps, next
     prevProps.cvData === nextProps.cvData &&
     prevProps.template === nextProps.template &&
     shallowArrayEqual(prevProps.sectionOrder, nextProps.sectionOrder) &&
-    shallowArrayEqual(prevProps.sectionVisibility, nextProps.sectionVisibility) &&
-    shallowArrayEqual(prevProps.enabledSections, nextProps.enabledSections) &&
+    shallowObjectEqual(prevProps.sectionVisibility, nextProps.sectionVisibility) &&
+    shallowObjectEqual(prevProps.enabledSections, nextProps.enabledSections) &&
     shallowObjectEqual(prevProps.customStyles, nextProps.customStyles)
   );
 });

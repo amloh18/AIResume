@@ -279,6 +279,10 @@ export async function PUT(
       journey.currentStep = body.currentStep;
     }
     
+    if (body.noteEntries !== undefined) {
+      journey.noteEntries = body.noteEntries;
+    }
+
     if (body.notes !== undefined) {
       journey.notes = body.notes;
     }

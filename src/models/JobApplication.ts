@@ -27,6 +27,7 @@ export interface IJobApplication extends Document {
   applicationDate?: Date;
   deadline?: Date;
   notes?: string;
+  noteEntries?: Array<{ id: string; content: string; date: Date }>;
   contactDetails?: {
     name?: string;
     email?: string;
@@ -46,6 +47,7 @@ export interface IJobApplication extends Document {
     duration?: number;
     interviewer?: string;
     notes?: string;
+  noteEntries?: Array<{ id: string; content: string; date: Date }>;
     outcome?: 'scheduled' | 'completed' | 'cancelled' | 'no-show';
     feedback?: string;
   }>;
