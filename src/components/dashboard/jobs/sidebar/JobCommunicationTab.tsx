@@ -5,6 +5,8 @@ import { Mail, Send, Loader2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { JobApplication } from '@/types/job';
 
+import { authenticatedFetchWithUserId } from '@/lib/utils/apiUtils';
+
 interface JobCommunicationTabProps {
   job: JobApplication;
   isRecruiterVisibilityStage: boolean;
@@ -12,6 +14,8 @@ interface JobCommunicationTabProps {
   hasRecruiterEmail: boolean;
   handleOpenEmail: (index: number) => void;
   setIsEmailConnectModalOpen: (open: boolean) => void;
+  user?: { id?: string } | null;
+  onRefresh?: () => Promise<void>;
 }
 
 const JobCommunicationTab: React.FC<JobCommunicationTabProps> = ({
@@ -20,7 +24,9 @@ const JobCommunicationTab: React.FC<JobCommunicationTabProps> = ({
   recruiterVisibilitySteps,
   hasRecruiterEmail,
   handleOpenEmail,
-  setIsEmailConnectModalOpen
+  setIsEmailConnectModalOpen,
+  user,
+  onRefresh
 }) => {
   const [emails, setEmails] = useState<any[]>([]);
   const [emailsLoading, setEmailsLoading] = useState(false);
@@ -48,7 +54,13 @@ const JobCommunicationTab: React.FC<JobCommunicationTabProps> = ({
     if (!jobId) return;
     try {
       setEmailsLoading(true);
-      const res = await fetch(`/api/tracker/emails?jobId=${jobId}`);
+      const url = `/api/tracker/emails?jobId=${jobId}`;
+      let res;
+      if (user?.id) {
+        res = await authenticatedFetchWithUserId(url, user.id);
+      } else {
+        res = await fetch(url);
+      }
       const data = await res.json();
       if (data.success) {
         setEmails(data.messages || []);
@@ -58,7 +70,7 @@ const JobCommunicationTab: React.FC<JobCommunicationTabProps> = ({
     } finally {
       setEmailsLoading(false);
     }
-  }, [job]);
+  }, [job, user?.id]);
 
   useEffect(() => {
     fetchEmails();
@@ -80,25 +92,40 @@ const JobCommunicationTab: React.FC<JobCommunicationTabProps> = ({
       const bodyText = tonePrefix ? `${tonePrefix}${replyText}` : replyText;
       const jobId = job.id || job._id;
 
-      const res = await fetch('/api/tracker/emails', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'send_reply',
-          jobId,
-          threadId: mainThread,
-          subject: emails[0]?.subject ? `Re: ${emails[0].subject}` : `Follow-up: ${job.jobTitle} application`,
-          bodyText,
-          recipientEmail: recruiterEmail,
-          recipientName: job.contactDetails?.name || 'Recruiter'
-        })
-      });
+      const url = '/api/tracker/emails';
+      const bodyPayload = {
+        action: 'send_reply',
+        jobId,
+        threadId: mainThread,
+        subject: emails[0]?.subject ? `Re: ${emails[0].subject}` : `Follow-up: ${job.jobTitle} application`,
+        bodyText,
+        recipientEmail: recruiterEmail,
+        recipientName: job.contactDetails?.name || 'Recruiter'
+      };
+
+      let res;
+      if (user?.id) {
+        res = await authenticatedFetchWithUserId(url, user.id, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(bodyPayload)
+        });
+      } else {
+        res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(bodyPayload)
+        });
+      }
 
       const data = await res.json();
       if (data.success) {
         toast.success('Email sent successfully!');
         setReplyText('');
         fetchEmails();
+        if (onRefresh) {
+          await onRefresh();
+        }
       } else {
         toast.error(data.error || 'Failed to send reply');
       }

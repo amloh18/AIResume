@@ -135,7 +135,8 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [showRoleProfiler, setShowRoleProfiler] = useState(false);
 
-    const isImproveMode = searchParams.get('improve') === 'true' || searchParams.get('mode') === 'improve';
+     const isImproveMode = searchParams.get('improve') === 'true' || searchParams.get('mode') === 'improve';
+    const showChecklist = state.cvType === 'master' && (searchParams.get('mode') || 'create') === 'create';
     const [isSectionEdited, setIsSectionEdited] = useState(false);
     const [isPdfExported, setIsPdfExported] = useState(false);
 
@@ -1324,11 +1325,13 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
             `}
             style={{ order: isControlPanelOpen ? 1 : 2 }}
           >
-            <InlineChecklist 
-              dispatch={dispatch} 
-              goToStep={goToStep} 
-              setActiveUtilityPanel={setActiveUtilityPanel} 
-            />
+            {showChecklist && (
+              <InlineChecklist 
+                dispatch={dispatch} 
+                goToStep={goToStep} 
+                setActiveUtilityPanel={setActiveUtilityPanel} 
+              />
+            )}
             <div className="flex-1 min-h-0">
               <ATSMeterPanel isUtilityPanelOpen={!!activeUtilityPanel} onClose={() => setActiveUtilityPanel(null)} />
             </div>

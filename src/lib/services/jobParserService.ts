@@ -474,11 +474,17 @@ export class JobParserService {
       }
 
       const { callAIWithFallback } = await import('@/lib/utils/ai-api-helper');
-      const systemPrompt = `You are an expert job description analyst. Extracts structured data from any JD, however vague. Keep all text fields, descriptions, and list items extremely concise (under 120 characters each) to fit output token limits. Return ONLY valid JSON, no markdown, no code fences. Fill in all fields, handling missing information gracefully by setting defaults or marked as unknown.`;
+      const systemPrompt = `You are an expert job description analyst. Extracts structured data from any JD, however vague. Keep all text fields, descriptions, and list items extremely concise (under 120 characters each) to fit output token limits. Return ONLY valid JSON, no markdown, no code fences. Fill in all fields, handling missing information gracefully by setting defaults or marked as unknown. Make sure to generate a field "cleaned_job_description" (string) inside "role_content" that contains the cleaned, nicely formatted job description (free of website noise, cookie notices, navigation, and footer text) in proper JD format.`;
       
       let userPrompt = '';
       try {
-        const filePath = path.join(process.cwd(), 'public/job_refine.md');
+        let filePath = path.join(process.cwd(), 'docs/job_refine.md');
+        if (!fs.existsSync(filePath)) {
+          filePath = path.join(process.cwd(), 'public/job_refine.md');
+        }
+        if (!fs.existsSync(filePath)) {
+          filePath = path.join(process.cwd(), '.vscode/job_refine.md');
+        }
         const fileContent = fs.readFileSync(filePath, 'utf8');
         const sectionHeader = '## full job details extraction prompt';
         if (fileContent.includes(sectionHeader)) {
@@ -556,7 +562,7 @@ export class JobParserService {
           currency: parsed.compensation.salary_currency || 'USD',
           period: parsed.compensation.salary_period === 'annual' ? 'year' : parsed.compensation.salary_period === 'monthly' ? 'month' : parsed.compensation.salary_period === 'hourly' ? 'hour' : 'year'
         } : undefined,
-        description: jobText,
+        description: parsed.role_content?.cleaned_job_description || jobText,
         requirements: (parsed.role_content?.requirements_must_have || []).map((r: any) => r.text)
           .concat((parsed.role_content?.requirements_nice_to_have || []).map((r: any) => r.text)),
         benefits: (parsed.compensation?.benefits || []).map((b: any) => b.detail || b.category),
@@ -569,7 +575,7 @@ export class JobParserService {
         sourceUrl: parsed.application_info?.apply_url || (isUrl ? textOrUrl : 'manual'),
         richData: parsed // Include the entire structured result
       };
-
+ 
       return mappedDetails;
     } catch (error) {
       console.error('Error parsing job description with LLM:', error);

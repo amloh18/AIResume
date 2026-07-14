@@ -19,8 +19,14 @@ import mongoose from 'mongoose';
  * ```
  */
 export async function withTransaction<T>(
-  callback: (session: mongoose.ClientSession) => Promise<T>
+  callback: (session: mongoose.ClientSession | undefined) => Promise<T>
 ): Promise<T> {
+  const disableTransactions = process.env.DISABLE_MONGODB_TRANSACTIONS === 'true';
+
+  if (disableTransactions) {
+    return callback(undefined);
+  }
+
   const session = await mongoose.startSession();
   session.startTransaction();
   
@@ -28,8 +34,23 @@ export async function withTransaction<T>(
     const result = await callback(session);
     await session.commitTransaction();
     return result;
-  } catch (error) {
+  } catch (error: any) {
     await session.abortTransaction();
+
+    // Check if error is due to transactions not being supported (standalone MongoDB)
+    const isTransactionUnsupportedError = 
+      error && 
+      (error.message?.includes('Transaction numbers are only allowed') || 
+       error.errmsg?.includes('Transaction numbers are only allowed') ||
+       error.codeName === 'IllegalOperation' ||
+       error.code === 20);
+
+    if (isTransactionUnsupportedError) {
+      console.warn('⚠️ Standalone MongoDB detected. Falling back to non-transactional execution.');
+      // Execute the callback again, but without transaction session
+      return callback(undefined);
+    }
+    
     throw error;
   } finally {
     session.endSession();

@@ -229,6 +229,15 @@ export async function createJourneyDocuments(
             console.log('⚠️ Journey Document Service - Master CV missing structure, will be initialized in studio');
           }
 
+          // Cleanse master CV metadata to avoid validation issues on null subdocuments
+          const sanitizedMetadata = masterCV.metadata ? JSON.parse(JSON.stringify(masterCV.metadata)) : {};
+          if (sanitizedMetadata.surgeonAnalysis === null) {
+            delete sanitizedMetadata.surgeonAnalysis;
+          }
+          if (sanitizedMetadata.analysisSnapshot === null) {
+            delete sanitizedMetadata.analysisSnapshot;
+          }
+
           const duplicatedCV = new CV({
             title: cvTitle,
             cvData: duplicatedCvData, // Tailored or Master content
@@ -243,7 +252,7 @@ export async function createJourneyDocuments(
             styling: masterCV.styling ? JSON.parse(JSON.stringify(masterCV.styling)) : masterCV.styling, // Deep copy styling
             userId: new mongoose.Types.ObjectId(userId),
             metadata: {
-              ...masterCV.metadata,
+              ...sanitizedMetadata,
               isMaster: false,
               createdVia: 'journey',
               lastModified: new Date(),

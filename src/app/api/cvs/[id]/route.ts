@@ -967,6 +967,21 @@ export async function DELETE(
     await CV.deleteOne({ _id: cvId });
     console.log('✅ CV DELETE API - CV deleted successfully');
 
+    // Unlink this CV from any ApplicationJourney
+    try {
+      const { ApplicationJourney } = await import('@/models');
+      const unlinkResult = await ApplicationJourney.updateMany(
+        { cvId: cvId },
+        { 
+          $unset: { cvId: "" }, 
+          $set: { status: 'draft' } 
+        }
+      );
+      console.log('✅ CV DELETE API - Unlinked CV from journeys:', unlinkResult);
+    } catch (unlinkError) {
+      console.error('Failed to unlink CV from journeys:', unlinkError);
+    }
+
     // Log CV deletion activity
     try {
       const { ActivityLogService } = await import('@/lib/services/activityLogService');

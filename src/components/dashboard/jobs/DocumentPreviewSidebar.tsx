@@ -2,6 +2,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import CVBuilderProAdapter from '@/components/cv-builder-pro/CVBuilderProAdapter';
+import { ResumeEnhancerProvider } from '@/contexts/ResumeEnhancerContext';
 import CoverLetterPreview from '@/components/cv-preview/CoverLetterPreview';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { ITemplate } from '@/types/template';
@@ -58,12 +59,14 @@ export default function DocumentPreviewSidebar({
         <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-gray-50 dark:bg-[#1a201a]">
           <div className="max-w-4xl mx-auto bg-white dark:bg-white rounded-lg shadow-sm overflow-hidden min-h-full">
             {documentType === 'cv' ? (
-              <CVBuilderProAdapter
-                cvData={documentData as UnifiedCVDataStructure}
-                template={template || null}
-                theme="light"
-                readOnly={true}
-              />
+              <ResumeEnhancerProvider>
+                <CVBuilderProAdapter
+                  cvData={documentData as UnifiedCVDataStructure}
+                  template={template || null}
+                  theme="light"
+                  readOnly={true}
+                />
+              </ResumeEnhancerProvider>
             ) : (
               <CoverLetterPreview
                 content={documentData?.content || ''}

@@ -464,7 +464,7 @@ export async function PUT(
               _id: new mongoose.Types.ObjectId(resolvedParams.id),
               userId: normalizedUserId
             },
-            statusUpdateData,
+            { $set: statusUpdateData },
             { session, new: true }
           );
 
@@ -671,7 +671,7 @@ export async function PUT(
           _id: new mongoose.Types.ObjectId(resolvedParams.id),
           userId: normalizedUserId
         },
-        updateData,
+        { $set: updateData },
         { new: true }
       );
 
