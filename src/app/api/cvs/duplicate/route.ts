@@ -184,6 +184,35 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Clean and duplicate metadata to prevent Cast to Object validation errors
+    const cleanMetadata = sourceCV.metadata 
+      ? JSON.parse(JSON.stringify(sourceCV.metadata)) 
+      : {};
+
+    // Remove surgeonAnalysis if it is null, undefined, or empty to prevent CastError
+    if ('surgeonAnalysis' in cleanMetadata) {
+      const sa = cleanMetadata.surgeonAnalysis;
+      const isValidSA = sa !== null && 
+                        sa !== undefined && 
+                        typeof sa === 'object' && 
+                        Object.keys(sa).length > 0;
+      if (!isValidSA) {
+        delete cleanMetadata.surgeonAnalysis;
+      }
+    }
+
+    // Remove analysisSnapshot if it is null, undefined, or empty to prevent CastError
+    if ('analysisSnapshot' in cleanMetadata) {
+      const asSnap = cleanMetadata.analysisSnapshot;
+      const isValidAS = asSnap !== null && 
+                        asSnap !== undefined && 
+                        typeof asSnap === 'object' && 
+                        Object.keys(asSnap).length > 0;
+      if (!isValidAS) {
+        delete cleanMetadata.analysisSnapshot;
+      }
+    }
+
     // Create the duplicated CV with deep copies to preserve all data
     const duplicatedCV = new CV({
       userId: toObjectId(userId),
@@ -199,7 +228,7 @@ export async function POST(request: NextRequest) {
       templateData: sourceCV.templateData ? JSON.parse(JSON.stringify(sourceCV.templateData)) : sourceCV.templateData, // Deep copy template data
       styling: sourceCV.styling ? JSON.parse(JSON.stringify(sourceCV.styling)) : sourceCV.styling, // Deep copy styling
       metadata: {
-        ...sourceCV.metadata,
+        ...cleanMetadata,
         isMaster: false, // Ensure duplicated CVs are never master CVs
         createdVia: createdVia, // Set createdVia for journey CVs
         lastModified: new Date(),

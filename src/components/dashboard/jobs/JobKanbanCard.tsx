@@ -76,7 +76,7 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
   const [progress, setProgress] = useState(15);
   const primaryJourney = jobJourneys[0];
   const atsScore = primaryJourney?.atsScore || job.atsScore;
-  const isGenerating = stage === "created" && (
+  const isGenerating = (stage === "created" || stage === "pipeline" || job.status === "created") && (
     !primaryJourney ||
     primaryJourney.status === "processing_documents" ||
     (primaryJourney.status !== "creation_failed" && primaryJourney.status !== "ready" && (!primaryJourney.cvId || !primaryJourney.coverLetterId))

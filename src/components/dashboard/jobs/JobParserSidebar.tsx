@@ -51,6 +51,301 @@ interface JobParserSidebarProps {
   matchScore?: number;
 }
 
+const parseJobDescriptionClientSide = (text: string): ParsedJobData => {
+  const lines = text.split('\n').map(line => line.trim()).filter(Boolean);
+  
+  let jobTitle = '';
+  let company = '';
+  let location = '';
+  let salaryMin: number | undefined;
+  let salaryMax: number | undefined;
+  let salaryCurrency = 'USD';
+  let salaryPeriod: 'hourly' | 'monthly' | 'yearly' = 'yearly';
+  let experienceLevel = 'Mid Level';
+  let employmentType = 'Full-time';
+  let sponsorship: 'yes' | 'no' | 'unknown' = 'unknown';
+  const tags: string[] = [];
+  const responsibilities: string[] = [];
+  const requirements: string[] = [];
+  const benefits: string[] = [];
+  const atsKeywords: string[] = [];
+
+  // 1. Try to guess Job Title and Company from the first few lines
+  if (lines.length > 0) {
+    const firstLine = lines[0];
+    const atMatch = firstLine.match(/(.+?)\s+(?:at|@)\s+(.+)/i);
+    if (atMatch) {
+      jobTitle = atMatch[1].trim();
+      company = atMatch[2].trim();
+    } else {
+      jobTitle = firstLine;
+      if (lines.length > 1) {
+        if (lines[1].toLowerCase().includes('location') || lines[1].toLowerCase().includes('remote')) {
+          location = lines[1];
+        } else {
+          company = lines[1];
+        }
+      }
+    }
+  }
+
+  // If we still don't have company/title, look for patterns
+  for (const line of lines.slice(0, 10)) {
+    const titleMatch = line.match(/(?:title|position|role):\s*(.+)/i);
+    if (titleMatch && !jobTitle) {
+      jobTitle = titleMatch[1].trim();
+    }
+    const companyMatch = line.match(/(?:company|employer|firm):\s*(.+)/i);
+    if (companyMatch && !company) {
+      company = companyMatch[1].trim();
+    }
+  }
+
+  // Set defaults if not found
+  if (!jobTitle || jobTitle.length > 80) jobTitle = 'Job Opportunity';
+  if (!company || company.length > 80) company = 'Company';
+
+  // 2. Parse Location
+  const remoteKeywords = ['remote', 'telecommute', 'wfh', 'work from home'];
+  const hasRemote = remoteKeywords.some(kw => text.toLowerCase().includes(kw));
+  const hybridKeywords = ['hybrid'];
+  const hasHybrid = hybridKeywords.some(kw => text.toLowerCase().includes(kw));
+
+  if (hasRemote) {
+    location = 'Remote';
+  } else if (hasHybrid) {
+    location = 'Hybrid';
+  } else {
+    for (const line of lines) {
+      const locMatch = line.match(/(?:location|loc|city|office):\s*(.+)/i);
+      if (locMatch) {
+        location = locMatch[1].trim();
+        break;
+      }
+    }
+    if (!location) {
+      const cityStateMatch = text.match(/([A-Z][a-zA-Z\s.]+),\s*([A-Z]{2}|[A-Z][a-zA-Z\s]+)/);
+      if (cityStateMatch) {
+        location = cityStateMatch[0];
+      } else {
+        location = 'On-site';
+      }
+    }
+  }
+
+  // 3. Parse Salary
+  const salaryRegex = /(?:salary|compensation|pay|rate)?\s*([$£€]|\bUSD\b)\s*(\d{1,3}(?:[.,]\d{3})*(?:\s*k)?)\s*[-–—to]+\s*([$£€]|\bUSD\b)?\s*(\d{1,3}(?:[.,]\d{3})*(?:\s*k)?)/gi;
+  let match;
+  let salaryMatched = false;
+  while ((match = salaryRegex.exec(text)) !== null) {
+    const currencySym = match[1] || match[3] || '$';
+    salaryCurrency = currencySym === '£' || currencySym === 'GBP' ? 'GBP' : currencySym === '€' ? 'EUR' : 'USD';
+    
+    const parseNum = (str: string): number => {
+      let cleaned = str.toLowerCase().replace(/[\s,]/g, '');
+      if (cleaned.endsWith('k')) {
+        return parseFloat(cleaned) * 1000;
+      }
+      return parseFloat(cleaned);
+    };
+
+    salaryMin = parseNum(match[2]);
+    salaryMax = parseNum(match[4]);
+    salaryMatched = true;
+    break;
+  }
+
+  if (!salaryMatched) {
+    const singleSalaryRegex = /(?:salary|compensation|pay|rate):\s*([$£€]|\bUSD\b)?\s*(\d{1,3}(?:[.,]\d{3})*(?:\s*k)?)/gi;
+    const singleMatch = singleSalaryRegex.exec(text);
+    if (singleMatch) {
+      const currencySym = singleMatch[1] || '$';
+      salaryCurrency = currencySym === '£' || currencySym === 'GBP' ? 'GBP' : currencySym === '€' ? 'EUR' : 'USD';
+      salaryMin = parseFloat(singleMatch[2].toLowerCase().replace(/[\s,]/g, '')) * (singleMatch[2].toLowerCase().endsWith('k') ? 1000 : 1);
+    }
+  }
+
+  if (text.toLowerCase().includes('/hr') || text.toLowerCase().includes('per hour') || text.toLowerCase().includes('hourly')) {
+    salaryPeriod = 'hourly';
+  } else if (text.toLowerCase().includes('/mo') || text.toLowerCase().includes('per month') || text.toLowerCase().includes('monthly')) {
+    salaryPeriod = 'monthly';
+  } else {
+    salaryPeriod = 'yearly';
+  }
+
+  // 4. Experience Level
+  if (text.toLowerCase().includes('senior') || text.toLowerCase().includes('sr.')) {
+    experienceLevel = 'Senior Level';
+  } else if (text.toLowerCase().includes('lead') || text.toLowerCase().includes('manager') || text.toLowerCase().includes('director')) {
+    experienceLevel = 'Lead / Manager';
+  } else if (text.toLowerCase().includes('junior') || text.toLowerCase().includes('jr.') || text.toLowerCase().includes('entry') || text.toLowerCase().includes('intern')) {
+    experienceLevel = 'Entry Level';
+  } else {
+    experienceLevel = 'Mid Level';
+  }
+
+  // 5. Employment Type
+  if (text.toLowerCase().includes('contract') || text.toLowerCase().includes('contractor')) {
+    employmentType = 'Contract';
+  } else if (text.toLowerCase().includes('intern') || text.toLowerCase().includes('internship')) {
+    employmentType = 'Internship';
+  } else if (text.toLowerCase().includes('part-time') || text.toLowerCase().includes('part time')) {
+    employmentType = 'Part-time';
+  } else if (text.toLowerCase().includes('freelance')) {
+    employmentType = 'Freelance';
+  } else {
+    employmentType = 'Full-time';
+  }
+
+  // 6. Sponsorship
+  const visaKeywords = ['sponsorship', 'visa', 'h1b', 'work authorization'];
+  const hasVisaMention = visaKeywords.some(kw => text.toLowerCase().includes(kw));
+  if (hasVisaMention) {
+    if (text.toLowerCase().includes('cannot offer') || text.toLowerCase().includes('no sponsorship') || text.toLowerCase().includes('not offer sponsorship')) {
+      sponsorship = 'no';
+    } else if (text.toLowerCase().includes('offer sponsorship') || text.toLowerCase().includes('will sponsor') || text.toLowerCase().includes('sponsorship available')) {
+      sponsorship = 'yes';
+    }
+  }
+
+  // 7. Key Skills / Tags / ATS Keywords
+  const commonKeywords = [
+    'react', 'angular', 'vue', 'next.js', 'typescript', 'javascript', 'python', 'java', 'c++', 'go', 'rust',
+    'sql', 'postgresql', 'mongodb', 'redis', 'aws', 'docker', 'kubernetes', 'ci/cd', 'git', 'node.js',
+    'html', 'css', 'tailwind', 'sass', 'graphql', 'rest api', 'product management', 'scrum', 'agile',
+    'project management', 'sales', 'marketing', 'seo', 'figma', 'ui/ux', 'machine learning', 'data science',
+    'data analytics', 'analytics', 'communication', 'leadership', 'collaboration'
+  ];
+
+  for (const kw of commonKeywords) {
+    try {
+      let regex: RegExp;
+      if (kw === 'c++') {
+        regex = /c\+\+/i;
+      } else if (kw === 'next.js') {
+        regex = /next\.js/i;
+      } else if (kw === 'ci/cd') {
+        regex = /ci\/cd/i;
+      } else if (kw === 'ui/ux') {
+        regex = /ui\/ux/i;
+      } else if (kw === 'node.js') {
+        regex = /node\.js/i;
+      } else {
+        regex = new RegExp(`\\b${kw}\\b`, 'i');
+      }
+
+      if (regex.test(text)) {
+        const capKw = kw.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+        tags.push(capKw);
+        atsKeywords.push(capKw);
+      }
+    } catch (e) {
+      console.warn('Regex error for keyword:', kw, e);
+    }
+  }
+
+  // 8. Responsibilities and Requirements Section parsing
+  let currentSection: 'none' | 'responsibilities' | 'requirements' | 'benefits' = 'none';
+  for (const line of lines) {
+    const lowerLine = line.toLowerCase();
+    
+    if (lowerLine.includes('responsibilit') || lowerLine.includes('what you will do') || lowerLine.includes('key roles') || lowerLine.includes('duties')) {
+      currentSection = 'responsibilities';
+      continue;
+    } else if (lowerLine.includes('requirement') || lowerLine.includes('qualification') || lowerLine.includes('skills required') || lowerLine.includes('what you need') || lowerLine.includes('about you')) {
+      currentSection = 'requirements';
+      continue;
+    } else if (lowerLine.includes('benefit') || lowerLine.includes('perk') || lowerLine.includes('what we offer')) {
+      currentSection = 'benefits';
+      continue;
+    } else if (line.match(/^[A-Z][A-Za-z\s]{3,20}:$/)) {
+      currentSection = 'none';
+      continue;
+    }
+
+    if (line.match(/^[-•*+–]\s*(.+)/) || (currentSection !== 'none' && line.length > 20 && !line.includes('.') && line.charAt(0) === line.charAt(0).toUpperCase())) {
+      const bulletText = line.replace(/^[-•*+–]\s*/, '').trim();
+      if (bulletText.length > 5) {
+        if (currentSection === 'responsibilities') {
+          responsibilities.push(bulletText);
+        } else if (currentSection === 'requirements') {
+          requirements.push(bulletText);
+        } else if (currentSection === 'benefits') {
+          benefits.push(bulletText);
+        }
+      }
+    }
+  }
+
+  if (responsibilities.length === 0) {
+    const actionVerbs = ['manage', 'build', 'create', 'develop', 'design', 'lead', 'coordinate', 'support', 'collaborate', 'implement', 'maintain'];
+    for (const line of lines) {
+      if (actionVerbs.some(verb => line.toLowerCase().includes(verb)) && line.length > 25 && line.length < 150) {
+        responsibilities.push(line);
+        if (responsibilities.length >= 5) break;
+      }
+    }
+  }
+
+  if (requirements.length === 0) {
+    const reqVerbs = ['experience', 'degree', 'knowledge', 'proficiency', 'ability to', 'skills in', 'fluent'];
+    for (const line of lines) {
+      if (reqVerbs.some(verb => line.toLowerCase().includes(verb)) && line.length > 25 && line.length < 150) {
+        requirements.push(line);
+        if (requirements.length >= 5) break;
+      }
+    }
+  }
+
+  return {
+    jobTitle,
+    company,
+    location,
+    jobDescription: text,
+    jobDescriptionRaw: text,
+    salary: (salaryMin || salaryMax) ? {
+      min: salaryMin,
+      max: salaryMax,
+      currency: salaryCurrency,
+      period: salaryPeriod
+    } : undefined,
+    experienceLevel,
+    sponsorship,
+    tags: tags.slice(0, 8),
+    benefits: benefits.slice(0, 5),
+    extractedJd: {
+      role: {
+        job_title: { value: jobTitle },
+        seniority_level: { value: experienceLevel }
+      },
+      company: {
+        company_name: { value: company }
+      },
+      location: {
+        location_raw: location
+      },
+      compensation: {
+        salary_min: salaryMin,
+        salary_max: salaryMax,
+        salary_currency: salaryCurrency,
+        salary_period: salaryPeriod === 'yearly' ? 'annual' : salaryPeriod === 'monthly' ? 'monthly' : salaryPeriod === 'hourly' ? 'hourly' : 'annual',
+        benefits: benefits.map(b => ({ detail: b }))
+      },
+      role_content: {
+        responsibilities: responsibilities.map(r => ({ text: r })),
+        requirements_must_have: requirements.map(r => ({ text: r }))
+      },
+      skills: {
+        skills_technical: atsKeywords.map(k => ({ skill: k }))
+      },
+      jd_quality: {
+        jd_quality_score: 75,
+        jd_quality_grade: 'Local Parse'
+      }
+    }
+  };
+};
+
 const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
   isOpen,
   onClose,
@@ -68,6 +363,7 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
   const [activeTab, setActiveTab] = useState<'text_or_url' | 'upload'>('text_or_url');
   const [isAccordionOpen, setIsAccordionOpen] = useState(false);
   const [isParsing, setIsParsing] = useState(false);
+  const [isCleaning, setIsCleaning] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [parsedData, setParsedData] = useState<ParsedJobData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -160,6 +456,39 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
     }
   };
 
+  // AI-powered cleaning of raw job description text
+  const handleCleanTextWithAI = async () => {
+    const trimmedInput = inputText.trim();
+    if (!trimmedInput) return;
+
+    setIsCleaning(true);
+    try {
+      const response = await fetch('/api/jobs/clean', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ text: trimmedInput })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to clean job description');
+      }
+
+      const data = await response.json();
+      if (data.success && data.cleanedText) {
+        setInputText(data.cleanedText);
+        toast.success('Job description cleaned with AI!');
+      } else {
+        throw new Error('Could not parse clean text');
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to clean text');
+    } finally {
+      setIsCleaning(false);
+    }
+  };
+
   // Perform parsing using API
   const handleParse = async () => {
     const trimmedInput = inputText.trim();
@@ -168,19 +497,71 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
       return;
     }
 
-    if (!user?.id) {
-      setError('Please sign in to parse job descriptions');
-      return;
-    }
-
-    if (!canAccess('jobParsing')) {
-      setShowUpgradePopup(true);
-      return;
-    }
-
     setIsParsing(true);
     setError(null);
     setParsedData(null);
+
+    // Helper to fall back to client-side parsing
+    const runClientSideFallback = () => {
+      try {
+        const localParsed = parseJobDescriptionClientSide(trimmedInput);
+        setParsedData(localParsed);
+        
+        // Initialize basic fields
+        setEditedJobTitle(localParsed.jobTitle || '');
+        setEditedCompany(localParsed.company || '');
+        setEditedLocation(localParsed.location || '');
+        
+        if (localParsed.salary) {
+          setEditedSalary({
+            min: localParsed.salary.min,
+            max: localParsed.salary.max,
+            currency: localParsed.salary.currency || 'USD',
+            period: localParsed.salary.period || 'yearly'
+          });
+        }
+        
+        setEditedTags(localParsed.tags || []);
+        setExperienceLevel(localParsed.experienceLevel || 'Mid Level');
+        setSponsorship((localParsed.sponsorship as 'yes' | 'no' | 'unknown') || 'unknown');
+        
+        const richData = localParsed.extractedJd;
+        
+        // Responsibilities
+        const respList = richData?.role_content?.responsibilities?.map((r: any) => r.text) || [];
+        setEditedResponsibilities(respList.filter(Boolean));
+
+        // Requirements
+        const reqList = richData?.role_content?.requirements_must_have?.map((r: any) => r.text) || [];
+        setEditedRequirements(reqList.filter(Boolean));
+
+        // ATS Keywords
+        const keywordsList = richData?.skills?.skills_technical?.map((k: any) => k.skill) || [];
+        setEditedAtsKeywords(keywordsList.filter(Boolean));
+
+        // Benefits
+        setEditedBenefits(localParsed.benefits || []);
+        
+        setEmploymentType('Full-time'); // Default
+
+        // Move to Preview tab automatically
+        setActiveStepper('preview');
+        toast.success('Job details extracted locally!');
+      } catch (err: any) {
+        setError('Failed to extract job details locally.');
+        toast.error('Local extraction failed.');
+      } finally {
+        setIsParsing(false);
+      }
+    };
+
+    // If guest or free tier, run client side parser fallback
+    if (!user?.id || !canAccess('jobParsing')) {
+      setTimeout(() => {
+        runClientSideFallback();
+      }, 600);
+      return;
+    }
 
     // Detect if input is a URL
     const isUrl = /^https?:\/\/[^\s]+$/.test(trimmedInput);
@@ -199,14 +580,9 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        if (errorData.requiresUpgrade && response.status === 403) {
-          setShowUpgradePopup(true);
-          setError(errorData.error || 'You need to upgrade to parse job descriptions');
-          setIsParsing(false);
-          return;
-        }
-        throw new Error(errorData.error || 'Failed to parse job description');
+        console.warn('API parsing failed, falling back to local extraction');
+        runClientSideFallback();
+        return;
       }
 
       const result = await response.json();
@@ -280,18 +656,27 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
           setEmploymentType('Full-time');
         }
 
+        // 5. Benefits
+        let benefitsList: string[] = [];
+        if (richData?.compensation?.benefits) {
+          benefitsList = richData.compensation.benefits.map((b: any) => typeof b === 'string' ? b : (b.detail || b.text || ''));
+        } else if (result.data.benefits) {
+          benefitsList = result.data.benefits;
+        } else if (result.extracted?.benefits) {
+          benefitsList = result.extracted.benefits;
+        }
+        setEditedBenefits(benefitsList.filter(Boolean));
+
         // Move to Preview tab automatically
         setActiveStepper('preview');
         toast.success('Job description parsed successfully!');
       } else {
-        throw new Error('Invalid response from server');
+        console.warn('API parsing success check failed, using local extraction');
+        runClientSideFallback();
       }
     } catch (err: any) {
-      const errMsg = err.message || 'Failed to parse job description';
-      setError(errMsg);
-      toast.error(errMsg);
-    } finally {
-      setIsParsing(false);
+      console.warn('API parsing exception caught, using local extraction:', err);
+      runClientSideFallback();
     }
   };
 
@@ -528,10 +913,30 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
                     <div className="space-y-2">
                       <div className="flex justify-between items-center text-xs">
                         <span className="font-semibold text-gray-700 dark:text-gray-300">Paste job description or URL</span>
-                        <a href="#" className="text-gray-550 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white flex items-center gap-1.5 transition-colors font-medium">
-                          <Sparkles className="w-3.5 h-3.5 text-lime-600 dark:text-lime-400 animate-pulse" />
-                          Tips for better results
-                        </a>
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={handleCleanTextWithAI}
+                            disabled={isCleaning || !inputText.trim()}
+                            className="text-lime-600 dark:text-lime-400 hover:text-lime-700 dark:hover:text-lime-300 font-bold flex items-center gap-1 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {isCleaning ? (
+                              <>
+                                <Loader2 className="w-3 h-3 animate-spin text-lime-600 dark:text-lime-400" />
+                                Cleaning...
+                              </>
+                            ) : (
+                              <>
+                                <Sparkles className="w-3.5 h-3.5 text-lime-600 dark:text-lime-400" />
+                                Clean with AI
+                              </>
+                            )}
+                          </button>
+                          <a href="#" className="text-gray-550 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white flex items-center gap-1.5 transition-colors font-medium">
+                            <Sparkles className="w-3.5 h-3.5 text-lime-600 dark:text-lime-400 animate-pulse" />
+                            Tips for better results
+                          </a>
+                        </div>
                       </div>
                       
                       <div className="relative border border-gray-200 dark:border-white/10 rounded-2xl p-4 bg-gray-50/50 dark:bg-[#0a0d08] focus-within:border-lime-500 focus-within:dark:border-lime-500/40 focus-within:ring-1 focus-within:ring-lime-500/20 transition-all">

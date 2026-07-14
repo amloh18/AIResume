@@ -118,6 +118,7 @@ const JobSidebar: React.FC<JobSidebarProps> = ({
   // Comms sidebar states
   const [isEmailConnectModalOpen, setIsEmailConnectModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'details' | 'communication' | 'people' | 'notes' | 'files'>('details');
+  const [progress, setProgress] = useState(15);
 
   const handleTabChange = (tab: typeof activeTab) => {
     setActiveTab(tab);
@@ -620,6 +621,74 @@ ${userName}`
 
 
   const generationState = primaryJourney?.generationState;
+  
+  const isGenerating = !!(primaryJourney && (
+    primaryJourney.status === "processing_documents" ||
+    (primaryJourney.status !== "creation_failed" && primaryJourney.status !== "ready" && (!primaryJourney.cvId || !primaryJourney.coverLetterId))
+  ));
+
+  // Progress simulation timer
+  useEffect(() => {
+    if (!isGenerating) {
+      setProgress(15);
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setProgress((prev) => {
+        if (prev >= 95) return 95;
+        const inc = Math.floor(Math.random() * 5) + 3; // 3% to 7%
+        return Math.min(95, prev + inc);
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [isGenerating]);
+
+  // Polling database for updates on journey status
+  useEffect(() => {
+    if (!isGenerating || !primaryJourney) return;
+
+    let isMounted = true;
+    const pollTimer = setInterval(async () => {
+      try {
+        const jobId = job.id || job._id;
+        const url = `/api/application-journey?jobId=${jobId}`;
+        let res;
+        if (user?.id) {
+          res = await authenticatedFetchWithUserId(url, user.id);
+        } else {
+          res = await fetch(url);
+        }
+        if (res.ok && isMounted) {
+          const result = await res.json();
+          if (result.success && result.data?.journeys && result.data.journeys.length > 0) {
+            const updatedJourney = result.data.journeys.find(
+              (j: any) => j.id === primaryJourney.id || j._id === primaryJourney.id || j.jobId === jobId
+            );
+            if (updatedJourney) {
+              const hasBoth = updatedJourney.cvId && updatedJourney.coverLetterId;
+              const notProcessing = updatedJourney.status !== "processing_documents";
+              if (hasBoth || notProcessing || updatedJourney.status === "ready" || updatedJourney.status === "creation_failed") {
+                clearInterval(pollTimer);
+                if (isMounted) {
+                  await onRefresh();
+                }
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Error polling journey status in Sidebar:", err);
+      }
+    }, 2500);
+
+    return () => {
+      isMounted = false;
+      clearInterval(pollTimer);
+    };
+  }, [isGenerating, primaryJourney, job.id, job._id, onRefresh]);
+
   const keywordMatchScore = insights?.keywordMatchScore ?? job.atsScore ?? 0;
   const followUpTimeline = useMemo(() => getFollowUpTimeline(job), [job.status, job.updatedAt, job.deadline]);
   const formatTimelineDate = useCallback((date?: string | Date | null) => {
@@ -1473,30 +1542,65 @@ ${userName}`
         >
           {/* Header */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 p-4 sm:p-6 border-b border-gray-200 dark:border-white/10 flex-shrink-0">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-1 sm:gap-2 min-w-0 flex-1">
-              <h2 className="text-h3 sm:text-h3 font-semibold text-gray-900 dark:text-white truncate">{job.jobTitle || job.title}</h2>
-              <span className="text-gray-500 dark:text-gray-400 hidden sm:inline">at</span>
-              <h2 className="text-h3 sm:text-h3 font-semibold text-gray-900 dark:text-white truncate">{job.company}</h2>
-
-              {/* Sponsorship Tag */}
-              {job.sponsorship && job.sponsorship !== 'unknown' && (
-                <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-small font-medium ml-0 sm:ml-2 ${job.sponsorship === 'yes'
-                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                  : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+            <div className="flex flex-col gap-1 min-w-0 flex-1">
+              <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 min-w-0">
+                <h2 className="text-h3 font-semibold text-gray-900 dark:text-white truncate">{job.jobTitle || job.title}</h2>
+                <span className="text-gray-500 dark:text-gray-400 text-small">at</span>
+                <h3 className="text-body font-semibold text-gray-800 dark:text-gray-200 truncate">{job.company}</h3>
+                
+                {/* Sponsorship Tag */}
+                {job.sponsorship && job.sponsorship !== 'unknown' && (
+                  <span className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                    job.sponsorship === 'yes'
+                      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                      : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
                   }`}>
-                  {job.sponsorship === 'yes' ? (
-                    <>
-                      <CheckCircle size={12} />
-                      <span>Sponsorship Provided</span>
-                    </>
-                  ) : (
-                    <>
-                      <X size={12} />
-                      <span>No Sponsorship</span>
-                    </>
-                  )}
-                </div>
-              )}
+                    {job.sponsorship === 'yes' ? 'Sponsorship' : 'No Sponsorship'}
+                  </span>
+                )}
+              </div>
+
+              {/* Sub-header meta row: Location, Salary, Job Type */}
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500 dark:text-gray-400 mt-1">
+                {job.location && (
+                  <div className="flex items-center gap-1">
+                    <MapPin size={12} className="text-gray-400" />
+                    <span>{job.location}</span>
+                  </div>
+                )}
+                
+                {(job.salary?.min || job.salary?.max) && (
+                  <>
+                    <span className="text-gray-300 dark:text-white/10 hidden sm:inline">&bull;</span>
+                    <div className="flex items-center gap-1">
+                      <DollarSign size={12} className="text-gray-400" />
+                      <span>{formatJobSalary(job.salary)}</span>
+                    </div>
+                  </>
+                )}
+
+                {(job.jobType || job.type) && (
+                  <>
+                    <span className="text-gray-300 dark:text-white/10 hidden sm:inline">&bull;</span>
+                    <div className="flex items-center gap-1">
+                      <Briefcase size={12} className="text-gray-400" />
+                      <span className="capitalize">{job.jobType || job.type}</span>
+                    </div>
+                  </>
+                )}
+
+                {job.priority && (
+                  <>
+                    <span className="text-gray-300 dark:text-white/10 hidden sm:inline">&bull;</span>
+                    <div className="flex items-center gap-1">
+                      <span className={`h-1.5 w-1.5 rounded-full ${
+                        job.priority === 'high' ? 'bg-red-500' : job.priority === 'medium' ? 'bg-amber-500' : 'bg-blue-500'
+                      }`} />
+                      <span className="capitalize">{job.priority} Priority</span>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
             <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
               <motion.button
@@ -1618,59 +1722,96 @@ ${userName}`
                     <div className="flex flex-col gap-4">
                       {/* Top Row: Eyebrow & Description */}
                       <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-                        <div className="space-y-1.5 flex-1">
+                        <div className="space-y-1.5 flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
-                            <span className={`rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wider ${journeyCardData.accentClasses}`}>
-                              {journeyCardData.eyebrow}
-                            </span>
-                             {journeyCardData.stageBadge && (
-                               <span className={`rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wider ${journeyCardData.stageBadge.colorClasses}`}>
-                                 <span className="opacity-70">Stage:</span> {journeyCardData.stageBadge.label}
-                               </span>
-                             )}
                             <h4 className="text-small font-black text-gray-900 dark:text-white uppercase tracking-wider">
                               {journeyCardData.title || (job.status === 'applied' || job.status === 'screening' ? 'Journey Snapshot' : 'Next Steps')}
                             </h4>
                           </div>
-                          <p className="text-small text-gray-600 dark:text-gray-300 leading-normal">
+                          <p className={`text-small text-gray-600 dark:text-gray-300 leading-normal ${
+                            journeyCardData.summary.includes("ready to review") ? "lg:whitespace-nowrap overflow-x-auto scrollbar-none" : ""
+                          }`}>
                             {journeyCardData.summary}
                           </p>
+
+                          {/* Progress Bar for document generation */}
+                          {isGenerating && (
+                            <div className="mt-3 space-y-1">
+                              <div className="flex items-center justify-between text-xs font-bold">
+                                <span className="text-blue-600 dark:text-blue-400 animate-pulse">Generating Documents...</span>
+                                <span className="text-blue-600 dark:text-blue-400">{progress}%</span>
+                              </div>
+                              <div className="w-full bg-gray-200 dark:bg-white/10 rounded-full h-1.5 overflow-hidden">
+                                <div
+                                  className="h-1.5 rounded-full bg-blue-500 transition-all duration-500 ease-out"
+                                  style={{ width: `${progress}%` }}
+                                />
+                              </div>
+                            </div>
+                          )}
                         </div>
 
-                        {/* Stats chips row */}
-                        <div className="flex flex-wrap gap-2 shrink-0 md:justify-end">
-                          {journeyCardData.stats.map((stat) => (
-                            <div key={stat.label} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/60 dark:bg-white/5 border border-gray-200/50 dark:border-white/5 text-[11px] font-semibold text-gray-800 dark:text-gray-200">
-                              <span className="opacity-60">{stat.label}:</span>
-                              <span className="font-extrabold text-[#80FF00] dark:text-[#99FF00]">{stat.value}</span>
-                            </div>
-                          ))}
-                        </div>
+                        {/* Stats chips row - hidden if CV or Cover Letter is ready to merge them into preview area */}
+                        {journeyCardData.stats && journeyCardData.stats.length > 0 && !primaryJourney?.cvId && !primaryJourney?.coverLetterId && (
+                          <div className="flex flex-wrap gap-2 shrink-0 md:justify-end">
+                            {journeyCardData.stats.map((stat) => (
+                              <div key={stat.label} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/60 dark:bg-white/5 border border-gray-200/50 dark:border-white/5 text-[11px] font-semibold text-gray-800 dark:text-gray-200">
+                                <span className="opacity-60">{stat.label}:</span>
+                                <span className="font-extrabold text-[#80FF00] dark:text-[#99FF00]">{stat.value}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
 
                       {/* Previews / Document Indicators Inline */}
-                      {primaryJourney && (primaryJourney.cvId || primaryJourney.coverLetterId) && (
+                      {primaryJourney && (
                         <div className="flex flex-wrap items-center gap-3 bg-white/40 dark:bg-white/5 border border-gray-200/40 dark:border-white/5 rounded-xl p-3">
                           <span className="text-[10px] font-black uppercase tracking-wider text-gray-500 dark:text-gray-400">Ready Previews:</span>
                           <div className="flex flex-wrap gap-2">
-                            {primaryJourney.cvId && (
+                            {primaryJourney.cvId ? (
                               <button
                                 onClick={() => void handleOpenDocumentPreview('cv')}
                                 disabled={previewLoading === 'cv'}
                                 className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200/60 dark:border-white/10 bg-white/80 dark:bg-[#1a2015] px-2.5 py-1.5 text-small font-semibold text-gray-700 hover:bg-gray-50 dark:text-[var(--text-secondary)] dark:hover:bg-[var(--bg-tertiary)] transition-colors"
                               >
-                                {previewLoading === 'cv' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Eye className="h-3.5 w-3.5" />}
-                                CV
+                                {previewLoading === 'cv' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Eye className="h-3.5 w-3.5 text-gray-400" />}
+                                <span>CV: </span>
+                                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
+                                <span className="text-emerald-600 dark:text-[#99FF00] text-[10px] font-black uppercase tracking-wider">Ready</span>
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => void runSidebarAction(journeyCardData.primaryActionId)}
+                                className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-gray-300 dark:border-white/10 bg-white/40 dark:bg-[#1a2015]/40 px-2.5 py-1.5 text-small font-semibold text-gray-500 hover:text-emerald-500 dark:text-gray-405 transition-all"
+                                title="Regenerate CV"
+                              >
+                                <Sparkles className="h-3.5 w-3.5 text-gray-400" />
+                                <span>CV: </span>
+                                <span className="text-gray-500 text-[10px] font-black uppercase tracking-wider">Regenerate</span>
                               </button>
                             )}
-                            {primaryJourney.coverLetterId && (
+
+                            {primaryJourney.coverLetterId ? (
                               <button
                                 onClick={() => void handleOpenDocumentPreview('coverLetter')}
                                 disabled={previewLoading === 'coverLetter'}
                                 className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200/60 dark:border-white/10 bg-white/80 dark:bg-[#1a2015] px-2.5 py-1.5 text-small font-semibold text-gray-700 hover:bg-gray-50 dark:text-[var(--text-secondary)] dark:hover:bg-[var(--bg-tertiary)] transition-colors"
                               >
-                                {previewLoading === 'coverLetter' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Eye className="h-3.5 w-3.5" />}
-                                Cover Letter
+                                {previewLoading === 'coverLetter' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Eye className="h-3.5 w-3.5 text-gray-400" />}
+                                <span>Cover Letter: </span>
+                                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
+                                <span className="text-emerald-600 dark:text-[#99FF00] text-[10px] font-black uppercase tracking-wider">Ready</span>
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => void runSidebarAction(journeyCardData.primaryActionId)}
+                                className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-gray-300 dark:border-white/10 bg-white/40 dark:bg-[#1a2015]/40 px-2.5 py-1.5 text-small font-semibold text-gray-500 hover:text-emerald-500 dark:text-gray-450 transition-all"
+                                title="Regenerate Cover Letter"
+                              >
+                                <Sparkles className="h-3.5 w-3.5 text-gray-400" />
+                                <span>Cover Letter: </span>
+                                <span className="text-gray-500 text-[10px] font-black uppercase tracking-wider">Regenerate</span>
                               </button>
                             )}
                           </div>
@@ -1709,7 +1850,7 @@ ${userName}`
                         {(() => {
                           const terminalStages = ['accepted', 'rejected', 'withdrawn'] as const;
                           const isTerminal = terminalStages.includes(job.status as any);
-                          if (job.status === 'draft' || job.status === 'created') {
+                          if (job.status === 'draft') {
                             return (
                               <div className="flex items-center gap-1.5 text-small text-gray-500">
                                 <span className="w-1.5 h-1.5 rounded-full bg-gray-400 shrink-0" />
@@ -1976,6 +2117,8 @@ ${userName}`
                       hasRecruiterEmail={hasRecruiterEmail}
                       handleOpenEmail={handleOpenEmail}
                       setIsEmailConnectModalOpen={setIsEmailConnectModalOpen}
+                      user={user}
+                      onRefresh={async () => { if (onRefresh) await onRefresh(); }}
                     />
                   )}
 
@@ -2006,6 +2149,8 @@ ${userName}`
                       handleOpenDocumentPreview={handleOpenDocumentPreview}
                       runSidebarAction={runSidebarAction}
                       journeyCardData={journeyCardData}
+                      user={user}
+                      onRefresh={onRefresh}
                     />
                   )}
                 </div>

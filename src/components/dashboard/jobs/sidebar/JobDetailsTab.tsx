@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ExternalLink } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { authenticatedFetchWithUserId } from '@/lib/utils/apiUtils';
@@ -56,8 +56,13 @@ const JobDetailsTab: React.FC<JobDetailsTabProps> = ({
   const [isSavingDetails, setIsSavingDetails] = useState(false);
   const [confirmJobTypeChoice, setConfirmJobTypeChoice] = useState(false);
 
+  const prevIsEditingRef = useRef(false);
+
   useEffect(() => {
-    if (isEditingDetails) {
+    const wasEditing = prevIsEditingRef.current;
+    prevIsEditingRef.current = isEditingDetails;
+
+    if (isEditingDetails && !wasEditing) {
       setEditJobTitle(job.jobTitle || '');
       setEditCompany(job.company || '');
       setEditLocation(job.location || '');
@@ -487,6 +492,60 @@ const JobDetailsTab: React.FC<JobDetailsTabProps> = ({
                   </div>
                 </div>
               ))}
+
+              {/* Salary details row */}
+              {(job.salary?.min || job.salary?.max) && (
+                <div className="grid grid-cols-[130px_1fr] gap-4 items-center text-small">
+                  <span className="text-gray-500 dark:text-gray-400 font-semibold">Salary</span>
+                  <span className="font-semibold text-gray-900 dark:text-white truncate">
+                    {job.salary.min ? `${job.salary.currency || 'USD'} ${job.salary.min.toLocaleString()}` : ''}
+                    {job.salary.min && job.salary.max ? ' - ' : ''}
+                    {job.salary.max ? `${job.salary.currency || 'USD'} ${job.salary.max.toLocaleString()}` : ''}
+                    {` / ${job.salary.period || 'yearly'}`}
+                  </span>
+                </div>
+              )}
+
+              {/* Priority row */}
+              {job.priority && (
+                <div className="grid grid-cols-[130px_1fr] gap-4 items-center text-small">
+                  <span className="text-gray-500 dark:text-gray-400 font-semibold">Priority</span>
+                  <span className="font-semibold text-gray-900 dark:text-white capitalize">{job.priority}</span>
+                </div>
+              )}
+
+              {/* Sponsorship row */}
+              {job.sponsorship && job.sponsorship !== 'unknown' && (
+                <div className="grid grid-cols-[130px_1fr] gap-4 items-center text-small">
+                  <span className="text-gray-500 dark:text-gray-400 font-semibold">Sponsorship</span>
+                  <span className="font-semibold text-gray-900 dark:text-white">
+                    {job.sponsorship === 'yes' ? 'Provided' : 'Not provided'}
+                  </span>
+                </div>
+              )}
+
+              {/* Contact person row */}
+              {(job.contactDetails?.name || job.contactDetails?.email || job.contactDetails?.phone) && (
+                <div className="grid grid-cols-[130px_1fr] gap-4 items-start text-small">
+                  <span className="text-gray-500 dark:text-gray-400 font-semibold">Contact</span>
+                  <div className="flex flex-col min-w-0">
+                    {job.contactDetails.name && <span className="font-semibold text-gray-900 dark:text-white truncate">{job.contactDetails.name}</span>}
+                    {job.contactDetails.role && <span className="text-[11px] text-gray-500 dark:text-gray-400 truncate">{job.contactDetails.role}</span>}
+                    {job.contactDetails.email && <span className="text-[11px] text-blue-600 dark:text-blue-400 truncate">{job.contactDetails.email}</span>}
+                    {job.contactDetails.phone && <span className="text-[11px] text-gray-500 dark:text-gray-400 truncate">{job.contactDetails.phone}</span>}
+                  </div>
+                </div>
+              )}
+
+              {/* Job description section */}
+              {job.jobDescription && (
+                <div className="space-y-1.5 pt-3 border-t border-gray-100 dark:border-white/5">
+                  <span className="text-gray-500 dark:text-gray-400 font-semibold text-[10px] uppercase tracking-wider">Job Description</span>
+                  <p className="text-small text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap max-h-60 overflow-y-auto bg-gray-50/50 dark:bg-black/15 p-3 rounded-lg border border-gray-150/40 dark:border-white/5 scrollbar-thin">
+                    {job.jobDescription}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         )
@@ -495,21 +554,7 @@ const JobDetailsTab: React.FC<JobDetailsTabProps> = ({
       <div className="h-[1px] bg-gray-100 dark:bg-white/5" />
 
       <div className="space-y-4">
-        {sidebarConfig.sections.showInsights && (
-          <div className="flex justify-end">
-            <button
-              onClick={() => void runSidebarAction('open_insights')}
-              className="rounded-lg border border-gray-200 px-3 py-1.5 text-[11px] font-bold text-gray-700 transition hover:bg-gray-50 dark:border-white/10 dark:text-white dark:hover:bg-[#273021]"
-            >
-              Analytics
-            </button>
-          </div>
-        )}
-
         <div className="grid gap-4 sm:grid-cols-1">
-          {(job.status === 'draft' || job.status === 'created') && (
-            <MatchScoreGapWidget status={job.status} />
-          )}
           {(job.status === 'applied' || job.status === 'screening') && (
             <AgingTrackerWidget status={job.status} applicationDate={job.applicationDate ? new Date(job.applicationDate) : undefined} deadline={job.deadline} nextFollowUpAt={nextFollowUpAt} />
           )}

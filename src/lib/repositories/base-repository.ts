@@ -323,8 +323,14 @@ export abstract class BaseRepository<T extends Document> {
    *   });
    */
   async withTransaction<R>(
-    operation: (session: ClientSession) => Promise<R>
+    operation: (session: ClientSession | undefined) => Promise<R>
   ): Promise<R> {
+    const disableTransactions = process.env.DISABLE_MONGODB_TRANSACTIONS === 'true';
+
+    if (disableTransactions) {
+      return operation(undefined as any);
+    }
+
     const session = await mongoose.startSession();
     session.startTransaction();
 
@@ -332,8 +338,22 @@ export abstract class BaseRepository<T extends Document> {
       const result = await operation(session);
       await session.commitTransaction();
       return result;
-    } catch (error) {
+    } catch (error: any) {
       await session.abortTransaction();
+
+      // Check if error is due to transactions not being supported (standalone MongoDB)
+      const isTransactionUnsupportedError = 
+        error && 
+        (error.message?.includes('Transaction numbers are only allowed') || 
+         error.errmsg?.includes('Transaction numbers are only allowed') ||
+         error.codeName === 'IllegalOperation' ||
+         error.code === 20);
+
+      if (isTransactionUnsupportedError) {
+        console.warn('⚠️ Standalone MongoDB detected in base repository. Falling back to non-transactional execution.');
+        return operation(undefined as any);
+      }
+
       throw error;
     } finally {
       session.endSession();

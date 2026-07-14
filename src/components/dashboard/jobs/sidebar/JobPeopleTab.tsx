@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Plus, Users, Globe, Mail } from 'lucide-react';
+import { Plus, Users, Globe, Mail, Linkedin } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { authenticatedFetchWithUserId } from '@/lib/utils/apiUtils';
 import { JobApplication } from '@/types/job';
@@ -97,16 +97,28 @@ const JobPeopleTab: React.FC<JobPeopleTabProps> = ({ job, user, onRefresh }) => 
 
   return (
     <div className="space-y-4 flex-1 flex flex-col min-h-0">
-      <div className="flex items-center justify-between flex-shrink-0">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 flex-shrink-0">
         <h4 className="text-small font-bold text-gray-900 dark:text-white uppercase tracking-wider">Saved Contacts</h4>
-        {!showAddContactForm && (
-          <button
-            onClick={() => setShowAddContactForm(true)}
-            className="rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-1.5 text-[11px] font-bold transition flex items-center gap-1"
+        <div className="flex items-center gap-2">
+          <a
+            href={`https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(`"${job.company}" (recruiter OR "talent acquisition" OR "hiring manager" OR HR)`)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-lg border border-gray-200 dark:border-white/10 hover:bg-[#0077b5]/10 dark:hover:bg-[#0077b5]/20 hover:border-[#0077b5]/30 text-gray-700 dark:text-gray-300 px-3 py-1.5 text-[11px] font-bold transition flex items-center gap-1.5"
+            title="Search HR, recruiters, and hiring managers"
           >
-            <Plus size={12} /> Add Contact
-          </button>
-        )}
+            <Linkedin size={12} className="text-[#0077b5]" />
+            Search HR / Hiring Team
+          </a>
+          {!showAddContactForm && (
+            <button
+              onClick={() => setShowAddContactForm(true)}
+              className="rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-1.5 text-[11px] font-bold transition flex items-center gap-1"
+            >
+              <Plus size={12} /> Add Contact
+            </button>
+          )}
+        </div>
       </div>
 
       {showAddContactForm ? (
@@ -208,12 +220,15 @@ const JobPeopleTab: React.FC<JobPeopleTabProps> = ({ job, user, onRefresh }) => 
                         No email saved
                       </span>
                     )}
-                    {contact.linkedin && (
-                      <a href={contact.linkedin} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-[11px] text-gray-500 hover:text-[#0077b5] transition-colors">
-                        <Globe size={12} />
-                        LinkedIn
-                      </a>
-                    )}
+                    <a
+                      href={contact.linkedin || `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(contact.name + " " + job.company)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 text-[11px] text-gray-500 hover:text-[#0077b5] transition-colors"
+                    >
+                      <Linkedin size={12} className="text-[#0077b5]" />
+                      {contact.linkedin ? 'LinkedIn' : 'Search LinkedIn'}
+                    </a>
                   </div>
                 </div>
                 <button

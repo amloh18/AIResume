@@ -240,6 +240,21 @@ export async function DELETE(
       deletedId: coverLetter._id?.toString()
     }));
 
+    // Unlink this Cover Letter from any ApplicationJourney
+    try {
+      const { ApplicationJourney } = await import('@/models');
+      const unlinkResult = await ApplicationJourney.updateMany(
+        { coverLetterId: coverLetterId },
+        { 
+          $unset: { coverLetterId: "" }, 
+          $set: { status: 'draft' } 
+        }
+      );
+      console.error('✅ DELETE Cover Letter - Unlinked Cover Letter from journeys:', unlinkResult);
+    } catch (unlinkError) {
+      console.error('Failed to unlink Cover Letter from journeys:', unlinkError);
+    }
+
     return NextResponse.json({
       success: true,
       message: 'Cover letter deleted successfully'
