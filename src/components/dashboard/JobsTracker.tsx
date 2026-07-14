@@ -570,6 +570,13 @@ const JobsTracker: React.FC = () => {
 
   const handleParseComplete = async (parsedData: any) => {
     try {
+      // If parsedData already has an ID or was saved directly by the parser, we just load data and close!
+      if (parsedData.id || parsedData._id) {
+        loadData();
+        setShowJobParserDialog(false);
+        return;
+      }
+
       // Helper function to get date string in YYYY-MM-DD format (15 days from now)
       const getDateString = (daysFromNow: number): string => {
         const date = new Date();
