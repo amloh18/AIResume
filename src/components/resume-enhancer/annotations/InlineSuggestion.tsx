@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { CheckCircle2, XCircle } from 'lucide-react';
+import DOMPurify from 'isomorphic-dompurify';
 import type { FixAnnotation } from './fix-annotation';
 
 interface InlineSuggestionProps {
@@ -30,10 +31,15 @@ function renderFormattedText(text: string) {
       .replace(/<b[^>]*>/gi, `<b style="color: white; font-weight: 600;">`)
       .replace(/<i[^>]*>/gi, `<i style="color: white; font-style: italic;">`);
     
+    const sanitizedHTML = DOMPurify.sanitize(styledHTML, {
+      ALLOWED_TAGS: ['p', 'ul', 'ol', 'li', 'br', 'strong', 'em', 'b', 'i'],
+      ALLOWED_ATTR: ['style']
+    });
+    
     return (
       <div 
         className="text-sm leading-relaxed text-white"
-        dangerouslySetInnerHTML={{ __html: styledHTML }}
+        dangerouslySetInnerHTML={{ __html: sanitizedHTML }}
       />
     );
   }

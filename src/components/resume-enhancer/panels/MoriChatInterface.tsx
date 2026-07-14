@@ -779,4 +779,4 @@ const MoriChatInterface: React.FC = () => {
   );
 };
 
-export default MoriChatInterface;
+export default React.memo(MoriChatInterface);

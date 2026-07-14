@@ -5,39 +5,9 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle, X } from 'lucide-react';
 import { CVJourney } from '@/types/cv';
+import { JobApplication } from '@/types/job';
 
-interface JobApplication {
-  id: string;
-  _id: string;
-  userId: string;
-  jobTitle: string;
-  title?: string;
-  company: string;
-  status: 'draft' | 'created' | 'applied' | 'screening' | 'interview' | 'offer' | 'rejected' | 'accepted' | 'withdrawn';
-  jobDescription?: string;
-  description?: string;
-  location?: string;
-  jobUrl?: string;
-  salary?: {
-    min?: number;
-    max?: number;
-    currency?: string;
-    period?: 'hourly' | 'monthly' | 'yearly';
-  };
-  jobType?: 'full-time' | 'part-time' | 'contract' | 'internship';
-  type?: string;
-  source?: string;
-  postedDate?: Date;
-  applicationDate?: Date;
-  deadline?: Date;
-  priority: 'low' | 'medium' | 'high';
-  notes?: string;
-  tags?: string[];
-  isArchived?: boolean;
-  atsScore?: number;
-  createdAt: string;
-  updatedAt: string;
-}
+
 
 interface JobsListViewProps {
   jobs: JobApplication[];

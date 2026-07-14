@@ -4,26 +4,9 @@ import React, { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Calendar, Clock, AlertCircle, CheckCircle, Building, Eye, Globe, MapPin, Bell, TrendingUp } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { JobApplication } from '@/types/job';
 
-interface JobApplication {
-  id: string;
-  _id: string;
-  jobTitle: string;
-  title?: string;
-  company: string;
-  companyLogo?: string;
-  location?: string;
-  status?: string;
-  applicationDate?: Date | string;
-  deadline?: Date | string;
-  updatedAt: string;
-  salary?: {
-    min?: number;
-    max?: number;
-    currency?: string;
-  };
-  source?: string;
-}
+
 
 interface AppliedStageViewProps {
   jobs: JobApplication[];

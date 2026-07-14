@@ -3,6 +3,7 @@
 
 import React from 'react';
 import { CheckCircle2, XCircle, AlertCircle, CheckCircle } from 'lucide-react';
+import DOMPurify from 'isomorphic-dompurify';
 import type { FixAnnotation } from './fix-annotation';
 import { getFieldPathLabel } from '@/lib/utils/fieldPathLabels';
 
@@ -34,11 +35,16 @@ function renderFormattedText(text: string, isReplacement: boolean = false) {
       .replace(/<b[^>]*>/gi, `<b style="color: ${textColor}; font-weight: 600;">`)
       .replace(/<i[^>]*>/gi, `<i style="color: ${textColor}; font-style: italic;">`);
     
+    const sanitizedHTML = DOMPurify.sanitize(styledHTML, {
+      ALLOWED_TAGS: ['p', 'ul', 'ol', 'li', 'br', 'strong', 'em', 'b', 'i'],
+      ALLOWED_ATTR: ['style']
+    });
+    
     return (
       <div 
         className={`text-sm leading-relaxed break-words overflow-wrap-anywhere ${isReplacement ? '' : 'line-through'}`}
         style={{ color: isReplacement ? '#39FF14' : '#fca5a5' }}
-        dangerouslySetInnerHTML={{ __html: styledHTML }}
+        dangerouslySetInnerHTML={{ __html: sanitizedHTML }}
       />
     );
   }

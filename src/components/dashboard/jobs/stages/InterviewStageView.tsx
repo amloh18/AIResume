@@ -4,30 +4,9 @@ import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Calendar, Clock, AlertCircle, Building, GraduationCap, MapPin, Link as LinkIcon, User, TrendingUp } from 'lucide-react';
 import { CVJourney } from '@/types/cv';
+import { JobApplication } from '@/types/job';
 
-interface JobApplication {
-  id: string;
-  _id: string;
-  jobTitle: string;
-  title?: string;
-  company: string;
-  companyLogo?: string;
-  location?: string;
-  salary?: {
-    min?: number;
-    max?: number;
-    currency?: string;
-  };
-  applicationDate?: Date | string;
-  updatedAt: string;
-  interviews?: Array<{
-    type: string;
-    date: Date | string;
-    outcome?: string;
-    interviewer?: string;
-    meetingLink?: string;
-  }>;
-}
+
 
 interface InterviewStageViewProps {
   jobs: JobApplication[];

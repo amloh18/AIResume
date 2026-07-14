@@ -32,58 +32,13 @@ import InterviewStageView from "./stages/InterviewStageView";
 import OfferStageView from "./stages/OfferStageView";
 import RejectedStageView from "./stages/RejectedStageView";
 import JobKanbanCard from "./JobKanbanCard";
+import { JobApplication } from '@/types/job';
 import {
   routeTrackerCardAction,
   type TrackerSidebarOpenContext,
 } from "./trackerSidebarConfig";
 
-interface JobApplication {
-  id: string;
-  _id: string;
-  userId: string;
-  jobTitle: string;
-  title?: string;
-  company: string;
-  status:
-    | "draft"
-    | "created"
-    | "applied"
-    | "screening"
-    | "interview"
-    | "offer"
-    | "rejected"
-    | "accepted"
-    | "withdrawn";
-  jobDescription?: string;
-  description?: string;
-  location?: string;
-  jobUrl?: string;
-  salary?: {
-    min?: number;
-    max?: number;
-    currency?: string;
-    period?: "hourly" | "monthly" | "yearly";
-  };
-  jobType?: "full-time" | "part-time" | "contract" | "internship";
-  type?: string;
-  source?: string;
-  postedDate?: Date;
-  applicationDate?: Date;
-  deadline?: Date;
-  offerDetails?: {
-    salary?: number;
-    bonus?: string;
-    equity?: string;
-    deadline?: Date;
-    status?: string;
-  };
-  priority: "low" | "medium" | "high";
-  notes?: string;
-  tags?: string[];
-  isArchived?: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
+
 
 interface JobsKanbanViewProps {
   jobs: JobApplication[];

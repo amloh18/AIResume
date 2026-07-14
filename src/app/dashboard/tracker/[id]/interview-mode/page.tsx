@@ -8,14 +8,9 @@ import { authenticatedFetchWithUserId } from '@/lib/utils/apiUtils';
 import { useUnifiedAuth, getUserIdForAPI } from '@/lib/hooks/useUnifiedAuth';
 import InterviewCoach from '@/components/dashboard/jobs/ai/InterviewCoach';
 import toast from 'react-hot-toast';
+import { JobApplication } from '@/types/job';
 
-interface JobApplication {
-  id: string;
-  jobTitle: string;
-  company: string;
-  jobDescription?: string;
-  status: string;
-}
+
 
 interface CVJourney {
   id: string;

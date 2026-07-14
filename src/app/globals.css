@@ -3153,3 +3153,24 @@ mark[data-type="highlight"] {
   }
 }
 
+
+/* Required CSS for CV Preview */
+:root {
+  --cv-font: 'Inter';
+  --cv-base-size: 12px;
+  --cv-spacing: 1.0;
+  --cv-accent: #22c55e;
+}
+.cv-document { font-family: var(--cv-font), sans-serif; color: #1f2937; font-size: var(--cv-base-size); }
+.cv-name { font-size: calc(var(--cv-base-size) * 2.5); line-height: 1.1; }
+.cv-name-narrow { font-size: calc(var(--cv-base-size) * 2.0); line-height: 1.1; }
+.cv-role { font-size: calc(var(--cv-base-size) * 1.15); }
+.cv-heading { font-size: calc(var(--cv-base-size) * 1.1); }
+.cv-title { font-size: calc(var(--cv-base-size) * 1.05); }
+.cv-subtitle { font-size: calc(var(--cv-base-size) * 0.95); }
+.cv-date { font-size: calc(var(--cv-base-size) * 0.85); }
+.cv-contact { font-size: calc(var(--cv-base-size) * 0.85); }
+.cv-body { font-size: inherit; line-height: calc(1.6 * var(--cv-spacing)); }
+.cv-document p, .cv-document ul, .cv-document li { font-size: inherit !important; line-height: inherit !important; margin: 0; padding: 0; }
+.cv-prose p { margin-bottom: calc(0.3em * var(--cv-spacing)) !important; }
+.cv-prose ul { list-style-type: disc; padding-left: 1.2em; margin-top: calc(0.25em * var(--cv-spacing)) !important; margin-bottom: calc(0.25em * var(--cv-spacing)) !important; }

@@ -30,6 +30,7 @@ import SmartJDModal from '@/components/resume-enhancer/SmartJDModal';
 // CV Surgeon service
 import { CVSurgeonService, SurgicalFix } from '@/lib/services/cv-surgeon-service';
 import { logResumeEnhancerEvent } from '@/lib/services/resumeEnhancerLogClient';
+import { UnifiedCVDataStructure, DEFAULT_UNIFIED_CV_DATA, SECTION_TYPE_TO_FIELD_MAP, DEFAULT_SECTION_ITEM } from '@/types/unified-cv-schema';
 import { inferRoleContextFromCVData } from '@/lib/utils/resumeEnhancerRoleInference';
 import { calculateOptimalColumnDistribution } from '@/services/sectionRebalancer';
 import type { RecruiterFeatures } from '@/components/resume-enhancer/panels/RecruiterModePanel';
@@ -89,6 +90,38 @@ export interface Step3CVRef {
   handleSectionReorder: (sectionIds: string[]) => void;
   activeSection: string;
 }
+
+const InlineChecklist = ({ 
+  dispatch, 
+  goToStep, 
+  setActiveUtilityPanel 
+}: { 
+  dispatch: any, 
+  goToStep: any, 
+  setActiveUtilityPanel: any 
+}) => {
+  const { progress: checklistProgress, markComplete, isComplete } = useEditorChecklist();
+
+  const handleItemComplete = React.useCallback((id: 'layout' | 'design' | 'aiChat' | 'review') => {
+    markComplete(id);
+  }, [markComplete]);
+
+  if (isComplete) return null;
+
+  return (
+    <EditorChecklist
+      progress={checklistProgress}
+      onOpenLayout={() => {
+        dispatch({ type: 'SET_STEP', payload: 1 });
+        window.dispatchEvent(new CustomEvent('open-templates'));
+      }}
+      onOpenDesign={() => setActiveUtilityPanel('design')}
+      onOpenAiChat={() => setActiveUtilityPanel('mori')}
+      onOpenReview={() => goToStep(5)}
+      onItemComplete={handleItemComplete}
+    />
+  );
+};
 
 const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
   ({ onComplete, onActiveSectionChange }, ref) => {
@@ -156,6 +189,7 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
     const lastSavedCvDataStrRef = useRef<string>('');
 
     // Floating Editor State
+    const floatingEditorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const [activeEditorSectionId, setActiveEditorSectionId] = useState<string | null>(null);
     const [editorPosition, setEditorPosition] = useState<{ top: number; left: number; height: number; alignment: 'left' | 'right' } | null>(null);
 
@@ -918,11 +952,12 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
             });
 
             if (!cvUpdateResponse.ok) {
-              console.warn('Failed to update CV with journeyId, but job was created');
+              const errorData = await cvUpdateResponse.json().catch(() => ({}));
+              throw new Error(errorData.error || 'Failed to update CV with journeyId');
             }
           } catch (cvError) {
             console.error('Error updating CV:', cvError);
-            // Don't fail the whole operation if CV update fails
+            throw cvError; // Fail the operation if CV update fails
           }
         }
 
@@ -980,117 +1015,15 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
       console.log('Adding new section:', sectionType);
 
       // Initialize CV data for the new section
-      let newSectionData: any = null;
-      let fieldName: string = sectionType;
-
-      switch (sectionType) {
-        case 'volunteer':
-          newSectionData = [...(state.cvData.volunteer || []), {
-            organization: 'Organization Name',
-            position: 'Volunteer Role',
-            url: '',
-            startDate: 'Jan 2020',
-            endDate: 'Present',
-            summary: '',
-            highlights: []
-          }];
-          fieldName = 'volunteer';
-          break;
-        case 'publications':
-          newSectionData = [...(state.cvData.publications || []), {
-            name: 'Publication Title',
-            publisher: 'Publisher Name',
-            releaseDate: '2024',
-            url: '',
-            summary: ''
-          }];
-          fieldName = 'publications';
-          break;
-        case 'languages':
-          newSectionData = [...(state.cvData.languages || []), {
-            language: 'Language',
-            fluency: 'Native'
-          }];
-          fieldName = 'languages';
-          break;
-        case 'interests':
-          newSectionData = [...(state.cvData.interests || []), {
-            name: 'Interest Category',
-            keywords: ['Hobby 1', 'Hobby 2']
-          }];
-          fieldName = 'interests';
-          break;
-        case 'references':
-          newSectionData = [...(state.cvData.references || []), {
-            name: 'Reference Name',
-            reference: 'Available upon request'
-          }];
-          fieldName = 'references';
-          break;
-        case 'awards':
-          newSectionData = [...(state.cvData.awards || []), {
-            title: 'Award Title',
-            date: '2024',
-            awarder: 'Awarding Organization',
-            summary: ''
-          }];
-          fieldName = 'awards';
-          break;
-        case 'certificates':
-          newSectionData = [...(state.cvData.certificates || []), {
-            name: 'Certificate Name',
-            issuer: 'Issuing Organization',
-            date: '2024',
-            url: '',
-            description: ''
-          }];
-          fieldName = 'certificates';
-          break;
-        case 'projects':
-          newSectionData = [...(state.cvData.projects || []), {
-            name: 'Project Name',
-            startDate: 'Jan 2024',
-            endDate: 'Present',
-            description: 'Project description',
-            highlights: [],
-            keywords: [],
-            url: ''
-          }];
-          fieldName = 'projects';
-          break;
-        case 'skills':
-          newSectionData = [...(state.cvData.skills || []), {
-            category: 'Skill Category',
-            skills: ['Skill 1', 'Skill 2']
-          }];
-          fieldName = 'skills';
-          break;
-        case 'education':
-          newSectionData = [...(state.cvData.education || []), {
-            institution: 'Name of University',
-            url: '',
-            area: 'ENTER YOUR MAJOR',
-            studyType: '',
-            startDate: 'Jan 2005',
-            endDate: 'Jan 2007',
-            score: '',
-            description: ''
-          }];
-          fieldName = 'education';
-          break;
-        case 'work_experience':
-          newSectionData = [...(state.cvData.work || []), {
-            name: 'Company Name',
-            position: 'Job Title',
-            url: '',
-            startDate: 'Jan 2020',
-            endDate: 'Present',
-            summary: 'Enter your job responsibilities and achievements',
-            highlights: []
-          }];
-          fieldName = 'work';
-          break;
+      const fieldName = SECTION_TYPE_TO_FIELD_MAP[sectionType];
+      if (!fieldName) {
+        console.warn('Unknown section type:', sectionType);
+        return;
       }
+      
+      const defaultItem = DEFAULT_SECTION_ITEM[fieldName];
+      const existingData = state.cvData[fieldName as keyof UnifiedCVDataStructure] as any[];
+      const newSectionData = [...(existingData || []), { ...defaultItem }];
 
       // Update both CV data and structure
       if (newSectionData !== null && fieldName) {
@@ -1137,7 +1070,8 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
 
         // Auto-open the floating editor for the new section
         // Use setTimeout to ensure the DOM has updated and the section is rendered
-        setTimeout(() => {
+        if (floatingEditorTimeoutRef.current) clearTimeout(floatingEditorTimeoutRef.current);
+        floatingEditorTimeoutRef.current = setTimeout(() => {
           const sectionElement = document.querySelector(`[data-section-id="${sectionType}"]`);
           if (sectionElement) {
             const rect = sectionElement.getBoundingClientRect();
@@ -1390,29 +1324,11 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
             `}
             style={{ order: isControlPanelOpen ? 1 : 2 }}
           >
-            {(() => {
-              const { progress: checklistProgress, markComplete, isComplete } = useEditorChecklist();
-
-              const handleItemComplete = useCallback((id: 'layout' | 'design' | 'aiChat' | 'review') => {
-                markComplete(id);
-              }, [markComplete]);
-
-              if (isComplete) return null;
-
-              return (
-                <EditorChecklist
-                  progress={checklistProgress}
-                  onOpenLayout={() => {
-                    dispatch({ type: 'SET_STEP', payload: 1 });
-                    setTemplateOverlayOpen(true);
-                  }}
-                  onOpenDesign={() => setActiveUtilityPanel('design')}
-                  onOpenAiChat={() => setActiveUtilityPanel('mori')}
-                  onOpenReview={() => goToStep(5)}
-                  onItemComplete={handleItemComplete}
-                />
-              );
-            })()}
+            <InlineChecklist 
+              dispatch={dispatch} 
+              goToStep={goToStep} 
+              setActiveUtilityPanel={setActiveUtilityPanel} 
+            />
             <div className="flex-1 min-h-0">
               <ATSMeterPanel isUtilityPanelOpen={!!activeUtilityPanel} onClose={() => setActiveUtilityPanel(null)} />
             </div>

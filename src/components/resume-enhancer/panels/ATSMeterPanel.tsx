@@ -206,7 +206,7 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ isUtilityPanelOpen
   const report = state.scoreReport;
   const isMasterCV = state.cvType === 'master';
 
-  const runAnalysis = async () => {
+  const runAnalysis = async (signal?: AbortSignal) => {
     if (!state.cvId) return;
     const isRoleReady = state.cvType === 'journey' || Boolean(state.targetRole && state.seniorityLevel);
     if (!isRoleReady) {
@@ -218,6 +218,7 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ isUtilityPanelOpen
       const response = await fetch('/api/ai/analyze-cv-v3', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal,
         body: JSON.stringify({
           CV_DATA: state.cvData,
           CV_TYPE: state.cvType,
@@ -284,6 +285,10 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ isUtilityPanelOpen
         throw new Error(data.error || 'Failed to parse report');
       }
     } catch (err: any) {
+      if (err.name === 'AbortError') {
+        console.log('Analysis request aborted');
+        return;
+      }
       console.error('Analysis error:', err);
       toast.error('Failed to run analysis: ' + err.message);
     } finally {
@@ -292,9 +297,19 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ isUtilityPanelOpen
   };
 
   useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+    const abortController = new AbortController();
+
     if (!report && !isAnalyzing && state.cvId) {
-      runAnalysis();
+      timeoutId = setTimeout(() => {
+        runAnalysis(abortController.signal);
+      }, 500);
     }
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      abortController.abort();
+    };
   }, [report, state.cvId]);
 
   const handleOptimizeCV = async () => {
@@ -555,7 +570,7 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ isUtilityPanelOpen
           <h3 className="text-xs font-extrabold uppercase tracking-wider text-gray-700 dark:text-gray-200">Analysis</h3>
           {/* Refresh Analysis next to text */}
           <button
-            onClick={runAnalysis}
+            onClick={() => runAnalysis()}
             disabled={isAnalyzing}
             onMouseEnter={() => setHoveredIcon('refresh')}
             onMouseLeave={() => setHoveredIcon(null)}
@@ -693,7 +708,7 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ isUtilityPanelOpen
                 Run an AI analysis scan to see your overall score, keywords matches, strengths, and optimized suggestions.
               </p>
               <button
-                onClick={runAnalysis}
+                onClick={() => runAnalysis()}
                 disabled={isAnalyzing}
                 className="w-full py-2.5 px-4 bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
               >

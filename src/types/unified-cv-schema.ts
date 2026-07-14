@@ -464,3 +464,93 @@ export const DEFAULT_UNIFIED_CV_DATA: UnifiedCVDataStructure = {
  */
 export const UNIFIED_CV_SCHEMA_VERSION = "1.0.0";
 
+export const SECTION_TYPE_TO_FIELD_MAP: Record<string, keyof UnifiedCVDataStructure> = {
+  'volunteer': 'volunteer',
+  'publications': 'publications',
+  'languages': 'languages',
+  'interests': 'interests',
+  'references': 'references',
+  'awards': 'awards',
+  'certificates': 'certificates',
+  'projects': 'projects',
+  'skills': 'skills',
+  'education': 'education',
+  'work_experience': 'work'
+};
+
+export const DEFAULT_SECTION_ITEM: Record<string, any> = {
+  'volunteer': {
+    organization: 'Organization Name',
+    position: 'Volunteer Role',
+    url: '',
+    startDate: 'Jan 2020',
+    endDate: 'Present',
+    summary: '',
+    highlights: []
+  },
+  'publications': {
+    name: 'Publication Title',
+    publisher: 'Publisher Name',
+    releaseDate: '2024',
+    url: '',
+    summary: ''
+  },
+  'languages': {
+    language: 'Language',
+    fluency: 'Native'
+  },
+  'interests': {
+    name: 'Interest Category',
+    keywords: ['Hobby 1', 'Hobby 2']
+  },
+  'references': {
+    name: 'Reference Name',
+    reference: 'Available upon request'
+  },
+  'awards': {
+    title: 'Award Title',
+    date: '2024',
+    awarder: 'Awarding Organization',
+    summary: ''
+  },
+  'certificates': {
+    name: 'Certificate Name',
+    issuer: 'Issuing Organization',
+    date: '2024',
+    url: '',
+    description: ''
+  },
+  'projects': {
+    name: 'Project Name',
+    startDate: 'Jan 2024',
+    endDate: 'Present',
+    description: 'Project description',
+    highlights: [],
+    keywords: [],
+    url: ''
+  },
+  'skills': {
+    category: 'Skill Category',
+    skills: ['Skill 1', 'Skill 2']
+  },
+  'education': {
+    institution: 'Name of University',
+    url: '',
+    area: 'ENTER YOUR MAJOR',
+    studyType: '',
+    startDate: 'Jan 2005',
+    endDate: 'Jan 2007',
+    score: '',
+    description: ''
+  },
+  'work': {
+    name: 'Company Name',
+    position: 'Job Title',
+    url: '',
+    startDate: 'Jan 2020',
+    endDate: 'Present',
+    summary: 'Enter your job responsibilities and achievements',
+    highlights: []
+  }
+};
+
