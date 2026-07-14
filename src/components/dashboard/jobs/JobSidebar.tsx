@@ -622,10 +622,20 @@ ${userName}`
 
   const generationState = primaryJourney?.generationState;
   
-  const isGenerating = !!(primaryJourney && (
-    primaryJourney.status === "processing_documents" ||
-    (primaryJourney.status !== "creation_failed" && primaryJourney.status !== "ready" && (!primaryJourney.cvId || !primaryJourney.coverLetterId))
-  ));
+  const isGenerating = !!(
+    (job.relationship?.journey && (
+      job.relationship.journey.status === "processing_documents" ||
+      (job.relationship.journey.status !== "creation_failed" &&
+       job.relationship.journey.status !== "ready" &&
+       (!job.relationship.documents?.cv?.id || !job.relationship.documents?.coverLetter?.id))
+    )) ||
+    (primaryJourney && (
+      primaryJourney.status === "processing_documents" ||
+      (primaryJourney.status !== "creation_failed" &&
+       primaryJourney.status !== "ready" &&
+       (!primaryJourney.cvId || !primaryJourney.coverLetterId))
+    ))
+  );
 
   // Progress simulation timer
   useEffect(() => {
@@ -811,11 +821,13 @@ ${userName}`
     router.push(`/dashboard/interview/${jobId}`);
   }, [jobId, router]);
   const handleOpenDocumentPreview = useCallback(async (documentType: 'cv' | 'coverLetter') => {
-    if (!user?.id || !primaryJourney) {
+    if (!user?.id || (!primaryJourney && !job.relationship?.journey)) {
       return;
     }
 
-    const targetId = documentType === 'cv' ? primaryJourney.cvId : primaryJourney.coverLetterId;
+    const targetId = documentType === 'cv'
+      ? (job.relationship?.documents?.cv?.id || primaryJourney?.cvId)
+      : (job.relationship?.documents?.coverLetter?.id || primaryJourney?.coverLetterId);
     if (!targetId) {
       return;
     }
@@ -1752,7 +1764,7 @@ ${userName}`
                         </div>
 
                         {/* Stats chips row - hidden if CV or Cover Letter is ready to merge them into preview area */}
-                        {journeyCardData.stats && journeyCardData.stats.length > 0 && !primaryJourney?.cvId && !primaryJourney?.coverLetterId && (
+                        {journeyCardData.stats && journeyCardData.stats.length > 0 && !job.relationship?.documents?.cv?.id && !job.relationship?.documents?.coverLetter?.id && !primaryJourney?.cvId && !primaryJourney?.coverLetterId && (
                           <div className="flex flex-wrap gap-2 shrink-0 md:justify-end">
                             {journeyCardData.stats.map((stat) => (
                               <div key={stat.label} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/60 dark:bg-white/5 border border-gray-200/50 dark:border-white/5 text-[11px] font-semibold text-gray-800 dark:text-gray-200">
@@ -1765,17 +1777,17 @@ ${userName}`
                       </div>
 
                       {/* Previews / Document Indicators Inline */}
-                      {primaryJourney && (
+                      {(job.relationship?.journey || primaryJourney) && (
                         <div className="flex flex-wrap items-center gap-3 bg-white/40 dark:bg-white/5 border border-gray-200/40 dark:border-white/5 rounded-xl p-3">
                           <span className="text-[10px] font-black uppercase tracking-wider text-gray-500 dark:text-gray-400">Ready Previews:</span>
                           <div className="flex flex-wrap gap-2">
-                            {primaryJourney.cvId ? (
+                            {(job.relationship?.documents?.cv?.id || primaryJourney?.cvId) ? (
                               <button
                                 onClick={() => void handleOpenDocumentPreview('cv')}
                                 disabled={previewLoading === 'cv'}
                                 className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200/60 dark:border-white/10 bg-white/80 dark:bg-[#1a2015] px-2.5 py-1.5 text-small font-semibold text-gray-700 hover:bg-gray-50 dark:text-[var(--text-secondary)] dark:hover:bg-[var(--bg-tertiary)] transition-colors"
                               >
-                                {previewLoading === 'cv' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Eye className="h-3.5 w-3.5 text-gray-400" />}
+                                {previewLoading === 'cv' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Eye className="h-3.5 w-3.5" />}
                                 <span>CV: </span>
                                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
                                 <span className="text-emerald-600 dark:text-[#99FF00] text-[10px] font-black uppercase tracking-wider">Ready</span>
@@ -1792,13 +1804,13 @@ ${userName}`
                               </button>
                             )}
 
-                            {primaryJourney.coverLetterId ? (
+                            {(job.relationship?.documents?.coverLetter?.id || primaryJourney?.coverLetterId) ? (
                               <button
                                 onClick={() => void handleOpenDocumentPreview('coverLetter')}
                                 disabled={previewLoading === 'coverLetter'}
                                 className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200/60 dark:border-white/10 bg-white/80 dark:bg-[#1a2015] px-2.5 py-1.5 text-small font-semibold text-gray-700 hover:bg-gray-50 dark:text-[var(--text-secondary)] dark:hover:bg-[var(--bg-tertiary)] transition-colors"
                               >
-                                {previewLoading === 'coverLetter' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Eye className="h-3.5 w-3.5 text-gray-400" />}
+                                {previewLoading === 'coverLetter' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Eye className="h-3.5 w-3.5" />}
                                 <span>Cover Letter: </span>
                                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
                                 <span className="text-emerald-600 dark:text-[#99FF00] text-[10px] font-black uppercase tracking-wider">Ready</span>
@@ -2067,7 +2079,7 @@ ${userName}`
                     { key: 'communication', label: 'Communication', badge: 0 || recruiterVisibilitySteps.length || undefined },
                     { key: 'people', label: 'People', badge: contacts.length || undefined },
                     { key: 'notes', label: 'Notes' },
-                    { key: 'files', label: 'Files', badge: (primaryJourney?.cvId ? 1 : 0) + (primaryJourney?.coverLetterId ? 1 : 0) || undefined }
+                    { key: 'files', label: 'Files', badge: ((job.relationship?.documents?.cv?.id || primaryJourney?.cvId) ? 1 : 0) + ((job.relationship?.documents?.coverLetter?.id || primaryJourney?.coverLetterId) ? 1 : 0) || undefined }
                   ].map((t) => (
                     <button
                       key={t.key}
@@ -2144,6 +2156,7 @@ ${userName}`
 
                   {activeTab === 'files' && (
                     <JobFilesTab
+                      job={job}
                       primaryJourney={primaryJourney || undefined}
                       previewLoading={previewLoading}
                       handleOpenDocumentPreview={handleOpenDocumentPreview}
