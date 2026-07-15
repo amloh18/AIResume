@@ -281,12 +281,24 @@ const OptimizedNavigation: React.FC = () => {
 
   // Update active section based on current path
   useEffect(() => {
-    if (pathname === '/dashboard' || pathname.startsWith('/dashboard?')) {
+    if (pathname === '/dashboard' || pathname === '/dashboard/') {
       setActiveSection('analytics');
     } else if (pathname.includes('/jobs')) {
       setActiveSection('jobs-dashboard');
     } else if (pathname.includes('/settings')) {
       setActiveSection('settings');
+    } else if (pathname.includes('/tracker')) {
+      setActiveSection('tracker');
+    } else if (pathname.includes('/editor')) {
+      setActiveSection('cv-builder-pro');
+    } else if (pathname.includes('/interview')) {
+      setActiveSection('interview-coach');
+    } else if (pathname.includes('/linkedin-enhancer')) {
+      setActiveSection('linkedin-enhancer');
+    } else if (pathname.includes('/admin/dashboard')) {
+      setActiveSection('admin-panel');
+    } else {
+      setActiveSection('');
     }
   }, [pathname]);
 
@@ -438,6 +450,19 @@ const OptimizedNavigation: React.FC = () => {
       activeBg: 'bg-[#1a230f] border-[rgb(129,255,0)]/40',
     },
   ];
+
+  if (isAdmin) {
+    toolSections.push({
+      id: 'admin-panel',
+      name: 'Admin',
+      icon: Shield,
+      description: 'System administration',
+      route: '/admin/dashboard',
+      color: 'text-amber-600 dark:text-amber-400',
+      bg: 'bg-amber-50 dark:bg-amber-900/30',
+      activeBg: 'bg-amber-900/40 border-amber-500/40',
+    });
+  }
 
   return (
     <div className={`flex flex-col h-full m-0 bg-transparent rounded-none shadow-none overflow-visible pointer-events-auto relative`}>
@@ -629,69 +654,6 @@ const OptimizedNavigation: React.FC = () => {
           </div>
         </div>
       </nav>
-
-      {/* HR Dashboard Button - Show for B2B users and Admins */}
-      {(userData?.b2b?.tenantId || userData?.isB2b || isAdmin) && (
-        <div className={`px-6 pb-2 ${isDesktopExpanded ? 'lg:px-4' : 'lg:px-2'}`}>
-          <div className={isDesktopExpanded ? "grid grid-cols-2 gap-2" : "flex flex-col items-center gap-2"}>
-            {(userData?.b2b?.tenantId || userData?.isB2b) && (
-              <motion.button
-                onClick={() => {
-                  if (isMobileMenuOpen) {
-                    setIsOpen(false);
-                  }
-                  router.push('/b2b/dashboard');
-                }}
-                className={isDesktopExpanded
-                  ? "w-full h-full min-h-[88px] flex flex-col items-start justify-between gap-3 rounded-xl border border-[rgb(129,255,0)]/15 transition-all duration-200 text-left p-4 bg-[rgb(129,255,0)]/10 text-[#4C9900] dark:text-[rgb(129,255,0)] hover:bg-[rgb(129,255,0)]/20"
-                  : "w-9 h-9 flex items-center justify-center rounded-xl border border-[rgb(129,255,0)]/15 bg-[rgb(129,255,0)]/10 text-[#4C9900] dark:text-[rgb(129,255,0)] hover:bg-[rgb(129,255,0)]/20"
-                }
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                title="HR Dashboard"
-              >
-                <Briefcase className="w-5 h-5 flex-shrink-0" />
-                {isDesktopExpanded && (
-                  <div className="min-w-0 w-full text-left">
-                    <div className="text-small font-medium truncate">HR Dashboard</div>
-                    <div className="text-[11px] opacity-80 truncate mt-0.5">
-                      Business Portal
-                    </div>
-                  </div>
-                )}
-              </motion.button>
-            )}
-
-            {isAdmin && (
-              <motion.button
-                onClick={() => {
-                  if (isMobileMenuOpen) {
-                    setIsOpen(false);
-                  }
-                  router.push('/admin/dashboard');
-                }}
-                className={isDesktopExpanded
-                  ? "w-full h-full min-h-[88px] flex flex-col items-start justify-between gap-3 rounded-xl border border-purple-500/15 transition-all duration-200 text-left p-4 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 hover:bg-purple-200 dark:hover:bg-purple-900/50"
-                  : "w-9 h-9 flex items-center justify-center rounded-xl border border-purple-500/15 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 hover:bg-purple-200 dark:hover:bg-purple-900/50"
-                }
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                title="Admin Dashboard"
-              >
-                <Shield className="w-5 h-5 flex-shrink-0" />
-                {isDesktopExpanded && (
-                  <div className="min-w-0 w-full text-left">
-                    <div className="text-small font-medium truncate">Admin Dashboard</div>
-                    <div className="text-[11px] text-purple-600 dark:text-purple-300 truncate mt-0.5">
-                      System controls
-                    </div>
-                  </div>
-                )}
-              </motion.button>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Payment Past Due Banner - Show for past_due/unpaid subscriptions */}
       {(() => {

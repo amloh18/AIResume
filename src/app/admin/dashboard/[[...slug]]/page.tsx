@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, Search, Bell, Command, ChevronRight, Activity, Calendar } from 'lucide-react';
+import { useUserData } from '@/lib/hooks/useUserData';
 import AdminNavigation from '@/components/admin/AdminNavigation';
 import RecentActivityPanel from '@/components/admin/RecentActivityPanel';
 import { ADMIN_THEME } from '@/lib/config/adminTheme';
@@ -27,6 +28,7 @@ import UserActivityModal from '@/components/admin/UserActivityModal';
 
 export default function AdminDashboard() {
   const { data: session, status } = useSession();
+  const { userData, loading: userDataLoading } = useUserData();
   const [isActivityPanelOpen, setIsActivityPanelOpen] = useState(false);
   const [activities, setActivities] = useState<any[]>([]);
   const [activitiesLoading, setActivitiesLoading] = useState(false);
@@ -47,7 +49,7 @@ export default function AdminDashboard() {
 
   // Extract admin user from session
   const user = session?.user as any;
-  const isAdmin = user?.type === 'admin' || user?.role === 'admin' || user?.role === 'superadmin';
+  const isAdmin = user?.type === 'admin' || user?.role === 'admin' || user?.role === 'superadmin' || userData?.role === 'admin' || userData?.role === 'superadmin';
 
   // Path-based navigation state derived from URL
   const slug = params?.slug as string[] | undefined;
@@ -64,16 +66,19 @@ export default function AdminDashboard() {
     if (window.innerWidth < 1024) setIsMobileMenuOpen(false);
   };
 
+
+
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/admin/login');
       return;
     }
-    if (status === 'authenticated' && !isAdmin) {
+    // Only redirect once we are fully authenticated and user data is loaded, and we are SURE they aren't admin
+    if (status === 'authenticated' && !userDataLoading && !isAdmin) {
       router.push('/dashboard');
       return;
     }
-  }, [status, isAdmin, router]);
+  }, [status, isAdmin, userDataLoading, router]);
 
   const fetchActivities = async () => {
     try {
@@ -91,7 +96,7 @@ export default function AdminDashboard() {
     }
   };
 
-  if (status === 'loading' || !mounted) {
+  if (status === 'loading' || userDataLoading || !mounted) {
     return (
       <div className="min-h-screen bg-[#050505] flex items-center justify-center">
         <motion.div 
