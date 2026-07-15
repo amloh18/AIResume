@@ -12,7 +12,7 @@ import RouteGuard from '@/components/auth/RouteGuard'
 import { geistFont } from '@/lib/fonts'
 import { MobileSidebarProvider } from '@/contexts/MobileSidebarContext'
 import { Skeleton } from '@/components/ui/SkeletonLoader';
-import { Loader2 } from 'lucide-react'
+import { Loader2, WifiOff, RefreshCw } from 'lucide-react'
 
 function SyncIndicator({ visible }: { visible: boolean }) {
   if (!visible) return null
@@ -63,6 +63,7 @@ function ResumeEnhancerPageContent() {
 
   const [hydrated, setHydrated] = useState(false)
   const [isHydrating, setIsHydrating] = useState(true)
+  const [syncError, setSyncError] = useState<string | null>(null)
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -77,16 +78,29 @@ function ResumeEnhancerPageContent() {
     if (authLoading) return
 
     let cancelled = false
+
+    // Set a safety timeout of 15 seconds to prevent infinite hang on network/db drops
+    const timeout = setTimeout(() => {
+      if (!cancelled) {
+        console.warn('⚠️ Workspace sync timed out (15s limit reached).');
+        setSyncError('Polar Gateway Timeout: Workspace synchronization is taking too long. This typically means the local database or gateway service is offline.')
+        setIsHydrating(false)
+      }
+    }, 15000)
+
     const handleMasterCVRedirect = async () => {
       setIsHydrating(true)
+      setSyncError(null)
 
       if (docParam !== 'master-cv') {
+        clearTimeout(timeout)
         setHydrated(true)
         setIsHydrating(false)
         return
       }
 
       if (!isAuthenticated) {
+        clearTimeout(timeout)
         setHydrated(true)
         setIsHydrating(false)
         return
@@ -94,6 +108,9 @@ function ResumeEnhancerPageContent() {
 
       try {
         const res = await fetch(`/api/cvs/master?userId=${user?.id}`)
+        if (!res.ok) {
+          throw new Error(`HTTP Error: ${res.status}`)
+        }
         const result = await res.json()
 
         const currentParams = new URLSearchParams(searchParams.toString())
@@ -108,13 +125,13 @@ function ResumeEnhancerPageContent() {
           currentParams.set('mode', 'create')
           router.replace(`/editor?${currentParams.toString()}`)
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error fetching master CV for redirect:', error)
-        const currentParams = new URLSearchParams(searchParams.toString())
-        currentParams.delete('doc')
-        currentParams.set('mode', 'create')
-        router.replace(`/editor?${currentParams.toString()}`)
+        if (!cancelled) {
+          setSyncError(`Polar Gateway Connection Error: Failed to synchronize workspace data. ${error.message || ''}`)
+        }
       } finally {
+        clearTimeout(timeout)
         if (!cancelled) {
           setHydrated(true)
           setIsHydrating(false)
@@ -125,6 +142,7 @@ function ResumeEnhancerPageContent() {
     handleMasterCVRedirect()
     return () => {
       cancelled = true
+      clearTimeout(timeout)
     }
   }, [authLoading, isAuthenticated, user?.id, docParam, router, searchParams])
 
@@ -157,6 +175,71 @@ function ResumeEnhancerPageContent() {
         <Skeleton className="h-4 w-64" />
         <div className="mt-8">
           <Skeleton className="min-h-[400px] md:min-h-[600px] w-full rounded-2xl" />
+        </div>
+      </div>
+    );
+  }
+
+  if (syncError) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-[#0c0f0a] flex items-center justify-center p-6 text-center">
+        <div className="w-full max-w-[420px] p-8 rounded-3xl bg-white dark:bg-[#12160f] border border-slate-200 dark:border-white/10 shadow-2xl flex flex-col items-center gap-6 relative overflow-hidden group">
+          {/* Glowing background light blobs */}
+          <div className="absolute -top-16 -left-16 w-36 h-36 rounded-full bg-red-500/10 blur-3xl group-hover:scale-110 transition-transform duration-500 pointer-events-none"></div>
+          <div className="absolute -bottom-16 -right-16 w-36 h-36 rounded-full bg-amber-500/10 blur-3xl group-hover:scale-110 transition-transform duration-500 pointer-events-none"></div>
+
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-red-500 to-amber-600 flex items-center justify-center shadow-lg shadow-red-500/20">
+            <WifiOff className="w-7 h-7 text-white animate-pulse" />
+          </div>
+
+          <div className="space-y-2">
+            <h3 className="text-lg font-bold text-slate-800 dark:text-white tracking-tight">
+              Polar Gateway Offline
+            </h3>
+            <p className="text-[12px] text-slate-500 dark:text-slate-400 leading-relaxed max-w-[320px] mx-auto">
+              Mori is unable to establish a secure connection to the local database or payment gateway. Please ensure your development environment is running.
+            </p>
+            <div className="mt-3 p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-500/20 rounded-xl text-left">
+              <span className="text-[10px] font-mono text-red-600 dark:text-red-400 break-words block">
+                {syncError}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2.5 w-full pt-1">
+            <button
+              onClick={() => {
+                setSyncError(null);
+                setIsHydrating(true);
+                // Trigger reload of the window to try a clean sync
+                window.location.reload();
+              }}
+              className="w-full py-2.5 bg-gradient-to-r from-red-500 to-amber-600 hover:from-red-600 hover:to-amber-700 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-98 flex items-center justify-center gap-1.5 cursor-pointer border-none"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              Retry Connection
+            </button>
+            
+            <div className="flex gap-2 w-full">
+              <button
+                onClick={() => {
+                  setSyncError(null);
+                  setHydrated(true);
+                  setIsHydrating(false);
+                }}
+                className="flex-1 py-2 hover:bg-slate-50 dark:hover:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-400 rounded-xl text-xs font-semibold transition-all active:scale-98 cursor-pointer"
+              >
+                Offline Mode
+              </button>
+              
+              <button
+                onClick={() => router.push('/')}
+                className="flex-1 py-2 hover:bg-slate-50 dark:hover:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-400 rounded-xl text-xs font-semibold transition-all active:scale-98 cursor-pointer"
+              >
+                Home
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     );

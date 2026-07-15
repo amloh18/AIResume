@@ -267,6 +267,12 @@ export async function PUT(
       return NextResponse.json({ error: 'Job not found' }, { status: 404 });
     }
 
+    // Prepare update data with proper date conversion
+    const updateData: any = {
+      ...body,
+      updatedAt: new Date()
+    };
+
     // Track status changes
     if (body.status && body.status !== currentJob?.status) {
       if (!currentJob.statusHistory) {
@@ -277,6 +283,8 @@ export async function PUT(
         changedAt: new Date(),
         previousStatus: currentJob.status
       });
+      // Ensure the updated status history is saved to the database
+      updateData.statusHistory = currentJob.statusHistory;
     }
 
     // Auto-schedule follow-up when job enters applied stage
@@ -297,12 +305,6 @@ export async function PUT(
         ];
       }
     }
-
-    // Prepare update data with proper date conversion
-    const updateData = {
-      ...body,
-      updatedAt: new Date()
-    };
 
     // Remove immutable/system fields to prevent MongoServerError or schema violations
     delete updateData.id;

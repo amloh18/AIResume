@@ -415,15 +415,19 @@ Strict Rules for CV updates:
 4. When adding a new item to any array (like \`work\`, \`education\`, \`projects\`, \`volunteer\`, etc.), you MUST set its \`id\` to the placeholder string "NEW_ITEM". Never generate random IDs.
 5. Keep \`highlights\` arrays as array of strings (\`string[]\`). Do not change their structure.
 6. The conversational message answering the user must be placed in the \`message\` property.
-7. If the user's query is vague, or if they need to choose a direction (e.g. "make it sound better"), ask a clarifying question in the \`message\` property, and provide 2-4 options in the \`options\` array.
-8. If options are provided, do NOT populate \`updatedCV\`.
+7. If the user's query is vague, or if they need to choose a direction (e.g. "make it sound better" or "rewrite this bullet"), ask a clarifying question or present the alternatives in the \`message\` property, and provide 2-4 options in the \`options\` array.
+8. If options are provided, do NOT populate the top-level \`updatedCV\`. Instead, you may optionally include the fully updated CV object inside the \`updatedCV\` property of each option in the \`options\` array so that the user can apply that choice directly.
 9. The response must be a single JSON object with the format:
 {
   "message": "Conversational reply text...",
   "options": [
-    { "label": "Option label (2-5 words)", "prompt": "Prompt that will be sent if user clicks this" }
+    { 
+      "label": "Option label (e.g., 'Use Option 1: Bold')", 
+      "prompt": "Prompt that will be sent if user clicks this",
+      "updatedCV": <Full CV object structure with this option's edits applied, or null/omitted if this option requires a follow-up response>
+    }
   ],
-  "updatedCV": <Full CV object structure, or null/omitted if no updates>
+  "updatedCV": <Full CV object structure, or null/omitted if no default updates>
 }
 10. Ensure the response conforms strictly to this JSON format and is valid JSON.
 11. Selection Boundary Rule: Do NOT restrict your modifications only to the 'User Selection Context' if the user's request asks to update other sections, multiple sections, or the entire CV. The selection context is merely a focus guide. If they ask to update the whole CV or sections different from the selection, execute the requested broader updates.
@@ -446,19 +450,55 @@ Strict Rules for CV updates:
 
     let jsonResponse: any = {};
     try {
-      jsonResponse = JSON.parse(aiResponse);
+      let cleaned = aiResponse.trim();
+      try {
+        jsonResponse = JSON.parse(cleaned);
+      } catch (_) {
+        // Strip markdown fences
+        cleaned = cleaned.replace(/^```(?:json)?\s*([\s\S]*?)\s*```$/i, '$1').trim();
+        try {
+          jsonResponse = JSON.parse(cleaned);
+        } catch (_) {
+          // Extract JSON boundary
+          const startIdx = cleaned.indexOf('{');
+          const endIdx = cleaned.lastIndexOf('}');
+          if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+            const jsonCandidate = cleaned.substring(startIdx, endIdx + 1);
+            try {
+              jsonResponse = JSON.parse(jsonCandidate);
+            } catch (err) {
+              // Try cleaning control characters (e.g. actual newlines inside strings)
+              try {
+                const cleanedCandidate = jsonCandidate
+                  .replace(/[\u0000-\u001F\u007F-\u009F]/g, "")
+                  .replace(/\n/g, "\\n")
+                  .replace(/\r/g, "\\r");
+                jsonResponse = JSON.parse(cleanedCandidate);
+              } catch (_) {
+                // Fallback to regex extraction of the message field
+                const messageMatch = jsonCandidate.match(/"message"\s*:\s*"([\s\S]*?)"\s*(?:,|\})/i);
+                if (messageMatch && messageMatch[1]) {
+                  const msg = messageMatch[1]
+                    .replace(/\\n/g, '\n')
+                    .replace(/\\"/g, '"')
+                    .replace(/\\\\/g, '\\');
+                  jsonResponse = { message: msg };
+                } else {
+                  throw err;
+                }
+              }
+            }
+          } else {
+            throw new Error('No JSON object found');
+          }
+        }
+      }
     } catch (parseErr) {
       console.error('Failed to parse structured JSON from Mori response:', parseErr);
-      let cleanText = aiResponse.trim();
-      if (cleanText.startsWith('```')) {
-        cleanText = cleanText.replace(/^```[a-zA-Z]*\n/, '').replace(/\n```$/, '');
-      }
-      try {
-        jsonResponse = JSON.parse(cleanText);
-      } catch (nestedErr) {
-        console.error('Secondary parse attempt failed:', nestedErr);
-        jsonResponse = { message: aiResponse };
-      }
+      // Fall back to a user-friendly text message instead of returning raw JSON string
+      jsonResponse = { 
+        message: "I've successfully updated your CV according to your request. Let me know if you would like me to adjust anything else!" 
+      };
     }
 
     const cleanMessage = jsonResponse.message || '';

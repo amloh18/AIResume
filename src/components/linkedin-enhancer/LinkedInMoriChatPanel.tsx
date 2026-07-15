@@ -523,13 +523,15 @@ export default function LinkedInMoriChatPanel({ cvId, cvType, onCvUpdated, onClo
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 10, opacity: 0, scale: 0.95 }}
-              className="pointer-events-auto bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30 rounded-t-xl px-3 py-2 flex items-center justify-between mb-0 shadow-sm mx-1"
+              className="pointer-events-auto bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30 rounded-t-xl px-3 py-2 flex items-center justify-between mb-0 shadow-sm mx-1 min-w-0 w-full"
             >
-              <div className="flex items-center gap-2 overflow-hidden flex-1 mr-2">
+              <div className="flex items-center gap-2 overflow-hidden flex-1 mr-2 min-w-0">
                 <MousePointer2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                <div className="text-[11px] font-medium text-emerald-800 dark:text-emerald-300 truncate">
-                  <span className="opacity-70 mr-1">Targeting:</span>
-                  "{currentSelection.text}"
+                <div className="text-[11px] font-medium text-emerald-800 dark:text-emerald-300 flex items-center gap-1 min-w-0 max-w-full">
+                  <span className="opacity-70 shrink-0">Targeting:</span>
+                  <span className="truncate max-w-[120px] xs:max-w-[180px] sm:max-w-[280px] md:max-w-[380px]">
+                    "{currentSelection.text}"
+                  </span>
                 </div>
               </div>
               <button 

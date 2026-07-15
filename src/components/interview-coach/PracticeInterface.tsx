@@ -225,9 +225,13 @@ const PracticeInterface: React.FC<PracticeInterfaceProps> = ({ userId, jobId, mo
             recorder.start();
             setMediaRecorder(recorder);
             setIsRecording(true);
-        } catch (err) {
+        } catch (err: any) {
             console.error('Error accessing microphone:', err);
-            toast.error('Could not access microphone. Please check permissions.');
+            if (err?.name === 'NotAllowedError' || err?.name === 'PermissionDeniedError') {
+                toast.error('Microphone access blocked. Click the lock/settings icon in your browser address bar to allow microphone access.', { duration: 6000 });
+            } else {
+                toast.error('Could not access microphone. Please check permissions.');
+            }
         }
     }, [isRecording, mediaRecorder]);
 

@@ -72,8 +72,15 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
   const [appliedDiscount, setAppliedDiscount] = useState<DiscountCode | null>(null);
   const [discountError, setDiscountError] = useState<string | null>(null);
   const [currentUserPlan, setCurrentUserPlan] = useState<string>(propCurrentUserPlan || 'free');
+
+  useEffect(() => {
+    if (propCurrentUserPlan) {
+      setCurrentUserPlan(propCurrentUserPlan);
+    }
+  }, [propCurrentUserPlan]);
   const [userCurrentPlan, setUserCurrentPlan] = useState<any>(null);
   const [showPromotionalPricing, setShowPromotionalPricing] = useState(false);
+  const [isCurrentPlanExpanded, setIsCurrentPlanExpanded] = useState(false);
   const [userChangedPlan, setUserChangedPlan] = useState(false); // Track if user manually changed plan
   const [providerHealth, setProviderHealth] = useState<{
     polar: boolean | null;
@@ -659,6 +666,26 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
 
   // getEffectivePrice is now provided by the usePricingPlans hook
 
+  const PLAN_TIER: Record<string, number> = {
+    'free': 0,
+    'starter_monthly': 0,
+    'starter_yearly': 1,
+    'focused_monthly': 2,
+    'focused_yearly': 3,
+    'smart_quarterly': 4,
+    'smart_yearly': 5,
+    'pro_monthly': 6,
+    'pro_yearly': 7,
+    'pro_lifetime': 8,
+  };
+
+  const isLowerPlan = (plan: PricingPlan) => {
+    if (adminMode) return false;
+    const currentTier = PLAN_TIER[currentUserPlan === 'free' ? 'starter_monthly' : (currentUserPlan || 'starter_monthly')] || 0;
+    const planTier = PLAN_TIER[plan.key] || 0;
+    return planTier < currentTier;
+  };
+
   // Check if a plan is the user's current plan
   const isCurrentPlan = (plan: PricingPlan) => {
     if (adminMode) return false;
@@ -670,6 +697,9 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
   const getPlanStatusText = (plan: PricingPlan) => {
     if (isCurrentPlan(plan)) {
       return 'Current Plan';
+    }
+    if (isLowerPlan(plan)) {
+      return 'Downgrade (Unavailable)';
     }
     if (plan.key === 'free' && currentUserPlan !== 'free') {
       return 'Downgrade';
@@ -1177,16 +1207,10 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                  <div className="flex-1 flex flex-col justify-between w-full">
                   {step === 1 && (
                     <>
-                      {/* Current Plan Info - Displayed outside cards */}
-                      {/* Current Plan moved inside plans container */}
-
-                      {/* Selected Plan Display (if preselected and different from current) - REMOVED DUPLICATE BLOCK */}
-
-
                       {/* Unified Plans Container with Header & Current Plan */}
                       {(() => {
                         const availablePlans = Array.isArray(pricingPlans) && pricingPlans.length > 0
-                          ? pricingPlans.filter(plan => plan.key !== 'free' && !isCurrentPlan(plan))
+                          ? pricingPlans.filter(plan => plan.key !== 'free')
                           : [];
 
                         let currentPlan = pricingPlans.find((plan: PricingPlan) => isCurrentPlan(plan));
@@ -1204,7 +1228,6 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                           if (billingCycle === 'yearly') {
                             return key.includes('yearly') || key.includes('lifetime');
                           } else {
-                            // Exclude starter_monthly in the main cards list for monthly billing view
                             if (key === 'starter_monthly') return false;
                             return key.includes('monthly') || key.includes('quarterly');
                           }
@@ -1257,20 +1280,56 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
 
                             {/* --- CURRENT PLAN MOVED INSIDE --- */}
                             {currentPlan && !adminMode && (
-                              <div className="mx-0 p-3 bg-white dark:bg-[#232f1c] rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm">
-                                <div className="flex items-center gap-4">
-                                  <div className="flex-shrink-0">
-                                    <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-lime-500/10 text-lime-600 dark:text-lime-400">
-                                      {(() => { const Icon = getPlanIcon(currentPlan.key); return <Icon size={20} />; })()}
+                              <div className="mx-0 bg-white dark:bg-[#232f1c] rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm overflow-hidden transition-all duration-300">
+                                <button
+                                  onClick={() => setIsCurrentPlanExpanded(prev => !prev)}
+                                  className="w-full text-left p-4 flex items-center justify-between hover:bg-gray-50/50 dark:hover:bg-white/[0.02] transition-colors border-none bg-transparent"
+                                >
+                                  <div className="flex items-center gap-4">
+                                    <div className="flex-shrink-0">
+                                      <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-lime-500/10 text-lime-600 dark:text-lime-400">
+                                        {(() => { const Icon = getPlanIcon(currentPlan.key); return <Icon size={20} />; })()}
+                                      </div>
+                                    </div>
+                                    <div className="flex-1">
+                                      <div className="flex items-center gap-2">
+                                        <h3 className="text-md font-bold text-gray-900 dark:text-white">{currentPlan.name}</h3>
+                                        <span className="bg-lime-100 text-lime-800 text-[9px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider">Current</span>
+                                      </div>
                                     </div>
                                   </div>
-                                  <div className="flex-1">
-                                    <div className="flex items-center gap-2">
-                                      <h3 className="text-md font-bold text-gray-900 dark:text-white">{currentPlan.name}</h3>
-                                      <span className="bg-lime-100 text-lime-800 text-[9px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider">Current</span>
-                                    </div>
+                                  <div className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors">
+                                    {isCurrentPlanExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                                   </div>
-                                </div>
+                                </button>
+
+                                <AnimatePresence>
+                                  {isCurrentPlanExpanded && (
+                                    <motion.div
+                                      initial={{ height: 0, opacity: 0 }}
+                                      animate={{ height: 'auto', opacity: 1 }}
+                                      exit={{ height: 0, opacity: 0 }}
+                                      transition={{ duration: 0.25, ease: 'easeInOut' }}
+                                      className="border-t border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-black/10 px-4 py-3"
+                                    >
+                                      <div className="text-xs font-bold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wider">
+                                        Features & Benefits Included:
+                                      </div>
+                                      <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                        {Array.isArray(currentPlan.features) && currentPlan.features.length > 0 ? (
+                                          currentPlan.features.map((feature: string, idx: number) => (
+                                            <li key={idx} className="flex items-start gap-2 text-xs text-gray-600 dark:text-gray-300">
+                                              <CheckCircle className="w-3.5 h-3.5 text-lime-500 mt-0.5 shrink-0" />
+                                              <span>{feature}</span>
+                                            </li>
+                                          ))
+                                        ) : (
+                                          <li className="text-xs text-gray-400 italic">No features listed.</li>
+                                        )}
+                                      </ul>
+                                    </motion.div>
+                                  )}
+                                </AnimatePresence>
                               </div>
                             )}
 
@@ -1302,13 +1361,16 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                                     <div
                                       key={plan.key}
                                       onClick={() => {
+                                        if (isLowerPlan(plan)) return;
                                         setUserChangedPlan(true);
                                         setSelectedPlan(plan);
                                       }}
-                                      className={`group relative flex flex-col p-5 rounded-3xl border-2 transition-all duration-300 cursor-pointer ${
-                                        isSelected
-                                          ? 'border-lime-500 bg-white dark:bg-[#1A201A] shadow-lg shadow-lime-500/10 scale-[1.02] z-10'
-                                          : 'border-gray-200 hover:border-gray-300 dark:border-white/5 bg-white dark:bg-white/5'
+                                      className={`group relative flex flex-col p-5 rounded-3xl border-2 transition-all duration-300 ${
+                                        isLowerPlan(plan) 
+                                          ? 'opacity-40 cursor-not-allowed border-gray-200 dark:border-white/5 bg-gray-50 dark:bg-white/5' 
+                                          : 'cursor-pointer ' + (isSelected
+                                            ? 'border-lime-500 bg-white dark:bg-[#1A201A] shadow-lg shadow-lime-500/10 scale-[1.02] z-10'
+                                            : 'border-gray-200 hover:border-gray-300 dark:border-white/5 bg-white dark:bg-white/5')
                                       }`}
                                     >
                                       {/* Selection Indicator & Badge */}

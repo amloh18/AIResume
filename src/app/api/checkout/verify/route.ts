@@ -67,7 +67,28 @@ export async function GET(request: NextRequest) {
       ]
     });
 
-    const planKey = plan ? plan.key : 'starter_monthly';
+    if (!productId && !priceId) {
+      console.error('[POLAR VERIFY] No productId or priceId in checkout - cannot map plan:', checkoutId);
+      return NextResponse.json({ success: false, error: 'Cannot determine plan from checkout - missing product/price IDs' }, { status: 422 });
+    }
+
+    console.log(`[POLAR VERIFY] Plan lookup: productId=${productId} priceId=${priceId}`);
+
+    if (!plan) {
+      // CRITICAL: Do NOT silently fall back to starter_monthly.
+      // Log unmapped IDs so admin can fix PricingPlan product ID mapping.
+      console.error(
+        `[POLAR VERIFY] ⚠️ PLAN MAPPING FAILURE for checkout ${checkoutId}: ` +
+        `productId=${productId} priceId=${priceId} matched no PricingPlan document. ` +
+        'Fix: ensure PricingPlan docs have correct polarProductId_* / polarPriceId_* fields.'
+      );
+      return NextResponse.json({
+        success: false,
+        error: `Plan mapping failed. Payment was successful on Polar but internal plan could not be resolved for productId=${productId}. Please contact support.`
+      }, { status: 422 });
+    }
+
+    const planKey = plan.key;
     const metadata: Record<string, any> = checkout.metadata || {};
     const interval = metadata.interval || 'monthly';
     const amount = (checkout.amount || 0) / 100;

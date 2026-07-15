@@ -2,9 +2,14 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
+import { useSession } from 'next-auth/react';
+import { useMembership } from '@/lib/hooks/useMembership';
+import { UserTier } from '@/types/dashboard-widgets';
+import UpgradeBanner from '@/components/dashboard/redesigned/UpgradeBanner';
 import { 
   Send, Sparkles, User, Loader2, Trash2, CornerDownRight, 
-  MousePointer2, MessageSquare, History, Edit2, X, Plus, ChevronRight, Check
+  MousePointer2, MessageSquare, History, Edit2, X, Plus, ChevronRight, Check,
+  ChevronUp, ChevronDown, Mic, Paperclip
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -43,14 +48,161 @@ const SUGGESTIONS = [
 interface MoriCoverLetterChatProps {
   onBodyChange?: (content: string) => void;
   onClose?: () => void;
+  isBottomOverlay?: boolean;
 }
+
+const COVER_LETTER_PLACEHOLDERS = [
+  "Ask Mori AI to polish your cover letter...",
+  "Ask Mori AI by voice (click Mic)...",
+  "Mori can align your letter to target jobs...",
+  "Mori can make the introduction more hook-like...",
+  "Mori can improve grammatical tone...",
+  "Mori can make the cover letter shorter/longer..."
+];
 
 export const MoriCoverLetterChat: React.FC<MoriCoverLetterChatProps> = ({
   onBodyChange,
-  onClose
+  onClose,
+  isBottomOverlay = false
 }) => {
   const { state, dispatch } = useResumeEnhancer();
   const [input, setInput] = useState('');
+
+  const { data: session, status: sessionStatus } = useSession();
+  const { membership } = useMembership();
+  const planKey = membership?.planKey || 'free';
+  const userTier: UserTier = planKey.toLowerCase().startsWith('smart') || planKey.toLowerCase().startsWith('pro') 
+    ? 'smart' 
+    : planKey.toLowerCase().startsWith('focused') 
+      ? 'focused' 
+      : 'starter';
+
+  const [limitExhausted, setLimitExhausted] = useState(false);
+
+  const checkMoriLimit = async () => {
+    if (sessionStatus === 'unauthenticated') return;
+    try {
+      const res = await fetch('/api/ai/mori-chat/history');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.limitExhausted !== undefined) {
+          setLimitExhausted(data.limitExhausted);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to fetch Mori Chat limit status', e);
+    }
+  };
+
+  useEffect(() => {
+    if (sessionStatus === 'authenticated') {
+      checkMoriLimit();
+    }
+  }, [sessionStatus]);
+  
+  const [placeholderIndex, setPlaceholderIndex] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setPlaceholderIndex((prev) => (prev + 1) % COVER_LETTER_PLACEHOLDERS.length);
+    }, 3500);
+    return () => clearInterval(timer);
+  }, []);
+
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
+
+  const startListening = async () => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      toast.error("Speech recognition is not supported in this browser. Try Chrome or Safari!");
+      return;
+    }
+
+    // Stop existing session before starting new one
+    if (recognitionRef.current) {
+      try { recognitionRef.current.stop(); } catch (_) {}
+    }
+
+    // Explicitly request microphone access first to trigger the browser's permission prompt if needed
+    try {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        // Stop the tracks immediately as we only needed to verify/trigger permission
+        stream.getTracks().forEach(track => track.stop());
+      }
+    } catch (err: any) {
+      console.warn('[Mori Cover Letter STT] Microphone permission request failed:', err);
+      toast.error(
+        "Microphone access blocked. Click the lock/settings icon in your browser address bar to allow microphone access.",
+        { duration: 6000 }
+      );
+      setIsListening(false);
+      return;
+    }
+
+    try {
+      const rec = new SpeechRecognition();
+      rec.continuous = false;
+      rec.interimResults = false;
+      rec.lang = 'en-US';
+
+      rec.onstart = () => {
+        setIsListening(true);
+        toast.success("Listening... Speak now!");
+      };
+
+      rec.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        if (transcript) {
+          setInput((prev) => prev + (prev ? ' ' : '') + transcript);
+        }
+      };
+
+      rec.onerror = (e: any) => {
+        const errorCode: string = typeof e?.error === 'string' ? e.error : 'unknown';
+        const userMessages: Record<string, string> = {
+          'no-speech': 'No speech detected. Try again.',
+          'audio-capture': 'Microphone not found. Check your audio settings.',
+          'not-allowed': 'Microphone access denied. Click the lock/settings icon in your browser address bar to allow microphone access.',
+          'network': 'Network error during recognition. Check connection.',
+          'aborted': '', // silent — user stopped manually
+          'service-not-allowed': 'Speech service not available.',
+        };
+        const msg = userMessages[errorCode];
+        if (msg) toast.error(msg, { duration: 6000 });
+        if (errorCode !== 'aborted') {
+          console.warn('[Mori Cover Letter STT] Speech recognition error code:', errorCode);
+        }
+        setIsListening(false);
+      };
+
+      rec.onend = () => {
+        setIsListening(false);
+      };
+
+      recognitionRef.current = rec;
+      rec.start();
+    } catch (err) {
+      console.error(err);
+      setIsListening(false);
+    }
+  };
+
+  const stopListening = () => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+    }
+    setIsListening(false);
+  };
+
+  const toggleListening = () => {
+    if (isListening) {
+      stopListening();
+    } else {
+      startListening();
+    }
+  };
+
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 'welcome',
@@ -61,6 +213,7 @@ export const MoriCoverLetterChat: React.FC<MoriCoverLetterChatProps> = ({
   ]);
   const [isLoading, setIsLoading] = useState(false);
   const [currentSelection, setCurrentSelection] = useState<{ text: string } | null>(null);
+  const [isCollapsed, setIsCollapsed] = useState(false);
   
   // History State
   const [chatId, setChatId] = useState<string | null>(null);
@@ -331,252 +484,279 @@ Please rewrite the cover letter body to fulfill the request. Return the rewritte
   };
 
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/5 rounded-2xl shadow-sm relative overflow-hidden">
-      
-      {/* Header Bar */}
-      <div className="px-4 py-2 border-b border-slate-200 dark:border-white/10 flex items-center justify-between bg-white dark:bg-transparent shrink-0">
-        <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
-          <MessageSquare className="w-4 h-4 text-emerald-500" />
-          {chatId ? chatHistory.find(c => c.id === chatId)?.title || 'Current Chat' : 'New Chat'}
+    <div className={`${isBottomOverlay ? "w-full flex flex-col pointer-events-auto relative" : "flex flex-col h-full bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/5 rounded-2xl shadow-sm relative overflow-hidden"} ${limitExhausted ? "min-h-[400px]" : ""}`}>
+      {limitExhausted && (
+        <div className="absolute inset-0 bg-white/95 dark:bg-[#141810]/98 backdrop-blur-md z-[55] p-3 rounded-2xl flex items-center justify-center">
+          <UpgradeBanner tier={userTier} isCompact={true} context="mori" />
         </div>
-        <div className="flex items-center gap-1.5">
-          <button 
-            onClick={handleNewChat}
-            className="p-1.5 hover:bg-slate-100 dark:hover:bg-white/5 rounded-md text-emerald-600 transition-all flex items-center gap-1 text-[10px] font-bold"
-            title="New Chat"
-          >
-            <Plus className="w-3.5 h-3.5" /> New
-          </button>
-          <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1"></div>
-          <button 
-            onClick={() => setShowHistory(!showHistory)}
-            className={`p-1.5 rounded-md transition-all flex items-center gap-1 text-[10px] font-bold ${showHistory ? 'bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-white' : 'hover:bg-slate-100 dark:hover:bg-white/5 text-slate-600 dark:text-slate-400'}`}
-            title="History"
-          >
-            <History className="w-3.5 h-3.5" /> History
-          </button>
-          {onClose && (
-            <>
-              <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1"></div>
-              <button 
-                onClick={onClose}
-                className="p-1.5 hover:bg-slate-100 dark:hover:bg-white/5 rounded-md text-gray-400 hover:text-red-500 transition-all"
-                title="Close Mori Chat"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Main Content Area */}
-      <div className="flex-1 relative overflow-hidden">
-        
-        {/* History Overlay Panel */}
-        <AnimatePresence>
-          {showHistory && (
-            <motion.div 
-              initial={{ x: '100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '100%' }}
-              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="absolute inset-0 z-20 bg-white dark:bg-[#141810] flex flex-col"
-            >
-              <div className="p-3 border-b border-slate-200 dark:border-white/10 bg-gray-50 dark:bg-transparent flex justify-between items-center">
-                <span className="text-xs font-bold text-slate-600 dark:text-slate-400">Previous Conversations</span>
-                <button onClick={() => setShowHistory(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-white"><X className="w-4 h-4" /></button>
-              </div>
-              <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
-                {chatHistory.length === 0 ? (
-                  <div className="text-center p-6 text-xs text-slate-400 italic">No previous chats found.</div>
-                ) : (
-                  chatHistory.map((chat) => (
-                    <div 
-                      key={chat.id}
-                      onClick={() => handleLoadChat(chat.id)}
-                      className={`group flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors border ${chatId === chat.id ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20' : 'bg-transparent border-transparent hover:bg-slate-50 dark:hover:bg-white/5 hover:border-slate-200 dark:hover:border-white/10'}`}
-                    >
-                      {editingChatId === chat.id ? (
-                        <div className="flex items-center gap-2 flex-1" onClick={e => e.stopPropagation()}>
-                          <input 
-                            autoFocus
-                            value={editTitle}
-                            onChange={e => setEditTitle(e.target.value)}
-                            onKeyDown={e => handleRenameChat(e, chat.id)}
-                            className="flex-1 text-xs px-2 py-1 bg-white dark:bg-[#141810] border border-emerald-500 outline-none rounded"
-                          />
-                          <button onClick={(e) => handleRenameChat(e, chat.id)} className="text-emerald-600 hover:text-emerald-700">Save</button>
-                        </div>
-                      ) : (
-                        <>
-                          <div className="flex-1 min-w-0 pr-3">
-                            <h4 className={`text-xs font-semibold truncate ${chatId === chat.id ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-700 dark:text-slate-300'}`}>
-                              {chat.title}
-                            </h4>
-                            <p className="text-[10px] text-slate-400 mt-0.5">
-                              {new Date(chat.updatedAt).toLocaleDateString()}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button 
-                              onClick={(e) => { e.stopPropagation(); setEditTitle(chat.title); setEditingChatId(chat.id); }}
-                              className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded"
-                            >
-                              <Edit2 className="w-3.5 h-3.5" />
-                            </button>
-                            <button 
-                              onClick={(e) => handleDeleteChat(e, chat.id)}
-                              className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  ))
-                )}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Messages Area */}
-        <div 
-          ref={scrollRef}
-          className="absolute inset-0 overflow-y-auto p-4 space-y-5 hide-scrollbar pb-32"
-        >
-          {messages.map((m) => (
+      )}
+      {isBottomOverlay ? (
+        <div className="w-full bg-white dark:bg-[#141810] rounded-2xl border border-slate-200 dark:border-white/10 p-4 flex flex-col gap-3.5 shadow-xl">
+          {/* 1. Chat conversation history inside the same container (shown only if not collapsed) */}
+          {messages.length > 1 && !isCollapsed && (
             <div 
-              key={m.id}
-              className={`flex flex-col ${m.role === 'user' ? 'items-end' : 'items-start'}`}
+              ref={scrollRef}
+              className="flex-grow overflow-y-auto max-h-[220px] space-y-4 border-b border-slate-100 dark:border-white/5 pb-3 mb-1 custom-scrollbar min-h-[90px] flex flex-col pr-1"
             >
-              <div className={`flex gap-2 max-w-[90%] ${m.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
-                <div className={`w-7 h-7 rounded-full shrink-0 flex items-center justify-center mt-1 ${m.role === 'user' ? 'bg-emerald-500' : 'bg-slate-200 dark:bg-white/10'}`}>
-                  {m.role === 'user' ? <User className="w-4 h-4 text-white" /> : <Sparkles className="w-4 h-4 text-emerald-500" />}
-                </div>
-                <div className="space-y-1 min-w-0">
-                  <div className={`px-3.5 py-2.5 rounded-2xl text-[13px] leading-relaxed ${
-                    m.role === 'user' 
-                      ? 'bg-emerald-500 text-white rounded-tr-none shadow-sm' 
-                      : 'bg-white dark:bg-white/5 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-white/10 rounded-tl-none shadow-sm'
-                  }`}>
-                    {m.selection && (
-                      <div className="mb-2 pb-2 border-b border-white/20 opacity-90 text-[11px] font-medium flex items-start gap-1.5">
-                        <CornerDownRight className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                        <span className="italic leading-snug">"{m.selection.text.substring(0, 60)}{m.selection.text.length > 60 ? '...' : ''}"</span>
+              {showHistory ? (
+                <div className="space-y-2 p-1">
+                  <div className="flex justify-between items-center border-b border-slate-100 dark:border-white/5 pb-1.5 mb-2">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Previous Chats</span>
+                    <button onClick={() => setShowHistory(false)} className="text-slate-455 hover:text-slate-655 text-xs font-semibold bg-transparent border-none">Back to Chat</button>
+                  </div>
+                  {chatHistory.length === 0 ? (
+                    <div className="text-center py-6 text-xs text-slate-400 italic">No previous chats.</div>
+                  ) : (
+                    chatHistory.map((chat) => (
+                      <div 
+                        key={chat.id}
+                        onClick={() => handleLoadChat(chat.id)}
+                        className={`group flex items-center justify-between p-2.5 rounded-lg cursor-pointer transition-colors border ${chatId === chat.id ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-250' : 'border-transparent hover:bg-slate-50 dark:hover:bg-white/5'}`}
+                      >
+                        <div className="flex-grow min-w-0 pr-2">
+                          <h4 className="text-xs font-bold truncate text-slate-700 dark:text-slate-350">{chat.title}</h4>
+                        </div>
+                        <button onClick={(e) => { e.stopPropagation(); handleDeleteChat(e, chat.id); }} className="text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-transparent border-none">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
-                    )}
-                    <span className="whitespace-pre-line">{m.content}</span>
-                  </div>
-                  <div className={`text-[9px] text-slate-400 px-1 font-medium ${m.role === 'user' ? 'text-right' : 'text-left'}`}>
-                    {new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </div>
+                    ))
+                  )}
                 </div>
-              </div>
-
-
-
-              {/* Suggestions chips for welcome message */}
-              {m.id === 'welcome' && messages.length === 1 && (
-                <div className="ml-9 mt-3 flex flex-wrap gap-2 max-w-[90%]">
-                  {SUGGESTIONS.map((sug, i) => (
-                    <button
-                      key={i}
-                      onClick={() => handleSend(sug.prompt)}
-                      disabled={isLoading}
-                      className="px-3.5 py-1.5 bg-emerald-50/50 hover:bg-emerald-50 dark:bg-emerald-500/5 dark:hover:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 rounded-xl text-[11px] font-semibold text-emerald-800 dark:text-emerald-300 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-sm flex items-center gap-1.5"
-                    >
-                      {sug.label}
-                    </button>
-                  ))}
+              ) : (
+                messages.map((m) => (
+                  <div 
+                    key={m.id}
+                    className={`flex flex-col ${m.role === 'user' ? 'items-end' : 'items-start'}`}
+                  >
+                    <div className={`flex gap-2.5 max-w-[90%] ${m.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
+                      <div className={`w-6 h-6 rounded-full shrink-0 flex items-center justify-center mt-0.5 ${m.role === 'user' ? 'bg-emerald-500' : 'bg-slate-200 dark:bg-white/10'}`}>
+                        {m.role === 'user' ? <User className="w-3 h-3 text-white" /> : <Sparkles className="w-3 h-3 text-emerald-500" />}
+                      </div>
+                      <div className="space-y-0.5 min-w-0">
+                        <div className={`px-3 py-2 rounded-xl text-[12.5px] leading-relaxed ${
+                          m.role === 'user' 
+                            ? 'bg-emerald-500 text-white rounded-tr-none shadow-sm' 
+                            : 'bg-slate-50 dark:bg-white/5 text-slate-700 dark:text-slate-200 border border-slate-150 dark:border-white/10 rounded-tl-none shadow-sm'
+                        }`}>
+                          {m.selection && (
+                            <div className="mb-1.5 pb-1.5 border-b border-black/10 dark:border-white/10 opacity-90 text-[10px] font-medium flex items-start gap-1">
+                              <CornerDownRight className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                              <span className="italic leading-snug">"{m.selection.text.substring(0, 60)}{m.selection.text.length > 60 ? '...' : ''}"</span>
+                            </div>
+                          )}
+                          <span className="whitespace-pre-line">{m.content}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+              {isLoading && (
+                <div className="flex gap-2.5 items-start mt-2">
+                  <div className="w-6 h-6 rounded-full shrink-0 flex items-center justify-center mt-0.5 bg-slate-250 dark:bg-white/10">
+                    <Sparkles className="w-3 h-3 text-emerald-500 animate-spin" />
+                  </div>
+                  <div className="px-3 py-2 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-155 dark:border-white/10 rounded-tl-none shadow-sm flex items-center">
+                    <div className="flex items-center space-x-1">
+                      <div className="w-1.5 h-1.5 bg-emerald-450 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                      <div className="w-1.5 h-1.5 bg-emerald-450 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                      <div className="w-1.5 h-1.5 bg-emerald-450 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                    </div>
+                  </div>
                 </div>
               )}
-
             </div>
-          ))}
-          {isLoading && (
-            <div className="flex flex-col items-start mt-2">
-              <div className="flex gap-2 max-w-[90%] flex-row">
-                <div className="w-7 h-7 rounded-full shrink-0 flex items-center justify-center mt-1 bg-slate-200 dark:bg-white/10 shadow-sm">
-                  <Sparkles className="w-4 h-4 text-emerald-500" />
+          )}
+
+          {/* Target Selection Banner above input */}
+          <AnimatePresence>
+            {currentSelection && (
+              <motion.div 
+                initial={{ y: 5, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: 5, opacity: 0 }}
+                className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-250 dark:border-emerald-500/35 rounded-xl px-3 py-1.5 flex items-center justify-between shadow-sm shrink-0 min-w-0 w-full"
+              >
+                <div className="flex items-center gap-2 overflow-hidden flex-grow mr-2 min-w-0">
+                  <MousePointer2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <div className="text-[10px] font-medium text-emerald-800 dark:text-emerald-300 flex items-center gap-1 min-w-0 max-w-full">
+                    <span className="opacity-70 shrink-0">Targeting Selection:</span>
+                    <span className="truncate max-w-[120px] xs:max-w-[180px] sm:max-w-[280px] md:max-w-[380px]">
+                      "{currentSelection.text}"
+                    </span>
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <div className="px-4 py-3.5 rounded-2xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-tl-none shadow-sm flex items-center h-[38px]">
-                    <div className="flex items-center space-x-1.5">
-                      <div className="w-1.5 h-1.5 bg-emerald-400/80 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                      <div className="w-1.5 h-1.5 bg-emerald-400/80 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                      <div className="w-1.5 h-1.5 bg-emerald-400/80 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                <button onClick={() => setCurrentSelection(null)} className="p-0.5 hover:bg-emerald-200 dark:hover:bg-emerald-500/30 rounded text-emerald-600 dark:text-emerald-400 transition-colors shrink-0 bg-transparent border-none">
+                  <X className="w-3 h-3" />
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* 3. Main Action/Input bar row */}
+          <div className="flex items-center gap-2.5 w-full">
+            {/* Textarea Input Container */}
+            <div className="flex-grow flex-1 relative bg-gray-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-3 py-2 flex items-center gap-2.5">
+              <textarea
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onFocus={() => {
+                  if (isCollapsed) setIsCollapsed(false);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend();
+                  }
+                }}
+                placeholder={COVER_LETTER_PLACEHOLDERS[placeholderIndex]}
+                rows={1}
+                className="flex-grow bg-transparent text-[13px] placeholder:text-[13px] placeholder:text-slate-400 dark:placeholder-slate-500 focus:outline-none resize-none dark:text-white self-center py-0.5"
+                style={{ minHeight: '22px', maxHeight: '90px' }}
+              />
+            </div>
+
+            {/* Circular Voice Input Button */}
+            <button 
+              onClick={toggleListening}
+              className={`w-10 h-10 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-sm hover:shadow active:scale-95 shrink-0 ${
+                isListening 
+                  ? 'bg-red-500 border-red-500 text-white animate-pulse' 
+                  : 'bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-500 hover:text-slate-700 dark:hover:text-white'
+              }`}
+              title={isListening ? "Stop Voice Input" : "Voice Input"}
+            >
+              <Mic className={`w-4 h-4 ${isListening ? 'animate-bounce' : ''}`} />
+            </button>
+
+            {/* History Toggle button */}
+            <button 
+              onClick={() => setShowHistory(!showHistory)}
+              className={`w-10 h-10 rounded-full flex items-center justify-center border transition-all cursor-pointer shadow-sm active:scale-95 shrink-0 ${
+                showHistory 
+                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500' 
+                  : 'bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-500 hover:text-slate-700 dark:hover:text-white'
+              }`}
+              title="History"
+            >
+              <History className="w-4 h-4" />
+            </button>
+
+            {/* Chevron Expand/Collapse Toggle button */}
+            <button 
+              onClick={() => setIsCollapsed(!isCollapsed)}
+              className={`w-10 h-10 rounded-full flex items-center justify-center border transition-all cursor-pointer shadow-sm active:scale-95 shrink-0 ${
+                !isCollapsed 
+                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500' 
+                  : 'bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-500 hover:text-slate-700 dark:hover:text-white'
+              }`}
+              title={isCollapsed ? "Expand Chat" : "Collapse Chat"}
+            >
+              {isCollapsed ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
+
+            {/* circular send button */}
+            <button
+              onClick={() => handleSend()}
+              disabled={!input.trim() || isLoading}
+              className={`w-10 h-10 rounded-full flex items-center justify-center transition-all shrink-0 ${
+                input.trim() && !isLoading 
+                  ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-md cursor-pointer hover:scale-105 active:scale-95' 
+                  : 'bg-slate-100 dark:bg-white/5 text-slate-400 dark:text-slate-600 cursor-not-allowed'
+              }`}
+            >
+              <Send className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          {/* 4. Suggested Prompts bar (shown only in initial welcome state) */}
+          {messages.length <= 1 && !showHistory && (
+            <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 flex-wrap mt-0.5">
+              <span className="font-bold">Suggested prompts:</span>
+              <button onClick={() => handleSend("Improve tone")} className="px-3 py-1 bg-slate-105 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-350 rounded-full font-semibold transition-colors cursor-pointer border-none">Improve tone</button>
+              <button onClick={() => handleSend("Highlight achievements")} className="px-3 py-1 bg-slate-105 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-350 rounded-full font-semibold transition-colors cursor-pointer border-none">Highlight achievements</button>
+              <button onClick={() => handleSend("Align with JD")} className="px-3 py-1 bg-slate-105 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-350 rounded-full font-semibold transition-colors cursor-pointer border-none">Align with JD</button>
+              <button onClick={() => handleSend("Make shorter")} className="px-3 py-1 bg-slate-105 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-355 rounded-full font-semibold transition-colors cursor-pointer border-none">Make shorter</button>
+            </div>
+          )}
+        </div>
+      ) : (
+        <>
+          {/* Header Bar */}
+          <div className="px-4 py-2 border-b border-slate-200 dark:border-white/10 flex items-center justify-between bg-white dark:bg-transparent shrink-0">
+            <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-350">
+              <MessageSquare className="w-4 h-4 text-emerald-500" />
+              {chatId ? chatHistory.find(c => c.id === chatId)?.title || 'Current Chat' : 'New Chat'}
+            </div>
+            <div className="flex items-center gap-1.5 font-bold">
+              <button 
+                onClick={handleNewChat}
+                className="p-1.5 hover:bg-slate-100 dark:hover:bg-white/5 rounded-md text-emerald-600 transition-all flex items-center gap-1 text-[10px] bg-transparent border-none cursor-pointer"
+                title="New Chat"
+              >
+                <Plus className="w-3.5 h-3.5" /> New
+              </button>
+              <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1"></div>
+              <button 
+                onClick={() => setShowHistory(!showHistory)}
+                className={`p-1.5 rounded-md transition-all flex items-center gap-1 text-[10px] bg-transparent border-none cursor-pointer ${showHistory ? 'bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-white' : 'hover:bg-slate-100 dark:hover:bg-white/5 text-slate-600 dark:text-slate-400'}`}
+                title="History"
+              >
+                <History className="w-3.5 h-3.5" /> History
+              </button>
+            </div>
+          </div>
+
+          <div className="flex-grow relative overflow-hidden">
+            {/* History Overlay Panel */}
+            <AnimatePresence>
+              {showHistory && (
+                <motion.div 
+                  initial={{ x: '100%' }}
+                  animate={{ x: 0 }}
+                  exit={{ x: '100%' }}
+                  transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                  className="absolute inset-0 z-20 bg-white dark:bg-[#141810] flex flex-col"
+                >
+                  <div className="p-3 border-b border-slate-200 dark:border-white/10 bg-gray-50 dark:bg-transparent flex justify-between items-center">
+                    <span className="text-xs font-bold text-slate-600 dark:text-slate-400">Previous Conversations</span>
+                    <button onClick={() => setShowHistory(false)} className="text-slate-400 hover:text-slate-655 dark:hover:text-white bg-transparent border-none"><X className="w-4 h-4" /></button>
+                  </div>
+                  <div className="flex-grow overflow-y-auto p-2 space-y-1 custom-scrollbar">
+                    {chatHistory.map((chat) => (
+                      <div 
+                        key={chat.id}
+                        onClick={() => handleLoadChat(chat.id)}
+                        className={`group flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors border ${chatId === chat.id ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-250' : 'border-transparent hover:bg-slate-50 dark:hover:bg-white/5'}`}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-xs font-semibold truncate text-slate-700 dark:text-slate-350">{chat.title}</h4>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <div ref={scrollRef} className="absolute inset-0 overflow-y-auto p-4 space-y-5 custom-scrollbar pb-32">
+              {messages.map((m) => (
+                <div key={m.id} className={`flex flex-col ${m.role === 'user' ? 'items-end' : 'items-start'}`}>
+                  <div className={`flex gap-2 max-w-[90%] ${m.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
+                    <div className={`w-7 h-7 rounded-full shrink-0 flex items-center justify-center mt-1 ${m.role === 'user' ? 'bg-emerald-500' : 'bg-slate-200 dark:bg-white/10'}`}>
+                      {m.role === 'user' ? <User className="w-4 h-4 text-white" /> : <Sparkles className="w-4 h-4 text-emerald-500" />}
+                    </div>
+                    <div className="px-3.5 py-2.5 rounded-2xl text-[13px] leading-relaxed break-words max-w-full bg-white dark:bg-white/5 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-white/10 rounded-tl-none shadow-sm">
+                      {m.content}
                     </div>
                   </div>
-                  <div className="text-[9px] text-slate-400 px-2 font-medium text-left animate-pulse">
-                    Mori is thinking...
-                  </div>
                 </div>
-              </div>
+              ))}
             </div>
-          )}
-        </div>
-      </div>
-
-      {/* Input Area (sticks to bottom) */}
-      <div className="absolute bottom-0 left-0 right-0 p-3 pt-0 bg-gradient-to-t from-white via-white to-transparent dark:from-[#141810] dark:via-[#141810] z-10 pointer-events-none">
-        
-        {/* Selection Banner */}
-        <AnimatePresence>
-          {currentSelection && (
-            <motion.div 
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 10, opacity: 0, scale: 0.95 }}
-              className="pointer-events-auto bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30 rounded-t-xl px-3 py-2 flex items-center justify-between mb-0 shadow-sm mx-1"
-            >
-              <div className="flex items-center gap-2 overflow-hidden flex-1 mr-2">
-                <MousePointer2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                <div className="text-[11px] font-medium text-emerald-800 dark:text-emerald-300 truncate">
-                  <span className="opacity-70 mr-1">Targeting Selection:</span>
-                  "{currentSelection.text}"
-                </div>
-              </div>
-              <button 
-                onClick={() => setCurrentSelection(null)}
-                className="p-1 hover:bg-emerald-200 dark:hover:bg-emerald-500/30 rounded-md text-emerald-600 dark:text-emerald-400 transition-colors shrink-0"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <div className={`pointer-events-auto relative group shadow-xl shadow-slate-200/50 dark:shadow-none bg-white dark:bg-[#141810] border border-slate-200 dark:border-white/10 transition-all ${currentSelection ? 'rounded-b-xl rounded-t-none border-t-0' : 'rounded-2xl'}`}>
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSend();
-              }
-            }}
-            placeholder={currentSelection ? "Instruct Mori to update selection..." : "Ask Mori to polish your cover letter..."}
-            rows={1}
-            className="w-full bg-transparent px-4 py-3.5 pr-12 text-[13px] focus:outline-none resize-none dark:text-white dark:placeholder-slate-500"
-            style={{ minHeight: '48px', maxHeight: '120px' }}
-          />
-          <button
-            onClick={() => handleSend()}
-            disabled={!input.trim() || isLoading}
-            className={`absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-xl transition-all ${
-              input.trim() && !isLoading 
-                ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-md shadow-emerald-500/20 scale-100' 
-                : 'bg-slate-100 dark:bg-white/5 text-slate-400 dark:text-slate-500 scale-95'
-            }`}
-          >
-            <Send className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
+          </div>
+        </>
+      )}
     </div>
   );
 };

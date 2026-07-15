@@ -37,19 +37,19 @@ export class UserService {
     try {
       await getConnection();
 
-      // Find user by email with password in regular User collection
-      let user = await userRepository.findByEmailWithPassword(email);
+      let user = null;
       let isAdminCollection = false;
 
-      if (!user) {
-        // Fallback: Check AdminAuth collection
-        const AdminAuth = (await import('@/models/AdminAuth')).default;
-        const adminUser = await AdminAuth.findOne({ email: email.toLowerCase() }).select('+password').lean().exec();
-        
-        if (adminUser) {
-          user = adminUser as any;
-          isAdminCollection = true;
-        }
+      // Check AdminAuth FIRST for admin/superuser credentials
+      const AdminAuth = (await import('@/models/AdminAuth')).default;
+      const adminUser = await AdminAuth.findOne({ email: email.toLowerCase() }).select('+password').lean().exec();
+      
+      if (adminUser) {
+        user = adminUser as any;
+        isAdminCollection = true;
+      } else {
+        // Fallback: Find user by email with password in regular User collection
+        user = await userRepository.findByEmailWithPassword(email);
       }
 
       if (!user) {

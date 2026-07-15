@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import User from '@/models/User';
 import VerificationToken from '@/models/VerificationToken';
-import bcrypt from 'bcryptjs';
 
 export async function POST(request: NextRequest) {
   try {
@@ -103,12 +102,8 @@ export async function POST(request: NextRequest) {
         firstName: user.firstName
       });
       
-      // Hash the new password
-      const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash(newPassword, salt);
-
       // Update password in our database
-      user.password = hashedPassword;
+      user.password = newPassword;
       user.lastPasswordChange = new Date();
       await user.save();
       console.log('✅ Password updated in database');

@@ -193,12 +193,12 @@ export async function GET(request: NextRequest) {
     try {
       const polarRes = await PolarService.listProducts();
       if (polarRes.success && polarRes.products) {
-        const productsPayload = polarRes.products as any;
-        const polarProducts = Array.isArray(productsPayload)
-          ? productsPayload
-          : Array.isArray(productsPayload?.items)
-            ? productsPayload.items
-            : [];
+        const polarProducts: any[] = [];
+        for await (const page of polarRes.products) {
+          if (page.result?.items) {
+            polarProducts.push(...page.result.items);
+          }
+        }
         for (const plan of plans) {
           const matchedProduct = polarProducts.find((p: any) => 
             p.metadata?.planKey === plan.key || 
@@ -207,12 +207,59 @@ export async function GET(request: NextRequest) {
           );
           if (matchedProduct) {
             plan.polarProductId = matchedProduct.id;
+            
+            const updateFields: any = {};
+            // Determine billing interval from plan key or default to monthly
+            const cycle = plan.key?.includes('yearly') ? 'yearly' 
+                        : plan.key?.includes('quarterly') ? 'quarterly' 
+                        : 'monthly';
+            
+            updateFields[`polarProductId_${cycle}`] = matchedProduct.id;
+
             if (matchedProduct.prices && matchedProduct.prices.length > 0) {
               const priceObj = matchedProduct.prices[0];
               plan.polarPriceId = priceObj.id;
+              updateFields[`polarPriceId_${cycle}`] = priceObj.id;
+              
               if (priceObj.price_amount !== undefined) {
                 const amountVal = priceObj.price_amount / 100;
                 PLAN_USD_PRICES[plan.key] = amountVal;
+              }
+            }
+
+            // Sync regional pricing mappings by currency and price
+            if (matchedProduct.prices && matchedProduct.prices.length > 0 && Array.isArray(plan.regionalPricing)) {
+              let regionalPricingUpdated = false;
+              const updatedRegionalPricing = plan.regionalPricing.map((rp: any) => {
+                const matchedPrice = matchedProduct.prices.find((pObj: any) => {
+                  const matchesCurrency = pObj.price_currency?.toUpperCase() === rp.currency?.toUpperCase();
+                  const matchesAmount = Math.abs((pObj.price_amount || 0) - (rp.price * 100)) < 5;
+                  return matchesCurrency && matchesAmount;
+                });
+                
+                if (matchedPrice) {
+                  regionalPricingUpdated = true;
+                  return {
+                    ...rp,
+                    polarPriceId: matchedPrice.id,
+                    polarProductId: matchedProduct.id
+                  };
+                }
+                return rp;
+              });
+              
+              if (regionalPricingUpdated) {
+                updateFields.regionalPricing = updatedRegionalPricing;
+                plan.regionalPricing = updatedRegionalPricing;
+              }
+            }
+
+            if (Object.keys(updateFields).length > 0) {
+              try {
+                await PricingPlanModel.updateOne({ _id: plan._id }, { $set: updateFields });
+                console.log(`✅ Successfully synced and updated Polar product/price IDs for plan: ${plan.key}`);
+              } catch (dbErr) {
+                console.error(`❌ Failed to update Polar IDs in DB for plan ${plan.key}:`, dbErr);
               }
             }
           }

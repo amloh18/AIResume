@@ -11,13 +11,71 @@ import { usePaymentModal } from '@/contexts/PaymentModalContext';
 interface UpgradeBannerProps {
   tier: UserTier;
   isYearly?: boolean;
+  isCompact?: boolean;
+  context?: 'dashboard' | 'mori';
 }
 
-export default function UpgradeBanner({ tier, isYearly = false }: UpgradeBannerProps) {
+export default function UpgradeBanner({ 
+  tier, 
+  isYearly = false, 
+  isCompact = false,
+  context = 'dashboard'
+}: UpgradeBannerProps) {
   const router = useRouter();
   const { openPaymentModal } = usePaymentModal();
 
   const getContent = () => {
+    if (context === 'mori') {
+      switch (tier) {
+        case 'starter':
+          return {
+            title: "Unlock Unlimited Mori AI",
+            description: "You've reached your free Mori AI chat limit. Upgrade to Starter Yearly, Focused, or Smart to get unlimited messages, direct resume adjustments, and AI cover letters.",
+            features: ["Unlimited Mori AI Chat", "Interactive CV Enhancing", "AI Cover Letter Editor"],
+            cta: "Upgrade to Unlock Mori",
+            gradient: "from-emerald-600 via-teal-700 to-cyan-800",
+            icon: <Rocket className="w-12 h-12 text-[#83d60d]" />,
+            path: "/pricing",
+            planKey: 'starter_yearly'
+          };
+        case 'focused':
+          return {
+            title: "Unlock Smart AI Autopilot",
+            description: "Upgrade to the Smart plan to unlock our Autonomous AI Bot that automatically tailors your CV and applies to matching roles for you 24/7.",
+            features: ["Autonomous AI Apply Bot", "Priority Queue", "Behavioral AI Coaching"],
+            cta: "Activate Smart Autopilot",
+            gradient: "from-indigo-600 via-purple-700 to-rose-700",
+            icon: <Zap className="w-12 h-12 text-amber-400" />,
+            path: "/pricing?plan=smart",
+            planKey: 'smart_quarterly'
+          };
+        case 'smart':
+          if (!isYearly) {
+            return {
+              title: "Maximize Your AI Autopilot",
+              description: "Switch to Smart Yearly to keep your resume, cover letter, and auto-applying tools on autopilot all year round while saving significantly.",
+              features: ["Full Year of Autopilot", "Exclusive Templates", "Priority VIP Support"],
+              cta: "Switch to Yearly & Save",
+              gradient: "from-[#0f172a] via-[#1e293b] to-[#334155]",
+              icon: <Star className="w-12 h-12 text-[#83d60d]" />,
+              path: "/pricing?interval=yearly",
+              planKey: 'smart_yearly'
+            };
+          }
+          return {
+            title: "Peak AI Autopilot Active",
+            description: "You're on the Smart Yearly plan. Your career is on full autopilot. Keep your profile and target job descriptions updated for best AI results.",
+            features: ["Active AI Autopilot", "Premium Priority", "Full Suite Access"],
+            cta: "Manage Subscription",
+            gradient: "from-[#163d32] to-[#0f172a]",
+            icon: <ShieldCheck className="w-12 h-12 text-[#83d60d]" />,
+            path: "/dashboard/settings"
+          };
+        default:
+          return null;
+      }
+    }
+
     switch (tier) {
       case 'starter':
         return {
@@ -82,6 +140,83 @@ export default function UpgradeBanner({ tier, isYearly = false }: UpgradeBannerP
     }
   };
 
+  if (isCompact) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="w-full h-full flex flex-col min-h-0"
+      >
+        <div className={cn(
+          "relative overflow-hidden rounded-[32px] p-6 shadow-2xl border border-white/10 w-full h-full flex flex-col justify-between min-h-0",
+          "bg-gradient-to-br",
+          content.gradient
+        )}>
+          {/* Animated Background Elements */}
+          <div className="absolute top-0 right-0 w-96 h-96 bg-[#83d60d]/10 blur-[100px] -mr-48 -mt-48 animate-pulse" />
+          <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-500/10 blur-[80px] -ml-32 -mb-32" />
+          
+          <div className="relative z-10 flex flex-col justify-between h-full space-y-4 min-h-0">
+            <div className="space-y-4 min-h-0 overflow-y-auto custom-scrollbar pr-1">
+              <div className="flex items-start justify-between gap-4">
+                <div className="space-y-3 flex-1">
+                  <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 border border-white/20 backdrop-blur-md">
+                    <Sparkles size={14} className="text-[#83d60d]" />
+                    <span className="text-[10px] font-black text-white uppercase tracking-widest">Premium Opportunity</span>
+                  </div>
+                  <h2 className="text-[22px] sm:text-[26px] font-black text-white leading-[1.15]">
+                    {content.title}
+                  </h2>
+                </div>
+                
+                <div className="w-20 h-20 rounded-[28px] bg-white/10 border border-white/20 flex items-center justify-center shadow-2xl backdrop-blur-xl shrink-0 overflow-hidden">
+                  <motion.div
+                    animate={{ rotate: [0, 5, -5, 0], scale: [1, 1.05, 1] }}
+                    transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
+                    className="w-full h-full flex items-center justify-center"
+                  >
+                    {content.icon}
+                  </motion.div>
+                </div>
+              </div>
+              
+              <p className="text-[13px] sm:text-[14px] font-medium text-white/70 leading-relaxed">
+                {content.description}
+              </p>
+              
+              <div className="flex flex-wrap gap-2.5 pt-1">
+                {content.features.map((feature, i) => (
+                  <div key={i} className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-black/20 border border-white/5 shrink-0">
+                    <div className="w-1.5 h-1.5 rounded-full bg-[#83d60d]" />
+                    <span className="text-[11px] font-bold text-white/90">{feature}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            <div className="pt-2 shrink-0">
+              <button
+                onClick={handleAction}
+                className="w-full group relative py-3.5 rounded-2xl bg-[#83d60d] hover:bg-[#a2f02d] text-slate-900 font-black text-small uppercase tracking-widest transition-all shadow-xl shadow-[#83d60d]/20 overflow-hidden"
+              >
+                <div className="relative z-10 flex items-center justify-center gap-2">
+                  {content.cta}
+                  <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                </div>
+                <motion.div 
+                  className="absolute inset-0 bg-white/20"
+                  initial={{ x: '-100%' }}
+                  whileHover={{ x: '100%' }}
+                  transition={{ duration: 0.5 }}
+                />
+              </button>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    );
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -109,7 +244,7 @@ export default function UpgradeBanner({ tier, isYearly = false }: UpgradeBannerP
               {content.title}
             </h2>
             
-            <p className="text-h3 font-medium text-white/70 max-w-2xl leading-relaxed">
+            <p className="text-h3 font-medium text-white/70 leading-relaxed">
               {content.description}
             </p>
             
@@ -124,13 +259,15 @@ export default function UpgradeBanner({ tier, isYearly = false }: UpgradeBannerP
           </div>
           
           <div className="w-full lg:w-auto flex flex-col items-center gap-6">
-            <motion.div
-              animate={{ rotate: [0, 5, -5, 0], scale: [1, 1.05, 1] }}
-              transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
-              className="w-32 h-32 rounded-[40px] bg-white/10 border border-white/20 flex items-center justify-center shadow-2xl backdrop-blur-xl"
-            >
-              {content.icon}
-            </motion.div>
+            <div className="w-32 h-32 rounded-[40px] bg-white/10 border border-white/20 flex items-center justify-center shadow-2xl backdrop-blur-xl overflow-hidden shrink-0">
+              <motion.div
+                animate={{ rotate: [0, 5, -5, 0], scale: [1, 1.05, 1] }}
+                transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
+                className="w-full h-full flex items-center justify-center"
+              >
+                {content.icon}
+              </motion.div>
+            </div>
             
             <button
               onClick={handleAction}

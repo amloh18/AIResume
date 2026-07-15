@@ -83,31 +83,44 @@ export async function GET(request: NextRequest) {
       }
 
       if (liveDetails.hasActiveSub) {
-        currentPlanKey = liveDetails.planKey || 'starter_monthly';
-        effectiveSub = {
-          planKey: currentPlanKey,
-          status: 'active',
-          endDate: liveDetails.subscription?.currentPeriodEnd || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-          currentPeriodStart: liveDetails.subscription?.currentPeriodStart || new Date(),
-          currentPeriodEnd: liveDetails.subscription?.currentPeriodEnd || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-          purchasePrice: 0,
-          downgradeStatus: 'none',
-          pendingDowngradePlanKey: null
-        };
+        // If planKey is undefined, plan mapping failed — do NOT silently assign starter_monthly.
+        // Keep user's current MongoDB plan (which may already be correct from a prior webhook).
+        if (!liveDetails.planKey) {
+          console.error(
+            `[SUBSCRIPTION API] ⚠️ Polar has active subscription for ${user.email} but plan mapping failed. ` +
+            'Polar product/price IDs are not configured in PricingPlan collection. ' +
+            'Falling through to MongoDB plan to avoid downgrading paid user.'
+          );
+          const effective = subscriptionService.getEffectivePlan(user);
+          currentPlanKey = effective.currentPlanKey;
+          effectiveSub = effective.subscription;
+        } else {
+          currentPlanKey = liveDetails.planKey;
+          effectiveSub = {
+            planKey: currentPlanKey,
+            status: 'active',
+            endDate: liveDetails.subscription?.currentPeriodEnd || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+            currentPeriodStart: liveDetails.subscription?.currentPeriodStart || new Date(),
+            currentPeriodEnd: liveDetails.subscription?.currentPeriodEnd || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+            purchasePrice: 0,
+            downgradeStatus: 'none',
+            pendingDowngradePlanKey: null
+          };
 
-        // Reconcile MongoDB in background
-        const mongoActive = user.subscription && (user.subscription.status === 'active' || user.subscription.status === 'trialing') && user.currentPlanKey !== 'free';
-        if (!mongoActive) {
-          console.log(`🔄 Subscription API - Reconciling active Polar subscription for ${user.email} in MongoDB...`);
-          await User.findByIdAndUpdate(user._id, {
-            $set: {
-              currentPlanKey,
-              'subscription.planKey': currentPlanKey,
-              'subscription.status': 'active',
-              'subscription.accessExpiresAt': effectiveSub.currentPeriodEnd,
-              'subscription.currentPeriodEnd': effectiveSub.currentPeriodEnd
-            }
-          });
+          // Reconcile MongoDB in background — only if state is out of sync
+          const mongoActive = user.subscription && (user.subscription.status === 'active' || user.subscription.status === 'trialing') && user.currentPlanKey !== 'free';
+          if (!mongoActive) {
+            console.log(`[SUBSCRIPTION API] Reconciling active Polar subscription for ${user.email}: planKey=${currentPlanKey}`);
+            await User.findByIdAndUpdate(user._id, {
+              $set: {
+                currentPlanKey,
+                'subscription.planKey': currentPlanKey,
+                'subscription.status': 'active',
+                'subscription.accessExpiresAt': effectiveSub.currentPeriodEnd,
+                'subscription.currentPeriodEnd': effectiveSub.currentPeriodEnd
+              }
+            });
+          }
         }
       } else {
         const effective = subscriptionService.getEffectivePlan(user);

@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getConnection } from '@/lib/database';
 import { User } from '@/models';
-import { getAdminInvoice } from '@/models/admin-models';
+import Invoice from '@/models/Invoice'; // Use main Invoice model, not the admin collection
 import PolarService from '@/lib/payment/polar';
 
 export async function GET(request: NextRequest) {
@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
 
     // Get query parameters
     const { searchParams } = new URL(request.url);
-    const limit = parseInt(searchParams.get('limit') || '10');
+    const limit = parseInt(searchParams.get('limit') || '20');
     const page = parseInt(searchParams.get('page') || '1');
     const status = searchParams.get('status');
 
@@ -40,51 +40,62 @@ export async function GET(request: NextRequest) {
       query.status = status;
     }
 
-    // Fetch invoices from DB with pagination
-    const Invoice = await getAdminInvoice();
+    // Fetch invoices from the main Invoice collection (created by webhooks)
     const dbInvoices = await Invoice.find(query)
       .sort({ createdAt: -1 })
       .limit(limit)
-      .skip((page - 1) * limit);
+      .skip((page - 1) * limit)
+      .lean();
 
     // Get total count from DB
     const dbTotal = await Invoice.countDocuments(query);
 
-    // Fetch orders from Polar
-    let polarInvoices = [];
+    // Fetch orders from Polar as supplementary source.
+    // These are used to show invoices even if the webhook hasn't fired yet.
+    let polarInvoices: any[] = [];
+    const existingCheckoutIds = new Set(
+      (dbInvoices as any[]).map((inv: any) => inv.metadata?.polarCheckoutId).filter(Boolean)
+    );
+
     try {
       const polarResult = await PolarService.listOrders({ 
         customerEmail: user.email 
       });
 
       if (polarResult.success && polarResult.orders) {
-        polarInvoices = polarResult.orders.map((order: any) => ({
-          id: order.id,
-          invoiceNumber: order.id.substring(0, 8).toUpperCase(),
-          subtotal: order.amount / 100, // Polar amounts are in cents
-          taxAmount: (order.tax_amount || 0) / 100,
-          amount: order.amount / 100,
-          currency: order.currency.toUpperCase(),
-          status: 'paid', // If it's an order in Polar, it's paid
-          planName: order.product?.name || 'Subscription',
-          billingCycle: order.product?.recurring_interval || 'one-time',
-          paymentMethodType: 'card',
-          paymentMethodLast4: '****',
-          paidAt: order.created_at,
-          dueDate: order.created_at,
-          invoiceDate: order.created_at,
-          description: `Order for ${order.product?.name || 'CVCircle Pro'}`,
-          createdAt: order.created_at,
-          isPolar: true
-        }));
+        polarInvoices = polarResult.orders
+          .filter((order: any) => {
+            // De-duplicate against locally-stored invoices
+            // Polar SDK may return checkout_id (snake_case) or checkoutId (camelCase)
+            const orderId = order.checkout_id || order.checkoutId || null;
+            return !orderId || !existingCheckoutIds.has(orderId);
+          })
+          .map((order: any) => ({
+            id: order.id,
+            invoiceNumber: (order.id || '').substring(0, 8).toUpperCase(),
+            subtotal: (order.amount || 0) / 100,
+            taxAmount: ((order.taxAmount || order.tax_amount) || 0) / 100,
+            amount: (order.amount || 0) / 100,
+            currency: (order.currency || 'USD').toUpperCase(),
+            status: 'paid',
+            planName: order.product?.name || order.productName || 'Subscription',
+            billingCycle: order.product?.recurringInterval || order.product?.recurring_interval || 'one-time',
+            paymentMethodType: 'card',
+            paymentMethodLast4: '****',
+            paidAt: order.createdAt || order.created_at,
+            dueDate: order.createdAt || order.created_at,
+            invoiceDate: order.createdAt || order.created_at,
+            description: `Order for ${order.product?.name || order.productName || 'CVCircle Pro'}`,
+            createdAt: order.createdAt || order.created_at,
+            isPolar: true
+          }));
       }
     } catch (polarError) {
-      console.warn('Failed to fetch Polar orders:', polarError);
+      console.warn('[INVOICES API] Failed to fetch Polar orders:', polarError);
     }
 
-    // Merge and deduplicate (by checking if DB invoice already represents this Polar order)
-    // For now, we'll just merge and sort by date
-    const allInvoices = [...dbInvoices.map((invoice: any) => ({
+    // Merge DB invoices + polar invoices, sorted by date descending
+    const formattedDbInvoices = (dbInvoices as any[]).map((invoice: any) => ({
       id: invoice._id,
       invoiceNumber: invoice.invoiceNumber,
       subtotal: invoice.subtotal || invoice.amount,
@@ -102,15 +113,15 @@ export async function GET(request: NextRequest) {
       description: invoice.description,
       createdAt: invoice.createdAt,
       isPolar: false
-    })), ...polarInvoices];
+    }));
+
+    const allInvoices = [...formattedDbInvoices, ...polarInvoices];
 
     // Sort all by creation date descending
     allInvoices.sort((a: any, b: any) => 
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
     );
 
-    // Apply pagination to merged list if necessary
-    // (In a real high-scale app we'd do this more efficiently)
     const paginatedInvoices = allInvoices.slice(0, limit);
 
     return NextResponse.json({
@@ -125,7 +136,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error fetching invoices:', error);
+    console.error('[INVOICES API] Error fetching invoices:', error);
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }

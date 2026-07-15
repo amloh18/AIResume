@@ -1182,19 +1182,20 @@ export default function Step1Dashboard({
             </div>
 
 {/* Action Cards Grid - horizontal scroll on mobile, grid on sm+ */}
-            <div
-              className="relative z-20 flex sm:grid gap-3 sm:gap-4 origin-top sm:grid-cols-2 lg:grid-cols-3 w-full overflow-x-auto sm:overflow-x-visible pb-4 sm:pb-20 snap-x snap-mandatory sm:snap-none scroll-pl-4 -mx-4 px-4 sm:mx-0 sm:px-0"
-              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-            >
-            {activeTab === 'cvs' ? (
-              <>
-                {/* Resume Cards */}
+            <div className="w-full relative overflow-visible h-[180px] sm:h-[200px] mb-6 sm:mb-8">
+              <div
+                className="relative z-20 flex sm:grid gap-3 sm:gap-4 origin-top sm:grid-cols-2 lg:grid-cols-3 w-full overflow-x-auto sm:overflow-visible py-3 -my-3 h-full snap-x snap-mandatory sm:snap-none scroll-pl-4 -mx-4 px-4 sm:mx-0 sm:px-0"
+                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+              >
+              {activeTab === 'cvs' ? (
+                <>
+                  {/* Resume Cards */}
                 <motion.button
                   whileHover={{ y: -5, scale: 1.01 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => handleManualEntry()}
                   disabled={isCreatingBlank || isDuplicating || isLoadingCVs}
-                  className={`step-one-action step-one-action-primary snap-start shrink-0 w-[72vw] sm:w-auto group relative rounded-xl sm:rounded-2xl p-5 sm:p-6 min-h-[148px] border border-dashed overflow-hidden text-left flex flex-col items-center justify-center text-center ${(isCreatingBlank || isDuplicating || isLoadingCVs) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  className={`step-one-action step-one-action-primary snap-start shrink-0 w-[72vw] sm:w-auto group relative rounded-xl sm:rounded-2xl p-5 sm:p-6 h-[156px] sm:h-[176px] border border-dashed overflow-hidden text-left flex flex-col items-center justify-center text-center ${(isCreatingBlank || isDuplicating || isLoadingCVs) ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-lime-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                   <div className="relative flex flex-col items-center space-y-3 sm:space-y-4">
@@ -1215,7 +1216,7 @@ export default function Step1Dashboard({
                   whileTap={{ scale: 0.98 }}
                   onClick={handleDuplicatePrimary}
                   disabled={!userHasMasterCV || isDuplicating || isLoadingCVs}
-                  className={`step-one-action snap-start shrink-0 w-[72vw] sm:w-auto group relative rounded-xl sm:rounded-2xl p-5 sm:p-6 min-h-[148px] overflow-hidden text-left flex flex-col items-center justify-center text-center ${(!userHasMasterCV || isDuplicating || isLoadingCVs) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  className={`step-one-action snap-start shrink-0 w-[72vw] sm:w-auto group relative rounded-xl sm:rounded-2xl p-5 sm:p-6 h-[156px] sm:h-[176px] overflow-hidden text-left flex flex-col items-center justify-center text-center ${(!userHasMasterCV || isDuplicating || isLoadingCVs) ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-lime-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                   <div className="relative flex flex-col items-center space-y-3 sm:space-y-4">
@@ -1245,7 +1246,7 @@ export default function Step1Dashboard({
                     setParseMethod('upload');
                   }}
                   disabled={isCreatingBlank || isDuplicating || isLoadingCVs}
-                  className={`step-one-action snap-start shrink-0 w-[72vw] sm:w-auto group relative rounded-xl sm:rounded-2xl p-5 sm:p-6 min-h-[148px] overflow-hidden text-left flex flex-col items-center justify-center text-center ${(isCreatingBlank || isDuplicating || isLoadingCVs) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  className={`step-one-action snap-start shrink-0 w-[72vw] sm:w-auto group relative rounded-xl sm:rounded-2xl p-5 sm:p-6 h-[156px] sm:h-[176px] overflow-hidden text-left flex flex-col items-center justify-center text-center ${(isCreatingBlank || isDuplicating || isLoadingCVs) ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                   <div className="relative flex flex-col items-center space-y-3 sm:space-y-4">
@@ -1269,7 +1270,7 @@ export default function Step1Dashboard({
                   whileHover={{ y: -5, scale: 1.01 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={handleStartWithJob}
-                  className="step-one-action step-one-action-primary snap-start shrink-0 w-[72vw] sm:w-auto group relative rounded-xl sm:rounded-2xl p-5 sm:p-6 min-h-[148px] border border-dashed overflow-hidden text-left flex flex-col items-center justify-center text-center"
+                  className="step-one-action step-one-action-primary snap-start shrink-0 w-[72vw] sm:w-auto group relative rounded-xl sm:rounded-2xl p-5 sm:p-6 h-[156px] sm:h-[176px] border border-dashed overflow-hidden text-left flex flex-col items-center justify-center text-center"
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-lime-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                   <div className="relative flex flex-col items-center space-y-3 sm:space-y-4">
@@ -1290,7 +1291,7 @@ export default function Step1Dashboard({
                   whileHover={{ y: -5, scale: 1.01 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => router.push('/editor?mode=create-cover-letter&step=4')}
-                  className="step-one-action snap-start shrink-0 w-[72vw] sm:w-auto group relative rounded-xl sm:rounded-2xl p-5 sm:p-6 min-h-[148px] overflow-hidden text-left flex flex-col items-center justify-center text-center"
+                  className="step-one-action snap-start shrink-0 w-[72vw] sm:w-auto group relative rounded-xl sm:rounded-2xl p-5 sm:p-6 h-[156px] sm:h-[176px] overflow-hidden text-left flex flex-col items-center justify-center text-center"
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-lime-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                   <div className="relative flex flex-col items-center space-y-3 sm:space-y-4">
@@ -1310,6 +1311,7 @@ export default function Step1Dashboard({
               </>
             )}
           </div>
+        </div>
 
 
 
@@ -1320,10 +1322,10 @@ export default function Step1Dashboard({
         {!isGuestMode && (
           <div 
             ref={documentsSectionRef}
-            className="w-full mt-12 border-t border-[color:var(--border-primary)] pt-12 pb-24 px-4 sm:px-8 no-print"
+            className="w-full mt-4 border-t border-[color:var(--border-primary)] pt-4 pb-24 px-4 sm:px-8 no-print"
           >
             <div className="w-full max-w-7xl mx-auto">
-              <div className="step-one-documents-header flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-5 pb-5 border-b border-[color:var(--border-primary)] pt-5">
+              <div className="step-one-documents-header flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-5 pb-5 border-b border-[color:var(--border-primary)] pt-0">
                   <div>
                     <h2 className="text-2xl sm:text-3xl font-black text-[color:var(--text-primary)] tracking-tight text-left">Your Documents</h2>
                     <p className="text-xs sm:text-sm text-[color:var(--text-secondary)] mt-1.5">All your resumes and cover letters in one place.</p>

@@ -295,31 +295,40 @@ class SubscriptionService {
       : expiresAt;
 
     const Subscription = await import('@/models/Subscription').then(m => m.default);
-    const subDocs = await Subscription.create([{
-      userId,
-      planId,
-      status: 'active',
-      startDate: now,
-      endDate: expiresAt,
-      billingCycle,
-      amount: amount + discountAmount, // Gross amount
-      currency: currency.toUpperCase(),
-      paymentMethod,
-      paymentProviderId,
-      discountCodeId: discountCodeId || undefined,
-      discountAmount,
-      finalAmount: amount, // Net amount paid
-      nextBillingDate: autoRenew ? expiresAt : undefined,
-      metadata: {
-        polarCustomerId: metadata.polarCustomerId,
-        invoiceUrl: metadata.invoiceUrl,
-        receiptUrl: metadata.receiptUrl,
-        prorationCreditApplied: metadata.prorationCreditApplied,
-        prorationDaysAdded: metadata.prorationDaysAdded
-      }
-    }], { session });
 
-    const subscription = subDocs[0];
+    // Make idempotent: check if a subscription document already exists for this paymentProviderId
+    const existingSub = await Subscription.findOne({ paymentProviderId }).session(session);
+    let subscription;
+
+    if (existingSub) {
+      console.log(`⚠️ Subscription already exists for provider ID ${paymentProviderId}. Skipping document creation.`);
+      subscription = existingSub;
+    } else {
+      const subDocs = await Subscription.create([{
+        userId,
+        planId,
+        status: 'active',
+        startDate: now,
+        endDate: expiresAt,
+        billingCycle,
+        amount: amount + discountAmount, // Gross amount
+        currency: currency.toUpperCase(),
+        paymentMethod,
+        paymentProviderId,
+        discountCodeId: discountCodeId || undefined,
+        discountAmount,
+        finalAmount: amount, // Net amount paid
+        nextBillingDate: autoRenew ? expiresAt : undefined,
+        metadata: {
+          polarCustomerId: metadata.polarCustomerId,
+          invoiceUrl: metadata.invoiceUrl,
+          receiptUrl: metadata.receiptUrl,
+          prorationCreditApplied: metadata.prorationCreditApplied,
+          prorationDaysAdded: metadata.prorationDaysAdded
+        }
+      }], { session });
+      subscription = subDocs[0];
+    }
 
     // Build the user update data
     const userUpdate: any = {

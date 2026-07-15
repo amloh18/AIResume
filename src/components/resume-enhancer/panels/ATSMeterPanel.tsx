@@ -13,6 +13,8 @@ import { SENIORITY_LEVELS, filterJobTitles, SeniorityLevel } from '@/lib/data/ro
 interface ATSMeterPanelProps {
   isUtilityPanelOpen?: boolean;
   onClose?: () => void;
+  showMoriChat?: boolean;
+  onToggleMoriChat?: () => void;
 }
 
 import {
@@ -146,7 +148,12 @@ const AnalysisSkeleton: React.FC = () => {
   );
 };
 
-export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ isUtilityPanelOpen = false, onClose }) => {
+export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ 
+  isUtilityPanelOpen = false, 
+  onClose,
+  showMoriChat = true,
+  onToggleMoriChat
+}) => {
   const { state, dispatch, goToStep } = useResumeEnhancer();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isOptimizing, setIsOptimizing] = useState(false);
@@ -197,6 +204,13 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ isUtilityPanelOpen
 
   const togglePanel = (panel: keyof typeof expanded) => {
     setExpanded(prev => ({ ...prev, [panel]: !prev[panel] }));
+  };
+
+  // Dispatch a targeted fix to Mori chat
+  const sendToMori = (prompt: string, section?: string) => {
+    // Ensure analysis panel triggers mori panel too
+    window.dispatchEvent(new CustomEvent('mori-fix-issue', { detail: { prompt, section } }));
+    toast.success('⚡ Sending to Mori AI...', { duration: 1500, icon: '✨' });
   };
 
   if (!state.cvData) {
@@ -582,9 +596,7 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ isUtilityPanelOpen
         </div>
         
         <div className="flex items-center gap-2">
-          {!isUtilityPanelOpen && (
-            <UtilityPanelPill activePanel={null} onHoverPanel={(panel) => setHoveredIcon(panel)} />
-          )}
+          <UtilityPanelPill activePanel={showMoriChat ? 'mori' : null} onHoverPanel={(panel) => setHoveredIcon(panel)} onToggleMori={onToggleMoriChat} />
           {onClose && (
             <button
               onClick={onClose}
@@ -597,7 +609,7 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ isUtilityPanelOpen
         </div>
 
         {/* Floating rich hover info card with animated motion graphics */}
-        {hoveredIcon && !isUtilityPanelOpen && (
+        {hoveredIcon && (
           <div className="absolute top-full left-0 right-0 mt-1 mx-2 bg-white dark:bg-[#191c1b] border border-gray-200 dark:border-white/[0.08] rounded-2xl p-4 shadow-[0_12px_30px_rgba(0,0,0,0.15)] dark:shadow-[0_12px_30px_rgba(0,0,0,0.5)] z-50 animate-fadeIn pointer-events-none">
             <PanelWorkflowDemo panelType={hoveredIcon} />
           </div>
@@ -790,6 +802,20 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ isUtilityPanelOpen
                 </div>
               </div>
             </div>
+
+            {/* ── Fix All with Mori CTA ── */}
+            {(gapsList.length > 0 || actionsList.length > 0) && (
+              <button
+                onClick={() => sendToMori(
+                  `Fix all critical issues found in my CV analysis: ${gapsList.map((g: any) => g.title).join(', ')}. Also apply these priority actions: ${actionsList.map((a: any) => a.title).join(', ')}. Apply all improvements now.`
+                )}
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all shadow-md hover:shadow-lg hover:scale-[1.01] active:scale-[0.99]"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                Fix All Issues with Mori
+                <span className="text-[10px] font-black opacity-70">{gapsList.length + actionsList.length} fixes</span>
+              </button>
+            )}
 
             {/* ── 2. CATEGORY SCORES PANEL ── */}
             {categoryScores.length > 0 && (
@@ -988,18 +1014,30 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ isUtilityPanelOpen
                 {expanded.gaps && (
                   <div className="p-4 divide-y divide-gray-100 dark:divide-white/5">
                     {gapsList.map((g: any, i: number) => (
-                      <div key={i} className="flex gap-3 py-3 first:pt-0 last:pb-0">
-                        <div className="w-5 h-5 rounded-full bg-rose-500/10 flex items-center justify-center shrink-0">
-                          <X className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
+                      <div key={i} className="py-3 first:pt-0 last:pb-0 space-y-2">
+                        <div className="flex gap-3">
+                          <div className="w-5 h-5 rounded-full bg-rose-500/10 flex items-center justify-center shrink-0 mt-0.5">
+                            <X className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
+                          </div>
+                          <div className="space-y-0.5 flex-1 min-w-0">
+                            <h5 className="text-[11px] font-black text-gray-900 dark:text-white leading-relaxed">
+                              {g.title}
+                            </h5>
+                            <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
+                              {g.detail}
+                            </p>
+                          </div>
                         </div>
-                        <div className="space-y-0.5">
-                          <h5 className="text-[11px] font-black text-gray-900 dark:text-white leading-relaxed">
-                            {g.title}
-                          </h5>
-                          <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
-                            {g.detail}
-                          </p>
-                        </div>
+                        <button
+                          onClick={() => sendToMori(
+                            `Fix this CV gap: "${g.title}". ${g.detail || ''} Apply the fix directly to my CV now.`,
+                            g.section || ''
+                          )}
+                          className="ml-8 flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-black rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 transition-all border border-rose-500/20 hover:border-rose-500/40 cursor-pointer"
+                        >
+                          <Sparkles className="w-3 h-3" />
+                          Fix with Mori
+                        </button>
                       </div>
                     ))}
                   </div>
@@ -1039,18 +1077,30 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ isUtilityPanelOpen
                   <div className="p-4 space-y-4">
                     <div className="divide-y divide-gray-100 dark:divide-white/5">
                       {actionsList.map((a: any, i: number) => (
-                        <div key={i} className="flex gap-3 py-3 first:pt-0 last:pb-0">
-                          <div className="w-5 h-5 rounded-full bg-blue-500 text-white flex items-center justify-center shrink-0 text-[10px] font-black">
-                            {a.step || (i + 1)}
+                        <div key={i} className="py-3 first:pt-0 last:pb-0 space-y-2">
+                          <div className="flex gap-3">
+                            <div className="w-5 h-5 rounded-full bg-blue-500 text-white flex items-center justify-center shrink-0 text-[10px] font-black mt-0.5">
+                              {a.step || (i + 1)}
+                            </div>
+                            <div className="space-y-0.5 flex-1 min-w-0">
+                              <h5 className="text-[11px] font-black text-gray-900 dark:text-white leading-relaxed">
+                                {a.title}
+                              </h5>
+                              <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
+                                {a.detail}
+                              </p>
+                            </div>
                           </div>
-                          <div className="space-y-0.5">
-                            <h5 className="text-[11px] font-black text-gray-900 dark:text-white leading-relaxed">
-                              {a.title}
-                            </h5>
-                            <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
-                              {a.detail}
-                            </p>
-                          </div>
+                          <button
+                            onClick={() => sendToMori(
+                              `Action item ${a.step || i + 1}: "${a.title}". ${a.detail || ''} Apply this improvement to my CV right now.`,
+                              a.section || ''
+                            )}
+                            className="ml-8 flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-black rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 transition-all border border-blue-500/20 hover:border-blue-500/40 cursor-pointer"
+                          >
+                            <Sparkles className="w-3 h-3" />
+                            Fix with Mori
+                          </button>
                         </div>
                       ))}
                     </div>

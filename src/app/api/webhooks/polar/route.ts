@@ -100,34 +100,40 @@ export async function POST(request: NextRequest) {
       console.error('Failed to log webhook:', logError);
     }
 
-    console.log('Polar webhook event:', event.type);
+    console.log(`[POLAR WEBHOOK] Received event: ${event.type} | dataId=${event.data?.id || 'n/a'}`);
 
     let processingError: Error | null = null;
 
     try {
       switch (event.type) {
         case 'checkout.completed':
+          console.log(`[POLAR WEBHOOK] Processing checkout.completed: checkoutId=${event.data?.id}`);
           await handleCheckoutCompleted(event.data);
           break;
 
         case 'checkout.expired':
+          console.log(`[POLAR WEBHOOK] Processing checkout.expired: checkoutId=${event.data?.id}`);
           await handleCheckoutExpired(event.data);
           break;
 
         case 'charge.refunded':
+          console.log(`[POLAR WEBHOOK] Processing charge.refunded: chargeId=${event.data?.id}`);
           await handleChargeRefunded(event.data);
           break;
 
+        case 'subscription.created':
         case 'subscription.updated':
+          console.log(`[POLAR WEBHOOK] Processing ${event.type}: subId=${event.data?.id} status=${event.data?.status}`);
           await handleSubscriptionUpdated(event.data);
           break;
 
         case 'subscription.cancelled':
+          console.log(`[POLAR WEBHOOK] Processing subscription.cancelled: subId=${event.data?.id}`);
           await handleSubscriptionCancelled(event.data);
           break;
 
         default:
-          console.log(`Unhandled Polar event type: ${event.type}`);
+          console.log(`[POLAR WEBHOOK] Unhandled event type: ${event.type}`);
       }
 
       if (webhookLog) {
@@ -173,24 +179,29 @@ async function handleCheckoutCompleted(checkout: any) {
   const metadata = checkout.metadata || {};
   const productId = checkout.product?.id;
   const productPriceId = checkout.productPrice?.id;
+  console.log(`[POLAR WEBHOOK] checkout.completed: checkoutId=${checkoutId} email=${customerEmail} productId=${productId} priceId=${productPriceId}`);
 
   const user = await User.findOne({ email: customerEmail });
   if (!user) {
-    throw new Error(`User not found for email: ${customerEmail}`);
+    throw new Error(`[POLAR WEBHOOK] User not found for email: ${customerEmail}`);
   }
 
   const userId = user._id.toString();
   const PricingPlan = await getAdminPricingPlan();
   let pricingPlan = null;
+  const planLookupLog: string[] = [];
 
   if (metadata.planId) {
     pricingPlan = await PricingPlan.findById(metadata.planId);
+    planLookupLog.push(`metadata.planId=${metadata.planId} found=${!!pricingPlan}`);
   }
   if (!pricingPlan && metadata.planKey) {
     pricingPlan = await PricingPlan.findOne({ key: metadata.planKey });
+    planLookupLog.push(`metadata.planKey=${metadata.planKey} found=${!!pricingPlan}`);
   }
   if (!pricingPlan && metadata.planName) {
     pricingPlan = await PricingPlan.findOne({ name: metadata.planName });
+    planLookupLog.push(`metadata.planName=${metadata.planName} found=${!!pricingPlan}`);
   }
   if (!pricingPlan && productId) {
     pricingPlan = await PricingPlan.findOne({
@@ -202,6 +213,7 @@ async function handleCheckoutCompleted(checkout: any) {
         { 'regionalPricing.polarProductId': productId }
       ]
     });
+    planLookupLog.push(`polarProductId=${productId} found=${!!pricingPlan}`);
   }
   if (!pricingPlan && productPriceId) {
     pricingPlan = await PricingPlan.findOne({
@@ -213,12 +225,18 @@ async function handleCheckoutCompleted(checkout: any) {
         { 'regionalPricing.polarPriceId': productPriceId }
       ]
     });
+    planLookupLog.push(`polarPriceId=${productPriceId} found=${!!pricingPlan}`);
   }
 
+  console.log(`[POLAR WEBHOOK] Plan lookup steps: ${planLookupLog.join(' | ')}`);
   if (!pricingPlan) {
-    console.error(`Pricing plan not found: ID=${metadata.planId}, Key=${metadata.planKey}, Name=${metadata.planName}, PolarProductId=${productId}`);
+    console.error(`[POLAR WEBHOOK] ⚠️ PLAN MAPPING FAILURE for checkout ${checkoutId}: ` +
+      `planId=${metadata.planId} planKey=${metadata.planKey} productId=${productId} priceId=${productPriceId}. ` +
+      'Ensure PricingPlan documents have correct polarProductId_* / polarPriceId_* fields.');
     throw new Error(`Pricing plan not found for checkout metadata or Polar IDs`);
   }
+
+  console.log(`[POLAR WEBHOOK] Plan resolved: key=${pricingPlan.key} name=${pricingPlan.name}`);
 
   const finalPlanName = pricingPlan.name || metadata.planName || 'Unknown Plan';
   const billingCycle = metadata.interval || metadata.billingCycle || 'one-time';
@@ -335,12 +353,7 @@ async function handleCheckoutCompleted(checkout: any) {
       session
     });
 
-    console.log('Polar checkout completed processing successful:', {
-      userId,
-      subscriptionId: subscription._id,
-      invoiceId: invoice[0]._id,
-      planName: finalPlanName
-    });
+    console.log(`[POLAR WEBHOOK] checkout.completed: userId=${userId} subscriptionId=${subscription._id} planKey=${pricingPlan.key} invoiceId=${invoice[0]._id} amount=${finalAmount}`);
   });
 
   // Track payment completion server-side (outside transaction to avoid blocking)
@@ -415,6 +428,7 @@ async function handleSubscriptionUpdated(subscription: any) {
           { polarProductId_monthly: productId },
           { polarProductId_yearly: productId },
           { polarProductId_quarterly: productId },
+          { polarProductId_one_time: productId },
         ]
       });
     }
@@ -435,7 +449,7 @@ async function handleSubscriptionUpdated(subscription: any) {
             : undefined,
         }
       });
-      console.log(`subscription.updated: synced user ${user._id} to plan ${newPlanKey}`);
+      console.log(`[POLAR WEBHOOK] subscription.updated: synced user ${user._id} to plan ${newPlanKey} (providerSubId=${subscription.id})`);
     } else {
       // Just update the subscription status to active
       await User.findByIdAndUpdate(user._id, {
@@ -444,19 +458,30 @@ async function handleSubscriptionUpdated(subscription: any) {
           'subscription.providerSubscriptionId': subscription.id,
         }
       });
-      console.log(`subscription.updated: updated status to active for user ${user._id}`);
+      console.log(`[POLAR WEBHOOK] subscription.updated: updated status to active for user ${user._id} (no plan remapping — productId=${subscription.product?.id})`);
     }
-  } else if (status === 'canceled' || status === 'past_due' || status === 'unpaid') {
-    // Mark subscription as cancelled/expired — revert to free
+  } else if (status === 'canceled') {
+    // Subscription explicitly cancelled (not past_due) — revert to free
     await User.findByIdAndUpdate(user._id, {
       $set: {
         currentPlanKey: 'free',
         'subscription.planKey': 'free',
-        'subscription.status': status === 'canceled' ? 'cancelled' : 'expired',
+        'subscription.status': 'cancelled',
         'subscription.providerSubscriptionId': subscription.id,
       }
     });
-    console.log(`subscription.updated: reverted user ${user._id} to free (Polar status: ${status})`);
+    console.log(`[POLAR WEBHOOK] subscription.updated: reverted user ${user._id} to free (Polar status: canceled)`);
+  } else if (status === 'past_due' || status === 'unpaid') {
+    // past_due / unpaid: revert user to free plan immediately on payment failure
+    await User.findByIdAndUpdate(user._id, {
+      $set: {
+        currentPlanKey: 'free',
+        'subscription.planKey': 'free',
+        'subscription.status': status === 'past_due' ? 'past_due' : 'unpaid',
+        'subscription.providerSubscriptionId': subscription.id,
+      }
+    });
+    console.log(`[POLAR WEBHOOK] subscription.updated: user ${user._id} reverted to free due to payment failure (${status})`);
   }
 }
 

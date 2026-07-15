@@ -425,7 +425,7 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
                 redirect: false
               } as any),
               new Promise((_, reject) =>
-                setTimeout(() => reject(new Error('Sign-in request timed out after 30 seconds')), 30000)
+                setTimeout(() => reject(new Error('Sign-in request timed out after 60 seconds')), 60000)
               )
             ]) as any;
 
@@ -464,8 +464,40 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
                   setError(verifyResult.message || 'Invalid or expired code. Please request a new one.');
                   setRemainingAttempts(verifyResult.remainingAttempts || 0);
                 } else {
-                  // Code is valid but NextAuth sign-in failed - the code was already consumed
-                  setError('Code was verified but sign-in failed. The code may have been used. Please request a new code and try again.');
+                  // Code is valid but NextAuth sign-in failed (e.g. callback rate-limiting or timeout)
+                  // Create session directly via the API
+                  try {
+                    const sessionResponse = await fetch('/api/auth/create-session', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        userId: verifyResult.userId,
+                        email: verifyResult.email,
+                      }),
+                    });
+
+                    const sessionResult = await sessionResponse.json();
+
+                    if (!sessionResult.success) {
+                      setError('Failed to create session. Please try again.');
+                      return;
+                    }
+
+                    // Success - redirect
+                    setSuccess('Authentication successful, redirecting...');
+                    posthog.capture('user_signed_in', {
+                      auth_method: 'passwordless_fallback',
+                      email,
+                    });
+                    setTimeout(() => {
+                      if (!isModal) {
+                        safeRedirect(callbackUrl);
+                      }
+                    }, 1000);
+                  } catch (sessError) {
+                    console.error('Failed to create fallback session:', sessError);
+                    setError('Code was verified but session initialization failed. Please try again.');
+                  }
                 }
               } catch (fetchError: any) {
                 console.error('Failed to fetch verification status:', fetchError);

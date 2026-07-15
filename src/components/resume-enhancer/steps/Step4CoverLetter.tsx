@@ -114,7 +114,7 @@ export default function Step4CoverLetter({ onComplete }: Step4CoverLetterProps) 
   const [activeLeftSidebar, setActiveLeftSidebar] = useState<string | null>(null);
   const [grammarIssues, setGrammarIssues] = useState<any[]>([]);
   const [matchScore, setMatchScore] = useState(82);
-  const [showMoriChat, setShowMoriChat] = useState(false);
+  const [showMoriChat, setShowMoriChat] = useState(true);
   const [showGuidePanel, setShowGuidePanel] = useState(false);
   const [showTemplateSelector, setShowTemplateSelector] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
@@ -299,10 +299,12 @@ export default function Step4CoverLetter({ onComplete }: Step4CoverLetterProps) 
     <div className="flex flex-col h-[calc(100vh-64px)] min-h-0 relative overflow-hidden bg-gray-50 dark:bg-[var(--bg-primary)]">
       <div className="flex-1 h-full flex overflow-hidden relative px-3 pb-3 pt-3 gap-3">
         
-        {/* Canvas Wrapper */}
-        <div className="flex-1 min-h-0 relative flex flex-col rounded-xl overflow-hidden shadow-sm shadow-black/10 dark:shadow-black/30 border border-gray-200 dark:border-white/5 text-gray-900">
-          <div ref={containerRef} className="flex-1 min-h-0 overflow-y-auto bg-gray-100/50 dark:bg-[#141810] p-4 lg:p-8 flex justify-center custom-scrollbar">
-            <div className="transition-transform duration-300 transform origin-top pb-20" style={{ transform: `scale(${zoom / 100})` }}>
+        {/* Canvas Column — canvas card + Mori chat stacked vertically */}
+        <div className="flex-1 min-h-0 relative flex flex-col gap-3">
+          {/* Canvas card */}
+          <div className="flex-1 min-h-0 relative flex flex-col rounded-xl overflow-hidden shadow-sm shadow-black/10 dark:shadow-black/30 border border-gray-200 dark:border-white/5 text-gray-900">
+          <div ref={containerRef} className="flex-1 min-h-0 overflow-y-auto bg-gray-100/50 dark:bg-[#141810] p-4 lg:p-8 flex justify-center custom-scrollbar relative">
+            <div className="transition-transform duration-300 transform origin-top pb-48" style={{ transform: `scale(${zoom / 100})` }}>
               <CoverLetterLayoutEngine 
                 templateType={templateType}
                 onTemplateTypeChange={setTemplateType}
@@ -329,7 +331,7 @@ export default function Step4CoverLetter({ onComplete }: Step4CoverLetterProps) 
           </div>
 
           {/* Floating Zoom & Page Controls */}
-          <div className="absolute bottom-6 right-6 z-[40] hidden md:flex items-center gap-2 pointer-events-none">
+          <div className="absolute right-6 z-[40] hidden md:flex items-center gap-2 pointer-events-none bottom-6">
             <div className="px-3 h-9 rounded-xl border shadow-xl backdrop-blur-md flex items-center gap-3 text-[10px] font-bold uppercase tracking-wider bg-white/90 dark:bg-[#111]/90 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-[#2a2a2a] opacity-90 hover:opacity-100 transition-opacity pointer-events-auto">
               <button 
                 onClick={() => setPageFormat(pageFormat === 'a4' ? 'letter' : 'a4')}
@@ -369,7 +371,20 @@ export default function Step4CoverLetter({ onComplete }: Step4CoverLetterProps) 
               </button>
             </div>
           </div>
-        </div>
+
+          </div>{/* end canvas card */}
+
+          {/* Mori Chat — separate panel BELOW canvas, same column, hidden when guide/template panel is open */}
+          {showMoriChat && !showGuidePanel && !showTemplateSelector && (
+            <div className="shrink-0 rounded-xl overflow-hidden panel-glass border border-white/10 dark:border-white/10 shadow-sm">
+              <MoriCoverLetterChat
+                isBottomOverlay={true}
+                onBodyChange={handleBodyChange}
+                onClose={() => setShowMoriChat(false)}
+              />
+            </div>
+          )}
+        </div>{/* end canvas column */}
 
         {/* MIDDLE COLUMN - LETTER GUIDE (radial progress, metrics, context) */}
         <div 
@@ -378,7 +393,7 @@ export default function Step4CoverLetter({ onComplete }: Step4CoverLetterProps) 
             lg:static lg:w-[400px] lg:shadow-none lg:flex lg:z-10 lg:p-0 lg:overflow-hidden lg:bg-transparent
             ${showGuidePanel || showTemplateSelector ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}
           `}
-          style={{ order: (showMoriChat || showGuidePanel || showTemplateSelector) ? 1 : 2 }}
+          style={{ order: 2 }}
         >
           {showTemplateSelector ? (
             <div className="flex flex-col h-full bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/5 rounded-2xl shadow-sm overflow-hidden">
@@ -487,28 +502,8 @@ export default function Step4CoverLetter({ onComplete }: Step4CoverLetterProps) 
               }}
             />
           )}
-          {!showMoriChat && <EditorStepsNavOverlay />}
+          <EditorStepsNavOverlay />
         </div>
-
-        {/* RIGHT COLUMN - MORI AI ASSISTANT CHAT */}
-        <AnimatePresence>
-          {showMoriChat && (
-            <motion.div 
-              initial={{ opacity: 0, x: 20, width: 0 }}
-              animate={{ opacity: 1, x: 0, width: 360 }}
-              exit={{ opacity: 0, x: 20, width: 0 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed inset-y-0 right-0 z-50 w-full lg:static lg:w-[360px] flex flex-col shrink-0 h-full relative min-h-0 overflow-hidden shadow-2xl lg:shadow-none bg-white dark:bg-[var(--bg-secondary)]"
-              style={{ order: 3 }}
-            >
-              <MoriCoverLetterChat 
-                onBodyChange={handleBodyChange} 
-                onClose={() => setShowMoriChat(false)}
-              />
-              {showMoriChat && <EditorStepsNavOverlay />}
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
 
       {/* Mobile unified bottom navigation pill */}
