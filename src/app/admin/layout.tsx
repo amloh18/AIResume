@@ -8,6 +8,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   // Check if user is authenticated and is an admin
   const authResult = await getAuthenticatedUser();
   const isAdmin = authResult?.user?.role === 'admin' || authResult?.user?.role === 'superadmin';
+  console.log('AdminLayout Check:', { user: authResult?.user, role: authResult?.user?.role, isAdmin });
 
   return (
     <AdminThemeEnforcer>
