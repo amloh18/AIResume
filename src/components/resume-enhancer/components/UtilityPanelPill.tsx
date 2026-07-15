@@ -6,9 +6,10 @@ interface UtilityPanelPillProps {
   activePanel: 'mori' | 'design' | 'json' | 'layout' | null;
   /** Called when a button is hovered — pass null on mouse-leave */
   onHoverPanel?: (panel: 'mori' | 'design' | 'json' | 'layout' | 'role' | null) => void;
+  onToggleMori?: () => void;
 }
 
-export const UtilityPanelPill: React.FC<UtilityPanelPillProps> = ({ activePanel, onHoverPanel }) => {
+export const UtilityPanelPill: React.FC<UtilityPanelPillProps> = ({ activePanel, onHoverPanel, onToggleMori }) => {
   const { state, dispatch } = useResumeEnhancer();
 
   const handleToggle = (panel: 'mori' | 'design' | 'json' | 'layout') => {
@@ -50,7 +51,13 @@ export const UtilityPanelPill: React.FC<UtilityPanelPillProps> = ({ activePanel,
 
       {/* Mori AI (Sparkles) */}
       <button 
-         onClick={() => handleToggle('mori')}
+         onClick={() => {
+           if (onToggleMori) {
+             onToggleMori();
+           } else {
+             handleToggle('mori');
+           }
+         }}
          onMouseEnter={() => onHoverPanel?.('mori')}
          onMouseLeave={() => onHoverPanel?.(null)}
          className={`p-1.5 rounded-full transition-all flex items-center justify-center hover:scale-110 active:scale-95 duration-150 ${

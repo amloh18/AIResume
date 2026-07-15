@@ -5,7 +5,7 @@ import { getConnection } from '@/lib/database';
 import { User, Invoice } from '@/models';
 import InvoiceItem from '@/models/InvoiceItem';
 import mongoose from 'mongoose';
-import PolarService from '@/lib/payment/polar';
+import PolarService, { getPolar } from '@/lib/payment/polar';
 
 /**
  * Download invoice as PDF
@@ -44,6 +44,40 @@ export async function GET(
       ...(isObjectId ? { _id: invoiceId } : { 'metadata.polarCheckoutId': invoiceId }),
       userId: user._id
     });
+
+    // If it's a Polar order, attempt to redirect to the official Polar invoice URL
+    let polarOrderId: string | null = null;
+    if (invoice && invoice.metadata?.polarCheckoutId) {
+      try {
+        const polarResult = await PolarService.listOrders({ customerEmail: user.email });
+        if (polarResult.success && polarResult.orders) {
+          const order = polarResult.orders.find((o: any) => o.checkout_id === invoice.metadata.polarCheckoutId || o.checkoutId === invoice.metadata.polarCheckoutId);
+          if (order) {
+            polarOrderId = order.id;
+          }
+        }
+      } catch (polarErr) {
+        console.error('Failed to resolve Polar order ID from checkout ID:', polarErr);
+      }
+    } else if (!isObjectId) {
+      polarOrderId = invoiceId;
+    }
+
+    if (polarOrderId) {
+      try {
+        const polar = getPolar();
+        if (polar) {
+          console.log(`🔍 Fetching official Polar invoice URL for order ${polarOrderId}`);
+          const invoiceRes = await polar.orders.invoice({ id: polarOrderId });
+          if (invoiceRes && invoiceRes.url) {
+            console.log(`➡️ Redirecting user to Polar invoice: ${invoiceRes.url}`);
+            return NextResponse.redirect(invoiceRes.url);
+          }
+        }
+      } catch (polarErr) {
+        console.error('⚠️ Failed to fetch Polar invoice URL, falling back to local PDF generation:', polarErr);
+      }
+    }
 
     if (!invoice) {
       // Try fetching from Polar orders directly

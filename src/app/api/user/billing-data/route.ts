@@ -47,41 +47,51 @@ export async function GET(request: NextRequest) {
     }
 
     if (liveDetails.hasActiveSub) {
-      const resolvedPlanKey = liveDetails.planKey || 'starter_monthly';
-      const mongoActive = user.subscription && (user.subscription.status === 'active' || user.subscription.status === 'trialing') && user.currentPlanKey !== 'free';
-      if (!mongoActive) {
-        console.log(`🔄 Billing Data API - Reconciling active Polar subscription for ${user.email} in MongoDB...`);
-        const expiresAt = liveDetails.subscription?.currentPeriodEnd || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-        
-        await User.findByIdAndUpdate(user._id, {
-          $set: {
-            currentPlanKey: resolvedPlanKey,
-            'subscription.planKey': resolvedPlanKey,
-            'subscription.status': 'active',
-            'subscription.accessExpiresAt': expiresAt,
-            'subscription.currentPeriodEnd': expiresAt
-          }
-        });
-        
-        const SubscriptionModel = (await import('@/models/Subscription')).default;
-        const { getAdminPricingPlan } = await import('@/models/admin-models');
-        const PricingPlan = await getAdminPricingPlan();
-        const plan = await PricingPlan.findOne({ key: resolvedPlanKey });
-        
-        await SubscriptionModel.findOneAndUpdate(
-          { userId: user._id },
-          {
-            $set: {
-              status: 'active',
-              planKey: resolvedPlanKey,
-              planId: plan?._id,
-              currentPeriodStart: liveDetails.subscription?.currentPeriodStart || new Date(),
-              currentPeriodEnd: expiresAt,
-              providerSubscriptionId: liveDetails.subscription?.id || 'polar_sub_reconciled'
-            }
-          },
-          { upsert: true }
+      if (!liveDetails.planKey) {
+        // CRITICAL: Plan mapping failed — do NOT silently assign starter_monthly.
+        // This prevents a paid user from being wrongly shown starter_monthly.
+        console.error(
+          `[BILLING DATA] ⚠️ Polar has active subscription for ${user.email} but plan mapping failed. ` +
+          'Polar product/price IDs not found in PricingPlan collection. ' +
+          'Keeping MongoDB plan — fix PricingPlan polar product ID fields.'
         );
+      } else {
+        const resolvedPlanKey = liveDetails.planKey;
+        const mongoActive = user.subscription && (user.subscription.status === 'active' || user.subscription.status === 'trialing') && user.currentPlanKey !== 'free';
+        if (!mongoActive) {
+          console.log(`[BILLING DATA] Reconciling active Polar subscription for ${user.email}: planKey=${resolvedPlanKey}`);
+          const expiresAt = liveDetails.subscription?.currentPeriodEnd || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+          
+          await User.findByIdAndUpdate(user._id, {
+            $set: {
+              currentPlanKey: resolvedPlanKey,
+              'subscription.planKey': resolvedPlanKey,
+              'subscription.status': 'active',
+              'subscription.accessExpiresAt': expiresAt,
+              'subscription.currentPeriodEnd': expiresAt
+            }
+          });
+          
+          const SubscriptionModel = (await import('@/models/Subscription')).default;
+          const { getAdminPricingPlan } = await import('@/models/admin-models');
+          const PricingPlan = await getAdminPricingPlan();
+          const plan = await PricingPlan.findOne({ key: resolvedPlanKey });
+          
+          await SubscriptionModel.findOneAndUpdate(
+            { userId: user._id },
+            {
+              $set: {
+                status: 'active',
+                planKey: resolvedPlanKey,
+                planId: plan?._id,
+                currentPeriodStart: liveDetails.subscription?.currentPeriodStart || new Date(),
+                currentPeriodEnd: expiresAt,
+                providerSubscriptionId: liveDetails.subscription?.id || 'polar_sub_reconciled'
+              }
+            },
+            { upsert: true }
+          );
+        }
       }
     }
     // --- End Live Polar Reconciliation Check ---
@@ -234,29 +244,36 @@ export async function GET(request: NextRequest) {
       });
 
       if (polarResult.success && polarResult.orders) {
-        const existingCheckoutIds = invoices
-          .map((inv: any) => inv.metadata?.polarCheckoutId)
-          .filter(Boolean);
+        // Collect all checkout IDs already stored in local DB invoices
+        // Polar SDK may return checkout_id (snake_case) or checkoutId (camelCase)
+        const existingCheckoutIds = new Set(
+          invoices
+            .map((inv: any) => inv.metadata?.polarCheckoutId)
+            .filter(Boolean)
+        );
 
         polarInvoices = polarResult.orders
-          .filter((order: any) => !order.checkout_id || !existingCheckoutIds.includes(order.checkout_id))
+          .filter((order: any) => {
+            const orderId = order.checkout_id || order.checkoutId || null;
+            return !orderId || !existingCheckoutIds.has(orderId);
+          })
           .map((order: any) => ({
             id: order.id,
-            invoiceNumber: order.id.substring(0, 8).toUpperCase(),
-            subtotal: order.amount / 100, // Polar amounts are in cents
-            taxAmount: (order.tax_amount || 0) / 100,
-            amount: order.amount / 100,
-            currency: order.currency.toUpperCase(),
-            status: 'paid', // If it's an order in Polar, it's paid
-            planName: order.product?.name || 'Subscription',
-            billingCycle: order.product?.recurring_interval || 'one-time',
+            invoiceNumber: (order.id || '').substring(0, 8).toUpperCase(),
+            subtotal: (order.amount || 0) / 100,
+            taxAmount: ((order.taxAmount || order.tax_amount) || 0) / 100,
+            amount: (order.amount || 0) / 100,
+            currency: (order.currency || 'USD').toUpperCase(),
+            status: 'paid',
+            planName: order.product?.name || order.productName || 'Subscription',
+            billingCycle: order.product?.recurringInterval || order.product?.recurring_interval || 'one-time',
             paymentMethodType: 'card',
             paymentMethodLast4: '****',
-            paidAt: order.created_at,
-            dueDate: order.created_at,
-            invoiceDate: order.created_at,
-            description: `Order for ${order.product?.name || 'CVCircle Pro'}`,
-            createdAt: order.created_at,
+            paidAt: order.createdAt || order.created_at,
+            dueDate: order.createdAt || order.created_at,
+            invoiceDate: order.createdAt || order.created_at,
+            description: `Order for ${order.product?.name || order.productName || 'CVCircle Pro'}`,
+            createdAt: order.createdAt || order.created_at,
             isPolar: true,
             items: []
           }));

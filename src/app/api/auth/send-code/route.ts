@@ -47,10 +47,14 @@ export async function POST(request: NextRequest) {
     if (type === 'passwordless-login') {
       const user = await User.findOne({ email: email.toLowerCase() });
       if (!user) {
-        return NextResponse.json(
-          { success: false, message: 'No account found with this email. Please sign up first.' },
-          { status: 404 }
-        );
+        const AdminAuth = (await import('@/models/AdminAuth')).default;
+        const admin = await AdminAuth.findOne({ email: email.toLowerCase() });
+        if (!admin) {
+          return NextResponse.json(
+            { success: false, message: 'No account found with this email. Please sign up first.' },
+            { status: 404 }
+          );
+        }
       }
     }
 

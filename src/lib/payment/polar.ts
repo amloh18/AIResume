@@ -89,7 +89,63 @@ export class PolarService {
       // New SDK (v0.48+) uses products[] with product IDs.
       // We use the product ID if available, otherwise fall back to the price ID
       // (works for Polar products that have only one price).
-      const productIdToUse = params.productId || params.productPriceId;
+      let productIdToUse = params.productId;
+      
+      // If productId is missing, or is equal to priceId, resolve it
+      const shouldResolve = !productIdToUse || productIdToUse === params.productPriceId;
+      
+      if (shouldResolve && params.productPriceId) {
+        try {
+          console.log(`🔍 Resolving Polar Product ID for Price ID: ${params.productPriceId}...`);
+          const listRes = await polarInstance.products.list({ limit: 100 });
+          const polarProducts: any[] = [];
+          for await (const page of listRes) {
+            if (page.result?.items) {
+              polarProducts.push(...page.result.items);
+            }
+          }
+          
+          const matchedProduct = polarProducts.find((p: any) =>
+            p.prices && p.prices.some((price: any) => price.id === params.productPriceId)
+          );
+          if (matchedProduct) {
+            console.log(`   ✅ Resolved Price ID ${params.productPriceId} to Product ID: ${matchedProduct.id} (${matchedProduct.name})`);
+            productIdToUse = matchedProduct.id;
+          } else {
+            console.warn(`   ⚠️ Price ID ${params.productPriceId} not found in any Polar Product catalog entry.`);
+          }
+        } catch (resolveErr) {
+          console.error('   ❌ Error dynamically resolving Product ID from Price ID:', resolveErr);
+        }
+      }
+
+      // If productIdToUse is still defined, perform a final sanity check:
+      // Scan all Polar products to ensure the ID is not actually a Price ID.
+      if (productIdToUse) {
+        try {
+          const listRes = await polarInstance.products.list({ limit: 100 });
+          const polarProducts: any[] = [];
+          for await (const page of listRes) {
+            if (page.result?.items) {
+              polarProducts.push(...page.result.items);
+            }
+          }
+          
+          const matchedProductByPriceId = polarProducts.find((p: any) =>
+            p.prices && p.prices.some((price: any) => price.id === productIdToUse)
+          );
+          if (matchedProductByPriceId) {
+            console.log(`   ⚠️ Detected productIdToUse (${productIdToUse}) is actually a Price ID. Correcting to parent Product ID: ${matchedProductByPriceId.id}`);
+            productIdToUse = matchedProductByPriceId.id;
+          }
+        } catch (sanityErr) {
+          console.warn('   ⚠️ Sanity check for price ID failed:', sanityErr);
+        }
+      }
+
+      if (!productIdToUse) {
+        productIdToUse = params.productPriceId;
+      }
 
       const checkout = await polarInstance.checkouts.create({
         products: [productIdToUse],
@@ -242,18 +298,37 @@ export class PolarService {
     }
     
     try {
-      // Fetch orders from Polar
-      const orders = await polarInstance.orders.list({
-        ...params
-      });
+      // Polar SDK v0.48+ returns a paginator object — collect all pages
+      const allOrders: any[] = [];
+      const limit = params.limit || 50;
+      const listParams: any = {};
+      if (params.customerEmail) listParams.customerEmail = params.customerEmail;
+      if (params.customerId) listParams.customerId = params.customerId;
+      listParams.limit = limit;
 
+      const paginator = await polarInstance.orders.list(listParams);
+
+      // If the SDK returns a paginator with an async iteration protocol, collect pages
+      if (paginator && typeof (paginator as any)[Symbol.asyncIterator] === 'function') {
+        for await (const page of paginator as any) {
+          const items = page?.result?.items || page?.items || (Array.isArray(page) ? page : []);
+          allOrders.push(...items);
+          if (allOrders.length >= limit) break;
+        }
+      } else {
+        // Older SDK or already resolved: check for .items directly
+        const directItems = (paginator as any)?.items || (paginator as any)?.result?.items || [];
+        allOrders.push(...directItems);
+      }
+
+      console.log(`[POLAR] listOrders fetched ${allOrders.length} orders for email=${params.customerEmail || '?'}`);
       return {
         success: true,
-        orders: orders.items || [],
-        total: orders.pagination?.totalCount || orders.items?.length || 0
+        orders: allOrders,
+        total: allOrders.length
       };
     } catch (error) {
-      console.error('Polar listOrders error:', error);
+      console.error('[POLAR] listOrders error:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -356,28 +431,41 @@ export class PolarService {
 
     const cached = this.subscriptionCache.get(customerEmail);
     if (cached && cached.expiresAt > Date.now()) {
-      console.log('polar.ts getActiveSubscriptionDetails (cache hit):', customerEmail, cached.data.hasActiveSub);
+      console.log('[POLAR] getActiveSubscriptionDetails (cache hit):', customerEmail, cached.data.hasActiveSub, 'planKey=', cached.data.planKey);
       return cached.data;
     }
 
     const polarInstance = getPolarInstance();
     if (!polarInstance) {
+      console.warn('[POLAR] getActiveSubscriptionDetails: Polar not configured');
       return { hasActiveSub: false };
     }
 
     try {
-      console.log('polar.ts getActiveSubscriptionDetails (cache miss): fetching live state for', customerEmail);
+      console.log('[POLAR] getActiveSubscriptionDetails (cache miss): fetching live state for', customerEmail);
       
-      const subscriptions = await polarInstance.subscriptions.list({
+      // Collect subscriptions — handle paginator
+      let subItems: any[] = [];
+      const subPaginator = await polarInstance.subscriptions.list({
         customerEmail: customerEmail,
         limit: 10
       });
+      if (subPaginator && typeof (subPaginator as any)[Symbol.asyncIterator] === 'function') {
+        for await (const page of subPaginator as any) {
+          const items = page?.result?.items || page?.items || (Array.isArray(page) ? page : []);
+          subItems.push(...items);
+          break; // Only need first page
+        }
+      } else {
+        subItems = (subPaginator as any)?.items || (subPaginator as any)?.result?.items || [];
+      }
 
-      const activeSub = (subscriptions.items || []).find(sub => 
+      const activeSub = subItems.find((sub: any) => 
         sub.status === 'active' || sub.status === 'trialing'
       );
 
       if (!activeSub) {
+        console.log('[POLAR] getActiveSubscriptionDetails: No active subscription found for', customerEmail);
         const result = { hasActiveSub: false };
         this.subscriptionCache.set(customerEmail, {
           data: result,
@@ -388,28 +476,51 @@ export class PolarService {
 
       const productId = activeSub.productId;
       const priceId = activeSub.priceId;
+      console.log(`[POLAR] Active subscription found for ${customerEmail}: subId=${activeSub.id} productId=${productId} priceId=${priceId} status=${activeSub.status}`);
 
       const { getAdminPricingPlan } = await import('@/models/admin-models');
       const PricingPlan = await getAdminPricingPlan();
       
       const plan = await PricingPlan.findOne({
         $or: [
-          { polarProductId_monthly: productId },
-          { polarProductId_yearly: productId },
-          { polarProductId_quarterly: productId },
-          { polarProductId_one_time: productId },
-          { polarPriceId_monthly: priceId },
-          { polarPriceId_yearly: priceId },
-          { polarPriceId_quarterly: priceId },
-          { polarPriceId_one_time: priceId },
-          { 'regionalPricing.polarProductId': productId },
-          { 'regionalPricing.polarPriceId': priceId }
-        ]
+          ...(productId ? [
+            { polarProductId_monthly: productId },
+            { polarProductId_yearly: productId },
+            { polarProductId_quarterly: productId },
+            { polarProductId_one_time: productId },
+            { 'regionalPricing.polarProductId': productId }
+          ] : []),
+          ...(priceId ? [
+            { polarPriceId_monthly: priceId },
+            { polarPriceId_yearly: priceId },
+            { polarPriceId_quarterly: priceId },
+            { polarPriceId_one_time: priceId },
+            { 'regionalPricing.polarPriceId': priceId }
+          ] : [])
+        ].filter(Boolean)
       });
 
+      if (!plan) {
+        // CRITICAL: Do NOT silently fall back to starter_monthly.
+        // Log the unmapped IDs so they can be fixed in the admin panel.
+        console.error(
+          `[POLAR] ⚠️ PLAN MAPPING FAILURE: No PricingPlan found for productId=${productId} priceId=${priceId}. ` +
+          'Please ensure PricingPlan documents have correct polarProductId_* / polarPriceId_* fields. ' +
+          'User has an active Polar subscription but cannot be mapped to an internal plan.'
+        );
+        // Return hasActiveSub=true but planKey=undefined so callers can handle gracefully
+        const result = { hasActiveSub: true, planKey: undefined, subscription: activeSub };
+        this.subscriptionCache.set(customerEmail, {
+          data: result,
+          expiresAt: Date.now() + 60 * 1000 // Short cache on mapping failure
+        });
+        return result;
+      }
+
+      console.log(`[POLAR] Plan mapping success: productId=${productId} → planKey=${plan.key}`);
       const result = {
         hasActiveSub: true,
-        planKey: plan ? plan.key : 'starter_monthly',
+        planKey: plan.key,
         subscription: activeSub
       };
 
@@ -420,7 +531,7 @@ export class PolarService {
 
       return result;
     } catch (error) {
-      console.error('Polar getActiveSubscriptionDetails error:', error);
+      console.error('[POLAR] getActiveSubscriptionDetails error:', error);
       const result = { hasActiveSub: false };
       this.subscriptionCache.set(customerEmail, {
         data: result,

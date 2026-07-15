@@ -38,7 +38,7 @@ import { LocationService } from '@/lib/payment/locationService';
 import { DuplicateJobService, DuplicateCheckResult } from '@/lib/services/duplicateJobService';
 import DuplicateJobWarningModal from './DuplicateJobWarningModal';
 import { useUpgradePopupTrigger } from '@/lib/hooks/useUpgradePopupTrigger';
-import UpgradeCard from '@/components/dashboard/UpgradeCard';
+import UniversalPaymentModal from '@/components/payment/UniversalPaymentModal';
 import TrackerCreatedStageModal from './TrackerCreatedStageModal';
 import {
   shouldSkipTrackerCreatedStageModalForToday,
@@ -79,7 +79,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
   // Global credit exhaustion handler
   const { showExhaustionModal } = useCreditExhaustionHandler();
   const { shouldShow: shouldShowUpgradePopup, show: showUpgradePopup, dismiss: dismissUpgradePopup } = useUpgradePopupTrigger();
-  const [showUpgradeCard, setShowUpgradeCard] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showCreatedStageModal, setShowCreatedStageModal] = useState(false);
   const [trackerCreatedStagePreview, setTrackerCreatedStagePreview] = useState<TrackerCreatedStagePreview | null>(null);
 
@@ -741,7 +741,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
 
           setErrorMessage(trackerLimitMessage);
           if (userId) {
-            setShowUpgradeCard(true);
+            setShowPaymentModal(true);
           }
           if (!isAutoSave) setIsSaving(false);
           isSavingRef.current = false;
@@ -764,7 +764,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
           );
 
           if (userId) {
-            setShowUpgradeCard(true);
+            setShowPaymentModal(true);
           }
 
           if (!isAutoSave) setIsSaving(false);
@@ -1546,11 +1546,12 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
         />
       )}
 
-      {/* Upgrade Card */}
-      {showUpgradeCard && userId && (
-        <UpgradeCard
-          userId={userId}
-          onClose={() => setShowUpgradeCard(false)}
+      {/* Universal Payment Modal */}
+      {showPaymentModal && (
+        <UniversalPaymentModal
+          isOpen={showPaymentModal}
+          onClose={() => setShowPaymentModal(false)}
+          preselectedPlanKey="focused_yearly"
         />
       )}
     </AnimatePresence>

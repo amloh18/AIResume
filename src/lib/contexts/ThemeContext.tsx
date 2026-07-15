@@ -29,8 +29,13 @@ interface ThemeProviderProps {
 }
 
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
-  const [theme, setThemeState] = useState<Theme>('light');
-  const [isSystemDark, setIsSystemDark] = useState(false);
+  const [theme, setThemeState] = useState<Theme>('system');
+  const [isSystemDark, setIsSystemDark] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+    return false;
+  });
   const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
@@ -38,7 +43,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     if (savedTheme === 'light' || savedTheme === 'dark' || savedTheme === 'system') {
       setThemeState(savedTheme);
     } else {
-      setThemeState('light');
+      setThemeState('system');
     }
     setIsInitialized(true);
   }, []);
@@ -70,9 +75,23 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     setIsSystemDark(mediaQuery.matches);
 
-    const handler = (event: MediaQueryListEvent) => setIsSystemDark(event.matches);
-    mediaQuery.addEventListener('change', handler);
-    return () => mediaQuery.removeEventListener('change', handler);
+    const handler = (event: MediaQueryListEvent | MediaQueryList) => {
+      setIsSystemDark(event.matches);
+    };
+
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener('change', handler as any);
+    } else {
+      mediaQuery.addListener(handler as any);
+    }
+
+    return () => {
+      if (mediaQuery.removeEventListener) {
+        mediaQuery.removeEventListener('change', handler as any);
+      } else {
+        mediaQuery.removeListener(handler as any);
+      }
+    };
   }, [theme]);
 
   const toggleTheme = () => {

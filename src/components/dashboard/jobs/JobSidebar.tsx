@@ -35,7 +35,7 @@ import { CVJourney } from '@/types/cv';
 import { useRouter } from 'next/navigation';
 import { useCreditExhaustionHandler } from '@/hooks/useCreditExhaustionHandler';
 import { useUpgradePopupTrigger } from '@/lib/hooks/useUpgradePopupTrigger';
-import UpgradeCard from '../UpgradeCard';
+import UniversalPaymentModal from '@/components/payment/UniversalPaymentModal';
 import { isJobStale, getFollowUpNudge, calculateSuccessProbability, getMarketSalaryComparison } from '@/lib/utils/jobIntelligence';
 import TrackerCreatedStageModal from './TrackerCreatedStageModal';
 import LinkedInJobTab from './LinkedInJobTab';
@@ -2052,7 +2052,7 @@ ${userName}`
                       ) : (
                         <div className="relative rounded-2xl border border-white/5 bg-[#161d12] p-4 text-center overflow-hidden">
                           <p className="text-gray-300 font-semibold mb-1">Recruiter Auto-Sync</p>
-                          <p className="text-[11px] text-gray-500 mb-3 max-w-sm mx-auto leading-relaxed">
+                          <p className="text-[11px] text-gray-500 mb-3 leading-relaxed">
                             Upgrade to Focused or Pro to connect Gmail, Outlook, or IMAP. Automatically match emails, parse interviews, and auto-update journey stages.
                           </p>
                           <button
@@ -2327,13 +2327,14 @@ ${userName}`
 
 
         {/* Upgrade Card - shown after first journey creation */}
-        {showUpgradePopupState && shouldShowUpgradePopup && user?.id && (
-          <UpgradeCard
-            userId={user.id}
+        {showUpgradePopupState && shouldShowUpgradePopup && (
+          <UniversalPaymentModal
+            isOpen={showUpgradePopupState}
             onClose={() => {
               setShowUpgradePopupState(false);
               dismissUpgradePopup();
             }}
+            preselectedPlanKey="focused_yearly"
           />
         )}
 

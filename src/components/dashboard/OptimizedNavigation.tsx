@@ -38,6 +38,11 @@ const OptimizedNavigation: React.FC = () => {
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [preselectedPlanKey, setPreselectedPlanKey] = useState<string | undefined>(undefined);
   const [isUserMenuExpanded, setIsUserMenuExpanded] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   const hoverTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [creditInfo, setCreditInfo] = useState<{
@@ -1228,14 +1233,16 @@ const OptimizedNavigation: React.FC = () => {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >
-            {resolvedTheme === 'dark' ? (
+            {!mounted ? (
+              <Moon className="w-6 h-6 flex-shrink-0" />
+            ) : resolvedTheme === 'dark' ? (
               <Sun className="w-6 h-6 flex-shrink-0" />
             ) : (
               <Moon className="w-6 h-6 flex-shrink-0" />
             )}
             <div className="flex-1 min-w-0">
               <div className="text-body font-medium truncate">
-                {resolvedTheme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+                {!mounted ? 'Dark Mode' : resolvedTheme === 'dark' ? 'Light Mode' : 'Dark Mode'}
               </div>
               <div className="text-small text-gray-500 dark:text-gray-400 truncate mt-0.5">
                 Switch theme

@@ -36,7 +36,8 @@ import {
   Loader2,
   Award,
   Star,
-  ArrowRight
+  ArrowRight,
+  ExternalLink
 } from 'lucide-react';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 import Pricing from '@/components/landing/Pricing';
@@ -172,6 +173,7 @@ interface Invoice {
   dueDate?: string;
   description: string;
   createdAt: string;
+  isPolar?: boolean;
 }
 
 // --- SKELETON LOADERS ---
@@ -1980,6 +1982,7 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
 
 // Membership & Billing Component
 const MembershipBilling = ({ user }: { user: User }) => {
+  const queryClient = useQueryClient();
   // Use consolidated billing data hook (fetches subscription, payment methods, invoices in parallel)
   const { data: billingData, isLoading: billingLoading, error: billingErrors, refetch: refetchBillingData } = useBillingData();
 
@@ -1991,6 +1994,34 @@ const MembershipBilling = ({ user }: { user: User }) => {
 
   const [isMembershipModalOpen, setIsMembershipModalOpen] = useState(false);
   const [isAddPaymentModalOpen, setIsAddPaymentModalOpen] = useState(false);
+  const [cancellingSubscription, setCancellingSubscription] = useState(false);
+
+  const handleCancelSubscription = async () => {
+    if (!window.confirm('Are you sure you want to cancel your subscription? You will keep your access until the end of the current billing cycle.')) {
+      return;
+    }
+
+    setCancellingSubscription(true);
+    try {
+      const response = await fetch('/api/subscription/cancel', {
+        method: 'POST',
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        toast.success(result.message || 'Subscription cancelled successfully.');
+        // Refresh billing data
+        refetchBillingData();
+      } else {
+        toast.error(result.error || 'Failed to cancel subscription.');
+      }
+    } catch (err) {
+      console.error('Error cancelling subscription:', err);
+      toast.error('An error occurred. Please try again.');
+    } finally {
+      setCancellingSubscription(false);
+    }
+  };
 
   // Toast notification state
 
@@ -2013,8 +2044,8 @@ const MembershipBilling = ({ user }: { user: User }) => {
   const paymentMethodsError = billingErrors.paymentMethods;
   const invoicesError = billingErrors.invoices;
 
-  // Determine the current plan key - use subscription planKey if available, otherwise use user's currentPlanKey
-  const currentPlanKey = subscription?.planKey || userData?.currentPlanKey || 'free';
+  // Determine the current plan key - use subscription planKey, user hook data subscription, user hook data currentPlan, user prop, defaulting to 'free'
+  const currentPlanKey = subscription?.planKey || userData?.subscription?.planKey || userData?.currentPlanKey || user?.currentPlanKey || (user as any)?.currentPlanKey || 'free';
   const currentPlanName = subscription?.planName || getPlanName(currentPlanKey as any);
   const currentPlanDetails = pricingHookResult.plans?.find((p: any) => p.key === currentPlanKey);
 
@@ -2204,6 +2235,33 @@ const MembershipBilling = ({ user }: { user: User }) => {
                     );
                   })()}
 
+                  {/* Cancel Subscription Button or Cancelled State */}
+                  {(() => {
+                    const isFree = isFreeTierPlan(currentPlanKey);
+                    if (isFree) return null;
+
+                    // If already canceled (autoRenew is false)
+                    if (subscription?.autoRenew === false) {
+                      const endDate = subscription?.currentPeriodEnd || subscription?.endDate;
+                      return (
+                        <div className="mt-3 p-2 bg-yellow-500/10 border border-yellow-500/20 text-yellow-600 dark:text-yellow-400 text-xs rounded-lg text-center font-medium">
+                          Subscription Cancelled. Access continues until {endDate ? formatDate(endDate) : 'end of billing period'}.
+                        </div>
+                      );
+                    }
+
+                    // Show cancel button
+                    return (
+                      <button
+                        onClick={handleCancelSubscription}
+                        disabled={cancellingSubscription}
+                        className="mt-3 w-full py-2 px-3 border border-red-500/20 text-red-500 hover:bg-red-500/5 dark:hover:bg-red-500/10 text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
+                      >
+                        {cancellingSubscription ? 'Cancelling...' : 'Cancel Subscription'}
+                      </button>
+                    );
+                  })()}
+
 
                 </div>
               </div>
@@ -2361,8 +2419,13 @@ const MembershipBilling = ({ user }: { user: User }) => {
                               <Star className="w-4 h-4" />
                             </div>
                             <div>
-                              <p className="text-small font-medium text-gray-900 dark:text-white">
+                              <p className="text-small font-medium text-gray-900 dark:text-white flex items-center gap-1.5">
                                 {invoice.planName || 'Subscription'}
+                                {invoice.isPolar && (
+                                  <span className="inline-flex items-center px-1.5 py-0.2 rounded bg-indigo-500/10 text-indigo-500 dark:text-indigo-400 text-[9px] font-semibold uppercase tracking-wider">
+                                    Polar
+                                  </span>
+                                )}
                               </p>
                               <p className="text-small text-gray-500 dark:text-gray-400">
                                 {invoice.billingCycle || 'One-time'}
@@ -2395,9 +2458,9 @@ const MembershipBilling = ({ user }: { user: User }) => {
                               target="_blank"
                               rel="noopener noreferrer"
                               className="p-2 text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                              title="Download Invoice"
+                              title={invoice.isPolar ? "View Official Polar Invoice" : "Download Invoice"}
                             >
-                              <Download className="w-4 h-4" />
+                              {invoice.isPolar ? <ExternalLink className="w-4 h-4" /> : <Download className="w-4 h-4" />}
                             </a>
                           </div>
                         </td>
@@ -2429,6 +2492,11 @@ const MembershipBilling = ({ user }: { user: User }) => {
         onSuccess={() => {
           setIsMembershipModalOpen(false);
           refetchBillingData();
+          queryClient.invalidateQueries({ queryKey: ['settings-user'] });
+          queryClient.invalidateQueries({ queryKey: ['settings-user-data'] });
+          window.dispatchEvent(new CustomEvent('userProfileUpdated', {
+            detail: { refreshUserData: true }
+          }));
           showToastNotification('success', 'Subscription updated successfully!');
         }}
         // Pass pricing data to avoid duplicate API calls

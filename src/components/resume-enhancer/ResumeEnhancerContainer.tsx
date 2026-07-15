@@ -59,7 +59,7 @@ import { useATS } from '@/contexts/ATSContext';
 import guestCVService from '@/lib/services/guestCVService';
 import { useUpgradePopupTrigger } from '@/lib/hooks/useUpgradePopupTrigger';
 import { usePaymentModal } from '@/contexts/PaymentModalContext';
-import UpgradeCard from '@/components/dashboard/UpgradeCard';
+import UniversalPaymentModal from '@/components/payment/UniversalPaymentModal';
 import { generateCVTitle } from '@/lib/utils/cv-title-generator';
 import ModeValidationBanner from '@/components/resume-enhancer/components/ModeValidationBanner';
 import ModeTransitionDialog from '@/components/resume-enhancer/components/ModeTransitionDialog';
@@ -3596,13 +3596,14 @@ function ResumeEnhancerContainerBase({
       )}
 
       {/* Upgrade Card - shown after first standalone CV creation */}
-      {showUpgradePopupState && shouldShowUpgradePopup && userId && (
-        <UpgradeCard
-          userId={userId}
+      {showUpgradePopupState && shouldShowUpgradePopup && (
+        <UniversalPaymentModal
+          isOpen={showUpgradePopupState}
           onClose={() => {
             setShowUpgradePopupState(false);
             dismissUpgradePopup();
           }}
+          preselectedPlanKey="focused_yearly"
         />
       )}
 

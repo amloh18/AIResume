@@ -16,7 +16,6 @@ import { DEFAULT_UNIFIED_CV_DATA } from '@/types/unified-cv-schema';
 import { useUserData } from '@/lib/hooks/useUserData';
 import { useCanvasFit } from '@/hooks/useCanvasFit';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
-import UtilityPanelPill from '@/components/resume-enhancer/components/UtilityPanelPill';
 const ReadOnlyWrapper = (props: any) => <EditableField {...props} readOnly={true} />;
 const EditableWrapper = EditableField;
 
@@ -449,7 +448,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
 
   const { containerRef: workspaceRef, zoom, setZoom, isAutoFit, triggerAutoFit } = useCanvasFit({
     documentPixelHeight: 1123, // Standard A4 height in pixels
-    paddingPx: 64, // 32px padding top/bottom combined
+    paddingPx: 100, // 50px padding top/bottom combined
     maxScale: 2.0,
     minScale: 0.5
   });
@@ -1961,8 +1960,8 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
             ref={workspaceRef}
             className={readOnly ? 'w-full @container' : `flex-1 overflow-auto relative flex justify-center custom-scrollbar transition-colors @container ${bgWorkspace}`}
             style={readOnly ? undefined : {
-              paddingTop: layoutMetrics.workspacePaddingY,
-              paddingBottom: layoutMetrics.workspacePaddingY,
+              paddingTop: 50,
+              paddingBottom: 50,
               paddingLeft: layoutMetrics.workspacePaddingX,
               paddingRight: layoutMetrics.workspacePaddingX,
             }}
@@ -1972,7 +1971,17 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
               {renderCanvasLayout()}
             </div>
           ) : (
-            <div key={templateAnimKey} className="transform origin-top transition-transform h-max pb-4 text-gray-900" style={{ transform: `scale(${zoom / 100})` }}>
+            <div
+              key={templateAnimKey}
+              className="transform transition-transform text-gray-900"
+              style={{
+                transform: `scale(${zoom / 100})`,
+                transformOrigin: 'top center',
+                // Pull up the empty space left by scale() shrinking the element visually
+                // without reducing its layout footprint
+                marginBottom: `${(zoom / 100 - 1) * layoutMetrics.pageHeightPx * (totalPagesCount || 1)}px`,
+              }}
+            >
               <div className="cv-document-wrapper relative" style={canvasStyleVars}>
                 {renderCanvasLayout()}
               </div>
@@ -1981,7 +1990,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
           </div>
 
           {!readOnly && (
-            <div className="absolute bottom-6 right-6 z-[40] hidden md:flex items-center gap-2 pointer-events-none">
+            <div className="absolute right-6 z-[40] hidden md:flex items-center gap-2 pointer-events-none transition-all duration-300 bottom-6">
               {/* Page Count and Size Info */}
               <div className={`px-3 h-9 rounded-xl border shadow-xl backdrop-blur-md flex items-center gap-3 text-[10px] font-bold uppercase tracking-wider ${bgNav} ${textPrimary} opacity-90 hover:opacity-100 transition-opacity pointer-events-auto`}>
                 <div className="flex items-center gap-1.5 border-r pr-3 border-gray-500/20">
@@ -2076,7 +2085,6 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
               <div className={`p-5 border-b flex items-center justify-between shrink-0 ${bgNav}`}>
                 <h3 className={`font-bold flex items-center gap-2 ${textPrimary}`}><Palette size={18} className={brandGreen}/> Global Design</h3>
                 <div className="flex items-center gap-2">
-                  <UtilityPanelPill activePanel="design" />
                   <button onClick={() => {
                     setActiveSidebar(null);
                     window.dispatchEvent(new CustomEvent('close-utility-panel'));
@@ -2181,8 +2189,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
                     <Copy size={13} />
                     Copy JSON Template
                   </button>
-                  <UtilityPanelPill activePanel="json" />
-                  <button onClick={() => {
+                   <button onClick={() => {
                     setActiveSidebar(null);
                     window.dispatchEvent(new CustomEvent('close-utility-panel'));
                   }} className={textMuted}><X size={18} /></button>
@@ -2350,15 +2357,12 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
                   <h3 className={`font-black text-xs uppercase tracking-wider ${textPrimary}`}>Template Library</h3>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <UtilityPanelPill activePanel="layout" />
-                <button onClick={() => {
+                 <button onClick={() => {
                   setIsTemplateModalOpen(false);
                   window.dispatchEvent(new CustomEvent('close-utility-panel'));
                 }} className={`p-1.5 rounded-full ${btnSecondary}`}>
                   <X size={16}/>
                 </button>
-              </div>
             </div>
             <div className={`p-4 overflow-y-auto flex-1 custom-scrollbar ${isDarkUI ? 'bg-[#0a0a0a]' : 'bg-gray-100'}`}>
               <div className="space-y-6">

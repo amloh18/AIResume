@@ -647,7 +647,22 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
     }, [state.cvType, state.journeyId, state.jobData, jdText]);
 
     const [activeUtilityPanel, setActiveUtilityPanel] = React.useState<'mori' | 'design' | 'json' | 'layout' | 'analysis' | null>(null);
-    const isControlPanelOpen = activeUtilityPanel && activeUtilityPanel !== 'analysis';
+    const [showMoriChatInAnalysis, setShowMoriChatInAnalysis] = React.useState(true);
+    const isControlPanelOpen = activeUtilityPanel && activeUtilityPanel !== 'analysis' && activeUtilityPanel !== 'mori';
+
+    React.useEffect(() => {
+      if (activeUtilityPanel === 'analysis') {
+        setShowMoriChatInAnalysis(true);
+      }
+    }, [activeUtilityPanel]);
+
+    React.useEffect(() => {
+      const handleCloseMori = () => {
+        setActiveUtilityPanel(null);
+      };
+      window.addEventListener('mori-close-panel', handleCloseMori);
+      return () => window.removeEventListener('mori-close-panel', handleCloseMori);
+    }, []);
 
     React.useEffect(() => {
       const handleSidebar = (e: Event) => {
@@ -675,21 +690,33 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
       };
     }, []);
 
+    // Sync activeUtilityPanel & showMoriChatInAnalysis with state.moriChatMode
     React.useEffect(() => {
-      if (state.moriChatMode) {
-        setActiveUtilityPanel('mori');
-      } else if (activeUtilityPanel === 'mori') {
-        setActiveUtilityPanel(null);
+      const isMoriVisible = activeUtilityPanel === 'mori' || (activeUtilityPanel === 'analysis' && showMoriChatInAnalysis);
+      
+      if (state.moriChatMode && !isMoriVisible) {
+        if (activeUtilityPanel === 'analysis') {
+          setShowMoriChatInAnalysis(true);
+        } else {
+          setActiveUtilityPanel('mori');
+        }
+      } else if (!state.moriChatMode && isMoriVisible) {
+        if (activeUtilityPanel === 'mori') {
+          setActiveUtilityPanel(null);
+        } else if (activeUtilityPanel === 'analysis') {
+          setShowMoriChatInAnalysis(false);
+        }
       }
-    }, [state.moriChatMode]);
+    }, [state.moriChatMode, activeUtilityPanel, showMoriChatInAnalysis]);
 
     React.useEffect(() => {
-      if (activeUtilityPanel === 'mori') {
+      const isMoriVisible = activeUtilityPanel === 'mori' || (activeUtilityPanel === 'analysis' && showMoriChatInAnalysis);
+      if (isMoriVisible) {
         if (!state.moriChatMode) dispatch({ type: 'SET_MORI_CHAT_MODE', payload: true });
       } else {
         if (state.moriChatMode) dispatch({ type: 'SET_MORI_CHAT_MODE', payload: false });
       }
-    }, [activeUtilityPanel, dispatch]);
+    }, [activeUtilityPanel, showMoriChatInAnalysis, dispatch, state.moriChatMode]);
 
     React.useEffect(() => {
       const handleOpenMoriChat = () => {
@@ -1253,10 +1280,12 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
         <div className="h-full w-full flex overflow-hidden relative p-3 gap-3">
           {/* CV Canvas Builder — full drag-drop snippet-based builder with inline editing */}
           <div 
-            className="flex-1 min-h-0 relative flex flex-col rounded-xl overflow-hidden shadow-sm shadow-black/10 dark:shadow-black/30"
-            style={{ order: isControlPanelOpen ? 2 : 1 }}
+            className="flex-1 min-h-0 relative flex flex-col gap-3"
+            style={{ order: 1 }}
           >
-            <div ref={cvPreviewRef} className="flex-1 min-h-0 overflow-hidden">
+            {/* Canvas card */}
+            <div className="flex-1 min-h-0 relative flex flex-col rounded-xl overflow-hidden shadow-sm shadow-black/10 dark:shadow-black/30">
+            <div ref={cvPreviewRef} className="flex-1 min-h-0 overflow-hidden relative">
               {!state.cvData ? (
                 <div className="w-full h-full bg-white dark:bg-[#141810] p-8 flex flex-col gap-6 animate-pulse rounded-xl border border-gray-200 dark:border-white/[0.04]">
                   {/* Header Skeleton */}
@@ -1314,8 +1343,25 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
                   </Suspense>
                 )}
             </div>
+            </div>{/* end canvas card */}
+
+            {/* Mori Chat — separate panel BELOW canvas, same column, hidden when control panel open or non-analysis/mori tab */}
+            {(activeUtilityPanel === 'mori' || (activeUtilityPanel === 'analysis' && showMoriChatInAnalysis)) && !isControlPanelOpen && !state.isJobSidebarOpen && (
+              <div className="shrink-0 rounded-xl overflow-hidden panel-glass border border-white/10 dark:border-white/10 shadow-sm">
+                <MoriChatInterface
+                  isBottomOverlay={true}
+                  onClose={() => {
+                    if (activeUtilityPanel === 'analysis') {
+                      setShowMoriChatInAnalysis(false);
+                    } else {
+                      setActiveUtilityPanel(null);
+                    }
+                  }}
+                />
+              </div>
+            )}
           </div>
-          
+
           {/* Right rail: onboarding setup checklist and AI analysis */}
           <div 
             className={`
@@ -1323,7 +1369,7 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
               lg:static lg:w-[426px] lg:shadow-none lg:border lg:border-white/20 lg:dark:border-white/10 lg:rounded-xl lg:flex lg:z-10 lg:p-0 lg:overflow-hidden lg:bg-transparent lg:panel-glass lg:shrink-0 overflow-hidden
               ${activeUtilityPanel === 'analysis' ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}
             `}
-            style={{ order: isControlPanelOpen ? 1 : 2 }}
+            style={{ order: 2 }}
           >
             {showChecklist && (
               <InlineChecklist 
@@ -1333,12 +1379,17 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
               />
             )}
             <div className="flex-1 min-h-0">
-              <ATSMeterPanel isUtilityPanelOpen={!!activeUtilityPanel} onClose={() => setActiveUtilityPanel(null)} />
+               <ATSMeterPanel 
+                 isUtilityPanelOpen={!!activeUtilityPanel} 
+                 onClose={() => setActiveUtilityPanel(null)} 
+                 showMoriChat={showMoriChatInAnalysis}
+                 onToggleMoriChat={() => setShowMoriChatInAnalysis(prev => !prev)}
+               />
             </div>
             {!isControlPanelOpen && <EditorStepsNavOverlay />}
           </div>
 
-          {/* Unified Utility Panel (Mori Chat, Design, JSON, Layout) */}
+          {/* Unified Utility Panel (Design, JSON, Layout) */}
           <div 
             className={`
               fixed inset-y-0 right-0 z-50 w-full bg-white dark:bg-[var(--bg-secondary)] flex flex-col h-full gap-3 min-h-0 shadow-2xl transition-all duration-300
@@ -1348,36 +1399,10 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
             `}
             style={{ order: 3 }}
           >
-            {/* Mori Chat — always in DOM, visibility toggled via CSS to keep portal target stable */}
-            <div className={`flex-1 flex flex-col min-h-0 overflow-hidden ${activeUtilityPanel === 'mori' ? '' : 'hidden'}`}>
-              {/* Mori Chat Header */}
-              <div className="sticky top-0 z-20 flex items-center justify-between px-4 py-3 bg-white/95 dark:bg-[var(--bg-secondary)] backdrop-blur-sm border-b border-gray-100 dark:border-white/[0.04]">
-                <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <h3 className="text-xs font-extrabold uppercase tracking-wider">Mori Chat</h3>
-                </div>
-                <div className="flex items-center gap-2">
-                  <UtilityPanelPill activePanel="mori" />
-                  <button
-                    onClick={() => dispatch({ type: 'SET_MORI_CHAT_MODE', payload: false })}
-                    className="p-1 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-white hover:bg-gray-150 dark:hover:bg-white/5 transition-colors"
-                    title="Close Mori Chat"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-              
-              {/* Mori Chat Interface */}
-              <div className="flex-1 min-h-0 overflow-hidden">
-                <MoriChatInterface />
-              </div>
-            </div>
-
             {/* Portal target — always mounted so CVCanvasEngine's React portals never lose their target */}
             <div
               id="builder-utility-panel-portal"
-              className={`flex-grow flex flex-col h-full overflow-hidden ${activeUtilityPanel === 'mori' ? 'hidden' : ''}`}
+              className="flex-grow flex flex-col h-full overflow-hidden"
             />
             {isControlPanelOpen && <EditorStepsNavOverlay />}
           </div>

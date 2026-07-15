@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import toast from 'react-hot-toast';
 import { useUnifiedAuth } from '@/lib/hooks/useUnifiedAuth';
 import { useMembership } from '@/lib/hooks/useMembership';
-import UpgradeCard from '@/components/dashboard/UpgradeCard';
+import UniversalPaymentModal from '@/components/payment/UniversalPaymentModal';
 
 interface ParsedJobData {
   jobTitle: string;
@@ -1699,10 +1699,11 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
       )}
 
       {/* Upgrade membership gateway dialog */}
-      {showUpgradePopup && user?.id && (
-        <UpgradeCard
-          userId={user.id}
+      {showUpgradePopup && (
+        <UniversalPaymentModal
+          isOpen={showUpgradePopup}
           onClose={() => setShowUpgradePopup(false)}
+          preselectedPlanKey="focused_yearly"
         />
       )}
     </AnimatePresence>

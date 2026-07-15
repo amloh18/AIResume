@@ -72,6 +72,7 @@ export interface IPricingPlan extends Document {
     price: number;
     displayPrice: string;
     polarPriceId?: string;
+    polarProductId?: string;
   }>;
   createdAt: Date;
   updatedAt: Date;
@@ -311,7 +312,8 @@ const pricingPlanSchema = new Schema<IPricingPlan>({
       required: true,
       trim: true
     },
-    polarPriceId: String
+    polarPriceId: String,
+    polarProductId: String
   }]
 }, {
   timestamps: true,

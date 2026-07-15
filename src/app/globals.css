@@ -408,7 +408,7 @@
 .step-one-hero {
   position: relative;
   isolation: isolate;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .step-one-stat,

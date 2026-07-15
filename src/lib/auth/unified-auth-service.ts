@@ -203,11 +203,27 @@ export class UnifiedAuthService {
 
                 // User was already verified by atomic-signup
                 // Just find them and return user data
-                const user = await User.findOne({
+                let userDoc: any = await User.findOne({
                   email: credentials.email.toLowerCase(),
                 }).lean().exec();
+                let isAdminCollection = false;
 
-                const userDoc = Array.isArray(user) ? user[0] : user;
+                if (!userDoc) {
+                  const AdminAuth = (await import('@/models/AdminAuth')).default;
+                  const adminUser = await AdminAuth.findOne({
+                    email: credentials.email.toLowerCase(),
+                  }).lean().exec();
+                  if (adminUser) {
+                    userDoc = {
+                      ...adminUser,
+                      firstName: 'Admin',
+                      lastName: adminUser.role,
+                      isEmailVerified: true,
+                      role: adminUser.role
+                    };
+                    isAdminCollection = true;
+                  }
+                }
 
                 if (!userDoc) {
                   console.error('❌ Passwordless login: User not found for pre-verified sign-in');
@@ -215,13 +231,18 @@ export class UnifiedAuthService {
                 }
 
                 // Verify user is actually verified
-                if (!userDoc.isEmailVerified) {
+                if (!isAdminCollection && !userDoc.isEmailVerified) {
                   console.error('❌ Passwordless login: User not verified despite preVerified flag');
                   return null;
                 }
 
                 // Update last login
-                await User.findByIdAndUpdate((userDoc._id as any).toString(), { lastLogin: new Date() });
+                if (isAdminCollection) {
+                  const AdminAuth = (await import('@/models/AdminAuth')).default;
+                  await AdminAuth.findByIdAndUpdate((userDoc._id as any).toString(), { lastLogin: new Date() });
+                } else {
+                  await User.findByIdAndUpdate((userDoc._id as any).toString(), { lastLogin: new Date() });
+                }
 
                 // Enforce portal isolation
                 const portal = credentials.portal || 'default';
@@ -290,87 +311,108 @@ export class UnifiedAuthService {
               console.log('✅ Passwordless login: Code verified successfully');
 
               // Find or create user
-              let user = await User.findOne({
+              let userDoc: any = await User.findOne({
                 email: credentials.email.toLowerCase(),
               }).lean().exec();
-
-              let userDoc = Array.isArray(user) ? user[0] : user;
+              let isAdminCollection = false;
 
               if (!userDoc) {
-                // Create new user for passwordless login
-                const newUser = new User({
-                  authProviderId: `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                  authProvider: 'local',
+                const AdminAuth = (await import('@/models/AdminAuth')).default;
+                const adminUser = await AdminAuth.findOne({
                   email: credentials.email.toLowerCase(),
-                  password: null,
-                  firstName: 'User',
-                  lastName: 'User',
-                  isEmailVerified: true, // Verified via code
-                  role: 'user',
-                  currentPlanKey: 'free',
-                  monthlyGoal: 20,
-                  usage: {
-                    cvJourneyCount: 0,
-                    cvCreatedCount: 0,
-                    journeysCreated: 0,
-                    exportCount: 0,
-                    atsCheckCount: 0,
-                    lastResetDate: new Date(),
-                  },
-                  subscription: {
-                    planKey: 'free',
-                    status: 'inactive',
-                    startDate: new Date(),
-                    provider: 'stripe',
-                    interval: 'monthly',
-                    seats: 3,
-                    storageUsed: 0
-                  },
-                  settings: {
-                    theme: 'auto',
-                    notifications: {
-                      email: true,
-                      push: true
-                    },
-                    timezone: 'UTC',
-                    languagePreference: 'en'
-                  }
-                });
-
-                await newUser.save();
-                userDoc = newUser.toObject();
-                console.log('✅ New user created for passwordless login:', newUser._id.toString());
-                
-                // Check for anonymous user to merge
-                try {
-                  const headersList = await headers();
-                  const cookieHeader = headersList.get('cookie');
-                  if (cookieHeader) {
-                    const match = cookieHeader.match(/cvcircle_anonymous_token=([^;]+)/);
-                    if (match && match[1]) {
-                      const anonymousToken = match[1];
-                      console.log('🔄 Merging anonymous user during passwordless signup:', anonymousToken);
-                      await UserService.mergeAnonymousUser(anonymousToken, userDoc._id.toString());
-                      
-                      // Fetch updated user doc to get merged onboarding state
-                      const updatedUser = await User.findById(userDoc._id).lean().exec();
-                      if (updatedUser) userDoc = updatedUser;
-                    }
-                  }
-                } catch (err) {
-                  console.warn('⚠️ Failed to merge anonymous user during passwordless signup:', err);
+                }).lean().exec();
+                if (adminUser) {
+                  userDoc = {
+                    ...adminUser,
+                    firstName: 'Admin',
+                    lastName: adminUser.role,
+                    isEmailVerified: true,
+                    role: adminUser.role
+                  };
+                  isAdminCollection = true;
                 }
-              } else if (!userDoc.isEmailVerified) {
-                // Update existing user to be verified
-                await User.findByIdAndUpdate((userDoc._id as any).toString(), {
-                  isEmailVerified: true,
-                  emailVerifiedAt: new Date()
-                });
-                userDoc.isEmailVerified = true;
               }
 
-              // Update last login
-              await User.findByIdAndUpdate((userDoc._id as any).toString(), { lastLogin: new Date() });
+              if (isAdminCollection) {
+                const AdminAuth = (await import('@/models/AdminAuth')).default;
+                await AdminAuth.findByIdAndUpdate((userDoc._id as any).toString(), { lastLogin: new Date() });
+              } else {
+                if (!userDoc) {
+                  // Create new user for passwordless login
+                  const newUser = new User({
+                    authProviderId: `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                    authProvider: 'local',
+                    email: credentials.email.toLowerCase(),
+                    password: null,
+                    firstName: 'User',
+                    lastName: 'User',
+                    isEmailVerified: true, // Verified via code
+                    role: 'user',
+                    currentPlanKey: 'free',
+                    monthlyGoal: 20,
+                    usage: {
+                      cvJourneyCount: 0,
+                      cvCreatedCount: 0,
+                      journeysCreated: 0,
+                      exportCount: 0,
+                      atsCheckCount: 0,
+                      lastResetDate: new Date(),
+                    },
+                    subscription: {
+                      planKey: 'free',
+                      status: 'inactive',
+                      startDate: new Date(),
+                      provider: 'polar',
+                      interval: 'monthly',
+                      seats: 3,
+                      storageUsed: 0
+                    },
+                    settings: {
+                      theme: 'auto',
+                      notifications: {
+                        email: true,
+                        push: true
+                      },
+                      timezone: 'UTC',
+                      languagePreference: 'en'
+                    }
+                  });
+
+                  await newUser.save();
+                  userDoc = newUser.toObject();
+                  console.log('✅ New user created for passwordless login:', newUser._id.toString());
+                  
+                  // Check for anonymous user to merge
+                  try {
+                    const headersList = await headers();
+                    const cookieHeader = headersList.get('cookie');
+                    if (cookieHeader) {
+                      const match = cookieHeader.match(/cvcircle_anonymous_token=([^;]+)/);
+                      if (match && match[1]) {
+                        const anonymousToken = match[1];
+                        console.log('🔄 Merging anonymous user during passwordless signup:', anonymousToken);
+                        await UserService.mergeAnonymousUser(anonymousToken, userDoc._id.toString());
+                        
+                        // Fetch updated user doc to get merged onboarding state
+                        const updatedUser = await User.findById(userDoc._id).lean().exec();
+                        if (updatedUser) userDoc = updatedUser;
+                      }
+                    }
+                  } catch (err) {
+                    console.warn('⚠️ Failed to merge anonymous user during passwordless signup:', err);
+                  }
+                } else if (!userDoc.isEmailVerified) {
+                  // Update existing user to be verified
+                  await User.findByIdAndUpdate((userDoc._id as any).toString(), {
+                    isEmailVerified: true,
+                    emailVerifiedAt: new Date()
+                  });
+                  userDoc.isEmailVerified = true;
+                }
+
+                // Update last login
+                await User.findByIdAndUpdate((userDoc._id as any).toString(), { lastLogin: new Date() });
+              }
 
               // Enforce portal isolation
               const portal = credentials.portal || 'default';
@@ -803,25 +845,24 @@ export class UnifiedAuthService {
       // Fetch from database
       await getConnection();
       
-      // Try User collection first
-      let userDoc = await User.findById(userId)
-        .select('_id email firstName lastName avatar role currentPlanKey subscription.status b2b')
-        .lean()
-        .exec();
+      // Try AdminAuth collection first (to resolve superusers)
+      const AdminAuth = (await import('@/models/AdminAuth')).default;
+      const adminUser = await AdminAuth.findById(userId).lean().exec();
+      let userDoc = null;
 
-      // If not found in User, check AdminAuth
-      if (!userDoc) {
-        const AdminAuth = (await import('@/models/AdminAuth')).default;
-        const adminUser = await AdminAuth.findById(userId).lean().exec();
-        
-        if (adminUser) {
-          userDoc = {
-            ...adminUser,
-            firstName: 'Admin',
-            lastName: 'User',
-            role: adminUser.role || 'admin',
-          };
-        }
+      if (adminUser) {
+        userDoc = {
+          ...adminUser,
+          firstName: 'Admin',
+          lastName: adminUser.role,
+          role: adminUser.role || 'admin',
+        };
+      } else {
+        // Fallback: Check User collection
+        userDoc = await User.findById(userId)
+          .select('_id email firstName lastName avatar role currentPlanKey subscription.status b2b')
+          .lean()
+          .exec();
       }
 
       if (!userDoc) {
