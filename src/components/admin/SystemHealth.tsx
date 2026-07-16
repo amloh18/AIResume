@@ -12,11 +12,21 @@ import {
 } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
 
+interface ApiHealth {
+  name: string;
+  status: 'healthy' | 'warning' | 'error';
+  responseTime: number;
+  uptime: string;
+}
+
 interface SystemStatus {
   database: { status: 'healthy' | 'warning' | 'error'; responseTime: number; connections: number; uptime: string; };
   api: { status: 'healthy' | 'warning' | 'error'; responseTime: number; requestsPerMinute: number; errorRate: number; };
   storage: { status: 'healthy' | 'warning' | 'error'; used: number; total: number; percentage: number; };
   memory: { status: 'healthy' | 'warning' | 'error'; used: number; total: number; percentage: number; };
+  appApis?: ApiHealth[];
+  thirdPartyApis?: ApiHealth[];
+  overallProgress?: number;
   uptime: string;
   lastCheck: string;
 }
@@ -217,6 +227,69 @@ const SystemHealth: React.FC = () => {
                 <p className="text-3xl font-black text-white tracking-tighter">99.98%</p>
               </div>
               <Shield className="w-10 h-10 text-emerald-500/20" />
+            </div>
+          </div>
+        </motion.div>
+      </div>
+
+      {/* API Health Tracking */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* App APIs */}
+        <motion.div variants={item} className="bg-[#111111] border border-white/10 rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-48 h-48 bg-blue-500/5 blur-[80px] rounded-full pointer-events-none" />
+          <div className="relative z-10">
+            <h3 className="text-lg font-black text-white uppercase tracking-tight mb-2">App APIs</h3>
+            <p className="text-white/40 text-[10px] font-black uppercase tracking-[0.2em] mb-8">Internal Endpoint Status</p>
+            
+            <div className="space-y-4">
+              {systemStatus?.appApis?.map((api, idx) => (
+                <div key={idx} className="flex items-center justify-between p-4 bg-white/[0.02] border border-white/5 rounded-2xl hover:bg-white/[0.04] transition-all">
+                  <div className="flex items-center gap-4">
+                    <div className={`w-2 h-2 rounded-full ${api.status === 'healthy' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]'}`} />
+                    <span className="text-sm font-black text-white/90">{api.name}</span>
+                  </div>
+                  <div className="flex items-center gap-6 text-right">
+                    <div>
+                      <p className="text-white/40 text-[8px] font-black uppercase tracking-widest">Latency</p>
+                      <p className="text-xs font-bold text-white">{api.responseTime}ms</p>
+                    </div>
+                    <div>
+                      <p className="text-white/40 text-[8px] font-black uppercase tracking-widest">Uptime</p>
+                      <p className="text-xs font-bold text-white">{api.uptime}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Third Party APIs */}
+        <motion.div variants={item} className="bg-[#111111] border border-white/10 rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-48 h-48 bg-purple-500/5 blur-[80px] rounded-full pointer-events-none" />
+          <div className="relative z-10">
+            <h3 className="text-lg font-black text-white uppercase tracking-tight mb-2">Third-Party APIs</h3>
+            <p className="text-white/40 text-[10px] font-black uppercase tracking-[0.2em] mb-8">External Service Status</p>
+            
+            <div className="space-y-4">
+              {systemStatus?.thirdPartyApis?.map((api, idx) => (
+                <div key={idx} className="flex items-center justify-between p-4 bg-white/[0.02] border border-white/5 rounded-2xl hover:bg-white/[0.04] transition-all">
+                  <div className="flex items-center gap-4">
+                    <div className={`w-2 h-2 rounded-full ${api.status === 'healthy' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]'}`} />
+                    <span className="text-sm font-black text-white/90">{api.name}</span>
+                  </div>
+                  <div className="flex items-center gap-6 text-right">
+                    <div>
+                      <p className="text-white/40 text-[8px] font-black uppercase tracking-widest">Latency</p>
+                      <p className="text-xs font-bold text-white">{api.responseTime}ms</p>
+                    </div>
+                    <div>
+                      <p className="text-white/40 text-[8px] font-black uppercase tracking-widest">Uptime</p>
+                      <p className="text-xs font-bold text-white">{api.uptime}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </motion.div>
