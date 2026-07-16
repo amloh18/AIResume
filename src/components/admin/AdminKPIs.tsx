@@ -241,13 +241,13 @@ const AdminKPIs: React.FC<AdminKPIsProps> = ({ onTabChange }) => {
             
             <div className="space-y-4">
               <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-white/30 mb-1">
-                <span>Server Load</span>
-                <span>{kpiData?.systemHealth?.load || 42}%</span>
+                <span>Overall Progress</span>
+                <span>{kpiData?.systemHealth?.status || 100}%</span>
               </div>
               <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
                 <motion.div 
                   initial={{ width: 0 }}
-                  animate={{ width: `${kpiData?.systemHealth?.load || 42}%` }}
+                  animate={{ width: `${kpiData?.systemHealth?.status || 100}%` }}
                   className="h-full bg-gradient-to-r from-emerald-600 to-emerald-400"
                 />
               </div>
