@@ -1,7 +1,7 @@
 import React from 'react';
 import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
-import authConfig from '@/lib/auth-config';
+import authConfig from '@/lib/auth';
 import { getConnection } from '@/lib/database/connection-manager';
 import { userRepository } from '@/lib/repositories/user-repository';
 import ClientLayout from './ClientLayout';
