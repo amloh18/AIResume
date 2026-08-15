@@ -32,7 +32,8 @@ import { CVSurgeonService } from '@/lib/services/cv-surgeon-service';
 import { CentralScoreManager } from '@/lib/pill-engine/CentralScoreManager';
 
 import { logResumeEnhancerEvent } from '@/lib/services/resumeEnhancerLogClient';
-import { inferRoleContextFromCVData } from '@/lib/utils/resumeEnhancerRoleInference';
+import { inferRoleContextFromCVData, inferSeniorityFromYears } from '@/lib/utils/resumeEnhancerRoleInference';
+import { mapExperienceLevelToSeniority, isDeepEqual, extractCvIdFromResponse } from '@/lib/resume-metrics';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 import { comprehensiveSignOut } from '@/lib/utils/signout';
 
@@ -697,24 +698,6 @@ export default function ResumeEnhancerContainer({
     }
   };
 
-  const getSeniorityFromYears = (years: number): string => {
-    if (years < 2) return 'beginner';
-    if (years < 5) return 'experienced';
-    if (years < 10) return 'professional';
-    if (years < 15) return 'senior';
-    return 'executive';
-  };
-
-  const mapExperienceLevelToSeniority = (level?: string): string | null => {
-    if (!level) return null;
-    const normalized = String(level).trim().toLowerCase();
-    if (normalized === 'entry' || normalized === 'junior') return 'beginner';
-    if (normalized === 'mid' || normalized === 'middle' || normalized === 'mid-level') return 'professional';
-    if (normalized === 'senior') return 'senior';
-    if (normalized === 'executive' || normalized === 'lead' || normalized === 'principal') return 'executive';
-    return null;
-  };
-
   // Sync cvId prop to state if available and state doesn't have it
   useEffect(() => {
     if (cvId && !state.cvId) {
@@ -1363,7 +1346,7 @@ export default function ResumeEnhancerContainer({
 
             const inferredSeniority =
               mapExperienceLevelToSeniority(cv?.metadata?.aiAnalysis?.experienceLevel?.level) ||
-              getSeniorityFromYears(calculateTotalWorkYears(cv.cvData?.work || [])) ||
+              inferSeniorityFromYears(calculateTotalWorkYears(cv.cvData?.work || [])) ||
               '';
 
             if (inferredRole || inferredSeniority) {
@@ -1713,7 +1696,7 @@ export default function ResumeEnhancerContainer({
 
       const inferredSeniority =
         mapExperienceLevelToSeniority((state.cvData as any)?.metadata?.aiAnalysis?.experienceLevel?.level) ||
-        getSeniorityFromYears(calculateTotalWorkYears(cvData?.work || [])) ||
+        inferSeniorityFromYears(calculateTotalWorkYears(cvData?.work || [])) ||
         '';
 
       if (inferredRole || inferredSeniority) {
@@ -2280,19 +2263,6 @@ export default function ResumeEnhancerContainer({
   };
 
   // Helper for deep equality check (simple but effective for our state objects)
-  const isDeepEqual = (a: any, b: any) => {
-    if (a === b) return true;
-    if (typeof a !== 'object' || a === null || typeof b !== 'object' || b === null) return false;
-    const keysA = Object.keys(a);
-    const keysB = Object.keys(b);
-    if (keysA.length !== keysB.length) return false;
-    for (const key of keysA) {
-      if (!keysB.includes(key)) return false;
-      if (!isDeepEqual(a[key], b[key])) return false;
-    }
-    return true;
-  };
-
   // Check if there are unsaved changes
   const hasUnsavedChanges = useMemo(() => {
     // If no initial data is captured yet, it's not "unsaved" yet
@@ -2381,25 +2351,6 @@ export default function ResumeEnhancerContainer({
     if (state.cvData.volunteer && state.cvData.volunteer.length > 0) filledSections++;
 
     return Math.round((filledSections / totalSections) * 100);
-  };
-
-  const extractCvIdFromResponse = (result: any): string | null => {
-    // Try multiple possible response structures
-    const cvId =
-      result?.data?.cv?.id ||
-      result?.data?.cv?._id ||
-      result?.data?.id ||
-      result?.cv?.id ||
-      result?.cv?._id ||
-      result?.id ||
-      null;
-
-    // Convert to string if it's an ObjectId
-    if (cvId) {
-      return String(cvId);
-    }
-
-    return null;
   };
 
   // Helper function to ensure CV is saved and return cvId
