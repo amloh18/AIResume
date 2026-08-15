@@ -451,10 +451,11 @@ export default function Step5Review({ onSave }: { onSave?: () => Promise<void> }
               const journeyUserId = journey?.userId;
 
               if (journeyUserId) {
-                const genResponse = await fetch('/api/cover-letters/auto-generate', {
+                const genResponse = await fetch('/api/ai/cover-letter-generate', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({
+                    mode: 'auto',
                     userId: journeyUserId,
                     journeyId: state.journeyId,
                     cvId: state.cvId, // or journey.cvId
