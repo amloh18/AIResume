@@ -7,7 +7,7 @@ import DeferredAnalytics from '@/components/DeferredAnalytics'
 import ViewportMeta from '@/components/ViewportMeta'
 import GlobalCommandBar from '@/components/ui/GlobalCommandBar'
 import { getServerSession } from 'next-auth'
-import { authConfig } from '@/lib/auth-config'
+import { authConfig } from '@/lib/auth'
 import { geistFont } from '@/lib/fonts'
 
 // Allow Next.js to determine rendering strategy (SSG vs SSR) automatically

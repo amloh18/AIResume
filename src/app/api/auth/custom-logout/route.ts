@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
-import { authConfig } from '@/lib/auth-config'
+import { authConfig } from '@/lib/auth'
 import { UnifiedAuthService } from '@/lib/auth/unified-auth-service'
 
 /**

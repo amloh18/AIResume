@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authConfig } from '@/lib/auth-config';
+import { authConfig } from '@/lib/auth';
 import { generateLinkedInPost, createLinkedInUGCPayload, validateLinkedInPost } from '@/lib/services/linkedin-post-mapper';
 import { decryptToken } from '@/lib/auth/token-encryption';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
