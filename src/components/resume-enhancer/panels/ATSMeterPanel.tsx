@@ -660,10 +660,11 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ isUtilityPanelOpen
     if (!state.cvId || !report) return;
     setIsGeneratingLetter(true);
     try {
-      const response = await fetch('/api/ai/generate-cover-letter-v3', {
+      const response = await fetch('/api/ai/cover-letter-generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          mode: 'agent',
           CV_DATA: state.cvData,
           CV_TYPE: state.cvType,
           SCORE_REPORT: report,
