@@ -7,7 +7,7 @@
     "dev": "next dev",
     "build": "NODE_OPTIONS=--max-old-space-size=4096 next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint src/",
     "test": "vitest",
     "build:analyze": "ANALYZE=true next build",
     "type-check": "tsc --noEmit",
