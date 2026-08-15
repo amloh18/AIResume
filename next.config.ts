@@ -250,7 +250,6 @@ const nextConfig: NextConfig = {
     optimizePackageImports: [
       'lucide-react',
       'framer-motion',
-      '@heroicons/react',
       'recharts',
       'date-fns',
       'lodash'
