@@ -51,13 +51,16 @@ function injectItemIds(obj: any): any {
 }
 
 export async function POST(req: NextRequest) {
+  let session: { user?: { id?: string; email?: string | null } | null } | null = null;
+  let cvId: string | null = null;
   try {
-    const session = await getServerSession(authOptions);
+    session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { chatId, messages, cvData, selection, jobData, targetRole, seniorityLevel, cvId, cvType } = await req.json();
+    const { chatId, messages, cvData, selection, jobData, targetRole, seniorityLevel, cvId: incomingCvId, cvType } = await req.json();
+    cvId = incomingCvId;
 
     const incomingLatest = messages[messages.length - 1];
     const latestMessage = {
@@ -338,10 +341,10 @@ export async function POST(req: NextRequest) {
       // Log user action & AI activity
       await ActivityLogService.logUserAction({
         userId: session.user.id,
-        userEmail: session.user.email,
+        userEmail: session.user.email ?? undefined,
         action: 'mori_chat_message',
         resourceType: 'cv',
-        resourceId: cvId,
+        resourceId: cvId ?? undefined,
         status: 'success',
         metadata: {
           chatId: chatRecord._id.toString(),
@@ -352,7 +355,7 @@ export async function POST(req: NextRequest) {
 
       await ActivityLogService.logAI({
         userId: session.user.id,
-        userEmail: session.user.email,
+        userEmail: session.user.email ?? undefined,
         model: 'gemini-1.5-flash',
         tokensUsed: 0,
         cost: 0,
@@ -551,10 +554,10 @@ Strict Rules for CV updates:
     // Log user action & AI activity
     await ActivityLogService.logUserAction({
       userId: session.user.id,
-      userEmail: session.user.email,
+      userEmail: session.user.email ?? undefined,
       action: 'mori_chat_message',
       resourceType: 'cv',
-      resourceId: cvId,
+      resourceId: cvId ?? undefined,
       status: 'success',
       metadata: {
         chatId: chatRecord._id.toString(),
@@ -567,7 +570,7 @@ Strict Rules for CV updates:
 
     await ActivityLogService.logAI({
       userId: session.user.id,
-      userEmail: session.user.email,
+      userEmail: session.user.email ?? undefined,
       model: 'gemini-1.5-flash',
       tokensUsed: 0,
       cost: 0,
@@ -591,11 +594,11 @@ Strict Rules for CV updates:
     console.error('Mori Chat Error:', error);
     try {
       await ActivityLogService.logUserAction({
-        userId: session?.user?.id,
-        userEmail: session?.user?.email,
+        userId: session?.user?.id ?? '',
+        userEmail: session?.user?.email ?? undefined,
         action: 'mori_chat_message',
         resourceType: 'cv',
-        resourceId: cvId,
+        resourceId: cvId ?? undefined,
         status: 'failed',
         metadata: {
           error: error.message

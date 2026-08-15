@@ -3,11 +3,6 @@ import type { NextConfig } from "next";
 // Force rebuild'
 
 const nextConfig: NextConfig = {
-  typescript: {
-    // Allow production builds to succeed on Vercel despite TS errors.
-    // We lint and type-check locally via `npm run type-check`.
-    ignoreBuildErrors: true,
-  },
   // Disable Fast Refresh notifications
   devIndicators: {
     position: 'bottom-right',
@@ -16,9 +11,6 @@ const nextConfig: NextConfig = {
   webpack: (config, { dev, isServer }) => {
     // Import webpack once
     const webpack = require('webpack');
-
-    // Load environment variables at build time
-    require('dotenv').config({ path: '.env.local' });
 
     // CRITICAL: Ensure Next.js internal loaders are preserved
     // Don't modify module.rules that might affect Next.js internal loaders
@@ -256,7 +248,6 @@ const nextConfig: NextConfig = {
     // optimizeCss: true,
     // Optimize imports for common heavy libraries
     optimizePackageImports: [
-      'lottie-react',
       'lucide-react',
       'framer-motion',
       '@heroicons/react',
@@ -370,8 +361,6 @@ const nextConfig: NextConfig = {
     'tesseract.js',
     'puppeteer',
     'mongoose',
-    'firebase-admin',
-    'openid-client',
     'pdf2pic',
     'pdf-parse',
     'stripe',
