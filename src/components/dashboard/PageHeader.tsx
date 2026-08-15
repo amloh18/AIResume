@@ -35,7 +35,6 @@ export default function PageHeader(props: PageHeaderProps) {
     if (pathname.includes('/dashboard/tracker')) return 'Tracker';
     if (pathname.includes('/dashboard/vault')) return 'Vault';
     if (pathname.includes('/dashboard/settings')) return 'Settings';
-    if (pathname.includes('/dashboard/canvas')) return 'Canvas';
     if (pathname.includes('/dashboard/interview')) return 'Interview Coach';
 
     const segment = pathname.split('/').pop() || '';
