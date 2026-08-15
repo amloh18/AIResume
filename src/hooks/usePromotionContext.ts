@@ -74,7 +74,7 @@ export function usePromotionContext(): PromotionContextData {
         } else if (documentType === 'cl') {
           contexts.push('cover-letter-editing');
         }
-      } else if (pathname.includes('/dashboard/canvas') || pathname.includes('/editor')) {
+      } else if (pathname.includes('/editor')) {
         contexts.push('cv-viewing');
       } else if (pathname.includes('/dashboard/tracker') || pathname.includes('/jobs')) {
         contexts.push('job-tracking');
