@@ -25,10 +25,12 @@ let cachedExistingCVs: ExistingCV[] | null = null;
 let cachedExistingCoverLetters: any[] | null = null;
 let cachedDraftCV: any | null = null;
 let lastFetchTime = 0;
+let cacheUserId: string | null = null;
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 export const invalidateStep1Cache = () => { 
   lastFetchTime = 0; 
+  cacheUserId = null;
   cachedDraftCV = null;
   cachedExistingCVs = null;
   cachedExistingCoverLetters = null;
@@ -525,7 +527,8 @@ export default function Step1Dashboard({
 
   // Fetch existing CVs on mount
   const fetchExistingCVs = useCallback(async () => {
-    if (cachedExistingCVs && Date.now() - lastFetchTime < CACHE_TTL) {
+    const cacheScope = user?.id ?? 'guest';
+    if (cacheUserId === cacheScope && cachedExistingCVs && Date.now() - lastFetchTime < CACHE_TTL) {
       setExistingCVs(cachedExistingCVs);
       return;
     }
@@ -536,6 +539,7 @@ export default function Step1Dashboard({
         const data = await response.json();
         const cvs = data.cvs || data.data?.cvs || [];
         cachedExistingCVs = cvs;
+        cacheUserId = cacheScope;
         lastFetchTime = Date.now();
         setExistingCVs(cvs);
         const cvIds = cvs.map((c: any) => String(c.id || c._id));
@@ -553,7 +557,8 @@ export default function Step1Dashboard({
   }, [user?.id]);
 
   const fetchDraftCV = useCallback(async () => {
-    if (cachedDraftCV && Date.now() - lastFetchTime < CACHE_TTL) {
+    const cacheScope = user?.id ?? 'guest';
+    if (cacheUserId === cacheScope && cachedDraftCV && Date.now() - lastFetchTime < CACHE_TTL) {
       setDraftCV(cachedDraftCV);
       return;
     }
@@ -563,6 +568,7 @@ export default function Step1Dashboard({
         const data = await response.json();
         if (data.success && data.data) {
           cachedDraftCV = data.data;
+          cacheUserId = cacheScope;
           setDraftCV(data.data);
         } else {
           cachedDraftCV = null;
@@ -572,11 +578,12 @@ export default function Step1Dashboard({
     } catch (error) {
       console.error('Failed to load draft CV:', error);
     }
-  }, []);
+  }, [user?.id]);
 
   const fetchExistingCoverLetters = useCallback(async () => {
     if (!user?.id) return;
-    if (cachedExistingCoverLetters && Date.now() - lastFetchTime < CACHE_TTL) {
+    const cacheScope = user.id;
+    if (cacheUserId === cacheScope && cachedExistingCoverLetters && Date.now() - lastFetchTime < CACHE_TTL) {
       setExistingCoverLetters(cachedExistingCoverLetters);
       return;
     }
@@ -587,6 +594,7 @@ export default function Step1Dashboard({
         const data = await response.json();
         const cls = data.coverLetters || data.data?.coverLetters || [];
         cachedExistingCoverLetters = cls;
+        cacheUserId = cacheScope;
         setExistingCoverLetters(cls);
       }
     } catch (error) {
@@ -1630,9 +1638,9 @@ export default function Step1Dashboard({
                                     Edited {getRelativeTime(cv.updatedAt || cv.createdAt)}
                                   </td>
                                   <td className="px-6 py-4">
-                                    {(typeof cv.atsScore === 'number' || (cv as any).metadata?.atsScore !== undefined) ? (
+                                    {getScoreForCV(cv) !== undefined ? (
                                       <span className="text-xs font-black text-lime-600 dark:text-[#80FF00] bg-lime-500/10 dark:bg-[#80FF00]/10 px-2.5 py-0.5 rounded-full">
-                                        {cv.atsScore ?? (cv as any).metadata?.atsScore}%
+                                        {getScoreForCV(cv)}%
                                       </span>
                                     ) : (
                                       <span className="text-xs text-gray-400">—</span>

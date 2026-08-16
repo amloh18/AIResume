@@ -28,18 +28,14 @@ export async function GET(request: NextRequest) {
             isForMasterCV: true 
           }).sort({ updatedAt: -1 });
           
-          // If anonymous draft is newer, use it and link to user
+          // If anonymous draft is newer, adopt it and link to user.
+          // NOTE: we intentionally do NOT delete either draft here - a GET must
+          // not have destructive side effects (deleting the user's older draft
+          // could destroy an edit made from another device).
           if (anonymousDraft && anonymousDraft.updatedAt > draft.updatedAt) {
-            const previousUserDraftId = draft._id;
             anonymousDraft.userId = session.user.id;
             await anonymousDraft.save();
             draft = anonymousDraft;
-            
-            // Delete old draft
-            await TemporaryCVDraft.deleteOne({ _id: previousUserDraftId });
-          } else if (anonymousDraft) {
-            // Delete anonymous draft if user draft is newer
-            await TemporaryCVDraft.deleteOne({ _id: anonymousDraft._id });
           }
         }
       }

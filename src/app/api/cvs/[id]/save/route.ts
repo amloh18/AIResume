@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import { CV } from '@/models';
 import { toObjectId, createErrorResponse } from '@/lib/db-utils';
+import { getAuthenticatedUser } from '@/lib/auth-helpers';
 
 /**
  * Deep merge function that properly handles arrays
@@ -190,30 +191,28 @@ export async function POST(
 ) {
   try {
     await getConnection();
-    
+
+    const authResult = await getAuthenticatedUser();
+    if (!authResult) {
+      return NextResponse.json(
+        { success: false, message: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+    const userId = authResult.userId;
+
     const { id } = await params;
     const body = await request.json();
     const { 
-      userId, 
       cvData, 
       template, 
       title,
       status = 'draft'
     } = body;
 
-    if (!userId) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: 'User ID is required'
-        },
-        { status: 400 }
-      );
-    }
-
     const cvId = toObjectId(id);
     
-    // Find CV and ensure user owns it
+    // Find CV and ensure the authenticated user owns it
     const cv = await CV.findOne({ _id: cvId, userId });
     
     if (!cv) {
@@ -322,19 +321,16 @@ export async function GET(
   try {
     await getConnection();
     
-    const { id } = await params;
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-
-    if (!userId) {
+    const authResult = await getAuthenticatedUser();
+    if (!authResult) {
       return NextResponse.json(
-        {
-          success: false,
-          message: 'User ID is required'
-        },
-        { status: 400 }
+        { success: false, message: 'Unauthorized' },
+        { status: 401 }
       );
     }
+    const userId = authResult.userId;
+
+    const { id } = await params;
 
     const cvId = toObjectId(id);
     
