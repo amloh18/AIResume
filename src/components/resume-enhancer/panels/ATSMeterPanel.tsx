@@ -689,12 +689,20 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ isUtilityPanelOpen
       }
 
       const data = await response.json();
-      if (data.success && data.letter_body) {
+      // Agent route returns cover_letter_body.full_body (shape enforced by
+      // COVER_LETTER_AGENT_PROMPT); letter_body kept as a legacy fallback.
+      const letterBody = data.cover_letter_body?.full_body || data.letter_body;
+      if (data.success && letterBody) {
+        const overallQuality = data.quality_scorecard?.overall_quality;
+        const score =
+          overallQuality === 'strong' ? 90
+            : overallQuality === 'good' ? 75
+            : (typeof data.letter_metadata?.estimated_score === 'number' ? data.letter_metadata.estimated_score : 85);
         dispatch({
           type: 'SET_AUTO_COVER_LETTER',
           payload: {
-            draft: data.letter_body,
-            score: data.letter_metadata?.estimated_score || 85
+            draft: letterBody,
+            score
           }
         });
         toast.success('Cover letter generated successfully! Proceed to Step 4.');

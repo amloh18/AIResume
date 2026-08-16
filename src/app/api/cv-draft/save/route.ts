@@ -104,6 +104,20 @@ export async function POST(request: NextRequest) {
       sessionId = randomBytes(16).toString('hex');
     }
 
+    // Guard against cross-account contamination: a guest sessionId whose draft
+    // was already transferred (userId/convertedAt set) must NEVER be reused to
+    // overwrite that draft. The guest gets a fresh sessionId + clean draft instead.
+    if (!session?.user?.id) {
+      const existingOwned = await TemporaryCVDraft.findOne({
+        sessionId,
+        isForMasterCV: isForMasterCV !== false
+      });
+      if (existingOwned && (existingOwned.userId || existingOwned.convertedAt)) {
+        console.warn('🛡️ SessionId already transferred to an account; allocating a fresh guest sessionId');
+        sessionId = randomBytes(16).toString('hex');
+      }
+    }
+
     // Find existing draft by session ID (or user ID if authenticated)
     // For guest users, prioritize sessionId; for authenticated, use userId
     const query = session?.user?.id 

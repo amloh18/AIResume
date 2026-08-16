@@ -732,6 +732,23 @@ export async function PUT(
       updateOperations
     );
 
+    // Enforce the single-master invariant that the CV pre('save') hook normally
+    // guarantees: CV.updateOne bypasses that hook, so explicitly demote any other
+    // master CV for this user when this update promotes a new one.
+    if (mongoUpdate.$set['metadata.isMaster'] === true || mongoUpdate.$set['metadata.isMaster'] === 'true') {
+      await CV.updateMany(
+        {
+          userId: new mongoose.Types.ObjectId(userId),
+          _id: { $ne: cvId },
+          $or: [
+            { 'metadata.isMaster': true },
+            { 'metadata.isMaster': 'true' }
+          ]
+        },
+        { $set: { 'metadata.isMaster': false } }
+      );
+    }
+
     // Reload the CV document to get updated data
     const updatedCVDoc = await CV.findById(cvId);
     if (!updatedCVDoc) {

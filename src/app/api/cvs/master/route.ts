@@ -10,31 +10,18 @@ export async function GET(request: NextRequest) {
   try {
     await getConnection();
 
-    // Check for explicit userId parameter (backward compatibility)
-    const { searchParams } = new URL(request.url);
-    const explicitUserId = searchParams.get('userId');
-
-    let userId: string;
-
-    if (explicitUserId) {
-      // Use explicit userId parameter (backward compatibility)
-      console.log('🔍 Master CV API - Using explicit userId:', explicitUserId);
-      userId = explicitUserId;
-    } else {
-      // Use new authentication system
-      const authResult = await getAuthenticatedUser();
-      if (!authResult) {
-        console.log('❌ Master CV API - No valid authentication found');
-        return NextResponse.json(
-          { success: false, error: 'Unauthorized' },
-          { status: 401 }
-        );
-      }
-      userId = authResult.userId;
-      console.log('🔍 Master CV API - Using authenticated user:', authResult.userEmail);
+    // Resolve the user from the authenticated session. The userId query
+    // parameter is intentionally ignored: it was previously trusted verbatim,
+    // allowing any caller to read another user's master CV if they knew an _id.
+    // All legitimate callers are the authenticated user themselves.
+    const authResult = await getAuthenticatedUser();
+    if (!authResult) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
     }
-
-    console.log('🔍 Master CV API - User ID:', userId);
+    const userId = authResult.userId;
 
     // First, try to find the master CV created via ai-career-report (the authoritative source)
     // or explicitly marked as master
