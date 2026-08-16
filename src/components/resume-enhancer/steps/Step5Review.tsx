@@ -1014,7 +1014,7 @@ export default function Step5Review({ onSave }: { onSave?: () => Promise<void> }
                   </pre>
                 </div>
               </div>
-            ) : (state.selectedTemplate || state.cvData?.metadata?.canvasTemplate || true) ? (
+            ) : (state.selectedTemplate || state.cvData?.metadata?.canvasTemplate) ? (
               <div className="relative w-full h-full overflow-y-auto scrollbar-hide">
                 <div className="w-full flex justify-center py-12" style={{ zoom }}>
                   <div

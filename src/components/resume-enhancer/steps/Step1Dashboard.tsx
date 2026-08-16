@@ -498,6 +498,20 @@ export default function Step1Dashboard({
     ? Math.round(cvsWithAts.reduce((sum, cv) => sum + (getScoreForCV(cv) ?? 0), 0) / cvsWithAts.length) 
     : 0;
   const topSectionRef = React.useRef<HTMLDivElement>(null);
+  const pendingTimersRef = React.useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  React.useEffect(() => {
+    return () => {
+      pendingTimersRef.current.forEach(t => clearTimeout(t));
+      pendingTimersRef.current = [];
+    };
+  }, []);
+
+  const scheduleTimer = (fn: () => void, ms: number) => {
+    const timer = setTimeout(fn, ms);
+    pendingTimersRef.current.push(timer);
+    return timer;
+  };
   
 
   
@@ -844,7 +858,7 @@ export default function Step1Dashboard({
       setUploadStatus('success');
 
       // Wait a moment to show success, then complete with fresher detection
-      setTimeout(() => {
+      scheduleTimer(() => {
         completeParsing(result);
       }, 1000);
 
@@ -966,7 +980,7 @@ export default function Step1Dashboard({
         setUploadProgress(80);
         
         // Wait a moment to show progress
-        setTimeout(() => {
+        scheduleTimer(() => {
           setUploadProgress(100);
           setUploadStatus('success');
           setIsLinkedInImporting(false);
