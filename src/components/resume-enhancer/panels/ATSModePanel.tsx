@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Target,
@@ -161,6 +161,13 @@ export default function ATSModePanel({
     const [showPlainText, setShowPlainText] = useState(false);
     const [showIssues, setShowIssues] = useState(false);
     const [copied, setCopied] = useState(false);
+    const copiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    useEffect(() => {
+        return () => {
+            if (copiedTimer.current) clearTimeout(copiedTimer.current);
+        };
+    }, []);
 
     // Parse JD keywords
     const jdKeywords = useMemo(() => {
@@ -181,9 +188,14 @@ export default function ATSModePanel({
     const missingCount = keywordMatches.filter(k => !k.found).length;
 
     const handleCopy = async () => {
-        await navigator.clipboard.writeText(plainText);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
+        try {
+            await navigator.clipboard.writeText(plainText);
+            setCopied(true);
+            if (copiedTimer.current) clearTimeout(copiedTimer.current);
+            copiedTimer.current = setTimeout(() => setCopied(false), 2000);
+        } catch {
+            // Clipboard unavailable (e.g. non-secure context); silently ignore.
+        }
     };
 
     const toggleFeature = (key: keyof ATSFeatures) => {

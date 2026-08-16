@@ -1554,7 +1554,7 @@ export default function ResumeEnhancerContainer({
 
                   // CRITICAL: Check if journey deeply has a CV already
                   // If so, switch to edit mode and load that CV instead of creating new one
-                  if (journey.cvId) {
+                  if (journey?.cvId) {
                     console.log('✅ Journey already has CV:', journey.cvId, '- Switching to EDIT mode');
 
                     // Fetch the CV details

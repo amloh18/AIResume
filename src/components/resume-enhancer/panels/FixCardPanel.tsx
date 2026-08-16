@@ -31,6 +31,8 @@ export default function FixCardPanel({
 }: FixCardPanelProps) {
     const scoreInfo = getScoreColor(currentScore);
     const scrollRef = React.useRef<HTMLDivElement>(null);
+    const completedCount = fixes.filter(f => f.status === 'completed').length;
+    const progressPct = fixes.length > 0 ? (completedCount / fixes.length) * 100 : 0;
 
     // Auto-scroll to processing/last completed item
     React.useEffect(() => {
@@ -56,7 +58,7 @@ export default function FixCardPanel({
                 <div className="relative z-10 flex items-center justify-between">
                     <div>
                         <h3 className="text-sm font-semibold text-white">Optimizing CV...</h3>
-                        <p className="text-xs text-white/50">{fixes.filter(f => f.status === 'completed').length} of {fixes.length} fixes applied</p>
+                        <p className="text-xs text-white/50">{completedCount} of {fixes.length} fixes applied</p>
                     </div>
                     <div className="flex items-center gap-3">
                         <div className="text-right">
@@ -78,7 +80,7 @@ export default function FixCardPanel({
                     <motion.div
                         className="h-full bg-[#80FF00]"
                         initial={{ width: 0 }}
-                        animate={{ width: `${(fixes.filter(f => f.status === 'completed').length / fixes.length) * 100}%` }}
+                        animate={{ width: `${progressPct}%` }}
                         transition={{ duration: 0.5 }}
                     />
                 </div>

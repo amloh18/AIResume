@@ -889,8 +889,9 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
         }
 
         const jobResult = await jobResponse.json();
-        const jobId = jobResult.data.jobApplication._id;
-        const journeyId = jobResult.data.journey._id;
+        const jobId = jobResult.data?.jobApplication?._id;
+        const journeyId = jobResult.data?.journey?._id;
+        if (!jobId) throw new Error('Failed to create job application');
 
         // If Master CV, we might want to CLONE it instead of converting?
         // But for now, assuming conversion in place is okay or API handles it.
