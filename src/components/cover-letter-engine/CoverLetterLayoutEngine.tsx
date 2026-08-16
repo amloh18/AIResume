@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
+import { getPageDimensions } from '@/lib/templates/page-dimensions';
 import { 
   ClassicHeader, 
   ModernHeader, 
@@ -192,8 +193,8 @@ export default function CoverLetterLayoutEngine({
     return splitHtmlIntoBlocks(bodyContent);
   }, [bodyContent]);
 
-  const width = pageFormat === 'letter' ? '8.5in' : '210mm';
-  const minHeight = pageFormat === 'letter' ? '11in' : '297mm';
+  const width = pageFormat === 'letter' ? getPageDimensions('Letter').widthCss : getPageDimensions('A4').widthCss;
+  const minHeight = pageFormat === 'letter' ? getPageDimensions('Letter').heightCss : getPageDimensions('A4').heightCss;
 
   const [pageAssignments, setPageAssignments] = useState<Record<string, number>>({});
   const pageAssignmentsRef = useRef(pageAssignments);
@@ -206,7 +207,7 @@ export default function CoverLetterLayoutEngine({
 
     const measureAndPaginate = () => {
       const scale = zoom / 100;
-      const H = pageFormat === 'letter' ? 1056 : 1122.5;
+      const H = getPageDimensions(pageFormat === 'letter' ? 'Letter' : 'A4').heightPx;
       const usableHeight = H - 160; // Estimated usable page height minus margins
 
       const unitHeights: Record<string, number> = {};
@@ -356,7 +357,12 @@ export default function CoverLetterLayoutEngine({
               boxSizing: 'border-box',
               overflowWrap: 'break-word',
               whiteSpace: 'normal',
-              wordBreak: 'normal'
+              wordBreak: 'normal',
+              // Clip content at the physical page edge (like the CV canvas and
+              // the DOM-capture PDF export) so long paragraphs cannot spill
+              // past the page box into the next page's gap. Editing keeps
+              // overflow visible so typing is not visually cut mid-document.
+              overflow: isEditing ? 'visible' : 'hidden',
             } as React.CSSProperties}
           >
             <div 

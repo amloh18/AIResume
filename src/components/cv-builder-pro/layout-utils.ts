@@ -1,6 +1,12 @@
 'use client';
 
-export type CanvasPageSize = 'A4' | 'Letter';
+import {
+  getPageDimensions,
+  PaperSize,
+  roundToDevicePixel as roundToDevicePixelCore,
+} from '@/lib/templates/page-dimensions';
+
+export type CanvasPageSize = PaperSize;
 
 export interface CanvasLayoutMetrics {
   pageWidthCss: string;
@@ -17,28 +23,9 @@ export interface CanvasLayoutMetrics {
   slotHeightPx: number;
 }
 
-const PAGE_DIMENSIONS: Record<CanvasPageSize, { widthCss: string; heightCss: string; widthPx: number; heightPx: number }> = {
-  A4: {
-    widthCss: '210mm',
-    heightCss: '297mm',
-    widthPx: 793.7008,
-    heightPx: 1122.5197,
-  },
-  Letter: {
-    widthCss: '8.5in',
-    heightCss: '11in',
-    widthPx: 816,
-    heightPx: 1056,
-  },
-};
+export const roundToDevicePixel = roundToDevicePixelCore;
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
-
-export const roundToDevicePixel = (value: number, devicePixelRatio = 1) => {
-  if (!Number.isFinite(value)) return 0;
-  const dpr = Math.max(1, devicePixelRatio || 1);
-  return Math.round(value * dpr) / dpr;
-};
 
 export function computeCanvasLayoutMetrics({
   pageSize,
@@ -55,7 +42,7 @@ export function computeCanvasLayoutMetrics({
   viewportHeight: number;
   devicePixelRatio?: number;
 }): CanvasLayoutMetrics {
-  const dims = PAGE_DIMENSIONS[pageSize] || PAGE_DIMENSIONS.A4;
+  const dims = getPageDimensions(pageSize) || getPageDimensions('A4');
   const dpr = Math.max(1, devicePixelRatio || 1);
 
   const isMobile = viewportWidth < 768;

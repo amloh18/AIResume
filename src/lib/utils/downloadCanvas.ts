@@ -1,3 +1,5 @@
+'use client';
+
 /**
  * downloadCanvas.ts
  *
@@ -11,13 +13,12 @@
  *  - The `.cv-document` element in the browser always reflects the true rendered state.
  */
 
-/** Standard page dimensions at 96 DPI */
-const PAGE_DIMS = {
-  A4:     { widthPx: 794,  heightPx: 1123, widthMm: 210,   heightMm: 297   },
-  Letter: { widthPx: 816,  heightPx: 1056, widthMm: 215.9, heightMm: 279.4 },
-} as const;
+import { getPageDimensions, PaperSize } from '@/lib/templates/page-dimensions';
 
-/** Default page gap (in px) between pages in the canvas document */
+/**
+ * Default page gap (in px) between pages in the canvas document.
+ * Kept for layout parity; the actual exported pages are captured individually.
+ */
 const DEFAULT_PAGE_GAP_PX = 40;
 
 /**
@@ -80,7 +81,8 @@ export async function downloadCanvasAsPDF(
     return;
   }
 
-  const dims = PAGE_DIMS[paperSize];
+  // Single source of truth for paper geometry — same constants the canvas uses.
+  const dims = getPageDimensions(paperSize as PaperSize);
   const { jsPDF } = await import('jspdf');
 
   // Create the jsPDF instance
@@ -115,14 +117,32 @@ export async function downloadCanvasAsPDF(
     el.removeAttribute('contenteditable');
   });
 
-  // Force dimensions and layout on the clone
+  // Force the document width so pages render at their true physical width.
+  // Height is left natural: pages are boxed to `dims` individually below and
+  // captured one at a time, so a collapsed container height only affects the
+  // multi-page fallback and not the per-page geometry.
   clone.style.width = `${dims.widthPx}px`;
-  clone.style.height = 'auto';
   clone.style.transform = 'none';
   clone.style.boxShadow = 'none';
   clone.style.margin = '0';
-  clone.style.gap = '0'; // Remove page gaps for continuous rendering
+  clone.style.gap = `${DEFAULT_PAGE_GAP_PX}px`; // Keep page separation while cloning
   clone.style.overflow = 'visible';
+
+  // Critical: preserve the TRUE page box. Every page must render at the exact
+  // physical size so html2canvas captures an A4/Letter-shaped canvas. Setting
+  // height to `auto` here used to collapse pages to their content height and
+  // then stretch the image back to `dims.heightPx` on `addImage`, distorting
+  // the vertical scale of the final PDF.
+  const pageSelector = '.cv-page, .cover-letter-document';
+  clone.querySelectorAll(pageSelector).forEach((pageEl) => {
+    const el = pageEl as HTMLElement;
+    el.style.width = `${dims.widthPx}px`;
+    el.style.height = `${dims.heightPx}px`;
+    el.style.minHeight = `${dims.heightPx}px`;
+    el.style.marginTop = '0';
+    el.style.marginBottom = '0';
+    el.style.boxShadow = 'none';
+  });
 
   // FIX: Pre-process SVGs (like Lucide icons) to avoid html2canvas SVG parsing errors
   // We inline all computed styles into the SVG attributes to ensure styling remains intact 
@@ -166,7 +186,7 @@ export async function downloadCanvasAsPDF(
     const html2canvasModule = await import('html2canvas');
     const html2canvas = html2canvasModule.default || html2canvasModule;
 
-    const pages = clone.querySelectorAll('.cv-page, .cover-letter-document');
+    const pages = clone.querySelectorAll(pageSelector);
     if (pages.length > 0) {
       for (let i = 0; i < pages.length; i++) {
         const page = pages[i] as HTMLElement;

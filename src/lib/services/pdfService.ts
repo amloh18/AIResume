@@ -9,6 +9,7 @@ import { puppeteerPoolService } from './puppeteerPoolService';
 import { configService } from './configService';
 import { metricsService } from './metricsService';
 import { logger } from '@/lib/structured-logger';
+import { getPageDimensions, PaperSize } from '@/lib/templates/page-dimensions';
 
 export interface PDFGenerationOptions {
   paperSize?: 'A4' | 'Letter';
@@ -170,14 +171,13 @@ export class PDFService extends BaseService {
         // Set timeout
         page.setDefaultTimeout(config.timeout);
 
-        // Set viewport to match @page CSS dimensions EXACTLY
-        // CRITICAL: This viewport width MUST match the page width defined in templateRendererService.ts
-        // A4: 210mm = 794px (at 96 DPI), Letter: 8.5in = 816px (at 96 DPI)
-        // Height is set very tall (10000px) to allow continuous rendering before PDF pagination
-        const viewportWidth = options.paperSize === 'Letter' ? 816 : 794;
-        
+        // Set viewport to match the @page CSS dimensions EXACTLY.
+        // Single source of truth: page-dimensions.ts (used by the canvas too).
+        const paper = getPageDimensions((options.paperSize || 'A4') as PaperSize);
+        const viewportWidth = Math.round(paper.widthPx);
+
         // Validate viewport matches expected dimensions
-        const expectedWidthMM = options.paperSize === 'Letter' ? 216 : 210; // Letter = 8.5in = 216mm
+        const expectedWidthMM = paper.widthMm;
         const actualWidthMM = Math.round((viewportWidth / 96) * 25.4); // Convert px to mm
         
         logger.info('PDF Generation - Viewport Configuration', {
@@ -213,7 +213,7 @@ export class PDFService extends BaseService {
           return document.body.scrollHeight;
         });
 
-        logger.info('PDF Generation - Body height measured', { bodyHeight, expectedMinHeight: 1123 });
+        logger.info('PDF Generation - Body height measured', { bodyHeight, expectedMinHeight: Math.round(getPageDimensions((options.paperSize || 'A4') as PaperSize).heightPx) });
 
         // Extract name for PDF metadata
         const name = (cvData.basics?.name || 'Resume').trim();
