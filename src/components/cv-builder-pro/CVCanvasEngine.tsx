@@ -12,6 +12,7 @@ import { generateId, setNestedValue, getNestedValue, escapeRegExp } from './help
 import { usePaymentModal } from '@/contexts/PaymentModalContext';
 import { analyzeText } from '@/lib/grammar/engine';
 import { computeCanvasLayoutMetrics } from './layout-utils';
+import { getPageDimensions } from '@/lib/templates/page-dimensions';
 import { DEFAULT_UNIFIED_CV_DATA } from '@/types/unified-cv-schema';
 import { useUserData } from '@/lib/hooks/useUserData';
 import { useCanvasFit } from '@/hooks/useCanvasFit';
@@ -429,9 +430,12 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     dragPreviewRef.current = dragPreview;
   }, [dragPreview]);
 
-  // Use the new smart auto-scaling hook
+  // Use the new smart auto-scaling hook.
+  // documentPixelWidth now follows the user's page size (A4 ↔ Letter) so
+  // a Letter document stops being auto-fit against the fixed A4 width.
+  const activePageWidthPx = getPageDimensions(design.pageSize).widthPx;
   const { containerRef: workspaceRef, zoom, setZoom, isAutoFit, triggerAutoFit } = useCanvasFit({
-    documentPixelWidth: 794, // Standard A4 width in pixels
+    documentPixelWidth: activePageWidthPx,
     paddingPx: 64, // 32px padding per side
     maxScale: 2.0,
     minScale: 0.5
@@ -1189,8 +1193,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
 
     const measureAndPaginate = () => {
       const scale = zoomRef.current / 100;
-      const isA4 = design.pageSize === 'A4';
-      const H = isA4 ? 1122.5 : 1056;
+      const H = layoutMetrics.pageHeightPx;
       const M = layoutMetrics.pageMarginPx || 40;
       const usableHeight = H - 2 * M;
 
@@ -1438,7 +1441,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
       clearTimeout(debounceTimer);
       observer.disconnect();
     };
-  }, [cvData.metadata, zones, design.pageSize, activeTemplate.id, layoutMetrics.pageMarginPx, layoutMetrics.sectionGapPx]);
+  }, [cvData.metadata, zones, design.pageSize, activeTemplate.id, layoutMetrics.pageMarginPx, layoutMetrics.pageHeightPx, layoutMetrics.sectionGapPx]);
 
   const handleTogglePhoto = () => {
     if (!cvData.basics?.showAvatar) {
@@ -1679,7 +1682,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
                 return (
                   <div className="h-full w-full flex flex-col" style={{ padding: 'var(--cv-page-margin)' }}>
                     {pageIdx === 0 && safeZones['header'] && (
-                      <div className="mb-4">{renderPageZone('header', pageIdx, 'w-full min-w-0')}</div>
+                      <div className="w-full min-w-0" style={{ marginBottom: 'var(--cv-section-gap, 16px)' }}>{renderPageZone('header', pageIdx, 'w-full min-w-0')}</div>
                     )}
                     <div className="flex flex-1 items-start gap-[var(--cv-column-gap)]">
                       <div className="flex-1 min-w-0">{renderPageZone('left', pageIdx, 'h-max')}</div>
@@ -2577,6 +2580,23 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
         .cv-document .cv-gap-sm { gap: calc(8px * var(--cv-spacing)) !important; }
         .cv-document .cv-gap-md { gap: calc(12px * var(--cv-spacing)) !important; }
         .cv-document .cv-gap-lg { gap: calc(16px * var(--cv-spacing)) !important; }
+
+        /* ─── UNIFIED SPACING RHYTHM ────────────────────────────────
+         * The snippet registry mixes fixed Tailwind utilities (pb-5, mb-4, p-4…)
+         * with the tokenised cv-gap-* classes, so changing design.spacing moved
+         * list items but not headers/boxes → inconsistent padding around snippet
+         * items. These overrides route every structural spacing through the ONE
+         * --cv-spacing token (== 1 by default, so no visual change), keeping the
+         * whole page in sync. Scoped to the CV canvas root so the cover-letter
+         * document (a different renderer) is untouched. */
+        #cv-document-root.cv-document .pb-3 { padding-bottom: calc(12px * var(--cv-spacing)) !important; }
+        #cv-document-root.cv-document .pb-4 { padding-bottom: calc(16px * var(--cv-spacing)) !important; }
+        #cv-document-root.cv-document .pb-5 { padding-bottom: calc(20px * var(--cv-spacing)) !important; }
+        #cv-document-root.cv-document .pb-6 { padding-bottom: calc(24px * var(--cv-spacing)) !important; }
+        #cv-document-root.cv-document .mb-4 { margin-bottom: calc(16px * var(--cv-spacing)) !important; }
+        #cv-document-root.cv-document .p-4 { padding: calc(16px * var(--cv-spacing)) !important; }
+        #cv-document-root.cv-document .p-5 { padding: calc(20px * var(--cv-spacing)) !important; }
+        #cv-document-root.cv-document .p-6 { padding: calc(24px * var(--cv-spacing)) !important; }
         
         /* Layout formats */
         .cv-format-bullets-only .cv-prose p {
