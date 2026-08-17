@@ -367,11 +367,11 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
 
           {/* Sidebar Panel */}
           <motion.div
-            initial={{ x: '100%' }}
+            initial={{ x: 'calc(100% + 12px)' }}
             animate={{ x: 0 }}
-            exit={{ x: '100%' }}
+            exit={{ x: 'calc(100% + 12px)' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed inset-y-0 right-0 w-full max-w-[560px] bg-white dark:bg-[#0c0f0a] shadow-2xl border-l border-gray-200 dark:border-white/10 flex flex-col z-[9999] overflow-hidden"
+            className="fixed top-3 right-3 bottom-3 w-full max-w-[560px] bg-white dark:bg-[#0c0f0a] shadow-2xl flex flex-col z-[9999] rounded-2xl overflow-hidden"
           >
             {/* Header */}
             <div className="p-6 border-b border-gray-150 dark:border-white/5 flex flex-col relative shrink-0">
@@ -386,7 +386,7 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
                 <div className="w-8 h-8 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center text-purple-600 dark:text-purple-400">
                   <Briefcase className="w-4 h-4" />
                 </div>
-                <h2 className="text-h3 font-bold text-gray-900 dark:text-white">Smart Job Analysis</h2>
+                <h2 className="!text-lg font-bold text-gray-900 dark:text-white">Smart Job Analysis</h2>
                 <span className="px-2 py-0.5 text-[9px] font-bold text-purple-700 bg-purple-100 dark:bg-purple-900/30 dark:text-purple-400 rounded-full">
                   BETA
                 </span>

@@ -183,7 +183,9 @@ export async function invalidateUserSessions(userId: string): Promise<void> {
 export function generateRecoveryCodes(): string[] {
   const codes: string[] = [];
   for (let i = 0; i < RECOVERY_CODE_COUNT; i++) {
-    const code = crypto.randomBytes(RECOVERY_CODE_LENGTH).toString('hex').toUpperCase();
+    // RECOVERY_CODE_LENGTH is the number of hex *characters*, so draw half that
+    // many bytes (each byte renders as two hex chars). Fixes 16-char output.
+    const code = crypto.randomBytes(RECOVERY_CODE_LENGTH / 2).toString('hex').toUpperCase();
     codes.push(code);
   }
   return codes;

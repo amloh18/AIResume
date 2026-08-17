@@ -121,7 +121,11 @@ const InterviewCoachContainer: React.FC<InterviewCoachContainerProps> = ({ userI
     };
 
     return (
-        <div className="h-macro app-page-bg flex flex-col font-sans overflow-hidden">
+        /* Same rounded-card-with-margins shell as the dashboard: white workspace,
+           off-white card inset right/bottom (+ left on mobile/tablet where the
+           sidebar is hidden); content scrolls inside the card. */
+        <div className="h-macro dashboard-workspace flex flex-col font-sans overflow-hidden pr-3 pb-3 pl-3 lg:pl-0">
+            <div className="dashboard-content-card rounded-2xl border border-[var(--border-primary)] shadow-sm flex-1 min-h-0 flex flex-col overflow-hidden">
             <div className="flex-1 max-w-[1400px] mx-auto px-4 sm:px-8 py-8 w-full overflow-y-auto overflow-x-hidden scrollbar-hide">
                 
                 {/* Breadcrumbs & Header */}
@@ -131,7 +135,7 @@ const InterviewCoachContainer: React.FC<InterviewCoachContainerProps> = ({ userI
                         <span>›</span>
                         <span className="text-gray-900 dark:text-gray-200">Interview Coach</span>
                     </div>
-                    <h1 className="text-h1 md:text-[32px] font-bold text-gray-900 dark:text-white flex items-center gap-2 tracking-tight">
+                    <h1 className="text-h1 md:text-5xl font-bold text-gray-900 dark:text-white flex items-center gap-2 tracking-tight">
                         Interview Coach
                         <Sparkles className="w-6 h-6 text-purple-500" />
                     </h1>
@@ -448,6 +452,7 @@ const InterviewCoachContainer: React.FC<InterviewCoachContainerProps> = ({ userI
                     </div>
                 )}
 
+            </div>
             </div>
         </div>
     );

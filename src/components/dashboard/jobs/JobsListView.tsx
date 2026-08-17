@@ -4,6 +4,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle, X } from 'lucide-react';
+import CompanyLogo from '@/components/ui/CompanyLogo';
 import { CVJourney } from '@/types/cv';
 
 interface JobApplication {
@@ -185,7 +186,10 @@ const JobsListView: React.FC<JobsListViewProps> = ({
                       />
                     </td>
                     <td className="px-6 py-4 text-gray-900 dark:text-white font-medium">
-                      {job.company || 'Unknown Company'}
+                      <div className="flex items-center gap-2.5">
+                        <CompanyLogo company={job.company} size={22} logoUrl={job.companyLogo} jobId={job.id || job._id} />
+                        <span className="truncate">{job.company || 'Unknown Company'}</span>
+                      </div>
                     </td>
                     <td className="px-6 py-4 text-gray-900 dark:text-white">
                       {job.jobTitle || 'Untitled Job'}

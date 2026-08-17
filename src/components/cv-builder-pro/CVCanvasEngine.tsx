@@ -16,7 +16,7 @@ import { getPageDimensions } from '@/lib/templates/page-dimensions';
 import { DEFAULT_UNIFIED_CV_DATA } from '@/types/unified-cv-schema';
 import { useUserData } from '@/lib/hooks/useUserData';
 import { useCanvasFit } from '@/hooks/useCanvasFit';
-import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
+import { useResumeEnhancerSafe } from '@/contexts/ResumeEnhancerContext';
 import UtilityPanelPill from '@/components/resume-enhancer/components/UtilityPanelPill';
 const ReadOnlyWrapper = (props: any) => <EditableField {...props} readOnly={true} />;
 const EditableWrapper = EditableField;
@@ -134,7 +134,7 @@ const FloatingAICard = ({ pointSuggestion, setPointSuggestion, handleFetchSugges
             <Wand2 size={18} className={pointSuggestion.loading ? 'animate-spin' : 'text-emerald-400'} />
           </div>
           <div>
-            <h4 className="text-[13px] font-bold text-white uppercase tracking-wider">ThinkHard AI</h4>
+            <h4 className="text-sm font-bold text-white uppercase tracking-wider">ThinkHard AI</h4>
             <p className="text-[10px] text-emerald-400/70 font-medium uppercase tracking-widest">{pointSuggestion.loading ? 'Processing...' : 'Contextual Suggestion'}</p>
           </div>
         </div>
@@ -197,7 +197,7 @@ const FloatingAICard = ({ pointSuggestion, setPointSuggestion, handleFetchSugges
           </div>
         ) : (
           <div className="relative group">
-            <div className={`text-[14px] leading-relaxed transition-all duration-300 ${activeTab === 'original' ? 'text-gray-400 italic' : 'text-gray-100'}`}>
+            <div className={`text-md leading-relaxed transition-all duration-300 ${activeTab === 'original' ? 'text-gray-400 italic' : 'text-gray-100'}`}>
               {activeTab === 'improvement' ? pointSuggestion.text : pointSuggestion.originalText}
             </div>
             {activeTab === 'improvement' && (
@@ -405,7 +405,10 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
   const dragDroppedRef = React.useRef(false); // track if a valid drop occurred
   const dragPreviewRef = React.useRef<any>(null); // stable ref to dragPreview for closure access
   const [scanning, setScanning] = useState(false);
-  const { state: enhancerState, dispatch: enhancerDispatch } = useResumeEnhancer();
+  // Safe variant: falls back to a no-op when rendered outside ResumeEnhancerProvider
+  // (e.g. readOnly CV previews in the dashboard sidebar / global search). Only the
+  // undo/redo keyboard shortcuts consume it, which are inert in readOnly mode.
+  const { state: enhancerState, dispatch: enhancerDispatch } = useResumeEnhancerSafe();
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -434,8 +437,10 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
   // documentPixelWidth now follows the user's page size (A4 ↔ Letter) so
   // a Letter document stops being auto-fit against the fixed A4 width.
   const activePageWidthPx = getPageDimensions(design.pageSize).widthPx;
+  const activePageHeightPx = getPageDimensions(design.pageSize).heightPx;
   const { containerRef: workspaceRef, zoom, setZoom, isAutoFit, triggerAutoFit } = useCanvasFit({
     documentPixelWidth: activePageWidthPx,
+    documentPixelHeight: activePageHeightPx,
     paddingPx: 64, // 32px padding per side
     maxScale: 2.0,
     minScale: 0.5
@@ -580,7 +585,11 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     const handleZoomIn = () => setZoom((z: number) => Math.min(200, z + 10));
     const handleZoomOut = () => setZoom((z: number) => Math.max(50, z - 10));
     const handleTogglePageSize = () => {
-      setDesign((d: any) => ({ ...d, pageSize: d.pageSize === 'A4' ? 'Letter' : 'A4' }));
+      setDesign((d: any) => {
+        const next = d?.pageSize === 'Letter' ? 'A4' : 'Letter';
+        window.dispatchEvent(new CustomEvent('cv-paper-size-changed', { detail: next }));
+        return { ...d, pageSize: next };
+      });
     };
 
     window.addEventListener('set-builder-sidebar', handleSetSidebar);
@@ -1192,7 +1201,12 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     if (!docElement) return undefined;
 
     const measureAndPaginate = () => {
-      const scale = zoomRef.current / 100;
+      // Derive the actually-applied zoom scale from the DOM instead of trusting
+      // zoomRef, which can lag behind the current render (e.g. during wheel zoom
+      // re-renders). offsetWidth is transform-independent; the rect width is scaled.
+      const docHTMLEl = docElement as HTMLElement;
+      const appliedScale = docHTMLEl.getBoundingClientRect().width / Math.max(1, docHTMLEl.offsetWidth);
+      const scale = Number.isFinite(appliedScale) && appliedScale > 0 ? appliedScale : zoomRef.current / 100;
       const H = layoutMetrics.pageHeightPx;
       const M = layoutMetrics.pageMarginPx || 40;
       const usableHeight = H - 2 * M;
@@ -1254,6 +1268,130 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
       const globalSet = new Set(globalZones);
       const columnZones = Object.keys(safeZones).filter(zoneId => !globalSet.has(zoneId));
 
+      // ---- Hybrid One-Pager: unified single-width / split-row flow ----
+      // Sections flow top-to-bottom on each page as whole units (respecting each
+      // section's full height): full-width sections first, then paired 50/50 rows
+      // from left/right. A section that doesn't fit the remaining space moves to the
+      // next page whole, so a single-column section is never shown split across two
+      // pages with a split-row in between, and nothing overlaps.
+      if (layoutType === 'hybrid-split') {
+        const sectionInfo = (block: any): { isList: boolean; total: number; headerH: number; entryGap: number; entries: any[] } => {
+          const snippetDef = SNIPPETS[block.type];
+          const isList = !!(snippetDef && LIST_SNIPPET_CATEGORIES.includes(snippetDef.category));
+          if (isList) {
+            const collectionName = getCollectionNameForCategory(snippetDef.category);
+            const entries = cvData[collectionName] || [];
+            const headerH = unitHeights[`${block.id}_header`] || 40;
+            const entryGap = unitHeights[`${block.id}_entryGap`] || 16;
+            let total = headerH;
+            entries.forEach((e: any, i: number) => {
+              total += (i > 0 ? entryGap : 0) + (unitHeights[`${block.id}_entry_${e.id}`] || 80);
+            });
+            return { isList, total, headerH, entryGap, entries };
+          }
+          return { isList, total: unitHeights[block.id] || 80, headerH: 0, entryGap: 0, entries: [] };
+        };
+
+        const assignSectionWhole = (block: any, info: any, pageNum: number) => {
+          if (info.isList) {
+            newAssignments[`${block.id}_header`] = pageNum;
+            info.entries.forEach((e: any) => {
+              newAssignments[`${block.id}_entry_${e.id}`] = pageNum;
+            });
+          } else {
+            newAssignments[block.id] = pageNum;
+          }
+        };
+
+        const fullWidthBlocks: any[] = [];
+        ['header', 'main'].forEach((z: string) => {
+          (safeZones[z] || []).forEach((b: any) => fullWidthBlocks.push(b));
+        });
+        const rowLeftBlocks = safeZones['left'] || [];
+        const rowRightBlocks = safeZones['right'] || [];
+        const maxRows = Math.max(rowLeftBlocks.length, rowRightBlocks.length);
+
+        let page = 0;
+        let used = 0;
+
+        const placeFullWidth = (block: any) => {
+          const info = sectionInfo(block);
+          if (used > 0 && used + sectionGap + info.total > usableHeight) {
+            page++;
+            used = 0;
+            if (page > maxPageNum) maxPageNum = page;
+          }
+          if (info.total > usableHeight) {
+            // Section taller than a full page: paginate its entries across pages.
+            if (info.isList) {
+              newAssignments[`${block.id}_header`] = page;
+              used = info.headerH;
+              info.entries.forEach((e: any, i: number) => {
+                const eh = unitHeights[`${block.id}_entry_${e.id}`] || 80;
+                if (used > 0 && used + (i > 0 ? info.entryGap : 0) + eh > usableHeight) {
+                  page++;
+                  used = 0;
+                  if (page > maxPageNum) maxPageNum = page;
+                }
+                newAssignments[`${block.id}_entry_${e.id}`] = page;
+                used += (i > 0 ? info.entryGap : 0) + eh;
+              });
+            } else {
+              newAssignments[block.id] = page;
+            }
+            return;
+          }
+          assignSectionWhole(block, info, page);
+          used += (used > 0 ? sectionGap : 0) + info.total;
+        };
+
+        const placeRow = (left: any, right: any) => {
+          const linfo = left ? sectionInfo(left) : null;
+          const rinfo = right ? sectionInfo(right) : null;
+          const rowH = Math.max(linfo ? linfo.total : 0, rinfo ? rinfo.total : 0, 1);
+          if (used > 0 && used + sectionGap + rowH > usableHeight) {
+            page++;
+            used = 0;
+            if (page > maxPageNum) maxPageNum = page;
+          }
+          if (rowH > usableHeight) {
+            // Rare: a half-width section taller than a full page. Paginate each column
+            // independently so nothing overflow; subsequent rows start on a fresh page.
+            [left, right].forEach((b: any) => {
+              if (!b) return;
+              const info = sectionInfo(b);
+              used = 0;
+              if (info.isList) {
+                newAssignments[`${b.id}_header`] = page;
+                used = info.headerH;
+                info.entries.forEach((e: any, i: number) => {
+                  const eh = unitHeights[`${b.id}_entry_${e.id}`] || 80;
+                  if (used > 0 && used + (i > 0 ? info.entryGap : 0) + eh > usableHeight) {
+                    page++;
+                    used = 0;
+                    if (page > maxPageNum) maxPageNum = page;
+                  }
+                  newAssignments[`${b.id}_entry_${e.id}`] = page;
+                  used += (i > 0 ? info.entryGap : 0) + eh;
+                });
+              } else {
+                newAssignments[b.id] = page;
+                if (page > maxPageNum) maxPageNum = page;
+              }
+            });
+            used = 0;
+            return;
+          }
+          if (left) assignSectionWhole(left, linfo!, page);
+          if (right) assignSectionWhole(right, rinfo!, page);
+          used += (used > 0 ? sectionGap : 0) + rowH;
+        };
+
+        fullWidthBlocks.forEach(placeFullWidth);
+        for (let i = 0; i < maxRows; i++) {
+          placeRow(rowLeftBlocks[i], rowRightBlocks[i]);
+        }
+      } else {
       // 2a. First, paginate global stacked zones sequentially
       const globalHeightOnPage: Record<number, number> = {};
       let currentGlobalPage = 0;
@@ -1385,6 +1523,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
           }
         });
       });
+      }
 
       // 3. Set total pages count state only if changed
       const nextTotalPages = maxPageNum + 1;
@@ -1681,7 +1820,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
               case '2-col': 
                 return (
                   <div className="h-full w-full flex flex-col" style={{ padding: 'var(--cv-page-margin)' }}>
-                    {pageIdx === 0 && safeZones['header'] && (
+                    {pageIdx === 0 && (safeZones['header'] || []).length > 0 && (
                       <div className="w-full min-w-0" style={{ marginBottom: 'var(--cv-section-gap, 16px)' }}>{renderPageZone('header', pageIdx, 'w-full min-w-0')}</div>
                     )}
                     <div className="flex flex-1 items-start gap-[var(--cv-column-gap)]">
@@ -1729,13 +1868,13 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
               case 'top-sidebar-left': 
                 return (
                   <div className="h-full w-full flex flex-col relative" style={{ minHeight: 'var(--cv-page-height)' }}>
-                    {pageIdx === 0 && safeZones['header'] && (
+                    {pageIdx === 0 && (safeZones['header'] || []).length > 0 && (
                       <div className="relative z-10" style={{ paddingTop: 'var(--cv-page-margin)', paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 0 }}>
                         {renderPageZone('header', pageIdx, 'w-full min-w-0')}
                       </div>
                     )}
-                    <div className="flex flex-1 relative z-10 items-start gap-[var(--cv-column-gap)]" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)', paddingTop: pageIdx === 0 && safeZones['header'] ? 'var(--cv-section-gap, 16px)' : 'var(--cv-page-margin)' }}>
-                      <div className="absolute left-[var(--cv-page-margin)] top-[var(--cv-section-gap,16px)] bottom-0 rounded-lg z-[-1]" style={{ backgroundColor: 'var(--cv-sidebar-bg)', width: 'calc(32% - 16px)' }}></div>
+                    <div className="flex flex-1 relative z-10 items-start gap-[var(--cv-column-gap)]" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)', paddingTop: pageIdx === 0 && (safeZones['header'] || []).length > 0 ? 'var(--cv-section-gap, 16px)' : 'var(--cv-page-margin)' }}>
+                      <div className="absolute left-[var(--cv-page-margin)] bottom-0 rounded-lg z-[-1]" style={{ top: pageIdx === 0 && (safeZones['header'] || []).length > 0 ? 'var(--cv-section-gap,16px)' : 'var(--cv-page-margin)', backgroundColor: 'var(--cv-sidebar-bg)', width: 'calc(32% - 16px)' }}></div>
                       <div className={`w-[32%] min-w-0 ${isDarkSidebar ? 'cv-dark-sidebar text-white' : ''}`} style={{ paddingRight: '5mm' }}>
                         {renderPageZone('sidebar', pageIdx, 'h-max', isDarkSidebar)}
                       </div>
@@ -1748,39 +1887,50 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
               case 'top-sidebar-right': 
                 return (
                   <div className="h-full w-full flex flex-col relative" style={{ minHeight: 'var(--cv-page-height)' }}>
-                    {pageIdx === 0 && safeZones['header'] && (
+                    {pageIdx === 0 && (safeZones['header'] || []).length > 0 && (
                       <div className="relative z-10" style={{ paddingTop: 'var(--cv-page-margin)', paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 0 }}>
                         {renderPageZone('header', pageIdx, 'w-full min-w-0')}
                       </div>
                     )}
-                    <div className="flex flex-1 relative z-10 items-start gap-[var(--cv-column-gap)]" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)', paddingTop: pageIdx === 0 && safeZones['header'] ? 'var(--cv-section-gap, 16px)' : 'var(--cv-page-margin)' }}>
+                    <div className="flex flex-1 relative z-10 items-start gap-[var(--cv-column-gap)]" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)', paddingTop: pageIdx === 0 && (safeZones['header'] || []).length > 0 ? 'var(--cv-section-gap, 16px)' : 'var(--cv-page-margin)' }}>
                       <div className="w-[68%] min-w-0">
                         {renderPageZone('main', pageIdx, 'h-max')}
                       </div>
-                      <div className="absolute right-[var(--cv-page-margin)] top-[var(--cv-section-gap,16px)] bottom-0 rounded-lg z-[-1]" style={{ backgroundColor: 'var(--cv-sidebar-bg)', width: 'calc(32% - 16px)' }}></div>
+                      <div className="absolute right-[var(--cv-page-margin)] bottom-0 rounded-lg z-[-1]" style={{ top: pageIdx === 0 && (safeZones['header'] || []).length > 0 ? 'var(--cv-section-gap,16px)' : 'var(--cv-page-margin)', backgroundColor: 'var(--cv-sidebar-bg)', width: 'calc(32% - 16px)' }}></div>
                       <div className={`w-[32%] min-w-0 ${isDarkSidebar ? 'cv-dark-sidebar text-white' : ''}`} style={{ paddingLeft: '5mm' }}>
                         {renderPageZone('sidebar', pageIdx, 'h-max', isDarkSidebar)}
                       </div>
                     </div>
                   </div>
                 );
-              case 'hybrid-split': 
+              case 'hybrid-split': {
+                // Render only the zone wrappers that actually have content on this page so the
+                // DOM spacing matches the unified pagination model (which budgets gaps only
+                // *between* content groups and reserves one page-margin at the top of a page).
+                const headerOnPage = pageIdx === 0 && (safeZones['header'] || []).length > 0;
+                const mainOnPage = getPageBlocks('main', pageIdx).length > 0;
+                const rowsOnPage = getPageBlocks('left', pageIdx).length > 0 || getPageBlocks('right', pageIdx).length > 0;
                 return (
                   <div className="h-full w-full flex flex-col" style={{ minHeight: 'var(--cv-page-height)' }}>
-                    {pageIdx === 0 && safeZones['header'] && (
+                    {headerOnPage && (
                       <div style={{ paddingTop: 'var(--cv-page-margin)', paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 0 }}>
                         {renderPageZone('header', pageIdx, 'w-full min-w-0')}
                       </div>
                     )}
-                    <div style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingTop: pageIdx === 0 && safeZones['header'] ? 'var(--cv-section-gap, 16px)' : 'var(--cv-page-margin)', paddingBottom: 0 }}>
-                      {renderPageZone('main', pageIdx, 'w-full min-w-0')}
-                    </div>
-                    <div className="flex flex-1 items-start gap-[var(--cv-column-gap)]" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)', paddingTop: 'var(--cv-section-gap, 16px)' }}>
-                      <div className="flex-1 min-w-0">{renderPageZone('left', pageIdx, 'h-max')}</div>
-                      <div className="flex-1 min-w-0">{renderPageZone('right', pageIdx, 'h-max')}</div>
-                    </div>
+                    {mainOnPage && (
+                      <div style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingTop: headerOnPage ? 'var(--cv-section-gap, 16px)' : 'var(--cv-page-margin)', paddingBottom: 0 }}>
+                        {renderPageZone('main', pageIdx, 'w-full min-w-0')}
+                      </div>
+                    )}
+                    {rowsOnPage && (
+                      <div className="flex flex-1 items-start gap-[var(--cv-column-gap)]" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)', paddingTop: mainOnPage || headerOnPage ? 'var(--cv-section-gap, 16px)' : 'var(--cv-page-margin)' }}>
+                        <div className="flex-1 min-w-0">{renderPageZone('left', pageIdx, 'h-max')}</div>
+                        <div className="flex-1 min-w-0">{renderPageZone('right', pageIdx, 'h-max')}</div>
+                      </div>
+                    )}
                   </div>
                 );
+              }
               default: return <div>Layout not found</div>;
             }
           };
@@ -1841,7 +1991,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
         }
       }}
     >
-      <div className={`h-full w-full flex font-sans overflow-hidden transition-colors duration-300 ${readOnly ? '' : bgApp}`}>
+      <div className={`h-full w-full flex font-sans overflow-hidden transition-colors duration-300 ${readOnly ? 'cv-readonly' : bgApp}`}>
         {/* Hidden file input for avatar upload */}
         {!readOnly && (
           <input
@@ -1871,7 +2021,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
               {renderCanvasLayout()}
             </div>
           ) : (
-            <div key={templateAnimKey} className="transform origin-top transition-transform h-max pb-4 text-gray-900" style={{ transform: `scale(${zoom / 100})` }}>
+            <div key={templateAnimKey} className="transform origin-top h-max pb-4 text-gray-900" style={{ transform: `scale(${zoom / 100})` }}>
               <div className="cv-document-wrapper relative" style={canvasStyleVars}>
                 {renderCanvasLayout()}
               </div>
@@ -2563,7 +2713,8 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
           overflow: hidden;
           font-size: min(calc(var(--cv-base-size) * 0.85), 2cqw) !important;
         }
-        .cv-body { font-size: inherit; line-height: calc(1.6 * var(--cv-spacing)); }
+        .cv-body { font-size: inherit; line-height: calc(1.6 * var(--cv-spacing)); overflow-wrap: anywhere; word-break: break-word; hyphens: auto; }
+        .cv-document .cv-body, .cv-document .cv-prose p { text-align: justify; }
         .cv-document p, .cv-document ul, .cv-document li { font-size: inherit !important; line-height: inherit !important; margin: 0; padding: 0; }
         .cv-document ul { list-style-type: disc !important; padding-left: 1.25rem !important; }
         .cv-document li { display: list-item !important; }
@@ -2574,6 +2725,10 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
         .cv-prose ul { list-style-type: disc !important; padding-left: 1.25rem !important; margin-top: calc(0.25em * var(--cv-spacing)) !important; margin-bottom: calc(0.25em * var(--cv-spacing)) !important; }
         .cv-prose li { display: list-item !important; margin-bottom: calc(0.15em * var(--cv-spacing)) !important; }
         [contenteditable]:empty:before { content: attr(placeholder); color: #9ca3af; pointer-events: none; display: block; }
+        /* Read-only previews: hide edit affordances and empty-field placeholders */
+        .cv-readonly .entry-controls { display: none !important; }
+        .cv-readonly [contenteditable]:empty:before { content: '' !important; display: none !important; }
+        .cv-readonly .group-hover\/entry\:opacity-100 { opacity: 0 !important; }
         .cv-accent-text { color: var(--cv-accent) !important; }
         .cv-accent-bg { background-color: var(--cv-accent) !important; }
         .cv-accent-border { border-color: var(--cv-accent) !important; }

@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import Logo from '@/components/ui/Logo';
 import {
-  LayoutDashboard, BarChart3, Users, Settings, LogOut, Activity, Mail, Database, CreditCard, Shield, X, Sparkles, FileText, MessageSquare, Bell, Briefcase, UserCircle, ChevronRight,
+  LayoutDashboard, BarChart3, Users, Settings, LogOut, Activity, Mail, Database, CreditCard, Shield, X, Sparkles, FileText, MessageSquare, Bell, ChevronRight,
   Globe, Gift, Tag, DollarSign
 } from 'lucide-react';
 import { useSession, signOut } from 'next-auth/react';
@@ -50,7 +50,6 @@ export default function AdminNavigation({ activeTab, activeSubTab, onTabChange, 
           icon: Shield,
           subItems: [
             { id: 'users', label: 'Users', icon: Users },
-            { id: 'businesses', label: 'Businesses', icon: Briefcase },
             { id: 'campaigns', label: 'Campaigns', icon: Mail },
             { id: 'notifications', label: 'Alerts', icon: Bell },
             { id: 'drafts', label: 'Drafts', icon: FileText },
@@ -226,24 +225,6 @@ export default function AdminNavigation({ activeTab, activeSubTab, onTabChange, 
 
       {/* Footer Area */}
       <div className="p-6 mt-auto space-y-4">
-        {/* Portal Links */}
-        <div className="grid grid-cols-2 gap-2">
-          <button 
-            onClick={() => router.push('/dashboard')}
-            className="flex flex-col items-center justify-center p-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/5 transition-all text-white/50 hover:text-white group"
-          >
-            <UserCircle className="w-5 h-5 mb-1 group-hover:text-emerald-400 transition-colors" />
-            <span className="text-[10px] font-bold uppercase tracking-wider">User</span>
-          </button>
-          <button 
-            onClick={() => router.push('/b2b/dashboard')}
-            className="flex flex-col items-center justify-center p-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/5 transition-all text-white/50 hover:text-white group"
-          >
-            <Briefcase className="w-5 h-5 mb-1 group-hover:text-emerald-400 transition-colors" />
-            <span className="text-[10px] font-bold uppercase tracking-wider">B2B</span>
-          </button>
-        </div>
-
         {/* User Profile Card */}
         <div className="relative group p-[1px] rounded-[1.5rem] overflow-hidden bg-white/5 hover:bg-gradient-to-br hover:from-emerald-500/50 hover:to-transparent transition-all duration-500">
           <div className="bg-[#0a0a0a] rounded-[1.5rem] p-4 flex items-center gap-3">

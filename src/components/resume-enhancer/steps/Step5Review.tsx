@@ -4,7 +4,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
 import { AlertCircle, Eye, Palette, X, FileText, Download, Target, Award, TrendingUp, AlertTriangle, CheckCircle2, Shield, Sparkles, BookOpen, ChevronRight, Zap, Briefcase, Edit2, LayoutTemplate, Calendar, PenTool, ZoomIn, ZoomOut } from 'lucide-react';
-import CVBuilderProAdapter from '@/components/cv-builder-pro/CVBuilderProAdapter';
+import CVPreviewDocument from '@/components/cv-preview/CVPreviewDocument';
 import { ITemplate } from '@/types/template';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
@@ -285,6 +285,10 @@ export default function Step5Review({ onSave }: { onSave?: () => Promise<void> }
   const previewRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  const resolvedPaperSize = state.paperSize === 'Letter' ? 'Letter' : 'A4';
+  const paperWidth = getPageDimensions(resolvedPaperSize).widthPx;
+  const paperHeight = getPageDimensions(resolvedPaperSize).heightPx;
+
   const missingSkills = useMemo(() => {
     if (state.keywordGaps) {
       return state.keywordGaps.slice(0, 4).map((g: any) => g.keyword);
@@ -372,10 +376,6 @@ export default function Step5Review({ onSave }: { onSave?: () => Promise<void> }
       container.removeEventListener('wheel', handleWheel);
     };
   }, []);
-
-  const resolvedPaperSize = state.paperSize === 'Letter' ? 'Letter' : 'A4';
-  const paperWidth = getPageDimensions(resolvedPaperSize).widthPx;
-  const paperHeight = getPageDimensions(resolvedPaperSize).heightPx;
 
   // Resolve the cover-letter visual style from the CV template (falling back to
   // the first CL template). Previously this was hardcoded to
@@ -789,7 +789,7 @@ export default function Step5Review({ onSave }: { onSave?: () => Promise<void> }
       <div className="flex-1 flex flex-col lg:flex-row gap-6 min-h-0 overflow-hidden p-6 max-w-[1700px] mx-auto w-full">
         
         {/* LEFT PANEL - Scorecard & Recruiter Preview */}
-        <div className="w-full lg:w-[280px] xl:w-[320px] flex flex-col gap-5 overflow-y-auto scrollbar-hide shrink-0">
+        <div className="w-full lg:w-[280px] xl:w-[320px] lg:order-1 flex flex-col gap-5 overflow-y-auto scrollbar-hide shrink-0">
           
           {/* Target Match Card */}
           <div className="bg-white dark:bg-[#141810] rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-800 text-left flex flex-col items-center">
@@ -927,7 +927,7 @@ export default function Step5Review({ onSave }: { onSave?: () => Promise<void> }
         </div>
 
         {/* CENTER PANEL - Dynamic Preview Canvas */}
-        <div ref={containerRef} className="flex-1 flex flex-col min-h-0 bg-white dark:bg-[#141810] rounded-3xl overflow-hidden shadow-sm border border-gray-100 dark:border-gray-800 relative">
+        <div ref={containerRef} className="flex-1 lg:order-3 flex flex-col min-h-0 bg-white dark:bg-[#141810] rounded-3xl overflow-hidden shadow-sm border border-gray-100 dark:border-gray-800 relative">
           
           {/* Tab Selector Header */}
           <div className="px-6 py-4 flex items-center justify-between border-b border-gray-100 dark:border-gray-800 shrink-0">
@@ -1072,14 +1072,10 @@ export default function Step5Review({ onSave }: { onSave?: () => Promise<void> }
                     className="relative"
                     style={{ width: paperWidth }}
                   >
-                    <CVBuilderProAdapter
+                    <CVPreviewDocument
                       cvData={state.cvData}
                       template={state.selectedTemplate || state.cvData?.metadata?.canvasTemplate}
                       theme={typeof window !== 'undefined' && document.documentElement.classList.contains('dark') ? 'dark' : 'light'}
-                      readOnly={true}
-                      cvId={state.cvId}
-                      jobId={state.jobData?._id || state.jobData?.id || state.journeyId}
-                      role={state.targetRole}
                     />
 
                     {/* Heatmap Overlay inside the zoomable container */}
@@ -1176,7 +1172,7 @@ export default function Step5Review({ onSave }: { onSave?: () => Promise<void> }
         </div>
 
         {/* RIGHT PANEL - Next Steps & Finish */}
-        <div className="w-full lg:w-[280px] xl:w-[340px] flex flex-col gap-4 overflow-y-auto scrollbar-hide shrink-0">
+        <div className="w-full lg:w-[280px] xl:w-[340px] lg:order-2 flex flex-col gap-4 overflow-y-auto scrollbar-hide shrink-0">
           
           {/* View in Tracker */}
           {isJourneyCV && (

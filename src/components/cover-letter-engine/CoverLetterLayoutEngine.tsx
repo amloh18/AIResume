@@ -77,7 +77,6 @@ const CanvasSectionWrapper: React.FC<CanvasSectionWrapperProps> = ({
 interface CoverLetterLayoutEngineProps {
   headerProps: HeaderSnippetProps;
   bodyContent: string;
-  footerContent?: string;
   templateType?: 'classic' | 'modern' | 'minimal' | 'typographic' | 'column-split' | 'accent-banner' | 'creative-edge' | 'executive-slate';
   isEditing?: boolean;
   onBodyChange?: (content: string) => void;
@@ -142,7 +141,6 @@ const splitHtmlIntoBlocks = (html: string): string[] => {
 export default function CoverLetterLayoutEngine({
   headerProps,
   bodyContent,
-  footerContent,
   templateType = 'modern',
   isEditing = false,
   onBodyChange,
@@ -207,8 +205,15 @@ export default function CoverLetterLayoutEngine({
 
     const measureAndPaginate = () => {
       const scale = zoom / 100;
-      const H = getPageDimensions(pageFormat === 'letter' ? 'Letter' : 'A4').heightPx;
-      const usableHeight = H - 160; // Estimated usable page height minus margins
+      const pageDims = getPageDimensions(pageFormat === 'letter' ? 'Letter' : 'A4');
+      const H = pageDims.heightPx;
+      // Usable height = page minus the ACTUAL top/bottom margins. The page content
+      // wrapper uses `${activeDesign.pageMargin}cqw` padding (cqw = % of page width),
+      // so the real margin in px is (pageMargin / 100) * widthPx — not the old
+      // hardcoded 160px estimate, which under-filled pages and caused premature
+      // page breaks / blank trailing pages.
+      const marginPx = (activeDesign.pageMargin / 100) * pageDims.widthPx;
+      const usableHeight = H - 2 * marginPx;
 
       const unitHeights: Record<string, number> = {};
 
@@ -223,11 +228,6 @@ export default function CoverLetterLayoutEngine({
           unitHeights[pId] = el.getBoundingClientRect().height / scale;
         }
       });
-
-      const footerEl = docElement.querySelector('[data-unit-id="footer"]');
-      if (footerEl) {
-        unitHeights['footer'] = footerEl.getBoundingClientRect().height / scale;
-      }
 
       const newAssignments: Record<string, number> = {};
       let currentPage = 0;
@@ -257,14 +257,6 @@ export default function CoverLetterLayoutEngine({
         newAssignments[pId] = currentPage;
         currentHeight += pH + 16;
       }
-
-      // 3. Footer
-      const footerH = unitHeights['footer'] || 80;
-      if (currentHeight + footerH > usableHeight && currentHeight > 0) {
-        currentPage++;
-        currentHeight = 0;
-      }
-      newAssignments['footer'] = currentPage;
 
       const assignmentsStr = JSON.stringify(newAssignments);
       if (recentAssignmentsRef.current.includes(assignmentsStr)) {
@@ -321,23 +313,6 @@ export default function CoverLetterLayoutEngine({
             box-sizing: border-box !important;
             word-break: normal !important;
             hyphens: none !important;
-          }
-          .cl-header-name {
-            display: inline-block !important;
-            max-width: 100% !important;
-            overflow: hidden !important;
-            text-overflow: ellipsis !important;
-            white-space: nowrap !important;
-            word-break: normal !important;
-            overflow-wrap: normal !important;
-          }
-          @supports (font-size: clamp(1rem, 5vw, 3rem)) {
-            .cl-header-name {
-              font-size: clamp(1.2rem, 4vw, 3.5rem) !important;
-              white-space: normal !important;
-              word-break: normal !important;
-              overflow-wrap: normal !important;
-            }
           }
         `}
       </style>
@@ -441,7 +416,7 @@ export default function CoverLetterLayoutEngine({
                           key={idx} 
                           data-paragraph-id={`p_${idx}`}
                           className="prose prose-sm max-w-none text-black text-justify leading-relaxed"
-                          style={{ fontSize: 'inherit', lineHeight: 'inherit' }}
+                          style={{ fontSize: 'inherit', lineHeight: 'inherit', overflowWrap: 'anywhere', wordBreak: 'normal' }}
                           dangerouslySetInnerHTML={{ __html: block }}
                         />
                       );

@@ -3,7 +3,7 @@
 import React, { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Calendar, Clock, AlertCircle, CheckCircle, Building, Eye, Globe, MapPin, Bell, TrendingUp } from 'lucide-react';
-import toast from 'react-hot-toast';
+import CompanyLogo from '@/components/ui/CompanyLogo';
 
 interface JobApplication {
   id: string;
@@ -35,7 +35,6 @@ interface AppliedStageViewProps {
 const AppliedStageView: React.FC<AppliedStageViewProps> = ({
   jobs,
   onJobClick,
-  onJobStatusUpdate,
   isFullScreen = false
 }) => {
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
@@ -77,26 +76,15 @@ const AppliedStageView: React.FC<AppliedStageViewProps> = ({
     });
   }, [jobs, sortOrder]);
 
-  const handleMarkFollowUpComplete = async (job: JobApplication, e: React.MouseEvent) => {
-    e.stopPropagation();
-    try {
-      await onJobStatusUpdate(job.id || job._id, job.status || 'applied');
-      toast.success('Follow-up marked as complete');
-    } catch (error) {
-      console.error('Error updating follow-up:', error);
-      toast.error('Failed to update follow-up status');
-    }
-  };
-
   if (jobs.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
         <CheckCircle className="w-16 h-16 text-gray-400 dark:text-gray-600 mb-4" />
-        <h3 className="text-h3 font-semibold text-gray-900 dark:text-white mb-2">
+        <div className="text-body font-semibold text-gray-900 dark:text-white mb-2">
           No applied jobs
-        </h3>
+        </div>
         <p className="text-small text-gray-500 dark:text-gray-400">
-          Jobs you've applied to will appear here.
+          Jobs you&apos;ve applied to will appear here.
         </p>
       </div>
     );
@@ -156,19 +144,7 @@ const AppliedStageView: React.FC<AppliedStageViewProps> = ({
                   {/* Company */}
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-white/10 flex items-center justify-center text-small font-bold text-gray-500 dark:text-gray-400 overflow-hidden">
-                        {job.companyLogo ? (
-                          <img
-                            src={job.companyLogo}
-                            alt={`${job.company} logo`}
-                            className="w-full h-full object-contain"
-                            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-                          />
-                        ) : null}
-                        <span style={{ display: job.companyLogo ? 'none' : 'block' }}>
-                          {job.company.substring(0, 2).toUpperCase()}
-                        </span>
-                      </div>
+                      <CompanyLogo company={job.company} size={32} logoUrl={job.companyLogo} jobId={job.id || job._id} />
                       <span className="text-small font-semibold text-gray-900 dark:text-white">{job.company}</span>
                     </div>
                   </td>

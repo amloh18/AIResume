@@ -437,13 +437,13 @@ export const CommunicationSidebar: React.FC<CommunicationSidebarProps> = ({
   return (
     <div 
       ref={sidebarRef}
-      className="fixed right-0 top-0 h-screen w-[450px] bg-white dark:bg-[#141810] shadow-2xl z-[9999] border-l border-gray-200 dark:border-white/10 flex flex-col"
+      className="fixed right-3 top-3 bottom-3 h-auto w-[450px] bg-white dark:bg-[#141810] shadow-2xl z-[9999] flex flex-col rounded-2xl overflow-hidden"
     >
       {/* Sidebar Header */}
       <div className="p-4 border-b border-gray-200 dark:border-white/10 flex items-center justify-between bg-white dark:bg-[#191f15] flex-shrink-0">
         <div className="flex items-center gap-2">
           <Mail className="h-5 w-5 text-emerald-500" />
-          <h3 className="font-bold text-gray-900 dark:text-white text-body">Communication</h3>
+          <h3 className="font-bold text-gray-900 dark:text-white text-sm">Communication</h3>
         </div>
         <button 
           onClick={onClose}

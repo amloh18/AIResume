@@ -18,7 +18,6 @@ export interface AuthenticatedUser {
   planKey?: string;
   subscriptionStatus?: string;
   requiresTwoFactor?: boolean; // Flag to indicate 2FA is required
-  isB2b?: boolean;
 }
 
 export interface AuthenticationResult {
@@ -99,7 +98,6 @@ export class UserService {
           role: user.role || 'user',
           planKey: (user as any).currentPlanKey || (isAdminCollection ? 'pro_lifetime' : 'free'),
           subscriptionStatus: (user as any).subscription?.status || (isAdminCollection ? 'active' : 'inactive'),
-          isB2b: isAdminCollection ? true : !!(user as any).b2b?.tenantId,
         },
       };
     } catch (error: any) {
@@ -164,7 +162,6 @@ export class UserService {
         role: existingUser.role || 'user',
         planKey: existingUser.currentPlanKey || 'free',
         subscriptionStatus: existingUser.subscription?.status || 'inactive',
-        isB2b: !!(existingUser as any).b2b?.tenantId,
       };
     } catch (error: any) {
       console.error(`❌ Error finding/creating ${data.provider} user:`, error);

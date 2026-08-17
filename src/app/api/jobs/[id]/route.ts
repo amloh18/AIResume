@@ -108,6 +108,7 @@ export async function GET(
       applicationDeadline: dateToISO(job.applicationDeadline),
       deadline: dateToISO(job.deadline),
       applicationDate: dateToISO(job.applicationDate),
+      appliedAt: job.appliedAt instanceof Date ? job.appliedAt.toISOString() : (job.appliedAt || undefined),
       status: job.status,
       priority: job.priority,
       notes: job.notes,
@@ -284,6 +285,14 @@ export async function PUT(
     delete updateData.userId;
     delete updateData.createdAt;
     delete updateData.__v;
+
+    // Record the moment an application is actually submitted: the first time a
+    // job reaches an applied-like status. Used by the streak/dashboard metrics
+    // to count real applications this week (not jobs merely created this week).
+    const appliedLikeStatuses = ['applied', 'screening', 'interview', 'offer', 'accepted'];
+    if (body.status && appliedLikeStatuses.includes(body.status) && !currentJob?.appliedAt) {
+      updateData.appliedAt = new Date();
+    }
 
     // Convert date strings to Date objects if provided
     if (body.deadline) {

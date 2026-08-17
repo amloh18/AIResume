@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import Logo from '@/components/ui/Logo';
 import { Upload, FileText, Files, Gauge, Edit3, CheckCircle2, Loader2, Briefcase, Sparkles, AlertTriangle, FolderOpen, Edit2, Copy, Plus, Grid, List, LayoutGrid, Trash2, SlidersHorizontal, ChevronDown, ChevronRight, CornerDownRight } from 'lucide-react';
-import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
 import { CVJourneyLookupService } from '@/lib/services/cvJourneyLookupService';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
 import { UnifiedCVDataStructure, DEFAULT_UNIFIED_CV_DATA } from '@/types/unified-cv-schema';
@@ -13,6 +12,7 @@ import { sanitizeErrorMessage } from '@/lib/api/error-handler';
 import JDInputPanel from '@/components/resume-enhancer/JDInputPanel';
 import { useUnifiedAuth } from '@/lib/hooks/useUnifiedAuth';
 import { authenticatedFetchWithUserId } from '@/lib/utils/apiUtils';
+import { getCvScoreForDisplay } from '@/lib/utils/cv-scoring';
 import CVPreviewThumbnail from '@/components/dashboard/CVPreviewThumbnail';
 import CoverLetterPreview from '@/components/cv-preview/CoverLetterPreview';
 import { getAllTemplates } from '@/lib/templates/template-utils';
@@ -345,7 +345,6 @@ export default function Step1Dashboard({
 }: Step1DashboardProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { isDesktopExpanded } = useMobileSidebar();
   const { state, dispatch, setFresherMode, detectFresherMode, determineCVType, setJdText, goToStep, setTemplateOverlayOpen } = useResumeEnhancer();
   const { user } = useUnifiedAuth();
   const [parseMethod, setParseMethod] = useState<'upload' | 'manual' | 'job' | 'linkedin' | null>(null);
@@ -366,7 +365,6 @@ export default function Step1Dashboard({
   const [forcedCvType, setForcedCvType] = useState<'master' | 'journey' | 'standalone' | null>(null);
   const [isCreatingBlank, setIsCreatingBlank] = useState(false);
   const [viewLayout, setViewLayout] = useState<'grid' | 'list' | 'compact'>('grid');
-  const [isDocumentsPanelExpanded, setIsDocumentsPanelExpanded] = useState(false);
   const [cvJourneysMap, setCvJourneysMap] = useState<Map<string, any>>(new Map());
 
   useEffect(() => {
@@ -487,12 +485,7 @@ export default function Step1Dashboard({
     }
   };
 
-  const getScoreForCV = (cv: any): number | undefined => {
-    return cv.metadata?.surgeonAnalysis?.scoreReport?.overall_score
-      ?? cv.scoreReport?.overall_score
-      ?? (typeof cv.atsScore === 'number' ? cv.atsScore : undefined)
-      ?? cv.metadata?.atsScore;
-  };
+  const getScoreForCV = getCvScoreForDisplay;
   const cvsWithAts = existingCVs.filter(cv => getScoreForCV(cv) !== undefined);
   const averageATSScore = cvsWithAts.length > 0 
     ? Math.round(cvsWithAts.reduce((sum, cv) => sum + (getScoreForCV(cv) ?? 0), 0) / cvsWithAts.length) 
@@ -1053,14 +1046,20 @@ export default function Step1Dashboard({
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: 20 }}
-          ref={scrollContainerRef}
-          className="step-one-shell flex flex-col h-full overflow-y-auto custom-scrollbar bg-[var(--bg-primary)] scroll-smooth"
-          onScroll={handleScroll}
+          className="step-one-shell dashboard-workspace flex flex-col h-full overflow-hidden pl-3 lg:pl-0 pb-3"
         >
+          {/* Off-white rounded content card — matches the dashboard workspace */}
+          <div className="dashboard-content-card rounded-2xl border border-[var(--border-primary)] shadow-sm h-full min-h-0 flex flex-col overflow-hidden mr-3">
+            <div
+              ref={scrollContainerRef}
+              className="flex-1 min-h-0 overflow-y-auto custom-scrollbar scroll-smooth"
+              onScroll={handleScroll}
+            >
+              <div className="min-h-full flex flex-col">
 
 
         {/* Top Section */}
-        <div ref={topSectionRef} className="step-one-hero relative z-10 w-full flex flex-col min-h-[30vh] pt-6 sm:pt-8 pb-4 sm:pb-6">
+        <div ref={topSectionRef} className="step-one-hero relative z-10 w-full flex flex-col shrink-0 min-h-[30vh] pt-6 sm:pt-8 pb-4 sm:pb-6">
           <div className="w-full max-w-7xl mx-auto px-4 sm:px-8">
             <div
               className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 sm:gap-6 mb-5 sm:mb-7 origin-bottom w-full px-1 lg:relative"
@@ -1144,7 +1143,7 @@ export default function Step1Dashboard({
 
 {/* Action Cards Grid - horizontal scroll on mobile, grid on sm+ */}
             <div
-              className="relative z-20 flex sm:grid gap-3 sm:gap-4 origin-top sm:grid-cols-2 lg:grid-cols-3 w-full overflow-x-auto sm:overflow-x-visible pb-4 sm:pb-20 snap-x snap-mandatory sm:snap-none scroll-pl-4 -mx-4 px-4 sm:mx-0 sm:px-0"
+              className="relative z-20 flex sm:grid gap-3 sm:gap-4 origin-top sm:grid-cols-2 lg:grid-cols-3 w-full overflow-x-auto sm:overflow-x-visible pb-4 sm:pb-8 snap-x snap-mandatory sm:snap-none scroll-pl-4 -mx-4 px-4 sm:mx-0 sm:px-0"
               style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
             {activeTab === 'cvs' ? (
@@ -1277,39 +1276,10 @@ export default function Step1Dashboard({
           </div>
         </div>
 
-        {/* Continue Editing Section (Floats on bottom, pullable drawer sheet layout) */}
+        {/* Your Documents — merged into the page flow (was a slide-up panel) */}
         {!isGuestMode && (
-          <motion.div 
-            layout
-            initial={{ y: '30vh' }}
-            animate={{ 
-              y: isDocumentsPanelExpanded ? 0 : 'calc(100% - 450px)',
-            }}
-            transition={{ type: 'spring', damping: 28, stiffness: 220 }}
-            className={`fixed bottom-0 left-0 right-0 mx-auto w-[96vw] h-[85vh] z-[90] flex flex-col bg-[var(--bg-primary)] border-t border-x border-[color:var(--border-primary)] shadow-[0_-20px_50px_rgba(0,0,0,0.18)] rounded-t-[32px] overflow-hidden no-print transition-all duration-300 ${
-              isDesktopExpanded ? 'lg:left-[280px] lg:w-[calc(100vw-320px)]' : 'lg:left-[84px] lg:w-[calc(100vw-120px)]'
-            }`}
-          >
-            {/* Drawer Pull Grab Handle Bar */}
-            <div 
-              onClick={() => setIsDocumentsPanelExpanded(!isDocumentsPanelExpanded)}
-              className="w-full py-4 shrink-0 flex flex-col items-center cursor-pointer hover:bg-gray-500/5 transition-colors border-b border-[color:var(--border-primary)] select-none bg-[var(--bg-primary)]"
-            >
-              <div className="w-14 h-1.5 bg-gray-300 dark:bg-gray-700 rounded-full transition-all duration-300 group-hover:bg-emerald-500" />
-              <div className="flex items-center gap-1.5 mt-2.5">
-                <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-widest text-[#80FF00] flex items-center gap-1">
-                  Your Documents
-                </span>
-                <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">
-                  • {isDocumentsPanelExpanded ? 'Click to Minimize' : 'Pull Up to View All Resumes & Cover Letters'}
-                </span>
-              </div>
-            </div>
-
-            {/* Scrollable Container inside sheet */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-6 sm:p-12 pb-32">
-              <div className="w-full max-w-7xl mx-auto">
-                <div className="step-one-documents-header flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-5 pb-5 border-b border-[color:var(--border-primary)] pt-5">
+          <div className="w-full max-w-7xl mx-auto px-4 sm:px-8 pb-12">
+                <div className="step-one-documents-header flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-5 pb-5 border-b border-[color:var(--border-primary)] pt-0">
                   <div>
                     <h3 className="mt-1 text-xs sm:text-sm text-[color:var(--text-secondary)]">Your Documents</h3>
                     <p className="text-xl sm:text-2xl font-black text-[color:var(--text-primary)] tracking-tight text-left">All your resumes and cover letters in one place.</p>
@@ -1795,9 +1765,10 @@ export default function Step1Dashboard({
               )}
 
             </div>
+          )}
           </div>
-        </motion.div>
-        )}
+          </div>
+        </div>
         </motion.div>
       )}
 

@@ -60,6 +60,7 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
   // Track if we've already fetched to prevent duplicate calls
   const hasFetchedRef = useRef(false);
   const lastFetchTimeRef = useRef<number>(0);
+  const lastErrorToastAtRef = useRef<number>(0);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null); // Ref to track polling interval
 
   // Check if we're on admin route - skip session logic if so
@@ -143,14 +144,23 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
 
     try {
       console.log('📥 NotificationContext - Fetching notifications...');
-      const response = await fetch('/api/notifications', { cache: 'no-store' });
+      // Fetch a generous slice of history so the Updates panel shows all
+      // notifications (read + unread) when left uninteracted.
+      const response = await fetch('/api/notifications?limit=500', { cache: 'no-store' });
       if (!response.ok) {
         const contentType = response.headers.get('content-type');
-        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        let errorMessage = `HTTP ${response.status}${response.statusText ? ` ${response.statusText}` : ''}`;
         if (contentType && contentType.includes('application/json')) {
           try {
             const errorData = await response.json();
-            errorMessage = errorData.error || errorData.message || errorMessage;
+            const apiError = errorData?.error;
+            if (typeof apiError === 'string' && apiError.length > 0) {
+              errorMessage = apiError;
+            } else if (apiError && typeof apiError.message === 'string') {
+              errorMessage = apiError.message;
+            } else if (typeof errorData?.message === 'string') {
+              errorMessage = errorData.message;
+            }
           } catch {
             // JSON parse failed, use default error message
           }
@@ -208,11 +218,17 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
       setNotifications([]);
       // Only show toast for non-401 errors (401 means user is not authenticated, which is expected for logged-out users)
       if (error instanceof Error && !error.message.includes('401')) {
-        toast({
-          title: 'Error',
-          description: 'Failed to load notifications. Please refresh the page.',
-          variant: 'destructive',
-        });
+        // Debounce error toasts: polling runs every 5-20s and a transient failure
+        // would otherwise spam a toast on every interval tick.
+        const now = Date.now();
+        if (now - lastErrorToastAtRef.current >= 60000) {
+          lastErrorToastAtRef.current = now;
+          toast({
+            title: 'Error',
+            description: 'Failed to load notifications. Please refresh the page.',
+            variant: 'destructive',
+          });
+        }
       }
       // Reset fetch flag on error so we can retry
       hasFetchedRef.current = false;

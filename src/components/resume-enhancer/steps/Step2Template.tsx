@@ -213,7 +213,8 @@ export default function Step2Template({ onComplete }: Step2TemplateProps) {
         .cv-subtitle { font-size: calc(var(--cv-base-size) * 0.95); }
         .cv-date { font-size: calc(var(--cv-base-size) * 0.85); }
         .cv-contact { font-size: calc(var(--cv-base-size) * 0.85); }
-        .cv-body { font-size: inherit; line-height: calc(1.6 * var(--cv-spacing)); }
+        .cv-body { font-size: inherit; line-height: calc(1.6 * var(--cv-spacing)); overflow-wrap: anywhere; word-break: break-word; hyphens: auto; }
+        .cv-document .cv-body, .cv-document .cv-prose p { text-align: justify; }
         .cv-document p, .cv-document ul, .cv-document li { font-size: inherit !important; line-height: inherit !important; margin: 0; padding: 0; }
         .cv-prose p { margin-bottom: calc(0.3em * var(--cv-spacing)) !important; }
         .cv-prose ul { list-style-type: disc; padding-left: 1.2em; margin-top: calc(0.25em * var(--cv-spacing)) !important; margin-bottom: calc(0.25em * var(--cv-spacing)) !important; }

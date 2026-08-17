@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { gsap } from 'gsap';
 import { X, Save, Eye, Loader2, Sparkles, User, Settings, LogOut, Sun, Moon, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Minimize2, Maximize2, Home, Plus, Palette, FileText, PenTool, Edit2, Check, ClipboardList } from 'lucide-react';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
+import { Skeleton } from '@/components/ui/Skeleton';
 import StepIndicator from './StepIndicator';
 import Step1Dashboard from './steps/Step1Dashboard';
 import Step2Template from './steps/Step2Template';
@@ -3127,25 +3128,149 @@ export default function ResumeEnhancerContainer({
   }, []); // Empty deps - only run on mount
 
   if (isLoading) {
+    // Keep the editor chrome visible while the document loads: header skeleton + a
+    // step-aware body skeleton (CV sheet + control panel, or letter sheet + panel).
+    const isCanvasStep = state.currentStep === 3;
+    const isLetterStep = state.currentStep === 4;
     return (
-      <div className="dashboard-page resume-enhancer-page flex items-center justify-center min-h-screen bg-[var(--bg-primary)]">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-[color:var(--accent-primary)] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-[color:var(--text-secondary)]">Loading Editor...</p>
-        </div>
+      <div className="h-macro dashboard-workspace flex flex-col overflow-hidden w-full" role="status" aria-label="Loading document">
+        {/* Editor header skeleton — static chrome */}
+        <header className="editor-header relative min-h-16 flex items-center justify-between gap-2 px-3 sm:px-6 bg-[var(--header-bg)] sticky top-0 z-[60]">
+          <div className="flex items-center gap-3 min-w-0">
+            <Skeleton className="hidden md:block w-10 h-10 rounded-xl" />
+            <div className="space-y-1.5 min-w-0">
+              <Skeleton className="h-4 w-40 sm:w-52" />
+              <Skeleton className="h-2.5 w-24" />
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Skeleton className="h-9 w-24 rounded-lg" />
+            <Skeleton className="h-9 w-9 rounded-lg" />
+            <Skeleton className="h-9 w-9 rounded-lg" />
+          </div>
+        </header>
+
+        {/* CV canvas step: A4 preview sheet + control panel */}
+        {isCanvasStep && (
+          <div className="flex-1 min-h-0 flex gap-3 p-3">
+            <div className="flex-1 lg:flex-none lg:w-[60%] min-h-0 flex items-start justify-center overflow-y-auto bg-gray-100/50 dark:bg-[#141810] rounded-xl border border-gray-200 dark:border-white/[0.04] p-6">
+              <div className="w-full max-w-[560px] aspect-[1/1.414] bg-white dark:bg-[#141810] rounded-xl border border-gray-200 dark:border-white/[0.04] shadow-sm p-8 flex flex-col gap-6">
+                <div className="space-y-3">
+                  <Skeleton className="h-6 w-1/3" />
+                  <Skeleton className="h-3.5 w-1/4" />
+                </div>
+                <div className="flex gap-4">
+                  <Skeleton className="h-3 w-20" />
+                  <Skeleton className="h-3 w-20" />
+                  <Skeleton className="h-3 w-20" />
+                </div>
+                <Skeleton className="h-px w-full" />
+                <div className="space-y-2.5">
+                  <Skeleton className="h-4 w-1/4" />
+                  <Skeleton className="h-3 w-full" />
+                  <Skeleton className="h-3 w-5/6" />
+                </div>
+                <div className="space-y-4 pt-2">
+                  <Skeleton className="h-4 w-1/4" />
+                  <div className="space-y-2.5">
+                    <div className="flex justify-between">
+                      <Skeleton className="h-3.5 w-1/3" />
+                      <Skeleton className="h-3 w-16" />
+                    </div>
+                    <Skeleton className="h-3 w-full" />
+                    <Skeleton className="h-3 w-full" />
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="hidden lg:flex flex-col gap-3 flex-1 min-h-0">
+              <div className="dashboard-content-card rounded-2xl border border-[var(--border-primary)] p-4 space-y-3 flex-1">
+                <Skeleton className="h-4 w-2/5" />
+                <Skeleton className="h-3 w-full" />
+                <Skeleton className="h-3 w-5/6" />
+                <Skeleton className="h-9 w-full rounded-lg" />
+                <Skeleton className="h-9 w-full rounded-lg" />
+              </div>
+              <div className="dashboard-content-card rounded-2xl border border-[var(--border-primary)] p-4 space-y-3 flex-1">
+                <Skeleton className="h-4 w-1/3" />
+                <Skeleton className="h-8 w-16" />
+                <Skeleton className="h-3 w-3/4" />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Cover letter step: letter sheet + tuning panel */}
+        {isLetterStep && (
+          <div className="flex-1 min-h-0 flex gap-3 p-3">
+            <div className="flex-1 min-h-0 overflow-y-auto bg-gray-100/50 dark:bg-[#141810] rounded-xl border border-gray-200 dark:border-white/[0.04] p-6 lg:p-10 flex justify-center">
+              <div className="w-full max-w-[620px] min-h-[520px] bg-white dark:bg-[#141810] rounded-xl border border-gray-200 dark:border-white/[0.04] shadow-sm p-10 space-y-4">
+                <div className="space-y-2">
+                  <Skeleton className="h-8 w-64 mx-auto" />
+                  <Skeleton className="h-3 w-40 mx-auto" />
+                  <Skeleton className="h-3 w-52 mx-auto" />
+                </div>
+                <Skeleton className="h-px w-full my-4" />
+                <div className="space-y-2.5">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <Skeleton key={i} className={`h-3 ${i % 3 === 0 ? 'w-full' : i % 3 === 1 ? 'w-5/6' : 'w-2/3'}`} />
+                  ))}
+                </div>
+                <div className="space-y-2.5 pt-2">
+                  <Skeleton className="h-3 w-11/12" />
+                  <Skeleton className="h-3 w-4/5" />
+                  <Skeleton className="h-3 w-3/4" />
+                </div>
+              </div>
+            </div>
+            <div className="hidden lg:flex flex-col gap-3 w-[300px] shrink-0">
+              <div className="dashboard-content-card rounded-2xl border border-[var(--border-primary)] p-4 space-y-3 flex-1">
+                <Skeleton className="h-4 w-2/5" />
+                <Skeleton className="h-8 w-20 rounded-full" />
+                <Skeleton className="h-8 w-20 rounded-full" />
+                <Skeleton className="h-9 w-full rounded-lg" />
+              </div>
+              <div className="dashboard-content-card rounded-2xl border border-[var(--border-primary)] p-4 space-y-3 flex-1">
+                <Skeleton className="h-4 w-1/3" />
+                <Skeleton className="h-3 w-full" />
+                <Skeleton className="h-3 w-5/6" />
+                <Skeleton className="h-3 w-2/3" />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Other steps: generic content skeleton */}
+        {!isCanvasStep && !isLetterStep && (
+          <div className="flex-1 min-h-0 p-6">
+            <div className="dashboard-content-card rounded-2xl border border-[var(--border-primary)] p-6 space-y-4">
+              <Skeleton className="h-7 w-64" />
+              <Skeleton className="h-4 w-96 max-w-full" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 pt-4">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="dashboard-content-card rounded-2xl border border-[var(--border-primary)] p-6 space-y-3">
+                    <Skeleton className="h-14 w-14 rounded-full" />
+                    <Skeleton className="h-5 w-28" />
+                    <Skeleton className="h-3 w-40" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
 
   return (
-    <div className="h-macro bg-[#f3f2ee] dark:bg-[#1a230f] flex overflow-hidden w-full">
+    <div className="h-macro dashboard-workspace flex overflow-hidden w-full">
       {/* Desktop Sidebar - Hidden on sm/md, visible on lg and up */}
       {state.currentStep === 1 && (
         <div
           data-dashboard-sidebar
           className={`hidden lg:flex lg:flex-col lg:sticky lg:top-0 lg:h-screen lg:z-[120] lg:py-0 lg:px-0 ${
-            isDesktopExpanded ? 'lg:w-[280px]' : 'lg:w-[84px]'
-          } overflow-visible pointer-events-auto transition-all duration-300 flex-shrink-0 border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-[#141810]`}
+            isDesktopExpanded ? 'lg:w-[280px]' : 'lg:w-[64px]'
+          } overflow-visible pointer-events-auto transition-all duration-300 flex-shrink-0 bg-white dark:bg-[#141810]`}
         >
           <OptimizedNavigation />
         </div>
@@ -3171,7 +3296,7 @@ export default function ResumeEnhancerContainer({
       {/* Main Content Area */}
       <div className="dashboard-page resume-enhancer-page flex flex-col flex-1 min-w-0 h-screen overflow-hidden text-[color:var(--text-primary)]">
         {/* HEADER - Top Bar */}
-        <header className={`editor-header relative min-h-16 flex items-center justify-between gap-2 px-3 sm:px-6 border-b border-[color:var(--border-primary)] bg-[var(--header-bg)] sticky top-0 z-[60] shadow-sm ${state.currentStep === 1 ? 'flex-wrap py-2 sm:py-0' : ''}`}>
+        <header className={`editor-header relative min-h-16 flex items-center justify-between gap-2 px-3 sm:px-6 bg-[var(--header-bg)] sticky top-0 z-[60] ${state.currentStep === 1 ? 'flex-wrap py-2 sm:py-0' : ''}`}>
           {(state.currentStep > 1 || state.isTemplateOverlayOpen) ? (
             <>
               {/* Left Column: Home Button & CV Title Inline Editor & Save Status */}

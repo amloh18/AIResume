@@ -16,7 +16,7 @@ import {
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
 import { AnimatedScore } from '@/components/ui/AnimatedScore';
 import { InfoTooltip } from '@/components/ui/tooltip';
-import CVPreviewContent from '@/components/cv-preview/CVPreviewContent';
+import CVOverlayDocument from '@/components/cv-builder-pro/CVOverlayDocument';
 import { ATSDeepDiveProvider, useATSDeepDive } from '@/contexts/ATSDeepDiveContext';
 // TODO: ATS Deep Dive components were deleted - using inline placeholders
 // import XRayCanvas from '@/components/studio/ats-deep-dive/XRayCanvas';
@@ -696,21 +696,9 @@ function ATSDeepDiveContent({ isOpen, onClose, userId }: ATSDeepDiveModalProps) 
                         margin: '0 auto'
                       }}
                     >
-                      <CVPreviewContent
+                      <CVOverlayDocument
                         cvData={state.cvData}
-                        selectedTemplate={state.selectedTemplate || undefined}
-                        overlaysEnabled={false}
-                        annotations={[]}
                         renderMode="continuous"
-                        ignoreStructureVisibility={true}
-                        showBadge={false}
-                        showTimelineGutter={deepDiveState.activeLayers.has('timeline')}
-                        timelineParserType={deepDiveState.selectedParser}
-                        timelineShowCriticalOnly={deepDiveState.showCriticalOnly}
-                        showKeywordHeatmap={deepDiveState.activeLayers.has('heatmap')}
-                        keywordParserType={deepDiveState.selectedParser}
-                        keywordShowCriticalOnly={deepDiveState.showCriticalOnly}
-                        jobData={state.jobData}
                       />
 
                       {/* SVG Overlay System - X-Ray Canvas */}

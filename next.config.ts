@@ -263,25 +263,15 @@ const nextConfig: NextConfig = {
   staticPageGenerationTimeout: 1000,
 
   // Handle API routes properly
-  // Note: chrome-extension:// origins are handled dynamically in route handlers via setCorsHeaders()
-  // Static headers here are for web origins only
+  // Note: chrome-extension:// origins are handled dynamically in route handlers via setCorsHeaders().
+  // We intentionally do NOT set a static Access-Control-Allow-Origin here: the header must contain
+  // exactly one origin (or a wildcard), never a comma-separated list, and it must match the
+  // requesting origin. Route handlers set the correct value per-request instead.
   async headers() {
-    const allowedOrigins = process.env.NODE_ENV === 'production'
-      ? [
-        'https://cvcircle.io',
-        'https://www.cvcircle.io',
-        'https://app.cvcircle.io',
-      ]
-      : [
-        'http://localhost:3000',
-        'http://127.0.0.1:3000',
-      ];
-
     return [
       {
         source: '/api/auth/:path*',
         headers: [
-          { key: 'Access-Control-Allow-Origin', value: allowedOrigins.join(', ') },
           { key: 'Access-Control-Allow-Methods', value: 'GET, POST, PUT, DELETE, OPTIONS' },
           { key: 'Access-Control-Allow-Headers', value: 'Content-Type, Authorization, Cookie' },
           { key: 'Access-Control-Allow-Credentials', value: 'true' },
@@ -291,7 +281,6 @@ const nextConfig: NextConfig = {
       {
         source: '/api/:path*',
         headers: [
-          { key: 'Access-Control-Allow-Origin', value: allowedOrigins.join(', ') },
           { key: 'Access-Control-Allow-Methods', value: 'GET, POST, PUT, DELETE, OPTIONS' },
           { key: 'Access-Control-Allow-Headers', value: 'Content-Type, Authorization, Cookie' },
           { key: 'Access-Control-Allow-Credentials', value: 'true' },
@@ -331,7 +320,12 @@ const nextConfig: NextConfig = {
   },
   // Performance optimizations
   compiler: {
-    removeConsole: process.env.NODE_ENV === 'production',
+    // Strip dev console.log/info/debug from production builds, but KEEP console.error
+    // and console.warn so real errors are still visible in server/production logs.
+    removeConsole:
+      process.env.NODE_ENV === 'production'
+        ? { exclude: ['error', 'warn'] }
+        : false,
   },
   compress: true,
   poweredByHeader: false,

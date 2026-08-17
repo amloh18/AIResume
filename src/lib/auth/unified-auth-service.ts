@@ -109,18 +109,10 @@ export class UnifiedAuthService {
               // Enforce portal isolation
               const portal = credentials.portal || 'default';
               const role = result.user.role;
-              // Add proper null checking for b2b object
-              const isB2b = !!(result.user as any).b2b?.tenantId || !!(result.user as any).isB2b;
               const isAdmin = role === 'admin' || role === 'superadmin';
 
               if (portal === 'admin' && !isAdmin) {
                 throw new Error('Unauthorized. Please use the consumer login.');
-              }
-              if (portal === 'b2b' && !isB2b && !isAdmin) {
-                throw new Error('Unauthorized. Please use the consumer login.');
-              }
-              if (portal === 'default' && isB2b && !isAdmin) {
-                throw new Error('Unauthorized. Please use the B2B login.');
               }
 
               console.log('✅ Credentials provider: Authentication successful for:', result.user.email);
@@ -132,7 +124,6 @@ export class UnifiedAuthService {
                 email: String(result.user.email).substring(0, 255),
                 name: String(result.user.name || '').substring(0, 100),
                 role: result.user.role,
-                isB2b: isB2b,
                 userLifecycleState: result.user.userLifecycleState,
                 // Only include image if it's a short URL (not a large base64 string)
                 image: result.user.image && typeof result.user.image === 'string' && result.user.image.length < 500
@@ -174,7 +165,6 @@ export class UnifiedAuthService {
               image: imageUrl,
               role: 'user' as const,
               type: 'user' as const,
-              isB2b: false,
             };
           },
         }),
@@ -241,18 +231,10 @@ export class UnifiedAuthService {
                 // Enforce portal isolation
                 const portal = credentials.portal || 'default';
                 const role = userDoc.role;
-                // Use any to bypass strict typing issues with mongoose lean documents
-                const isB2b = !!(userDoc as any).b2b?.tenantId || !!(userDoc as any).isB2b;
                 const isAdmin = role === 'admin' || role === 'superadmin';
 
                 if (portal === 'admin' && !isAdmin) {
                   throw new Error('Unauthorized. Please use the consumer login.');
-                }
-                if (portal === 'b2b' && !isB2b && !isAdmin) {
-                  throw new Error('Unauthorized. Please use the consumer login.');
-                }
-                if (portal === 'default' && isB2b && !isAdmin) {
-                  throw new Error('Unauthorized. Please use the B2B login.');
                 }
 
                 // CRITICAL: Return only minimal user data to prevent JWT token from becoming too large
@@ -261,7 +243,6 @@ export class UnifiedAuthService {
                     email: String(userDoc.email).substring(0, 255),
                     name: String(`${userDoc.firstName || ''} ${userDoc.lastName || ''}`.trim() || 'User').substring(0, 100),
                     role: userDoc.role,
-                    isB2b: isB2b,
                     // Only include image if it's a short URL (not a large base64 string)
                   image: userDoc.avatar && typeof userDoc.avatar === 'string' && userDoc.avatar.length < 500
                     ? userDoc.avatar.substring(0, 500)
@@ -390,18 +371,10 @@ export class UnifiedAuthService {
               // Enforce portal isolation
               const portal = credentials.portal || 'default';
               const role = userDoc.role;
-              // Use any to bypass strict typing issues with mongoose lean documents
-              const isB2b = !!(userDoc as any).b2b?.tenantId || !!(userDoc as any).isB2b;
               const isAdmin = role === 'admin' || role === 'superadmin';
 
               if (portal === 'admin' && !isAdmin) {
                 throw new Error('Unauthorized. Please use the consumer login.');
-              }
-              if (portal === 'b2b' && !isB2b && !isAdmin) {
-                throw new Error('Unauthorized. Please use the consumer login.');
-              }
-              if (portal === 'default' && isB2b && !isAdmin) {
-                throw new Error('Unauthorized. Please use the B2B login.');
               }
 
               // CRITICAL: Return only minimal user data to prevent JWT token from becoming too large
@@ -410,7 +383,6 @@ export class UnifiedAuthService {
                 email: String(userDoc.email).substring(0, 255),
                 name: String(`${userDoc.firstName || ''} ${userDoc.lastName || ''}`.trim() || 'User').substring(0, 100),
                 role: userDoc.role,
-                isB2b: isB2b,
                 // Only include image if it's a short URL (not a large base64 string)
                 image: userDoc.avatar && typeof userDoc.avatar === 'string' && userDoc.avatar.length < 500
                   ? userDoc.avatar.substring(0, 500)
@@ -543,7 +515,6 @@ export class UnifiedAuthService {
             
             token.type = String(userType).substring(0, 50);
             token.role = String(userRole).substring(0, 50);
-            token.isB2b = !!(user as any).isB2b;
 
             // If it's an admin, we can optionally store the name
             if (userType === 'admin') {
@@ -589,9 +560,6 @@ export class UnifiedAuthService {
           if (token.name && token.type === 'admin') {
             cleanedToken.name = String(token.name).substring(0, 100);
           }
-          if (token.isB2b !== undefined) {
-            cleanedToken.isB2b = !!token.isB2b;
-          }
 
           // Store LinkedIn data in token (encrypted)
           if (token.linkedInId) {
@@ -631,8 +599,6 @@ export class UnifiedAuthService {
                 (session.user as any).planKey = userData.planKey || (isAdmin ? 'admin' : 'free');
                 (session.user as any).userLifecycleState = token.userLifecycleState || userData.userLifecycleState || 'ACTIVE';
                 (session.user as any).subscriptionStatus = userData.subscriptionStatus || (isAdmin ? 'active' : 'inactive');
-                (session.user as any).isB2b = !!userData.isB2b;
-                (session.user as any).b2b = userData.b2b;
               } else {
                 // Fallback to token data if user not found in User model (e.g., direct AdminAuth user)
                 session.user.id = (token.id as string) || '';
@@ -642,7 +608,6 @@ export class UnifiedAuthService {
                 (session.user as any).type = isAdmin ? 'admin' : 'user';
                 (session.user as any).planKey = isAdmin ? 'admin' : 'free';
                 (session.user as any).subscriptionStatus = isAdmin ? 'active' : 'inactive';
-                (session.user as any).isB2b = !!token.isB2b;
               }
               
               // Add LinkedIn data to session if present in token
@@ -679,8 +644,6 @@ export class UnifiedAuthService {
               type: String((session.user as any)?.type || (isAdmin ? 'admin' : 'user')).substring(0, 50),
               planKey: String((session.user as any)?.planKey || (isAdmin ? 'admin' : 'free')).substring(0, 50),
               subscriptionStatus: String((session.user as any)?.subscriptionStatus || (isAdmin ? 'active' : 'inactive')).substring(0, 50),
-              isB2b: !!(session.user as any)?.isB2b,
-              b2b: (session.user as any)?.b2b,
             },
             expires: session.expires
           };
@@ -805,7 +768,7 @@ export class UnifiedAuthService {
       
       // Try User collection first
       let userDoc = await User.findById(userId)
-        .select('_id email firstName lastName avatar role currentPlanKey subscription.status b2b')
+        .select('_id email firstName lastName avatar role currentPlanKey subscription.status')
         .lean()
         .exec();
 
@@ -842,7 +805,7 @@ export class UnifiedAuthService {
         }
       }
 
-      const userData = {
+const userData = {
         id: String(doc._id),
         email: doc.email || '',
         name: `${doc.firstName || ''} ${doc.lastName || ''}`.trim() || 'User',
@@ -850,14 +813,7 @@ export class UnifiedAuthService {
         role: doc.role || 'user',
         planKey: doc.currentPlanKey || 'free',
         subscriptionStatus: (doc as any).subscription?.status || 'inactive',
-        isB2b: !!(doc.b2b?.tenantId) || !!(doc as any).isB2b,
-        b2b: doc.b2b ? JSON.parse(JSON.stringify({
-          tenantId: String(doc.b2b.tenantId),
-          role: doc.b2b.role,
-          setupComplete: !!doc.b2b.setupComplete,
-        })) : undefined,
       };
-
 
       // Cache for 5 minutes
       await setCache(cacheKey, userData, 300);

@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { FileText, Building, MapPin, TrendingUp, Sparkles, DollarSign, MoreHorizontal, Award, Globe, Calendar } from 'lucide-react';
+import CompanyLogo from '@/components/ui/CompanyLogo';
 
 interface JobApplication {
   id: string;
@@ -66,9 +67,9 @@ const DraftStageView: React.FC<DraftStageViewProps> = ({
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
         <FileText className="w-16 h-16 text-gray-400 dark:text-gray-600 mb-4" />
-        <h3 className="text-h3 font-semibold text-gray-900 dark:text-white mb-2">
+        <div className="text-body font-semibold text-gray-900 dark:text-white mb-2">
           No draft jobs
-        </h3>
+        </div>
         <p className="text-small text-gray-500 dark:text-gray-400">
           Add a job to get started with your application journey.
         </p>
@@ -110,7 +111,8 @@ const DraftStageView: React.FC<DraftStageViewProps> = ({
           </thead>
           <tbody className="divide-y divide-gray-200 dark:divide-white/10">
             {sortedJobs.map((job) => {
-              const matchScore = job.matchScore || 98; // Mock default if missing
+              // Only show a real score — never fabricate one
+              const matchScore = job.matchScore ?? job.atsScore ?? 0;
               return (
                 <motion.tr
                   key={job.id || job._id}
@@ -122,19 +124,7 @@ const DraftStageView: React.FC<DraftStageViewProps> = ({
                   {/* Company */}
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-white/10 flex items-center justify-center text-small font-bold text-gray-500 dark:text-gray-400 overflow-hidden">
-                        {job.companyLogo ? (
-                          <img
-                            src={job.companyLogo}
-                            alt={`${job.company} logo`}
-                            className="w-full h-full object-contain"
-                            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-                          />
-                        ) : null}
-                        <span style={{ display: job.companyLogo ? 'none' : 'block' }}>
-                          {job.company.substring(0, 2).toUpperCase()}
-                        </span>
-                      </div>
+                      <CompanyLogo company={job.company} size={32} logoUrl={job.companyLogo} jobId={job.id || job._id} />
                       <span className="text-small font-semibold text-gray-900 dark:text-white">{job.company}</span>
                     </div>
                   </td>
@@ -163,7 +153,7 @@ const DraftStageView: React.FC<DraftStageViewProps> = ({
                       matchScore >= 60 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' :
                         'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
                       }`}>
-                      {matchScore}%
+                      {matchScore > 0 ? `${matchScore}%` : '—'}
                     </span>
                   </td>
 

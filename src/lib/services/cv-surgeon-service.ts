@@ -301,18 +301,12 @@ export class CVSurgeonService {
             fix.severity === 'high' || ['grammar', 'formatting', 'impact', 'structure'].includes((fix.category || 'other').toLowerCase())
         );
 
-        // Calculate completeness score
-        const completenessScore = this.calculateCompletenessScore(cvData);
-        const impactScore = this.calculateImpactScore(cvData);
-
         return {
             ...result,
             fixes: finalFixes,
             annotations: normalizeSurgicalFixesToAnnotations(cvData, finalFixes),
             mode: 'master',
-            cvScore: result.score,
-            completenessScore,
-            impactScore
+            cvScore: result.score
         };
     }
 
@@ -443,103 +437,6 @@ export class CVSurgeonService {
                 jdContentHash: ''
             };
         }
-    }
-
-    /**
-     * Calculate CV completeness score (for Master/Standalone modes)
-     */
-    static calculateCompletenessScore(cvData: UnifiedCVDataStructure): number {
-        let score = 0;
-        const maxScore = 100;
-
-        // Basic info (25 points)
-        if (cvData.basics?.name) score += 5;
-        if (cvData.basics?.email) score += 5;
-        if (cvData.basics?.phone) score += 3;
-        if (cvData.basics?.location) score += 3;
-        if (cvData.basics?.summary && cvData.basics.summary.length > 50) score += 9;
-
-        // Work experience (25 points)
-        if (cvData.work && cvData.work.length > 0) {
-            score += 10;
-            const hasDescriptions = cvData.work.some((w: any) =>
-                w.highlights?.length > 0 || w.summary
-            );
-            if (hasDescriptions) score += 15;
-        }
-
-        // Education (15 points)
-        if (cvData.education && cvData.education.length > 0) score += 15;
-
-        // Skills (20 points)
-        if (cvData.skills && cvData.skills.length > 0) {
-            score += 10;
-            if (cvData.skills.length >= 5) score += 10;
-        }
-
-        // Projects (10 points)
-        if (cvData.projects && cvData.projects.length > 0) score += 10;
-
-        // Certificates (5 points)
-        if (cvData.certificates && cvData.certificates.length > 0) score += 5;
-
-        return Math.min(score, maxScore);
-    }
-
-    /**
-     * Calculate impact score based on action verbs and quantification
-     */
-    static calculateImpactScore(cvData: UnifiedCVDataStructure): number {
-        const impactVerbs = [
-            'led', 'managed', 'developed', 'created', 'implemented', 'improved',
-            'increased', 'reduced', 'optimized', 'designed', 'built', 'established',
-            'coordinated', 'supervised', 'analyzed', 'resolved', 'delivered',
-            'achieved', 'generated', 'streamlined', 'spearheaded', 'orchestrated'
-        ];
-
-        const quantifiers = /\d+%|\$[\d,]+|\d+[xX]|\d+\s*(million|billion|thousand|users|customers|projects|teams?)/gi;
-
-        let verbCount = 0;
-        let quantCount = 0;
-        let totalBullets = 0;
-
-        // Check work experience
-        if (cvData.work) {
-            cvData.work.forEach((job: any) => {
-                if (job.highlights) {
-                    job.highlights.forEach((highlight: string) => {
-                        totalBullets++;
-                        const lowerHighlight = highlight.toLowerCase();
-                        impactVerbs.forEach(verb => {
-                            if (lowerHighlight.startsWith(verb) || lowerHighlight.includes(` ${verb} `)) {
-                                verbCount++;
-                            }
-                        });
-                        const matches = highlight.match(quantifiers);
-                        if (matches) quantCount += matches.length;
-                    });
-                }
-            });
-        }
-
-        // Check projects
-        if (cvData.projects) {
-            cvData.projects.forEach((project: any) => {
-                if (project.description) {
-                    totalBullets++;
-                    const matches = project.description.match(quantifiers);
-                    if (matches) quantCount += matches.length;
-                }
-            });
-        }
-
-        if (totalBullets === 0) return 50; // Default score if no content
-
-        // Score: 50% from verbs, 50% from quantification
-        const verbScore = Math.min((verbCount / totalBullets) * 100, 50);
-        const quantScore = Math.min((quantCount / totalBullets) * 100, 50);
-
-        return Math.round(verbScore + quantScore);
     }
 
     /**

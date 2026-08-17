@@ -2566,9 +2566,15 @@ const SettingsContent = () => {
   };
 
   return (
-    <RouteGuard requireAuth={true}>
-      <div className="w-full min-w-0 overflow-x-hidden pb-20">
-        <div className="max-w-6xl mx-auto px-4 md:px-6 w-full min-w-0">
+    /* Same rounded-card-with-margins shell as the dashboard: white workspace,
+       off-white card inset right/bottom (+ left on mobile/tablet where the
+       sidebar is hidden); content scrolls inside the card. */
+    <div className="absolute inset-0 dashboard-workspace text-[#0f172a] dark:text-gray-150 font-sans overflow-hidden flex flex-col pr-3 pb-3 pl-3 lg:pl-0">
+      <div className="dashboard-content-card rounded-2xl border border-[var(--border-primary)] shadow-sm flex-1 min-h-0 flex flex-col overflow-hidden">
+        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden scrollbar-hide overscroll-contain">
+          <RouteGuard requireAuth={true}>
+            <div className="w-full min-w-0 overflow-x-hidden pb-20">
+              <div className="max-w-6xl mx-auto px-4 md:px-6 w-full min-w-0">
           {/* Page Header - Same style as other dashboard pages */}
           <PageHeader
             title="Settings"
@@ -2615,9 +2621,12 @@ const SettingsContent = () => {
               {renderTabContent()}
             </TabsContent>
           </Tabs>
+          </div>
         </div>
+      </RouteGuard>
       </div>
-    </RouteGuard>
+    </div>
+  </div>
   );
 };
 

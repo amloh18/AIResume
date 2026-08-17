@@ -3,11 +3,12 @@ import Image from 'next/image';
 
 interface LogoProps {
   className?: string;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'xs' | 'sm' | 'md' | 'lg';
 }
 
 const Logo = ({ className = '', size = 'md' }: LogoProps) => {
   const sizeMap = {
+    xs: { img: 36 },
     sm: { img: 64 },
     md: { img: 88 },
     lg: { img: 132 }

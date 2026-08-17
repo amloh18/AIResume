@@ -136,6 +136,11 @@ export async function GET(request: NextRequest) {
       response.headers.set('Last-Modified', new Date(user.updatedAt).toUTCString());
     }
 
+    // Always revalidate (no-cache keeps the If-Modified-Since / 304 flow alive,
+    // but forces the browser to re-check instead of serving a stale cached body
+    // after plan changes)
+    response.headers.set('Cache-Control', 'private, no-cache, max-age=0, must-revalidate');
+
     return response;
 
   } catch (error: any) {

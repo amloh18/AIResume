@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle, Building, DollarSign, Calendar, Clock, AlertCircle, Eye, MapPin, TrendingUp, XCircle, Handshake } from 'lucide-react';
+import CompanyLogo from '@/components/ui/CompanyLogo';
 import toast from 'react-hot-toast';
 
 interface JobApplication {
@@ -71,18 +72,12 @@ const OfferStageView: React.FC<OfferStageViewProps> = ({
     });
   }, [jobs, sortOrder]);
 
-  const handleOfferAction = async (job: JobApplication, action: 'accept' | 'negotiate' | 'decline', e: React.MouseEvent) => {
+  const handleOfferAction = async (job: JobApplication, action: 'accept' | 'decline', e: React.MouseEvent) => {
     e.stopPropagation();
     try {
-      let newStatus = job.status;
-      if (action === 'accept') {
-        newStatus = 'accepted';
-      } else if (action === 'decline') {
-        newStatus = 'rejected';
-      }
-
+      const newStatus = action === 'accept' ? 'accepted' : 'rejected';
       await onJobStatusUpdate(job.id || job._id, newStatus);
-      toast.success(`Offer ${action === 'accept' ? 'accepted' : action === 'decline' ? 'declined' : 'negotiation started'}!`);
+      toast.success(`Offer ${action === 'accept' ? 'accepted' : 'declined'}!`);
     } catch (error) {
       console.error('Error updating offer status:', error);
       toast.error('Failed to update offer status');
@@ -93,9 +88,9 @@ const OfferStageView: React.FC<OfferStageViewProps> = ({
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
         <CheckCircle className="w-16 h-16 text-gray-400 dark:text-gray-600 mb-4" />
-        <h3 className="text-h3 font-semibold text-gray-900 dark:text-white mb-2">
+        <div className="text-body font-semibold text-gray-900 dark:text-white mb-2">
           No offers yet
-        </h3>
+        </div>
         <p className="text-small text-gray-500 dark:text-gray-400">
           Keep applying! Your offers will appear here.
         </p>
@@ -151,19 +146,7 @@ const OfferStageView: React.FC<OfferStageViewProps> = ({
                   {/* Company */}
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-white/10 flex items-center justify-center text-small font-bold text-gray-500 dark:text-gray-400 overflow-hidden">
-                        {job.companyLogo ? (
-                          <img
-                            src={job.companyLogo}
-                            alt={`${job.company} logo`}
-                            className="w-full h-full object-contain"
-                            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-                          />
-                        ) : null}
-                        <span style={{ display: job.companyLogo ? 'none' : 'block' }}>
-                          {(job.company || 'NA').substring(0, 2).toUpperCase()}
-                        </span>
-                      </div>
+                      <CompanyLogo company={job.company} size={32} logoUrl={job.companyLogo} jobId={job.id || job._id} />
                       <span className="text-small font-semibold text-gray-900 dark:text-white">{job.company}</span>
                     </div>
                   </td>
@@ -184,7 +167,7 @@ const OfferStageView: React.FC<OfferStageViewProps> = ({
                   {/* Offer Value */}
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-h3 font-bold text-green-600 dark:text-green-400">
+                      <span className="!text-lg font-bold text-green-600 dark:text-green-400">
                         {offerValue > 0 ? formatCurrency(offerValue, currency) : 'TBD'}
                       </span>
                     </div>
@@ -231,7 +214,11 @@ const OfferStageView: React.FC<OfferStageViewProps> = ({
                         <CheckCircle size={16} />
                       </button>
                       <button
-                        onClick={(e) => handleOfferAction(job, 'negotiate', e)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          // Open the job details so the user can actually negotiate the offer
+                          onJobClick(job);
+                        }}
                         className="p-1.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors"
                         title="Negotiate"
                       >

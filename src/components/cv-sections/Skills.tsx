@@ -84,10 +84,6 @@ const Skills: React.FC<SkillsProps> = ({
           display: inline;
           line-height: ${template.globalStyles.lineHeight};
         }
-
-        .skill-name {
-          white-space: nowrap;
-        }
         
         @media print {
           .section-header,

@@ -57,6 +57,7 @@ const serializeJob = (job: any) => {
     salary: job?.salary,
     deadline: formatDateForResponse(job?.deadline),
     applicationDate: formatDateForResponse(job?.applicationDate),
+    appliedAt: job?.appliedAt instanceof Date ? job?.appliedAt.toISOString() : (job?.appliedAt || undefined),
     interviews: (job?.interviews || []).map((interview: any) => ({
       ...interview,
       date: formatDateForResponse(interview?.date)

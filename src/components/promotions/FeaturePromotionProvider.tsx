@@ -12,8 +12,8 @@ function PromotionRenderer() {
 
   // Select and show promotion when context changes
   useEffect(() => {
-    // DO NOT show for Admin or B2B users
-    if (contextData.isAdmin || contextData.isB2B) {
+    // DO NOT show for Admin users
+    if (contextData.isAdmin) {
       return;
     }
 
@@ -59,7 +59,6 @@ function PromotionRenderer() {
     contextData.hasJobs,
     contextData.isPaidUser,
     contextData.isAdmin,
-    contextData.isB2B,
     isDismissed,
     canShowPromotion,
     isPromotionOnCooldown,

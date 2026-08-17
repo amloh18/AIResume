@@ -18,7 +18,7 @@ export type AuthMode = 'signin' | 'signup' | 'reset' | 'magic-link' | 'verify-co
 export interface AuthPageProps {
   initialMode?: AuthMode;
   isModal?: boolean;
-  layoutVariant?: 'default' | 'b2b' | 'admin';
+  layoutVariant?: 'default' | 'admin';
   callbackUrl?: string;
 }
 
@@ -211,23 +211,6 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
       // This will be handled by the admin layout component
       return '/admin';
     }
-
-      // Check if user is B2B
-      const isB2b = !!(user as any).b2b?.tenantId || !!(user as any).isB2b;
-      if (isB2b) {
-        // Check if B2B user needs to complete onboarding
-        // setupComplete may be undefined for existing users, treat as false
-        const needsOnboarding = !(user as any).b2b?.setupComplete;
-        const isAdmin = user.role === 'admin' || user.role === 'superadmin';
-        
-        if (needsOnboarding && isAdmin) {
-          // B2B admin needs to complete onboarding
-          return '/b2b/onboarding';
-        }
-        
-        // Regular B2B user goes to dashboard
-        return '/b2b/dashboard';
-      }
 
     // Regular user goes to standard dashboard
     return defaultUrl;
@@ -801,6 +784,52 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
     }
   };
 
+  const handleDevBypass = async (role: 'user' | 'admin') => {
+    setIsLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const response = await fetch('/api/auth/dev-bypass', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setSuccess(`Bypass login successful! Redirecting...`);
+        if (result.user) {
+          posthog.identify(result.user.id, {
+            email: result.user.email,
+            name: result.user.name,
+          });
+          posthog.capture('user_signed_in', {
+            auth_method: 'dev_bypass',
+            email: result.user.email,
+            role: result.user.role,
+          });
+        }
+        
+        setTimeout(() => {
+          if (role === 'admin') {
+            window.location.href = '/admin';
+          } else {
+            window.location.href = callbackUrl || '/dashboard';
+          }
+        }, 800);
+      } else {
+        setError(result.error || 'Bypass login failed.');
+        setIsLoading(false);
+      }
+    } catch (err: any) {
+      console.error('Dev bypass error:', err);
+      setError('An error occurred during dev bypass login.');
+      setIsLoading(false);
+    }
+  };
+
   const switchMode = (newMode: AuthMode) => {
     setMode(newMode);
     setError('');
@@ -1029,7 +1058,7 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
             </p>
             {layoutVariant === 'default' && (
               <p className="text-gray-500 text-small text-center">
-                Don't have an account?{' '}
+                {"Don't have an account?"}{' '}
                 <button
                   onClick={() => switchMode('signup')}
                   className="text-[#80FF00] hover:text-[#80FF00]/80 transition-colors duration-200 font-medium"
@@ -1055,7 +1084,7 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
             </p>
             {layoutVariant === 'default' && (
               <p className="text-gray-500 text-small text-center">
-                Don't have an account?{' '}
+                {"Don't have an account?"}{' '}
                 <button
                   onClick={() => switchMode('signup')}
                   className="text-[#80FF00] hover:text-[#80FF00]/80 transition-colors duration-200 font-medium"
@@ -1271,6 +1300,34 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
                 {isLoading ? 'Sending code...' : 'Send me a code'}
               </button>
             </motion.div>
+          )}
+
+          {/* Dev Bypass Buttons */}
+          {process.env.NODE_ENV !== 'production' && mode === 'signin' && (
+            <div className="mt-6 pt-6 border-t border-dashed border-gray-200 dark:border-white/10 text-center">
+              <div className="text-xs font-bold tracking-widest text-gray-400 dark:text-white/40 uppercase mb-3 flex items-center justify-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#80FF00] animate-ping" />
+                Dev Bypass Login
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleDevBypass('user')}
+                  disabled={isLoading}
+                  className="px-3 py-2 text-xs font-semibold bg-gray-50 hover:bg-gray-100 dark:bg-white/5 dark:hover:bg-white/10 text-gray-800 dark:text-white/80 rounded border border-gray-200 dark:border-white/10 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  User
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDevBypass('admin')}
+                  disabled={isLoading}
+                  className="px-3 py-2 text-xs font-semibold bg-gray-50 hover:bg-gray-100 dark:bg-white/5 dark:hover:bg-white/10 text-gray-800 dark:text-white/80 rounded border border-gray-200 dark:border-white/10 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Admin
+                </button>
+              </div>
+            </div>
           )}
 
           {/* Footer Links */}

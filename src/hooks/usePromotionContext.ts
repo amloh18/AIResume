@@ -19,7 +19,6 @@ interface PromotionContextData {
   isFreeUser: boolean;
   isPaidUser: boolean;
   isAdmin: boolean;
-  isB2B: boolean;
   creditPercentage: number;
   creditsExhausted: boolean;
 }
@@ -42,14 +41,12 @@ export function usePromotionContext(): PromotionContextData {
     let isFreeUser = false;
     let isPaidUser = false;
     let isAdmin = false;
-    let isB2B = false;
     let creditPercentage = 100;
     let creditsExhausted = false;
 
     // Check user roles and special statuses
     if (user) {
       isAdmin = user.role === 'admin' || user.role === 'superadmin';
-      isB2B = !!user.b2b?.tenantId;
     }
 
     // Extract IDs from URL params
@@ -140,7 +137,6 @@ export function usePromotionContext(): PromotionContextData {
       isFreeUser,
       isPaidUser,
       isAdmin,
-      isB2B,
       creditPercentage,
       creditsExhausted,
     };

@@ -229,7 +229,7 @@ export const JSONSidebarViewer = ({ data, focusedPath, onChange, rainbowHighligh
       {error && <div className="bg-red-900/50 border-b border-red-500/50 text-red-400 p-2 text-small font-mono">{error}</div>}
       {rainbowHighlight && !isEditing ? (
         <div
-          className="flex-1 overflow-auto p-4 font-mono text-[11px] leading-relaxed custom-scrollbar cursor-text"
+          className="flex-1 overflow-auto p-4 font-mono text-[11px] leading-relaxed custom-scrollbar cursor-text whitespace-pre"
           onClick={() => setIsEditing(true)}
           dangerouslySetInnerHTML={{ __html: highlightedHtml }}
         />

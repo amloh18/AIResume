@@ -55,7 +55,6 @@ const CardNav = ({
   const navRef = useRef<HTMLElement>(null);
   const router = useRouter();
   const pathname = usePathname();
-  const isBusinessRoute = pathname?.startsWith('/b2b');
 
   // Handle scroll behavior
   useEffect(() => {
@@ -97,8 +96,6 @@ const CardNav = ({
   const handleCtaClick = () => {
     if (onCtaClick) {
       onCtaClick();
-    } else if (isBusinessRoute) {
-      router.push('/b2b/login?callbackUrl=%2Fb2b%2Fdashboard');
     } else {
       // Default action - route to sign in page
       router.push('/sign-in');
@@ -158,9 +155,6 @@ const CardNav = ({
           >
             <div className="logo-image-wrapper relative">
               <Logo size="lg" />
-              {isBusinessRoute && (
-                <sup className="absolute -top-2 -right-4 text-[10px] font-bold text-[#80FF00]">HR</sup>
-              )}
             </div>
           </button>
 
@@ -252,16 +246,6 @@ const CardNav = ({
           </div>
 
           <div className="nav-actions flex items-center h-full">
-            {!isBusinessRoute && (
-              <button
-                type="button"
-                className="card-nav-business-button hidden md:flex"
-                onClick={() => scrollToSection('/b2b', true)}
-              >
-                Business
-              </button>
-            )}
-
             <button
               type="button"
               className="card-nav-cta-button"
@@ -310,16 +294,6 @@ const CardNav = ({
               );
             })}
             
-            {!isBusinessRoute && (
-              <button
-                type="button"
-                className="mobile-cta-button mb-4"
-                onClick={() => scrollToSection('/b2b', true)}
-              >
-                Business
-              </button>
-            )}
-
             <button
               type="button"
               className="mobile-cta-button"

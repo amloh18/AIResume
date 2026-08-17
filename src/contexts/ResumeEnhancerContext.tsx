@@ -656,6 +656,7 @@ function resumeEnhancerReducer(
         cleanedData.work.some((w: any) => w && (w.name || w.company || w.position));
       const loadedReport = action.payload.scoreReport || null;
       const loadedScore = loadedReport?.overall_score || 0;
+      const loadedCanvasPageSize = cleanedData?.metadata?.canvasDesign?.pageSize;
       return {
         ...state,
         mode: 'edit',
@@ -665,6 +666,7 @@ function resumeEnhancerReducer(
         cvTitle: action.payload.cvTitle,
         cvData: cleanedData,
         fresherMode: !hasWorkExperience,
+        paperSize: loadedCanvasPageSize === 'Letter' ? 'Letter' : 'A4',
         selectedTemplate: action.payload.template || cleanedData?.metadata?.canvasTemplate || state.selectedTemplate,
         journeyId: action.payload.journeyId,
         jobData: action.payload.jobData,
@@ -1193,6 +1195,27 @@ export function useResumeEnhancer() {
   const context = useContext(ResumeEnhancerContext);
   if (!context) {
     throw new Error('useResumeEnhancer must be used within ResumeEnhancerProvider');
+  }
+  return context;
+}
+
+/**
+ * Like useResumeEnhancer, but returns a no-op fallback when the component tree has
+ * no ResumeEnhancerProvider. Read-only CV previews rendered outside the editor
+ * (dashboard sidebar, global search, journey timeline) don't need the enhancer
+ * state machine — only the undo/redo keyboard shortcuts use it — so this lets the
+ * canvas render in those contexts instead of crashing.
+ */
+export function useResumeEnhancerSafe(): Pick<ResumeEnhancerContextType, 'state' | 'dispatch'> {
+  const context = useContext(ResumeEnhancerContext);
+  if (!context) {
+    return {
+      state: {
+        undoStack: [],
+        redoStack: [],
+      } as unknown as ResumeEnhancerState,
+      dispatch: (() => {}) as React.Dispatch<ResumeEnhancerAction>,
+    };
   }
   return context;
 }

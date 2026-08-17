@@ -1611,8 +1611,14 @@ ${userName}`
       setActiveActionId('open_interview_prep');
       setActiveActionPayload(sidebarConfig.actionPayloads.open_interview_prep || null);
       handleOpenInterviewCoach();
+      return;
     }
-  }, [handleOpenInterviewCoach, job.status, openContext, sidebarConfig.actionPayloads]);
+
+    // Deep link with edit intent (e.g. /dashboard/tracker?jobId=X&edit=1)
+    if (openContext.autoOpenEdit) {
+      handleOpenEditModal();
+    }
+  }, [handleOpenInterviewCoach, handleOpenEditModal, job.status, openContext, sidebarConfig.actionPayloads]);
 
   const journeyCardData = sidebarConfig.journeyCard;
   return (
@@ -1639,20 +1645,20 @@ ${userName}`
         {/* Sidebar */}
         <motion.div
           ref={sidebarRef}
-          initial={{ x: '100%' }}
+          initial={{ x: 'calc(100% + 12px)' }}
           animate={{ x: 0 }}
-          exit={{ x: '100%' }}
+          exit={{ x: 'calc(100% + 12px)' }}
           transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-          className="fixed right-0 top-0 h-screen bg-white dark:bg-[#141810] shadow-2xl z-[9999] flex flex-col transition-all duration-300"
-          style={{ width: sidebarWidth, right: showCommsSidebar && windowWidth >= 768 ? '450px' : '0' }}
+          className="fixed right-3 top-3 bottom-3 h-auto bg-white dark:bg-[#141810] shadow-2xl z-[9999] flex flex-col rounded-2xl overflow-hidden transition-all duration-300"
+          style={{ width: sidebarWidth, right: showCommsSidebar && windowWidth >= 768 ? '474px' : '12px' }}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 p-4 sm:p-6 border-b border-gray-200 dark:border-white/10 flex-shrink-0">
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-1 sm:gap-2 min-w-0 flex-1">
-              <h2 className="text-h3 sm:text-h3 font-semibold text-gray-900 dark:text-white truncate">{job.jobTitle || job.title}</h2>
+              <h2 className="!text-lg font-semibold text-gray-900 dark:text-white truncate">{job.jobTitle || job.title}</h2>
               <span className="text-gray-500 dark:text-gray-400 hidden sm:inline">at</span>
-              <h2 className="text-h3 sm:text-h3 font-semibold text-gray-900 dark:text-white truncate">{job.company}</h2>
+              <h2 className="!text-lg font-semibold text-gray-900 dark:text-white truncate">{job.company}</h2>
 
               {/* Sponsorship Tag */}
               {job.sponsorship && job.sponsorship !== 'unknown' && (
@@ -2228,18 +2234,18 @@ ${userName}`
 
             {/* Modal Sidebar Panel */}
             <motion.div
-              initial={{ x: '100%' }}
+              initial={{ x: 'calc(100% + 12px)' }}
               animate={{ x: 0 }}
-              exit={{ x: '100%' }}
+              exit={{ x: 'calc(100% + 12px)' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed inset-y-0 right-0 w-full max-w-2xl bg-white dark:bg-[#141810] shadow-2xl border-l border-gray-200 dark:border-white/10 z-[10002] flex flex-col overflow-hidden"
+              className="fixed top-3 right-3 bottom-3 w-full max-w-2xl bg-white dark:bg-[#141810] shadow-2xl z-[10002] flex flex-col rounded-2xl overflow-hidden"
             >
               <div className="p-6 border-b border-gray-200 dark:border-white/10 flex-shrink-0 flex items-start justify-between gap-4">
                 <div>
                   <p className="text-small font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">
                     {detailsModalView === 'details' ? 'Job Details' : 'Application Insights'}
                   </p>
-                  <h3 className="text-h3 font-bold text-gray-900 dark:text-white mt-1">
+                  <h3 className="!text-lg font-bold text-gray-900 dark:text-white mt-1">
                     {job.jobTitle || job.title} at {job.company}
                   </h3>
                   {activeActionPayload && (

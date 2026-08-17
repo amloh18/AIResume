@@ -22,9 +22,9 @@ const GlobalSearchBar: React.FC = () => {
         className="relative hidden tablet:block shrink min-w-[220px] max-w-full cursor-pointer group"
       >
         <div className="relative flex items-center">
-          <Search className="absolute left-3 h-4 w-4 text-gray-400 dark:text-gray-500 z-10 pointer-events-none group-hover:text-lime-400 transition-colors" />
+          <Search className="absolute left-2.5 h-3.5 w-3.5 text-gray-400 dark:text-gray-500 z-10 pointer-events-none group-hover:text-lime-400 transition-colors" />
           <div
-            className="w-[clamp(220px,28vw,450px)] max-w-full pl-10 pr-12 py-2 rounded-2xl bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 text-gray-500 dark:text-white/50 transition-all text-small select-none truncate"
+            className="w-[clamp(180px,24vw,380px)] max-w-full pl-9 pr-11 py-1.5 rounded-xl bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 text-gray-500 dark:text-white/50 transition-all text-small select-none truncate"
           >
             Search jobs, CVs, cover letters...
           </div>
@@ -38,10 +38,10 @@ const GlobalSearchBar: React.FC = () => {
       <div className="tablet:hidden relative flex items-center">
         <button
           onClick={openCommandBar}
-          className="p-1.5 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-colors"
+          className="p-1 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-colors"
           aria-label="Search"
         >
-          <Search size={18} />
+          <Search size={16} />
         </button>
       </div>
     </>

@@ -10,7 +10,6 @@ interface UnifiedUser {
   username?: string;
   image?: string;
   role: string;
-  isB2b: boolean;
   isNextAuthUser: boolean;
 }
 
@@ -45,7 +44,6 @@ export const useUnifiedAuth = (): UseUnifiedAuthReturn => {
         name: session.user.name || session.user.email?.split('@')[0] || 'User',
         image: session.user.image,
         role: (session.user as any).role || 'user',
-        isB2b: !!(session.user as any).isB2b,
         isNextAuthUser: true
       };
     }

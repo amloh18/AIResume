@@ -10,12 +10,19 @@ export const metadata = {
 
 export default function JobsPage() {
   return (
-    <div className="min-h-screen app-page-bg p-4 lg:p-6">
-      <Suspense fallback={<JobsLoadingState />}>
-        <RouteGuard requireAuth={true}>
-          <JobsDashboard />
-        </RouteGuard>
-      </Suspense>
+    /* Same rounded-card-with-margins shell as the dashboard: white workspace,
+       off-white card inset right/bottom (+ left on mobile/tablet where the
+       sidebar is hidden); content scrolls inside the card. */
+    <div className="absolute inset-0 dashboard-workspace text-[#0f172a] dark:text-gray-150 font-sans overflow-hidden selection:bg-[#83d60d]/30 flex flex-col pr-3 pb-3 pl-3 lg:pl-0">
+      <div className="dashboard-content-card rounded-2xl border border-[var(--border-primary)] shadow-sm flex-1 min-h-0 flex flex-col overflow-hidden">
+        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden scrollbar-hide overscroll-contain">
+          <Suspense fallback={<JobsLoadingState />}>
+            <RouteGuard requireAuth={true}>
+              <JobsDashboard />
+            </RouteGuard>
+          </Suspense>
+        </div>
+      </div>
     </div>
   );
 }

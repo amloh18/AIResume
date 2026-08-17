@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LayoutGrid, Users, BarChart3, CheckCircle } from 'lucide-react';
+import { LayoutGrid, Users, CheckCircle } from 'lucide-react';
 
 interface AdminDashboardSelectorProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelect: (choice: 'admin' | 'user' | 'b2b') => void;
+  onSelect: (choice: 'admin' | 'user') => void;
 }
 
 export default function AdminDashboardSelector({
@@ -22,8 +22,8 @@ export default function AdminDashboardSelector({
       if (hasSeenSelector) {
         // If already confirmed, auto-select based on saved preference
         const savedPreference = localStorage.getItem('admin-dashboard-preference');
-        if (savedPreference) {
-          onSelect(savedPreference as 'admin' | 'user' | 'b2b');
+        if (savedPreference === 'admin' || savedPreference === 'user') {
+          onSelect(savedPreference);
           onClose();
           return;
         }
@@ -32,7 +32,7 @@ export default function AdminDashboardSelector({
     }
   }, [isOpen, onSelect, onClose]);
 
-  const handleSelect = (choice: 'admin' | 'user' | 'b2b') => {
+  const handleSelect = (choice: 'admin' | 'user') => {
     // Save preference to localStorage
     localStorage.setItem('admin-dashboard-preference', choice);
     localStorage.setItem('admin-dashboard-selector-confirmed', 'true');
@@ -113,28 +113,6 @@ export default function AdminDashboardSelector({
                   </h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
                     Access standard user features and CV tools
-                  </p>
-                </div>
-              </div>
-            </motion.button>
-
-            {/* B2B Analytics */}
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => handleSelect('b2b')}
-              className="w-full p-4 rounded-none border-2 border-gray-200 dark:border-white/10 hover:border-[#80FF00] transition-all duration-200 text-left group"
-            >
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-none border-2 border-[#88E03F] flex items-center justify-center group-hover:bg-[#88E03F]/10 transition-colors">
-                  <BarChart3 className="w-6 h-6 text-[#88E03F]" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900 dark:text-white group-hover:text-[#88E03F] transition-colors">
-                    B2B Analytics
-                  </h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    View HR analytics and team management tools
                   </p>
                 </div>
               </div>

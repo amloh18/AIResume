@@ -1,45 +1,14 @@
 'use client';
 
-import React, { Suspense, useState, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { Suspense, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Zap, 
-  Briefcase, 
-  FileText, 
-  ChevronDown, 
-  CheckCircle, 
-  ArrowRight, 
-  Sparkles, 
-  Trophy, 
-  Calendar, 
-  Target,
-  ArrowUpRight,
-  Plus,
-  Trash2,
-  AlertTriangle,
-  Lightbulb,
-  TrendingUp,
-  Brain,
-  Info,
-  Settings
-} from 'lucide-react';
 import RouteGuard from '@/components/auth/RouteGuard';
-import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
-import LoadingOverlay from '@/components/ui/LoadingOverlay';
+import { Skeleton } from '@/components/ui/Skeleton';
 import RedesignedDashboardView from '@/components/dashboard/redesigned/RedesignedDashboardView';
-import { UserTier } from '@/types/dashboard-widgets';
 import { authenticatedFetch } from '@/lib/utils/apiUtils';
 import { useMembership } from '@/lib/hooks/useMembership';
-import { useDashboardData } from '@/contexts/DashboardDataContext';
-
-// --- Specialized Hero Widgets (Legacy removed or moved if needed) ---
-
-function TextSkeleton({ width = 'w-24', height = 'h-4' }: { width?: string; height?: string }) {
-  return <span className={`inline-block animate-pulse rounded bg-slate-200 dark:bg-white/10 ${width} ${height}`} />;
-}
 
 async function fetchOnboardingData() {
   const res = await authenticatedFetch('/api/user/onboarding');
@@ -62,76 +31,22 @@ export default function DashboardPage() {
 
 function DashboardContent() {
   const { data: session, status } = useSession();
-  const { toggleSidebar } = useMobileSidebar();
-  const router = useRouter();
-  
+
   // --- All Hooks must be at the top ---
-  const { membership, loading: membershipLoading } = useMembership();
-  const { jobs, secondaryLoading } = useDashboardData();
+  const { membership } = useMembership();
   const { data: onboardingData } = useQuery({
     queryKey: ['dashboard', 'onboarding', session?.user?.id],
     queryFn: fetchOnboardingData,
     enabled: status === 'authenticated',
     staleTime: 5 * 60 * 1000,
   });
-  const [isExpanded, setIsExpanded] = useState(false);
-  
+
   const [notification, setNotification] = useState<string | null>(null);
   const [demoLayoutType, setDemoLayoutType] = useState<'cv' | 'tracker' | 'auto_apply' | null>(null);
-
-  const [touchStart, setTouchStart] = useState<number | null>(null);
-  const [touchEnd, setTouchEnd] = useState<number | null>(null);
-  
-  const containerRef = useRef<HTMLDivElement>(null);
 
   const triggerNotification = (message: string) => {
     setNotification(message);
     setTimeout(() => setNotification(null), 4000);
-  };
-
-  // Calculate matched jobs stats
-  const activeJobs = jobs.filter((j: any) => !['draft', 'archived'].includes(j.status)).length;
-  const highMatchJobs = jobs.filter((j: any) => (j.atsScore || 0) >= 80).length;
-  const jobsLoading = secondaryLoading.jobs;
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    setTouchStart(e.targetTouches[0].clientY);
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    setTouchEnd(e.targetTouches[0].clientY);
-  };
-
-  const handleTouchEnd = () => {
-    if (!touchStart || !touchEnd) return;
-    const distance = touchStart - touchEnd;
-    const isUpSwipe = distance > 50; // Lowered threshold for better responsiveness
-    const isDownSwipe = distance < -50;
-
-    if (isUpSwipe && !isExpanded) {
-      setIsExpanded(true);
-    } else if (isDownSwipe && isExpanded && containerRef.current && containerRef.current.scrollTop === 0) {
-      setIsExpanded(false);
-    }
-    setTouchStart(null);
-    setTouchEnd(null);
-  };
-
-  const handleWheel = (e: React.WheelEvent) => {
-    if (e.deltaY > 30 && !isExpanded) { // Lowered threshold
-      setIsExpanded(true);
-    } else if (e.deltaY < -30 && isExpanded && containerRef.current && containerRef.current.scrollTop === 0) {
-      setIsExpanded(false);
-    }
-  };
-
-  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const scrollTop = e.currentTarget.scrollTop;
-    if (scrollTop > 10 && !isExpanded) { // Lowered threshold
-      setIsExpanded(true);
-    } else if (scrollTop <= 2 && isExpanded) {
-      setIsExpanded(false);
-    }
   };
 
   // Let onboarding data and membership load in the background to speed up dashboard initial paint
@@ -142,7 +57,7 @@ function DashboardContent() {
 
   const userRole = (session?.user as any)?.role || 'user';
   const isAdmin = userRole === 'admin' || userRole === 'superadmin';
-  
+
   // Determine layout type based on active plan (membership)
   let layoutType: 'cv' | 'tracker' | 'auto_apply' = 'cv';
   if (demoLayoutType) {
@@ -162,208 +77,171 @@ function DashboardContent() {
     layoutType = onboardingData?.dashboard_layout_type || 'cv';
   }
 
-  const tierMap: Record<string, UserTier> = {
-    cv: 'starter',
-    tracker: 'focused',
-    auto_apply: 'smart'
-  };
-  const currentTier = tierMap[layoutType] || 'starter';
-
-  const sublines: Record<string, string> = {
-    starter: `${highMatchJobs} of ${activeJobs} jobs matched.`,
-    focused: `${highMatchJobs} of ${activeJobs} jobs matched.`,
-    smart: `${highMatchJobs} of ${activeJobs} jobs matched.`
-  };
-
   return (
-    <div 
-      className="h-macro app-page-bg text-[#0f172a] dark:text-gray-150 font-sans overflow-hidden selection:bg-[#83d60d]/30 relative flex flex-col"
-    >
-      <div
-        ref={containerRef}
-        onWheel={handleWheel}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        onScroll={handleScroll}
-        className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide pb-20"
-        style={{ scrollBehavior: 'smooth' }}
-      >
-      <style jsx global>{`
-        /* Hide scrollbar for Chrome, Safari and Opera */
-        .scrollbar-hide::-webkit-scrollbar {
-          display: none;
-        }
-        /* Hide scrollbar for IE, Edge and Firefox */
-        .scrollbar-hide {
-          -ms-overflow-style: none;  /* IE and Edge */
-          scrollbar-width: none;  /* Firefox */
-        }
-        body {
-          overflow: hidden;
-          touch-action: pan-y;
-        }
-      `}</style>
+    /* Cover the full main area (main is position:relative) so the page bg matches the
+       sidebar; the card is inset on the right only — flush at top, left and bottom */
+    <div className="absolute inset-0 dashboard-workspace text-[#0f172a] dark:text-gray-150 font-sans overflow-hidden selection:bg-[#83d60d]/30 flex flex-col pr-3 pb-3 pl-3 lg:pl-0">
+        <style jsx global>{`
+          /* Hide scrollbar for Chrome, Safari and Opera */
+          .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+          }
+          /* Hide scrollbar for IE, Edge and Firefox */
+          .scrollbar-hide {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+          }
+        `}</style>
 
-      {/* Admin Layout Switcher - Hidden until hover in corner */}
-      {isAdmin && (
-        <div className="fixed bottom-0 right-0 z-[60] group">
-          {/* Trigger Area - Small but accessible */}
-          <div className="absolute bottom-0 right-0 w-24 h-24 pointer-events-auto" />
-          
-          <div className="relative mb-6 mr-6 flex gap-2 bg-white/90 dark:bg-black/90 p-2 rounded-2xl shadow-2xl border border-slate-200 dark:border-gray-800 opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-auto transform translate-y-4 group-hover:translate-y-0 translate-x-4 group-hover:translate-x-0">
-            {(['cv', 'tracker', 'auto_apply'] as const).map(t => (
-              <button 
-                key={t}
-                onClick={() => { setDemoLayoutType(t); triggerNotification(`Admin: Switched to ${t.toUpperCase()} mode`); }}
-                className={`px-3 h-10 rounded-xl font-black text-[10px] uppercase transition-all ${layoutType === t ? 'bg-[#83d60d] text-slate-900 shadow-lg' : 'bg-slate-100 dark:bg-gray-800 text-slate-400 hover:bg-slate-200'}`}
-              >
-                {t.split('_')[0]}
-              </button>
-            ))}
+        {/* Admin Layout Switcher - Hidden until hover in corner */}
+        {isAdmin && (
+          <div className="fixed bottom-0 right-0 z-[60] group">
+            {/* Trigger Area - Small but accessible */}
+            <div className="absolute bottom-0 right-0 w-24 h-24 pointer-events-auto" />
+
+            <div className="relative mb-6 mr-6 flex gap-2 bg-white/90 dark:bg-black/90 p-2 rounded-2xl shadow-2xl border border-slate-200 dark:border-gray-800 opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-auto transform translate-y-4 group-hover:translate-y-0 translate-x-4 group-hover:translate-x-0">
+              {(['cv', 'tracker', 'auto_apply'] as const).map(t => (
+                <button
+                  key={t}
+                  onClick={() => { setDemoLayoutType(t); triggerNotification(`Admin: Switched to ${t.toUpperCase()} mode`); }}
+                  className={`px-3 h-10 rounded-xl font-black text-[10px] uppercase transition-all ${layoutType === t ? 'bg-[#83d60d] text-slate-900 shadow-lg' : 'bg-slate-100 dark:bg-gray-800 text-slate-400 hover:bg-slate-200'}`}
+                >
+                  {t.split('_')[0]}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
-
-      {/* Toast Notification Banner */}
-      <AnimatePresence>
-        {notification && (
-          <motion.div 
-            initial={{ opacity: 0, y: -20, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -20, scale: 0.9 }}
-            className="fixed top-6 right-6 z-50 bg-[#0f172a] text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center space-x-3 border border-slate-800"
-          >
-            <div className="w-2 h-2 rounded-full bg-[#83d60d] animate-ping" />
-            <span className="text-small font-bold uppercase tracking-wider">{notification}</span>
-          </motion.div>
         )}
-      </AnimatePresence>
 
-
-
-      <motion.div 
-        layout
-        id="dashboard-container" 
-        className={`max-w-6xl mx-auto px-4 md:px-6 ${isExpanded ? 'pt-2 pb-12' : 'pt-4'}`}
-        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-      >
-        
-        {/* --- LAYER 1: GREETING ROW --- */}
-        <motion.div 
-          layout
-          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-          className={`flex flex-col md:flex-row items-center justify-between gap-6 border-gray-200 dark:border-gray-800 ${
-            isExpanded ? 'mb-8 py-2 border-b pb-6' : 'mb-12'
-          }`}
-        >
-          <motion.div layout className={isExpanded ? 'text-center md:text-left flex-1' : ''}>
-            <motion.h1 
-              layout
-              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-              className={`font-black tracking-tight text-[#0f172a] dark:text-white leading-tight ${
-                isExpanded ? 'text-display' : 'text-display md:text-6xl'
-              }`}
-            >
-              Hello, <span className="text-[#83d60d]">{session?.user?.name?.split(' ')[0] || 'Alex'}</span>
-            </motion.h1>
-            <motion.p 
-              layout
-              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-              className={`text-slate-500 font-bold mt-1 ${
-                isExpanded ? 'text-small' : 'text-small md:text-body'
-              }`}
-            >
-              {jobsLoading ? <TextSkeleton width="w-48" height="h-5" /> : sublines[currentTier]}
-            </motion.p>
-          </motion.div>
- 
-           <motion.div 
-            layout
-            animate={{ scale: isExpanded ? 0.9 : 1, opacity: isExpanded ? 0.8 : 1 }}
-            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-            className="bg-white dark:bg-[#191c1b] border border-gray-200 dark:border-gray-800 rounded-3xl shadow-sm p-4 flex items-center gap-4"
-          >
-            <div className="relative w-12 h-12 flex items-center justify-center">
-              <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-                <circle className="text-slate-100 dark:text-gray-800" strokeWidth="4" stroke="currentColor" fill="none" cx="18" cy="18" r="16" />
-                <circle 
-                  className="text-[#83d60d] transition-all duration-1000" 
-                  strokeWidth="4" 
-                  strokeDasharray={`${Math.min(100, (highMatchJobs / Math.max(activeJobs, 1)) * 100)}, 100`}
-                  strokeLinecap="round" stroke="currentColor" fill="none" cx="18" cy="18" r="16" 
-                />
-              </svg>
-              <span className="absolute text-[10px] font-black dark:text-white">
-                {jobsLoading ? <TextSkeleton width="w-4" height="h-3" /> : highMatchJobs}
-              </span>
-            </div>
-            <div className="pr-2">
-              <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Jobs Matched</h3>
-              <p className="text-small font-bold text-gray-800 dark:text-gray-300">
-                {jobsLoading ? <TextSkeleton width="w-20" height="h-4" /> : `${highMatchJobs} / ${activeJobs} matched`}
-              </p>
-            </div>
-          </motion.div>
-        </motion.div>
- 
-        {/* --- LAYER 2+: REDESIGNED VIEW --- */}
-        <motion.div
-          layout
-          initial={false}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-        >
-          <RedesignedDashboardView tier={currentTier} isExpanded={isExpanded} />
-        </motion.div>
-
-        {/* Swipe Up Affordance & Collapse Button */}
+        {/* Toast Notification Banner */}
         <AnimatePresence>
-          {!isExpanded ? (
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
-              className="fixed bottom-8 inset-x-0 flex flex-col items-center justify-center pointer-events-none z-50"
+          {notification && (
+            <motion.div
+              initial={{ opacity: 0, y: -20, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -20, scale: 0.9 }}
+              className="fixed top-6 right-6 z-50 bg-[#0f172a] text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center space-x-3 border border-slate-800"
             >
-              <div 
-                className="flex flex-col items-center gap-2 cursor-pointer pointer-events-auto"
-                onClick={() => setIsExpanded(true)}
-              >
-                <motion.div 
-                  animate={{ y: [0, -8, 0] }}
-                  transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
-                  className="w-12 h-1 bg-[#83d60d] rounded-full shadow-lg shadow-[#83d60d]/20"
-                />
-                <span className="text-[10px] font-black text-slate-400 dark:text-gray-500 uppercase tracking-[0.3em] ml-1">Swipe up for insights</span>
-              </div>
-            </motion.div>
-          ) : (
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
-              className="flex justify-center mt-16 pb-12"
-            >
-              <button 
-                onClick={() => { setIsExpanded(false); containerRef.current?.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                className="flex flex-col items-center gap-2 group"
-              >
-                <div className="w-10 h-10 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center group-hover:border-[#83d60d] transition-all">
-                  <ChevronDown className="w-5 h-5 text-gray-400 group-hover:text-[#83d60d] transform rotate-180" />
-                </div>
-                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Back to top</span>
-              </button>
+              <div className="w-2 h-2 rounded-full bg-[#83d60d] animate-ping" />
+              <span className="text-small font-bold uppercase tracking-wider">{notification}</span>
             </motion.div>
           )}
         </AnimatePresence>
 
-      </motion.div>
+        {/* Rounded content area card — fills the viewport (minus header + margins) so its
+            corners are always visible; content scrolls inside the card */}
+        <div id="dashboard-container" className="flex-1 min-h-0">
+          {/* Horizontal padding lives on the card; vertical padding is inside the scroll
+              content so it scrolls away — no fixed blank band when scrolled to the ends */}
+          <div className="dashboard-content-card rounded-2xl border border-[var(--border-primary)] shadow-sm px-5 md:px-8 h-full min-h-0 flex flex-col overflow-hidden">
+            <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden scrollbar-hide overscroll-contain">
+              <div className="py-5 md:py-8">
+                <RedesignedDashboardView />
+              </div>
+            </div>
+          </div>
+        </div>
+    </div>
+  );
+}
+
+/* Skeleton panel: a real card frame with a static title and skeleton rows */
+function PanelSkeleton({
+  title,
+  subtitle,
+  rows = 3,
+  compact = false,
+}: {
+  title: string;
+  subtitle?: string;
+  rows?: number;
+  compact?: boolean;
+}) {
+  return (
+    <div className="dashboard-content-card rounded-2xl border border-[var(--border-primary)] p-5">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="dashboard-panel-title text-[var(--text-primary)]">{title}</h2>
+          {subtitle && (
+            <p className="mt-0.5 text-xs text-[var(--text-secondary)]">{subtitle}</p>
+          )}
+        </div>
+        <Skeleton className="h-7 w-16 rounded-lg" />
+      </div>
+      <div className="mt-4 space-y-3">
+        {Array.from({ length: rows }).map((_, i) => (
+          <div
+            key={i}
+            className={`flex items-center gap-3 ${compact ? 'justify-between' : ''}`}
+          >
+            <Skeleton className={`${compact ? 'h-3.5 w-2/3' : 'h-9 flex-1'}`} />
+            {!compact && <Skeleton className="h-9 w-24" />}
+            {!compact && <Skeleton className="h-9 w-16" />}
+          </div>
+        ))}
       </div>
     </div>
   );
 }
 
 function LoadingFallback() {
-  return <LoadingOverlay message="Initializing Dashboard" />;
+  return (
+    <div className="absolute inset-0 dashboard-workspace text-[#0f172a] dark:text-gray-150 font-sans overflow-hidden selection:bg-[#83d60d]/30 flex flex-col pr-3 pb-3 pl-3 lg:pl-0">
+      <div id="dashboard-container" className="flex-1 min-h-0">
+        <div className="dashboard-content-card rounded-2xl border border-[var(--border-primary)] shadow-sm px-5 md:px-8 h-full min-h-0 flex flex-col overflow-hidden">
+          <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden scrollbar-hide overscroll-contain">
+            <div className="py-5 md:py-8 space-y-6" role="status" aria-label="Loading dashboard">
+              {/* Greeting — the greeting text depends on the user/session, so it
+                  pulses as a skeleton block sized like the real heading */}
+              <div className="pt-2" role="status" aria-label="Loading dashboard">
+                <Skeleton className="h-7 w-64 max-w-full" />
+                <Skeleton className="mt-2 h-4 w-80 max-w-full" />
+              </div>
+
+              {/* KPI strip skeleton */}
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-xl shadow-sm px-5 py-4"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="h-8 w-8 rounded-full" />
+                      <Skeleton className="h-3.5 w-20" />
+                    </div>
+                    <Skeleton className="mt-3 h-6 w-12" />
+                    <Skeleton className="mt-1.5 h-3 w-24" />
+                  </div>
+                ))}
+              </div>
+
+              {/* Two-column workspace skeleton */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+                <div className="lg:col-span-2 space-y-6">
+                  <PanelSkeleton title="My CVs" subtitle="Your CVs and their performance overview." rows={4} />
+                  <PanelSkeleton title="Recent Jobs" subtitle="Jobs you're tracking and their current status." rows={4} />
+                </div>
+                <div className="space-y-6">
+                  {/* Upgrade suggestion card skeleton — keeps the rail stable while
+                      membership (and therefore the card) is still loading */}
+                  <div className="relative overflow-hidden rounded-xl border border-lime-500/25 bg-gradient-to-br from-[#101b12] via-[#142114] to-[#0c140e] p-5">
+                    <Skeleton className="h-3.5 w-28 rounded-full bg-white/10" />
+                    <Skeleton className="mt-3 h-4 w-4/5 bg-white/10" />
+                    <Skeleton className="mt-2 h-3 w-3/5 bg-white/10" />
+                    <div className="mt-4 flex gap-2.5">
+                      <Skeleton className="h-8 flex-1 rounded-lg bg-white/10" />
+                      <Skeleton className="h-8 w-24 rounded-lg bg-white/10" />
+                    </div>
+                  </div>
+                  <PanelSkeleton title="Continue where you left off" rows={2} compact />
+                  <PanelSkeleton title="CV Health" rows={3} compact />
+                  <PanelSkeleton title="Recent Activity" rows={3} compact />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }

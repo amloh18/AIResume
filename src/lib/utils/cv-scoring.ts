@@ -61,6 +61,26 @@ export function calculateScore(
 }
 
 /**
+ * Canonical read selector for the score a user sees in list/thumbnail views.
+ * 
+ * Single source of truth: deterministic scores first (persisted by
+ * CentralScoreManager-based writers), LLM review score only as a last resort.
+ * Mirrors the live pill shown in the editor so the same CV reads the same
+ * score in every surface.
+ */
+export function getCvScoreForDisplay(cv: any): number | undefined {
+  if (!cv) return undefined;
+  const deterministic =
+    typeof cv.metadata?.atsScore === 'number' ? cv.metadata.atsScore
+      : typeof cv.cv_score_ats === 'number' ? cv.cv_score_ats
+        : typeof cv.atsScore === 'number' ? cv.atsScore
+          : undefined;
+  if (deterministic !== undefined) return deterministic;
+  return cv.metadata?.surgeonAnalysis?.scoreReport?.overall_score
+    ?? cv.scoreReport?.overall_score;
+}
+
+/**
  * Get score color and label based on score value
  * Uses consistent color scheme across the application
  * 
