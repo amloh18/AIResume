@@ -244,19 +244,12 @@ export async function POST(request: NextRequest) {
       100 // atsScoreCap
     );
 
-    // Use ATS score if available (journey CV), otherwise fall back to CV score
-    let finalScore = scoreResult.atsScore?.total ?? scoreResult.cvScore.total;
-
-    // Prioritize overall score from analysis report or metadata score syncs
-    const reportScore = cv.metadata?.surgeonAnalysis?.scoreReport?.overall_score || 
-                        cv.scoreReport?.overall_score ||
-                        cv.metadata?.atsScore ||
-                        cv.metadata?.cvScore;
-
-    if (reportScore !== undefined && reportScore !== null && reportScore > 0) {
-      console.log('📊 ATS Calculate Score API - Overriding calculate-score with surgeon analysis score report:', reportScore);
-      finalScore = reportScore;
-    }
+    // Use ATS score if available (journey CV), otherwise fall back to CV score.
+    // Canonical: the freshly computed deterministic CentralScoreManager result.
+    // The LLM review score (metadata.surgeonAnalysis.scoreReport.overall_score)
+    // is intentionally NOT used here - it must never overwrite the deterministic
+    // result returned by the shared scoring engine.
+    const finalScore = scoreResult.atsScore?.total ?? scoreResult.cvScore.total;
 
     console.log('✅ ATS Calculate Score API - Score calculated using CentralScoreManager:', {
       score: finalScore,

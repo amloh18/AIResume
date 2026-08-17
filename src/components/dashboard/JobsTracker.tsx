@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 // Force HMR update
 import { motion, AnimatePresence } from 'framer-motion';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { FileText, Trash2, Columns3, List } from 'lucide-react';
+import { FileText, Trash2, Columns3, List, Briefcase } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { authenticatedFetch, authenticatedFetchWithUserId } from '@/lib/utils/apiUtils';
 import { useUserData, getUserDisplayName, getUserEmail, getUserAvatar } from '@/lib/hooks/useUserData';
@@ -17,6 +17,7 @@ import JobSidebar from './jobs/JobSidebar';
 import EditJobSidebar from './jobs/EditJobSidebar';
 import type { TrackerSidebarOpenContext } from './jobs/trackerSidebarConfig';
 import JobCreationPaywall from '@/components/payment/JobCreationPaywall';
+import UpgradePromptCard from '@/components/payment/UpgradePromptCard';
 import JobsHeader from './jobs/JobsHeader';
 
 import JobsListView from './jobs/JobsListView';
@@ -91,6 +92,8 @@ const JobsTracker: React.FC = () => {
   const searchParams = useSearchParams();
   const cvId = searchParams.get('cvId');
   const stageParam = searchParams.get('stage');
+  const deepLinkJobId = searchParams.get('jobId');
+  const deepLinkEdit = searchParams.get('edit') === '1';
 
   // Get user ID for data fetching
   const userId = getUserIdForAPI(user);
@@ -182,6 +185,7 @@ const JobsTracker: React.FC = () => {
   const [showJobParserDialog, setShowJobParserDialog] = useState(false);
   const [editingJob, setEditingJob] = useState<JobApplication | null>(null);
   const [showPaywall, setShowPaywall] = useState(false);
+  const [showTrackerAccessPrompt, setShowTrackerAccessPrompt] = useState(false);
   const [paywallInfo, setPaywallInfo] = useState<{ currentCount: number; limit: number } | null>(null);
   const [zoomedStage, setZoomedStage] = useState<string | null>(null);
   const [isUpdatingJobStatus, setIsUpdatingJobStatus] = useState<Set<string>>(new Set());
@@ -244,6 +248,19 @@ const JobsTracker: React.FC = () => {
       setZoomedStage(stageParam);
     }
   }, [stageParam]);
+
+  // Deep link: /dashboard/tracker?jobId=X&edit=1 opens the exact job's sidebar
+  // once the job list has loaded (e.g. from the dashboard Recent Jobs actions).
+  const deepLinkHandledRef = useRef(false);
+  useEffect(() => {
+    if (!deepLinkJobId || deepLinkHandledRef.current || jobs.length === 0 || loading) return;
+    const target = jobs.find((job) => (job.id || job._id) === deepLinkJobId);
+    if (!target) return;
+    deepLinkHandledRef.current = true;
+    setSelectedJob(target);
+    setSidebarOpenContext(deepLinkEdit ? { autoOpenEdit: true } : null);
+    setShowModal(true);
+  }, [deepLinkJobId, deepLinkEdit, jobs, loading]);
 
   const loadCVContext = async (cvId: string) => {
     try {
@@ -626,22 +643,18 @@ const JobsTracker: React.FC = () => {
   const handleAddJob = () => {
     // Block if plan has no tracker access at all (e.g. starter_yearly: maxJobs=0, jobTracker=false)
     if (limitInfo && !limitInfo.hasTrackerAccess) {
-      openPaymentModal({
-        preselectedPlanKey: 'focused_monthly',
-        triggerContext: 'job-tracker',
-        returnUrl: window.location.href
-      });
-      toast.error('Job Tracker requires a Focused or higher plan. Upgrade to unlock.');
+      // Non-blocking bottom-right card replaces the old centered paywall + toast
+      setShowTrackerAccessPrompt(true);
       return;
     }
     // EDGE CASE 4: Block "Add Job" button when count limit reached (free plan: 3 jobs)
     if (limitInfo && !limitInfo.isUnlimited && limitInfo.remaining === 0) {
+      // The bottom paywall card is the notification — no separate toast.
       setShowPaywall(true);
       setPaywallInfo({
         currentCount: limitInfo.currentCount,
         limit: limitInfo.limit
       });
-      toast.error('Tracker full. Upgrade to track unlimited applications.');
       return;
     }
     setEditingJob(null);
@@ -651,22 +664,18 @@ const JobsTracker: React.FC = () => {
   const handleQuickAdd = () => {
     // Block if plan has no tracker access at all
     if (limitInfo && !limitInfo.hasTrackerAccess) {
-      openPaymentModal({
-        preselectedPlanKey: 'focused_monthly',
-        triggerContext: 'job-tracker',
-        returnUrl: window.location.href
-      });
-      toast.error('Job Tracker requires a Focused or higher plan. Upgrade to unlock.');
+      // Non-blocking bottom-right card replaces the old centered paywall + toast
+      setShowTrackerAccessPrompt(true);
       return;
     }
     // EDGE CASE 4: Block "Quick Add" when count limit reached
     if (limitInfo && !limitInfo.isUnlimited && limitInfo.remaining === 0) {
+      // The bottom paywall card is the notification — no separate toast.
       setShowPaywall(true);
       setPaywallInfo({
         currentCount: limitInfo.currentCount,
         limit: limitInfo.limit
       });
-      toast.error('Tracker full. Upgrade to track unlimited applications.');
       return;
     }
     setShowJobParserDialog(true);
@@ -977,6 +986,9 @@ const JobsTracker: React.FC = () => {
           const currentUsage = errorData.currentUsage || limit;
           const creditsRemaining = Math.max(0, limit - currentUsage);
 
+          // Show the bottom-right upgrade card and stop here — the card is the
+          // UX for this outcome, so don't throw (an unhandled rejection from the
+          // fire-and-forget callers would surface a dev overlay on top of it).
           showExhaustionModal(
             {
               creditsRemaining,
@@ -985,7 +997,7 @@ const JobsTracker: React.FC = () => {
             },
             'pro_monthly'
           );
-          throw new Error('This feature requires a Pro membership to create a journey');
+          return;
         }
 
         console.error('Failed to move job to created stage:', response.status, errorData);
@@ -1067,17 +1079,23 @@ const JobsTracker: React.FC = () => {
         }
       }
     } catch (error: any) {
-      console.error('Error creating journey:', error);
+      const isCreditError =
+        error?.message?.includes('Insufficient credits') ||
+        error?.message?.includes('requires a Pro membership') ||
+        error?.message?.includes('limit exceeded') ||
+        error?.message?.includes('insufficient credits');
 
-      // Don't show toast if it's a credit error (paywall already shown)
-      if (
-        !error?.message?.includes('Insufficient credits') &&
-        !error?.message?.includes('requires a Pro membership')
-      ) {
+      if (!isCreditError) {
+        // Real failure — log and toast. For credit errors the bottom-right
+        // upgrade card is already shown, so stay silent to avoid a dev
+        // overlay / duplicate prompt on top of it.
+        console.error('Error creating journey:', error);
         toast.error(error?.message || 'Failed to create journey. Please try again.');
       }
 
-      throw error;
+      // Don't rethrow: all callers are fire-and-forget or catch-and-log, and
+      // an unhandled rejection here would surface a dev overlay on top of the
+      // upgrade card.
     }
   }, [loadData, moveDraftJobToCreated, shouldOpenCreatedStageModal, userId]);
 
@@ -1388,7 +1406,7 @@ const JobsTracker: React.FC = () => {
       <div className="h-full flex flex-col min-w-0 w-full max-w-full overflow-hidden">
         <div className="w-full h-full flex flex-col min-w-0 max-w-full overflow-hidden">
           {/* Enhanced Header - Fixed Width Container */}
-          <div className="flex-shrink-0 w-full px-0 sm:px-4 md:px-6">
+          <div className="flex-shrink-0 w-full">
             <JobsHeader
               onAddJob={handleAddJob}
               onQuickAdd={handleQuickAdd}
@@ -1413,7 +1431,7 @@ const JobsTracker: React.FC = () => {
 
           {/* CV Context Banner - Fixed Width Container */}
           {cvContext && (
-            <div className="flex-shrink-0 w-full px-0 sm:px-4 md:px-6">
+            <div className="flex-shrink-0 w-full">
               <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -1446,7 +1464,7 @@ const JobsTracker: React.FC = () => {
           )}
 
           {/* Filters Panel - Fixed Width Container */}
-          <div className="flex-shrink-0 w-full px-0 sm:px-4 md:px-6">
+          <div className="flex-shrink-0 w-full">
             <AnimatePresence>
               {showFilters && (
                 <JobsFilters
@@ -1469,7 +1487,7 @@ const JobsTracker: React.FC = () => {
           </div>
 
           {/* Bulk Actions Bar - Fixed Width Container */}
-          <div className="flex-shrink-0 w-full px-0 sm:px-4 md:px-6">
+          <div className="flex-shrink-0 w-full">
             <AnimatePresence>
               {showBulkActions && (
                 <motion.div
@@ -1550,7 +1568,7 @@ const JobsTracker: React.FC = () => {
 
           {/* View Content - Kanban or List */}
           <div className="flex-1 min-h-0 w-full relative overflow-hidden">
-            <div className="absolute inset-x-0 top-0 bottom-0 mt-4 px-0 sm:px-4 md:px-6 overflow-x-auto overflow-y-hidden scrollbar-hide">
+            <div className="absolute inset-x-0 top-0 bottom-0 mt-4 overflow-x-auto overflow-y-hidden scrollbar-hide">
               {viewMode === 'kanban' ? (
                 <div className="h-full w-full overflow-x-auto overflow-y-hidden rounded-lg scrollbar-hide">
                   <JobsKanbanView
@@ -1659,6 +1677,19 @@ const JobsTracker: React.FC = () => {
           preselectedPlanKey="focused_monthly"
         />
       )}
+
+      {/* No tracker access (e.g. Starter plan) — bottom-right upgrade card */}
+      <UpgradePromptCard
+        isOpen={showTrackerAccessPrompt}
+        onClose={() => setShowTrackerAccessPrompt(false)}
+        title="Job Tracker requires Focused"
+        description="Your current plan doesn't include the job tracker. Upgrade to Focused or higher to track unlimited applications."
+        icon={<Briefcase className="w-4 h-4" />}
+        preselectedPlanKey="focused_monthly"
+        triggerContext="job-tracker"
+        primaryLabel="Upgrade to Focused"
+        secondaryLabel="Maybe Later"
+      />
 
       <TrackerCreatedStageModal
         isOpen={Boolean(pendingCreatedStageJob)}

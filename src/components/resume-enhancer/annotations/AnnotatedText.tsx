@@ -33,6 +33,13 @@ interface AnnotatedTextProps {
    * where the right-side panel owns the "Fix it" UI).
    */
   inlineCard?: boolean;
+  /**
+   * Match annotations by content (originalText inside `text`) instead of by
+   * fieldPath equality + precomputed offsets. Used when the rendered field is a
+   * different view of the same data (e.g. the canvas renderer merges work
+   * summary + highlights into a single description field).
+   */
+  contentMatch?: boolean;
 }
 
 export default function AnnotatedText({
@@ -46,17 +53,27 @@ export default function AnnotatedText({
   onSelectFix,
   onApplyFix,
   onDismissFix,
-  inlineCard = true
+  inlineCard = true,
+  contentMatch = false
 }: AnnotatedTextProps) {
   const Tag = as as any;
-  const openFixes = (annotations || []).filter((f) => f.status === 'open' && f.fieldPath === fieldPath);
+  const openFixes = (annotations || []).filter((f) => {
+    if (f.status !== 'open') return false;
+    if (contentMatch) return !!f.originalText && !!text && text.includes(f.originalText);
+    return f.fieldPath === fieldPath;
+  });
   if (!enabled || openFixes.length === 0) {
     return <Tag className={className}>{text}</Tag>;
   }
 
   const active = openFixes.find((f) => f.id === activeFixId) || openFixes[0];
-  const start = active.match?.start ?? null;
-  const end = active.match?.end ?? null;
+  const computedStart = contentMatch
+    ? (active.originalText ? text.indexOf(active.originalText) : -1)
+    : (active.match?.start ?? null);
+  const start: number | null = computedStart == null ? null : (contentMatch ? (computedStart >= 0 ? computedStart : null) : computedStart);
+  const end = contentMatch
+    ? (start != null ? start + (active.originalText || '').length : null)
+    : (active.match?.end ?? null);
 
   const hasExactSpan = start != null && end != null && start >= 0 && end >= start && end <= text.length;
   const before = hasExactSpan ? text.slice(0, start!) : '';

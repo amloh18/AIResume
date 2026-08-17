@@ -15,17 +15,9 @@ const adminRoutes = [
   '/admin',
 ]
 
-const b2bRoutes = [
-  '/b2b/dashboard',
-  '/b2b/onboarding',
-  '/b2b/api-keys',
-]
-
 const publicRoutes = [
   '/',
-  '/b2b',
   '/sign-in',
-  '/b2b/login',
   '/admin/login',
   '/custom-signin',
   '/sign-up',
@@ -56,15 +48,8 @@ const isPublicRoute = (req: NextRequest) => {
     if (route === '/') {
       return pathname === '/';
     }
-    if (route === '/b2b') {
-      return pathname === '/b2b' || pathname === '/b2b/';
-    }
     return pathname.startsWith(route);
   });
-}
-
-const isB2BRoute = (req: NextRequest) => {
-  return b2bRoutes.some((route) => req.nextUrl.pathname.startsWith(route))
 }
 
 export default async function proxy(req: NextRequest) {
@@ -72,7 +57,13 @@ export default async function proxy(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
   const method = req.method;
 
-  const secret = process.env.NEXTAUTH_SECRET || 'fallback-secret-key-for-development';
+  // CRITICAL: Fail closed if the JWT secret is missing. Never fall back to a
+  // hardcoded value — a known signing secret would let anyone forge admin tokens.
+  const secret = process.env.NEXTAUTH_SECRET;
+  if (!secret) {
+    log.error('NEXTAUTH_SECRET is not set; denying request', undefined, { pathname, method });
+    return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+  }
 
   if (pathname.startsWith('/studio')) {
     return NextResponse.next()
@@ -101,7 +92,6 @@ export default async function proxy(req: NextRequest) {
       '/api/public',
       '/api/webhooks',
       '/api/health',
-      '/api/v1/b2b',
       '/api/user/onboarding',
       '/api/cv/parse',
       '/api/cv-draft/save',
@@ -168,9 +158,6 @@ export default async function proxy(req: NextRequest) {
         role: token.role,
         type: token.type || 'none',
       });
-      if (token.isB2b) {
-        return NextResponse.redirect(new URL('/b2b/dashboard', req.url))
-      }
       return NextResponse.redirect(new URL('/dashboard', req.url))
     }
 
@@ -182,27 +169,6 @@ export default async function proxy(req: NextRequest) {
     return NextResponse.next()
   }
 
-  if (isB2BRoute(req)) {
-    if (!isAuth) {
-      log.warn('Unauthenticated B2B access attempt', {
-        pathname,
-        ip: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown'
-      });
-      return NextResponse.redirect(new URL('/b2b/login', req.url));
-    }
-
-    const isUserAdmin = token.type === 'admin' || token.role === 'admin' || token.role === 'superadmin';
-    if (!token.isB2b) {
-      log.warn('Insufficient permissions for B2B access', { pathname, userId: token.id });
-      if (isUserAdmin) {
-        return NextResponse.redirect(new URL('/admin/dashboard', req.url));
-      }
-      return NextResponse.redirect(new URL('/dashboard', req.url));
-    }
-
-    return NextResponse.next();
-  }
-
   if (isProtectedRoute(req)) {
     if (!isAuth) {
       log.debug('Unauthenticated access to protected route, redirecting to login', { pathname });
@@ -212,10 +178,6 @@ export default async function proxy(req: NextRequest) {
     const isUserAdmin = token.type === 'admin' || token.role === 'admin' || token.role === 'superadmin';
     // Admin users are allowed to access consumer routes if they want to
     // They will have a "Switch to Admin" button in their navigation
-    if (token.isB2b && !isUserAdmin) {
-      log.debug('B2B user attempted to access consumer route, redirecting', { pathname });
-      return NextResponse.redirect(new URL('/b2b/dashboard', req.url));
-    }
 
     if (pathname.startsWith('/dashboard') && !pathname.startsWith('/dashboard/settings')) {
       const expiredParam = req.nextUrl.searchParams.get('expired');

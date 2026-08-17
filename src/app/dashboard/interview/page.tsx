@@ -26,7 +26,9 @@ function InterviewCoachGate() {
     };
 
     return (
-        <div className="min-h-[calc(100vh-120px)] flex flex-col items-center justify-center px-4 py-12">
+        /* Same rounded-card-with-margins shell as the dashboard */
+        <div className="absolute inset-0 dashboard-workspace text-[#0f172a] dark:text-gray-150 font-sans overflow-hidden flex flex-col pr-3 pb-3 pl-3 lg:pl-0">
+            <div className="dashboard-content-card rounded-2xl border border-[var(--border-primary)] shadow-sm flex-1 min-h-0 flex items-center justify-center overflow-hidden px-4 py-12">
             <motion.div
                 initial={{ opacity: 0, y: 24 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -85,6 +87,7 @@ function InterviewCoachGate() {
                     </button>
                 </div>
             </motion.div>
+            </div>
         </div>
     );
 }

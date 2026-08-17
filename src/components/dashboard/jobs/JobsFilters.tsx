@@ -61,7 +61,7 @@ const JobsFilters: React.FC<JobsFiltersProps> = ({
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Filter size={18} className="text-gray-600 dark:text-gray-400" />
-          <h3 className="text-h3 font-semibold text-gray-900 dark:text-white">Filters & Sorting</h3>
+          <div className="text-body font-semibold text-gray-900 dark:text-white">Filters & Sorting</div>
         </div>
         <div className="flex items-center gap-2">
           {hasActiveFilters && (

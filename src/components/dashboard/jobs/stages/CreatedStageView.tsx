@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { FileText, Building, MapPin, Download, Zap, TrendingUp, AlertTriangle, CheckCircle, Shield, Globe, Calendar, DollarSign } from 'lucide-react';
+import { FileText, MapPin, Download, TrendingUp, AlertTriangle, CheckCircle, Shield } from 'lucide-react';
+import CompanyLogo from '@/components/ui/CompanyLogo';
 import { CVJourney } from '@/types/cv';
 
 interface JobApplication {
@@ -33,13 +34,15 @@ interface CreatedStageViewProps {
   getJourneyStatusText: (jobJourneys: CVJourney[], jobStatus?: string) => string;
   onJobClick: (job: JobApplication) => void;
   onRefresh?: () => void;
+  onDownload?: (job: JobApplication) => void;
 }
 
 const CreatedStageView: React.FC<CreatedStageViewProps> = ({
   jobs,
   getJobJourneys,
   onJobClick,
-  onRefresh
+  onRefresh,
+  onDownload
 }) => {
   const [showReadyOnly, setShowReadyOnly] = useState(false);
 
@@ -63,9 +66,9 @@ const CreatedStageView: React.FC<CreatedStageViewProps> = ({
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
         <FileText className="w-16 h-16 text-gray-400 dark:text-gray-600 mb-4" />
-        <h3 className="text-h3 font-semibold text-gray-900 dark:text-white mb-2">
+        <div className="text-body font-semibold text-gray-900 dark:text-white mb-2">
           No created jobs
-        </h3>
+        </div>
         <p className="text-small text-gray-500 dark:text-gray-400">
           Jobs with generated documents will appear here.
         </p>
@@ -128,19 +131,7 @@ const CreatedStageView: React.FC<CreatedStageViewProps> = ({
                   {/* Company */}
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-white/10 flex items-center justify-center text-small font-bold text-gray-500 dark:text-gray-400 overflow-hidden">
-                        {job.companyLogo ? (
-                          <img
-                            src={job.companyLogo}
-                            alt={`${job.company} logo`}
-                            className="w-full h-full object-contain"
-                            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-                          />
-                        ) : null}
-                        <span style={{ display: job.companyLogo ? 'none' : 'block' }}>
-                          {job.company.substring(0, 2).toUpperCase()}
-                        </span>
-                      </div>
+                      <CompanyLogo company={job.company} size={32} logoUrl={job.companyLogo} jobId={job.id || job._id} />
                       <span className="text-small font-semibold text-gray-900 dark:text-white">{job.company}</span>
                     </div>
                   </td>
@@ -214,14 +205,7 @@ const CreatedStageView: React.FC<CreatedStageViewProps> = ({
                   <td className="px-6 py-4 whitespace-nowrap text-right" onClick={(e) => e.stopPropagation()}>
                     <div className="flex justify-end gap-2">
                       <button
-                        onClick={() => console.log('Inject Data', job.id)}
-                        className="p-1.5 bg-lime-500/10 text-lime-600 dark:text-lime-400 rounded-lg hover:bg-lime-500/20 transition-colors"
-                        title="Inject Data"
-                      >
-                        <Zap size={16} />
-                      </button>
-                      <button
-                        onClick={() => console.log('Download', job.id)}
+                        onClick={() => onDownload?.(job)}
                         className="p-1.5 bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-white/20 transition-colors"
                         title="Download Docs"
                       >

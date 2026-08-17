@@ -9,7 +9,7 @@ import { ATSProvider } from '@/contexts/ATSContext';
 import { DashboardDataProvider } from '@/contexts/DashboardDataContext';
 import ResumeEnhancerContainer from '@/components/resume-enhancer/ResumeEnhancerContainer';
 import RouteGuard from '@/components/auth/RouteGuard';
-import LoadingOverlay from '@/components/ui/LoadingOverlay';
+import { Skeleton } from '@/components/ui/Skeleton';
 import guestCVService from '@/lib/services/guestCVService';
 import { MobileSidebarProvider } from '@/contexts/MobileSidebarContext';
 import { geistFont } from '@/lib/fonts';
@@ -150,9 +150,11 @@ function ResumeEnhancerPageContent() {
     checkGuestMode();
   }, [authLoading, isAuthenticated, user?.id, mode, cvId, clId, journeyId, restoreDraftParam]);
 
-// Show loading while checking guest mode or authenticating or redirecting
+// Show the editor skeleton while checking guest mode / authenticating / redirecting.
+// The skeleton mirrors the editor chrome (top bar + step tabs + content cards) so
+// the page structure is visible immediately — only data sections pulse.
 if (authLoading || isCheckingGuestMode || isRedirecting) {
-  return <LoadingOverlay message={isRedirecting ? 'Opening Master CV' : 'Loading Editor'} />;
+  return <EditorSkeleton />;
 }
 
   // For guest mode, resolve mode to 'create' or 'create-cover-letter' because guests don't have database documents to edit.
@@ -212,10 +214,61 @@ export default function ResumeEnhancerPage() {
   return (
     <div className={`${geistFont.variable} geist-ui`}>
       <MobileSidebarProvider>
-        <Suspense fallback={<LoadingOverlay message="Loading Editor" />}>
+        <Suspense fallback={<EditorSkeleton />}>
           <ResumeEnhancerPageContent />
         </Suspense>
       </MobileSidebarProvider>
+    </div>
+  );
+}
+
+/**
+ * Editor loading skeleton — mirrors the editor chrome (top bar, step tabs, content
+ * cards) so the UI renders immediately and only data-driven sections pulse.
+ */
+function EditorSkeleton() {
+  return (
+    <div className="dashboard-workspace min-h-screen flex flex-col overflow-hidden pl-3 lg:pl-0 pb-3">
+      {/* Editor top bar skeleton */}
+      <div className="h-16 shrink-0 bg-white dark:bg-[#141810] border-b border-[var(--border-primary)] flex items-center gap-3 px-4">
+        <Skeleton className="h-9 w-9 rounded-lg" />
+        <Skeleton className="h-5 w-40" />
+        <div className="ml-auto flex items-center gap-2">
+          <Skeleton className="h-9 w-24 rounded-lg" />
+          <Skeleton className="h-9 w-9 rounded-lg" />
+        </div>
+      </div>
+
+      {/* Content card skeleton */}
+      <div className="flex-1 min-h-0 mt-3 mr-3 flex flex-col">
+        <div className="dashboard-content-card rounded-2xl border border-[var(--border-primary)] shadow-sm h-full min-h-0 flex flex-col overflow-hidden">
+          {/* Step tabs */}
+          <div className="shrink-0 flex items-center gap-3 border-b border-[var(--border-primary)] px-6 py-4">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-8 w-20 sm:w-24 rounded-full" />
+            ))}
+          </div>
+
+          {/* Step body */}
+          <div className="flex-1 min-h-0 overflow-y-auto p-6" role="status" aria-label="Loading editor">
+            <Skeleton className="h-7 w-64" />
+            <Skeleton className="mt-3 h-4 w-96 max-w-full" />
+
+            <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="dashboard-content-card rounded-2xl border border-[var(--border-primary)] p-6 space-y-3 flex flex-col items-center"
+                >
+                  <Skeleton className="h-14 w-14 rounded-full" />
+                  <Skeleton className="h-5 w-28" />
+                  <Skeleton className="h-3 w-40" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

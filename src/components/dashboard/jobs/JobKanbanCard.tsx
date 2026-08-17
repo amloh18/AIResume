@@ -25,6 +25,7 @@ import {
   Briefcase,
   ChevronRight,
 } from "lucide-react";
+import CompanyLogo from "@/components/ui/CompanyLogo";
 import { CVJourney } from "@/types/cv";
 import { isJobStale, getFollowUpNudge, calculateSuccessProbability } from "@/lib/utils/jobIntelligence";
 
@@ -723,10 +724,10 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
           ? "ring-2 ring-blue-500 ring-opacity-50"
           : "border-gray-200 dark:border-white/20"
       } ${isDragging ? "opacity-50" : ""} ${!canDrag ? "cursor-default" : "cursor-grab active:cursor-grabbing"}
-      ${isExpired ? "opacity-60 grayscale border-dashed border-gray-300 dark:border-gray-600" : "shadow-lg group-hover:shadow-xl"}
+      ${isExpired ? "opacity-60 grayscale border-dashed border-gray-300 dark:border-gray-600" : "shadow-sm group-hover:shadow-md"}
       `}
     >
-      <div className="p-4">
+      <div className="p-3">
         {isStale && (
           <div className="mb-3 flex items-center justify-between bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 px-2 py-1.5 rounded text-small font-medium border border-red-100 dark:border-red-900/30">
             <div className="flex items-center gap-1.5">
@@ -754,22 +755,8 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
         )}
 
         {/* Visual Anchor: Logo & Title */}
-        <div className="flex gap-3">
-          <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-white/5 flex items-center justify-center text-small font-bold text-gray-500 overflow-hidden flex-shrink-0">
-            {job.companyLogo ? (
-              <img
-                src={job.companyLogo}
-                alt={`${job.company} logo`}
-                className="w-full h-full object-contain"
-                onError={(e) => {
-                  (e.currentTarget as HTMLImageElement).style.display = "none";
-                }}
-              />
-            ) : null}
-            <span style={{ display: job.companyLogo ? "none" : "block" }}>
-              {(job.company || "NA").substring(0, 2).toUpperCase()}
-            </span>
-          </div>
+        <div className="flex gap-2.5">
+          <CompanyLogo company={job.company} size={28} logoUrl={job.companyLogo} jobId={job.id || job._id} />
           <div className="min-w-0 flex-1">
             <div className="flex justify-between items-start">
               <h4 className="font-bold text-small text-gray-900 dark:text-white truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">

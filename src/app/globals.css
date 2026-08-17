@@ -57,24 +57,26 @@
   /* Font stack — Geist variable loaded via next/font, falls back gracefully */
   --font-sans: var(--font-geist, 'Geist', 'Inter', system-ui, -apple-system, sans-serif);
 
-  /* Phase 1: 6-Tier Fluid Typography Scale */
-  --font-size-display: clamp(2.5rem, 2rem + 2.5vw, 4rem);     /* 40px - 64px */
-  --font-size-h1:      clamp(1.75rem, 1.5rem + 1.25vw, 2.5rem);  /* 28px - 40px */
-  --font-size-h2:      clamp(1.25rem, 1.1rem + 0.75vw, 1.75rem); /* 20px - 28px */
-  --font-size-h3:      clamp(1.125rem, 1rem + 0.5vw, 1.35rem);   /* 18px - 22px */
-  --font-size-body:    clamp(0.9375rem, 0.9rem + 0.25vw, 1.0625rem); /* 15px - 17px */
-  --font-size-small:   clamp(0.75rem, 0.7rem + 0.15vw, 0.875rem);    /* 12px - 14px */
+  /* Phase 1: 6-Tier Fluid Typography Scale — retuned to the compact
+     dashboard scale (greeting 28px · section titles 18-20px · card
+     headings 15-16px · body 13-14px) so the whole app shares one rhythm. */
+  --font-size-display: clamp(1.75rem, 1.5rem + 0.75vw, 2.25rem);   /* 28px - 36px */
+  --font-size-h1:      clamp(1.5rem, 1.35rem + 0.5vw, 1.75rem);    /* 24px - 28px */
+  --font-size-h2:      clamp(1.125rem, 1.05rem + 0.3vw, 1.25rem);  /* 18px - 20px */
+  --font-size-h3:      clamp(0.9375rem, 0.9rem + 0.15vw, 1rem);    /* 15px - 16px */
+  --font-size-body:    clamp(0.8125rem, 0.8rem + 0.15vw, 0.875rem); /* 13px - 14px */
+  --font-size-small:   clamp(0.75rem, 0.72rem + 0.1vw, 0.8125rem);  /* 12px - 13px */
 
-  /* Modern type scale (px values match the spec) */
+  /* Modern type scale (px values match the compact dashboard scale) */
   --text-xs:   0.75rem;   /* 12px */
-  --text-sm:   0.875rem;  /* 14px */
-  --text-md:   1rem;      /* 16px */
-  --text-lg:   1.0625rem; /* 17px (reduced from 1.125rem) */
-  --text-xl:   1.125rem;  /* 18px (reduced from 1.25rem) */
-  --text-2xl:  1.25rem;   /* 20px (reduced from 1.5rem) */
-  --text-3xl:  1.5rem;    /* 24px (reduced from 2rem) */
-  --text-4xl:  2.5rem;    /* 40px */
-  --text-5xl:  3.5rem;    /* 56px */
+  --text-sm:   0.8125rem; /* 13px */
+  --text-md:   0.875rem;  /* 14px */
+  --text-lg:   0.9375rem; /* 15px */
+  --text-xl:   1rem;      /* 16px */
+  --text-2xl:  1.125rem;  /* 18px */
+  --text-3xl:  1.25rem;   /* 20px */
+  --text-4xl:  1.5rem;    /* 24px */
+  --text-5xl:  1.75rem;   /* 28px */
 
   /* Weights: 400 / 500 / 600 only */
   --weight-regular:   400;
@@ -90,24 +92,24 @@
 
 /* -- Headings & Page Titles ------------------------------------------------ */
 .geist-ui h1:not([class*="cv-document"] *, [class*="cv-page"] *, [class*="builder-preview"] *, [class*="cv-container"] *, [class*="live-preview-container"] *, [class*="cover-letter-document"] *, [data-cv-canvas] *, [class*="cv-preview"] *, [class*="cv-thumbnail"] *, [class*="aspect-\[1\/1\.414\]"] *, [class*="step-one-document-preview"] *) {
-  font-size: var(--text-5xl);
-  font-weight: var(--weight-semibold);
-  letter-spacing: -0.05em;
-  line-height: 1.05;
-}
-
-.geist-ui h2:not([class*="cv-document"] *, [class*="cv-page"] *, [class*="builder-preview"] *, [class*="cv-container"] *, [class*="live-preview-container"] *, [class*="cover-letter-document"] *, [data-cv-canvas] *, [class*="cv-preview"] *, [class*="cv-thumbnail"] *, [class*="aspect-\[1\/1\.414\]"] *, [class*="step-one-document-preview"] *) {
-  font-size: var(--text-4xl);
-  font-weight: var(--weight-semibold);
-  letter-spacing: -0.04em;
-  line-height: 1.1;
-}
-
-.geist-ui h3:not([class*="cv-document"] *, [class*="cv-page"] *, [class*="builder-preview"] *, [class*="cv-container"] *, [class*="live-preview-container"] *, [class*="cover-letter-document"] *, [data-cv-canvas] *, [class*="cv-preview"] *, [class*="cv-thumbnail"] *, [class*="aspect-\[1\/1\.414\]"] *, [class*="step-one-document-preview"] *) {
-  font-size: var(--text-3xl);
+  font-size: var(--font-size-h1);
   font-weight: var(--weight-semibold);
   letter-spacing: -0.03em;
   line-height: 1.15;
+}
+
+.geist-ui h2:not([class*="cv-document"] *, [class*="cv-page"] *, [class*="builder-preview"] *, [class*="cv-container"] *, [class*="live-preview-container"] *, [class*="cover-letter-document"] *, [data-cv-canvas] *, [class*="cv-preview"] *, [class*="cv-thumbnail"] *, [class*="aspect-\[1\/1\.414\]"] *, [class*="step-one-document-preview"] *) {
+  font-size: var(--font-size-h2);
+  font-weight: var(--weight-semibold);
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.geist-ui h3:not([class*="cv-document"] *, [class*="cv-page"] *, [class*="builder-preview"] *, [class*="cv-container"] *, [class*="live-preview-container"] *, [class*="cover-letter-document"] *, [data-cv-canvas] *, [class*="cv-preview"] *, [class*="cv-thumbnail"] *, [class*="aspect-\[1\/1\.414\]"] *, [class*="step-one-document-preview"] *) {
+  font-size: var(--font-size-h3);
+  font-weight: var(--weight-semibold);
+  letter-spacing: -0.01em;
+  line-height: 1.3;
 }
 
 /* Card / section headings */
@@ -122,9 +124,9 @@
 .geist-ui p:not([class*="cv-document"] *, [class*="cv-page"] *, [class*="builder-preview"] *, [class*="cv-container"] *, [class*="live-preview-container"] *, [class*="cover-letter-document"] *, [data-cv-canvas] *, [class*="cv-preview"] *, [class*="cv-thumbnail"] *, [class*="aspect-\[1\/1\.414\]"] *, [class*="step-one-document-preview"] *),
 .geist-ui li:not([class*="cv-document"] *, [class*="cv-page"] *, [class*="builder-preview"] *, [class*="cv-container"] *, [class*="live-preview-container"] *, [class*="cover-letter-document"] *, [data-cv-canvas] *, [class*="cv-preview"] *, [class*="cv-thumbnail"] *, [class*="aspect-\[1\/1\.414\]"] *, [class*="step-one-document-preview"] *),
 .geist-ui label:not([class*="cv-document"] *, [class*="cv-page"] *, [class*="builder-preview"] *, [class*="cv-container"] *, [class*="live-preview-container"] *, [class*="cover-letter-document"] *, [data-cv-canvas] *, [class*="cv-preview"] *, [class*="cv-thumbnail"] *, [class*="aspect-\[1\/1\.414\]"] *, [class*="step-one-document-preview"] *) {
-  font-size: var(--text-md);
+  font-size: var(--font-size-body);
   font-weight: var(--weight-regular);
-  line-height: 1.6;
+  line-height: 1.5;
   letter-spacing: -0.01em;
 }
 
@@ -738,6 +740,37 @@ body.dark {
 }
 .dark .app-page-bg {
   background-color: #191c1b !important;
+}
+
+/* Dashboard workspace — content card matches the sidebar surface
+   (bg-white / dark:bg-[#141810]) for a cohesive app shell. */
+.dashboard-workspace {
+  background-color: #ffffff;
+}
+.dark .dashboard-workspace {
+  background-color: #141810;
+}
+.dashboard-workspace .dashboard-content-card {
+  background-color: #f3f2ee;
+}
+.dark .dashboard-workspace .dashboard-content-card {
+  background-color: #191c1b;
+}
+
+/* Dashboard workspace — compact heading sizes. The .geist-ui element
+   selectors (h1/h2) out-specify Tailwind utilities, so !important is
+   required to enforce the compact professional scale. */
+.geist-ui .dashboard-workspace .dashboard-greeting {
+  font-size: 1.75rem !important; /* 28px */
+  font-weight: var(--weight-semibold) !important;
+  letter-spacing: -0.02em !important;
+  line-height: 1.2 !important;
+}
+.geist-ui .dashboard-workspace .dashboard-panel-title {
+  font-size: 0.8125rem !important; /* 13px */
+  font-weight: var(--weight-semibold) !important;
+  letter-spacing: -0.02em !important;
+  line-height: 1.4 !important;
 }
 
 /* LinkedIn Enhancer theme-aware mappings (applied globally for light/dark theme variables) */
@@ -2019,6 +2052,34 @@ nav {
 }
 
 
+
+/* Skeleton loading blocks — section-level placeholders that let static UI render */
+.skeleton-block {
+  background: color-mix(in srgb, var(--text-secondary) 14%, transparent);
+  border-radius: 0.375rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton-block::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--bg-primary) 55%, transparent),
+    transparent
+  );
+  animation: skeleton-shimmer 1.6s ease-in-out infinite;
+}
+
+@keyframes skeleton-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
 
 /* Custom scrollbar styles */
 .scrollbar-thin {

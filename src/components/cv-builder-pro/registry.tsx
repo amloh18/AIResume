@@ -356,8 +356,8 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
       <div className={`flex flex-col snippet-anim w-full cv-keep-with-next gap-5 pb-4 border-b ${isNarrow ? alignClass : 'items-center'} ${isDark ? 'border-slate-700 text-gray-300' : 'border-gray-200 text-gray-600'}`}>
         <Title titleKey="header" overrideClass="hidden" />
         <div className={`min-w-0 w-full flex flex-col ${alignClass}`}>
-          <h1 className={`${isNarrow ? TYPOGRAPHY.nameNarrow : TYPOGRAPHY.name} ${isDark ? 'text-white' : 'text-gray-900'} mb-1 uppercase tracking-widest pr-1`}><Editable path="basics.name" nowrap={!isNarrow} /></h1>
-          <h2 className={`${TYPOGRAPHY.role} ${isDark ? 'text-gray-400' : ''} mb-3 pr-1`}><Editable path="basics.title" nowrap={!isNarrow} /></h2>
+          <h1 className={`${isNarrow ? TYPOGRAPHY.nameNarrow : TYPOGRAPHY.name} ${isDark ? 'text-white' : 'text-gray-900'} mb-1 uppercase tracking-widest pr-1`}><Editable path="basics.name" className="break-words" /></h1>
+          <h2 className={`${TYPOGRAPHY.role} ${isDark ? 'text-gray-400' : ''} mb-3 pr-1`}><Editable path="basics.title" className="break-words" /></h2>
           {!hasSidebarContact && (
             <div className={`flex ${isNarrow ? 'flex-col gap-1.5' : 'flex-wrap gap-x-4 gap-y-1.5 items-center'} ${alignClass} ${TYPOGRAPHY.contact}`}>
               <ContactLinks data={data} Editable={Editable} isNarrow={isNarrow} showIcons={showIcons} design={design} align={justifyClass} />
@@ -380,8 +380,8 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
         <div className={`flex ${isNarrow ? `flex-col ${alignClass}` : 'items-center'} gap-4 min-w-0 flex-1`}>
           {data?.basics?.showAvatar && <AvatarEditable data={data} sizeClass={isNarrow ? 'w-24 h-24' : 'w-16 h-16'} shapeClass="rounded-full shadow-md" readOnly={readOnly} />}
           <div className={`min-w-0 flex flex-col ${alignClass}`}>
-            <h1 className={`${isNarrow ? 'text-2xl' : 'text-3xl'} font-bold tracking-tight ${isDark ? 'text-white' : 'text-slate-800'} mb-1.5 pr-1`}><Editable path="basics.name" nowrap={!isNarrow} /></h1>
-            <h2 className={`text-xs font-semibold tracking-widest uppercase ${isDark ? 'text-emerald-400' : 'text-emerald-600'} pr-1`}><Editable path="basics.title" nowrap={!isNarrow} /></h2>
+            <h1 className={`${isNarrow ? 'text-2xl' : 'text-3xl'} font-bold tracking-tight ${isDark ? 'text-white' : 'text-slate-800'} mb-1.5 pr-1`}><Editable path="basics.name" className="break-words" /></h1>
+            <h2 className={`text-xs font-semibold tracking-widest uppercase ${isDark ? 'text-emerald-400' : 'text-emerald-600'} pr-1`}><Editable path="basics.title" className="break-words" /></h2>
           </div>
         </div>
         {!hasSidebarContact && (
@@ -404,8 +404,8 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
         <Title titleKey="header" overrideClass="hidden" />
         {data?.basics?.showAvatar && <AvatarEditable data={data} sizeClass={isNarrow ? 'w-28 h-28' : 'w-24 h-24'} shapeClass="rounded-full shadow-lg" borderClass={isDark ? 'border-2 border-slate-700' : 'border-4 border-white'} readOnly={readOnly} />}
         <div className={`min-w-0 w-full flex flex-col ${alignClass}`}>
-          <h1 className={`${isNarrow ? TYPOGRAPHY.nameNarrow : TYPOGRAPHY.name} ${isDark ? 'text-white' : 'text-gray-900'} mb-1.5 pr-1`}><Editable path="basics.name" nowrap={!isNarrow} /></h1>
-          <h2 className={`${TYPOGRAPHY.role} mb-3 pr-1`}><Editable path="basics.title" nowrap={!isNarrow} /></h2>
+          <h1 className={`${isNarrow ? TYPOGRAPHY.nameNarrow : TYPOGRAPHY.name} ${isDark ? 'text-white' : 'text-gray-900'} mb-1.5 pr-1`}><Editable path="basics.name" className="break-words" /></h1>
+          <h2 className={`${TYPOGRAPHY.role} mb-3 pr-1`}><Editable path="basics.title" className="break-words" /></h2>
           {!hasSidebarContact && (
             <div className={`flex ${isNarrow ? `flex-col gap-1.5 ${alignClass}` : `flex-wrap gap-x-4 gap-y-1.5 items-center ${justifyClass}`} ${TYPOGRAPHY.contact} ${isDark ? 'text-gray-300' : 'text-gray-500'}`}>
               <ContactLinks data={data} Editable={Editable} isNarrow={isNarrow} showIcons={showIcons} design={design} align={justifyClass} />
@@ -428,9 +428,9 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
         {data?.basics?.showAvatar && <AvatarEditable data={data} sizeClass={isNarrow ? 'w-28 h-28 mb-4' : 'w-24 h-24'} shapeClass="rounded-full shadow-xl" borderClass={isDark ? 'border-2 border-slate-700' : 'border-[4px] border-white'} readOnly={readOnly} />}
         <div className={`min-w-0 w-full flex flex-col ${alignClass}`}>
           <div className={`inline-block border-[2px] px-6 py-1.5 mb-4 tracking-[0.25em] uppercase ${isDark ? 'border-white text-white' : 'border-gray-900 text-gray-900'}`}>
-            <h1 className={`${isNarrow ? 'text-xl' : 'text-2xl'} font-bold leading-none pr-1`}><Editable path="basics.name" nowrap={!isNarrow} /></h1>
+            <h1 className={`${isNarrow ? 'text-xl' : 'text-2xl'} font-bold leading-none pr-1`}><Editable path="basics.name" className="break-words" /></h1>
           </div>
-          <h2 className={`${TYPOGRAPHY.role} mb-5 ${isDark ? 'text-gray-400' : ''} pr-1`}><Editable path="basics.title" nowrap={!isNarrow} /></h2>
+          <h2 className={`${TYPOGRAPHY.role} mb-5 ${isDark ? 'text-gray-400' : ''} pr-1`}><Editable path="basics.title" className="break-words" /></h2>
           {!hasSidebarContact && (
             <div className={`flex ${isNarrow ? `flex-col gap-1.5 ${alignClass}` : `flex-wrap gap-x-4 gap-y-1.5 ${justifyClass}`} ${TYPOGRAPHY.contact}`}>
               <ContactLinks data={data} Editable={Editable} isNarrow={isNarrow} showIcons={showIcons} design={design} align={justifyClass} />
@@ -452,7 +452,7 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
         <Title titleKey="header" overrideClass="hidden" />
         {data?.basics?.showAvatar && <AvatarEditable data={data} sizeClass={isNarrow ? 'w-24 h-24 mb-3' : 'w-20 h-24'} shapeClass="rounded shadow-md" borderClass={isDark ? 'border border-slate-600' : ''} readOnly={readOnly} />}
         <div className={`min-w-0 w-full flex flex-col ${alignClass}`}>
-          <h1 className={`${isNarrow ? 'text-2xl' : 'text-3xl uppercase'} font-extrabold tracking-widest mb-2 ${isDark ? 'text-white' : 'text-gray-900'} pr-1`}><Editable path="basics.name" nowrap={!isNarrow} /></h1>
+          <h1 className={`${isNarrow ? 'text-2xl' : 'text-3xl uppercase'} font-extrabold tracking-widest mb-2 ${isDark ? 'text-white' : 'text-gray-900'} pr-1`}><Editable path="basics.name" className="break-words" /></h1>
           {!hasSidebarContact && (
             <div className={`flex ${isNarrow ? `flex-col gap-1.5 ${alignClass}` : `flex-wrap gap-x-4 gap-y-1.5 ${justifyClass}`} ${TYPOGRAPHY.contact} ${isDark ? 'text-gray-300' : 'text-gray-800'}`}>
               <ContactLinks data={data} Editable={Editable} isNarrow={isNarrow} showIcons={showIcons} design={design} align={justifyClass} />
@@ -476,8 +476,8 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
           <div className={`min-w-0 flex ${isNarrow ? `flex-col ${alignClass} w-full` : 'items-center flex-1 gap-4'}`}>
             {data?.basics?.showAvatar && <AvatarEditable data={data} sizeClass={isNarrow ? 'w-24 h-24 mb-4' : 'w-16 h-16'} shapeClass="rounded-full shadow-md" readOnly={readOnly} />}
             <div className={`min-w-0 flex flex-col ${alignClass}`}>
-              <h1 className={`${isNarrow ? 'text-3xl' : 'text-4xl'} font-light tracking-widest uppercase mb-2 ${isDark ? 'text-white' : 'text-gray-800'} pr-1`}><Editable path="basics.name" nowrap={!isNarrow} /></h1>
-              <h2 className={`${TYPOGRAPHY.role} tracking-[0.25em] pr-1`}><Editable path="basics.title" nowrap={!isNarrow} /></h2>
+              <h1 className={`${isNarrow ? 'text-3xl' : 'text-4xl'} font-light tracking-widest uppercase mb-2 ${isDark ? 'text-white' : 'text-gray-800'} pr-1`}><Editable path="basics.name" className="break-words" /></h1>
+              <h2 className={`${TYPOGRAPHY.role} tracking-[0.25em] pr-1`}><Editable path="basics.title" className="break-words" /></h2>
             </div>
           </div>
           {!hasSidebarContact && (
@@ -504,8 +504,8 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
         <Title titleKey="header" overrideClass="hidden" />
         {data?.basics?.showAvatar && <AvatarEditable data={data} sizeClass={isNarrow ? 'w-24 h-24 mb-2' : 'w-24 h-24'} shapeClass="rounded-full shadow-2xl" borderClass="border-4 border-white/20" readOnly={readOnly} />}
         <div className={`min-w-0 flex-1 flex flex-col ${alignClass}`}>
-          <h1 className={`${isNarrow ? 'text-xl' : 'text-4xl'} font-black tracking-tight mb-1 pr-1`}><Editable path="basics.name" nowrap={!isNarrow} /></h1>
-          <h2 className={`${isNarrow ? 'text-[10px] tracking-wider' : 'text-sm tracking-widest'} font-semibold uppercase opacity-90 mb-4 pr-1`}><Editable path="basics.title" nowrap={!isNarrow} /></h2>
+          <h1 className={`${isNarrow ? 'text-xl' : 'text-4xl'} font-black tracking-tight mb-1 pr-1`}><Editable path="basics.name" className="break-words" /></h1>
+          <h2 className={`${isNarrow ? 'text-[10px] tracking-wider' : 'text-sm tracking-widest'} font-semibold uppercase opacity-90 mb-4 pr-1`}><Editable path="basics.title" className="break-words" /></h2>
           {!hasSidebarContact && (
             <div className={`flex ${isNarrow ? `flex-col gap-1.5 ${alignClass}` : `flex-wrap gap-x-4 gap-y-1.5 ${justifyClass}`} text-xs font-medium opacity-90`}>
               <ContactLinks data={data} Editable={Editable} isNarrow={isNarrow} showIcons={showIcons} design={design} align={justifyClass} />
@@ -547,7 +547,7 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
     const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
     const expData = data?.experience || [];
     if (expData.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="experience" /><div className="flex flex-col gap-5 cv-gap-lg">{expData.map((exp: any, idx: number) => (<ListEntry key={exp.id} collection="experience" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`flex ${isNarrow ? 'flex-col gap-1.5' : 'gap-5'}`}><div className={`${isNarrow ? 'w-full' : 'w-[25%]'} shrink-0 cv-keep-with-next`}><div className={`${TYPOGRAPHY.date}`}><Editable path={`experience.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`experience.${idx}.endDate`} nowrap isDate={true} /></div></div><div className={`${isNarrow ? 'w-full' : 'w-[75%]'}`}><div className="cv-keep-with-next"><h4 className={`${TYPOGRAPHY.itemTitle} inline ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`experience.${idx}.company`} nowrap /></h4><span className="opacity-70 font-normal mr-1.5">,</span><span className={`${TYPOGRAPHY.itemSubtitle} inline ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`experience.${idx}.role`} nowrap /></span></div><div className={`${TYPOGRAPHY.body} mt-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><Editable path={`experience.${idx}.description`} multiline html /></div></div></div></ListEntry>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="experience" /><div className="flex flex-col gap-5 cv-gap-lg">{expData.map((exp: any, idx: number) => (<ListEntry key={exp.id} collection="experience" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`flex ${isNarrow ? 'flex-col gap-1.5' : 'gap-5'}`}><div className={`${isNarrow ? 'w-full' : 'w-[25%]'} shrink-0 cv-keep-with-next`}><div className={`${TYPOGRAPHY.date} break-words`}><Editable path={`experience.${idx}.startDate`} isDate={true} /> - <Editable path={`experience.${idx}.endDate`} isDate={true} /></div></div><div className={`${isNarrow ? 'w-full' : 'w-[75%]'} min-w-0`}><div className="cv-keep-with-next"><h4 className={`${TYPOGRAPHY.itemTitle} inline break-words ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`experience.${idx}.company`} /></h4><span className="opacity-70 font-normal mr-1.5">,</span><span className={`${TYPOGRAPHY.itemSubtitle} inline ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`experience.${idx}.role`} /></span></div><div className={`${TYPOGRAPHY.body} mt-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><Editable path={`experience.${idx}.description`} multiline html /></div></div></div></ListEntry>))}</div></div>);
   }},
   'experience-harvard': { id: 'experience-harvard', name: 'Harvard Dense', category: 'Experience', render: ({ data, Editable, zoneId, isDark, Title, moveEntry, deleteEntry }: any) => {
     const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
@@ -583,7 +583,7 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
   'education-split': { id: 'education-split', name: 'Split Columns', category: 'Education', render: ({ data, Editable, zoneId, isDark, Title, moveEntry, deleteEntry }: any) => {
     const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
     const eduData = data?.education || [];
-    return (<div className="snippet-anim cv-section"><Title titleKey="education" /><div className="flex flex-col gap-4 cv-gap-lg">{eduData.map((edu: any, idx: number) => (<ListEntry key={edu.id} collection="education" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`flex ${isNarrow ? 'flex-col gap-1.5' : 'gap-5'}`}><div className={`${isNarrow ? 'w-full' : 'w-[25%]'} shrink-0 cv-keep-with-next`}><div className={`${TYPOGRAPHY.date}`}><Editable path={`education.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`education.${idx}.endDate`} nowrap isDate={true} /></div></div><div className={`${isNarrow ? 'w-full' : 'w-[75%]'}`}><div className="cv-keep-with-next"><h4 className={`${TYPOGRAPHY.itemTitle} inline ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`education.${idx}.institution`} nowrap /></h4><span className="opacity-70 font-normal mr-1.5">,</span><span className={`${TYPOGRAPHY.itemSubtitle} inline ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`education.${idx}.degree`} nowrap /></span></div><div className={`${TYPOGRAPHY.body} mt-1.5 ${isDark ? 'text-gray-400' : 'text-gray-700'}`}><Editable path={`education.${idx}.description`} multiline /></div></div></div></ListEntry>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="education" /><div className="flex flex-col gap-4 cv-gap-lg">{eduData.map((edu: any, idx: number) => (<ListEntry key={edu.id} collection="education" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`flex ${isNarrow ? 'flex-col gap-1.5' : 'gap-5'}`}><div className={`${isNarrow ? 'w-full' : 'w-[25%]'} shrink-0 cv-keep-with-next`}><div className={`${TYPOGRAPHY.date} break-words`}><Editable path={`education.${idx}.startDate`} isDate={true} /> - <Editable path={`education.${idx}.endDate`} isDate={true} /></div></div><div className={`${isNarrow ? 'w-full' : 'w-[75%]'} min-w-0`}><div className="cv-keep-with-next"><h4 className={`${TYPOGRAPHY.itemTitle} inline break-words ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`education.${idx}.institution`} /></h4><span className="opacity-70 font-normal mr-1.5">,</span><span className={`${TYPOGRAPHY.itemSubtitle} inline ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`education.${idx}.degree`} /></span></div><div className={`${TYPOGRAPHY.body} mt-1.5 ${isDark ? 'text-gray-400' : 'text-gray-700'}`}><Editable path={`education.${idx}.description`} multiline /></div></div></div></ListEntry>))}</div></div>);
   }},
   'education-harvard': { id: 'education-harvard', name: 'Harvard Dense', category: 'Education', render: ({ data, Editable, zoneId, isDark, Title, moveEntry, deleteEntry }: any) => {
     const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
@@ -616,7 +616,7 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
     const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
     const prjData = data?.projects || [];
     if (prjData.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="projects" /><div className="flex flex-col gap-5 cv-gap-lg">{prjData.map((prj: any, idx: number) => (<ListEntry key={prj.id} collection="projects" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`flex ${isNarrow ? 'flex-col gap-1.5' : 'gap-5'}`}><div className={`${isNarrow ? 'w-full' : 'w-[25%]'} shrink-0 cv-keep-with-next`}><div className={`${TYPOGRAPHY.date}`}><Editable path={`projects.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`projects.${idx}.endDate`} nowrap isDate={true} /></div></div><div className={`${isNarrow ? 'w-full' : 'w-[75%]'}`}><div className="cv-keep-with-next"><h4 className={`${TYPOGRAPHY.itemTitle} inline ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`projects.${idx}.name`} nowrap /></h4><span className="opacity-70 font-normal mr-1.5">,</span><span className={`${TYPOGRAPHY.itemSubtitle} inline ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`projects.${idx}.role`} nowrap /></span></div><div className={`${TYPOGRAPHY.body} mt-1.5 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><Editable path={`projects.${idx}.description`} multiline html /></div></div></div></ListEntry>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="projects" /><div className="flex flex-col gap-5 cv-gap-lg">{prjData.map((prj: any, idx: number) => (<ListEntry key={prj.id} collection="projects" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`flex ${isNarrow ? 'flex-col gap-1.5' : 'gap-5'}`}><div className={`${isNarrow ? 'w-full' : 'w-[25%]'} shrink-0 cv-keep-with-next`}><div className={`${TYPOGRAPHY.date} break-words`}><Editable path={`projects.${idx}.startDate`} isDate={true} /> - <Editable path={`projects.${idx}.endDate`} isDate={true} /></div></div><div className={`${isNarrow ? 'w-full' : 'w-[75%]'} min-w-0`}><div className="cv-keep-with-next"><h4 className={`${TYPOGRAPHY.itemTitle} inline break-words ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`projects.${idx}.name`} /></h4><span className="opacity-70 font-normal mr-1.5">,</span><span className={`${TYPOGRAPHY.itemSubtitle} inline ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`projects.${idx}.role`} /></span></div><div className={`${TYPOGRAPHY.body} mt-1.5 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><Editable path={`projects.${idx}.description`} multiline html /></div></div></div></ListEntry>))}</div></div>);
   }},
   'projects-harvard': { id: 'projects-harvard', name: 'Harvard Dense', category: 'Projects', render: ({ data, Editable, zoneId, isDark, Title, moveEntry, deleteEntry }: any) => {
     const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
@@ -638,7 +638,7 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
     const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
     const prjData = data?.projects || [];
     if (prjData.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="projects" /><div className={`grid ${isNarrow ? 'grid-cols-1' : 'grid-cols-2'} gap-4 cv-gap-md`}>{prjData.map((prj: any, idx: number) => (<ListEntry key={prj.id} collection="projects" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`h-full p-4 rounded-xl border transition-colors hover:border-emerald-500/30 ${isDark ? 'bg-slate-800/40 border-slate-700' : 'bg-white border-gray-200 shadow-sm'}`}><div className="cv-keep-with-next"><h4 className={`${TYPOGRAPHY.itemTitle} mb-1 ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`projects.${idx}.name`} nowrap /></h4><div className={`flex justify-between items-baseline mb-2`}><span className={`${TYPOGRAPHY.itemSubtitle} ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`projects.${idx}.role`} nowrap /></span><span className={`${TYPOGRAPHY.date} text-[10px]`}><Editable path={`projects.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`projects.${idx}.endDate`} nowrap isDate={true} /></span></div></div><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><Editable path={`projects.${idx}.description`} multiline html /></div></div></ListEntry>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="projects" /><div className={`grid ${isNarrow ? 'grid-cols-1' : 'grid-cols-2'} gap-4 cv-gap-md`}>{prjData.map((prj: any, idx: number) => (<ListEntry key={prj.id} collection="projects" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className={`h-full p-4 rounded-xl border transition-colors hover:border-emerald-500/30 ${isDark ? 'bg-slate-800/40 border-slate-700' : 'bg-white border-gray-200 shadow-sm'}`}><div className="cv-keep-with-next"><h4 className={`${TYPOGRAPHY.itemTitle} mb-1 break-words ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`projects.${idx}.name`} /></h4><div className={`flex justify-between items-baseline mb-2`}><span className={`${TYPOGRAPHY.itemSubtitle} break-words ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`projects.${idx}.role`} /></span><span className={`${TYPOGRAPHY.date} text-[10px]`}><Editable path={`projects.${idx}.startDate`} nowrap isDate={true} /> - <Editable path={`projects.${idx}.endDate`} nowrap isDate={true} /></span></div></div><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><Editable path={`projects.${idx}.description`} multiline html /></div></div></ListEntry>))}</div></div>);
   }},
 
   // === CERTIFICATIONS (5) ===
@@ -694,7 +694,7 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
     const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
     const refData = Array.isArray(data?.references) ? data.references : [];
     if (refData.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="references" /><div className={`grid ${isNarrow ? 'grid-cols-1' : 'grid-cols-2'} gap-6 cv-gap-lg`}>{refData.map((ref_item: any, idx: number) => (<ListEntry key={ref_item.id} collection="references" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className="cv-keep-with-next"><h4 className={`${TYPOGRAPHY.itemTitle} mb-1 ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`references.${idx}.name`} nowrap /></h4><div className={`${TYPOGRAPHY.itemSubtitle} mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`references.${idx}.role`} nowrap /></div><div className={`${TYPOGRAPHY.body} font-medium ${isDark ? 'text-blue-400' : 'text-blue-600'}`}><Editable path={`references.${idx}.contact`} nowrap /></div></div></ListEntry>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="references" /><div className={`grid ${isNarrow ? 'grid-cols-1' : 'grid-cols-2'} gap-6 cv-gap-lg`}>{refData.map((ref_item: any, idx: number) => (<ListEntry key={ref_item.id} collection="references" index={idx} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className="cv-keep-with-next"><h4 className={`${TYPOGRAPHY.itemTitle} mb-1 break-words ${isDark ? 'text-gray-100' : 'text-gray-900'}`}><Editable path={`references.${idx}.name`} /></h4><div className={`${TYPOGRAPHY.itemSubtitle} mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path={`references.${idx}.role`} /></div><div className={`${TYPOGRAPHY.body} font-medium ${isDark ? 'text-blue-400' : 'text-blue-600'}`}><Editable path={`references.${idx}.contact`} breakAll /></div></div></ListEntry>))}</div></div>);
   }},
 
   // === SKILLS (6) ===
@@ -740,7 +740,7 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
         </div>
       );
     }
-    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-wrap gap-2 cv-gap-sm">{allSkills.map((skill: any, i: number) => (<span key={i} className={`px-3 py-1.5 text-[0.85em] font-semibold rounded-md border cv-item-avoid ${isDark ? "bg-slate-700 border-slate-600 text-slate-200" : "bg-slate-100 border-slate-200 text-slate-700"}`}><Editable path={skill.pathSkills} overrideValue={skill.label} arrayIndex={skill.skillIndex} nowrap /></span>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-wrap gap-2 cv-gap-sm">{allSkills.map((skill: any, i: number) => (<span key={i} className={`max-w-full break-words px-3 py-1.5 text-[0.85em] font-semibold rounded-md border cv-item-avoid ${isDark ? "bg-slate-700 border-slate-600 text-slate-200" : "bg-slate-100 border-slate-200 text-slate-700"}`}><Editable path={skill.pathSkills} overrideValue={skill.label} arrayIndex={skill.skillIndex} /></span>))}</div></div>);
   }},
   'skills-round-pills': { id: 'skills-round-pills', name: 'Round Pills', category: 'Skills', render: ({ data, Editable, isDark, Title }: any) => {
     const allSkills = flattenSkillItems(data?.skills);
@@ -763,11 +763,11 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
         </div>
       );
     }
-    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-wrap gap-2 cv-gap-sm">{allSkills.map((skill: any, i: number) => (<span key={i} className={`px-4 py-1.5 text-[0.85em] font-semibold rounded-full border cv-item-avoid ${isDark ? "bg-slate-700 border-slate-600 text-slate-200" : "bg-slate-100 border-slate-200 text-slate-700"}`}><Editable path={skill.pathSkills} overrideValue={skill.label} arrayIndex={skill.skillIndex} nowrap /></span>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-wrap gap-2 cv-gap-sm">{allSkills.map((skill: any, i: number) => (<span key={i} className={`max-w-full break-words px-4 py-1.5 text-[0.85em] font-semibold rounded-full border cv-item-avoid ${isDark ? "bg-slate-700 border-slate-600 text-slate-200" : "bg-slate-100 border-slate-200 text-slate-700"}`}><Editable path={skill.pathSkills} overrideValue={skill.label} arrayIndex={skill.skillIndex} /></span>))}</div></div>);
   }},
   'skills-dots': { id: 'skills-dots', name: 'Dot Rating', category: 'Skills', render: ({ data, Editable, isDark, Title }: any) => {
     const allSkills = flattenSkillItems(data?.skills).slice(0, 6);
-    return (<div className="snippet-anim w-full cv-section"><Title titleKey="skills" /><div className="grid grid-cols-1 gap-y-2 gap-x-4 cv-gap-sm">{allSkills.map((skill: any, i: number) => (<div key={i} className={`flex justify-between items-center ${TYPOGRAPHY.body} cv-item-avoid`}><span className={`truncate font-medium ${isDark ? 'text-gray-200' : 'text-gray-800'}`}><Editable path={skill.pathSkills} overrideValue={skill.label} arrayIndex={skill.skillIndex} nowrap /></span><div className="flex gap-1.5">{[...Array(5)].map((_, dotIdx) => (<div key={dotIdx} className={`w-2 h-2 rounded-full ${dotIdx < skill.rating ? 'cv-accent-bg' : (isDark ? 'bg-slate-700' : 'bg-gray-200')}`}></div>))}</div></div>))}</div></div>);
+    return (<div className="snippet-anim w-full cv-section"><Title titleKey="skills" /><div className="grid grid-cols-1 gap-y-2 gap-x-4 cv-gap-sm">{allSkills.map((skill: any, i: number) => (<div key={i} className={`flex justify-between items-center ${TYPOGRAPHY.body} cv-item-avoid`}><span className={`min-w-0 truncate font-medium ${isDark ? 'text-gray-200' : 'text-gray-800'}`}><Editable path={skill.pathSkills} overrideValue={skill.label} arrayIndex={skill.skillIndex} nowrap /></span><div className="flex gap-1.5 shrink-0">{[...Array(5)].map((_, dotIdx) => (<div key={dotIdx} className={`w-2 h-2 rounded-full ${dotIdx < skill.rating ? 'cv-accent-bg' : (isDark ? 'bg-slate-700' : 'bg-gray-200')}`}></div>))}</div></div>))}</div></div>);
   }},
   'skills-category-inline': { id: 'skills-category-inline', name: 'Category Inline', category: 'Skills', render: ({ data, Editable, isDark, Title }: any) => {
     const groups = normalizeSkillGroups(data?.skills);
@@ -795,7 +795,7 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
   )},
   'languages-dots': { id: 'languages-dots', name: 'Dot Rating', category: 'Languages', render: ({ data, isDark, Title }: any) => {
     const items = (data.languages || '').split(',').map((s: string) => s.trim()).filter(Boolean);
-    return (<div className="snippet-anim w-full cv-section cv-item-avoid"><Title titleKey="languages" /><div className="grid grid-cols-1 gap-y-2 gap-x-4 cv-gap-sm">{items.map((item: string, i: number) => { const rating = i % 2 === 0 ? 5 : 4; return (<div key={i} className={`flex justify-between items-center ${TYPOGRAPHY.body}`}><span className={`truncate font-medium ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>{item.split('(')[0]}</span><div className="flex gap-1.5">{[...Array(5)].map((_, dotIdx) => (<div key={dotIdx} className={`w-2 h-2 rounded-full ${dotIdx < rating ? 'cv-accent-bg' : (isDark ? 'bg-slate-700' : 'bg-gray-200')}`}></div>))}</div></div>); })}</div></div>);
+    return (<div className="snippet-anim w-full cv-section cv-item-avoid"><Title titleKey="languages" /><div className="grid grid-cols-1 gap-y-2 gap-x-4 cv-gap-sm">{items.map((item: string, i: number) => { const rating = i % 2 === 0 ? 5 : 4; return (<div key={i} className={`flex justify-between items-center ${TYPOGRAPHY.body}`}><span className={`min-w-0 truncate font-medium ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>{item.split('(')[0]}</span><div className="flex gap-1.5 shrink-0">{[...Array(5)].map((_, dotIdx) => (<div key={dotIdx} className={`w-2 h-2 rounded-full ${dotIdx < rating ? 'cv-accent-bg' : (isDark ? 'bg-slate-700' : 'bg-gray-200')}`}></div>))}</div></div>); })}</div></div>);
   }},
   'languages-bars': { id: 'languages-bars', name: 'Progress Bars', category: 'Languages', render: ({ data, isDark, Title }: any) => {
     const items = (data.languages || '').split(',').map((s: string) => s.trim()).filter(Boolean);
@@ -803,11 +803,11 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
   }},
   'languages-pills': { id: 'languages-pills', name: 'Solid Pills', category: 'Languages', render: ({ data, isDark, Title }: any) => {
     const items = (data.languages || '').split(',').map((s: string) => s.trim()).filter(Boolean);
-    return (<div className="snippet-anim cv-section cv-item-avoid"><Title titleKey="languages" /><div className="flex flex-wrap gap-2 cv-gap-sm">{items.map((item: string, i: number) => (<span key={i} className={`px-3 py-1.5 text-[0.85em] font-semibold rounded-md border ${isDark ? 'bg-slate-700 border-slate-600 text-slate-200' : 'bg-slate-100 border-slate-200 text-slate-700'}`}>{item.split('(')[0]}</span>))}</div></div>);
+    return (<div className="snippet-anim cv-section cv-item-avoid"><Title titleKey="languages" /><div className="flex flex-wrap gap-2 cv-gap-sm">{items.map((item: string, i: number) => (<span key={i} className={`max-w-full break-words px-3 py-1.5 text-[0.85em] font-semibold rounded-md border ${isDark ? 'bg-slate-700 border-slate-600 text-slate-200' : 'bg-slate-100 border-slate-200 text-slate-700'}`}>{item.split('(')[0]}</span>))}</div></div>);
   }},
   'languages-round-pills': { id: 'languages-round-pills', name: 'Round Pills', category: 'Languages', render: ({ data, isDark, Title }: any) => {
     const items = (data.languages || '').split(',').map((s: string) => s.trim()).filter(Boolean);
-    return (<div className="snippet-anim cv-section cv-item-avoid"><Title titleKey="languages" /><div className="flex flex-wrap gap-2 cv-gap-sm">{items.map((item: string, i: number) => (<span key={i} className={`px-4 py-1.5 text-[0.85em] font-semibold rounded-full border ${isDark ? 'bg-slate-700 border-slate-600 text-slate-200' : 'bg-slate-100 border-slate-200 text-slate-700'}`}>{item.split('(')[0]}</span>))}</div></div>);
+    return (<div className="snippet-anim cv-section cv-item-avoid"><Title titleKey="languages" /><div className="flex flex-wrap gap-2 cv-gap-sm">{items.map((item: string, i: number) => (<span key={i} className={`max-w-full break-words px-4 py-1.5 text-[0.85em] font-semibold rounded-full border ${isDark ? 'bg-slate-700 border-slate-600 text-slate-200' : 'bg-slate-100 border-slate-200 text-slate-700'}`}>{item.split('(')[0]}</span>))}</div></div>);
   }},
 
   // === INTERESTS ===
@@ -816,7 +816,7 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
   )},
   'interests-pills': { id: 'interests-pills', name: 'Outline Pills', category: 'Interests', render: ({ data, isDark, Title }: any) => {
     const items = (data.interests || '').split(',').map((s: string) => s.trim()).filter(Boolean);
-    return (<div className="snippet-anim cv-section cv-item-avoid"><Title titleKey="interests" /><div className="flex flex-wrap gap-2 cv-gap-sm">{items.map((item: string, i: number) => (<span key={i} className={`px-3 py-1.5 text-[0.85em] font-medium border rounded-full ${isDark ? 'border-slate-500 text-slate-200' : 'border-gray-400 text-gray-800'}`}>{item}</span>))}</div></div>);
+    return (<div className="snippet-anim cv-section cv-item-avoid"><Title titleKey="interests" /><div className="flex flex-wrap gap-2 cv-gap-sm">{items.map((item: string, i: number) => (<span key={i} className={`max-w-full break-words px-3 py-1.5 text-[0.85em] font-medium border rounded-full ${isDark ? 'border-slate-500 text-slate-200' : 'border-gray-400 text-gray-800'}`}>{item}</span>))}</div></div>);
   }},
 
   // === SIDEBAR SPECIFIC ===
@@ -832,11 +832,11 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
     };
     return (
       <div className={`snippet-anim cv-section ${isDark ? 'text-white' : 'text-gray-900'} w-full min-w-0 cv-item-avoid`}><Title titleKey="contact" /><div className={`flex flex-col gap-2.5 cv-gap-sm ${TYPOGRAPHY.body} ${isDark ? 'text-slate-300' : 'text-gray-700'} break-all`}>
-        {isVisible('location') && (!readOnly || hasValue(data?.basics?.location)) && <div className="flex items-center gap-2">{showIcons && <MapPin size={14} />}<Editable path="basics.location" nowrap /></div>}
-        {isVisible('phone') && (!readOnly || hasValue(data?.basics?.phone)) && <div className="flex items-center gap-2">{showIcons && <Phone size={14} />}<Editable path="basics.phone" nowrap /></div>}
-        {isVisible('email') && (!readOnly || hasValue(data?.basics?.email)) && <div className="flex items-center gap-2">{showIcons && <Mail size={14} />}<Editable path="basics.email" breakAll /></div>}
-        {isVisible('linkedin') && (data?.basics?.linkedin || !readOnly) && (!readOnly || hasValue(data?.basics?.linkedin)) && <div className="flex items-center gap-2">{showIcons && <Linkedin size={14} />}<Editable path="basics.linkedin" breakAll /></div>}
-        {isVisible('website') && (data?.basics?.website || !readOnly) && (!readOnly || hasValue(data?.basics?.website)) && <div className="flex items-center gap-2">{showIcons && <LinkIcon size={14} />}<Editable path="basics.website" breakAll /></div>}
+        {isVisible('location') && (!readOnly || hasValue(data?.basics?.location)) && <div className="flex items-center gap-2 min-w-0">{showIcons && <MapPin size={14} />}<Editable path="basics.location" nowrap /></div>}
+        {isVisible('phone') && (!readOnly || hasValue(data?.basics?.phone)) && <div className="flex items-center gap-2 min-w-0">{showIcons && <Phone size={14} />}<Editable path="basics.phone" nowrap /></div>}
+        {isVisible('email') && (!readOnly || hasValue(data?.basics?.email)) && <div className="flex items-center gap-2 min-w-0">{showIcons && <Mail size={14} />}<Editable path="basics.email" breakAll /></div>}
+        {isVisible('linkedin') && (data?.basics?.linkedin || !readOnly) && (!readOnly || hasValue(data?.basics?.linkedin)) && <div className="flex items-center gap-2 min-w-0">{showIcons && <Linkedin size={14} />}<Editable path="basics.linkedin" breakAll /></div>}
+        {isVisible('website') && (data?.basics?.website || !readOnly) && (!readOnly || hasValue(data?.basics?.website)) && <div className="flex items-center gap-2 min-w-0">{showIcons && <LinkIcon size={14} />}<Editable path="basics.website" breakAll /></div>}
         {data?.basics?.profiles && Array.isArray(data.basics.profiles) && data.basics.profiles.map((profile: any, index: number) => {
           const net = profile.network?.toLowerCase() || `link-${index}`;
           if (!isVisible(net)) return null;
@@ -862,11 +862,11 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
       <div className={`snippet-anim w-full cv-keep-with-next flex flex-col ${alignClass}`}>
         <Title titleKey="header" overrideClass="hidden" />
         <div className={`w-full flex flex-col ${alignClass}`}>
-          <h1 className={`font-black leading-none tracking-tighter mb-2 ${isNarrow ? 'text-3xl' : 'text-5xl'} ${isDark ? 'text-white' : 'text-gray-900'} pr-1`}><Editable path="basics.name" nowrap={!isNarrow} /></h1>
+          <h1 className={`font-black leading-none tracking-tighter mb-2 ${isNarrow ? 'text-3xl' : 'text-5xl'} ${isDark ? 'text-white' : 'text-gray-900'} pr-1`}><Editable path="basics.name" className="break-words" /></h1>
           <div className={`flex items-center gap-3 mb-3 ${isNarrow ? 'w-full' : ''} ${justifyClass}`}>
             {align !== 'left' && <div className="h-[2px] flex-1 cv-accent-bg" />}
             <div className="h-[2px] w-10 cv-accent-bg shrink-0" />
-            <h2 className={`${TYPOGRAPHY.role} text-[0.85em] shrink-0 pr-1`}><Editable path="basics.title" nowrap={!isNarrow} /></h2>
+            <h2 className={`${TYPOGRAPHY.role} text-[0.85em] shrink-0 pr-1`}><Editable path="basics.title" className="break-words" /></h2>
             {align !== 'right' && <div className="h-[2px] flex-1 cv-accent-bg" />}
           </div>
           {!hasSidebarContact && (
@@ -889,8 +889,8 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
       <div className={`snippet-anim w-full cv-keep-with-next flex ${isNarrow ? `flex-col gap-3 ${alignClass}` : 'gap-8 items-end'} pb-4 border-b ${isDark ? 'border-slate-700' : 'border-gray-200'}`}>
         <Title titleKey="header" overrideClass="hidden" />
         <div className={`${isNarrow ? 'w-full' : 'flex-1'} min-w-0 flex flex-col ${alignClass}`}>
-          <h1 className={`font-bold leading-tight ${isNarrow ? TYPOGRAPHY.nameNarrow : TYPOGRAPHY.name} ${isDark ? 'text-white' : 'text-gray-900'} pr-1`}><Editable path="basics.name" nowrap={!isNarrow} /></h1>
-          <h2 className={`${TYPOGRAPHY.role} mt-1 pr-1`}><Editable path="basics.title" nowrap={!isNarrow} /></h2>
+          <h1 className={`font-bold leading-tight ${isNarrow ? TYPOGRAPHY.nameNarrow : TYPOGRAPHY.name} ${isDark ? 'text-white' : 'text-gray-900'} pr-1`}><Editable path="basics.name" className="break-words" /></h1>
+          <h2 className={`${TYPOGRAPHY.role} mt-1 pr-1`}><Editable path="basics.title" className="break-words" /></h2>
         </div>
         {!hasSidebarContact && (
           <div className={`flex flex-col gap-1 shrink-0 ${TYPOGRAPHY.contact} ${isDark ? 'text-gray-400' : 'text-gray-500'} ${isNarrow ? `w-full ${alignClass}` : 'text-right max-w-[45%]'}`}>
@@ -911,8 +911,8 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
       <div className={`snippet-anim w-full cv-keep-with-next flex flex-col ${alignClass}`}>
         <Title titleKey="header" overrideClass="hidden" />
         <div className={`cv-accent-bg rounded-lg px-5 py-4 mb-3 w-full flex flex-col ${alignClass}`}>
-          <h1 className={`font-extrabold tracking-tight text-white leading-tight ${isNarrow ? 'text-2xl' : 'text-3xl'} pr-1`}><Editable path="basics.name" nowrap={!isNarrow} /></h1>
-          <h2 className="text-[0.82em] font-semibold tracking-widest uppercase text-white/80 mt-0.5 pr-1"><Editable path="basics.title" nowrap={!isNarrow} /></h2>
+          <h1 className={`font-extrabold tracking-tight text-white leading-tight ${isNarrow ? 'text-2xl' : 'text-3xl'} pr-1`}><Editable path="basics.name" className="break-words" /></h1>
+          <h2 className="text-[0.82em] font-semibold tracking-widest uppercase text-white/80 mt-0.5 pr-1"><Editable path="basics.title" className="break-words" /></h2>
         </div>
         {!hasSidebarContact && (
           <div className={`flex ${isNarrow ? `flex-col gap-1.5 ${alignClass}` : `flex-wrap gap-x-4 gap-y-1 ${justifyClass}`} ${TYPOGRAPHY.contact} ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
@@ -1072,7 +1072,7 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
   ,'skills-grouped-sections': { id: 'skills-grouped-sections', name: 'Grouped by Category', category: 'Skills', render: ({ data, isDark, Title }: any) => {
     const groups = normalizeSkillGroups(data?.skills);
     if (groups.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-col gap-3">{groups.map((group, index) => (<div key={`${group.category}-${index}`}><div className={`text-[0.72em] uppercase tracking-widest font-bold mb-1.5 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{group.category}</div><div className="flex flex-wrap gap-1.5">{group.skills.map((skill: string, i: number) => (<span key={i} className={`text-[0.85em] px-2.5 py-0.5 rounded-md font-medium ${isDark ? 'bg-slate-700 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>{skill}</span>))}</div></div>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-col gap-3">{groups.map((group, index) => (<div key={`${group.category}-${index}`}><div className={`text-[0.72em] uppercase tracking-widest font-bold mb-1.5 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{group.category}</div><div className="flex flex-wrap gap-1.5">{group.skills.map((skill: string, i: number) => (<span key={i} className={`max-w-full break-words text-[0.85em] px-2.5 py-0.5 rounded-md font-medium ${isDark ? 'bg-slate-700 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>{skill}</span>))}</div></div>))}</div></div>);
   }}
   ,'skills-star-rating': { id: 'skills-star-rating', name: 'Star Rating', category: 'Skills', render: ({ data, isDark, Title }: any) => {
     const items = flattenSkillItems(data?.skills).slice(0, 8);
@@ -1084,7 +1084,7 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
   }}
   ,'skills-accent-badges': { id: 'skills-accent-badges', name: 'Accent Solid Badges', category: 'Skills', render: ({ data, isDark, Title }: any) => {
     const items = flattenSkillItems(data?.skills);
-    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-wrap gap-1.5">{items.map((skill: any, i: number) => (<span key={i} className="text-[10px] font-bold px-2.5 py-1 rounded-md cv-accent-bg text-white tracking-wide">{skill.label}</span>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-wrap gap-1.5">{items.map((skill: any, i: number) => (<span key={i} className="max-w-full break-words text-[10px] font-bold px-2.5 py-1 rounded-md cv-accent-bg text-white tracking-wide">{skill.label}</span>))}</div></div>);
   }}
   ,'skills-compact-inline': { id: 'skills-compact-inline', name: 'Compact Inline All', category: 'Skills', render: ({ data, isDark, Title }: any) => {
     const all = flattenSkillItems(data?.skills);
@@ -1155,7 +1155,7 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
   }}
   ,'languages-accent-pills': { id: 'languages-accent-pills', name: 'Accent Pills', category: 'Languages', render: ({ data, isDark, Title }: any) => {
     const langs = Array.isArray(data?.languages) ? data.languages : []; if (langs.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="languages" /><div className="flex flex-wrap gap-2">{langs.map((l: any, i: number) => (<div key={i} className={`px-3 py-1.5 rounded-full text-[0.85em] font-bold cv-accent-bg text-white flex items-center gap-2`}><span>{l.name}</span><span className="w-1 h-1 rounded-full bg-white/40" /><span className="opacity-80 font-semibold">{l.level}</span></div>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="languages" /><div className="flex flex-wrap gap-2">{langs.map((l: any, i: number) => (<div key={i} className={`max-w-full break-words px-3 py-1.5 rounded-full text-[0.85em] font-bold cv-accent-bg text-white flex items-center gap-2`}><span className="min-w-0">{l.name}</span><span className="w-1 h-1 rounded-full bg-white/40" /><span className="opacity-80 font-semibold">{l.level}</span></div>))}</div></div>);
   }}
   ,'languages-two-col': { id: 'languages-two-col', name: 'Two Column', category: 'Languages', render: ({ data, isDark, Title }: any) => {
     const langs = Array.isArray(data?.languages) ? data.languages : []; if (langs.length === 0) return null;
@@ -1176,7 +1176,7 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
   // =======================================================
   ,'interests-accent-pills': { id: 'interests-accent-pills', name: 'Accent Pills', category: 'Interests', render: ({ data, isDark, Title }: any) => {
     const items = typeof data?.interests === 'string' ? data.interests.split(',').filter(Boolean) : []; if (items.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="interests" /><div className="flex flex-wrap gap-2">{items.map((item: string, i: number) => (<span key={i} className={`px-3 py-1 rounded-full text-[0.85em] font-medium border ${isDark ? 'border-slate-600 text-gray-300' : 'border-gray-200 text-gray-600'} cv-accent-text-hover`}>{item.trim()}</span>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="interests" /><div className="flex flex-wrap gap-2">{items.map((item: string, i: number) => (<span key={i} className={`max-w-full break-words px-3 py-1 rounded-full text-[0.85em] font-medium border ${isDark ? 'border-slate-600 text-gray-300' : 'border-gray-200 text-gray-600'} cv-accent-text-hover`}>{item.trim()}</span>))}</div></div>);
   }}
   ,'interests-icon-grid': { id: 'interests-icon-grid', name: 'Icon Grid', category: 'Interests', render: ({ data, isDark, Title }: any) => {
     const items = typeof data?.interests === 'string' ? data.interests.split(',').filter(Boolean) : []; if (items.length === 0) return null;
@@ -1188,7 +1188,7 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
   }}
   ,'interests-card': { id: 'interests-card', name: 'Card Layout', category: 'Interests', render: ({ data, isDark, Title }: any) => {
     const items = typeof data?.interests === 'string' ? data.interests.split(',').filter(Boolean) : []; if (items.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="interests" /><div className="flex flex-wrap gap-2">{items.map((item: string, i: number) => (<div key={i} className={`px-3 py-1.5 rounded-lg border ${TYPOGRAPHY.body} ${isDark ? 'border-slate-700 bg-slate-800/50 text-gray-300' : 'border-gray-200 bg-gray-50 text-gray-700'}`}>{item.trim()}</div>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="interests" /><div className="flex flex-wrap gap-2">{items.map((item: string, i: number) => (<div key={i} className={`max-w-full break-words px-3 py-1.5 rounded-lg border ${TYPOGRAPHY.body} ${isDark ? 'border-slate-700 bg-slate-800/50 text-gray-300' : 'border-gray-200 bg-gray-50 text-gray-700'}`}>{item.trim()}</div>))}</div></div>);
   }}
   ,'interests-two-col': { id: 'interests-two-col', name: 'Two Column', category: 'Interests', render: ({ data, isDark, Title }: any) => {
     const items = typeof data?.interests === 'string' ? data.interests.split(',').filter(Boolean) : []; if (items.length === 0) return null;
@@ -1201,7 +1201,7 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
   ,'sidebar-skills-grouped': { id: 'sidebar-skills-grouped', name: 'Skills by Group', category: 'Sidebar', render: ({ data, isDark, Title }: any) => {
     const groups = normalizeSkillGroups(data?.skills);
     if (groups.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-col gap-4">{groups.map((group, index) => (<div key={`${group.category}-${index}`}><div className={`text-[0.78em] uppercase tracking-widest font-bold mb-2 ${isDark ? 'text-gray-400' : 'text-gray-500'} border-b pb-1 ${isDark ? 'border-slate-700' : 'border-gray-200'}`}>{group.category}</div><div className="flex flex-wrap gap-1.5">{group.skills.map((skill: string, i: number) => (<span key={i} className={`text-[0.85em] px-2 py-1 rounded font-medium ${isDark ? 'bg-slate-800 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>{skill}</span>))}</div></div>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-col gap-4">{groups.map((group, index) => (<div key={`${group.category}-${index}`}><div className={`text-[0.78em] uppercase tracking-widest font-bold mb-2 ${isDark ? 'text-gray-400' : 'text-gray-500'} border-b pb-1 ${isDark ? 'border-slate-700' : 'border-gray-200'}`}>{group.category}</div><div className="flex flex-wrap gap-1.5">{group.skills.map((skill: string, i: number) => (<span key={i} className={`max-w-full break-words text-[0.85em] px-2 py-1 rounded font-medium ${isDark ? 'bg-slate-800 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>{skill}</span>))}</div></div>))}</div></div>);
   }}
   ,'sidebar-bio': { id: 'sidebar-bio', name: 'Mini Bio', category: 'Sidebar', render: ({ data, Editable, isDark, Title }: any) => (
     <div className="snippet-anim cv-section">

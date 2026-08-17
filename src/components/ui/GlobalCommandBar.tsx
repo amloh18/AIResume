@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useUnifiedAuth } from '@/lib/hooks/useUnifiedAuth';
 import { authenticatedFetchWithUserId } from '@/lib/utils/apiUtils';
 import JobSidebar from '@/components/dashboard/jobs/JobSidebar';
-import CVPreviewContent from '@/components/cv-preview/CVPreviewContent';
+import CVPreviewDocument from '@/components/cv-preview/CVPreviewDocument';
 import CoverLetterPreviewModal from '@/components/notifications/CoverLetterPreviewModal';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 
@@ -28,6 +28,7 @@ export default function GlobalCommandBar() {
 
     const [showCVModal, setShowCVModal] = useState(false);
     const [selectedCVData, setSelectedCVData] = useState<UnifiedCVDataStructure | null>(null);
+    const [selectedCVTemplate, setSelectedCVTemplate] = useState<any>(null);
 
     const [showCoverLetterModal, setShowCoverLetterModal] = useState(false);
     const [selectedCoverLetterData, setSelectedCoverLetterData] = useState<any>(null);
@@ -173,6 +174,7 @@ export default function GlobalCommandBar() {
 
                 if (unifiedCVData && (unifiedCVData.basics || unifiedCVData.name)) {
                     setSelectedCVData(unifiedCVData as UnifiedCVDataStructure);
+                    setSelectedCVTemplate(cvObj.template || cvObj.metadata?.canvasTemplate || null);
                     setShowCVModal(true);
                     setIsOpen(false);
                 }
@@ -483,6 +485,7 @@ export default function GlobalCommandBar() {
                 <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[9999] flex items-center justify-center p-4" onClick={() => {
                     setShowCVModal(false);
                     setSelectedCVData(null);
+                    setSelectedCVTemplate(null);
                 }}>
                     <div className="bg-white dark:bg-[#141810] rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-white/10">
@@ -491,6 +494,7 @@ export default function GlobalCommandBar() {
                                 onClick={() => {
                                     setShowCVModal(false);
                                     setSelectedCVData(null);
+                                    setSelectedCVTemplate(null);
                                 }}
                                 className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-colors"
                             >
@@ -498,7 +502,13 @@ export default function GlobalCommandBar() {
                             </button>
                         </div>
                         <div className="flex-1 overflow-y-auto p-6">
-                            <CVPreviewContent cvData={selectedCVData} />
+                            <div className="flex justify-center">
+                                <CVPreviewDocument
+                                    cvData={selectedCVData}
+                                    template={selectedCVTemplate}
+                                    className="w-full max-w-4xl"
+                                />
+                            </div>
                         </div>
                     </div>
                 </div>

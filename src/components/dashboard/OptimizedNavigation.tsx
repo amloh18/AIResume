@@ -419,7 +419,7 @@ const OptimizedNavigation: React.FC = () => {
       </button>
 
        {/* Header */}
-       <div className={`flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 lg:border-b-0 ${isDesktopExpanded ? 'lg:p-6 lg:justify-start' : 'lg:p-4 lg:justify-center'} relative`}>
+       <div className={`flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 lg:border-b-0 ${isDesktopExpanded ? 'lg:p-6 lg:justify-start' : 'lg:p-2 lg:justify-center'} relative`}>
          <motion.button
            onClick={handleLogoClick}
            className="flex items-center gap-3 hover:opacity-90 transition-opacity"
@@ -433,7 +433,7 @@ const OptimizedNavigation: React.FC = () => {
                <Logo size="md" />
              </div>
              <div className={`hidden ${!isDesktopExpanded ? 'lg:flex' : ''}`}>
-               <Logo size="md" />
+               <Logo size="xs" />
              </div>
            </div>
          </motion.button>
@@ -560,12 +560,12 @@ const OptimizedNavigation: React.FC = () => {
                   title={section.name}
                   className={`relative group flex flex-col items-center justify-center rounded-2xl border transition-all duration-200 cursor-pointer outline-none focus:outline-none focus:ring-0 !shadow-none
                     ${isDesktopExpanded
-                      ? 'p-3 gap-2 aspect-square'
-                      : 'lg:p-3 lg:gap-1 lg:aspect-square p-3 gap-2 aspect-square'
+                      ? 'p-2 gap-1.5 aspect-square'
+                      : 'lg:p-2 lg:gap-1 lg:aspect-square p-2 gap-1.5 aspect-square'
                     }
                     ${isActive
-                      ? `${(section as any).activeBg || 'bg-emerald-500/15 border-emerald-500/40'}`
-                      : 'bg-white dark:bg-[#1a2015] border-gray-100 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-sm'
+                      ? 'border-[rgb(129,255,0)]/40 bg-transparent'
+                      : 'border-transparent'
                     }`}
                   style={{ outline: 'none', boxShadow: 'none' }}
                   whileHover={{ scale: 1.04, y: -1 }}
@@ -578,8 +578,8 @@ const OptimizedNavigation: React.FC = () => {
                     </span>
                   )}
 
-                  {/* Icon container */}
-                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-all duration-200 ${isActive ? 'scale-110' : ''} ${bgClass}`}>
+                  {/* Icon container — icon bg only, with a border (no container bg) */}
+                  <div className={`w-9 h-9 rounded-xl border border-gray-200 dark:border-gray-700 flex items-center justify-center flex-shrink-0 transition-all duration-200 ${isActive ? 'scale-110' : ''} ${bgClass}`}>
                     <Icon className={`w-5 h-5 ${isActive ? 'text-[rgb(129,255,0)] dark:text-[rgb(129,255,0)]' : 'text-gray-500 dark:text-gray-400'}`} />
                   </div>
 
@@ -598,65 +598,35 @@ const OptimizedNavigation: React.FC = () => {
         </div>
       </nav>
 
-      {/* HR Dashboard Button - Show for B2B users and Admins */}
-      {(userData?.b2b?.tenantId || userData?.isB2b || isAdmin) && (
+      {/* Admin Dashboard Button - Show for Admins */}
+      {isAdmin && (
         <div className={`px-6 pb-2 ${isDesktopExpanded ? 'lg:px-4' : 'lg:px-2'}`}>
           <div className={isDesktopExpanded ? "grid grid-cols-2 gap-2" : "flex flex-col items-center gap-2"}>
-            {(userData?.b2b?.tenantId || userData?.isB2b) && (
-              <motion.button
-                onClick={() => {
-                  if (isMobileMenuOpen) {
-                    setIsOpen(false);
-                  }
-                  router.push('/b2b/dashboard');
-                }}
-                className={isDesktopExpanded
-                  ? "w-full h-full min-h-[88px] flex flex-col items-start justify-between gap-3 rounded-xl border border-[rgb(129,255,0)]/15 transition-all duration-200 text-left p-4 bg-[rgb(129,255,0)]/10 text-[#4C9900] dark:text-[rgb(129,255,0)] hover:bg-[rgb(129,255,0)]/20"
-                  : "w-9 h-9 flex items-center justify-center rounded-xl border border-[rgb(129,255,0)]/15 bg-[rgb(129,255,0)]/10 text-[#4C9900] dark:text-[rgb(129,255,0)] hover:bg-[rgb(129,255,0)]/20"
+            <motion.button
+              onClick={() => {
+                if (isMobileMenuOpen) {
+                  setIsOpen(false);
                 }
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                title="HR Dashboard"
-              >
-                <Briefcase className="w-5 h-5 flex-shrink-0" />
-                {isDesktopExpanded && (
-                  <div className="min-w-0 w-full text-left">
-                    <div className="text-small font-medium truncate">HR Dashboard</div>
-                    <div className="text-[11px] opacity-80 truncate mt-0.5">
-                      Business Portal
-                    </div>
+                router.push('/admin/dashboard');
+              }}
+              className={isDesktopExpanded
+                ? "w-full h-full min-h-[88px] flex flex-col items-start justify-between gap-3 rounded-xl border border-purple-500/15 transition-all duration-200 text-left p-4 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 hover:bg-purple-200 dark:hover:bg-purple-900/50"
+                : "w-9 h-9 flex items-center justify-center rounded-xl border border-purple-500/15 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 hover:bg-purple-200 dark:hover:bg-purple-900/50"
+              }
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              title="Admin Dashboard"
+            >
+              <Shield className="w-5 h-5 flex-shrink-0" />
+              {isDesktopExpanded && (
+                <div className="min-w-0 w-full text-left">
+                  <div className="text-small font-medium truncate">Admin Dashboard</div>
+                  <div className="text-[11px] text-purple-600 dark:text-purple-300 truncate mt-0.5">
+                    System controls
                   </div>
-                )}
-              </motion.button>
-            )}
-
-            {isAdmin && (
-              <motion.button
-                onClick={() => {
-                  if (isMobileMenuOpen) {
-                    setIsOpen(false);
-                  }
-                  router.push('/admin/dashboard');
-                }}
-                className={isDesktopExpanded
-                  ? "w-full h-full min-h-[88px] flex flex-col items-start justify-between gap-3 rounded-xl border border-purple-500/15 transition-all duration-200 text-left p-4 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 hover:bg-purple-200 dark:hover:bg-purple-900/50"
-                  : "w-9 h-9 flex items-center justify-center rounded-xl border border-purple-500/15 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 hover:bg-purple-200 dark:hover:bg-purple-900/50"
-                }
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                title="Admin Dashboard"
-              >
-                <Shield className="w-5 h-5 flex-shrink-0" />
-                {isDesktopExpanded && (
-                  <div className="min-w-0 w-full text-left">
-                    <div className="text-small font-medium truncate">Admin Dashboard</div>
-                    <div className="text-[11px] text-purple-600 dark:text-purple-300 truncate mt-0.5">
-                      System controls
-                    </div>
-                  </div>
-                )}
-              </motion.button>
-            )}
+                </div>
+              )}
+            </motion.button>
           </div>
         </div>
       )}
@@ -1275,8 +1245,6 @@ const OptimizedNavigation: React.FC = () => {
                     </div>
                   </motion.button>
 
-                  {/* B2B Dashboard (Removed from here, now in bottom section) */}
-                  
                   {/* Theme - Icon button for xl, toggle for expanded desktop */}
                   {/* xl: Icon button only */}
                   <motion.button

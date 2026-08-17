@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import PricingPlan from '@/models/PricingPlan';
+import { requireAdmin } from '@/lib/middleware/admin-auth';
 
 /**
  * POST /api/admin/pricing-plans/sync-features
@@ -81,6 +82,7 @@ const updatedPlans = [
 
 export async function POST(request: NextRequest) {
     try {
+        await requireAdmin(request);
         await getConnection();
 
         const results: { key: string; status: string }[] = [];

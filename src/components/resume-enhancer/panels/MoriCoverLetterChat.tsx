@@ -457,7 +457,7 @@ Please rewrite the cover letter body to fulfill the request. Return the rewritte
                   {m.role === 'user' ? <User className="w-4 h-4 text-white" /> : <Sparkles className="w-4 h-4 text-emerald-500" />}
                 </div>
                 <div className="space-y-1 min-w-0">
-                  <div className={`px-3.5 py-2.5 rounded-2xl text-[13px] leading-relaxed ${
+                  <div className={`px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed ${
                     m.role === 'user' 
                       ? 'bg-emerald-500 text-white rounded-tr-none shadow-sm' 
                       : 'bg-white dark:bg-white/5 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-white/10 rounded-tl-none shadow-sm'
@@ -561,7 +561,7 @@ Please rewrite the cover letter body to fulfill the request. Return the rewritte
             }}
             placeholder={currentSelection ? "Instruct Mori to update selection..." : "Ask Mori to polish your cover letter..."}
             rows={1}
-            className="w-full bg-transparent px-4 py-3.5 pr-12 text-[13px] focus:outline-none resize-none dark:text-white dark:placeholder-slate-500"
+            className="w-full bg-transparent px-4 py-3.5 pr-12 text-sm focus:outline-none resize-none dark:text-white dark:placeholder-slate-500"
             style={{ minHeight: '48px', maxHeight: '120px' }}
           />
           <button

@@ -11,6 +11,11 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      // `server-only` / `client-only` throw when imported outside the correct
+      // React Server Component condition, which Vitest does not provide. Stub
+      // them so server modules can be unit-tested in isolation.
+      'server-only': path.resolve(__dirname, './vitest.server-only-stub.ts'),
+      'client-only': path.resolve(__dirname, './vitest.client-only-stub.ts'),
     },
   },
 });

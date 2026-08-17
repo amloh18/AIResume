@@ -332,7 +332,7 @@ export default function LinkedInEnhancementFlow({ onBackToDashboard }: { onBackT
     if (!initialLoadComplete) {
         return (
             <div
-                className="min-h-screen flex flex-col app-page-bg"
+                className="min-h-screen flex flex-col dashboard-workspace"
             >
                 <LinkedInHeader
                     availableCvs={[]}
@@ -379,7 +379,7 @@ export default function LinkedInEnhancementFlow({ onBackToDashboard }: { onBackT
     if (initialLoadComplete && availableCvs.length === 0) {
         return (
             <div
-                className="min-h-screen flex flex-col app-page-bg"
+                className="min-h-screen flex flex-col dashboard-workspace"
             >
                 <LinkedInHeader
                     availableCvs={[]}
@@ -417,8 +417,11 @@ export default function LinkedInEnhancementFlow({ onBackToDashboard }: { onBackT
     }
 
     return (
+        /* Same rounded-card-with-margins shell as the dashboard: white workspace,
+           off-white card with margins (this page is standalone — no sidebar — so
+           the inset is even on all sides); content scrolls inside the card. */
         <div
-            className="h-macro flex flex-col app-page-bg overflow-hidden linkedin-enhancer"
+            className="h-macro flex flex-col dashboard-workspace overflow-hidden linkedin-enhancer"
         >
              {/* Header */}
             <LinkedInHeader
@@ -438,8 +441,11 @@ export default function LinkedInEnhancementFlow({ onBackToDashboard }: { onBackT
                 setShowInsights={setShowInsights}
             />
 
-            {/* Main Content */}
-            <main className="flex-1 max-w-[1700px] mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 overflow-y-auto overflow-x-hidden custom-scrollbar">
+            {/* Main Content — dashboard-style card with margins */}
+            <main className="flex-1 min-h-0 overflow-hidden">
+                <div className="h-full min-h-0 flex flex-col pr-3 pb-3 pl-3 lg:pl-0">
+                    <div className="dashboard-content-card rounded-2xl border border-[var(--border-primary)] shadow-sm flex-1 min-h-0 flex flex-col overflow-hidden">
+                        <div className="flex-1 min-h-0 max-w-[1700px] mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 overflow-y-auto overflow-x-hidden custom-scrollbar">
                 {/* Loading State */}
                 <AnimatePresence mode="wait">
                     {state.isLoading ? (
@@ -727,7 +733,10 @@ export default function LinkedInEnhancementFlow({ onBackToDashboard }: { onBackT
                             </div>
                         </motion.div>
                     )}
-                </AnimatePresence>
+                        </AnimatePresence>
+                        </div>
+                    </div>
+                </div>
             </main>
 
             <BrowserExtensionModal 

@@ -381,12 +381,12 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
                 <div key={stage.status} className="space-y-4 py-4">
                   {/* Stage Header */}
                   <div
-                    className={`p-3 rounded-xl border-2 border-solid ${stage.color} min-h-[60px] flex items-center justify-center sticky top-0 z-10 backdrop-blur-sm bg-white/80 dark:bg-[#141810]/80 cursor-pointer transition-all duration-200 group`}
+                    className={`p-2.5 rounded-xl border-2 border-solid ${stage.color} min-h-[48px] flex items-center justify-center sticky top-0 z-10 backdrop-blur-sm bg-white/80 dark:bg-[#141810]/80 cursor-pointer transition-all duration-200 group`}
                     onMouseEnter={(e) => {
-                      e.currentTarget.className = `p-3 rounded-xl border-2 border-solid ${stage.hoverColor} min-h-[60px] flex items-center justify-center sticky top-0 z-10 backdrop-blur-sm bg-white/80 dark:bg-[#141810]/80 cursor-pointer transition-all duration-200 group`;
+                      e.currentTarget.className = `p-2.5 rounded-xl border-2 border-solid ${stage.hoverColor} min-h-[48px] flex items-center justify-center sticky top-0 z-10 backdrop-blur-sm bg-white/80 dark:bg-[#141810]/80 cursor-pointer transition-all duration-200 group`;
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.className = `p-3 rounded-xl border-2 border-solid ${stage.color} min-h-[60px] flex items-center justify-center sticky top-0 z-10 backdrop-blur-sm bg-white/80 dark:bg-[#141810]/80 cursor-pointer transition-all duration-200 group`;
+                      e.currentTarget.className = `p-2.5 rounded-xl border-2 border-solid ${stage.color} min-h-[48px] flex items-center justify-center sticky top-0 z-10 backdrop-blur-sm bg-white/80 dark:bg-[#141810]/80 cursor-pointer transition-all duration-200 group`;
                     }}
                     onClick={(e) => {
                       e.stopPropagation();
@@ -394,9 +394,9 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
                     }}
                   >
                     <div className="flex items-center justify-between w-full">
-                      <h3 className="text-small font-medium text-black dark:text-white tracking-tight">
+                      <div className="text-small font-semibold text-black dark:text-white tracking-tight">
                         {stage.title}
-                      </h3>
+                      </div>
                       <span className="text-small">{stageJobs.length}</span>
                     </div>
                   </div>
@@ -419,6 +419,7 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
                         getJourneyStatusText={getJourneyStatusText}
                         onJobClick={onJobClick as any}
                         onRefresh={onRefresh}
+                        onDownload={onDownload as any}
                       />
                     )}
                     {stage.status === "applied" && onJobStatusUpdate && (
@@ -451,6 +452,7 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
                       <RejectedStageView
                         jobs={stageJobs as any}
                         onJobClick={onJobClick as any}
+                        onJobStatusUpdate={onJobStatusUpdate as any}
                         isFullScreen={!!zoomedStage}
                       />
                     )}
@@ -461,28 +463,28 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
         </div>
       ) : (
         // All stages - horizontal scrollable with proper width
-        <div className="flex flex-row gap-4 h-full min-w-max pb-4 pl-0 sm:pl-2 pr-0 sm:pr-4 overflow-x-auto scrollbar-hide">
+        <div className="flex flex-row gap-4 h-full pb-4 overflow-x-auto scrollbar-hide">
           {stages.map((stage) => {
             const stageJobs =
               jobsByStatus[stage.status as keyof typeof jobsByStatus];
             return (
               <div
                 key={stage.status}
-                className="flex flex-col gap-4 w-[320px] flex-shrink-0 h-full max-h-full"
+                className="flex flex-col gap-4 flex-1 min-w-[220px] h-full max-h-full"
               >
                 {/* Stage Header */}
                 <div
-                  className={`flex-shrink-0 p-3 rounded-xl border-2 border-solid ${stage.color} min-h-[60px] flex items-center justify-center cursor-pointer transition-all duration-200 group`}
+                  className={`flex-shrink-0 p-2.5 rounded-xl border-2 border-solid ${stage.color} min-h-[48px] flex items-center justify-center cursor-pointer transition-all duration-200 group`}
                   style={
                     {
                       "--hover-color": stage.hoverColor,
                     } as React.CSSProperties
                   }
                   onMouseEnter={(e) => {
-                    e.currentTarget.className = `p-3 rounded-xl border-2 border-solid ${stage.hoverColor} min-h-[60px] flex items-center justify-center cursor-pointer transition-all duration-200 group`;
+                    e.currentTarget.className = `p-2.5 rounded-xl border-2 border-solid ${stage.hoverColor} min-h-[48px] flex items-center justify-center cursor-pointer transition-all duration-200 group`;
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.className = `p-3 rounded-xl border-2 border-solid ${stage.color} min-h-[60px] flex items-center justify-center cursor-pointer transition-all duration-200 group`;
+                    e.currentTarget.className = `p-2.5 rounded-xl border-2 border-solid ${stage.color} min-h-[48px] flex items-center justify-center cursor-pointer transition-all duration-200 group`;
                   }}
                   onClick={(e) => {
                     e.stopPropagation();
@@ -490,21 +492,21 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
                   }}
                 >
                   <div className="flex items-center justify-between w-full">
-                    <h3 className="text-small font-medium text-black dark:text-white tracking-tight">
+                    <div className="text-small font-semibold text-black dark:text-white tracking-tight">
                       {stage.title}
-                    </h3>
+                    </div>
                     <span className="text-small">{stageJobs.length}</span>
                   </div>
                 </div>
 
                 {/* Drop Zone */}
                 <div
-                  className={`w-full rounded-xl border-2 border-dashed transition-all duration-300 flex-1 overflow-y-auto scrollbar-hide min-h-0 ${
+                  className={`w-full rounded-xl border transition-all duration-300 flex-1 overflow-y-auto scrollbar-hide min-h-0 ${
                     draggedJob
                       ? isDraggableStage(stage.status)
                         ? `border-blue-300 dark:border-[rgb(60,75,60)] bg-blue-50 dark:bg-[rgb(60,75,60)]/20`
                         : "border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/30 opacity-50"
-                      : "border-transparent"
+                      : "border-[var(--border-primary)]/60"
                   }`}
                   onDragOver={onDragOver}
                   onDrop={(e) => onDrop(e, stage.status)}

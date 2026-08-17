@@ -43,6 +43,8 @@ export interface TrackerSidebarOpenContext {
   sourceAction?: TrackerCardActionId;
   preferredDetailsView?: TrackerDetailsView;
   highlightAction?: TrackerSidebarActionId;
+  /** Deep link: automatically open the Edit Job sidebar once the job loads. */
+  autoOpenEdit?: boolean;
 }
 
 export interface TrackerSidebarMetric {

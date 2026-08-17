@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
-import { usePaymentModal } from '@/contexts/PaymentModalContext';
+import MoriChatLimitPanel from '@/components/payment/MoriChatLimitPanel';
 import { useSession } from 'next-auth/react';
 import { useAuthModalStore } from '@/lib/stores/authModalStore';
 import { 
@@ -45,7 +45,6 @@ const SUGGESTIONS = [
 
 const MoriChatInterface: React.FC = () => {
   const { state, updateCVData } = useResumeEnhancer();
-  const { openPaymentModal } = usePaymentModal();
   const { data: session, status: sessionStatus } = useSession();
   const { openModal } = useAuthModalStore();
   const isGuestMode = sessionStatus === 'unauthenticated';
@@ -482,7 +481,7 @@ const MoriChatInterface: React.FC = () => {
             <div className="flex flex-col gap-2">
               <button
                 onClick={() => openModal({ view: 'signup', callbackUrl: window.location.href })}
-                className="w-full py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-xl text-[12px] font-bold transition-all shadow-md shadow-emerald-500/20 hover:shadow-lg active:scale-[0.98] flex items-center justify-center gap-1.5"
+                className="w-full py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-emerald-500/20 hover:shadow-lg active:scale-[0.98] flex items-center justify-center gap-1.5"
               >
                 <span>Sign Up to Use AI</span>
                 <ChevronRight className="w-3.5 h-3.5" />
@@ -490,7 +489,7 @@ const MoriChatInterface: React.FC = () => {
               
               <button
                 onClick={() => openModal({ view: 'signin', callbackUrl: window.location.href })}
-                className="w-full py-2 hover:bg-slate-50 dark:hover:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-400 rounded-xl text-[12px] font-semibold transition-all active:scale-[0.98]"
+                className="w-full py-2 hover:bg-slate-50 dark:hover:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-400 rounded-xl text-xs font-semibold transition-all active:scale-[0.98]"
               >
                 Already have an account? Log In
               </button>
@@ -616,7 +615,7 @@ const MoriChatInterface: React.FC = () => {
                   {m.role === 'user' ? <User className="w-4 h-4 text-white" /> : <Sparkles className="w-4 h-4 text-emerald-500" />}
                 </div>
                 <div className="space-y-1">
-                  <div className={`px-3.5 py-2.5 rounded-2xl text-[13px] leading-relaxed break-words max-w-full overflow-hidden [word-break:break-word] ${
+                  <div className={`px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed break-words max-w-full overflow-hidden [word-break:break-word] ${
                     m.role === 'user' 
                       ? 'bg-emerald-500 text-white rounded-tr-none shadow-sm' 
                       : 'bg-white dark:bg-[var(--bg-primary)] text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-white/10 rounded-tl-none shadow-sm'
@@ -723,26 +722,7 @@ const MoriChatInterface: React.FC = () => {
         </AnimatePresence>
 
         {limitExhausted ? (
-          <div className="pointer-events-auto relative p-5 bg-gradient-to-br from-emerald-500/10 via-teal-500/5 to-purple-500/10 dark:from-emerald-500/20 dark:to-purple-500/20 border border-emerald-500/20 dark:border-emerald-500/40 rounded-2xl shadow-xl flex flex-col items-center text-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-500 animate-pulse">
-              <Sparkles className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-            </div>
-            <div>
-              <h4 className="text-[13.5px] font-bold text-slate-800 dark:text-white">
-                Mori Chat Limit Reached
-              </h4>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 max-w-[290px] leading-relaxed">
-                You've exhausted your limit of 5 free AI conversations this month. Upgrade to Pro for unlimited edits!
-              </p>
-            </div>
-            <button
-              onClick={() => openPaymentModal({ preselectedPlanKey: 'pro_monthly', triggerContext: 'mori-chat-limit' })}
-              className="w-full py-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-xl text-[12px] font-semibold transition-all shadow-md shadow-emerald-500/20 active:scale-[0.98] flex items-center justify-center gap-1.5"
-            >
-              <span>Upgrade to Pro</span>
-              <Sparkles className="w-3.5 h-3.5" />
-            </button>
-          </div>
+          <MoriChatLimitPanel />
         ) : (
           <div className={`pointer-events-auto relative group shadow-xl shadow-slate-200/50 dark:shadow-none bg-white dark:bg-[var(--bg-primary)] border border-slate-200 dark:border-white/10 transition-all ${currentSelection ? 'rounded-b-xl rounded-t-none border-t-0' : 'rounded-2xl'}`}>
             <textarea

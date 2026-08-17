@@ -5,6 +5,8 @@ export interface IJobApplication extends Document {
   // cvId removed - relationships now managed through CVJourney
   jobTitle: string;
   company: string;
+  companyLogo?: string; // Resolved company logo URL
+  appliedAt?: Date; // When the application was actually submitted (first applied-like status)
   jobUrl?: string;
   jobDescription?: string;
   sponsorship?: 'yes' | 'no' | 'unknown';
@@ -178,6 +180,15 @@ const jobApplicationSchema = new Schema<IJobApplication>({
     required: [true, 'Company name is required'],
     trim: true,
     maxlength: [100, 'Company name cannot exceed 100 characters']
+  },
+  companyLogo: {
+    type: String,
+    trim: true,
+    maxlength: [1000, 'Company logo URL cannot exceed 1000 characters']
+  },
+  appliedAt: {
+    type: Date,
+    required: false
   },
   jobUrl: {
     type: String,

@@ -9,6 +9,7 @@ import { sanitizeErrorMessage } from '@/lib/api/error-handler';
 import { downloadCanvasAsPDF } from '@/lib/utils/downloadCanvas';
 import { usePaymentModal } from '@/contexts/PaymentModalContext';
 import DownloadModal from '@/components/ui/DownloadModal';
+import { Skeleton } from '@/components/ui/Skeleton';
 import {
   Sparkles,
   Component, Eye, Target, ZoomIn, ZoomOut, Plus, Shuffle, Palette, X,
@@ -152,7 +153,6 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
     const [editorPosition, setEditorPosition] = useState<{ top: number; left: number; height: number; alignment: 'left' | 'right' } | null>(null);
 
     const [viewMode, setViewMode] = useState<ViewMode>('edit'); // New View Mode State
-    const [pageFormat, setPageFormat] = useState<'a4' | 'letter'>('a4');
     const [highlightedField, setHighlightedField] = useState<string | null>(null);
 
     // CV Layout Validation — runs whenever cvData changes
@@ -631,6 +631,19 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
         window.removeEventListener('close-utility-panel', handleClose);
       };
     }, []);
+
+    React.useEffect(() => {
+      // Keep the context paperSize (single source for exports) in sync with the
+      // canvas page-size toggle. The canvas owns design.pageSize; this mirrors it.
+      const handlePaperSizeChange = (e: Event) => {
+        const next = (e as CustomEvent).detail;
+        if (next === 'A4' || next === 'Letter') {
+          dispatch({ type: 'SET_PAPER_SIZE', payload: next });
+        }
+      };
+      window.addEventListener('cv-paper-size-changed', handlePaperSizeChange);
+      return () => window.removeEventListener('cv-paper-size-changed', handlePaperSizeChange);
+    }, [dispatch]);
 
     React.useEffect(() => {
       if (state.moriChatMode) {
@@ -1311,40 +1324,43 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
         <div className="h-full w-full flex overflow-hidden relative p-3 gap-3">
           {/* CV Canvas Builder — full drag-drop snippet-based builder with inline editing */}
           <div 
-            className="flex-1 min-h-0 relative flex flex-col rounded-xl overflow-hidden shadow-sm shadow-black/10 dark:shadow-black/30"
+            className="flex-1 lg:flex-none lg:w-[60%] min-h-0 relative flex flex-col rounded-xl overflow-hidden shadow-sm shadow-black/10 dark:shadow-black/30"
             style={{ order: isControlPanelOpen ? 2 : 1 }}
           >
             <div ref={cvPreviewRef} className="flex-1 min-h-0 overflow-hidden">
               {!state.cvData ? (
-                <div className="w-full h-full bg-white dark:bg-[#141810] p-8 flex flex-col gap-6 animate-pulse rounded-xl border border-gray-200 dark:border-white/[0.04]">
-                  {/* Header Skeleton */}
-                  <div className="space-y-3">
-                    <div className="h-6 bg-gray-250 dark:bg-white/10 rounded w-1/3 animate-pulse" />
-                    <div className="h-3.5 bg-gray-200 dark:bg-white/5 rounded w-1/4 animate-pulse" />
-                  </div>
-                  {/* Details Skeletons */}
-                  <div className="flex gap-4">
-                    <div className="h-3 bg-gray-200 dark:bg-white/5 rounded w-20 animate-pulse" />
-                    <div className="h-3 bg-gray-200 dark:bg-white/5 rounded w-20 animate-pulse" />
-                    <div className="h-3 bg-gray-200 dark:bg-white/5 rounded w-20 animate-pulse" />
-                  </div>
-                  <hr className="border-gray-250 dark:border-white/5" />
-                  {/* Summary skeleton */}
-                  <div className="space-y-2.5">
-                    <div className="h-4 bg-gray-250 dark:bg-white/10 rounded w-1/4 animate-pulse" />
-                    <div className="h-3 bg-gray-200 dark:bg-white/5 rounded w-full animate-pulse" />
-                    <div className="h-3 bg-gray-200 dark:bg-white/5 rounded w-5/6 animate-pulse" />
-                  </div>
-                  {/* Experience skeleton */}
-                  <div className="space-y-4 pt-4">
-                    <div className="h-4 bg-gray-250 dark:bg-white/10 rounded w-1/4 animate-pulse" />
+                /* CV sheet skeleton — mimics the document that will render here */
+                <div className="w-full h-full flex items-start justify-center overflow-y-auto p-6">
+                  <div className="w-full max-w-[560px] aspect-[1/1.414] bg-white dark:bg-[#141810] rounded-xl border border-gray-200 dark:border-white/[0.04] shadow-sm p-8 flex flex-col gap-6">
+                    {/* Header Skeleton */}
+                    <div className="space-y-3">
+                      <Skeleton className="h-6 w-1/3" />
+                      <Skeleton className="h-3.5 w-1/4" />
+                    </div>
+                    {/* Details Skeletons */}
+                    <div className="flex gap-4">
+                      <Skeleton className="h-3 w-20" />
+                      <Skeleton className="h-3 w-20" />
+                      <Skeleton className="h-3 w-20" />
+                    </div>
+                    <Skeleton className="h-px w-full" />
+                    {/* Summary skeleton */}
                     <div className="space-y-2.5">
-                      <div className="flex justify-between">
-                        <div className="h-3.5 bg-gray-250 dark:bg-white/10 rounded w-1/3 animate-pulse" />
-                        <div className="h-3 bg-gray-200 dark:bg-white/5 rounded w-16 animate-pulse" />
+                      <Skeleton className="h-4 w-1/4" />
+                      <Skeleton className="h-3 w-full" />
+                      <Skeleton className="h-3 w-5/6" />
+                    </div>
+                    {/* Experience skeleton */}
+                    <div className="space-y-4 pt-2">
+                      <Skeleton className="h-4 w-1/4" />
+                      <div className="space-y-2.5">
+                        <div className="flex justify-between">
+                          <Skeleton className="h-3.5 w-1/3" />
+                          <Skeleton className="h-3 w-16" />
+                        </div>
+                        <Skeleton className="h-3 w-full" />
+                        <Skeleton className="h-3 w-full" />
                       </div>
-                      <div className="h-3 bg-gray-200 dark:bg-white/5 rounded w-full animate-pulse" />
-                      <div className="h-3 bg-gray-200 dark:bg-white/5 rounded w-full animate-pulse" />
                     </div>
                   </div>
                 </div>
@@ -1376,7 +1392,9 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
           <div 
             className={`
               fixed inset-y-0 right-0 z-50 w-full bg-white dark:bg-[#0a0a0a] flex flex-col h-full gap-3 min-h-0 shadow-2xl transition-all duration-300
-              lg:static lg:w-[426px] lg:shadow-none lg:border lg:border-white/20 lg:dark:border-white/10 lg:rounded-xl lg:flex lg:z-10 lg:p-0 lg:overflow-hidden lg:bg-transparent lg:panel-glass lg:shrink-0 overflow-hidden
+              ${isControlPanelOpen
+                ? 'hidden lg:hidden'
+                : 'lg:static lg:w-[40%] lg:min-w-0 lg:shadow-none lg:border lg:border-white/20 lg:dark:border-white/10 lg:rounded-xl lg:flex lg:z-10 lg:p-0 lg:overflow-hidden lg:bg-transparent lg:panel-glass overflow-hidden'}
               ${activeUtilityPanel === 'analysis' ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}
             `}
             style={{ order: isControlPanelOpen ? 1 : 2 }}
@@ -1506,7 +1524,7 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
             className={`
               fixed inset-y-0 right-0 z-50 w-full bg-white dark:bg-[var(--bg-secondary)] flex flex-col h-full gap-3 min-h-0 shadow-2xl transition-all duration-300
               ${isControlPanelOpen 
-                ? 'translate-x-0 flex lg:static lg:w-[426px] lg:shadow-sm lg:border lg:border-gray-200 lg:dark:border-white/[0.06] lg:rounded-xl lg:z-10 lg:overflow-hidden lg:shrink-0' 
+                ? 'translate-x-0 flex lg:static lg:w-[40%] lg:min-w-0 lg:shadow-sm lg:border lg:border-gray-200 lg:dark:border-white/[0.06] lg:rounded-xl lg:z-10 lg:overflow-hidden' 
                 : 'translate-x-full hidden lg:hidden w-0'}
             `}
             style={{ order: 3 }}

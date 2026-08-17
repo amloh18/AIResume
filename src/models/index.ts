@@ -42,9 +42,3 @@ export { default as SupportNote, type ISupportNote } from './SupportNote';
 
 // Feedback model
 export { default as Feedback, type IFeedback } from './Feedback';
-
-// B2B models
-export { default as Tenant, type ITenant } from './b2b/Tenant';
-export { default as ApiKey, type IApiKey } from './b2b/ApiKey';
-export { default as B2BCandidate, type IB2BCandidate } from './b2b/B2BCandidate';
-export { default as B2BBatch, type IB2BBatch } from './b2b/B2BBatch';

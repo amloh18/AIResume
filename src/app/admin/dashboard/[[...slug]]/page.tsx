@@ -13,7 +13,7 @@ import { ADMIN_THEME } from '@/lib/config/adminTheme';
 import AdminKPIs from '@/components/admin/AdminKPIs';
 import CVJourneyKPIs from '@/components/admin/CVJourneyKPIs';
 import UserManagement from '@/components/admin/UserManagement';
-import BusinessManagement from '@/components/admin/BusinessManagement';
+
 import EmailCampaignManager from '@/components/admin/EmailCampaignManager';
 import DraftManagement from '@/components/admin/DraftManagement';
 import UnifiedNotificationManager from '@/components/admin/UnifiedNotificationManager';
@@ -261,7 +261,7 @@ export default function AdminDashboard() {
                       <UserManagement />
                     )
                   )}
-                  {activeTab === 'management' && activeSubTab === 'businesses' && <BusinessManagement />}
+                  
                   {activeTab === 'management' && activeSubTab === 'campaigns' && <EmailCampaignManager />}
                   {activeTab === 'management' && activeSubTab === 'notifications' && <UnifiedNotificationManager />}
                   {activeTab === 'management' && activeSubTab === 'drafts' && <DraftManagement />}

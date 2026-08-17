@@ -207,13 +207,6 @@ export interface IUser extends Document {
     lastPracticeDate: Date;
   };
 
-  // B2B Support
-  b2b?: {
-    tenantId: mongoose.Types.ObjectId;
-    role: 'admin' | 'recruiter' | 'member';
-    setupComplete?: boolean;
-  };
-
   onboarding?: {
     primary_goal?: 'cv' | 'tracker' | 'auto_apply';
     confidence_score?: number;
@@ -728,20 +721,6 @@ const userSchema = new Schema<IUser>({
   interviewCoach: {
     currentStreak: { type: Number, default: 0 },
     lastPracticeDate: { type: Date }
-  },
-  b2b: {
-    tenantId: {
-      type: Schema.Types.ObjectId,
-      ref: 'Tenant'
-    },
-    role: {
-      type: String,
-      enum: ['admin', 'recruiter', 'member']
-    },
-    setupComplete: {
-      type: Boolean,
-      default: false
-    }
   },
   onboarding: {
     primary_goal: { type: String, enum: ['cv', 'tracker', 'auto_apply'] },

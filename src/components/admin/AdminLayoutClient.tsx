@@ -7,13 +7,11 @@ import { useRouter, usePathname } from 'next/navigation';
 interface AdminLayoutClientProps {
   children: React.ReactNode;
   isAdmin: boolean;
-  isB2B: boolean;
 }
 
 export default function AdminLayoutClient({
   children,
   isAdmin,
-  isB2B,
 }: AdminLayoutClientProps) {
   const [showSelector, setShowSelector] = useState(false);
   const router = useRouter();
@@ -22,7 +20,7 @@ export default function AdminLayoutClient({
   useEffect(() => {
     // Only show selector on first visit to admin dashboard
     // and if user hasn't made a selection before
-    if (isAdmin && !isB2B && pathname === '/admin/dashboard') {
+    if (isAdmin && pathname === '/admin/dashboard') {
       const hasSeenSelector = localStorage.getItem('admin-dashboard-selector-confirmed');
       if (!hasSeenSelector) {
         // Small delay to let the page render first
@@ -32,22 +30,16 @@ export default function AdminLayoutClient({
         return () => clearTimeout(timer);
       }
     }
-  }, [isAdmin, isB2B, pathname]);
+  }, [isAdmin, pathname]);
 
-  const handleSelect = (choice: 'admin' | 'user' | 'b2b') => {
+  const handleSelect = (choice: 'admin' | 'user') => {
     setShowSelector(false);
     
     // Navigate to the selected dashboard
-    switch (choice) {
-      case 'admin':
-        router.push('/admin/dashboard');
-        break;
-      case 'user':
-        router.push('/dashboard');
-        break;
-      case 'b2b':
-        router.push('/b2b/dashboard');
-        break;
+    if (choice === 'admin') {
+      router.push('/admin/dashboard');
+    } else {
+      router.push('/dashboard');
     }
   };
 

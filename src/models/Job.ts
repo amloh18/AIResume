@@ -2,7 +2,6 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IJob extends Document {
   userId: mongoose.Types.ObjectId; // ObjectId, references the User schema
-  tenantId?: mongoose.Types.ObjectId; // B2B Tenant ID for isolation
   jobTitle: string;
   company: string;
   companyLogo?: string; // Company logo URL
@@ -21,7 +20,7 @@ export interface IJob extends Document {
 
   // Active vs. Archived categorization for limit enforcement
   isArchived: boolean; // If true, doesn't count against active job limit
-  isPublic: boolean; // For B2B careers page
+  isPublic: boolean;
   applicationDate?: Date;
   deadline?: Date;
   notes?: string;
@@ -85,11 +84,6 @@ const jobSchema = new Schema<IJob>({
     type: Schema.Types.ObjectId,
     ref: 'User',
     required: [true, 'User ID is required']
-  },
-  tenantId: {
-    type: Schema.Types.ObjectId,
-    ref: 'Tenant',
-    index: true // Fast lookup for B2B queries
   },
   jobTitle: {
     type: String,
