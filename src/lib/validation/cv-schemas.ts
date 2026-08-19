@@ -58,6 +58,8 @@ export const EducationSchema = z.object({
 export const SkillSchema = z.object({
   category: z.string().max(100),
   skills: z.array(z.string().max(100)),
+  levels: z.array(z.number().int().min(1).max(5)).optional(),
+  rating: z.number().int().min(1).max(5).optional(),
 });
 
 // Project schema
@@ -83,6 +85,7 @@ export const CertificateSchema = z.object({
 export const LanguageSchema = z.object({
   language: z.string().min(1, 'Language is required').max(100),
   fluency: z.string().max(100).optional().or(z.literal('')),
+  level: z.number().int().min(1).max(5).optional(),
 });
 
 // Complete CV data structure schema

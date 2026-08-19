@@ -76,6 +76,8 @@ export interface EducationContent {
 export interface SkillsContent {
   category: string;
   skills: string[];
+  levels?: number[];
+  rating?: number;
 }
 
 export interface ProjectContent {
@@ -108,6 +110,7 @@ export interface PublicationContent {
 export interface LanguageContent {
   language: string;
   fluency: string;
+  level?: number;
 }
 
 export interface AwardContent {

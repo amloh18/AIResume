@@ -1190,6 +1190,7 @@ export default function ResumeEnhancerContainer({
           if (!actualCvId && coverLetterData) {
             dispatch({
               type: 'SET_AUTO_COVER_LETTER',
+              skipHistory: true,
               payload: { draft: coverLetterData.body || extractBodyFromContent(coverLetterData.content || ''), coverLetterId: coverLetterData.id || coverLetterData._id || clId }
             });
             dispatch({ type: 'SET_CV_TYPE', payload: 'standalone' });
@@ -1334,6 +1335,7 @@ export default function ResumeEnhancerContainer({
           if (coverLetterData) {
             dispatch({
               type: 'SET_AUTO_COVER_LETTER',
+              skipHistory: true,
               payload: { draft: coverLetterData.body || extractBodyFromContent(coverLetterData.content || ''), coverLetterId: coverLetterData.id || coverLetterData._id || clId }
             });
           }

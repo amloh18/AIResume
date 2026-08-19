@@ -6,6 +6,7 @@ import { ImageIcon, Plus, RefreshCw, ChevronUp, ChevronDown, Trash2, PlusCircle,
 import { SNIPPETS, TITLE_STYLES } from '../registry';
 import { getNestedValue, escapeRegExp, formatCVDate } from '../helpers';
 import { AnimatePresence } from 'framer-motion';
+import { SNIPPET_CATEGORY_JSON_PATH } from '@/lib/utils/cv-snippet-data';
 
 // CORE UI COMPONENTS
 // ==========================================
@@ -125,7 +126,12 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
     }
   };
   const handleKeyDown = (e: React.KeyboardEvent) => { if (!multiline && e.key === 'Enter') e.preventDefault(); };
-  const handleFocus = () => { if (!isEditable) return; setIsEditing(true); if (setFocusedRef) setFocusedRef(contentRef.current); };
+  const handleFocus = () => {
+    if (!isEditable) return;
+    setIsEditing(true);
+    if (setFocusedRef) setFocusedRef(contentRef.current);
+    if (ctx?.setFocusedJsonPath && path) ctx.setFocusedJsonPath(path);
+  };
   const handleBlur = () => {
     if (!isEditable) return;
     setIsEditing(false);
@@ -219,7 +225,7 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
   else if (lowerPath.includes('publisher')) emptyText = "Publisher Name";
 
   const moriHoverClass = moriChatMode ? 'hover:bg-emerald-500/20 hover:shadow-[0_0_0_2px_rgba(16,185,129,0.4)] cursor-pointer rounded-sm' : '';
-  const editHoverClass = isEditable ? 'hover:bg-emerald-50/30 focus:bg-white focus:ring-2 focus:ring-emerald-500/50 focus:shadow-md border border-transparent hover:border-gray-300 focus:border-emerald-400 focus:text-gray-900 rounded-[3px] px-1 py-0.5 -mx-1 -my-0.5' : '';
+  const editHoverClass = isEditable ? 'hover:bg-emerald-50/30 focus:bg-white/80 focus:outline focus:outline-2 focus:outline-emerald-400/60 border border-transparent hover:border-gray-200 focus:border-emerald-300 focus:text-gray-900 rounded-[3px]' : '';
   // Empty-field placeholder chrome only belongs in edit mode — readOnly previews
   // must not show "Type here..."/"END DATE" hints over real documents.
   const emptyPlaceholderClass = isEditable
@@ -409,13 +415,18 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
     if (isHeader || readOnly) return;
     const sourceElement = e.currentTarget as HTMLElement;
     const previewMarkup = buildSnippetPreviewMarkup(sourceElement);
-    e.dataTransfer.setData('application/json', JSON.stringify({ source: 'canvas', zoneId, index, instance }));
+    e.dataTransfer.setData('application/json', JSON.stringify({
+      source: 'canvas',
+      zoneId: bareZoneId,
+      index: (layoutZones?.[bareZoneId] || []).findIndex((block: any) => block.id === instance.id),
+      instance,
+    }));
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setDragImage(getTransparentDragImage(), 0, 0);
     document.dispatchEvent(new CustomEvent('snippet-drag-start', {
       detail: {
-        zoneId,
-        index,
+        zoneId: bareZoneId,
+        index: (layoutZones?.[bareZoneId] || []).findIndex((block: any) => block.id === instance.id),
         instance,
         pointer: { x: e.clientX, y: e.clientY },
         previewMarkup,
@@ -453,7 +464,7 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
       return null;
     }
 
-    const isSidebar = ['sidebar', 'left', 'right'].includes(zoneId);
+    const isSidebar = isNarrow;
     const styleKey = isSidebar && activeTemplate?.sidebarTitleStyle ? activeTemplate.sidebarTitleStyle : activeTemplate?.titleStyle;
     const Renderer = TITLE_STYLES[styleKey] || TITLE_STYLES['standard'];
 
@@ -469,7 +480,7 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
   const isHeaderPage = assignedPage === pageIdx;
 
   const showInlineControls = !readOnly && !ctx?.moriChatMode && primaryTitleKey && isHeaderPage;
-  const canAddListEntry = SnippetComponent && ['Experience', 'Education', 'Projects', 'Certifications', 'Awards', 'Publications', 'Volunteer', 'References'].includes(SnippetComponent.category);
+  const canAddListEntry = SnippetComponent && ['Experience', 'Education', 'Projects', 'Certifications', 'Awards', 'Publications', 'Volunteer', 'References', 'Languages', 'Interests', 'Skills'].includes(SnippetComponent.category);
   const controls = showInlineControls ? (
     <div className="absolute opacity-0 group-hover/inner:opacity-100 transition-all duration-200 flex items-center gap-0.5 z-[200] no-print top-[-24px] right-1 bg-white shadow-[0_4px_12px_rgba(0,0,0,0.08)] border border-gray-200 rounded px-1 py-0.5">
       {/* Action icons group */}
@@ -699,7 +710,12 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
       <div
         data-block-id={instance.id}
         className={`relative group/snippet cv-section-wrapper ${showDropLine ? 'mt-10' : 'mt-0'} ${moriHoverClass}`}
+        data-json-section={SNIPPET_CATEGORY_JSON_PATH[SnippetComponent.category] || ''}
         style={isHeader ? {} : { marginBottom: isLastSnippetInZone ? 0 : 'var(--cv-section-gap, 16px)' }}
+        onMouseDown={() => {
+          const jsonPath = SNIPPET_CATEGORY_JSON_PATH[SnippetComponent.category];
+          if (jsonPath) ctx?.setFocusedJsonPath?.(jsonPath);
+        }}
         onClick={handleMoriClick}
       >
         {showDropLine && (
@@ -709,7 +725,7 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
         )}
         <div className={`relative hover:z-[150] group/inner w-full`}>
           {controls}
-          <div className={`${isNarrow ? 'px-1.5' : 'px-2'} py-1 pointer-events-auto snippet-content relative z-10 w-full min-w-0 ${!content && !readOnly ? 'min-h-[60px] flex flex-col justify-center' : ''}`}>
+          <div className={`${isNarrow ? '' : ''} pointer-events-auto snippet-content relative z-10 w-full min-w-0 ${!content && !readOnly ? 'min-h-[60px] flex flex-col justify-center' : ''}`}>
             {!readOnly && (
               <div className="absolute left-[-1px] right-[-1px] top-[-1px] bottom-[-1px] bg-emerald-50/10 opacity-0 group-hover/inner:opacity-100 pointer-events-none transition-all duration-200 z-[-1] border border-transparent group-hover/inner:border-emerald-400 group-hover/inner:border-dashed shadow-none group-hover/inner:shadow-sm rounded-md group-hover/inner:rounded-tr-none group-hover/inner:rounded-tl-none transition-shadow"></div>
             )}
@@ -732,7 +748,12 @@ const InsertSnippetHandle = ({ onAddSnippet, zoneId, index, alwaysVisible = fals
       <div className="absolute inset-0 cursor-pointer" />
       <div className={`w-full h-[2px] bg-emerald-400 ${alwaysVisible ? 'opacity-100' : 'opacity-0 group-hover/insert:opacity-100'} transition-opacity pointer-events-none absolute left-0 right-0`} />
       <button
-        onClick={() => onAddSnippet(zoneId, index)}
+        type="button"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          onAddSnippet(zoneId, index);
+        }}
         className={`${alwaysVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-90 group-hover/insert:opacity-100 group-hover/insert:scale-100'} transition-all flex items-center gap-1 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-2.5 py-1 rounded-full text-[10px] shadow-md hover:shadow-lg font-sans absolute left-1/2 -translate-x-1/2 cursor-pointer pointer-events-auto`}
       >
         <Plus size={11} /> Add Section
@@ -744,6 +765,7 @@ const InsertSnippetHandle = ({ onAddSnippet, zoneId, index, alwaysVisible = fals
 export const CanvasZone = ({ readOnly = false, zoneId, blocks, cvData, EditableWrapper, handleDrop, moveSnippet, removeSnippet, onReplace, onAddSnippet, onTogglePhoto, onAddListEntry, moveEntry, deleteEntry, dragState, activeTemplate, layoutZones, isDark = false, className = "", onOpenSkillsSuggestions, isDropAllowed, onMoveToZone }: any) => {
   const [isOverZone, setIsOverZone] = useState(false);
   const [dropIntent, setDropIntent] = useState<'valid' | 'invalid' | null>(null);
+  const bareZoneId = (zoneId || '').replace(/_page_\d+$/, '');
   const onDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     setIsOverZone(true);
@@ -800,6 +822,9 @@ export const CanvasZone = ({ readOnly = false, zoneId, blocks, cvData, EditableW
       <div className={`${dragHighlightClass} ${dropStateClass} transition-all duration-300 pb-0 ${className}`} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}>
         
         <div className="flex flex-col gap-0">
+          {!readOnly && blocks.length === 0 && (layoutZones?.[bareZoneId]?.length ?? 0) === 0 && (
+            <InsertSnippetHandle onAddSnippet={onAddSnippet} zoneId={zoneId} index={0} alwaysVisible={true} />
+          )}
           <AnimatePresence mode="popLayout">
             {blocks.map((instance: any, index: number) => (
               <React.Fragment key={instance?.id || `snippet-${index}`}>

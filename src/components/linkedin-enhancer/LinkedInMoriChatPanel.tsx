@@ -9,6 +9,7 @@ import {
   MousePointer2, MessageSquare, History, Edit2, X, Plus, ChevronRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { sanitizeMoriChatMessage } from '@/lib/utils/mori-chat-response';
 
 interface Option {
   label: string;
@@ -195,7 +196,7 @@ export default function LinkedInMoriChatPanel({ cvId, cvType, onCvUpdated, onClo
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: result.message || "I've processed your request.",
+        content: sanitizeMoriChatMessage(result.message) || "I've processed your request.",
         timestamp: Date.now(),
         options: result.options
       };

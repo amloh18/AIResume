@@ -10,25 +10,7 @@ import { isFreeTierPlan } from '@/lib/utils/subscription-helpers';
 import crypto from 'crypto';
 import { ANALYSIS_AGENT_PROMPT, CV_TAILOR_AGENT_PROMPT } from '@/lib/prompts/promptTemplates';
 import { ActivityLogService } from '@/lib/services/activityLogService';
-
-function cleanAndParseJSON(content: string): any {
-  let cleaned = content.trim();
-  const codeBlockRegex = /```(?:json)?\s*([\s\S]*?)```/;
-  const codeBlockMatch = cleaned.match(codeBlockRegex);
-  if (codeBlockMatch) {
-    cleaned = codeBlockMatch[1].trim();
-  }
-
-  let jsonStart = cleaned.indexOf('{');
-  let jsonEnd = cleaned.lastIndexOf('}');
-  if (jsonStart === -1 || jsonEnd === -1 || jsonEnd < jsonStart) {
-    throw new Error('No JSON object found in response');
-  }
-
-  let jsonString = cleaned.substring(jsonStart, jsonEnd + 1);
-  jsonString = jsonString.replace(/,(\s*[}\]])/g, '$1'); // trailing commas fix
-  return JSON.parse(jsonString);
-}
+import { cleanAndParseJSON, inferCvSectionFromPrompt, mergeMoriCvIntoCanvas, parseMoriChatContent } from '@/lib/utils/mori-chat-response';
 
 function injectItemIds(obj: any): any {
   if (!obj || typeof obj !== 'object') return obj;
@@ -70,6 +52,7 @@ export async function POST(req: NextRequest) {
       timestamp: incomingLatest.timestamp || Date.now(),
       selection: incomingLatest.selection
     };
+    const resolvedSelection = selection || latestMessage.selection || inferCvSectionFromPrompt(latestMessage.content);
     // Connect to database and check plan and usage limits
     await getConnection();
 
@@ -398,32 +381,32 @@ Target Role: ${targetRole || 'Not specified'}
 Seniority: ${seniorityLevel || 'Not specified'}
 
 User Selection Context:
-${selection ? `Path: ${selection.path}\nContent: "${selection.text}"` : 'No specific section selected.'}
+${resolvedSelection ? `Path: ${resolvedSelection.path}\nContent: "${resolvedSelection.text}"\nThe user named or implied this section. Apply the edit to this section even if they did not click it on the canvas.` : 'No specific section selected. Infer the section from the user request (for example languages, skills, experience). If it is still unclear, ask a short clarifying question.'}
 (Note: The selection context shows what the user currently has selected/focused on the screen. However, they are NOT restricted to editing only this selection. If the user asks for changes across other sections or the entire CV, you MUST apply updates to all appropriate sections.)
 
 Your task is to analyze the user's request, their current CV, their master CV, and the job description, and return a structured JSON response.
 
 Strict Rules for CV updates:
-1. If the user asks to modify the CV and the request is clear, you MUST suggest updates.
-2. All suggestions/edits must be returned in the \`updatedCV\` property.
-3. The \`updatedCV\` property MUST contain the ENTIRE CV structure (with your updates merged). Do NOT return partial snippets. Truncating any section in \`updatedCV\` will cause user data loss.
-4. When adding a new item to any array (like \`work\`, \`education\`, \`projects\`, \`volunteer\`, etc.), you MUST set its \`id\` to the placeholder string "NEW_ITEM". Never generate random IDs.
-5. Keep \`highlights\` arrays as array of strings (\`string[]\`). Do not change their structure.
-6. The conversational message answering the user must be placed in the \`message\` property.
-7. If the user's query is vague, or if they need to choose a direction (e.g. "make it sound better"), ask a clarifying question in the \`message\` property, and provide 2-4 options in the \`options\` array.
-8. If options are provided, do NOT populate \`updatedCV\`.
-9. The response must be a single JSON object with the format:
+1. If the user asks to modify the CV and the request is clear, you MUST apply the edit in \`patch\`.
+2. NEVER put JSON, CV objects, or field dumps in \`message\`. \`message\` is a short spoken confirmation only (1-2 sentences).
+3. Do NOT return the entire CV. Do not use \`updatedCV\`. Full CV payloads truncate and get shown in chat by accident.
+4. Put only the sections you changed in \`patch\`. Each patch value must be the complete replacement for that section after the edit (include existing items plus any new ones).
+5. Use the field names from <current_cv>: \`experience\` (not \`work\`), \`certifications\` (not \`certificates\`), language items as \`{ "language", "fluency", "level" }\`.
+6. When adding a new item to any array, set its \`id\` to the placeholder string "NEW_ITEM". Never generate random IDs.
+7. Keep \`highlights\` arrays as \`string[]\`. Do not change their structure.
+8. If the user's query is vague, ask a clarifying question in \`message\` and provide 2-4 \`options\`. If options are provided, omit \`patch\`.
+9. Return a single JSON object:
 {
-  "message": "Conversational reply text...",
-  "options": [
-    { "label": "Option label (2-5 words)", "prompt": "Prompt that will be sent if user clicks this" }
-  ],
-  "updatedCV": <Full CV object structure, or null/omitted if no updates>
+  "message": "Short confirmation with no JSON.",
+  "options": null,
+  "patch": {
+    "languages": [ { "id": "NEW_ITEM", "language": "Spanish", "fluency": "Fluent", "level": 4 } ]
+  }
 }
-10. Ensure the response conforms strictly to this JSON format and is valid JSON.
-11. Selection Boundary Rule: Do NOT restrict your modifications only to the 'User Selection Context' if the user's request asks to update other sections, multiple sections, or the entire CV. The selection context is merely a focus guide. If they ask to update the whole CV or sections different from the selection, execute the requested broader updates.
-12. Section Target Protection Rule: Under NO circumstances should you modify, add, or delete items in other, unrelated CV sections if the selection path points to a specific field or section index (e.g. basics.summary, work[i], education[j], projects[k]). If a specific section path is provided or targeted, strictly limit all your updates to that targeted field/section index only, unless the user's text prompt explicitly asks you to update multiple sections or the entire CV.
-13. Strict Targeting Priorities: Prioritize applying edits directly to the exact field provided in 'User Selection Context' (e.g. work[i].highlights[j]). Never introduce random changes in unrelated sections.`;
+10. \`patch\` keys are section names from the current CV (\`languages\`, \`skills\`, \`experience\`, \`education\`, \`basics\`, etc.). Omit \`patch\` when nothing should change.
+11. Selection Boundary Rule: Do NOT restrict modifications only to 'User Selection Context' if the user asks to update other sections or the entire CV.
+12. Section Target Protection Rule: Do not modify unrelated sections unless the user explicitly asks.
+13. Strict Targeting Priorities: Prefer the exact field in 'User Selection Context' when the request is about that selection.`;
 
     const formattedMessages = messages.map((m: any) => `${m.role.toUpperCase()}: ${m.content}`).join('\n\n');
     const prompt = `Chat History:\n${formattedMessages}`;
@@ -431,34 +414,16 @@ Strict Rules for CV updates:
     const result = await callAIWithFallback({
       prompt,
       systemPrompt,
-      temperature: 0.5,
+      temperature: 0.3,
       maxTokens: 4096,
       responseMimeType: 'application/json',
       action: 'mori_chat'
     });
 
-    const aiResponse = result.content;
-
-    let jsonResponse: any = {};
-    try {
-      jsonResponse = JSON.parse(aiResponse);
-    } catch (parseErr) {
-      console.error('Failed to parse structured JSON from Mori response:', parseErr);
-      let cleanText = aiResponse.trim();
-      if (cleanText.startsWith('```')) {
-        cleanText = cleanText.replace(/^```[a-zA-Z]*\n/, '').replace(/\n```$/, '');
-      }
-      try {
-        jsonResponse = JSON.parse(cleanText);
-      } catch (nestedErr) {
-        console.error('Secondary parse attempt failed:', nestedErr);
-        jsonResponse = { message: aiResponse };
-      }
-    }
-
-    const cleanMessage = jsonResponse.message || '';
-    const options = jsonResponse.options || null;
-    let finalCvData = jsonResponse.updatedCV || null;
+    const parsed = parseMoriChatContent(result.content);
+    const cleanMessage = parsed.message;
+    const options = parsed.options;
+    let finalCvData = mergeMoriCvIntoCanvas(cvData, parsed);
 
     if (finalCvData) {
       finalCvData = injectItemIds(finalCvData);

@@ -87,6 +87,10 @@ interface CoverLetterLayoutEngineProps {
   onToggleMoriChat?: () => void;
   onChangeHeaderStyle?: () => void;
   zoom?: number;
+  sessionUndoStack?: unknown[];
+  sessionRedoStack?: unknown[];
+  onSessionUndo?: () => void;
+  onSessionRedo?: () => void;
 }
 
 const splitHtmlIntoBlocks = (html: string): string[] => {
@@ -150,7 +154,11 @@ export default function CoverLetterLayoutEngine({
   showMoriChat,
   onToggleMoriChat,
   onChangeHeaderStyle,
-  zoom = 100
+  zoom = 100,
+  sessionUndoStack,
+  sessionRedoStack,
+  onSessionUndo,
+  onSessionRedo
 }: CoverLetterLayoutEngineProps) {
 
   const HeaderComponent = useMemo(() => {
@@ -404,6 +412,10 @@ export default function CoverLetterLayoutEngine({
                       textColor="black"
                       autoExpand
                       noPadding={true}
+                      sessionUndoStack={sessionUndoStack}
+                      sessionRedoStack={sessionRedoStack}
+                      onSessionUndo={onSessionUndo}
+                      onSessionRedo={onSessionRedo}
                     />
                   </CanvasSectionWrapper>
                 ) : (

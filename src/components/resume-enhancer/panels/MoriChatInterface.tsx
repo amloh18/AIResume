@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
+import { recoverMoriChatResult, resolveMoriEditTarget, sanitizeMoriChatMessage } from '@/lib/utils/mori-chat-response';
 import MoriChatLimitPanel from '@/components/payment/MoriChatLimitPanel';
 import { useSession } from 'next-auth/react';
 import { useAuthModalStore } from '@/lib/stores/authModalStore';
@@ -130,56 +131,45 @@ const MoriChatInterface: React.FC = () => {
       const assistantMsg: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: 'Action cancelled. Please select a section in the CV preview to edit, or ask a question.',
+        content: 'Okay, cancelled. Tell me what you would like to change.',
         timestamp: Date.now()
       };
       setMessages(prev => [...prev, userMsg, assistantMsg]);
       return;
     }
 
-    const editKeywords = ['change', 'edit', 'rewrite', 'make', 'fix', 'improve', 'add', 'remove', 'update', 'refine', 'modify', 'bullet', 'bulletpoint', 'word', 'phrase', 'cv', 'resume'];
     const textLower = textToSend.toLowerCase();
-    const isEditIntent = editKeywords.some(kw => textLower.includes(kw));
+    const isConfirmWholeCV = textLower.includes('apply to whole') || textLower.includes('apply to the whole') || textLower.includes('entire cv') || textLower.includes('proceed');
+    const isQuickOption = messages.length > 1 && messages[messages.length - 1].options?.some(opt => opt.prompt === textToSend || opt.label === textToSend);
+    const target = resolveMoriEditTarget(textToSend, state.cvData);
 
-    if (!currentSelection && isEditIntent) {
-      const isConfirmWholeCV = textLower.includes('apply to whole') || textLower.includes('apply to the whole') || textLower.includes('entire cv') || textLower.includes('proceed') || textLower.includes('about');
-      const isQuickOption = messages.length > 1 && messages[messages.length - 1].options?.some(opt => opt.prompt === textToSend || opt.label === textToSend);
-      
-      if (!isConfirmWholeCV && !isQuickOption) {
-        const userMsg: Message = {
-          id: Date.now().toString(),
-          role: 'user',
-          content: textToSend,
-          timestamp: Date.now()
-        };
-        setMessages(prev => [...prev, userMsg]);
-        setInput('');
-        setIsLoading(true);
-        
-        setTimeout(() => {
-          const warningMsg: Message = {
-            id: (Date.now() + 1).toString(),
-            role: 'assistant',
-            content: "You are asking to make changes, but no CV section is currently selected. Please select a section in the CV preview to focus the edits, or choose below to apply changes to the entire CV.",
-            timestamp: Date.now(),
-            options: [
-              { label: "Apply changes to the entire CV", prompt: `${textToSend} (Apply to whole CV)` },
-              { label: "Cancel", prompt: "Cancel" }
-            ]
-          };
-          setMessages(prev => [...prev, warningMsg]);
-          setIsLoading(false);
-        }, 400);
-        return;
-      }
+    if (!currentSelection && !isConfirmWholeCV && !isQuickOption && target.status === 'ask') {
+      const userMsg: Message = {
+        id: Date.now().toString(),
+        role: 'user',
+        content: textToSend,
+        timestamp: Date.now()
+      };
+      const warningMsg: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: target.message,
+        timestamp: Date.now(),
+        options: [...target.options, { label: 'Cancel', prompt: 'Cancel' }]
+      };
+      setInput('');
+      setMessages((prev) => [...prev, userMsg, warningMsg]);
+      return;
     }
+
+    const inferredSelection = currentSelection || (target.status === 'resolved' ? target.selection : null);
 
     const userMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
       content: textToSend,
       timestamp: Date.now(),
-      selection: currentSelection || undefined
+      selection: inferredSelection || undefined
     };
 
     setMessages(prev => [...prev, userMessage]);
@@ -193,7 +183,7 @@ const MoriChatInterface: React.FC = () => {
         cvType: state.cvType,
         messages: messages.concat(userMessage),
         cvData: state.cvData,
-        selection: currentSelection,
+        selection: inferredSelection,
         jobData: state.jobData,
         targetRole: state.targetRole,
         seniorityLevel: state.seniorityLevel
@@ -220,6 +210,7 @@ const MoriChatInterface: React.FC = () => {
       }
 
       const result = await response.json();
+      const recovered = recoverMoriChatResult(result, state.cvData);
       if (result.limitExhausted) {
         setLimitExhausted(true);
       }
@@ -227,9 +218,9 @@ const MoriChatInterface: React.FC = () => {
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: result.message || "I've processed your request.",
+        content: recovered.message,
         timestamp: Date.now(),
-        options: result.options
+        options: recovered.options
       };
 
       setMessages(prev => [...prev, assistantMessage]);
@@ -239,9 +230,9 @@ const MoriChatInterface: React.FC = () => {
         fetchHistory(); // Refresh history to show new chat
       }
 
-      if (result.updatedCV) {
+      if (recovered.updatedCV) {
         const oldCV = state.cvData;
-        const newCV = result.updatedCV;
+        const newCV = recovered.updatedCV;
 
         updateCVData(newCV);
 
@@ -312,15 +303,31 @@ const MoriChatInterface: React.FC = () => {
             });
           }
 
-          // Compare projects
-          if (Array.isArray(newCV.projects) && Array.isArray(oldCV.projects)) {
-            newCV.projects.forEach((newProj: any, idx: number) => {
-              const oldProj = oldCV.projects.find((p: any) => p.id === newProj.id) || oldCV.projects[idx];
-              if (!oldProj || newProj.description !== oldProj.description || newProj.name !== oldProj.name) {
+          // Compare languages
+          if (Array.isArray(newCV.languages) && Array.isArray(oldCV.languages)) {
+            newCV.languages.forEach((_lang: any, idx: number) => {
+              const oldLang = oldCV.languages[idx];
+              if (!oldLang || JSON.stringify(newCV.languages[idx]) !== JSON.stringify(oldLang)) {
                 window.dispatchEvent(new CustomEvent('mori-cv-updated-section', {
-                  detail: { collection: 'projects', index: idx }
+                  detail: { collection: 'languages', index: idx }
                 }));
               }
+            });
+          }
+
+          // Compare skills
+          if (JSON.stringify(newCV.skills) !== JSON.stringify(oldCV.skills)) {
+            window.dispatchEvent(new CustomEvent('mori-cv-updated-section', {
+              detail: { collection: 'skills', index: 0 }
+            }));
+          }
+
+          // Compare interests
+          if (Array.isArray(newCV.interests)) {
+            newCV.interests.forEach((_item: any, idx: number) => {
+              window.dispatchEvent(new CustomEvent('mori-cv-updated-section', {
+                detail: { collection: 'interests', index: idx }
+              }));
             });
           }
         }
@@ -346,7 +353,11 @@ const MoriChatInterface: React.FC = () => {
       const res = await fetch(`/api/ai/mori-chat/${id}`);
       if (res.ok) {
         const data = await res.json();
-        setMessages(data.chat.messages);
+        setMessages((data.chat.messages || []).map((msg: Message) => (
+          msg.role === 'assistant'
+            ? { ...msg, content: sanitizeMoriChatMessage(msg.content) || msg.content }
+            : msg
+        )));
         setChatId(id);
         setShowHistory(false);
       }

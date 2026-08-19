@@ -49,8 +49,20 @@ function SortableLanguageItem({ language, index, onUpdate, onRemove, onDuplicate
             <option value="Advanced">Advanced</option>
             <option value="Intermediate">Intermediate</option>
             <option value="Basic">Basic</option>
+            <option value="Beginner">Beginner</option>
           </select>
         </div>
+      </div>
+      <div className="mt-4">
+        <label className="block text-white/80 text-sm font-medium mb-2">Intensity ({language.level || 3}/5)</label>
+        <input
+          type="range"
+          min={1}
+          max={5}
+          value={language.level || 3}
+          onChange={(e) => onUpdate(index, 'level', Number(e.target.value))}
+          className="w-full accent-[#80FF00]"
+        />
       </div>
     </div>
   );
@@ -62,8 +74,17 @@ const LanguagesSection: React.FC<LanguagesSectionProps> = ({ data, onUpdate, onA
 
   const updateLanguage = (index: number, field: string, value: any) => {
     const updatedData = [...safeData];
-    if (!updatedData[index]) updatedData[index] = { language: '', fluency: '' };
-    updatedData[index] = { ...updatedData[index], [field]: value };
+    if (!updatedData[index]) updatedData[index] = { language: '', fluency: '', level: 3 };
+    const next = { ...updatedData[index], [field]: value };
+    if (field === 'fluency') {
+      const map: Record<string, number> = { Native: 5, Fluent: 4, Advanced: 4, Intermediate: 3, Basic: 2, Beginner: 1 };
+      next.level = map[value] || 3;
+    }
+    if (field === 'level') {
+      const labels = ['', 'Beginner', 'Basic', 'Intermediate', 'Fluent', 'Native'];
+      next.fluency = labels[Number(value)] || next.fluency;
+    }
+    updatedData[index] = next;
     onUpdate(updatedData);
   };
 
@@ -99,7 +120,7 @@ const LanguagesSection: React.FC<LanguagesSectionProps> = ({ data, onUpdate, onA
           ))}
         </SortableContext>
       </DndContext>
-      <button onClick={() => onUpdate([...safeData, { language: '', fluency: '' }])} className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#80FF00]/50 text-white/50 hover:text-[#80FF00] rounded-none transition-colors flex items-center justify-center gap-2">
+      <button onClick={() => onUpdate([...safeData, { language: '', fluency: '', level: 3 }])} className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#80FF00]/50 text-white/50 hover:text-[#80FF00] rounded-none transition-colors flex items-center justify-center gap-2">
         <Plus size={20} /> Add Language
       </button>
     </>

@@ -1,4 +1,5 @@
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
+import { clampLevel, serializeLanguagesForStorage } from '@/lib/utils/cv-snippet-data';
 
 const buildRichTextDescription = (summary?: string, highlights?: string[]) => {
   const parts: string[] = [];
@@ -111,24 +112,102 @@ export function normalizeCvDataForCanvas(cvData: UnifiedCVDataStructure | null |
           id: `skill-${index}`,
           category: 'Skills',
           skillsText: skillGrp,
+          skills: skillGrp.split(/[,\n]/).map((item: string) => item.trim()).filter(Boolean),
+          levels: [],
         };
       }
+
+      const skills = Array.isArray(skillGrp.skills)
+        ? skillGrp.skills.map((item: any) => (typeof item === 'string' ? item : item?.name || item?.skill || '')).filter(Boolean)
+        : [];
+      const levels = Array.isArray(skillGrp.levels)
+        ? skillGrp.levels.map((level: any) => clampLevel(level, skillGrp.rating || 3))
+        : skills.map((_skill: string, skillIndex: number) => clampLevel(skillGrp.rating, 5 - (skillIndex % 3)));
 
       return {
         ...skillGrp,
         id: skillGrp.id || `skill-${index}`,
         category: skillGrp.category || skillGrp.name || `Skills ${index + 1}`,
-        skillsText: normalizeSkillsText(skillGrp.skills || skillGrp.keywords || []),
+        skills,
+        skillsText: normalizeSkillsText(skillGrp.skillsText || skills || skillGrp.keywords || []),
+        levels,
+        rating: typeof skillGrp.rating === 'number' ? clampLevel(skillGrp.rating) : undefined,
       };
     });
   }
 
-  if (Array.isArray(cvData.languages)) {
-    translated.languages = cvData.languages.map((l: any) => l.language || l).join(', ');
+  if (Array.isArray(cvData.languages) || typeof (cvData as any).languages === 'string') {
+    translated.languages = serializeLanguagesForStorage(cvData.languages);
+  }
+
+  if (Array.isArray(cvData.certificates) || Array.isArray((cvData as any).certifications)) {
+    const source = Array.isArray((cvData as any).certifications) && (cvData as any).certifications.length > 0
+      ? (cvData as any).certifications
+      : cvData.certificates || [];
+    translated.certifications = source.map((cert: any, index: number) => ({
+      ...cert,
+      id: cert.id || `cert-${index}`,
+      name: cert.name || '',
+      issuer: cert.issuer || '',
+      startDate: cert.startDate || cert.date || '',
+      endDate: cert.endDate || '',
+      date: cert.date || cert.startDate || '',
+      url: cert.url || '',
+      description: cert.description || '',
+    }));
+  }
+
+  if (Array.isArray(cvData.awards)) {
+    translated.awards = cvData.awards.map((award: any, index: number) => ({
+      ...award,
+      id: award.id || `award-${index}`,
+      name: award.name || award.title || '',
+      title: award.title || award.name || '',
+      issuer: award.issuer || award.awarder || '',
+      awarder: award.awarder || award.issuer || '',
+      startDate: award.startDate || award.date || '',
+      endDate: award.endDate || '',
+      date: award.date || award.startDate || '',
+      summary: award.summary || '',
+    }));
+  }
+
+  if (Array.isArray(cvData.publications)) {
+    translated.publications = cvData.publications.map((pub: any, index: number) => ({
+      ...pub,
+      id: pub.id || `pub-${index}`,
+      title: pub.title || pub.name || '',
+      name: pub.name || pub.title || '',
+      publisher: pub.publisher || '',
+      startDate: pub.startDate || pub.releaseDate || '',
+      endDate: pub.endDate || '',
+      releaseDate: pub.releaseDate || pub.startDate || '',
+      description: pub.description || pub.summary || '',
+      summary: pub.summary || pub.description || '',
+    }));
+  }
+
+  if (Array.isArray(cvData.references)) {
+    translated.references = cvData.references.map((ref: any, index: number) => ({
+      ...ref,
+      id: ref.id || `ref-${index}`,
+      name: ref.name || '',
+      role: ref.role || ref.reference || '',
+      contact: ref.contact || ref.url || '',
+      reference: ref.reference || ref.role || '',
+    }));
   }
 
   if (Array.isArray(cvData.interests)) {
-    translated.interests = cvData.interests.map((i: any) => i.name || i).join(', ');
+    translated.interests = cvData.interests.map((item: any, index: number) => (
+      typeof item === 'string'
+        ? { name: item, keywords: [] }
+        : { ...item, id: item.id || `int-${index}`, name: item.name || '', keywords: item.keywords || [] }
+    ));
+  }
+
+  if (cvData.stats) {
+    translated.stats = cvData.stats;
   }
 
   translated.sectionTitles = translated.sectionTitles || {
