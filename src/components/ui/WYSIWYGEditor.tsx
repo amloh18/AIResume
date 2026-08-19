@@ -24,6 +24,10 @@ interface WYSIWYGEditorProps {
   textColor?: string;
   autoExpand?: boolean;
   noPadding?: boolean;
+  sessionUndoStack?: unknown[];
+  sessionRedoStack?: unknown[];
+  onSessionUndo?: () => void;
+  onSessionRedo?: () => void;
 }
 
 // Hook to get toolbar props for external rendering
@@ -136,7 +140,11 @@ const WYSIWYGEditor: React.FC<WYSIWYGEditorProps> = ({
   grammarLocale,
   textColor = 'white',
   autoExpand = false,
-  noPadding = false
+  noPadding = false,
+  sessionUndoStack,
+  sessionRedoStack,
+  onSessionUndo,
+  onSessionRedo
 }) => {
   // Use the WYSIWYG hook directly - hooks must be called unconditionally
   const {
@@ -308,14 +316,14 @@ const WYSIWYGEditor: React.FC<WYSIWYGEditorProps> = ({
           >
             <WYSIWYGToolbar
               formatState={formatState}
-              undoStack={undoStack}
-              redoStack={redoStack}
+              undoStack={sessionUndoStack || undoStack}
+              redoStack={sessionRedoStack || redoStack}
               onBold={handleBold}
               onItalic={handleItalic}
               onUnderline={handleUnderline}
               onBulletList={handleBulletList}
-              onUndo={handleUndo}
-              onRedo={handleRedo}
+              onUndo={onSessionUndo || handleUndo}
+              onRedo={onSessionRedo || handleRedo}
               onStrikethrough={() => {
                 if (editorRef.current) {
                   editorRef.current.focus();

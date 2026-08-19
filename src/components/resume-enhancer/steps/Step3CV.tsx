@@ -622,13 +622,18 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
       const handleClose = () => {
         setActiveUtilityPanel(null);
       };
+      const handleOpenAnalysis = () => {
+        setActiveUtilityPanel('analysis');
+      };
       window.addEventListener('set-builder-sidebar', handleSidebar);
       window.addEventListener('open-templates', handleTemplates);
       window.addEventListener('close-utility-panel', handleClose);
+      window.addEventListener('open-analysis-panel', handleOpenAnalysis);
       return () => {
         window.removeEventListener('set-builder-sidebar', handleSidebar);
         window.removeEventListener('open-templates', handleTemplates);
         window.removeEventListener('close-utility-panel', handleClose);
+        window.removeEventListener('open-analysis-panel', handleOpenAnalysis);
       };
     }, []);
 
@@ -1532,13 +1537,14 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
             {/* Mori Chat — always in DOM, visibility toggled via CSS to keep portal target stable */}
             <div className={`flex-1 flex flex-col min-h-0 overflow-hidden ${activeUtilityPanel === 'mori' ? '' : 'hidden'}`}>
               {/* Mori Chat Header */}
-              <div className="sticky top-0 z-20 flex items-center justify-between px-4 py-3 bg-white/95 dark:bg-[var(--bg-secondary)] backdrop-blur-sm border-b border-gray-100 dark:border-white/[0.04]">
+              <div className="sticky top-0 z-20 bg-white/95 dark:bg-[var(--bg-secondary)] backdrop-blur-sm">
+                <UtilityPanelPill activePanel="mori" />
+                <div className="flex lg:hidden items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-white/[0.04]">
                 <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
                   <Sparkles className="w-3.5 h-3.5" />
                   <h3 className="text-xs font-extrabold uppercase tracking-wider">Mori Chat</h3>
                 </div>
                 <div className="flex items-center gap-2">
-                  <UtilityPanelPill activePanel="mori" />
                   <button
                     onClick={() => dispatch({ type: 'SET_MORI_CHAT_MODE', payload: false })}
                     className="p-1 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-white hover:bg-gray-150 dark:hover:bg-white/5 transition-colors"
@@ -1546,6 +1552,7 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
                   >
                     <X className="w-4 h-4" />
                   </button>
+                </div>
                 </div>
               </div>
               

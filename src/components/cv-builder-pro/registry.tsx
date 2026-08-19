@@ -2,6 +2,8 @@ import React from 'react';
 import { Quote, AlignJustify, Columns, LayoutTemplate, Sidebar, User, Briefcase, GraduationCap, FolderOpen, Award, Trophy, Code2, Globe, Heart, BookOpen, Users, MapPin, Phone, Mail, Linkedin, Link as LinkIcon, Github, Twitter, Facebook, Instagram, Youtube, Dribbble, Twitch, Figma, Gitlab } from 'lucide-react';
 import ListEntry from './components/ListEntry';
 import { AvatarEditable } from './components/AvatarEditable';
+import { LevelMeter } from './components/LevelMeter';
+import { deriveCareerStats, normalizeInterestsList, normalizeLanguages } from '@/lib/utils/cv-snippet-data';
 // UNIFIED TYPOGRAPHY SYSTEM
 // ==========================================
 const TYPOGRAPHY = {
@@ -232,6 +234,8 @@ const normalizeSkillGroups = (rawSkills: any) => {
             skillsText: group,
             skills,
             rating: undefined,
+            levels: undefined,
+            groupIndex: index,
             pathCategory: `skills.${index}.category`,
             pathSkills: `skills.${index}.skillsText`,
           };
@@ -247,6 +251,8 @@ const normalizeSkillGroups = (rawSkills: any) => {
           skillsText,
           skills,
           rating: typeof group?.rating === 'number' ? group.rating : undefined,
+          levels: Array.isArray(group?.levels) ? group.levels : undefined,
+          groupIndex: index,
           pathCategory: `skills.${index}.category`,
           pathSkills: `skills.${index}.skillsText`,
         };
@@ -257,11 +263,13 @@ const normalizeSkillGroups = (rawSkills: any) => {
   if (rawSkills && typeof rawSkills === 'object') {
     return Object.entries(rawSkills)
       .filter(([, value]) => typeof value === 'string' && value.trim())
-      .map(([key, value]) => ({
+      .map(([key, value], index) => ({
         category: LEGACY_SKILL_GROUP_LABELS[key] || key,
         skillsText: value as string,
         skills: splitSkillsText(value),
         rating: undefined,
+        levels: undefined as number[] | undefined,
+        groupIndex: index,
         pathCategory: null,
         pathSkills: `skills.${key}`,
       }));
@@ -273,6 +281,8 @@ const normalizeSkillGroups = (rawSkills: any) => {
       skillsText: rawSkills,
       skills: splitSkillsText(rawSkills),
       rating: undefined,
+      levels: undefined as number[] | undefined,
+      groupIndex: 0,
       pathCategory: null,
       pathSkills: 'skills',
     }];
@@ -286,8 +296,9 @@ const flattenSkillItems = (rawSkills: any) => (
     group.skills.map((label, index) => ({
       label,
       category: group.category,
-      rating: clampSkillRating(group.rating, 5 - (index % 3)),
+      rating: clampSkillRating(group.levels?.[index] ?? group.rating, 3),
       pathSkills: group.pathSkills,
+      pathLevel: `skills.${group.groupIndex ?? 0}.levels.${index}`,
       skillIndex: index
     }))
   )
@@ -721,6 +732,7 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
   }},
   'skills-pills': { id: 'skills-pills', name: 'Solid Pills', category: 'Skills', render: ({ data, Editable, isDark, Title }: any) => {
     const allSkills = flattenSkillItems(data?.skills);
+    if (allSkills.length === 0) return null;
     if (allSkills.length > 10) {
       const groups = normalizeSkillGroups(data?.skills);
       if (groups.length === 0) return null;
@@ -744,6 +756,7 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
   }},
   'skills-round-pills': { id: 'skills-round-pills', name: 'Round Pills', category: 'Skills', render: ({ data, Editable, isDark, Title }: any) => {
     const allSkills = flattenSkillItems(data?.skills);
+    if (allSkills.length === 0) return null;
     if (allSkills.length > 10) {
       const groups = normalizeSkillGroups(data?.skills);
       if (groups.length === 0) return null;
@@ -766,8 +779,9 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
     return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-wrap gap-2 cv-gap-sm">{allSkills.map((skill: any, i: number) => (<span key={i} className={`max-w-full break-words px-4 py-1.5 text-[0.85em] font-semibold rounded-full border cv-item-avoid ${isDark ? "bg-slate-700 border-slate-600 text-slate-200" : "bg-slate-100 border-slate-200 text-slate-700"}`}><Editable path={skill.pathSkills} overrideValue={skill.label} arrayIndex={skill.skillIndex} /></span>))}</div></div>);
   }},
   'skills-dots': { id: 'skills-dots', name: 'Dot Rating', category: 'Skills', render: ({ data, Editable, isDark, Title }: any) => {
-    const allSkills = flattenSkillItems(data?.skills).slice(0, 6);
-    return (<div className="snippet-anim w-full cv-section"><Title titleKey="skills" /><div className="grid grid-cols-1 gap-y-2 gap-x-4 cv-gap-sm">{allSkills.map((skill: any, i: number) => (<div key={i} className={`flex justify-between items-center ${TYPOGRAPHY.body} cv-item-avoid`}><span className={`min-w-0 truncate font-medium ${isDark ? 'text-gray-200' : 'text-gray-800'}`}><Editable path={skill.pathSkills} overrideValue={skill.label} arrayIndex={skill.skillIndex} nowrap /></span><div className="flex gap-1.5 shrink-0">{[...Array(5)].map((_, dotIdx) => (<div key={dotIdx} className={`w-2 h-2 rounded-full ${dotIdx < skill.rating ? 'cv-accent-bg' : (isDark ? 'bg-slate-700' : 'bg-gray-200')}`}></div>))}</div></div>))}</div></div>);
+    const allSkills = flattenSkillItems(data?.skills);
+    if (allSkills.length === 0) return null;
+    return (<div className="snippet-anim w-full cv-section"><Title titleKey="skills" /><div className="grid grid-cols-1 gap-y-2 gap-x-4 cv-gap-sm">{allSkills.map((skill: any, i: number) => (<div key={i} className={`flex justify-between items-center ${TYPOGRAPHY.body} cv-item-avoid`}><span className={`min-w-0 truncate font-medium ${isDark ? 'text-gray-200' : 'text-gray-800'}`}><Editable path={skill.pathSkills} overrideValue={skill.label} arrayIndex={skill.skillIndex} nowrap /></span><LevelMeter path={skill.pathLevel} value={skill.rating} valueType="number" isDark={isDark} /></div>))}</div></div>);
   }},
   'skills-category-inline': { id: 'skills-category-inline', name: 'Category Inline', category: 'Skills', render: ({ data, Editable, isDark, Title }: any) => {
     const groups = normalizeSkillGroups(data?.skills);
@@ -790,33 +804,55 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
   }},
 
   // === LANGUAGES ===
-  'languages-comma': { id: 'languages-comma', name: 'Comma Separated', category: 'Languages', render: ({ data, Editable, isDark, Title }: any) => (
-    <div className="snippet-anim cv-section cv-item-avoid"><Title titleKey="languages" /><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><Editable path="languages" /></div></div>
-  )},
-  'languages-dots': { id: 'languages-dots', name: 'Dot Rating', category: 'Languages', render: ({ data, isDark, Title }: any) => {
-    const items = (data.languages || '').split(',').map((s: string) => s.trim()).filter(Boolean);
-    return (<div className="snippet-anim w-full cv-section cv-item-avoid"><Title titleKey="languages" /><div className="grid grid-cols-1 gap-y-2 gap-x-4 cv-gap-sm">{items.map((item: string, i: number) => { const rating = i % 2 === 0 ? 5 : 4; return (<div key={i} className={`flex justify-between items-center ${TYPOGRAPHY.body}`}><span className={`min-w-0 truncate font-medium ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>{item.split('(')[0]}</span><div className="flex gap-1.5 shrink-0">{[...Array(5)].map((_, dotIdx) => (<div key={dotIdx} className={`w-2 h-2 rounded-full ${dotIdx < rating ? 'cv-accent-bg' : (isDark ? 'bg-slate-700' : 'bg-gray-200')}`}></div>))}</div></div>); })}</div></div>);
+  'languages-comma': { id: 'languages-comma', name: 'Comma Separated', category: 'Languages', render: ({ data, Editable, isDark, Title }: any) => {
+    const langs = normalizeLanguages(data?.languages);
+    if (langs.length === 0) return null;
+    return (
+      <div className="snippet-anim cv-section cv-item-avoid">
+        <Title titleKey="languages" />
+        <div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+          {langs.map((lang, i) => (
+            <span key={lang.pathLanguage}>
+              <Editable path={lang.pathLanguage} />
+              <> (<Editable path={lang.pathFluency} nowrap />)</>
+              {i < langs.length - 1 ? ', ' : ''}
+            </span>
+          ))}
+        </div>
+      </div>
+    );
   }},
-  'languages-bars': { id: 'languages-bars', name: 'Progress Bars', category: 'Languages', render: ({ data, isDark, Title }: any) => {
-    const items = (data.languages || '').split(',').map((s: string) => s.trim()).filter(Boolean);
-    return (<div className="snippet-anim w-full cv-section cv-item-avoid"><Title titleKey="languages" /><div className="flex flex-col gap-3 cv-gap-sm">{items.map((item: string, i: number) => { const widths = ['w-[95%]', 'w-[85%]', 'w-[65%]', 'w-[50%]']; return (<div key={i} className={`flex justify-between items-center ${TYPOGRAPHY.body}`}><span className={`w-1/2 truncate font-medium ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>{item.split('(')[0]}</span><div className={`w-1/2 h-2 rounded-full overflow-hidden ${isDark ? 'bg-slate-800' : 'bg-gray-200'}`}><div className={`h-full cv-accent-bg ${widths[i] || 'w-[70%]'}`}></div></div></div>); })}</div></div>);
+  'languages-dots': { id: 'languages-dots', name: 'Dot Rating', category: 'Languages', render: ({ data, Editable, isDark, Title }: any) => {
+    const langs = normalizeLanguages(data?.languages);
+    if (langs.length === 0) return null;
+    return (<div className="snippet-anim w-full cv-section cv-item-avoid"><Title titleKey="languages" /><div className="grid grid-cols-1 gap-y-2 gap-x-4 cv-gap-sm">{langs.map((lang) => (<div key={lang.pathLanguage} className={`flex justify-between items-center ${TYPOGRAPHY.body}`}><span className={`min-w-0 truncate font-medium ${isDark ? 'text-gray-200' : 'text-gray-800'}`}><Editable path={lang.pathLanguage} nowrap /></span><LevelMeter path={lang.pathFluency} value={lang.fluency || lang.level} isDark={isDark} /></div>))}</div></div>);
   }},
-  'languages-pills': { id: 'languages-pills', name: 'Solid Pills', category: 'Languages', render: ({ data, isDark, Title }: any) => {
-    const items = (data.languages || '').split(',').map((s: string) => s.trim()).filter(Boolean);
-    return (<div className="snippet-anim cv-section cv-item-avoid"><Title titleKey="languages" /><div className="flex flex-wrap gap-2 cv-gap-sm">{items.map((item: string, i: number) => (<span key={i} className={`max-w-full break-words px-3 py-1.5 text-[0.85em] font-semibold rounded-md border ${isDark ? 'bg-slate-700 border-slate-600 text-slate-200' : 'bg-slate-100 border-slate-200 text-slate-700'}`}>{item.split('(')[0]}</span>))}</div></div>);
+  'languages-bars': { id: 'languages-bars', name: 'Progress Bars', category: 'Languages', render: ({ data, Editable, isDark, Title }: any) => {
+    const langs = normalizeLanguages(data?.languages);
+    if (langs.length === 0) return null;
+    return (<div className="snippet-anim w-full cv-section cv-item-avoid"><Title titleKey="languages" /><div className="flex flex-col gap-3 cv-gap-sm">{langs.map((lang) => (<div key={lang.pathLanguage} className={`flex justify-between items-center ${TYPOGRAPHY.body}`}><span className={`w-1/2 truncate font-medium ${isDark ? 'text-gray-200' : 'text-gray-700'}`}><Editable path={lang.pathLanguage} nowrap /></span><LevelMeter path={lang.pathFluency} value={lang.fluency || lang.level} variant="bar" isDark={isDark} /></div>))}</div></div>);
   }},
-  'languages-round-pills': { id: 'languages-round-pills', name: 'Round Pills', category: 'Languages', render: ({ data, isDark, Title }: any) => {
-    const items = (data.languages || '').split(',').map((s: string) => s.trim()).filter(Boolean);
-    return (<div className="snippet-anim cv-section cv-item-avoid"><Title titleKey="languages" /><div className="flex flex-wrap gap-2 cv-gap-sm">{items.map((item: string, i: number) => (<span key={i} className={`max-w-full break-words px-4 py-1.5 text-[0.85em] font-semibold rounded-full border ${isDark ? 'bg-slate-700 border-slate-600 text-slate-200' : 'bg-slate-100 border-slate-200 text-slate-700'}`}>{item.split('(')[0]}</span>))}</div></div>);
+  'languages-pills': { id: 'languages-pills', name: 'Solid Pills', category: 'Languages', render: ({ data, Editable, isDark, Title }: any) => {
+    const langs = normalizeLanguages(data?.languages);
+    if (langs.length === 0) return null;
+    return (<div className="snippet-anim cv-section cv-item-avoid"><Title titleKey="languages" /><div className="flex flex-wrap gap-2 cv-gap-sm">{langs.map((lang) => (<span key={lang.pathLanguage} className={`max-w-full break-words px-3 py-1.5 text-[0.85em] font-semibold rounded-md border ${isDark ? 'bg-slate-700 border-slate-600 text-slate-200' : 'bg-slate-100 border-slate-200 text-slate-700'}`}><Editable path={lang.pathLanguage} /></span>))}</div></div>);
+  }},
+  'languages-round-pills': { id: 'languages-round-pills', name: 'Round Pills', category: 'Languages', render: ({ data, Editable, isDark, Title }: any) => {
+    const langs = normalizeLanguages(data?.languages);
+    if (langs.length === 0) return null;
+    return (<div className="snippet-anim cv-section cv-item-avoid"><Title titleKey="languages" /><div className="flex flex-wrap gap-2 cv-gap-sm">{langs.map((lang) => (<span key={lang.pathLanguage} className={`max-w-full break-words px-4 py-1.5 text-[0.85em] font-semibold rounded-full border ${isDark ? 'bg-slate-700 border-slate-600 text-slate-200' : 'bg-slate-100 border-slate-200 text-slate-700'}`}><Editable path={lang.pathLanguage} /></span>))}</div></div>);
   }},
 
   // === INTERESTS ===
-  'interests-comma': { id: 'interests-comma', name: 'Comma Separated', category: 'Interests', render: ({ data, Editable, isDark, Title }: any) => (
-    <div className="snippet-anim cv-section cv-item-avoid"><Title titleKey="interests" /><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><Editable path="interests" /></div></div>
-  )},
-  'interests-pills': { id: 'interests-pills', name: 'Outline Pills', category: 'Interests', render: ({ data, isDark, Title }: any) => {
-    const items = (data.interests || '').split(',').map((s: string) => s.trim()).filter(Boolean);
-    return (<div className="snippet-anim cv-section cv-item-avoid"><Title titleKey="interests" /><div className="flex flex-wrap gap-2 cv-gap-sm">{items.map((item: string, i: number) => (<span key={i} className={`max-w-full break-words px-3 py-1.5 text-[0.85em] font-medium border rounded-full ${isDark ? 'border-slate-500 text-slate-200' : 'border-gray-400 text-gray-800'}`}>{item}</span>))}</div></div>);
+  'interests-comma': { id: 'interests-comma', name: 'Comma Separated', category: 'Interests', render: ({ data, Editable, isDark, Title }: any) => {
+    const items = normalizeInterestsList(data?.interests);
+    if (items.length === 0) return null;
+    return (<div className="snippet-anim cv-section cv-item-avoid"><Title titleKey="interests" /><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{items.map((item, i) => (<span key={item.path}><Editable path={item.path} />{i < items.length - 1 ? ', ' : ''}</span>))}</div></div>);
+  }},
+  'interests-pills': { id: 'interests-pills', name: 'Outline Pills', category: 'Interests', render: ({ data, Editable, isDark, Title }: any) => {
+    const items = normalizeInterestsList(data?.interests);
+    if (items.length === 0) return null;
+    return (<div className="snippet-anim cv-section cv-item-avoid"><Title titleKey="interests" /><div className="flex flex-wrap gap-2 cv-gap-sm">{items.map((item) => (<span key={item.path} className={`max-w-full break-words px-3 py-1.5 text-[0.85em] font-medium border rounded-full ${isDark ? 'border-slate-500 text-slate-200' : 'border-gray-400 text-gray-800'}`}><Editable path={item.path} /></span>))}</div></div>);
   }},
 
   // === SIDEBAR SPECIFIC ===
@@ -955,20 +991,23 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
       </div>
     );
   }}
-  ,'summary-stats': { id: 'summary-stats', name: 'Stats + Paragraph', category: 'Summary', render: ({ data, Editable, isDark, Title }: any) => (
+  ,'summary-stats': { id: 'summary-stats', name: 'Stats + Paragraph', category: 'Summary', render: ({ data, Editable, isDark, Title }: any) => {
+    const stats = deriveCareerStats(data);
+    return (
     <div className="snippet-anim cv-section">
       <Title titleKey="summary" />
       <div className={`flex gap-4 mb-4 py-3 border-y ${isDark ? 'border-slate-700' : 'border-gray-200'}`}>
-        {[{val:'5+',lbl:'Years Exp.'},{val:'20+',lbl:'Projects'},{val:'3',lbl:'Industries'}].map((item,i) => (
-          <div key={i} className="flex flex-col items-center flex-1 text-center">
-            <span className="text-[1.6em] font-black cv-accent-text leading-none">{item.val}</span>
+        {[{val: stats.years, lbl:'Years Exp.', path: 'stats.years'},{val: stats.projects, lbl:'Projects', path: 'stats.projects'},{val: stats.industries, lbl:'Industries', path: 'stats.industries'}].map((item) => (
+          <div key={item.path} className="flex flex-col items-center flex-1 text-center">
+            <span className="text-[1.6em] font-black cv-accent-text leading-none"><Editable path={item.path} overrideValue={item.val} nowrap /></span>
             <span className={`text-[9px] uppercase tracking-widest font-bold mt-0.5 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{item.lbl}</span>
           </div>
         ))}
       </div>
       <div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><Editable path="basics.summary" multiline /></div>
     </div>
-  )}
+    );
+  }}
   ,'summary-card-dark': { id: 'summary-card-dark', name: 'Statement Card', category: 'Summary', render: ({ data, Editable, isDark, Title }: any) => (
     <div className="snippet-anim cv-section">
       <Title titleKey="summary" />
@@ -1069,26 +1108,30 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
   // =======================================================
   // NEW SNIPPETS — SKILLS (5 new)
   // =======================================================
-  ,'skills-grouped-sections': { id: 'skills-grouped-sections', name: 'Grouped by Category', category: 'Skills', render: ({ data, isDark, Title }: any) => {
+  ,'skills-grouped-sections': { id: 'skills-grouped-sections', name: 'Grouped by Category', category: 'Skills', render: ({ data, Editable, isDark, Title }: any) => {
     const groups = normalizeSkillGroups(data?.skills);
     if (groups.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-col gap-3">{groups.map((group, index) => (<div key={`${group.category}-${index}`}><div className={`text-[0.72em] uppercase tracking-widest font-bold mb-1.5 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{group.category}</div><div className="flex flex-wrap gap-1.5">{group.skills.map((skill: string, i: number) => (<span key={i} className={`max-w-full break-words text-[0.85em] px-2.5 py-0.5 rounded-md font-medium ${isDark ? 'bg-slate-700 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>{skill}</span>))}</div></div>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-col gap-3">{groups.map((group, index) => (<div key={`${group.category}-${index}`}><div className={`text-[0.72em] uppercase tracking-widest font-bold mb-1.5 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{group.pathCategory ? <Editable path={group.pathCategory} nowrap /> : group.category}</div><div className="flex flex-wrap gap-1.5">{group.pathSkills ? <Editable path={group.pathSkills} /> : group.skills.map((skill: string, i: number) => (<span key={i} className={`max-w-full break-words text-[0.85em] px-2.5 py-0.5 rounded-md font-medium ${isDark ? 'bg-slate-700 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>{skill}</span>))}</div></div>))}</div></div>);
   }}
-  ,'skills-star-rating': { id: 'skills-star-rating', name: 'Star Rating', category: 'Skills', render: ({ data, isDark, Title }: any) => {
-    const items = flattenSkillItems(data?.skills).slice(0, 8);
-    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-col gap-2">{items.map((skill: any, i: number) => (<div key={i} className="flex justify-between items-center"><span className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{skill.label}</span><div className="flex gap-0.5">{[1,2,3,4,5].map(s => (<span key={s} className={`text-[13px] ${s <= skill.rating ? 'cv-accent-text' : (isDark ? 'text-slate-700' : 'text-gray-200')}`}>★</span>))}</div></div>))}</div></div>);
-  }}
-  ,'skills-two-col-list': { id: 'skills-two-col-list', name: 'Two Column List', category: 'Skills', render: ({ data, isDark, Title }: any) => {
+  ,'skills-star-rating': { id: 'skills-star-rating', name: 'Star Rating', category: 'Skills', render: ({ data, Editable, isDark, Title }: any) => {
     const items = flattenSkillItems(data?.skills);
-    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="grid grid-cols-2 gap-x-4 gap-y-1">{items.map((skill: any, i: number) => (<div key={i} className={`flex items-center gap-1.5 ${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><span className="cv-accent-text text-[10px] shrink-0">●</span>{skill.label}</div>))}</div></div>);
+    if (items.length === 0) return null;
+    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-col gap-2">{items.map((skill: any, i: number) => (<div key={i} className="flex justify-between items-center"><span className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><Editable path={skill.pathSkills} overrideValue={skill.label} arrayIndex={skill.skillIndex} nowrap /></span><LevelMeter path={skill.pathLevel} value={skill.rating} valueType="number" variant="stars" isDark={isDark} /></div>))}</div></div>);
   }}
-  ,'skills-accent-badges': { id: 'skills-accent-badges', name: 'Accent Solid Badges', category: 'Skills', render: ({ data, isDark, Title }: any) => {
+  ,'skills-two-col-list': { id: 'skills-two-col-list', name: 'Two Column List', category: 'Skills', render: ({ data, Editable, isDark, Title }: any) => {
     const items = flattenSkillItems(data?.skills);
-    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-wrap gap-1.5">{items.map((skill: any, i: number) => (<span key={i} className="max-w-full break-words text-[10px] font-bold px-2.5 py-1 rounded-md cv-accent-bg text-white tracking-wide">{skill.label}</span>))}</div></div>);
+    if (items.length === 0) return null;
+    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="grid grid-cols-2 gap-x-4 gap-y-1">{items.map((skill: any, i: number) => (<div key={i} className={`flex items-center gap-1.5 ${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><span className="cv-accent-text text-[10px] shrink-0">●</span><Editable path={skill.pathSkills} overrideValue={skill.label} arrayIndex={skill.skillIndex} nowrap /></div>))}</div></div>);
   }}
-  ,'skills-compact-inline': { id: 'skills-compact-inline', name: 'Compact Inline All', category: 'Skills', render: ({ data, isDark, Title }: any) => {
+  ,'skills-accent-badges': { id: 'skills-accent-badges', name: 'Accent Solid Badges', category: 'Skills', render: ({ data, Editable, isDark, Title }: any) => {
+    const items = flattenSkillItems(data?.skills);
+    if (items.length === 0) return null;
+    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-wrap gap-1.5">{items.map((skill: any, i: number) => (<span key={i} className="max-w-full break-words text-[10px] font-bold px-2.5 py-1 rounded-md cv-accent-bg text-white tracking-wide"><Editable path={skill.pathSkills} overrideValue={skill.label} arrayIndex={skill.skillIndex} nowrap /></span>))}</div></div>);
+  }}
+  ,'skills-compact-inline': { id: 'skills-compact-inline', name: 'Compact Inline All', category: 'Skills', render: ({ data, Editable, isDark, Title }: any) => {
     const all = flattenSkillItems(data?.skills);
-    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><p className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'} leading-relaxed`}>{all.map((skill: any, i: number) => <span key={i}>{skill.label}{i < all.length-1 && <span className={`mx-1.5 ${isDark ? 'text-gray-600' : 'text-gray-300'}`}>·</span>}</span>)}</p></div>);
+    if (all.length === 0) return null;
+    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><p className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'} leading-relaxed`}>{all.map((skill: any, i: number) => <span key={i}><Editable path={skill.pathSkills} overrideValue={skill.label} arrayIndex={skill.skillIndex} nowrap />{i < all.length-1 && <span className={`mx-1.5 ${isDark ? 'text-gray-600' : 'text-gray-300'}`}>·</span>}</span>)}</p></div>);
   }}
 
   // =======================================================
@@ -1149,59 +1192,58 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
   // =======================================================
   // NEW SNIPPETS — LANGUAGES (5 new)
   // =======================================================
-  ,'languages-grid-cards': { id: 'languages-grid-cards', name: 'Grid Cards', category: 'Languages', render: ({ data, isDark, Title }: any) => {
-    const langs = Array.isArray(data?.languages) ? data.languages : []; if (langs.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="languages" /><div className="grid grid-cols-2 gap-2">{langs.map((l: any, i: number) => (<div key={i} className={`p-3 rounded-lg border flex justify-between items-center ${isDark ? 'border-slate-700 bg-slate-800/50' : 'border-gray-200 bg-gray-50'}`}><span className={`${TYPOGRAPHY.itemTitle} text-[0.85em] ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>{l.name}</span><span className={`text-[9px] font-bold uppercase tracking-wider ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{l.level}</span></div>))}</div></div>);
+  ,'languages-grid-cards': { id: 'languages-grid-cards', name: 'Grid Cards', category: 'Languages', render: ({ data, Editable, isDark, Title }: any) => {
+    const langs = normalizeLanguages(data?.languages); if (langs.length === 0) return null;
+    return (<div className="snippet-anim cv-section"><Title titleKey="languages" /><div className="grid grid-cols-2 gap-2">{langs.map((l) => (<div key={l.pathLanguage} className={`p-3 rounded-lg border flex justify-between items-center ${isDark ? 'border-slate-700 bg-slate-800/50' : 'border-gray-200 bg-gray-50'}`}><span className={`${TYPOGRAPHY.itemTitle} text-[0.85em] ${isDark ? 'text-gray-200' : 'text-gray-800'}`}><Editable path={l.pathLanguage} nowrap /></span><span className={`text-[9px] font-bold uppercase tracking-wider ${isDark ? 'text-gray-400' : 'text-gray-500'}`}><Editable path={l.pathFluency} nowrap /></span></div>))}</div></div>);
   }}
-  ,'languages-accent-pills': { id: 'languages-accent-pills', name: 'Accent Pills', category: 'Languages', render: ({ data, isDark, Title }: any) => {
-    const langs = Array.isArray(data?.languages) ? data.languages : []; if (langs.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="languages" /><div className="flex flex-wrap gap-2">{langs.map((l: any, i: number) => (<div key={i} className={`max-w-full break-words px-3 py-1.5 rounded-full text-[0.85em] font-bold cv-accent-bg text-white flex items-center gap-2`}><span className="min-w-0">{l.name}</span><span className="w-1 h-1 rounded-full bg-white/40" /><span className="opacity-80 font-semibold">{l.level}</span></div>))}</div></div>);
+  ,'languages-accent-pills': { id: 'languages-accent-pills', name: 'Accent Pills', category: 'Languages', render: ({ data, Editable, isDark, Title }: any) => {
+    const langs = normalizeLanguages(data?.languages); if (langs.length === 0) return null;
+    return (<div className="snippet-anim cv-section"><Title titleKey="languages" /><div className="flex flex-wrap gap-2">{langs.map((l) => (<div key={l.pathLanguage} className={`max-w-full break-words px-3 py-1.5 rounded-full text-[0.85em] font-bold cv-accent-bg text-white flex items-center gap-2`}><span className="min-w-0"><Editable path={l.pathLanguage} nowrap /></span><span className="w-1 h-1 rounded-full bg-white/40" /><span className="opacity-80 font-semibold"><Editable path={l.pathFluency} nowrap /></span></div>))}</div></div>);
   }}
-  ,'languages-two-col': { id: 'languages-two-col', name: 'Two Column', category: 'Languages', render: ({ data, isDark, Title }: any) => {
-    const langs = Array.isArray(data?.languages) ? data.languages : []; if (langs.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="languages" /><div className="grid grid-cols-2 gap-x-4 gap-y-1">{langs.map((l: any, i: number) => (<div key={i} className={`flex justify-between items-center py-1 border-b ${isDark ? 'border-slate-800' : 'border-gray-100'}`}><span className={`${TYPOGRAPHY.body} font-medium ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>{l.name}</span><span className={`${TYPOGRAPHY.body} text-[0.9em] italic ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{l.level}</span></div>))}</div></div>);
+  ,'languages-two-col': { id: 'languages-two-col', name: 'Two Column', category: 'Languages', render: ({ data, Editable, isDark, Title }: any) => {
+    const langs = normalizeLanguages(data?.languages); if (langs.length === 0) return null;
+    return (<div className="snippet-anim cv-section"><Title titleKey="languages" /><div className="grid grid-cols-2 gap-x-4 gap-y-1">{langs.map((l) => (<div key={l.pathLanguage} className={`flex justify-between items-center py-1 border-b ${isDark ? 'border-slate-800' : 'border-gray-100'}`}><span className={`${TYPOGRAPHY.body} font-medium ${isDark ? 'text-gray-200' : 'text-gray-800'}`}><Editable path={l.pathLanguage} nowrap /></span><span className={`${TYPOGRAPHY.body} text-[0.9em] italic ${isDark ? 'text-gray-400' : 'text-gray-500'}`}><Editable path={l.pathFluency} nowrap /></span></div>))}</div></div>);
   }}
-  ,'languages-minimal-list': { id: 'languages-minimal-list', name: 'Minimal Inline', category: 'Languages', render: ({ data, isDark, Title }: any) => {
-    const langs = Array.isArray(data?.languages) ? data.languages : []; if (langs.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="languages" /><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{langs.map((l: any, i: number) => (<span key={i}>{l.name} <span className={isDark ? 'text-gray-500' : 'text-gray-400'}>({l.level})</span>{i < langs.length - 1 && ', '}</span>))}</div></div>);
+  ,'languages-minimal-list': { id: 'languages-minimal-list', name: 'Minimal Inline', category: 'Languages', render: ({ data, Editable, isDark, Title }: any) => {
+    const langs = normalizeLanguages(data?.languages); if (langs.length === 0) return null;
+    return (<div className="snippet-anim cv-section"><Title titleKey="languages" /><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{langs.map((l, i) => (<span key={l.pathLanguage}><Editable path={l.pathLanguage} nowrap /> <span className={isDark ? 'text-gray-500' : 'text-gray-400'}>(<Editable path={l.pathFluency} nowrap />)</span>{i < langs.length - 1 && ', '}</span>))}</div></div>);
   }}
-  ,'languages-circle-dots': { id: 'languages-circle-dots', name: 'Circle Level Dots', category: 'Languages', render: ({ data, isDark, Title }: any) => {
-    const langs = Array.isArray(data?.languages) ? data.languages : []; if (langs.length === 0) return null;
-    const getLvl = (l: string) => { const str = (l||'').toLowerCase(); return str.includes('native')||str.includes('bilingual')?5:str.includes('fluent')||str.includes('proficient')||str.includes('advanced')?4:str.includes('intermediate')?3:str.includes('basic')?2:1; };
-    return (<div className="snippet-anim cv-section"><Title titleKey="languages" /><div className="flex flex-col gap-2">{langs.map((l: any, i: number) => { const lvl = getLvl(l.level); return (<div key={i} className="flex justify-between items-center"><span className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{l.name}</span><div className="flex gap-1">{[1,2,3,4,5].map(s => (<span key={s} className={`w-2.5 h-2.5 rounded-full ${s <= lvl ? 'cv-accent-bg' : (isDark ? 'bg-slate-700' : 'bg-gray-200')}`} />))}</div></div>)})}</div></div>);
+  ,'languages-circle-dots': { id: 'languages-circle-dots', name: 'Circle Level Dots', category: 'Languages', render: ({ data, Editable, isDark, Title }: any) => {
+    const langs = normalizeLanguages(data?.languages); if (langs.length === 0) return null;
+    return (<div className="snippet-anim cv-section"><Title titleKey="languages" /><div className="flex flex-col gap-2">{langs.map((l) => (<div key={l.pathLanguage} className="flex justify-between items-center"><span className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><Editable path={l.pathLanguage} nowrap /></span><LevelMeter path={l.pathFluency} value={l.fluency || l.level} isDark={isDark} /></div>))}</div></div>);
   }}
 
   // =======================================================
   // NEW SNIPPETS — INTERESTS (5 new)
   // =======================================================
-  ,'interests-accent-pills': { id: 'interests-accent-pills', name: 'Accent Pills', category: 'Interests', render: ({ data, isDark, Title }: any) => {
-    const items = typeof data?.interests === 'string' ? data.interests.split(',').filter(Boolean) : []; if (items.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="interests" /><div className="flex flex-wrap gap-2">{items.map((item: string, i: number) => (<span key={i} className={`max-w-full break-words px-3 py-1 rounded-full text-[0.85em] font-medium border ${isDark ? 'border-slate-600 text-gray-300' : 'border-gray-200 text-gray-600'} cv-accent-text-hover`}>{item.trim()}</span>))}</div></div>);
+  ,'interests-accent-pills': { id: 'interests-accent-pills', name: 'Accent Pills', category: 'Interests', render: ({ data, Editable, isDark, Title }: any) => {
+    const items = normalizeInterestsList(data?.interests); if (items.length === 0) return null;
+    return (<div className="snippet-anim cv-section"><Title titleKey="interests" /><div className="flex flex-wrap gap-2">{items.map((item) => (<span key={item.path} className={`max-w-full break-words px-3 py-1 rounded-full text-[0.85em] font-medium border ${isDark ? 'border-slate-600 text-gray-300' : 'border-gray-200 text-gray-600'} cv-accent-text-hover`}><Editable path={item.path} /></span>))}</div></div>);
   }}
-  ,'interests-icon-grid': { id: 'interests-icon-grid', name: 'Icon Grid', category: 'Interests', render: ({ data, isDark, Title }: any) => {
-    const items = typeof data?.interests === 'string' ? data.interests.split(',').filter(Boolean) : []; if (items.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="interests" /><div className="grid grid-cols-2 gap-2">{items.map((item: string, i: number) => (<div key={i} className={`flex items-center gap-2 ${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><span className="text-[1.2em] opacity-80">✦</span>{item.trim()}</div>))}</div></div>);
+  ,'interests-icon-grid': { id: 'interests-icon-grid', name: 'Icon Grid', category: 'Interests', render: ({ data, Editable, isDark, Title }: any) => {
+    const items = normalizeInterestsList(data?.interests); if (items.length === 0) return null;
+    return (<div className="snippet-anim cv-section"><Title titleKey="interests" /><div className="grid grid-cols-2 gap-2">{items.map((item) => (<div key={item.path} className={`flex items-center gap-2 ${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><span className="text-[1.2em] opacity-80">✦</span><Editable path={item.path} /></div>))}</div></div>);
   }}
-  ,'interests-minimal-bold': { id: 'interests-minimal-bold', name: 'Minimal Bold List', category: 'Interests', render: ({ data, isDark, Title }: any) => {
-    const items = typeof data?.interests === 'string' ? data.interests.split(',').filter(Boolean) : []; if (items.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="interests" /><p className={`${TYPOGRAPHY.body} font-bold ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>{items.map((item: string, i: number) => <span key={i}>{item.trim()}{i < items.length - 1 && <span className={`mx-1.5 font-normal ${isDark ? 'text-gray-600' : 'text-gray-300'}`}>·</span>}</span>)}</p></div>);
+  ,'interests-minimal-bold': { id: 'interests-minimal-bold', name: 'Minimal Bold List', category: 'Interests', render: ({ data, Editable, isDark, Title }: any) => {
+    const items = normalizeInterestsList(data?.interests); if (items.length === 0) return null;
+    return (<div className="snippet-anim cv-section"><Title titleKey="interests" /><p className={`${TYPOGRAPHY.body} font-bold ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>{items.map((item, i) => <span key={item.path}><Editable path={item.path} />{i < items.length - 1 && <span className={`mx-1.5 font-normal ${isDark ? 'text-gray-600' : 'text-gray-300'}`}>·</span>}</span>)}</p></div>);
   }}
-  ,'interests-card': { id: 'interests-card', name: 'Card Layout', category: 'Interests', render: ({ data, isDark, Title }: any) => {
-    const items = typeof data?.interests === 'string' ? data.interests.split(',').filter(Boolean) : []; if (items.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="interests" /><div className="flex flex-wrap gap-2">{items.map((item: string, i: number) => (<div key={i} className={`max-w-full break-words px-3 py-1.5 rounded-lg border ${TYPOGRAPHY.body} ${isDark ? 'border-slate-700 bg-slate-800/50 text-gray-300' : 'border-gray-200 bg-gray-50 text-gray-700'}`}>{item.trim()}</div>))}</div></div>);
+  ,'interests-card': { id: 'interests-card', name: 'Card Layout', category: 'Interests', render: ({ data, Editable, isDark, Title }: any) => {
+    const items = normalizeInterestsList(data?.interests); if (items.length === 0) return null;
+    return (<div className="snippet-anim cv-section"><Title titleKey="interests" /><div className="flex flex-wrap gap-2">{items.map((item) => (<div key={item.path} className={`max-w-full break-words px-3 py-1.5 rounded-lg border ${TYPOGRAPHY.body} ${isDark ? 'border-slate-700 bg-slate-800/50 text-gray-300' : 'border-gray-200 bg-gray-50 text-gray-700'}`}><Editable path={item.path} /></div>))}</div></div>);
   }}
-  ,'interests-two-col': { id: 'interests-two-col', name: 'Two Column', category: 'Interests', render: ({ data, isDark, Title }: any) => {
-    const items = typeof data?.interests === 'string' ? data.interests.split(',').filter(Boolean) : []; if (items.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="interests" /><div className="grid grid-cols-2 gap-x-4 gap-y-1">{items.map((item: string, i: number) => (<div key={i} className={`flex items-center gap-1.5 ${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><span className="cv-accent-text text-[10px] shrink-0">▸</span>{item.trim()}</div>))}</div></div>);
+  ,'interests-two-col': { id: 'interests-two-col', name: 'Two Column', category: 'Interests', render: ({ data, Editable, isDark, Title }: any) => {
+    const items = normalizeInterestsList(data?.interests); if (items.length === 0) return null;
+    return (<div className="snippet-anim cv-section"><Title titleKey="interests" /><div className="grid grid-cols-2 gap-x-4 gap-y-1">{items.map((item) => (<div key={item.path} className={`flex items-center gap-1.5 ${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><span className="cv-accent-text text-[10px] shrink-0">▸</span><Editable path={item.path} /></div>))}</div></div>);
   }}
 
   // =======================================================
   // NEW SNIPPETS — SIDEBAR (5 new)
   // =======================================================
-  ,'sidebar-skills-grouped': { id: 'sidebar-skills-grouped', name: 'Skills by Group', category: 'Sidebar', render: ({ data, isDark, Title }: any) => {
+  ,'sidebar-skills-grouped': { id: 'sidebar-skills-grouped', name: 'Skills by Group', category: 'Sidebar', render: ({ data, Editable, isDark, Title }: any) => {
     const groups = normalizeSkillGroups(data?.skills);
     if (groups.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-col gap-4">{groups.map((group, index) => (<div key={`${group.category}-${index}`}><div className={`text-[0.78em] uppercase tracking-widest font-bold mb-2 ${isDark ? 'text-gray-400' : 'text-gray-500'} border-b pb-1 ${isDark ? 'border-slate-700' : 'border-gray-200'}`}>{group.category}</div><div className="flex flex-wrap gap-1.5">{group.skills.map((skill: string, i: number) => (<span key={i} className={`max-w-full break-words text-[0.85em] px-2 py-1 rounded font-medium ${isDark ? 'bg-slate-800 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>{skill}</span>))}</div></div>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-col gap-4">{groups.map((group, index) => (<div key={`${group.category}-${index}`}><div className={`text-[0.78em] uppercase tracking-widest font-bold mb-2 ${isDark ? 'text-gray-400' : 'text-gray-500'} border-b pb-1 ${isDark ? 'border-slate-700' : 'border-gray-200'}`}>{group.pathCategory ? <Editable path={group.pathCategory} nowrap /> : group.category}</div><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{group.pathSkills ? <Editable path={group.pathSkills} /> : group.skills.join(', ')}</div></div>))}</div></div>);
   }}
   ,'sidebar-bio': { id: 'sidebar-bio', name: 'Mini Bio', category: 'Sidebar', render: ({ data, Editable, isDark, Title }: any) => (
     <div className="snippet-anim cv-section">
@@ -1211,23 +1253,26 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
       </div>
     </div>
   )}
-  ,'sidebar-key-stats': { id: 'sidebar-key-stats', name: 'Career Stats', category: 'Sidebar', render: ({ data, Editable, isDark, Title }: any) => (
+  ,'sidebar-key-stats': { id: 'sidebar-key-stats', name: 'Career Stats', category: 'Sidebar', render: ({ data, Editable, isDark, Title }: any) => {
+    const stats = deriveCareerStats(data);
+    return (
     <div className="snippet-anim cv-section">
       <Title titleKey="summary" overrideClass="hidden" />
       <div className="flex flex-col gap-3">
-        {[{val:'5+',lbl:'Years Exp.'},{val:'20+',lbl:'Projects'},{val:'3',lbl:'Industries'}].map((item,i) => (
-          <div key={i} className={`flex items-center gap-4 py-2 border-b ${isDark ? 'border-slate-800' : 'border-gray-100'}`}>
-            <span className="text-[1.6em] font-black cv-accent-text leading-none w-12 text-right">{item.val}</span>
+        {[{val: stats.years, lbl:'Years Exp.', path: 'stats.years'},{val: stats.projects, lbl:'Projects', path: 'stats.projects'},{val: stats.industries, lbl:'Industries', path: 'stats.industries'}].map((item) => (
+          <div key={item.path} className={`flex items-center gap-4 py-2 border-b ${isDark ? 'border-slate-800' : 'border-gray-100'}`}>
+            <span className="text-[1.6em] font-black cv-accent-text leading-none w-12 text-right"><Editable path={item.path} overrideValue={item.val} nowrap /></span>
             <span className={`text-[9px] uppercase tracking-widest font-bold ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{item.lbl}</span>
           </div>
         ))}
       </div>
     </div>
-  )}
-  ,'sidebar-tech-list': { id: 'sidebar-tech-list', name: 'Tech Stack List', category: 'Sidebar', render: ({ data, isDark, Title }: any) => {
+    );
+  }}
+  ,'sidebar-tech-list': { id: 'sidebar-tech-list', name: 'Tech Stack List', category: 'Sidebar', render: ({ data, Editable, isDark, Title }: any) => {
     const all = flattenSkillItems(data?.skills);
     if (all.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-col gap-1.5">{all.map((skill: any, i: number) => (<div key={i} className={`flex items-center gap-2 ${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><span className="cv-accent-text text-[12px]">✓</span>{skill.label}</div>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-col gap-1.5">{all.map((skill: any, i: number) => (<div key={i} className={`flex items-center gap-2 ${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><span className="cv-accent-text text-[12px]">✓</span><Editable path={skill.pathSkills} overrideValue={skill.label} arrayIndex={skill.skillIndex} nowrap /></div>))}</div></div>);
   }}
   ,'sidebar-social-links': { id: 'sidebar-social-links', name: 'Social Links', category: 'Sidebar', render: ({ data, Editable, isDark, Title, showIcons, design }: any) => (
     <div className="snippet-anim cv-section">

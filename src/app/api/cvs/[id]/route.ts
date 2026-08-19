@@ -105,7 +105,7 @@ function getDefaultItemForField(field: string): any {
     certificates: { name: '', date: '', issuer: '', url: '', description: '' },
     publications: { name: '', publisher: '', releaseDate: '', url: '', summary: '' },
     skills: { category: '', skills: [] },
-    languages: { language: '', fluency: '' },
+    languages: { language: '', fluency: '', level: 3 },
     interests: { name: '', keywords: [] },
     references: { name: '', reference: '' },
     projects: { name: '', startDate: '', endDate: '', description: '', highlights: [], keywords: [], url: '' }

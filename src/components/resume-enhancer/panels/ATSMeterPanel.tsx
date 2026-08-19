@@ -798,40 +798,27 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ isUtilityPanelOpen
     <div className="h-full flex flex-col bg-[#F9FAFB] dark:bg-[var(--bg-secondary)] rounded-xl border border-gray-200 dark:border-white/[0.06] overflow-y-auto scrollbar-hide text-gray-900 dark:text-white snap-y snap-mandatory scroll-smooth">
 
       {/* ── Header ── */}
-      <div className="sticky top-0 z-20 flex items-center justify-between px-4 py-3 bg-white/95 dark:bg-[var(--bg-secondary)] backdrop-blur-sm border-b border-gray-100 dark:border-white/[0.04]">
+      <div className="sticky top-0 z-20 relative bg-white/95 dark:bg-[var(--bg-secondary)] backdrop-blur-sm">
+        <UtilityPanelPill activePanel="analysis" />
+        <div className="flex lg:hidden items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-white/[0.04]">
         <div className="flex items-center gap-2">
           <h3 className="text-xs font-extrabold uppercase tracking-wider text-gray-700 dark:text-gray-200">Analysis</h3>
-          {/* Refresh Analysis next to text */}
-          <button
-            onClick={runAnalysis}
-            disabled={isAnalyzing}
-            onMouseEnter={() => setHoveredIcon('refresh')}
-            onMouseLeave={() => setHoveredIcon(null)}
-            className="p-1 rounded-full text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-200/50 dark:hover:bg-white/10 transition-all disabled:opacity-40 hover:scale-110 active:scale-95 duration-150 cursor-pointer shrink-0 animate-fadeIn"
-            title="Refresh Analysis"
-          >
-            {isAnalyzing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
-          </button>
         </div>
         
         <div className="flex items-center gap-2">
-          {!isUtilityPanelOpen && (
-            <UtilityPanelPill activePanel={null} />
-          )}
           {onClose && (
             <button
               onClick={onClose}
-              className="p-1 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-white hover:bg-gray-150 dark:hover:bg-white/5 transition-colors lg:hidden border-none bg-transparent"
+              className="p-1 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-white hover:bg-gray-150 dark:hover:bg-white/5 transition-colors border-none bg-transparent"
               title="Close Analysis"
             >
               <X className="w-4 h-4" />
             </button>
           )}
         </div>
-
-        {/* Floating rich hover info card with animated step-by-step motion graphics */}
-        {hoveredIcon && !isUtilityPanelOpen && (
-          <div className="absolute top-[48px] left-4 right-4 bg-white dark:bg-[#191c1b] border border-gray-200 dark:border-white/[0.08] rounded-2xl p-4 shadow-[0_12px_30px_rgba(0,0,0,0.15)] dark:shadow-[0_12px_30px_rgba(0,0,0,0.5)] z-50 transition-all duration-300 animate-fadeIn pointer-events-none">
+        </div>
+        {hoveredIcon && (
+          <div className="absolute top-[56px] left-4 right-4 bg-white dark:bg-[#191c1b] border border-gray-200 dark:border-white/[0.08] rounded-2xl p-4 shadow-[0_12px_30px_rgba(0,0,0,0.15)] dark:shadow-[0_12px_30px_rgba(0,0,0,0.5)] z-50 transition-all duration-300 animate-fadeIn pointer-events-none">
             <PanelWorkflowDemo panelType={hoveredIcon} />
           </div>
         )}
@@ -923,6 +910,16 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ isUtilityPanelOpen
                   <div className="font-extrabold text-gray-900 dark:text-white">{state.targetRole}</div>
                   <div className="text-[10px] text-gray-500 dark:text-gray-400 font-medium capitalize mt-0.5">{state.seniorityLevel} Level</div>
                 </div>
+                <button
+                  onClick={runAnalysis}
+                  disabled={isAnalyzing}
+                  onMouseEnter={() => setHoveredIcon('refresh')}
+                  onMouseLeave={() => setHoveredIcon(null)}
+                  className="p-1.5 rounded-full text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-200/50 dark:hover:bg-white/10 transition-all disabled:opacity-40 hover:scale-110 active:scale-95 duration-150 cursor-pointer shrink-0"
+                  title="Refresh Analysis"
+                >
+                  {isAnalyzing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                </button>
               </div>
             )}
           </div>
@@ -991,9 +988,23 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ isUtilityPanelOpen
 
               {/* Verdict text details */}
               <div className="min-w-0 flex-grow">
+                <div className="flex items-start justify-between gap-2">
                 <h4 className="text-sm font-black text-gray-900 dark:text-white leading-snug">
                   {state.jobData?.title || state.jobData?.jobTitle || state.targetRole || 'Target Role'}
                 </h4>
+                {state.cvType === 'journey' && (
+                  <button
+                    onClick={runAnalysis}
+                    disabled={isAnalyzing}
+                    onMouseEnter={() => setHoveredIcon('refresh')}
+                    onMouseLeave={() => setHoveredIcon(null)}
+                    className="p-1 rounded-full text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-200/50 dark:hover:bg-white/10 transition-all disabled:opacity-40 shrink-0"
+                    title="Refresh Analysis"
+                  >
+                    {isAnalyzing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                  </button>
+                )}
+                </div>
                 <p 
                   className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 leading-relaxed font-semibold truncate"
                   title={`${report.verdict || 'Moderate match'} · ${report.verdict_sub || 'strong foundation'}`}

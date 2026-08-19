@@ -285,6 +285,10 @@ export default function Step4CoverLetter({ onComplete }: Step4CoverLetterProps) 
                   showMoriChat={showMoriChat}
                   onToggleMoriChat={() => setShowMoriChat(!showMoriChat)}
                   onChangeHeaderStyle={() => setShowTemplateSelector(true)}
+                  sessionUndoStack={state.undoStack}
+                  sessionRedoStack={state.redoStack}
+                  onSessionUndo={() => dispatch({ type: 'UNDO' })}
+                  onSessionRedo={() => dispatch({ type: 'REDO' })}
                 />
               )}
             </div>

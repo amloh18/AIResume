@@ -110,3 +110,58 @@ export const initialData = {
         { id: "ref2", name: "Sarah Jenkins", role: "VP of Engineering at Innovate AI", contact: "s.jenkins@innovateai.io | +1 555-9012" }
     ]
 };
+
+const MOCK_CANVAS_PREVIEW = {
+    ...initialData,
+    skills: [
+        { category: 'Core Languages', skillsText: 'Python, R, SQL, JavaScript, HTML/CSS', skills: ['Python', 'R', 'SQL', 'JavaScript', 'HTML/CSS'], levels: [5, 4, 5, 4, 4] },
+        { category: 'Frameworks', skillsText: 'TensorFlow, PyTorch, React, Node.js', skills: ['TensorFlow', 'PyTorch', 'React', 'Node.js'], levels: [4, 4, 5, 4] },
+        { category: 'Tools & Tech', skillsText: 'Tableau, PowerBI, Docker, Git, AWS', skills: ['Tableau', 'PowerBI', 'Docker', 'Git', 'AWS'], levels: [4, 4, 3, 5, 4] },
+    ],
+    languages: [
+        { language: 'English', fluency: 'Native', level: 5 },
+        { language: 'Hindi', fluency: 'Fluent', level: 4 },
+        { language: 'Spanish', fluency: 'Basic', level: 2 },
+    ],
+    interests: [
+        { name: 'Open-source contributing' },
+        { name: 'Photography' },
+        { name: 'Chess' },
+        { name: 'Bouldering' },
+    ],
+    stats: { years: '8+', projects: '20+', industries: '3' },
+};
+
+const hasPreviewContent = (value: any): boolean => {
+    if (value == null) return false;
+    if (Array.isArray(value)) return value.length > 0;
+    if (typeof value === 'string') return value.trim().length > 0;
+    if (typeof value === 'object') return Object.values(value).some(hasPreviewContent);
+    return true;
+};
+
+export function getCanvasSnippetPreviewData(realData: any) {
+    const mock: any = JSON.parse(JSON.stringify(MOCK_CANVAS_PREVIEW));
+    if (!realData) return mock;
+
+    const merged: any = {
+        ...mock,
+        ...realData,
+        basics: { ...mock.basics, ...(realData.basics || {}) },
+        sectionTitles: { ...mock.sectionTitles, ...(realData.sectionTitles || {}) },
+        stats: { ...mock.stats, ...(realData.stats || {}) },
+    };
+
+    Object.keys(mock).forEach((key) => {
+        if (key === 'basics' || key === 'sectionTitles' || key === 'stats' || key === 'metadata') return;
+        if (!hasPreviewContent(realData[key])) {
+            merged[key] = mock[key];
+        }
+    });
+
+    if (!String(realData?.basics?.name || '').trim()) merged.basics.name = mock.basics.name;
+    if (!String(realData?.basics?.title || realData?.basics?.label || '').trim()) merged.basics.title = mock.basics.title;
+    if (!String(realData?.basics?.summary || '').trim()) merged.basics.summary = mock.basics.summary;
+
+    return merged;
+}

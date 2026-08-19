@@ -2,10 +2,10 @@
 
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, ArrowRight, AlertTriangle, Shield } from 'lucide-react';
+import { ArrowRight, AlertTriangle, Shield } from 'lucide-react';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
-import { CANVAS_TEMPLATES, TEMPLATE_CATEGORIES } from '@/components/cv-builder-pro/registry';
-import { StaticLayoutRenderer, EditableField } from '@/components/cv-builder-pro/components/CoreUI';
+import { TemplateLibraryGrid } from '@/components/cv-builder-pro/components/TemplateLibraryGrid';
+import { EditableField } from '@/components/cv-builder-pro/components/CoreUI';
 import { initialData } from '@/lib/templates/canvas-initial-data';
 
 interface Step2TemplateProps {
@@ -42,7 +42,6 @@ export default function Step2Template({ onComplete }: Step2TemplateProps) {
   const [pendingTemplate, setPendingTemplate] = useState<any>(null);
 
   const isJourneyCV = state.cvType === 'journey';
-  const isDarkUI = typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
 
   const ReadOnlyWrapper = useMemo(() => function Editable(props: any) {
     return <EditableField {...props} data={initialData} readOnly={true} />;
@@ -104,60 +103,22 @@ export default function Step2Template({ onComplete }: Step2TemplateProps) {
         </motion.div>
 
         <div className="space-y-12">
-          {TEMPLATE_CATEGORIES.map(cat => {
-            const catTemplates = CANVAS_TEMPLATES.filter(tpl => cat.types.includes(tpl.type));
-            if (catTemplates.length === 0) return null;
-
-            return (
-              <div key={cat.id} className="relative">
-                <div className={`sticky top-0 z-10 backdrop-blur-md py-4 mb-6 flex items-center gap-3 border-b ${isDarkUI ? 'border-[#222] bg-[#1a230f]/80 text-white' : 'border-gray-200 bg-gray-50/80 text-gray-900'}`}>
-                  <span className="text-emerald-500">{cat.icon}</span>
-                  <h2 className="text-xl font-bold tracking-tight">{cat.name}</h2>
-                  <span className={`text-sm font-medium ${isDarkUI ? 'text-gray-400' : 'text-gray-500'}`}>— {cat.desc}</span>
+          <TemplateLibraryGrid
+            activeTemplateId={state.selectedTemplate?.id}
+            onSelect={handleTemplateSelect}
+            cvData={initialData}
+            ReadOnlyWrapper={ReadOnlyWrapper}
+            renderMeta={(tpl) => {
+              if (!isJourneyCV) return null;
+              const atsInfo = getATSFriendliness(getTemplateATSScoreCap(tpl));
+              return (
+                <div className={`inline-flex items-center gap-1 w-fit text-[10px] px-1.5 py-0.5 rounded-full ${atsInfo.bgColor} ${atsInfo.color}`}>
+                  <Shield className="w-3 h-3" />
+                  {atsInfo.label}
                 </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-                  {catTemplates.map(tpl => {
-                    const isSelected = state.selectedTemplate?.id === tpl.id;
-                    const atsScore = getTemplateATSScoreCap(tpl);
-                    const atsInfo = getATSFriendliness(atsScore);
-
-                    return (
-                      <motion.div
-                        key={tpl.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        onClick={() => handleTemplateSelect(tpl)}
-                        className={`group relative rounded-xl border-2 cursor-pointer transition-all overflow-hidden flex flex-col hover:-translate-y-1 hover:shadow-xl ${isDarkUI ? 'bg-[#141414]' : 'bg-white'} ${isSelected ? 'border-emerald-500 ring-4 ring-emerald-500/20' : (isDarkUI ? 'border-[#333] hover:border-emerald-500/50' : 'border-gray-200 hover:border-emerald-500/50')}`}
-                      >
-                        <div className={`p-3 border-b flex flex-col gap-2 z-10 shrink-0 ${isDarkUI ? 'bg-[#111] border-[#2a2a2a]' : 'bg-gray-50 border-gray-200'}`}>
-                          <div className="flex justify-between items-center">
-                            <div className={`font-bold text-sm tracking-wide ${isDarkUI ? 'text-gray-100' : 'text-gray-900'}`}>{tpl.name}</div>
-                            {isSelected && <span className="bg-emerald-500/20 text-emerald-500 text-[10px] px-2 py-0.5 rounded font-bold tracking-wide uppercase">Active</span>}
-                          </div>
-                          
-                          {isJourneyCV && (
-                            <div className={`inline-flex items-center gap-1 w-fit text-xs px-2 py-0.5 rounded-full ${atsInfo.bgColor} ${atsInfo.color}`}>
-                              <Shield className="w-3 h-3" />
-                              {atsInfo.label}
-                            </div>
-                          )}
-                        </div>
-                        
-                        <div className={`relative w-full flex justify-center items-center p-6 flex-1 overflow-hidden pointer-events-none ${isDarkUI ? 'bg-[#1a1a1a]' : 'bg-gray-100'}`}>
-                          <div className="relative w-[200px] h-[283px] bg-white shadow-md overflow-hidden rounded-sm ring-1 ring-gray-300">
-                            <div className="absolute top-0 left-0 w-[794px] h-[1123px] origin-top-left" style={{ transform: 'scale(0.2518)' }}>
-                              <StaticLayoutRenderer template={tpl} cvData={initialData} ReadOnlyWrapper={ReadOnlyWrapper} />
-                            </div>
-                          </div>
-                        </div>
-                      </motion.div>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
+              );
+            }}
+          />
         </div>
 
         <AnimatePresence>

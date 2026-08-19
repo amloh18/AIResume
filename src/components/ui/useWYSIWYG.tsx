@@ -141,7 +141,11 @@ export function useWYSIWYG(value: string, onChange: (value: string) => void) {
     } else if (!editorRef.current) {
       console.warn('⚠️ useWYSIWYG - editorRef.current is null, cannot sync');
     } else if (isInternalUpdateRef.current) {
-      console.log('⏭️ useWYSIWYG - Skipping (internal update in progress)');
+      const incoming = value || '';
+      if (editorRef.current && incoming !== editorRef.current.innerHTML) {
+        editorRef.current.innerHTML = incoming;
+        lastSyncedValueRef.current = incoming;
+      }
     }
     isInternalUpdateRef.current = false;
     });
