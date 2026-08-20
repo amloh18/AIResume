@@ -16,41 +16,91 @@ const FAQ = () => {
   const faqData: FAQItem[] = [
     {
       id: 1,
+      question: "What is an AI resume builder?",
+      answer: "An AI resume builder uses artificial intelligence to create a professional resume. It generates content from your experience, writes achievement-focused bullet points, optimizes wording for the job you are applying to, and helps you build an ATS-friendly resume faster than writing it by hand."
+    },
+    {
+      id: 2,
+      question: "Is AI Resume ATS-friendly?",
+      answer: "Yes. AI Resume builds resumes with ATS-compatible formatting, clear sections, and simple layouts that applicant tracking systems can parse reliably. Templates avoid tables and complex styling that commonly break ATS parsers, and the ATS checker highlights keyword gaps before you apply."
+    },
+    {
+      id: 3,
+      question: "Can AI Resume tailor my resume to a job?",
+      answer: "Yes. Paste a job description or a job URL and AI Resume analyzes the role, identifies important keywords, compares the job with your resume, and recommends changes. You can rewrite relevant sections to improve alignment with the specific role you are applying for."
+    },
+    {
+      id: 4,
+      question: "Can I create a resume from scratch?",
+      answer: "Yes. You can create a resume from scratch using the AI resume builder. It guides you through each section, generates professional content, and helps you write strong summaries and achievement-focused bullet points with a template that fits your industry."
+    },
+    {
+      id: 5,
+      question: "Can I improve an existing resume?",
+      answer: "Yes. Upload or paste your existing resume and AI Resume will analyze it, improve the content, strengthen weak bullet points, fix formatting, and suggest keywords so your resume performs better with both ATS systems and recruiters."
+    },
+    {
+      id: 6,
+      question: "Can I create an AI cover letter?",
+      answer: "Yes. The AI cover letter generator creates job-specific cover letters based on your resume and the job description. Each letter references your actual achievements, is tailored to the role, and can be edited before you send it."
+    },
+    {
+      id: 7,
+      question: "What is an ATS?",
+      answer: "An ATS (Applicant Tracking System) is software employers use to screen, filter, and manage job applications. It parses resumes and ranks candidates by how well their resume matches the job description. An ATS-friendly resume uses clear formatting and relevant keywords so the system can read and score it correctly."
+    },
+    {
+      id: 8,
+      question: "Can I use AI Resume for CVs?",
+      answer: "Yes. AI Resume works for both resumes and CVs. Use it to create a CV with your full career history or a tailored resume for a specific job. The builder supports both formats with professional templates, so you can apply internationally with confidence."
+    },
+    {
+      id: 9,
+      question: "Are the resume templates ATS-friendly?",
+      answer: "Yes. Every template in AI Resume uses ATS-compatible formatting, readable headings, and clean layouts. Choose from professional, modern, and simple resume templates with confidence that applicant tracking systems can parse them correctly."
+    },
+    {
+      id: 10,
+      question: "How does resume scoring work?",
+      answer: "Resume scoring analyzes your resume against a job description and gives it a score based on keyword matches, skills alignment, readability, and format compatibility. It shows you exactly which keywords and sections to improve so you can strengthen your resume before applying."
+    },
+    {
+      id: 11,
       question: "Can I change my plan after I've purchased it?",
       answer: "Absolutely. You can upgrade from a Monthly to a Quarterly or Lifetime plan at any time. We will prorate the cost so you only pay the difference. If you wish to downgrade, your change will take effect at the end of your current billing cycle."
     },
     {
-      id: 2,
+      id: 12,
       question: "What is the real difference between the Basic and Pro ATS check?",
       answer: "Think of it this way: The Basic ATS Check ensures your CV has the correct formatting and structure to be readable by automated systems—it's about passing the first gate. The Pro ATS Optimisation is a strategic analysis that suggests keywords and phrasing to help your CV rank higher and get noticed by recruiters for specific roles. It's the difference between being compliant and being competitive."
     },
     {
-      id: 3,
+      id: 13,
       question: "Are the Pro plans a one-time payment or a subscription?",
       answer: "The Daily Pass and Lifetime plan are one-time charges. The Pro Monthly and Quarterly plans are subscriptions that automatically renew to ensure your service is uninterrupted. You can easily cancel the auto-renewal at any time from your account settings, no questions asked."
     },
     {
-      id: 4,
+      id: 14,
       question: "What happens to my CVs and documents if my plan ends or I cancel?",
       answer: "Your work is always yours. After your plan expires, you will still have access to view and download all the documents you created. You will revert to the Essential (Free) plan, meaning you won't be able to create new documents beyond the free limit or use Pro features until you subscribe again."
     },
     {
-      id: 5,
+      id: 15,
       question: "Which plan is the right choice for me?",
       answer: "Choose Essential if you're targeting one specific role or just want to try our platform. Choose the Daily Pass for a short, intense burst of applications, like for a career fair or urgent openings. Choose Pro Monthly if you are in an active, dedicated job search right now. Choose Pro Quarterly or Lifetime if you are in a strategic, long-term search (common for senior roles) and want the absolute best value and access to future features."
     },
     {
-      id: 6,
+      id: 16,
       question: "What kind of 'Future Pro Add-ons' are included with the Quarterly and Lifetime plans?",
       answer: "As we develop new premium tools to help you succeed, you get them automatically at no extra cost. This could include things like AI-powered interview practice modules, advanced portfolio builders, or enhanced career analytics to give you a continuous edge in the market."
     },
     {
-      id: 7,
+      id: 17,
       question: "What payment methods do you accept?",
       answer: "We accept all major international Credit and Debit Cards, UPI (including Google Pay, PhonePe, etc.), and Net Banking from all major Bank worldwide. Our payment gateway Polar.sh is secure and encrypted."
     },
     {
-      id: 8,
+      id: 18,
       question: "Is there a refund policy?",
       answer: "We are confident in the value our tools provide. For our Pro Quarterly/Pro Lifetime plan, we offer a 7-day money-back guarantee with terms (link). Due to their short-term nature, the Daily Pass and Pro Monthly are non-refundable."
     }

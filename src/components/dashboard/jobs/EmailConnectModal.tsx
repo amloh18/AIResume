@@ -389,7 +389,7 @@ export const EmailConnectModal: React.FC<EmailConnectModalProps> = ({
                   </div>
 
                   <p className="text-small text-gray-600 dark:text-gray-400 leading-relaxed">
-                    Connecting your {emailProvider === 'gmail' ? 'Gmail' : 'Outlook'} account enables CVCircle to automatically detect and index inbound application updates. Your credentials are never stored directly.
+                    Connecting your {emailProvider === 'gmail' ? 'Gmail' : 'Outlook'} account enables AI Resume to automatically detect and index inbound application updates. Your credentials are never stored directly.
                   </p>
 
                   <button

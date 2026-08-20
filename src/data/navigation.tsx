@@ -36,39 +36,54 @@ export const navLinks: NavLink[] = [
     ariaLabel: 'View products section',
     submenu: [
       { 
-        label: 'AI Resume Builder', 
-        description: 'Create ATS-friendly resumes in minutes with AI assistance and mix-and-match layout blocks.', 
-        href: '#features', 
-        ariaLabel: 'AI-powered resume builder',
+        label: 'Resume Builder', 
+        description: 'Create an ATS-friendly resume with AI, write stronger content, and choose a professional template.', 
+        href: '/ai-resume-builder', 
+        ariaLabel: 'AI resume builder',
         icon: <Sparkles className="w-6 h-6 text-lime-400" />,
         snapshot: 'bg-gradient-to-br from-lime-500/20 to-green-600/20 border-lime-500/30'
       },
       { 
-        label: 'ATS Scanner', 
-        description: 'Test your resume against job descriptions for keyword matches and format compatibility.', 
-        href: '#features', 
-        ariaLabel: 'ATS compatibility check',
+        label: 'Resume Templates', 
+        description: 'Explore 15+ interactive ATS-friendly templates, section layouts, and modular snippets.', 
+        href: '/explore', 
+        ariaLabel: 'Explore resume templates and modular snippets',
         icon: <CheckCircle className="w-6 h-6 text-blue-400" />,
         snapshot: 'bg-gradient-to-br from-blue-500/20 to-cyan-600/20 border-blue-500/30'
       },
       { 
-        label: 'Cover Letter Generator', 
-        description: 'Generate tailored, professional cover letters perfectly matching your target role.', 
-        href: '#features', 
-        ariaLabel: 'Cover letter generator',
+        label: 'Resume Checker', 
+        description: 'Test your resume against a job description for keyword matches and ATS compatibility.', 
+        href: '/ats-resume-checker', 
+        ariaLabel: 'ATS resume checker',
+        icon: <CheckCircle className="w-6 h-6 text-blue-400" />,
+        snapshot: 'bg-gradient-to-br from-blue-500/20 to-cyan-600/20 border-blue-500/30'
+      },
+      { 
+        label: 'Resume Score', 
+        description: 'See how strong your resume is and get actionable recommendations to improve it.', 
+        href: '/resume-score', 
+        ariaLabel: 'Resume score checker',
+        icon: <CheckCircle className="w-6 h-6 text-blue-400" />
+      },
+      { 
+        label: 'AI Cover Letter', 
+        description: 'Generate a job-specific, tailored cover letter in seconds with AI.', 
+        href: '/ai-resume-builder', 
+        ariaLabel: 'AI cover letter generator',
         icon: <FileText className="w-6 h-6 text-purple-400" />
       },
       { 
-        label: 'Smart Job Tracker', 
-        description: 'Organize and track all your applications and upcoming interviews in one place.', 
-        href: '#features', 
-        ariaLabel: 'Job tracker',
+        label: 'Job Tracker', 
+        description: 'Save jobs, track applications, and manage your job search in one place.', 
+        href: '/dashboard/jobs', 
+        ariaLabel: 'Job application tracker',
         icon: <Briefcase className="w-6 h-6 text-orange-400" />
       },
       { 
         label: 'LinkedIn Enhancer', 
         description: 'Optimize your LinkedIn profile and headlines for maximum visibility to recruiters.', 
-        href: '#features', 
+        href: '/linkedin-enhancer', 
         ariaLabel: 'LinkedIn Profile Enhancer',
         icon: <Linkedin className="w-6 h-6 text-blue-500" />
       },
@@ -76,7 +91,7 @@ export const navLinks: NavLink[] = [
     featured: {
       title: 'Interview Coach AI',
       description: 'Master your next interview with our real-time AI coach that analyzes your responses and provides instant feedback.',
-      href: '#features',
+      href: '/interview-coach',
       image: '/images/interviewcoach_dashbaord.png',
       badge: 'New Feature',
       actionText: 'Try AI Coach'
@@ -132,9 +147,9 @@ export const navLinks: NavLink[] = [
       },
       {
         label: 'Blog',
-        description: 'Research-backed career guides, ATS tips, and resume tutorials from CVCircle.',
+        description: 'Research-backed career guides, ATS tips, and resume tutorials from AI Resume.',
         href: '/blog',
-        ariaLabel: 'Read the CVCircle blog',
+        ariaLabel: 'Read the AI Resume blog',
         icon: <BookOpen className="w-5 h-5 text-gray-400" />
       },
       { 

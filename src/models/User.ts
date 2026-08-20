@@ -222,6 +222,52 @@ export interface IUser extends Document {
     primary_cv_id?: string | mongoose.Types.ObjectId;
   };
 
+  naukriIntegration?: {
+    enabled: boolean;
+    connectedAt?: Date;
+    lastSyncedAt?: Date;
+    sessionStatus: 'active' | 'expired' | 'disconnected';
+    userEmail?: string;
+    encryptedCookieJar?: string;
+    preferences: {
+      targetTitles: string[];
+      targetLocations: string[];
+      minCtcLakhs?: number;
+      experienceYears?: number;
+      maxNoticePeriodDays?: number;
+      dailyLimit: number;
+      autoApplyEnabled: boolean;
+    };
+    stats: {
+      totalFetched: number;
+      totalApplied: number;
+      lastAppliedAt?: Date;
+    };
+  };
+
+  indeedIntegration?: {
+    enabled: boolean;
+    connectedAt?: Date;
+    lastSyncedAt?: Date;
+    sessionStatus: 'active' | 'expired' | 'disconnected';
+    userEmail?: string;
+    encryptedCookieJar?: string;
+    preferences: {
+      targetTitles: string[];
+      targetLocations: string[];
+      minSalary?: number;
+      salaryCurrency?: string;
+      remoteOnly: boolean;
+      dailyLimit: number;
+      autoApplyEnabled: boolean;
+    };
+    stats: {
+      totalFetched: number;
+      totalApplied: number;
+      lastAppliedAt?: Date;
+    };
+  };
+
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -735,6 +781,68 @@ const userSchema = new Schema<IUser>({
     completed_stages: { type: [String], default: [] },
     onboarding_version: { type: Number, default: 1 },
     primary_cv_id: { type: Schema.Types.ObjectId, ref: 'CV' }
+  },
+  naukriIntegration: {
+    enabled: { type: Boolean, default: false },
+    connectedAt: { type: Date },
+    lastSyncedAt: { type: Date },
+    sessionStatus: {
+      type: String,
+      enum: ['active', 'expired', 'disconnected'],
+      default: 'disconnected'
+    },
+    userEmail: { type: String, trim: true },
+    encryptedCookieJar: { type: String },
+    preferences: {
+      type: Schema.Types.Mixed,
+      default: () => ({
+        targetTitles: [],
+        targetLocations: ['Bangalore', 'Remote', 'Mumbai', 'Hyderabad', 'Pune'],
+        minCtcLakhs: 0,
+        experienceYears: 2,
+        maxNoticePeriodDays: 30,
+        dailyLimit: 25,
+        autoApplyEnabled: false,
+      })
+    },
+    stats: {
+      type: Schema.Types.Mixed,
+      default: () => ({
+        totalFetched: 0,
+        totalApplied: 0,
+      })
+    }
+  },
+  indeedIntegration: {
+    enabled: { type: Boolean, default: false },
+    connectedAt: { type: Date },
+    lastSyncedAt: { type: Date },
+    sessionStatus: {
+      type: String,
+      enum: ['active', 'expired', 'disconnected'],
+      default: 'disconnected'
+    },
+    userEmail: { type: String, trim: true },
+    encryptedCookieJar: { type: String },
+    preferences: {
+      type: Schema.Types.Mixed,
+      default: () => ({
+        targetTitles: [],
+        targetLocations: ['London', 'Remote', 'New York', 'Bangalore'],
+        minSalary: 0,
+        salaryCurrency: 'USD',
+        remoteOnly: false,
+        dailyLimit: 25,
+        autoApplyEnabled: false,
+      })
+    },
+    stats: {
+      type: Schema.Types.Mixed,
+      default: () => ({
+        totalFetched: 0,
+        totalApplied: 0,
+      })
+    }
   }
 }, {
   timestamps: true,

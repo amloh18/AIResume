@@ -100,34 +100,34 @@ export default function MoriAssistant() {
   const getEmailDetails = (dept: 'finance' | 'help' | 'support' | 'hello' | 'feedback') => {
     const details = {
       finance: {
-        email: 'finance@cvcircle.io',
+        email: 'finance@buildairesume.com',
         name: 'Billing & Finance',
         subject: 'Billing and Invoice Query',
         body: 'Hello Finance Team,\n\nI have a question regarding my subscription/invoices. [Provide details here].\n\nThank you.'
       },
       help: {
-        email: 'help@cvcircle.io',
+        email: 'help@buildairesume.com',
         name: 'Technical Support',
         subject: 'Technical Assistance Request',
         body: 'Hello Support Team,\n\nI am experiencing a technical issue with [describe feature or issue].\n\nThank you.'
       },
       support: {
-        email: 'support@cvcircle.io',
+        email: 'support@buildairesume.com',
         name: 'Customer Support',
         subject: 'Customer Assistance Query',
-        body: 'Hello CVCircle Team,\n\nI need assistance with my account. [Describe your query].\n\nThank you.'
+        body: 'Hello AI Resume Team,\n\nI need assistance with my account. [Describe your query].\n\nThank you.'
       },
       hello: {
-        email: 'hello@cvcircle.io',
+        email: 'hello@buildairesume.com',
         name: 'General Inquiries',
         subject: 'General Inquiry / Partnership',
-        body: 'Hello CVCircle Team,\n\nI would like to query about [general topic].\n\nThank you.'
+        body: 'Hello AI Resume Team,\n\nI would like to query about [general topic].\n\nThank you.'
       },
       feedback: {
-        email: 'feedback@cvcircle.io',
+        email: 'feedback@buildairesume.com',
         name: 'Feedback & Testimonial Support',
-        subject: `CVCircle User Testimonial: ${rating}-Star Rating`,
-        body: `Dear CVCircle Team,\n\nHere is my rating and testimonial for my experience using the platform:\n\nRating: ${rating} / 5 Stars\nComment: ${feedbackComment || 'No additional comments.'}\n\nThank you!`
+        subject: `AI Resume User Testimonial: ${rating}-Star Rating`,
+        body: `Dear AI Resume Team,\n\nHere is my rating and testimonial for my experience using the platform:\n\nRating: ${rating} / 5 Stars\nComment: ${feedbackComment || 'No additional comments.'}\n\nThank you!`
       }
     };
     return details[dept];
@@ -274,7 +274,7 @@ export default function MoriAssistant() {
     if (action === 'Downgrade to Free' || action === 'Keep Free Tier') {
       setCancelLayer(0);
       addMoriMessage(
-        "Excellent choice! Your subscription will transition to the Free Tier at the end of the billing period. We'd love to hear your feedback on CVCircle to help us improve.",
+        "Excellent choice! Your subscription will transition to the Free Tier at the end of the billing period. We'd love to hear your feedback on AI Resume to help us improve.",
         'feedback_card'
       );
     } else if (action === 'Contact Finance') {
@@ -293,7 +293,7 @@ export default function MoriAssistant() {
       } else {
         setCancelLayer(4);
         addMoriMessage(
-          "Understood. To finalize: \n1. Click 'Cancel' under your active plan card in settings or email finance@cvcircle.io. \n2. For deletion: click 'Delete Account' at the bottom of the Account settings panel."
+          "Understood. To finalize: \n1. Click 'Cancel' under your active plan card in settings or email finance@buildairesume.com. \n2. For deletion: click 'Delete Account' at the bottom of the Account settings panel."
         );
       }
     }
@@ -590,7 +590,7 @@ export default function MoriAssistant() {
                               onClick={handleSubmitFeedback}
                               className="w-full py-2 bg-lime-500 hover:bg-lime-600 text-slate-950 text-center text-[11px] font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow"
                             >
-                              Submit Testimonial to feedback@cvcircle.io
+                              Submit Testimonial to feedback@buildairesume.com
                             </button>
                           </div>
                         )}
@@ -682,7 +682,7 @@ export default function MoriAssistant() {
                                 onClick={() => handleCancelFlowStep('Contact Tech Support')}
                                 className="w-full p-2 bg-lime-500 hover:bg-lime-600 text-slate-950 text-[11px] font-semibold rounded-lg transition-colors text-center"
                               >
-                                Email Tech Support (help@cvcircle.io)
+                                Email Tech Support (help@buildairesume.com)
                               </button>
                             )}
                             <button

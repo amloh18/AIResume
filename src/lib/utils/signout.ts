@@ -50,8 +50,8 @@ export const comprehensiveSignOut = async (): Promise<void> => {
       console.log('🔍 Explicitly clearing NextAuth cookies...');
       const currentDomain = window.location.hostname;
       const isSecure = window.location.protocol === 'https:';
-      // Detect production by checking if domain contains cvcircle.io or if using secure protocol
-      const isProduction = currentDomain.includes('cvcircle.io') || (isSecure && currentDomain !== 'localhost');
+      // Detect production by checking if domain contains buildairesume.com or if using secure protocol
+      const isProduction = currentDomain.includes('buildairesume.com') || (isSecure && currentDomain !== 'localhost');
 
       // NextAuth cookie names (both dev and production)
       const nextAuthCookies = [

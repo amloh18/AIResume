@@ -19,9 +19,9 @@ const Footer = () => {
   ];
 
   const socialLinks = [
-    { name: 'X', icon: X, href: 'https://x.com/cvcircle_io', color: 'from-blue-400 to-blue-500' },
-    { name: 'Instagram', icon: Instagram, href: 'https://www.instagram.com/cvcircle.io/', color: 'from-pink-500 to-purple-500' },
-    { name: 'LinkedIn', icon: Linkedin, href: 'https://www.linkedin.com/company/cvcircle-io/', color: 'from-blue-600 to-blue-700' },
+    { name: 'X', icon: X, href: 'https://x.com/buildairesume', color: 'from-blue-400 to-blue-500' },
+    { name: 'Instagram', icon: Instagram, href: 'https://www.instagram.com/buildairesume.com/', color: 'from-pink-500 to-purple-500' },
+    { name: 'LinkedIn', icon: Linkedin, href: 'https://www.linkedin.com/company/build-ai-resume/', color: 'from-blue-600 to-blue-700' },
   ];
 
   const scrollToSection = (href: string) => {
@@ -125,10 +125,10 @@ const Footer = () => {
                 <div>
                   <p className="text-white/60 text-small tablet:text-small">Email</p>
                   <a
-                    href="mailto:support@cvcircle.io"
+                    href="mailto:support@buildairesume.com"
                     className="text-white hover:text-lime-400 transition-colors duration-300 font-medium text-small tablet:text-small break-all"
                   >
-                    support@cvcircle.io
+                    support@buildairesume.com
                   </a>
                 </div>
               </motion.div>
@@ -252,8 +252,9 @@ const Footer = () => {
               </div>
             </motion.div>
             <p className="text-white/70 leading-relaxed max-w-sm text-body">
-              Empowering job seekers with modern tools to create stunning CVs,
-              track applications, and connect with industry professionals.
+              Empowering job seekers with modern tools to create stunning resumes
+              and CVs, tailor them to any job, track applications, and connect
+              with industry professionals.
             </p>
             <div className="flex space-x-4">
               {socialLinks.map((social, index) => {
@@ -397,10 +398,10 @@ const Footer = () => {
             className="text-white/60 text-small flex flex-col tablet:flex-row items-center gap-2"
             whileHover={{ scale: 1.02 }}
           >
-            <span>© 2026 <span className="text-lime-400">CVCircle</span> by <span className="text-white">Morigrid Labs</span>. All rights reserved.</span>
+            <span>© 2026 <span className="text-lime-400">AI Resume</span> by <span className="text-white">Morigrid Labs</span>. All rights reserved.</span>
             <div className="flex items-center gap-2">
               <span className="text-white/40 hidden tablet:inline">|</span>
-              <span className="text-white/60">Made with</span>
+              <span className="text-white/60">Made with love</span>
               <motion.div
                 animate={{ scale: [1, 1.3, 1] }}
                 transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}

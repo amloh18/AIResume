@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import Hero from '@/components/landing/Hero';
 import CardNav from '@/components/landing/CardNav';
+import AnnouncementBanner from '@/components/landing/AnnouncementBanner';
 import { TestimonialSnippet } from '@/components/landing/Testimonials';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
@@ -21,6 +22,18 @@ const Footer = dynamic(() => import('@/components/landing/Footer'), { ssr: true 
 
 export default function LandingPageContent() {
   const router = useRouter();
+  const [bannerActive, setBannerActive] = useState(false);
+  
+  useEffect(() => {
+    try {
+      const dismissed = localStorage.getItem('airesume_rebrand_banner_dismissed');
+      if (!dismissed) {
+        setBannerActive(true);
+      }
+    } catch {
+      setBannerActive(true);
+    }
+  }, []);
   
   // Handle logout cleanup - client-side only
   useEffect(() => {
@@ -55,10 +68,12 @@ export default function LandingPageContent() {
 
   return (
     <div className="min-h-screen bg-[#141810] relative overflow-hidden">
+      <AnnouncementBanner onDismiss={() => setBannerActive(false)} />
       <CardNav
-        logo="CVCircle"
+        logo="AI Resume"
         links={navLinks}
         onCtaClick={handleCtaClick}
+        withBanner={bannerActive}
       />
 
       <div className="fixed inset-0 z-0 pointer-events-none">
@@ -68,7 +83,7 @@ export default function LandingPageContent() {
       </div>
 
       <div className="relative">
-        <Hero />
+        <Hero withBanner={bannerActive} />
         <TestimonialSnippet index={0} />
         <HowItWorks />
         <TestimonialSnippet index={1} />

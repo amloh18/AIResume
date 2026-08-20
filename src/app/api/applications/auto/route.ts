@@ -1,166 +1,143 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ObjectId } from 'mongodb';
-import { ApplicationService } from '@/lib/services/applicationService';
-import { AutomationService } from '@/lib/services/automationService';
-import type { Job, JobMatch, AdminRules, AutoApplyResponse } from '@/types/automation-schema';
+import mongoose from 'mongoose';
+import { getConnection } from '@/lib/database';
+import { JobApplication, Notification } from '@/models';
+import { getAuthenticatedUser } from '@/lib/auth-helpers';
 
 export async function POST(request: NextRequest) {
   try {
-    const userId = request.headers.get('x-user-id');
+    const authResult = await getAuthenticatedUser(request);
+    const userId = authResult?.userId || request.headers.get('x-user-id');
     
     if (!userId) {
       return NextResponse.json(
-        { error: { code: 'UNAUTHORIZED', message: 'User not authenticated' } },
+        { error: { code: 'UNAUTHORIZED', message: 'User authentication required' } },
         { status: 401 }
       );
     }
 
+    await getConnection();
+
     const body = await request.json();
-    const { jobId } = body;
-
-    if (!jobId) {
-      return NextResponse.json(
-        { error: { code: 'VALIDATION_ERROR', message: 'jobId is required' } },
-        { status: 400 }
-      );
-    }
-
-    const { getDb } = await import('@/lib/db');
-    const db = await getDb();
-
-    const [isEnabled, hasReachedLimit, cooldownRemaining, job, match, adminRules] = await Promise.all([
-      AutomationService.isAutomationEnabled(userId),
-      AutomationService.checkDailyLimit(userId).then(canApply => !canApply),
-      AutomationService.getFailureCooldownRemaining(userId),
-      db.collection<Job>('jobs').findOne({ _id: new ObjectId(jobId) }),
-      db.collection<JobMatch>('job_matches').findOne({
-        userId: new ObjectId(userId),
-        jobId: new ObjectId(jobId),
-      }),
-      db.collection<AdminRules>('admin_rules').findOne({}),
-    ]);
-
-    if (!isEnabled) {
-      return NextResponse.json(
-        {
-          error: {
-            code: 'AUTOMATION_DISABLED',
-            message: 'Automation is not enabled for your account',
-          },
-        },
-        { status: 403 }
-      );
-    }
-
-    if (hasReachedLimit) {
-      return NextResponse.json(
-        {
-          error: {
-            code: 'DAILY_LIMIT_EXCEEDED',
-            message: 'You have reached your daily application limit',
-          },
-        },
-        { status: 429 }
-      );
-    }
-
-    if (cooldownRemaining > 0) {
-      return NextResponse.json(
-        {
-          error: {
-            code: 'COOLDOWN_ACTIVE',
-            message: `Your account is in cooldown. Resume in ${cooldownRemaining} hours`,
-            details: { cooldownHoursRemaining: cooldownRemaining },
-          },
-        },
-        { status: 429 }
-      );
-    }
-
-    if (!job) {
-      return NextResponse.json(
-        { error: { code: 'NOT_FOUND', message: 'Job not found' } },
-        { status: 404 }
-      );
-    }
-
-    if (!match || !match.eligibleForAutoApply) {
-      return NextResponse.json(
-        {
-          error: {
-            code: 'JOB_NOT_ELIGIBLE',
-            message: 'This job is not eligible for auto-apply',
-          },
-        },
-        { status: 403 }
-      );
-    }
-
-    if (job.atsType === 'unknown') {
-      return NextResponse.json(
-        {
-          error: {
-            code: 'ATS_UNSUPPORTED',
-            message: 'ATS type is not supported for auto-apply',
-          },
-        },
-        { status: 403 }
-      );
-    }
-
-    if (adminRules && !adminRules.globalAutoApplyEnabled) {
-      return NextResponse.json(
-        {
-          error: {
-            code: 'AUTOMATION_DISABLED',
-            message: 'Auto-apply is temporarily disabled',
-          },
-        },
-        { status: 503 }
-      );
-    }
-
-    const existingApp = await ApplicationService.getApplicationByJobId(userId, jobId);
-    if (existingApp) {
-      return NextResponse.json(
-        {
-          error: {
-            code: 'ALREADY_APPLIED',
-            message: 'You have already applied to this job',
-          },
-        },
-        { status: 409 }
-      );
-    }
-
-    const settings = await AutomationService.getAutomationSettings(userId);
-    const mode = settings?.mode || 'assisted';
-
-    const application = await ApplicationService.createApplication(
-      userId,
+    const {
       jobId,
-      mode
-    );
+      title,
+      jobTitle,
+      company,
+      location,
+      source,
+      applyUrl,
+      jobUrl,
+      salary,
+      matchScore,
+      description,
+      jobDescription,
+      skills,
+    } = body;
 
-    await ApplicationService.updateApplicationStatus(
-      application._id.toString(),
-      'queued'
-    );
+    const roleTitle = title || jobTitle || 'Software Engineer';
+    const companyName = company || 'Company';
+    const targetApplyUrl = applyUrl || jobUrl || '';
+    const jobDesc = description || jobDescription || '';
 
-    const response: AutoApplyResponse = {
-      applicationId: application._id.toString(),
-      status: 'queued',
-      queuePosition: undefined,
-    };
+    // Check if this job application already exists for this user
+    let existingJobApp = null;
+    if (jobId && mongoose.Types.ObjectId.isValid(jobId)) {
+      existingJobApp = await JobApplication.findOne({ _id: jobId, userId });
+    }
 
-    return NextResponse.json(response, { status: 200 });
+    if (!existingJobApp && companyName && roleTitle) {
+      existingJobApp = await JobApplication.findOne({
+        userId,
+        company: new RegExp(`^${companyName.trim()}$`, 'i'),
+        jobTitle: new RegExp(`^${roleTitle.trim()}$`, 'i'),
+      });
+    }
+
+    let savedJob: any;
+
+    if (existingJobApp) {
+      existingJobApp.status = 'applied';
+      existingJobApp.appliedAt = existingJobApp.appliedAt || new Date();
+      existingJobApp.applicationDate = existingJobApp.applicationDate || new Date();
+      if (targetApplyUrl) existingJobApp.jobUrl = targetApplyUrl;
+      if (matchScore) existingJobApp.matchScore = matchScore;
+      if (jobDesc && !existingJobApp.jobDescription) existingJobApp.jobDescription = jobDesc;
+      savedJob = await existingJobApp.save();
+    } else {
+      // Map source to valid schema enum
+      let cleanSource = 'direct';
+      const validSources = ['extension', 'manual', 'import', 'linkedin', 'indeed', 'company-website', 'referral', 'other'];
+      if (validSources.includes(source)) {
+        cleanSource = source;
+      } else if (source === 'naukri' || source === 'adzuna' || source === 'greenhouse' || source === 'lever' || source === 'workable') {
+        cleanSource = 'company-website';
+      }
+
+      let parsedSalary: any = undefined;
+      if (typeof salary === 'object' && salary !== null) {
+        parsedSalary = salary;
+      }
+
+      const newJobApp = new JobApplication({
+        userId,
+        jobTitle: roleTitle,
+        company: companyName,
+        location: location || 'Remote',
+        jobUrl: targetApplyUrl,
+        jobDescription: jobDesc,
+        status: 'applied',
+        priority: 'medium',
+        source: cleanSource,
+        matchScore: typeof matchScore === 'number' ? matchScore : 85,
+        appliedAt: new Date(),
+        applicationDate: new Date(),
+        isArchived: false,
+        salary: parsedSalary,
+        tags: Array.isArray(skills) ? skills : [],
+      });
+
+      savedJob = await newJobApp.save();
+    }
+
+    // Create an in-app notification for the user
+    try {
+      await Notification.create({
+        userId,
+        title: 'Application Submitted',
+        message: `Successfully applied to ${roleTitle} at ${companyName}.`,
+        category: 'application',
+        type: 'info',
+        priority: 'medium',
+        read: false,
+        actionUrl: `/dashboard/tracker?jobId=${savedJob._id}`,
+        createdAt: new Date(),
+      });
+    } catch (notifErr) {
+      console.warn('Failed to create notification for application:', notifErr);
+    }
+
+    return NextResponse.json({
+      success: true,
+      status: 'applied',
+      applicationId: savedJob._id.toString(),
+      jobId: savedJob._id.toString(),
+      job: {
+        id: savedJob._id.toString(),
+        jobTitle: savedJob.jobTitle,
+        company: savedJob.company,
+        location: savedJob.location,
+        status: savedJob.status,
+        appliedAt: savedJob.appliedAt,
+      },
+    });
   } catch (error: any) {
     console.error('[API] POST /api/applications/auto error:', error);
     return NextResponse.json(
       {
         error: {
           code: 'INTERNAL_ERROR',
-          message: error.message || 'Failed to queue application',
+          message: error.message || 'Failed to submit application',
         },
       },
       { status: 500 }

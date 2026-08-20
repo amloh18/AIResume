@@ -1,0 +1,271 @@
+'use client';
+
+import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { ChevronDown, Search, Check, Globe, X, Sparkles, MapPin } from 'lucide-react';
+
+export interface CountryOption {
+  code: string;
+  name: string;
+  flag: string;
+  currency: string;
+  region: string;
+}
+
+export const COUNTRIES_LIST: CountryOption[] = [
+  { code: 'IN', name: 'India', flag: '🇮🇳', currency: 'INR', region: 'Asia' },
+  { code: 'GB', name: 'United Kingdom', flag: '🇬🇧', currency: 'GBP', region: 'Europe' },
+  { code: 'US', name: 'United States', flag: '🇺🇸', currency: 'USD', region: 'North America' },
+  { code: 'CA', name: 'Canada', flag: '🇨🇦', currency: 'CAD', region: 'North America' },
+  { code: 'DE', name: 'Germany', flag: '🇩🇪', currency: 'EUR', region: 'Europe' },
+  { code: 'AE', name: 'United Arab Emirates', flag: '🇦🇪', currency: 'AED', region: 'Middle East' },
+  { code: 'SG', name: 'Singapore', flag: '🇸🇬', currency: 'SGD', region: 'Asia' },
+  { code: 'AU', name: 'Australia', flag: '🇦🇺', currency: 'AUD', region: 'Oceania' },
+  { code: 'NL', name: 'Netherlands', flag: '🇳🇱', currency: 'EUR', region: 'Europe' },
+  { code: 'IE', name: 'Ireland', flag: '🇮🇪', currency: 'EUR', region: 'Europe' },
+  { code: 'CH', name: 'Switzerland', flag: '🇨🇭', currency: 'CHF', region: 'Europe' },
+  { code: 'FR', name: 'France', flag: '🇫🇷', currency: 'EUR', region: 'Europe' },
+  { code: 'SE', name: 'Sweden', flag: '🇸🇪', currency: 'SEK', region: 'Europe' },
+  { code: 'PL', name: 'Poland', flag: '🇵🇱', currency: 'PLN', region: 'Europe' },
+  { code: 'ES', name: 'Spain', flag: '🇪🇸', currency: 'EUR', region: 'Europe' },
+  { code: 'JP', name: 'Japan', flag: '🇯🇵', currency: 'JPY', region: 'Asia' },
+  { code: 'BR', name: 'Brazil', flag: '🇧🇷', currency: 'BRL', region: 'South America' },
+  { code: 'ZA', name: 'South Africa', flag: '🇿🇦', currency: 'ZAR', region: 'Africa' },
+  { code: 'NZ', name: 'New Zealand', flag: '🇳🇿', currency: 'NZD', region: 'Oceania' },
+  { code: 'GLOBAL', name: 'Worldwide / Remote', flag: '🌍', currency: 'USD', region: 'Global' },
+];
+
+/**
+ * Detect user's country code based on browser timezone
+ */
+export function detectUserCountry(): CountryOption {
+  if (typeof Intl === 'undefined') return COUNTRIES_LIST[0]; // fallback India
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (tz.includes('Calcutta') || tz.includes('Kolkata') || tz.includes('Asia/Colombo')) {
+      return COUNTRIES_LIST.find((c) => c.code === 'IN') || COUNTRIES_LIST[0];
+    }
+    if (tz.includes('London') || tz.includes('Belfast') || tz.includes('Europe/London')) {
+      return COUNTRIES_LIST.find((c) => c.code === 'GB') || COUNTRIES_LIST[1];
+    }
+    if (tz.includes('America/New_York') || tz.includes('America/Los_Angeles') || tz.includes('America/Chicago')) {
+      return COUNTRIES_LIST.find((c) => c.code === 'US') || COUNTRIES_LIST[2];
+    }
+    if (tz.includes('America/Toronto') || tz.includes('America/Vancouver')) {
+      return COUNTRIES_LIST.find((c) => c.code === 'CA') || COUNTRIES_LIST[3];
+    }
+    if (tz.includes('Europe/Berlin') || tz.includes('Europe/Frankfurt')) {
+      return COUNTRIES_LIST.find((c) => c.code === 'DE') || COUNTRIES_LIST[4];
+    }
+    if (tz.includes('Asia/Dubai')) {
+      return COUNTRIES_LIST.find((c) => c.code === 'AE') || COUNTRIES_LIST[5];
+    }
+    if (tz.includes('Asia/Singapore')) {
+      return COUNTRIES_LIST.find((c) => c.code === 'SG') || COUNTRIES_LIST[6];
+    }
+    if (tz.includes('Australia/Sydney') || tz.includes('Australia/Melbourne')) {
+      return COUNTRIES_LIST.find((c) => c.code === 'AU') || COUNTRIES_LIST[7];
+    }
+  } catch {
+    // fallback
+  }
+  return COUNTRIES_LIST[0]; // India default
+}
+
+interface CountrySelectorProps {
+  value: string[]; // e.g. ['India'] or ['United Kingdom', 'India']
+  onChange: (countries: string[]) => void;
+  disabled?: boolean;
+}
+
+export function CountrySelector({ value, onChange, disabled }: CountrySelectorProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const userDetectedCountry = useMemo(() => detectUserCountry(), []);
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleToggleCountry = (countryName: string) => {
+    if (value.includes(countryName)) {
+      // Don't allow empty, fallback to Worldwide if last removed
+      const updated = value.filter((c) => c !== countryName);
+      onChange(updated.length > 0 ? updated : ['Worldwide / Remote']);
+    } else {
+      onChange([...value, countryName]);
+    }
+  };
+
+  const handleSelectOnly = (countryName: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    onChange([countryName]);
+    setIsOpen(false);
+  };
+
+  const filteredCountries = COUNTRIES_LIST.filter((c) =>
+    c.name.toLowerCase().includes(search.toLowerCase()) ||
+    c.code.toLowerCase().includes(search.toLowerCase()) ||
+    c.region.toLowerCase().includes(search.toLowerCase())
+  );
+
+  // Selected Country objects
+  const selectedObjects = COUNTRIES_LIST.filter((c) => value.includes(c.name));
+
+  return (
+    <div ref={dropdownRef} className="relative select-none">
+      {/* Trigger Button */}
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => setIsOpen(!isOpen)}
+        className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all border shrink-0 ${
+          isOpen
+            ? 'bg-lime-500/15 text-lime-800 dark:text-lime-300 border-lime-500 shadow-sm'
+            : 'bg-gray-50 dark:bg-[#1a230f] border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white hover:border-gray-400'
+        } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+      >
+        <div className="flex items-center gap-1">
+          {selectedObjects.length === 1 ? (
+            <>
+              <span className="text-sm">{selectedObjects[0].flag}</span>
+              <span>{selectedObjects[0].name}</span>
+            </>
+          ) : selectedObjects.length > 1 ? (
+            <>
+              <div className="flex items-center -space-x-1">
+                {selectedObjects.slice(0, 3).map((c) => (
+                  <span key={c.code} className="text-xs">
+                    {c.flag}
+                  </span>
+                ))}
+              </div>
+              <span>{selectedObjects.length} Countries</span>
+            </>
+          ) : (
+            <>
+              <Globe className="w-3.5 h-3.5 text-lime-600" />
+              <span>Select Countries</span>
+            </>
+          )}
+        </div>
+        <ChevronDown className="w-3 h-3 text-gray-400 opacity-80 ml-0.5" />
+      </button>
+
+      {/* Dropdown Menu */}
+      {isOpen && (
+        <div className="absolute left-0 top-full mt-2 w-72 bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-2xl shadow-2xl z-50 p-2.5 animate-fadeIn space-y-2">
+          {/* Search Bar */}
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+            <input
+              type="text"
+              autoFocus
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search country..."
+              className="w-full pl-8 pr-3 py-1.5 bg-gray-50 dark:bg-[#1a230f] border border-gray-200 dark:border-gray-700 rounded-xl text-xs text-gray-900 dark:text-white outline-none focus:ring-1 focus:ring-lime-500"
+            />
+          </div>
+
+          {/* User's Detected Country (Pinned on Top) */}
+          <div className="p-2 rounded-xl bg-lime-500/10 border border-lime-500/20 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-base">{userDetectedCountry.flag}</span>
+              <div>
+                <div className="text-[10px] uppercase font-bold text-lime-700 dark:text-lime-400 flex items-center gap-1">
+                  <MapPin className="w-2.5 h-2.5" />
+                  Your Location
+                </div>
+                <div className="text-xs font-bold text-gray-900 dark:text-white">
+                  {userDetectedCountry.name}
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => handleToggleCountry(userDetectedCountry.name)}
+              className={`px-2 py-1 text-[11px] font-semibold rounded-lg transition-colors ${
+                value.includes(userDetectedCountry.name)
+                  ? 'bg-lime-500 text-white'
+                  : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:border-lime-500'
+              }`}
+            >
+              {value.includes(userDetectedCountry.name) ? 'Selected' : '+ Add'}
+            </button>
+          </div>
+
+          {/* List of Countries */}
+          <div className="max-h-56 overflow-y-auto space-y-0.5 pr-1 scrollbar-thin">
+            {filteredCountries.map((c) => {
+              const isSelected = value.includes(c.name);
+
+              return (
+                <div
+                  key={c.code}
+                  onClick={() => handleToggleCountry(c.name)}
+                  className={`group px-2.5 py-1.5 rounded-xl text-xs flex items-center justify-between cursor-pointer transition-colors ${
+                    isSelected
+                      ? 'bg-lime-500/10 text-lime-800 dark:text-lime-300 font-semibold'
+                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div
+                      className={`w-3.5 h-3.5 rounded border flex items-center justify-center transition-colors ${
+                        isSelected
+                          ? 'bg-lime-500 border-lime-500 text-white'
+                          : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800'
+                      }`}
+                    >
+                      {isSelected && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                    </div>
+                    <span className="text-sm">{c.flag}</span>
+                    <span className="truncate">{c.name}</span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={(e) => handleSelectOnly(c.name, e)}
+                    className="opacity-0 group-hover:opacity-100 text-[10px] text-gray-400 hover:text-lime-600 font-medium px-1.5 py-0.5 rounded hover:bg-gray-200 dark:hover:bg-white/10 transition-all"
+                  >
+                    Only
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Footer Quick Actions */}
+          <div className="pt-2 border-t border-gray-100 dark:border-white/5 flex items-center justify-between text-[11px] px-1">
+            <button
+              type="button"
+              onClick={() => onChange(COUNTRIES_LIST.map((c) => c.name))}
+              className="text-gray-500 hover:text-lime-600 font-medium"
+            >
+              Select All
+            </button>
+            <button
+              type="button"
+              onClick={() => onChange([userDetectedCountry.name])}
+              className="text-lime-600 dark:text-lime-400 font-semibold hover:underline"
+            >
+              Reset to {userDetectedCountry.name}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default CountrySelector;

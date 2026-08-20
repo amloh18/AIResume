@@ -90,13 +90,41 @@ export const initialData = {
         { id: "awd1", name: "Excellence in Analytics Award", issuer: "Innovate AI", date: "2019" },
         { id: "awd2", name: "Top Contributor", issuer: "Open Source Data Org", date: "2018" }
     ],
-    skills: {
-        languages: "Python, R, SQL, JavaScript, HTML/CSS",
-        frameworks: "TensorFlow, PyTorch, React, Node.js",
-        tools: "Tableau, PowerBI, Docker, Git, AWS, GCP"
-    },
-    languages: "English (Native), Hindi (Fluent), Punjabi (Fluent), Spanish (Basic)",
-    interests: "Open-source contributing, Photography, Chess, Bouldering, Machine Learning Research",
+    skills: [
+        {
+            id: "sk1",
+            category: "Core Languages",
+            skillsText: "Python, R, SQL, JavaScript, TypeScript, HTML/CSS",
+            skills: ["Python", "R", "SQL", "JavaScript", "TypeScript", "HTML/CSS"],
+            levels: [5, 4, 5, 4, 5, 4]
+        },
+        {
+            id: "sk2",
+            category: "Frameworks & ML",
+            skillsText: "TensorFlow, PyTorch, React, Node.js, Next.js, FastAPI",
+            skills: ["TensorFlow", "PyTorch", "React", "Node.js", "Next.js", "FastAPI"],
+            levels: [4, 4, 5, 4, 5, 4]
+        },
+        {
+            id: "sk3",
+            category: "Data & Cloud Infrastructure",
+            skillsText: "AWS, GCP, Docker, Kubernetes, Apache Kafka, PostgreSQL, Redis",
+            skills: ["AWS", "GCP", "Docker", "Kubernetes", "Apache Kafka", "PostgreSQL", "Redis"],
+            levels: [4, 4, 4, 4, 4, 5, 4]
+        }
+    ],
+    languages: [
+        { id: "lang1", language: "English", fluency: "Native", level: 5 },
+        { id: "lang2", language: "Hindi", fluency: "Fluent", level: 4 },
+        { id: "lang3", language: "Spanish", fluency: "Basic", level: 2 }
+    ],
+    interests: [
+        { id: "int1", name: "Open-source Contributing" },
+        { id: "int2", name: "Photography & Visual Arts" },
+        { id: "int3", name: "Chess & Strategy" },
+        { id: "int4", name: "Bouldering" },
+        { id: "int5", name: "Machine Learning Research" }
+    ],
     publications: [
         { id: "pub1", title: "Predictive Analytics in Modern E-commerce", publisher: "Journal of Data Science", date: "Oct 2022", description: "Co-authored a comprehensive paper detailing modern algorithmic approaches to cart abandonment." },
         { id: "pub2", title: "Scaling Node.js Microservices", publisher: "Tech Architecture Weekly", date: "Jan 2020", description: "Published a guide on effectively utilizing Docker and Kubernetes for high-availability systems." }

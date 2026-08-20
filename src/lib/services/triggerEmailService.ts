@@ -47,7 +47,7 @@ class TriggerEmailService {
             // Basic Personalization
             const firstName = user.firstName || 'there';
             const lastName = user.lastName || '';
-            const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://cvcircle.io';
+            const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://buildairesume.com';
 
             htmlContent = htmlContent.replace(/{{firstName}}/g, firstName);
             subject = subject.replace(/{{firstName}}/g, firstName);
@@ -89,8 +89,8 @@ class TriggerEmailService {
                         opened: 0,
                         clicked: 0
                     },
-                    fromName: template.defaultFromName || 'CVCircle Team',
-                    fromEmail: template.defaultFromEmail || 'noreply@cvcircle.io',
+                    fromName: template.defaultFromName || 'AI Resume Team',
+                    fromEmail: template.defaultFromEmail || 'noreply@buildairesume.com',
                     creatorId: 'automation',
                     createdByName: 'Automation Engine',
                     tags: ['automated', template.category, template.id],

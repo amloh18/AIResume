@@ -48,7 +48,6 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Logo from '@/components/ui/Logo';
-import { usePaymentModal } from '@/contexts/PaymentModalContext';
 import CodeVerificationScreen from '@/components/auth/CodeVerificationScreen';
 import { toast } from 'react-hot-toast';
 import { getStrengthDescription, getWeaknessDescription } from '@/lib/cv-descriptions';
@@ -74,7 +73,6 @@ interface OnboardingState {
 const WelcomePage: React.FC = () => {
   const router = useRouter();
   const { data: session, status } = useSession();
-  const { openPaymentModal } = usePaymentModal();
   
   // Onboarding Steps (1 to 10)
   const [currentStep, setCurrentStep] = useState(1);
@@ -543,7 +541,7 @@ Please find the CV data attached.`;
 
   const saveStateToLocalStorage = (nextStepNum: number) => {
     const state = getOnboardingState();
-    localStorage.setItem('cvcircle_onboarding_state', JSON.stringify({
+    localStorage.setItem('buildairesume_onboarding_state', JSON.stringify({
       ...state,
       step: nextStepNum,
       fastTrackToEditor
@@ -552,7 +550,7 @@ Please find the CV data attached.`;
 
   // Restore State
   useEffect(() => {
-    const saved = localStorage.getItem('cvcircle_onboarding_state');
+    const saved = localStorage.getItem('buildairesume_onboarding_state');
     if (saved && status === 'authenticated') {
       try {
         const parsed = JSON.parse(saved);
@@ -575,7 +573,7 @@ Please find the CV data attached.`;
         if (parsed.droppedFile) setDroppedFile(parsed.droppedFile);
         
         // Clear local storage
-        localStorage.removeItem('cvcircle_onboarding_state');
+        localStorage.removeItem('buildairesume_onboarding_state');
         
         // If they fast-tracked, call completion logic instead of simple redirect
         if (parsed.fastTrackToEditor) {
@@ -679,72 +677,55 @@ Please find the CV data attached.`;
       let primary_goal: 'cv' | 'tracker' | 'auto_apply' = 'cv';
       let recommended_plan = 'starter_monthly';
       const isScratch = seedingMethod === 'scratch';
-      
-      // All three user types (Starter, Focused, Smart) must go to the editor to complete their primary CV
-      let activation_route = isScratch 
-        ? '/editor?mode=create&step=2&master=true'
-        : (isUserAuth 
-            ? '/editor?doc=master-cv&mode=improve&step=2' 
-            : '/editor?cvId=guest-draft&mode=create&step=2');
-        
-      let dashboard_layout_type: 'cv' | 'tracker' | 'auto_apply' = 'cv';
 
       if (rec.type === 3) {
         primary_goal = 'auto_apply';
         recommended_plan = 'smart_quarterly';
-        dashboard_layout_type = 'auto_apply';
       } else if (rec.type === 2) {
         primary_goal = 'tracker';
         recommended_plan = 'focused_monthly';
-        dashboard_layout_type = 'tracker';
       }
 
-      // If user has a valid primaryCvId (and not 'guest-draft'), route to it in edit-master mode
-      if (activeCvId && activeCvId !== 'guest-draft') {
-        activation_route = `/editor?cvId=${activeCvId}&mode=edit-master&improve=true&step=2`;
-      }
+      const dashboard_layout_type: 'cv' | 'tracker' | 'auto_apply' =
+        rec.type === 3 ? 'auto_apply' : rec.type === 2 ? 'tracker' : 'cv';
 
-      let targetRoute = redirectUrl === '/dashboard' ? '/dashboard' : activation_route;
+      // Route by recommendation so each user type lands on the view that
+      // matches their goal. CV-focused (Type 1) users finish their primary CV
+      // in the editor; tracker (Type 2) and auto-apply (Type 3) users land on
+      // the matching dashboard view.
+      const targetRoute =
+        redirectUrl === '/dashboard'
+          ? redirectUrl
+          : rec.type === 3
+            ? '/dashboard/jobs?tab=auto-apply&setup=1'
+            : rec.type === 2
+              ? '/dashboard/tracker?newJob=1'
+              : isScratch
+                ? '/editor?mode=create&step=2&master=true'
+                : activeCvId && activeCvId !== 'guest-draft'
+                  ? `/editor?cvId=${activeCvId}&mode=edit-master&improve=true&step=2`
+                  : isUserAuth
+                    ? '/editor?doc=master-cv&mode=improve&step=2'
+                    : '/editor?cvId=guest-draft&mode=create&step=2';
 
-      // Update session status
+      // Update session status and mark onboarding complete so the dashboard
+      // never re-gates the user behind activation.
       await saveSession({
         primary_goal,
         confidence_score: s_cvScore,
         recommended_plan,
+        activation_status: 'completed',
         userLifecycleState: 'ONBOARDING_COMPLETE',
         dashboard_layout_type
       });
 
-      if (isUserAuth && activeCvId && activeCvId !== 'guest-draft') {
-        openPaymentModal({
-          preselectedPlanKey: recommended_plan === 'starter_monthly' ? 'focused_monthly' : recommended_plan,
-          triggerContext: 'onboarding-exit',
-          onSuccess: () => {
-            sessionStorage.setItem('fromOnboarding', 'true');
-            router.push(targetRoute);
-          },
-          onClose: async () => {
-            try {
-              await fetch('/api/user/subscription', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ planKey: 'starter_monthly' })
-              });
-              sessionStorage.setItem('fromOnboarding', 'true');
-            } catch (err) {
-              console.error('Failed to auto-assign starter plan:', err);
-            }
-            router.push(targetRoute);
-          }
-        });
-      } else {
-        // Guest user OR authenticated user with no master CV yet - redirect to editor or dashboard with restore draft flag
-        sessionStorage.setItem('fromOnboarding', 'true');
-        const finalUrl = targetRoute.includes('?') 
-          ? `${targetRoute}&restoreDraft=true&fromOnboarding=true`
-          : `${targetRoute}?restoreDraft=true&fromOnboarding=true`;
-        router.push(finalUrl);
-      }
+      // Completed: no paywall at onboarding exit. Route straight to the
+      // destination so the user can start using the product immediately.
+      sessionStorage.setItem('fromOnboarding', 'true');
+      const finalUrl = targetRoute.includes('?')
+        ? `${targetRoute}&restoreDraft=true&fromOnboarding=true`
+        : `${targetRoute}?restoreDraft=true&fromOnboarding=true`;
+      router.push(finalUrl);
     } catch (err) {
       console.error('Failed to complete onboarding:', err);
       router.push(redirectUrl);
@@ -1169,7 +1150,7 @@ Please find the CV data attached.`;
   }, [currentStep]);
 
   return (
-    <div className="h-screen font-sans antialiased flex flex-col selection:bg-lime-200 transition-colors duration-300 overflow-hidden bg-[#f3f2ee] text-[#1A1A1A]">
+    <div className="h-screen font-sans antialiased flex flex-col selection:bg-lime-200 transition-colors duration-300 overflow-hidden bg-[#f3f2ee] text-[#1A1A1A] welcome-page">
       
       {/* Top Header */}
       <header className="px-6 py-5 max-w-7xl mx-auto w-full flex items-center justify-between border-b transition-colors duration-300 border-gray-100">
@@ -1180,22 +1161,16 @@ Please find the CV data attached.`;
           <div className="flex items-center gap-6 text-xs font-semibold text-gray-400">
             {/* Progress Indicators */}
             {currentStep !== 11 && (
-              <div className="flex items-center gap-1.5">
-                {[...Array(11)].map((_, i) => (
-                  <div 
-                    key={i} 
-                    className={`h-1.5 rounded-full transition-all duration-300 ${
-                      i + 1 === currentStep 
-                        ? 'w-6 bg-black dark:bg-[#80FF00]' 
-                        : i + 1 < currentStep 
-                        ? 'w-1.5 bg-gray-400 dark:bg-white/40' 
-                        : 'w-1.5 bg-gray-200 dark:bg-white/10'
-                    }`}
+              <div className="flex items-center gap-3 w-44 sm:w-56">
+                <div className="flex-1 h-1.5 rounded-full bg-gray-200 dark:bg-white/10 overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-black dark:bg-[#80FF00] transition-all duration-500"
+                    style={{ width: `${Math.max(4, Math.round((Math.min(currentStep, 11) / 11) * 100))}%` }}
                   />
-                ))}
+                </div>
+                <span className="whitespace-nowrap font-semibold">Step {Math.min(currentStep, 11)} of 11</span>
               </div>
             )}
-            <span>Step {currentStep} of 11</span>
           </div>
         )}
       </header>
@@ -1222,8 +1197,8 @@ Please find the CV data attached.`;
                     <div className="absolute inset-0 bg-[#80FF00]/5 rounded-3xl animate-pulse" />
                     <History className="h-8 w-8 text-[#80FF00] relative z-10" />
                   </div>
-                  <h1 className="text-4xl font-extrabold tracking-tight text-gray-900 animate-fade-in">Welcome Back</h1>
-                  <p className="text-gray-500 text-base max-w-md mx-auto">
+                  <h1 className="onboarding-title text-gray-900 animate-fade-in">Welcome Back</h1>
+                  <p className="onboarding-copy text-gray-500 max-w-md mx-auto">
                     We've safely saved your progress. Let's pick up right where you left off.
                   </p>
                 </div>
@@ -1302,11 +1277,11 @@ Please find the CV data attached.`;
             {currentStep === 1 && (
               <div className="space-y-8">
                 <div className="space-y-3 text-center">
-                  <span className="text-xs font-black uppercase tracking-widest text-[#80FF00] bg-black px-3 py-1 rounded-full">Personalization</span>
-                  <h1 className="text-4xl font-extrabold tracking-tight md:text-5xl">
-                    Tailor your career circle
+                  <span className="onboarding-step-label text-[#80FF00] bg-black px-3 py-1 rounded-full">Personalization</span>
+                  <h1 className="onboarding-title">
+                    Tailor your AI Resume
                   </h1>
-                  <p className="text-gray-500 text-lg max-w-xl mx-auto">
+                  <p className="onboarding-copy text-gray-500 max-w-xl mx-auto">
                     What is your primary focus today? We will adapt our tools and layout to match your goals.
                   </p>
                 </div>
@@ -1379,11 +1354,11 @@ Please find the CV data attached.`;
             {currentStep === 2 && (
               <div className="space-y-8">
                 <div className="space-y-3 text-center">
-                  <h1 className="text-4xl font-extrabold tracking-tight md:text-5xl">
+                  <h1 className="onboarding-title">
                     Import your background
                   </h1>
-                  <p className="text-gray-500 text-lg max-w-xl mx-auto">
-                    Seed your profile instantly. Select an import path to feed experience data into CVCircle.
+                  <p className="onboarding-copy text-gray-500 max-w-xl mx-auto">
+                    Seed your profile instantly. Select an import path to feed experience data into AI Resume.
                   </p>
                 </div>
 
@@ -1779,10 +1754,10 @@ Please find the CV data attached.`;
             {currentStep === 3 && (
               <div className="space-y-6 max-w-3xl mx-auto animate-fadeIn text-gray-900">
                 <div className="space-y-2 text-center">
-                  <h1 className="text-4xl font-extrabold tracking-tight md:text-5xl">
+                  <h1 className="onboarding-title">
                     Your CV Analysis
                   </h1>
-                  <p className="text-gray-500 text-lg max-w-2xl mx-auto">
+                  <p className="onboarding-copy text-gray-500 max-w-2xl mx-auto">
                     We've analyzed your CV to give you actionable insights and a health score.
                   </p>
                 </div>
@@ -2062,11 +2037,11 @@ Please find the CV data attached.`;
             {currentStep === 4 && (
               <div className="space-y-6 flex flex-col justify-between h-full animate-fade-in">
                 <div className="space-y-3 text-center">
-                  <span className="text-xs font-black uppercase tracking-widest text-[#80FF00] bg-black px-3 py-1 rounded-full">Recruiter Magnet</span>
-                  <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl text-gray-900 dark:text-white">
+                  <span className="onboarding-step-label text-[#80FF00] bg-black px-3 py-1 rounded-full">Recruiter Magnet</span>
+                  <h1 className="onboarding-title text-gray-900 dark:text-white">
                     LinkedIn Profile Optimizer
                   </h1>
-                  <p className="text-gray-500 dark:text-white/60 text-sm max-w-xl mx-auto">
+                  <p className="onboarding-copy text-gray-500 dark:text-white/60 max-w-xl mx-auto">
                     Sync your CV improvements directly to your LinkedIn. Transform passive profiles into recruiter magnets with optimized taglines and impactful summaries.
                   </p>
                 </div>
@@ -2115,11 +2090,11 @@ Please find the CV data attached.`;
             {currentStep === 999 && (
               <div className="space-y-6 flex flex-col justify-between h-full">
                 <div className="space-y-3 text-center animate-fade-in">
-                  <span className="text-xs font-black uppercase tracking-widest text-[#80FF00] bg-black px-3 py-1 rounded-full">Recruiter Magnet</span>
-                  <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl text-gray-900 dark:text-white">
+                  <span className="onboarding-step-label text-[#80FF00] bg-black px-3 py-1 rounded-full">Recruiter Magnet</span>
+                  <h1 className="onboarding-title text-gray-900 dark:text-white">
                     LinkedIn Profile Optimizer
                   </h1>
-                  <p className="text-gray-500 dark:text-white/60 text-sm max-w-xl mx-auto">
+                  <p className="onboarding-copy text-gray-500 dark:text-white/60 max-w-xl mx-auto">
                     Sync your CV improvements directly to your LinkedIn. Transform passive profiles into recruiter magnets with optimized taglines and impactful summaries.
                   </p>
                 </div>
@@ -2168,11 +2143,11 @@ Please find the CV data attached.`;
             {currentStep === 7 && (
               <div className="space-y-6 flex flex-col justify-between h-full">
                 <div className="space-y-3 text-center animate-fade-in">
-                  <span className="text-xs font-black uppercase tracking-widest text-[#80FF00] bg-black px-3 py-1 rounded-full">Interview Ready</span>
-                  <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl text-gray-900 dark:text-white">
+                  <span className="onboarding-step-label text-[#80FF00] bg-black px-3 py-1 rounded-full">Interview Ready</span>
+                  <h1 className="onboarding-title text-gray-900 dark:text-white">
                     Real-Time AI Interview Coach
                   </h1>
-                  <p className="text-gray-500 dark:text-white/60 text-sm max-w-xl mx-auto">
+                  <p className="onboarding-copy text-gray-500 dark:text-white/60 max-w-xl mx-auto">
                     Practice answering questions tailored to your CV and specific target roles. Receive immediate, data-driven audio feedback on structural gaps, tone, and confidence.
                   </p>
                 </div>
@@ -2250,10 +2225,10 @@ Please find the CV data attached.`;
             {currentStep === 5 && (
               <div className="space-y-8">
                 <div className="space-y-3 text-center">
-                  <h1 className="text-4xl font-extrabold tracking-tight md:text-5xl">
+                  <h1 className="onboarding-title">
                     Job Search Status
                   </h1>
-                  <p className="text-gray-500 text-lg max-w-xl mx-auto">
+                  <p className="onboarding-copy text-gray-500 max-w-xl mx-auto">
                     What is your current search strategy? This helps us configure notifications and automation alerts.
                   </p>
                 </div>
@@ -2287,10 +2262,10 @@ Please find the CV data attached.`;
             {currentStep === 6 && (
               <div className="space-y-8">
                 <div className="space-y-3 text-center">
-                  <h1 className="text-4xl font-extrabold tracking-tight md:text-5xl">
+                  <h1 className="onboarding-title">
                     Expected Volume
                   </h1>
-                  <p className="text-gray-500 text-lg max-w-xl mx-auto">
+                  <p className="onboarding-copy text-gray-500 max-w-xl mx-auto">
                     How many job applications do you plan to send per month?
                   </p>
                 </div>
@@ -2324,11 +2299,11 @@ Please find the CV data attached.`;
             {currentStep === 8 && (
               <div className="space-y-6 flex flex-col justify-between h-full animate-fade-in">
                 <div className="space-y-2 text-center">
-                  <span className="text-xs font-black uppercase tracking-widest text-[#80FF00] bg-black px-3 py-1 rounded-full">Automation Suite</span>
-                  <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl text-gray-900 dark:text-white">
+                  <span className="onboarding-step-label text-[#80FF00] bg-black px-3 py-1 rounded-full">Automation Suite</span>
+                  <h1 className="onboarding-title text-gray-900 dark:text-white">
                     Autopilot Application Tracker
                   </h1>
-                  <p className="text-gray-500 dark:text-white/60 text-sm max-w-xl mx-auto">
+                  <p className="onboarding-copy text-gray-500 dark:text-white/60 max-w-xl mx-auto">
                     Let AI scout matching roles, draft cover letters, autofill forms, and sync interview calendar updates automatically.
                   </p>
                 </div>
@@ -2462,10 +2437,10 @@ Please find the CV data attached.`;
             {currentStep === 9 && (
               <div className="space-y-8">
                 <div className="space-y-3 text-center">
-                  <h1 className="text-4xl font-extrabold tracking-tight md:text-5xl">
+                  <h1 className="onboarding-title">
                     Automate Submissions
                   </h1>
-                  <p className="text-gray-500 text-lg max-w-xl mx-auto">
+                  <p className="onboarding-copy text-gray-500 max-w-xl mx-auto">
                     Let AI manage the tedious work of finding matching jobs and submitting tailored applications.
                   </p>
                 </div>
@@ -2538,10 +2513,10 @@ Please find the CV data attached.`;
             {currentStep === 10 && (
               <div className="space-y-8">
                 <div className="space-y-3 text-center">
-                  <h1 className="text-4xl font-extrabold tracking-tight md:text-5xl">
+                  <h1 className="onboarding-title">
                     Target Preferences
                   </h1>
-                  <p className="text-gray-500 text-lg max-w-xl mx-auto">
+                  <p className="onboarding-copy text-gray-500 max-w-xl mx-auto">
                     Define your job target parameters to feed the matching algorithm.
                   </p>
                 </div>
@@ -2735,10 +2710,10 @@ Please find the CV data attached.`;
                   </div>
 
                   <div className="space-y-3 text-center relative z-10">
-                    <span className="text-xs font-black uppercase tracking-widest px-3 py-1 rounded-full bg-slate-100 text-black">
+                    <span className="onboarding-step-label px-3 py-1 rounded-full bg-slate-100 text-black">
                       Onboarding Completed! 🎉
                     </span>
-                    <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl text-gray-900 leading-tight">
+                    <h1 className="onboarding-title text-gray-900 leading-tight">
                       {TitleText}
                     </h1>
                   </div>
@@ -2755,7 +2730,7 @@ Please find the CV data attached.`;
                     <div className="space-y-4 text-amber-950/90 text-lg leading-relaxed select-text" style={{ fontFamily: "'Caveat', cursive" }}>
                       <p className="text-xl font-bold">Dear {parsedCVData?.basics?.name ? parsedCVData.basics.name.trim().split(' ')[0] : 'candidate'},</p>
                       <p>
-                        Welcome to CVCircle. We built this platform to take the tedious manual labor out of your job search so you can focus on landing roles you actually love. You've just mapped your preferences perfectly.
+                        Welcome to AI Resume. We built this platform to take the tedious manual labor out of your job search so you can focus on landing roles you actually love. You've just mapped your preferences perfectly.
                       </p>
                       <p>
                         Let's finalise your Primary CV. This master profile will fuel our scouting algorithm, auto-submit applications, and power your tailored coaching triggers.
@@ -2763,7 +2738,7 @@ Please find the CV data attached.`;
                       <div className="pt-2 flex justify-between items-end">
                         <div className="space-y-0.5">
                           <p className="font-bold text-xl text-black">Amar Lohia</p>
-                          <p className="text-xs uppercase tracking-wider font-sans font-bold text-gray-400 select-none">CEO, CVCircle</p>
+                          <p className="text-xs uppercase tracking-wider font-sans font-bold text-gray-400 select-none">CEO, AI Resume</p>
                         </div>
                       </div>
                     </div>
@@ -2815,7 +2790,7 @@ Please find the CV data attached.`;
 
           {/* Copyright text */}
           <div className="text-center font-medium">
-            &copy; {new Date().getFullYear()} CVCircle. All features secured.
+            &copy; {new Date().getFullYear()} AI Resume. All features secured.
           </div>
 
           {/* Next button */}

@@ -60,7 +60,7 @@ const CookiePolicy: React.FC = () => {
             Cookie Policy
           </h1>
           <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-            We value your privacy. This policy explains how and why we use cookies to improve your CVCircle experience.
+            We value your privacy. This policy explains how and why we use cookies to improve your AI Resume experience.
           </p>
         </motion.div>
 

@@ -77,10 +77,10 @@ const SupportContent: React.FC = () => {
             <div className="bg-lime-500/10 rounded-lg p-4 border border-lime-500/20">
               <p className="text-lime-400 font-medium mb-2">Primary Support Email:</p>
               <a 
-                href="mailto:support@cvcircle.io" 
+                href="mailto:support@buildairesume.com" 
                 className="text-2xl text-lime-400 hover:text-lime-300 underline"
               >
-                support@cvcircle.io
+                support@buildairesume.com
               </a>
             </div>
           </div>
@@ -131,24 +131,24 @@ const SupportContent: React.FC = () => {
           <div className="bg-white/5 rounded-lg p-4 border border-white/10">
             <h4 className="text-lg font-medium mb-2 text-lime-400">Privacy & Data Protection</h4>
             <p className="text-white/80 mb-2">For privacy-related inquiries, data access requests, or GDPR/CCPA/DPDP Act questions:</p>
-            <a href="mailto:privacy@cvcircle.io" className="text-lime-400 hover:text-lime-300 underline">
-              privacy@cvcircle.io
+            <a href="mailto:privacy@buildairesume.com" className="text-lime-400 hover:text-lime-300 underline">
+              privacy@buildairesume.com
             </a>
           </div>
 
           <div className="bg-white/5 rounded-lg p-4 border border-white/10">
             <h4 className="text-lg font-medium mb-2 text-lime-400">Legal & Terms</h4>
             <p className="text-white/80 mb-2">For legal inquiries, terms of service questions, or dispute resolution:</p>
-            <a href="mailto:legal@cvcircle.io" className="text-lime-400 hover:text-lime-300 underline">
-              legal@cvcircle.io
+            <a href="mailto:legal@buildairesume.com" className="text-lime-400 hover:text-lime-300 underline">
+              legal@buildairesume.com
             </a>
           </div>
 
           <div className="bg-white/5 rounded-lg p-4 border border-white/10">
             <h4 className="text-lg font-medium mb-2 text-lime-400">Billing & Payments</h4>
             <p className="text-white/80 mb-2">For subscription questions, refund requests, or payment issues:</p>
-            <a href="mailto:support@cvcircle.io?subject=Billing Inquiry" className="text-lime-400 hover:text-lime-300 underline">
-              support@cvcircle.io
+            <a href="mailto:support@buildairesume.com?subject=Billing Inquiry" className="text-lime-400 hover:text-lime-300 underline">
+              support@buildairesume.com
             </a>
             <p className="text-white/60 text-sm mt-2">(Subject: Billing Inquiry)</p>
           </div>
@@ -156,8 +156,8 @@ const SupportContent: React.FC = () => {
           <div className="bg-white/5 rounded-lg p-4 border border-white/10">
             <h4 className="text-lg font-medium mb-2 text-lime-400">Business & Partnerships</h4>
             <p className="text-white/80 mb-2">For enterprise inquiries, partnerships, or business opportunities:</p>
-            <a href="mailto:business@cvcircle.io" className="text-lime-400 hover:text-lime-300 underline">
-              business@cvcircle.io
+            <a href="mailto:business@buildairesume.com" className="text-lime-400 hover:text-lime-300 underline">
+              business@buildairesume.com
             </a>
           </div>
         </div>
@@ -195,7 +195,7 @@ const SupportContent: React.FC = () => {
           <div>
             <h4 className="text-lg font-medium mb-2 text-lime-400">Can I get a refund?</h4>
             <p className="text-white/80">
-              We offer a 7-day money-back guarantee for Pro plans (Monthly, Quarterly, Yearly) if no documents have been exported. EU customers have a 14-day cooling-off period. Day Pass purchases are non-refundable once activated. Contact support@cvcircle.io for refund requests.
+              We offer a 7-day money-back guarantee for Pro plans (Monthly, Quarterly, Yearly) if no documents have been exported. EU customers have a 14-day cooling-off period. Day Pass purchases are non-refundable once activated. Contact support@buildairesume.com for refund requests.
             </p>
           </div>
 
@@ -314,29 +314,29 @@ const SupportContent: React.FC = () => {
         <div className="space-y-4 text-white/80">
           <div>
             <p className="mb-2"><strong>General Support:</strong></p>
-            <a href="mailto:support@cvcircle.io" className="text-lime-400 hover:text-lime-300 underline">
-              support@cvcircle.io
+            <a href="mailto:support@buildairesume.com" className="text-lime-400 hover:text-lime-300 underline">
+              support@buildairesume.com
             </a>
           </div>
 
           <div>
             <p className="mb-2"><strong>Privacy & Data Protection:</strong></p>
-            <a href="mailto:privacy@cvcircle.io" className="text-lime-400 hover:text-lime-300 underline">
-              privacy@cvcircle.io
+            <a href="mailto:privacy@buildairesume.com" className="text-lime-400 hover:text-lime-300 underline">
+              privacy@buildairesume.com
             </a>
           </div>
 
           <div>
             <p className="mb-2"><strong>Legal Inquiries:</strong></p>
-            <a href="mailto:legal@cvcircle.io" className="text-lime-400 hover:text-lime-300 underline">
-              legal@cvcircle.io
+            <a href="mailto:legal@buildairesume.com" className="text-lime-400 hover:text-lime-300 underline">
+              legal@buildairesume.com
             </a>
           </div>
 
           <div>
             <p className="mb-2"><strong>Business & Partnerships:</strong></p>
-            <a href="mailto:business@cvcircle.io" className="text-lime-400 hover:text-lime-300 underline">
-              business@cvcircle.io
+            <a href="mailto:business@buildairesume.com" className="text-lime-400 hover:text-lime-300 underline">
+              business@buildairesume.com
             </a>
           </div>
 

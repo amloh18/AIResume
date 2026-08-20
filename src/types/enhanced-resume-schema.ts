@@ -2,7 +2,7 @@
 /**
  * Enhanced Resume JSON Schema
  * 
- * This is the canonical data structure for all resume data in CV Circle 2.0.
+ * This is the canonical data structure for all resume data in AI Resume 2.0.
  * All layers (forms, editor, preview, AI) read from and write to this structure.
  * 
  * Key Features:

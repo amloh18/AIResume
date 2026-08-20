@@ -15,7 +15,7 @@ export default function AIResumeBuilderPage() {
               <div className="w-8 h-8 bg-[#81ff00] rounded-lg flex items-center justify-center">
                 <span className="text-black font-bold text-sm">CV</span>
               </div>
-              <span className="text-white font-bold text-lg">CVCircle</span>
+              <span className="text-white font-bold text-lg">AI Resume</span>
             </Link>
             <div className="hidden md:flex items-center gap-8">
               <Link href="/#features" className="text-gray-400 hover:text-white transition-colors text-sm">Features</Link>
@@ -184,7 +184,7 @@ export default function AIResumeBuilderPage() {
             Ready to Create Your Resume?
           </h2>
           <p className="text-green-100 mb-8">
-            Join thousands who landed their dream jobs with CVCircle.
+            Join thousands who landed their dream jobs with AI Resume.
           </p>
           <Link
             href="/sign-up?callbackUrl=/editor"
@@ -202,7 +202,7 @@ export default function AIResumeBuilderPage() {
             <div className="w-6 h-6 bg-[#81ff00] rounded flex items-center justify-center">
               <span className="text-black font-bold text-xs">CV</span>
             </div>
-            <span className="text-gray-500 text-sm">© 2026 CVCircle. All rights reserved.</span>
+            <span className="text-gray-500 text-sm">© 2026 AI Resume. All rights reserved.</span>
           </div>
           <div className="flex items-center gap-6">
             <Link href="/privacy-policy" className="text-gray-500 hover:text-white text-sm">Privacy</Link>

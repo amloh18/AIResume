@@ -194,7 +194,7 @@ async function insertSampleData() {
     },
     metadata: {
       version: "1.0",
-      author: "CV Circle",
+      author: "AI Resume",
       tags: ["professional", "modern"],
       usageCount: 0
     },
@@ -242,7 +242,7 @@ async function verifySetup() {
 }
 
 async function main() {
-  console.log('🚀 Setting up MongoDB for CV Circle...\n');
+  console.log('🚀 Setting up MongoDB for AI Resume...\n');
   
   // Check if MongoDB tools are installed
   try {

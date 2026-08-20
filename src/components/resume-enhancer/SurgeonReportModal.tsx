@@ -723,7 +723,7 @@ export default function SurgeonReportModal({ isOpen, onClose, onReviewAndFix }: 
               <div className="flex items-center gap-3 min-w-0">
                 <Sparkles className="w-4 h-4 text-[#80FF00]" />
                 <InfoTooltip content="Issues are highlighted directly on your CV. Select a fix on the left, then apply it from the right panel.">
-                  <div className="text-white font-semibold cursor-help truncate">CVCircle Optimisation Report</div>
+                  <div className="text-white font-semibold cursor-help truncate">AI Resume Optimisation Report</div>
                 </InfoTooltip>
                 <div className="hidden md:flex items-center gap-3 text-xs text-white/70">
                   <span className="whitespace-nowrap">{openFixes.length} open</span>

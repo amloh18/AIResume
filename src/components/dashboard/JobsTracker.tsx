@@ -788,7 +788,7 @@ const JobsTracker: React.FC = () => {
           sponsorship: 'unknown' as const, // Default sponsorship
           tags: parsedData.tags || [],
           salary: salaryData, // Properly structured salary with currency and period
-          source: cleanedSource as 'extension' | 'manual' | 'import' | 'linkedin' | 'indeed' | 'company-website' | 'referral' | 'other',
+          source: cleanedSource as 'extension' | 'manual' | 'import' | 'linkedin' | 'naukri' | 'indeed' | 'company-website' | 'referral' | 'other',
           sourceUrl: parsedData.sourceUrl || '',
           contactDetails: {
             name: '',
@@ -1645,7 +1645,7 @@ const JobsTracker: React.FC = () => {
           sponsorship: editingJob.sponsorship,
           tags: editingJob.tags,
           contactDetails: editingJob.contactDetails || { name: '', email: '', phone: '', role: '' },
-          source: editingJob.source as 'linkedin' | 'indeed' | 'company-website' | 'referral' | 'other' | undefined,
+          source: editingJob.source as 'linkedin' | 'naukri' | 'indeed' | 'company-website' | 'referral' | 'other' | undefined,
           createdAt: editingJob.createdAt,
           updatedAt: editingJob.updatedAt
         } : null}

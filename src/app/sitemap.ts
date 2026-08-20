@@ -2,25 +2,22 @@ import { MetadataRoute } from 'next'
 import { getAllArticles } from '@/data/blogs'
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = 'https://cvcircle.io'
+  const baseUrl = 'https://buildairesume.com'
   const now = new Date()
 
   // Landing & Main Pages
   const staticPages = [
     { url: baseUrl, priority: 1.0, changeFrequency: 'daily' as const },
-    { url: `${baseUrl}/features`, priority: 0.9, changeFrequency: 'weekly' as const },
+    { url: `${baseUrl}/ai-resume-builder`, priority: 0.9, changeFrequency: 'weekly' as const },
     { url: `${baseUrl}/templates`, priority: 0.9, changeFrequency: 'weekly' as const },
+    { url: `${baseUrl}/ats-resume-checker`, priority: 0.9, changeFrequency: 'weekly' as const },
+    { url: `${baseUrl}/resume-score`, priority: 0.9, changeFrequency: 'weekly' as const },
+    { url: `${baseUrl}/features`, priority: 0.9, changeFrequency: 'weekly' as const },
     { url: `${baseUrl}/blog`, priority: 0.8, changeFrequency: 'weekly' as const },
-    { url: `${baseUrl}/about`, priority: 0.7, changeFrequency: 'monthly' as const },
-    { url: `${baseUrl}/careers`, priority: 0.6, changeFrequency: 'monthly' as const },
   ]
 
   // Tool pages
   const toolPages = [
-    'ai-resume-builder',
-    'ats-resume-checker',
-    'resume-score',
-    'ai-career-report',
     'interview-coach',
     'linkedin-enhancer',
   ]
@@ -29,10 +26,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
     url: `${baseUrl}/${tool}`,
     lastModified: now,
     changeFrequency: 'weekly' as const,
-    priority: 0.9,
+    priority: 0.7,
   }))
 
-  // Role-specific resume pages
+  // Role-specific resume pages (only roles with real content)
   const rolePages = [
     'data-analyst',
     'software-engineer',
@@ -44,10 +41,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     'data-scientist',
     'ui-ux-designer',
     'devops-engineer',
-    'project-manager',
-    'marketing-manager',
-    'sales-representative',
-    'customer-service',
   ]
 
   const roleSitemapEntries = rolePages.map(role => ({
@@ -89,7 +82,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   // Comparison Pages
   const comparisonPages = [
-    'compare/cvcircle-vs-cakeresume',
+    'compare/ai-resume-vs-cakeresume',
+    'compare/resume-builders',
   ]
 
   const comparisonSitemapEntries = comparisonPages.map(page => ({

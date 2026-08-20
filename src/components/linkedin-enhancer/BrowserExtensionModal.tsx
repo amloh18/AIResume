@@ -79,7 +79,7 @@ export default function BrowserExtensionModal({ isOpen, onClose, onPreview, sele
                         <div className="mb-6 bg-blue-50 border border-blue-100 rounded-xl p-4 text-small text-blue-800 flex gap-3">
                             <ShieldCheck className="w-5 h-5 text-blue-600 flex-shrink-0" />
                             <p>
-                                <strong>Safety First:</strong> The CVCircle extension acts solely as a bridge. It will never modify your profile without your explicit confirmation on the LinkedIn page.
+                                <strong>Safety First:</strong> The AI Resume extension acts solely as a bridge. It will never modify your profile without your explicit confirmation on the LinkedIn page.
                             </p>
                         </div>
 

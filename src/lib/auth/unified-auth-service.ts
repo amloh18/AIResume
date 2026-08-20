@@ -342,7 +342,7 @@ export class UnifiedAuthService {
                   const headersList = await headers();
                   const cookieHeader = headersList.get('cookie');
                   if (cookieHeader) {
-                    const match = cookieHeader.match(/cvcircle_anonymous_token=([^;]+)/);
+                    const match = cookieHeader.match(/buildairesume_anonymous_token=([^;]+)/);
                     if (match && match[1]) {
                       const anonymousToken = match[1];
                       console.log('🔄 Merging anonymous user during passwordless signup:', anonymousToken);
@@ -468,7 +468,7 @@ export class UnifiedAuthService {
                   const headersList = await headers();
                   const cookieHeader = headersList.get('cookie');
                   if (cookieHeader) {
-                    const match = cookieHeader.match(/cvcircle_anonymous_token=([^;]+)/);
+                    const match = cookieHeader.match(/buildairesume_anonymous_token=([^;]+)/);
                     if (match && match[1]) {
                       const anonymousToken = match[1];
                       console.log('🔄 Merging anonymous user during OAuth sign-in:', anonymousToken);

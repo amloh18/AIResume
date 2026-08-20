@@ -243,8 +243,8 @@ export default function UserActivityModal({ userId, isOpen, onClose }: { userId:
               emails: [data.user.email],
               subject: subject,
               htmlContent: `<p>${htmlContent.replace(/\n/g, '<br>')}</p>`,
-              fromName: 'CVCircle Support',
-              fromEmail: 'support@cvcircle.io'
+              fromName: 'AI Resume Support',
+              fromEmail: 'support@buildairesume.com'
             })
           });
           const result = await res.json();

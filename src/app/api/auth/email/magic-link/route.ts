@@ -5,7 +5,7 @@ export async function POST(request: NextRequest) {
     const { email, url, provider } = await request.json();
 
     // Get base URL for email images (absolute URLs required for emails)
-    const baseUrl = process.env.NEXTAUTH_URL || 'https://www.cvcircle.io';
+    const baseUrl = process.env.NEXTAUTH_URL || 'https://www.buildairesume.com';
     const cleanBaseUrl = baseUrl.replace(/\/$/, '');
     const logoUrl = `${cleanBaseUrl}/images/logo.png`;
 
@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
           <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
           <meta name="x-apple-disable-message-reformatting">
           <meta http-equiv="X-UA-Compatible" content="IE=edge">
-          <title>Sign in to CVCircle</title>
+          <title>Sign in to AI Resume</title>
           <style>
             body, table, td, p, a, li, blockquote {
               -webkit-text-size-adjust: 100%;
@@ -185,13 +185,13 @@ export async function POST(request: NextRequest) {
             <div class="container">
               <div class="header" style="margin-bottom: 30px;">
                 <div style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 10px;">
-                  <img src="${logoUrl}" alt="CVCircle Logo" width="40" height="40" style="display: block; max-width: 40px; height: auto;">
+                  <img src="${logoUrl}" alt="AI Resume Logo" width="40" height="40" style="display: block; max-width: 40px; height: auto;">
                 </div>
                 <p style="color: rgba(255, 255, 255, 0.6); margin: 5px 0 0 0; font-size: 14px; line-height: 1.4;">Professional CV Builder</p>
               </div>
               
               <h1>Sign in to your account</h1>
-              <p>Click the button below to sign in to your CVCircle account.</p>
+              <p>Click the button below to sign in to your AI Resume account.</p>
 
               <a href="${url}" class="button">Sign In</a>
 
@@ -207,8 +207,8 @@ export async function POST(request: NextRequest) {
 
               <div class="footer">
                 <p>This email was sent to ${email}</p>
-                <p>© 2026 CVCircle by Morigrid Labs. All rights reserved.</p>
-                <p>www.cvcircle.io</p>
+                <p>© 2026 AI Resume by Morigrid Labs. All rights reserved.</p>
+                <p>www.buildairesume.com</p>
               </div>
             </div>
           </div>
@@ -217,9 +217,9 @@ export async function POST(request: NextRequest) {
     `;
 
     const emailText = `
-      Sign in to CV Circle
+      Sign in to AI Resume
 
-      Click the following link to sign in to your CV Circle account:
+      Click the following link to sign in to your AI Resume account:
       ${url}
 
       This link will expire in 24 hours for your security.
@@ -227,7 +227,7 @@ export async function POST(request: NextRequest) {
       If you didn't request this sign-in, please ignore this email.
 
       ---
-      CV Circle Team
+      AI Resume Team
     `;
 
     // Send email using the configured email server
@@ -242,7 +242,7 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({
         from: process.env.EMAIL_SERVER_USER,
         to: email,
-        subject: 'Sign in to CV Circle',
+        subject: 'Sign in to AI Resume',
         text: emailText,
         html: emailHtml,
       }),

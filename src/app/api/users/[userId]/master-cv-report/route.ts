@@ -113,14 +113,14 @@ export async function GET(
     
     if (!masterCV) {
       return NextResponse.json(
-        { error: 'Master CV not found. Please create a master CV on cvcircle.io' },
+        { error: 'Master CV not found. Please create a master CV on buildairesume.com' },
         { status: 404 }
       );
     }
     
     if (!masterCV.metadata?.aiAnalysis) {
       return NextResponse.json(
-        { error: 'Master CV or AI analysis not found. Please create a master CV with AI career report on cvcircle.io' },
+        { error: 'Master CV or AI analysis not found. Please create a master CV with AI career report on buildairesume.com' },
         { status: 404 }
       );
     }

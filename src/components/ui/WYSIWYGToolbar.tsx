@@ -14,8 +14,8 @@ import { fixFormattingToBullets } from '@/lib/utils/format-utils';
 
 interface WYSIWYGToolbarProps {
   formatState?: { bold: boolean; italic: boolean; underline: boolean };
-  undoStack?: string[];
-  redoStack?: string[];
+  undoStack?: readonly unknown[];
+  redoStack?: readonly unknown[];
   onBold?: () => void;
   onItalic?: () => void;
   onUnderline?: () => void;

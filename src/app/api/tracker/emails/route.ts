@@ -113,7 +113,7 @@ async function seedMockEmailsIfNeeded(userId: string, jobId: string, job: any, a
 }
 
 function sessionUserEmail(userId: string) {
-  return 'user@cvcircle.com';
+  return 'user@buildairesume.com';
 }
 
 // GET: Fetch synced/mock emails for a jobId
@@ -212,7 +212,7 @@ export async function POST(request: NextRequest) {
         matchConfidence: 100,
         matchStatus: 'manual',
         direction: 'outbound',
-        senderEmail: session.user.email || 'user@cvcircle.com',
+        senderEmail: session.user.email || 'user@buildairesume.com',
         senderName: 'You',
         subject: subject || `Re: Communication regarding job`,
         bodySnippet: bodyText.substring(0, 500),

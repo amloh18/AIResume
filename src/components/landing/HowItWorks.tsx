@@ -112,7 +112,7 @@ const HowItWorks = () => {
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.15 }}
           >
-            CVCircle makes it simple to manage your entire job application.
+            AI Resume makes it simple to manage your entire job application.
           </motion.p>
         </div>
 

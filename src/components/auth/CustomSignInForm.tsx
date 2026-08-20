@@ -96,7 +96,7 @@ export default function CustomSignInForm() {
                     value={formData.email}
                     onChange={handleChange}
                     required
-                    placeholder="user@cvcircle.io"
+                    placeholder="user@buildairesume.com"
                     className="flex h-10 w-full rounded-none px-3 py-2 text-small file:border-0 file:bg-transparent file:text-small file:font-medium placeholder:text-muted-foreground outline-none focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 mt-1 bg-gray-700 border border-[#80FF00]/50 text-white placeholder-gray-400 focus:border-2 focus:border-[#80FF00] transition-all duration-200"
                   />
                 </div>
@@ -142,7 +142,7 @@ export default function CustomSignInForm() {
             <div className="mt-6 text-center">
               <p className="text-small text-gray-300">
                 Test credentials: <br />
-                <span className="text-blue-400">user@cvcircle.io</span> / <span className="text-blue-400">user123</span>
+                <span className="text-blue-400">user@buildairesume.com</span> / <span className="text-blue-400">user123</span>
               </p>
               <p className="text-small text-gray-300 mt-2">
                 Admin access? <a href="/sign-in" className="font-medium text-red-400 hover:text-red-300">Admin sign in</a>

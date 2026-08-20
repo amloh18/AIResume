@@ -29,10 +29,10 @@ const PrivacyPolicyContent: React.FC = () => {
           Introduction
         </h3>
         <p className="text-white/80 leading-relaxed mb-4">
-          At CVCircle ("we," "our," or "us"), a product of <strong>Morigrid Labs</strong>, we are committed to protecting your privacy and ensuring the security of your personal information. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our AI-powered CV creation and job application management platform.
+          At AI Resume ("we," "our," or "us"), a product of <strong>Morigrid Labs</strong>, we are committed to protecting your privacy and ensuring the security of your personal information. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our AI-powered CV creation and job application management platform.
         </p>
         <p className="text-white/80 leading-relaxed">
-          By using CVCircle, you agree to the collection and use of information in accordance with this policy. This policy complies with global data protection standards, including GDPR (General Data Protection Regulation), CCPA (California Consumer Privacy Act), and India's Digital Personal Data Protection Act 2023. If you do not agree with our policies and practices, please do not use our service.
+          By using AI Resume, you agree to the collection and use of information in accordance with this policy. This policy complies with global data protection standards, including GDPR (General Data Protection Regulation), CCPA (California Consumer Privacy Act), and India's Digital Personal Data Protection Act 2023. If you do not agree with our policies and practices, please do not use our service.
         </p>
       </div>
 
@@ -202,14 +202,14 @@ const PrivacyPolicyContent: React.FC = () => {
               <li>We retain your data as long as your account is active and for 30 days after account deletion</li>
               <li>Some information may be retained for legal compliance (tax records, payment history) for up to 7 years</li>
               <li>CV and cover letter data is deleted within 30 days of account deletion request</li>
-              <li>You can request immediate data deletion by contacting privacy@cvcircle.io</li>
+              <li>You can request immediate data deletion by contacting privacy@buildairesume.com</li>
             </ul>
           </div>
 
           <div>
             <h4 className="text-xl font-medium mb-3 text-lime-400">How to Exercise Your Rights</h4>
             <p className="text-white/80 mb-3">
-              To exercise any of these rights, please contact us at <strong>privacy@cvcircle.io</strong> with:
+              To exercise any of these rights, please contact us at <strong>privacy@buildairesume.com</strong> with:
             </p>
             <ul className="list-disc list-inside space-y-2 text-white/80 ml-4">
               <li>Your account email address</li>
@@ -288,7 +288,7 @@ const PrivacyPolicyContent: React.FC = () => {
       <div className="bg-white/5 backdrop-blur-sm rounded-xl p-8 mb-8 border border-white/10">
         <h3 className="text-2xl font-semibold mb-4">Children's Privacy</h3>
         <p className="text-white/80 leading-relaxed">
-          Our service is not intended for children under 13 years of age (or 16 in the EU). We do not knowingly collect personal information from children under 13. If you are a parent or guardian and believe your child has provided us with personal information, please contact us immediately at <strong>privacy@cvcircle.io</strong> and we will delete such information.
+          Our service is not intended for children under 13 years of age (or 16 in the EU). We do not knowingly collect personal information from children under 13. If you are a parent or guardian and believe your child has provided us with personal information, please contact us immediately at <strong>privacy@buildairesume.com</strong> and we will delete such information.
         </p>
       </div>
 
@@ -320,7 +320,7 @@ const PrivacyPolicyContent: React.FC = () => {
         </p>
 
         <div className="space-y-3 text-white/80">
-          <p><strong>Email:</strong> <a href="mailto:privacy@cvcircle.io" className="text-lime-400 hover:text-lime-300 underline">privacy@cvcircle.io</a></p>
+          <p><strong>Email:</strong> <a href="mailto:privacy@buildairesume.com" className="text-lime-400 hover:text-lime-300 underline">privacy@buildairesume.com</a></p>
           <p><strong>Subject Line:</strong> Privacy Policy Inquiry / Data Rights Request</p>
           <p><strong>Response Time:</strong> We aim to respond to all privacy-related inquiries within 48 hours and process data rights requests within 30 days as required by law.</p>
           <p><strong>Parent Company:</strong> Morigrid Labs</p>
@@ -328,7 +328,7 @@ const PrivacyPolicyContent: React.FC = () => {
 
         <div className="mt-6 p-4 bg-lime-500/10 rounded-lg border border-lime-500/20">
           <p className="text-lime-400 text-sm text-center">
-            © 2026 CVCircle by <strong>Morigrid Labs</strong>. All rights reserved.
+            © 2026 AI Resume by <strong>Morigrid Labs</strong>. All rights reserved.
           </p>
         </div>
       </div>

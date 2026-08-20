@@ -1,5 +1,5 @@
-# robots.txt for CVCircle.io
-# AI-Powered CV Builder and Job Application Management Platform
+# robots.txt for buildairesume.com
+# AI Resume - AI-Powered Resume Builder and Job Application Management Platform
 #
 # NOTE: This file is a copy for project root visibility.
 # The actual file served by Next.js is in: public/robots.txt
@@ -12,10 +12,12 @@ Allow: /
 Disallow: /admin/
 Disallow: /api/
 Disallow: /_next/
-Disallow: /studio/
+Disallow: /editor/
 Disallow: /dashboard/
 Disallow: /profile/
 Disallow: /auth/
+Disallow: /sign-in
+Disallow: /sign-up
 Disallow: /custom-signin/
 Disallow: /force-logout/
 Disallow: /welcome/
@@ -30,7 +32,7 @@ Allow: /resume/
 Allow: /ai-resume-builder
 Allow: /ats-resume-checker
 Allow: /resume-score
-Allow: /ai-career-report
+Allow: /compare/
 
 # AI Crawlers
 User-agent: GPTBot
@@ -50,4 +52,4 @@ Allow: /
 Allow: /llm.txt
 
 # Sitemap location
-Sitemap: https://cvcircle.io/sitemap.xml
+Sitemap: https://buildairesume.com/sitemap.xml
