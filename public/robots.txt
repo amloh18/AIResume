@@ -3,10 +3,13 @@ Allow: /
 Disallow: /dashboard/
 Disallow: /admin/
 Disallow: /api/
-Disallow: /studio/
+Disallow: /editor/
+Disallow: /auth/
+Disallow: /welcome/
+Disallow: /profile/
 
 # Host
-Host: https://cvcircle.io
+Host: https://buildairesume.com
 
 # Sitemaps
-Sitemap: https://cvcircle.io/sitemap.xml
+Sitemap: https://buildairesume.com/sitemap.xml

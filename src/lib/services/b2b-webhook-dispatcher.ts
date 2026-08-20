@@ -34,8 +34,8 @@ export class WebhookDispatcher {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'CVCircle-Webhook-Timestamp': timestamp,
-          'CVCircle-Webhook-Signature': `v1=${signature}`
+          'AI-Resume-Webhook-Timestamp': timestamp,
+          'AI-Resume-Webhook-Signature': `v1=${signature}`
         },
         body
       });

@@ -19,7 +19,7 @@ import CardNav from '@/components/landing/CardNav'
 import Footer from '@/components/landing/Footer'
 
 export const metadata: Metadata = {
-  title: 'CV Builder Features - AI-Powered Resume Tools & ATS Optimization | CVCircle',
+  title: 'AI Resume Builder Features - AI-Powered Resume Tools & ATS Optimization',
   description: 'Discover powerful CV builder features: AI-powered resume analysis, ATS optimization, job tracking, one-click career kits, and professional templates. Build ATS-friendly resumes that get you hired.',
   keywords: [
     'CV builder features',
@@ -37,16 +37,16 @@ export const metadata: Metadata = {
     'professional CV builder'
   ],
   openGraph: {
-    title: 'CV Builder Features - AI-Powered Resume Tools | CVCircle',
-    description: 'Powerful CV builder features: AI analysis, ATS optimization, job tracking, and professional templates. Build resumes that get you hired.',
-    url: 'https://cvcircle.io/features',
-    siteName: 'CVCircle',
+    title: 'AI Resume Builder Features - AI-Powered Resume Tools',
+    description: 'Powerful resume builder features: AI analysis, ATS optimization, job tracking, and professional templates.',
+    url: 'https://buildairesume.com/features',
+    siteName: 'AI Resume',
     images: [
       {
         url: '/images/features-og.png',
         width: 1200,
         height: 630,
-        alt: 'CVCircle Features - AI-Powered CV Builder',
+        alt: 'AI Resume Features - AI-Powered Resume Builder',
       },
     ],
     locale: 'en_US',
@@ -54,12 +54,12 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'CV Builder Features - AI-Powered Resume Tools',
+    title: 'AI Resume Builder Features - AI-Powered Resume Tools',
     description: 'Discover powerful CV builder features: AI analysis, ATS optimization, and job tracking.',
     images: ['/images/features-twitter.png'],
   },
   alternates: {
-    canonical: 'https://cvcircle.io/features',
+    canonical: 'https://buildairesume.com/features',
   },
   robots: {
     index: true,
@@ -154,9 +154,9 @@ const navLinks = [
       },
       {
         label: 'Blog',
-        description: 'Research-backed career guides, ATS tips, and resume tutorials from CVCircle.',
+        description: 'Research-backed career guides, ATS tips, and resume tutorials from AI Resume.',
         href: '/blog',
-        ariaLabel: 'Read the CVCircle blog',
+        ariaLabel: 'Read the AI Resume blog',
         icon: <BookOpen className="w-5 h-5 text-gray-400" />
       },
       { 
@@ -190,9 +190,9 @@ export default function FeaturesPage() {
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
-    "name": "CVCircle Features",
-    "description": "Comprehensive CV builder with AI-powered features, ATS optimization, and job tracking",
-    "url": "https://cvcircle.io/features",
+    "name": "AI Resume Features",
+    "description": "Comprehensive resume builder with AI-powered features, ATS optimization, and job tracking",
+    "url": "https://buildairesume.com/features",
     "applicationCategory": "BusinessApplication",
     "operatingSystem": "Web",
     "offers": {
@@ -233,7 +233,7 @@ export default function FeaturesPage() {
 
         <div className="relative z-10">
           <CardNav
-            logo="CVCircle"
+            logo="AI Resume"
             links={navLinks}
           />
 
@@ -272,7 +272,7 @@ export default function FeaturesPage() {
           <section className="py-20 px-4 bg-white/5 border-y border-white/5 backdrop-blur-sm">
             <div className="max-w-7xl mx-auto">
               <h2 className="text-4xl font-bold text-white text-center mb-12">
-                Why Choose CVCircle?
+                Why Choose AI Resume?
               </h2>
               <div className="grid tablet:grid-cols-3 gap-8">
                 <div className="bg-white/5 p-8 rounded-2xl border border-white/10 backdrop-blur-sm hover:border-[#80FF00]/30 hover:bg-white/10 transition-all duration-300 shadow-xl">
@@ -324,7 +324,7 @@ export default function FeaturesPage() {
                     Ready to Build Your <span className="text-[#80FF00] bg-clip-text bg-gradient-to-r from-[#80FF00] via-[#a2ff54] to-emerald-400">Perfect CV?</span>
                   </h2>
                   <p className="text-gray-300 mb-10 max-w-3xl text-body md:text-h2 leading-relaxed">
-                    Join thousands of professionals who have landed their dream jobs with CVCircle. Built in minutes — free to start.
+                    Join thousands of professionals who have landed their dream jobs with AI Resume. Built in minutes — free to start.
                   </p>
                   <div className="flex flex-col sm:flex-row gap-5 justify-center w-full sm:w-auto">
                     <Link

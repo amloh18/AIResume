@@ -9,32 +9,32 @@ type CellValue = 'yes' | 'no' | 'partial';
 interface Feature {
   category?: string;
   name: string;
-  cvcircle: CellValue;
+  aiResume: CellValue;
   zety: CellValue;
   resumeio: CellValue;
   kickresume: CellValue;
 }
 
 const features: Feature[] = [
-  { category: 'Core Building',       name: 'ATS-Optimised Templates',          cvcircle: 'yes', zety: 'yes',     resumeio: 'yes',     kickresume: 'yes' },
-  {                                   name: 'Custom ATS Templates',             cvcircle: 'yes', zety: 'no',      resumeio: 'no',      kickresume: 'no' },
-  {                                   name: 'Unlimited CV & Cover Letter Edit',  cvcircle: 'yes', zety: 'partial', resumeio: 'partial', kickresume: 'partial' },
-  {                                   name: 'Snippets (Reusable Blocks)',        cvcircle: 'yes', zety: 'no',      resumeio: 'no',      kickresume: 'no' },
-  { category: 'AI & Intelligence',   name: 'Live ATS Scoring & Real-time Edit', cvcircle: 'yes', zety: 'partial', resumeio: 'no',      kickresume: 'partial' },
-  {                                   name: 'AI Cover Letter Generator',         cvcircle: 'yes', zety: 'yes',     resumeio: 'yes',     kickresume: 'yes' },
-  {                                   name: 'AI Interview Coach Simulator',      cvcircle: 'yes', zety: 'no',      resumeio: 'no',      kickresume: 'no' },
-  {                                   name: 'LinkedIn Profile Enhancer',         cvcircle: 'yes', zety: 'no',      resumeio: 'no',      kickresume: 'partial' },
-  { category: 'Workflow',            name: 'Job Application Tracker',           cvcircle: 'yes', zety: 'no',      resumeio: 'no',      kickresume: 'no' },
-  {                                   name: 'Auto Job Application Bot',          cvcircle: 'yes', zety: 'no',      resumeio: 'no',      kickresume: 'no' },
-  {                                   name: 'Chrome Extension',                  cvcircle: 'yes', zety: 'no',      resumeio: 'no',      kickresume: 'no' },
-  {                                   name: 'Permanent Career Vault',            cvcircle: 'yes', zety: 'no',      resumeio: 'no',      kickresume: 'no' },
-  { category: 'Pricing & Support',   name: 'Transparent Flat Pricing',          cvcircle: 'yes', zety: 'no',      resumeio: 'no',      kickresume: 'partial' },
-  {                                   name: 'Free Plan (No Credit Card)',         cvcircle: 'yes', zety: 'no',      resumeio: 'no',      kickresume: 'no' },
-  {                                   name: 'Priority / VIP Support',            cvcircle: 'yes', zety: 'partial', resumeio: 'partial', kickresume: 'partial' },
+  { category: 'Core Building',       name: 'ATS-Optimised Templates',          aiResume: 'yes', zety: 'yes',     resumeio: 'yes',     kickresume: 'yes' },
+  {                                   name: 'Custom ATS Templates',             aiResume: 'yes', zety: 'no',      resumeio: 'no',      kickresume: 'no' },
+  {                                   name: 'Unlimited CV & Cover Letter Edit',  aiResume: 'yes', zety: 'partial', resumeio: 'partial', kickresume: 'partial' },
+  {                                   name: 'Snippets (Reusable Blocks)',        aiResume: 'yes', zety: 'no',      resumeio: 'no',      kickresume: 'no' },
+  { category: 'AI & Intelligence',   name: 'Live ATS Scoring & Real-time Edit', aiResume: 'yes', zety: 'partial', resumeio: 'no',      kickresume: 'partial' },
+  {                                   name: 'AI Cover Letter Generator',         aiResume: 'yes', zety: 'yes',     resumeio: 'yes',     kickresume: 'yes' },
+  {                                   name: 'AI Interview Coach Simulator',      aiResume: 'yes', zety: 'no',      resumeio: 'no',      kickresume: 'no' },
+  {                                   name: 'LinkedIn Profile Enhancer',         aiResume: 'yes', zety: 'no',      resumeio: 'no',      kickresume: 'partial' },
+  { category: 'Workflow',            name: 'Job Application Tracker',           aiResume: 'yes', zety: 'no',      resumeio: 'no',      kickresume: 'no' },
+  {                                   name: 'Auto Job Application Bot',          aiResume: 'yes', zety: 'no',      resumeio: 'no',      kickresume: 'no' },
+  {                                   name: 'Chrome Extension',                  aiResume: 'yes', zety: 'no',      resumeio: 'no',      kickresume: 'no' },
+  {                                   name: 'Permanent Career Vault',            aiResume: 'yes', zety: 'no',      resumeio: 'no',      kickresume: 'no' },
+  { category: 'Pricing & Support',   name: 'Transparent Flat Pricing',          aiResume: 'yes', zety: 'no',      resumeio: 'no',      kickresume: 'partial' },
+  {                                   name: 'Free Plan (No Credit Card)',         aiResume: 'yes', zety: 'no',      resumeio: 'no',      kickresume: 'no' },
+  {                                   name: 'Priority / VIP Support',            aiResume: 'yes', zety: 'partial', resumeio: 'partial', kickresume: 'partial' },
 ];
 
 const competitors = [
-  { key: 'cvcircle',   label: 'CVCircle',   highlight: true  },
+  { key: 'aiResume',   label: 'AI Resume',   highlight: true  },
   { key: 'zety',       label: 'Zety',       highlight: false },
   { key: 'resumeio',   label: 'Resume.io',  highlight: false },
   { key: 'kickresume', label: 'Kickresume', highlight: false },
@@ -124,7 +124,7 @@ const CompetitorComparison: React.FC = () => {
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.15 }}
           >
-            Most resume builders stop at templates — CVCircle gives you the full stack.
+            Most resume builders stop at templates — AI Resume gives you the full stack.
           </motion.p>
         </div>
 

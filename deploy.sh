@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# CVCircle Vercel Deployment Script
-echo "🚀 Starting CVCircle deployment to Vercel..."
+# AI Resume Vercel Deployment Script
+echo "🚀 Starting AI Resume deployment to Vercel..."
 
 # Check if Vercel CLI is installed
 if ! command -v vercel &> /dev/null; then

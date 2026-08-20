@@ -343,6 +343,38 @@ const nextConfig: NextConfig = {
         destination: '/b2b',
         permanent: true,
       },
+      // Rebrand: legacy comparison URL
+      {
+        source: '/compare/cvcircle-vs-cakeresume',
+        destination: '/compare/ai-resume-vs-cakeresume',
+        permanent: true,
+      },
+      // Rebrand: legacy blog URL
+      {
+        source: '/blog/why-cvcircle-beats-cakecv',
+        destination: '/blog/why-ai-resume-beats-cakecv',
+        permanent: true,
+      },
+      // Domain migration: redirect legacy domains to buildairesume.com
+      // (active when the app is served from these legacy domains)
+      {
+        source: '/:path*',
+        has: [{ type: 'host', value: 'cvcircle.io' }],
+        destination: 'https://buildairesume.com/:path*',
+        permanent: true,
+      },
+      {
+        source: '/:path*',
+        has: [{ type: 'host', value: 'www.cvcircle.io' }],
+        destination: 'https://buildairesume.com/:path*',
+        permanent: true,
+      },
+      {
+        source: '/:path*',
+        has: [{ type: 'host', value: 'app.cvcircle.io' }],
+        destination: 'https://buildairesume.com/:path*',
+        permanent: true,
+      },
     ];
   },
 

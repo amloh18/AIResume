@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
                 content = content.replace(/{{lastName}}/g, '');
                 content = content.replace(/{{email}}/g, email);
 
-                const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://cvcircle.io';
+                const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://buildairesume.com';
                 content = content.replace(/{{appUrl}}/g, appUrl);
 
                 // Mock Unsubscribe for Test

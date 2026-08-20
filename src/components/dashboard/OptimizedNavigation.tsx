@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import Logo from '@/components/ui/Logo';
 import {
-  BarChart3, Target, FileText,
+  Home, BarChart3, Target, FileText, Kanban,
   Bell, Sun, Moon, Menu, X, Shield, Settings, LogOut, User, ChevronDown, ChevronRight, ChevronLeft, Clock, Zap, AlertCircle, Briefcase, ExternalLink, Star, PenTool, Wand2, Mic, Linkedin, Lock, PanelLeft
 } from 'lucide-react';
 import { useTheme } from '@/lib/contexts/ThemeContext';
@@ -249,10 +249,20 @@ const OptimizedNavigation: React.FC = () => {
 
   // Update active section based on current path
   useEffect(() => {
-    if (pathname === '/dashboard' || pathname.startsWith('/dashboard?')) {
+    if (pathname === '/dashboard' || pathname === '/dashboard/') {
       setActiveSection('analytics');
     } else if (pathname.includes('/jobs')) {
       setActiveSection('jobs-dashboard');
+    } else if (pathname.includes('/tracker')) {
+      setActiveSection('tracker');
+    } else if (pathname.includes('/interview')) {
+      setActiveSection('interview-coach');
+    } else if (pathname.includes('/linkedin-enhancer')) {
+      setActiveSection('linkedin-enhancer');
+    } else if (pathname.includes('/editor') && typeof window !== 'undefined' && window.location.search.includes('tab=cover-letters')) {
+      setActiveSection('cover-letter-generator');
+    } else if (pathname.includes('/editor')) {
+      setActiveSection('cv-builder-pro');
     } else if (pathname.includes('/settings')) {
       setActiveSection('settings');
     }
@@ -327,15 +337,15 @@ const OptimizedNavigation: React.FC = () => {
   const sections = [
     {
       id: 'analytics',
-      name: 'Analytics',
-      icon: BarChart3,
+      name: 'Home',
+      icon: Home,
       description: 'Tracker, Documents & Analytics',
       route: '/dashboard'
     },
     {
       id: 'jobs-dashboard',
       name: 'Jobs',
-      icon: Zap,
+      icon: Briefcase,
       description: 'Job matching & automation (Beta)',
       route: '/dashboard/jobs',
       badge: 'BETA'
@@ -356,7 +366,7 @@ const OptimizedNavigation: React.FC = () => {
     {
       id: 'tracker',
       name: 'Tracker',
-      icon: Briefcase,
+      icon: Kanban,
       description: 'Job application tracker',
       route: '/dashboard/tracker',
       color: 'text-gray-600 dark:text-gray-400',
@@ -408,47 +418,47 @@ const OptimizedNavigation: React.FC = () => {
   ];
 
   return (
-    <div className={`flex flex-col h-full m-0 bg-transparent rounded-none shadow-none overflow-visible pointer-events-auto relative`}>
-      {/* Desktop Toggle Button - Positioned exactly on the right border */}
-      <button
-        onClick={toggleDesktopSidebar}
-        className="hidden lg:flex absolute -right-[13px] top-6 bg-white dark:bg-[#141810] border border-gray-200 dark:border-gray-700 rounded-full p-1 z-[130] hover:bg-gray-50 dark:hover:bg-gray-800 shadow-sm transition-transform hover:scale-110"
-        aria-label={isDesktopExpanded ? "Collapse sidebar" : "Expand sidebar"}
-      >
-        <PanelLeft className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${isDesktopExpanded ? '' : 'rotate-180'}`} />
-      </button>
-
-       {/* Header */}
-       <div className={`flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 lg:border-b-0 ${isDesktopExpanded ? 'lg:p-6 lg:justify-start' : 'lg:p-2 lg:justify-center'} relative`}>
-         <motion.button
-           onClick={handleLogoClick}
-           className="flex items-center gap-3 hover:opacity-90 transition-opacity"
-           whileHover={{ scale: 1.05 }}
-           whileTap={{ scale: 0.95 }}
-           aria-label="Home Dashboard"
-         >
+    <div className="flex flex-col h-full m-0 bg-transparent rounded-none shadow-none overflow-visible pointer-events-auto relative">
+      {/* Header aligned with h-14 global topbar */}
+      <div className={`flex items-center justify-between h-14 px-4 border-b border-gray-200 dark:border-white/10 lg:border-b-0 ${isDesktopExpanded ? 'lg:px-5 lg:justify-start' : 'lg:px-0 lg:justify-center'} relative flex-shrink-0`}>
+        <motion.button
+          onClick={handleLogoClick}
+          className="flex items-center gap-3 hover:opacity-90 transition-opacity"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          aria-label="Home Dashboard"
+        >
           {/* Logo Icon & Text */}
-           <div className="flex items-center">
-             <div className={`flex items-center ${!isDesktopExpanded ? 'lg:hidden' : ''}`}>
-               <Logo size="md" />
-             </div>
-             <div className={`hidden ${!isDesktopExpanded ? 'lg:flex' : ''}`}>
-               <Logo size="xs" />
-             </div>
-           </div>
-         </motion.button>
+          <div className="flex items-center justify-center">
+            <div className={`flex items-center ${!isDesktopExpanded ? 'lg:hidden' : ''}`}>
+              <Logo size="md" />
+            </div>
+            <div className={`hidden ${!isDesktopExpanded ? 'lg:flex lg:items-center lg:justify-center' : ''}`}>
+              <Logo size="xs" />
+            </div>
+          </div>
+        </motion.button>
 
-         {/* Close Button - Only visible on mobile */}
-         <motion.button
-           onClick={() => setIsOpen(false)}
-           className="lg:hidden text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors p-2 -mr-2"
-           whileHover={{ scale: 1.1 }}
-           whileTap={{ scale: 0.9 }}
-           aria-label="Close menu"
-         >
-           <X className="w-6 h-6" />
-         </motion.button>
-       </div>
+        {/* Close Button - Only visible on mobile */}
+        <motion.button
+          onClick={() => setIsOpen(false)}
+          className="lg:hidden text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors p-2 -mr-2"
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          aria-label="Close menu"
+        >
+          <X className="w-6 h-6" />
+        </motion.button>
+
+        {/* Desktop Toggle Button - Perfectly vertically centered at header height (h-14) on the sidebar border */}
+        <button
+          onClick={toggleDesktopSidebar}
+          className="hidden lg:flex absolute -right-[13px] top-1/2 -translate-y-1/2 bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/15 rounded-full p-1 z-[130] hover:bg-gray-50 dark:hover:bg-white/10 shadow-xs transition-all hover:scale-110 cursor-pointer"
+          aria-label={isDesktopExpanded ? "Collapse sidebar" : "Expand sidebar"}
+        >
+          <PanelLeft className={`w-3.5 h-3.5 text-gray-500 dark:text-gray-400 transition-transform duration-200 ${isDesktopExpanded ? '' : 'rotate-180'}`} />
+        </button>
+      </div>
 
       {/* Navigation */}
       <nav className={`flex-1 p-6 space-y-2 overflow-y-auto scrollbar-hide ${isDesktopExpanded ? 'lg:p-4 lg:space-y-1' : 'lg:p-2 lg:space-y-1'}`}>
@@ -511,90 +521,81 @@ const OptimizedNavigation: React.FC = () => {
         })}
 
 
-        {/* Tools Section — Square Tiles */}
-        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800">
+        {/* Tools Section */}
+        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800 space-y-2 lg:space-y-1">
           {/* Section Label — only when expanded */}
-          <div className={`px-3 mb-3 ${!isDesktopExpanded ? 'hidden lg:hidden' : 'lg:block'}`}>
+          <div className={`px-3 mb-2 ${!isDesktopExpanded ? 'hidden lg:hidden' : 'lg:block'}`}>
             <h3 className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.18em]">
               Tools
             </h3>
           </div>
 
-          {/* Tile Grid: 2-col expanded, 1-col collapsed */}
-          <div className={`grid gap-2 px-1 ${isDesktopExpanded ? 'lg:grid-cols-2' : 'lg:grid-cols-1'} grid-cols-2`}>
-            {toolSections.map((section) => {
-              const Icon = section.icon;
-              const isActive = activeSection === section.id;
-              const isExternal = (section as any).external === true;
+          {toolSections.map((section) => {
+            const Icon = section.icon;
+            const isActive = activeSection === section.id;
+            const isExternal = (section as any).external === true;
 
-              const Component = isExternal ? motion.a : motion.button;
-              const componentProps = isExternal
-                ? {
-                    href: section.route,
-                    target: '_blank',
-                    rel: 'noopener noreferrer',
-                    onClick: () => { if (isMobileMenuOpen) setIsOpen(false); }
+            const Component = isExternal ? motion.a : motion.button;
+            const componentProps = isExternal
+              ? {
+                  href: section.route,
+                  target: '_blank',
+                  rel: 'noopener noreferrer',
+                  onClick: () => {
+                    if (isMobileMenuOpen) {
+                      setIsOpen(false);
+                    }
                   }
-                : {
-                    onClick: () => {
-                      if (section.route.startsWith('/')) {
-                        setActiveSection(section.id);
-                        if (isMobileMenuOpen) setIsOpen(false);
-                        router.push(section.route);
-                      }
-                    },
-                    onMouseEnter: () => {
-                      if (section.route.startsWith('/')) {
-                        router.prefetch(section.route);
-                      }
+                }
+              : {
+                  onClick: () => handleNavigation(section.id),
+                  onMouseEnter: () => {
+                    if (!isExternal && section.route.startsWith('/')) {
+                      router.prefetch(section.route);
+                      preloadOnHover(section.id);
                     }
-                  };
+                  }
+                };
 
-              const colorClass = (section as any).color || 'text-gray-600 dark:text-gray-400';
-              const bgClass = (section as any).bg || 'bg-gray-50 dark:bg-gray-900/30';
-
-              return (
-                <Component
-                  key={section.id}
-                  {...componentProps}
-                  title={section.name}
-                  className={`relative group flex flex-col items-center justify-center rounded-2xl border transition-all duration-200 cursor-pointer outline-none focus:outline-none focus:ring-0 !shadow-none
-                    ${isDesktopExpanded
-                      ? 'p-2 gap-1.5 aspect-square'
-                      : 'lg:p-2 lg:gap-1 lg:aspect-square p-2 gap-1.5 aspect-square'
-                    }
-                    ${isActive
-                      ? 'border-[rgb(129,255,0)]/40 bg-transparent'
-                      : 'border-transparent'
-                    }`}
-                  style={{ outline: 'none', boxShadow: 'none' }}
-                  whileHover={{ scale: 1.04, y: -1 }}
-                  whileTap={{ scale: 0.97 }}
-                >
-                  {/* Badge */}
-                  {(section as any).badge && (
-                    <span className="absolute -top-1.5 -right-1.5 px-1.5 py-0.5 text-[8px] font-black bg-lime-400 text-black rounded-full z-10">
-                      {(section as any).badge}
-                    </span>
-                  )}
-
-                  {/* Icon container — icon bg only, with a border (no container bg) */}
-                  <div className={`w-9 h-9 rounded-xl border border-gray-200 dark:border-gray-700 flex items-center justify-center flex-shrink-0 transition-all duration-200 ${isActive ? 'scale-110' : ''} ${bgClass}`}>
-                    <Icon className={`w-5 h-5 ${isActive ? 'text-[rgb(129,255,0)] dark:text-[rgb(129,255,0)]' : 'text-gray-500 dark:text-gray-400'}`} />
+            return (
+              <Component
+                key={section.id}
+                {...componentProps}
+                className={`w-full flex items-center gap-4 px-5 py-4 rounded-xl transition-all duration-200 text-left outline-none focus:outline-none focus:ring-0 focus:shadow-none hover:shadow-none !shadow-none ${
+                  isDesktopExpanded ? 'lg:px-4 lg:py-3 lg:justify-start' : 'lg:px-3 lg:py-3 lg:justify-center'
+                } ${
+                  isActive
+                    ? 'bg-[#1a230f] dark:bg-[#1a230f] border border-[rgb(129,255,0)] text-[rgb(129,255,0)]'
+                    : 'text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                }`}
+                style={{ outline: 'none', boxShadow: 'none' }}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <Icon className={`w-6 h-6 lg:w-5 lg:h-5 flex-shrink-0 ${isActive ? 'text-[rgb(129,255,0)]' : ''}`} />
+                <div className={`flex-1 min-w-0 ${!isDesktopExpanded ? 'lg:hidden' : ''}`}>
+                  <div className="text-small font-semibold truncate flex items-baseline gap-1">
+                    <span>{section.name}</span>
+                    {section.badge && (
+                      <span className="px-1.5 py-0.5 text-[9px] font-black bg-lime-400 text-black rounded-full leading-none ml-1">
+                        {section.badge}
+                      </span>
+                    )}
+                    {isExternal && <ExternalLink className="w-3 h-3 opacity-60 ml-1" />}
                   </div>
-
-                  {/* Label — shown in expanded mode */}
-                  <span className={`text-[10px] font-bold leading-tight text-center truncate w-full
-                    ${isActive ? 'text-[rgb(129,255,0)] dark:text-[rgb(129,255,0)]' : 'text-gray-600 dark:text-gray-400'}
-                    ${isDesktopExpanded ? '' : 'lg:hidden'}
-                  `}>
-                    {section.name}
-                    {isExternal && <ExternalLink className="w-2.5 h-2.5 inline ml-0.5 opacity-60" />}
-                  </span>
-                </Component>
-              );
-            })}
-          </div>
+                  <div
+                    className={`text-small truncate mt-0.5 ${
+                      isActive
+                        ? 'text-[rgb(129,255,0)]/70'
+                        : 'text-gray-500 dark:text-gray-400'
+                    }`}
+                  >
+                    {section.description}
+                  </div>
+                </div>
+              </Component>
+            );
+          })}
         </div>
       </nav>
 

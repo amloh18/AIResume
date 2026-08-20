@@ -98,7 +98,7 @@ function generateGuideContent(): string {
   const pageFiles = getPageFiles();
   const now = new Date().toISOString();
   
-  let content = `# CVCircle.io - Application Guide
+  let content = `# AI Resume - Application Guide
 
 **Last Updated**: ${now}  
 **Purpose**: Comprehensive documentation of application logic and functions organized by sitemap structure

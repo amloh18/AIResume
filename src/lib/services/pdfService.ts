@@ -242,8 +242,8 @@ export class PDFService extends BaseService {
           author: name,
           subject: 'Resume',
           keywords: 'Resume, CV, Curriculum Vitae',
-          creator: 'CVCircle.io',
-          producer: 'CVCircle.io'
+          creator: 'AI Resume',
+          producer: 'AI Resume'
         });
 
         return Buffer.from(pdfBuffer);

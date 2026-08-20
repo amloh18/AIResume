@@ -119,7 +119,7 @@ export default function EmailSyncMockPage() {
             {provider === 'gmail' ? 'Sign in with Google' : 'Sign in with Microsoft'}
           </h2>
           <p className="text-xs text-gray-400 px-4">
-            to grant <span className="font-bold text-lime-400">CVCircle App</span> access to track your application and update pipeline stages.
+            to grant <span className="font-bold text-lime-400">AI Resume App</span> access to track your application and update pipeline stages.
           </p>
         </div>
 
@@ -187,7 +187,7 @@ export default function EmailSyncMockPage() {
 
       {/* Footer Disclaimer */}
       <div className="text-[10px] text-gray-600 text-center pt-4 border-t border-white/5">
-        By continuing, you authorize CVCircle to connect to your mailbox securely. You can revoke access at any time in your Settings dashboard.
+        By continuing, you authorize AI Resume to connect to your mailbox securely. You can revoke access at any time in your Settings dashboard.
       </div>
     </div>
   );

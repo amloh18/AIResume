@@ -115,7 +115,7 @@ export default function EmailManagementPage() {
             lastName: 'Doe',
             email: 'john@example.com',
             code: '1234',
-            link: 'https://cvcircle.com/example',
+            link: 'https://buildairesume.com/example',
             couponCode: 'SAVE30',
             expirationDate: 'December 31, 2024',
             usageLimit: 5,

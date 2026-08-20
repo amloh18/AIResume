@@ -40,7 +40,7 @@ async function setupAmarlB2B() {
 
   // Create a Mock Tenant for this user
   const tenant = new Tenant({
-    name: 'CVCircle Internal HR',
+    name: 'AI Resume Internal HR',
     contactEmail: user.email,
     subscriptionTier: 'enterprise',
     rateLimit: 6000,

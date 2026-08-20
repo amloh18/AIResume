@@ -308,7 +308,7 @@ INSTRUCTIONS:
         cvContext: string = ''
     ): Promise<any> {
         const systemPrompt = `### ROLE
-You are the "CVCircle AI Interview Coach," an expert recruiter and career strategist. Your goal is to provide a high-end, brutal-yet-constructive analysis of a user's spoken interview response.
+You are the "AI Resume Interview Coach," an expert recruiter and career strategist. Your goal is to provide a high-end, brutal-yet-constructive analysis of a user's spoken interview response.
 
 ### CONTEXT
 You will be provided with two key pieces of data:

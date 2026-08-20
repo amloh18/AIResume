@@ -121,7 +121,7 @@ const getSenderEmail = (): string => {
     return process.env.EMAIL_SERVER_USER;
   }
 
-  return 'noreply@cvcircle.com';
+  return 'noreply@buildairesume.com';
 };
 
 // Send email verification
@@ -150,12 +150,12 @@ export async function sendEmailVerification(email: string, verificationLink: str
     };
 
     const html = getEmailVerificationTemplate(templateData);
-    const text = `Verify Your Email - CVCircle\n\nHello ${firstName},\n\nPlease click the link below to verify your email address:\n${verificationLink}\n\nIf you didn't create an account with CVCircle, you can safely ignore this email.\n\n© 2026 CVCircle by Morigrid Labs. All rights reserved.`;
+    const text = `Verify Your Email - AI Resume\n\nHello ${firstName},\n\nPlease click the link below to verify your email address:\n${verificationLink}\n\nIf you didn't create an account with AI Resume, you can safely ignore this email.\n\n© 2026 AI Resume by Morigrid Labs. All rights reserved.`;
 
     const mailOptions = {
-      from: `"CVCircle" <${senderEmail}>`,
+      from: `"AI Resume" <${senderEmail}>`,
       to: email,
-      subject: 'Verify Your Email - CVCircle',
+      subject: 'Verify Your Email - AI Resume',
       text,
       html,
     };
@@ -197,12 +197,12 @@ export async function sendPasswordResetEmail(email: string, resetLink: string, f
     };
 
     const html = getPasswordResetTemplate(templateData);
-    const text = `Reset Your Password - CVCircle\n\nHello ${firstName},\n\nWe received a request to reset your password. Click the link below to set a new password:\n${resetLink}\n\nThis link will expire in 1 hour. If you didn't request this password reset, please ignore this email.\n\n© 2026 CVCircle by Morigrid Labs. All rights reserved.`;
+    const text = `Reset Your Password - AI Resume\n\nHello ${firstName},\n\nWe received a request to reset your password. Click the link below to set a new password:\n${resetLink}\n\nThis link will expire in 1 hour. If you didn't request this password reset, please ignore this email.\n\n© 2026 AI Resume by Morigrid Labs. All rights reserved.`;
 
     const mailOptions = {
-      from: `"CVCircle" <${senderEmail}>`,
+      from: `"AI Resume" <${senderEmail}>`,
       to: email,
-      subject: 'Reset Your Password - CVCircle',
+      subject: 'Reset Your Password - AI Resume',
       text,
       html,
     };
@@ -257,7 +257,7 @@ export async function sendEmail({ to, subject, text, html, from }: { to: string;
   try {
     const senderEmail = getSenderEmail();
     const mailOptions = {
-      from: from || `"CVCircle" <${senderEmail}>`,
+      from: from || `"AI Resume" <${senderEmail}>`,
       to,
       subject,
       text,
@@ -331,22 +331,22 @@ export async function sendVerificationCode(
 
     switch (type) {
       case 'email-verification':
-        subject = 'Verify Your Email - CVCircle';
+        subject = 'Verify Your Email - AI Resume';
         title = 'Verify Your Email Address';
         description = 'Please enter the code below to verify your email address and complete your account setup.';
         break;
       case 'passwordless-login':
-        subject = 'Your Sign-In Code - CVCircle';
+        subject = 'Your Sign-In Code - AI Resume';
         title = 'Sign In to Your Account';
-        description = 'Please enter the code below to sign in to your CVCircle account.';
+        description = 'Please enter the code below to sign in to your AI Resume account.';
         break;
       case 'password-reset':
-        subject = 'Reset Your Password - CVCircle';
+        subject = 'Reset Your Password - AI Resume';
         title = 'Reset Your Password';
         description = 'Please enter the code below to reset your password.';
         break;
       default:
-        subject = 'Your Verification Code - CVCircle';
+        subject = 'Your Verification Code - AI Resume';
         title = 'Verification Code';
         description = 'Please enter the code below to complete your request.';
     }
@@ -359,7 +359,7 @@ export async function sendVerificationCode(
     const html = getVerificationCodeTemplate(templateData);
 
     const text = `
-CVCircle - Your Verification Code
+AI Resume - Your Verification Code
 
 Hello, enter the code below to complete your sign in.
 
@@ -369,12 +369,12 @@ This code will expire in 10 minutes. Do not share this code with anyone.
 
 Didn't receive a code? You can request a new one from the app.
 
-© 2026 CVCircle by Morigrid Labs. All rights reserved. www.cvcircle.io
+© 2026 AI Resume by Morigrid Labs. All rights reserved. buildairesume.com
     `;
 
     const senderEmail = getSenderEmail();
     await transporter.sendMail({
-      from: `"CVCircle" <${senderEmail}>`,
+      from: `"AI Resume" <${senderEmail}>`,
       to: email,
       subject,
       text,

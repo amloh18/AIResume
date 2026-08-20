@@ -26,92 +26,74 @@ export const viewport: Viewport = {
   ],
 }
 
+const APP_URL = process.env.NEXTAUTH_URL || 'https://buildairesume.com';
+
 export const metadata: Metadata = {
   title: {
-    default: 'CVCIRCLE - Job Application tracker and AI based ATS Editor',
-    template: '%s | CVCIRCLE'
+    default: 'AI Resume Builder | Build an ATS-Friendly Resume with AI',
+    template: '%s | AI Resume'
   },
-  description: 'CVCircle (CV Circle) - Create ATS-optimized CVs with AI assistance. Free AI career guide, professional templates, resume analysis, career coaching, interview coaching,and real-time analytics. Build your perfect resume in minutes and land your dream job.',
+  description: 'Build, optimize, and tailor an ATS-friendly resume with AI. Create professional resumes, improve your content, and prepare every application faster.',
   keywords: [
-    'CV builder',
-    'resume builder',
-    'AI CV builder',
-    'ATS optimization',
-    'ATS resume checker',
-    'professional CV',
-    'CV templates',
-    'resume templates',
-    'career tools',
-    'job application',
-    'CV maker',
-    'resume maker',
-    'AI career guide',
-    'resume analyzer',
-    'CV analyzer',
-    'ATS resume optimizer',
-    'free resume builder',
-    'online CV builder',
-    'CV Circle',
-    'cv circle',
-    'CV Circle.io',
-    'cv circle io',
-    'CV Circle platform',
-    'CV Circle app',
-    'CVCircle',
-    'cvcircle',
-    'cv circle builder',
-    'CV Circle resume builder',
-    // Advanced & Trending Keywords
+    'AI resume builder',
     'AI resume writer',
-    'automated cover letter generator',
+    'resume builder',
+    'resume maker',
+    'ATS resume builder',
+    'ATS-friendly resume',
+    'resume optimizer',
+    'AI CV builder',
+    'CV builder',
+    'resume templates',
+    'professional resume builder',
+    'job-specific resume',
+    'tailored resume',
+    'resume checker',
+    'resume score',
+    'AI cover letter generator',
     'job application tracker',
-    'AI interview coach',
-    'LinkedIn profile optimizer',
-    'career gap analysis',
-    'resume scoring',
-    'job match technology',
-    'smart job search',
-    'ATS compliance',
-    'career copilot',
-    'resume parser',
-    'job tracking system',
-    'application management',
-    'AI career insights'
+    'CV templates',
+    'professional resume',
+    'free resume builder',
+    'online resume builder',
+    'résumé builder',
+    'international CV',
+    'AI career tools'
   ],
-  authors: [{ name: 'CVCircle Team' }],
-  creator: 'CVCircle',
-  publisher: 'CVCircle',
+  authors: [{ name: 'AI Resume Team' }],
+  creator: 'AI Resume by Morigrid Labs',
+  publisher: 'Morigrid Labs',
   formatDetection: {
     email: false,
     address: false,
     telephone: false,
   },
-  metadataBase: new URL(process.env.NEXTAUTH_URL || 'https://cvcircle.io'),
+  metadataBase: new URL(APP_URL),
   alternates: {
     canonical: '/',
   },
   openGraph: {
     type: 'website',
     locale: 'en_US',
-    url: 'https://cvcircle.io',
-    title: 'CVCircle (CV Circle) - AI-Powered CV Builder & ATS Resume Optimizer',
-    description: 'CVCircle (CV Circle) - Create ATS-optimized CVs with AI assistance. Free AI career guide, professional templates, resume analysis, and real-time analytics. Build your perfect resume in minutes.',
-    siteName: 'CVCircle (CV Circle)',
+    url: APP_URL,
+    title: 'Build a Better Resume With AI',
+    description: 'Create an ATS-friendly resume, tailor it to every job, and apply with confidence using AI-powered resume tools.',
+    siteName: 'AI Resume',
     images: [
       {
         url: '/images/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'CVCircle - AI-Powered CV Builder & ATS Resume Optimizer',
+        alt: 'AI Resume - Build a Better Resume With AI',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'CVCircle (CV Circle) - AI-Powered CV Builder & ATS Resume Optimizer',
-    description: 'CVCircle (CV Circle) - Create ATS-optimized CVs with AI assistance. Free AI career guide, professional templates, and resume analysis.',
+    title: 'Build a Better Resume With AI',
+    description: 'Create an ATS-friendly resume, tailor it to every job, and apply with confidence using AI-powered resume tools.',
     images: ['/images/twitter-image.png'],
-    creator: '@cvcircle',
+    creator: '@buildairesume',
   },
   robots: {
     index: true,
@@ -192,13 +174,14 @@ export default async function RootLayout({
               <div className="absolute inset-0 border-[3px] border-transparent border-t-[#81ff00] rounded-full animate-spin" style={{ animationDuration: '1.5s' }} />
               <div className="absolute inset-2 border-[2px] border-transparent border-b-[#81ff00]/50 rounded-full animate-spin" style={{ animationDirection: 'reverse', animationDuration: '2s' }} />
               
-              {/* Center "CV" Text */}
-              <div className="relative z-10 flex items-center justify-center">
-                <span className="text-2xl font-black text-black dark:text-white tracking-tighter">CV</span>
+              {/* Center Logo SVG Fill (No text) */}
+              <div className="relative z-10 w-12 h-12 flex items-center justify-center">
+                <img
+                  src="/images/logo.svg"
+                  alt="Loading"
+                  className="w-10 h-10 object-contain drop-shadow-sm"
+                />
               </div>
-            </div>
-            <div className="mt-8 flex flex-col items-center gap-2">
-              <h3 className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-[0.3em] animate-pulse">Initializing</h3>
             </div>
           </div>
         }>

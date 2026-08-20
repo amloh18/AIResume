@@ -398,7 +398,7 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
                     <tr className="bg-gray-50/50 dark:bg-black/20">
                       <th className="p-4 text-left border-b border-gray-200 dark:border-white/10 w-[25%] sticky left-0 bg-gray-50 dark:bg-[#1A2015] z-20">
                         <div className="flex flex-col">
-                          <span className="text-[10px] font-semibold text-lime-600 dark:text-lime-400 uppercase tracking-widest mb-0.5">CVCircle Plans</span>
+                          <span className="text-[10px] font-semibold text-lime-600 dark:text-lime-400 uppercase tracking-widest mb-0.5">AI Resume Plans</span>
                           <span className="text-h3 font-bold text-gray-900 dark:text-white">Compare Features</span>
                         </div>
                       </th>
@@ -748,7 +748,7 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
         >
           <p className="text-gray-600 dark:text-white/70 mb-4 text-small">Have questions about pricing?</p>
           <motion.a
-            href="mailto:support@cvcircle.io?subject=Sales%20Inquiry%20-%20CVCircle"
+            href="mailto:support@buildairesume.com?subject=Sales%20Inquiry%20-%20AI%20Resume"
             className="group text-lime-600 dark:text-lime-400 hover:text-lime-700 dark:hover:text-lime-300 font-semibold transition-colors duration-300 flex items-center gap-2 mx-auto w-fit"
             whileHover={{ x: 5 }}
           >

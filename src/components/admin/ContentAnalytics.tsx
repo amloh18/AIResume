@@ -100,7 +100,7 @@ export default function ContentAnalytics() {
                       <button
                         onClick={async () => {
                           const title = (document.getElementById('alert-title') as HTMLInputElement)?.value || 'System Update';
-                          const msg = (document.getElementById('alert-message') as HTMLTextAreaElement)?.value || 'CVCircle platform performance optimizations are undergoing live maintenance.';
+                          const msg = (document.getElementById('alert-message') as HTMLTextAreaElement)?.value || 'AI Resume platform performance optimizations are undergoing live maintenance.';
                           try {
                             const res = await fetch('/api/notifications/send-all-types', {
                               method: 'POST',

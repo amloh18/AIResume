@@ -2,7 +2,7 @@
 /**
  * Admin Template Service
  * 
- * Service for fetching templates from the primary cvcircle database
+ * Service for fetching templates from the primary app database
  * This centralizes template management across the platform
  */
 

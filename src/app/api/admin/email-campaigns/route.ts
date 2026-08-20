@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
 
         // Extract admin info from session
         const adminUserId = (session.user as any).id;
-        const adminEmail = session.user.email || 'admin@cvcircle.io';
+        const adminEmail = session.user.email || 'admin@buildairesume.com';
         const adminName = session.user.name || adminEmail.split('@')[0];
 
         // Handle recurring campaign setup

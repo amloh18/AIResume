@@ -93,7 +93,7 @@ interface Job {
     size: number;
     uploadedAt: Date;
   }>;
-  source?: 'linkedin' | 'indeed' | 'company-website' | 'referral' | 'other';
+  source?: 'linkedin' | 'naukri' | 'indeed' | 'company-website' | 'referral' | 'other';
   sourceUrl?: string;
   atsScore?: number;
   atsAnalysis?: {

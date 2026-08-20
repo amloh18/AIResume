@@ -309,7 +309,9 @@ export async function POST(request: NextRequest) {
         // This prevents race conditions where multiple requests could bypass credit limits
         jobApplication = await withTransaction(async (session) => {
           // 1. JOB LIMIT CHECK: Check count-based limit WITHIN transaction (locks user record to prevent race conditions)
-          const user = await User.findById(normalizedUserId).session(session);
+          const user = session
+            ? await User.findById(normalizedUserId).session(session)
+            : await User.findById(normalizedUserId);
           if (!user) {
             throw new Error('User not found');
           }
@@ -377,7 +379,7 @@ export async function POST(request: NextRequest) {
             extractedJd: extractedJd || undefined
           };
 
-          const [createdJob] = await JobApplication.create([jobData], { session });
+          const [createdJob] = await JobApplication.create([jobData], session ? { session } : undefined);
           console.log(`✅ [${source.toUpperCase()}] Job application created in transaction:`, createdJob._id);
 
           // 3. Track job creation (no credit spending - jobs are count-based now)
@@ -409,7 +411,7 @@ export async function POST(request: NextRequest) {
           await User.findByIdAndUpdate(
             normalizedUserId,
             updateData,
-            { session, new: true, runValidators: true }
+            { new: true, runValidators: true, ...(session && { session }) }
           );
 
           console.log(`✅ [${source.toUpperCase()}] Job created in transaction for user: ${normalizedUserId.toString()}`);

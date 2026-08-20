@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     try {
         await getConnection();
 
-        const email = 'testuser@cvcircle.io';
+        const email = 'testuser@buildairesume.com';
         console.log(`Seeding dashboard with 50 jobs for ${email}...`);
 
         // 1. Find the user

@@ -35,11 +35,11 @@ export async function POST(request: NextRequest) {
     let userRole: 'user' | 'admin' | 'superadmin' = 'user';
 
     if (role === 'admin') {
-      email = 'amarl@cvcircle.io';
+      email = 'amarl@buildairesume.com';
       name = 'Amar L';
       userRole = 'superadmin';
     } else {
-      email = 'dev-user@cvcircle.app';
+      email = 'dev-user@buildairesume.com';
       name = 'Dev User';
       userRole = 'user';
     }

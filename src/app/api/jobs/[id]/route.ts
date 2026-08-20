@@ -392,7 +392,9 @@ export async function PUT(
 
         await withTransaction(async (session) => {
           // 1. JOB LIMIT CHECK: Check count-based limit WITHIN transaction (locks user record to prevent race conditions)
-          const user = await User.findById(normalizedUserId).session(session);
+          const user = session
+            ? await User.findById(normalizedUserId).session(session)
+            : await User.findById(normalizedUserId);
           if (!user) {
             throw new Error('User not found');
           }
@@ -446,7 +448,7 @@ export async function PUT(
               userId: normalizedUserId
             },
             statusUpdateData,
-            { session, new: true }
+            { new: true, ...(session && { session }) }
           );
 
           if (!updatedJob) {
@@ -485,7 +487,7 @@ export async function PUT(
           await User.findByIdAndUpdate(
             normalizedUserId,
             userUpdateData,
-            { session, new: true, runValidators: true }
+            { new: true, runValidators: true, ...(session && { session }) }
           );
 
           console.log(`✅ Job Update API - Job status updated in transaction for user: ${normalizedUserId.toString()}`);

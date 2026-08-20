@@ -850,7 +850,7 @@ export const IntelligenceDashboard: React.FC<{
   const [isEditingGoal, setIsEditingGoal] = useState(false);
   const [newGoal, setNewGoal] = useState(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('cvcircle_monthly_goal');
+      const saved = localStorage.getItem('buildairesume_monthly_goal');
       if (saved) return parseInt(saved, 10);
     }
     return predictions?.monthlyGoal || 20;
@@ -1011,7 +1011,7 @@ export const IntelligenceDashboard: React.FC<{
       await onUpdateGoal(newGoal);
     }
     if (typeof window !== 'undefined') {
-      localStorage.setItem('cvcircle_monthly_goal', newGoal.toString());
+      localStorage.setItem('buildairesume_monthly_goal', newGoal.toString());
     }
     setIsEditingGoal(false);
   };

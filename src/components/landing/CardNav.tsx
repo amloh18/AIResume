@@ -40,13 +40,15 @@ interface CardNavProps {
   links: NavLink[];
   className?: string;
   onCtaClick?: () => void;
+  withBanner?: boolean;
 }
 
 const CardNav = ({
   logo,
   links,
   className = '',
-  onCtaClick
+  onCtaClick,
+  withBanner = false,
 }: CardNavProps) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [hoveredLink, setHoveredLink] = useState<string | null>(null);
@@ -144,7 +146,7 @@ const CardNav = ({
   };
 
   return (
-    <div className={`card-nav-container ${className} ${isAnySubmenuOpen ? 'submenu-open' : ''} ${!isVisible && !isMobileMenuOpen ? 'nav-hidden' : ''}`}>
+    <div className={`card-nav-container ${className} ${withBanner ? 'with-banner' : ''} ${isAnySubmenuOpen ? 'submenu-open' : ''} ${!isVisible && !isMobileMenuOpen ? 'nav-hidden' : ''}`}>
       <nav ref={navRef} className="card-nav">
         <div className="card-nav-content">
            <button 
@@ -154,7 +156,7 @@ const CardNav = ({
             type="button"
           >
             <div className="logo-image-wrapper relative">
-              <Logo size="lg" />
+              <Logo size="xs" />
             </div>
           </button>
 

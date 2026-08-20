@@ -16,6 +16,7 @@ import {
   Trash2,
   Loader2,
   ArrowUpRight,
+  ArrowRight,
   Clock,
   Sparkles,
   Activity,
@@ -39,9 +40,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useDashboardData } from '@/contexts/DashboardDataContext';
 import { useToast } from '@/hooks/use-toast';
 import UpgradeSuggestionCard from '@/components/dashboard/redesigned/UpgradeSuggestionCard';
+import TopJobMatchesSection from '@/components/dashboard/redesigned/TopJobMatchesSection';
 import CvReportSidebar from '@/components/dashboard/redesigned/CvReportSidebar';
 import CompanyLogo from '@/components/ui/CompanyLogo';
 import DocumentPreviewSidebar from '@/components/dashboard/jobs/DocumentPreviewSidebar';
+import JobSidebar from '@/components/dashboard/jobs/JobSidebar';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { authenticatedFetch } from '@/lib/utils/apiUtils';
 
@@ -88,11 +91,68 @@ function cvId(cv: any): string {
 }
 
 function cvAtsScore(cv: any): number {
-  return Math.round(cv?.metadata?.atsScore || cv?.cv_score_master || 0);
+  return Math.round(cv?.metadata?.atsScore || cv?.cv_score_master || cv?.atsScore || 0);
 }
 
-function jobLinkedCvId(job: any): string {
-  return String(job?.linkedCvId || job?.linkedCv?._id || job?.cvId || '');
+function findLinkedCvForJob(job: any, cvList: any[]): any | null {
+  if (!job || !cvList || cvList.length === 0) return null;
+  const jobId = String(job.id || job._id || '');
+  const linkedId = String(job.linkedCvId || job.linkedCv?._id || job.cvId || '');
+
+  // 1. Direct ID link on Job
+  if (linkedId) {
+    const directCv = cvList.find((cv) => cvId(cv) === linkedId);
+    if (directCv) return directCv;
+  }
+
+  // 2. Direct Job ID link on CV
+  if (jobId) {
+    const cvByJobId = cvList.find(
+      (cv) =>
+        String(cv.jobId || cv.targetJobId || cv.jobApplicationId || cv.metadata?.jobId || cv.metadata?.jobApplicationId || '') === jobId
+    );
+    if (cvByJobId) return cvByJobId;
+  }
+
+  // 3. Match by CV title / company / role patterns
+  const jobTitleClean = (job.jobTitle || job.title || '').trim().toLowerCase();
+  const companyClean = (job.company || '').trim().toLowerCase();
+
+  if (jobTitleClean || companyClean) {
+    const matchedCv = cvList.find((cv: any) => {
+      const cvTitle = (cv.title || cv.name || '').trim().toLowerCase();
+      const cvRole = (cv.role || cv.targetRole || cv.metadata?.targetRole || '').trim().toLowerCase();
+
+      // Case: "Monzo_Chief of Staff, Group CFO | CV" matching Monzo & Chief of Staff
+      if (companyClean && cvTitle.includes(companyClean)) {
+        if (jobTitleClean) {
+          const parts = jobTitleClean.split(/[\s,]+/);
+          if (parts.some((p: string) => p.length > 2 && cvTitle.includes(p))) return true;
+        }
+        return true;
+      }
+
+      if (jobTitleClean && (cvTitle.includes(jobTitleClean) || (cvRole && cvRole.includes(jobTitleClean)))) {
+        return true;
+      }
+
+      return false;
+    });
+
+    if (matchedCv) return matchedCv;
+  }
+
+  return null;
+}
+
+function jobLinkedCvId(job: any, cvList?: any[]): string {
+  const directId = String(job?.linkedCvId || job?.linkedCv?._id || job?.cvId || '');
+  if (directId) return directId;
+  if (cvList && cvList.length > 0) {
+    const linked = findLinkedCvForJob(job, cvList);
+    if (linked) return cvId(linked);
+  }
+  return '';
 }
 
 /* Status → soft badge styling (extremely restrained, per spec) */
@@ -380,11 +440,11 @@ function MyCvsPanel() {
   const linkedCounts = useMemo(() => {
     const map = new Map<string, number>();
     jobs.forEach((j: any) => {
-      const id = jobLinkedCvId(j);
+      const id = jobLinkedCvId(j, cvs);
       if (id) map.set(id, (map.get(id) || 0) + 1);
     });
     return map;
-  }, [jobs]);
+  }, [jobs, cvs]);
 
   const sorted = useMemo(
     () =>
@@ -538,6 +598,7 @@ function RecentJobsPanel() {
   const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [selectedJob, setSelectedJob] = useState<any | null>(null);
   const { toast } = useToast();
 
   const openJobMenu = (e: React.MouseEvent, job: any) => {
@@ -630,9 +691,9 @@ function RecentJobsPanel() {
             </thead>
             <tbody className="divide-y divide-[var(--border-primary)]">
               {sorted.slice(0, 8).map((j: any, i: number) => {
-                const linkedCv = cvById.get(jobLinkedCvId(j));
+                const linkedCv = findLinkedCvForJob(j, cvs);
                 const meta = statusMeta(j.status);
-                const match = Math.round(j.atsScore || j.matchScore || 0);
+                const match = Math.round(j.atsScore || j.matchScore || cvAtsScore(linkedCv) || (linkedCv?.atsScore) || 0);
                 return (
                   <tr key={j.id || j._id || i} className="hover:bg-[var(--bg-tertiary)]/40 transition-colors">
                     <td className="py-3 pr-4 font-medium text-[var(--text-primary)] whitespace-nowrap">{j.jobTitle || 'Untitled role'}</td>
@@ -669,7 +730,7 @@ function RecentJobsPanel() {
                     <td className="py-3 pr-4">
                       <div className="inline-flex items-center justify-end gap-1">
                         <button
-                          onClick={() => router.push(`/dashboard/tracker?jobId=${j.id || j._id}`)}
+                          onClick={() => setSelectedJob(j)}
                           aria-label={`View ${j.jobTitle}`}
                           title="View job"
                           className="w-7 h-7 inline-flex items-center justify-center rounded-md border border-[var(--border-primary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] transition-colors"
@@ -763,6 +824,19 @@ function RecentJobsPanel() {
           </div>
         </div>
       )}
+
+      {/* Job sidebar opened right on dashboard */}
+      {selectedJob && (
+        <JobSidebar
+          job={{
+            ...selectedJob,
+            id: selectedJob.id || selectedJob._id,
+          }}
+          journeys={[]}
+          onClose={() => setSelectedJob(null)}
+          onRefresh={refreshJobs}
+        />
+      )}
     </Panel>
   );
 }
@@ -771,45 +845,182 @@ function RecentJobsPanel() {
 /* Continue where you left off                                         */
 /* ------------------------------------------------------------------ */
 
-function ContinuePanel() {
-  const router = useRouter();
-  const { jobs, cvs, secondaryLoading } = useDashboardData();
-  const [activeIndex, setActiveIndex] = useState(0);
+interface ContinueJobCardProps {
+  job: any;
+  cvs: any[];
+  onOpenSidebar: (job: any) => void;
+}
 
-  // Up to 5 most recent jobs, shown one at a time in a vertical carousel.
-  const recentJobs = useMemo(() => {
-    const sorted = [...jobs].sort(
+function ContinueJobCard({ job, cvs, onOpenSidebar }: ContinueJobCardProps) {
+  const router = useRouter();
+  const linkedCv = useMemo(() => findLinkedCvForJob(job, cvs), [job, cvs]);
+  const linkedCvId = linkedCv ? cvId(linkedCv) : '';
+  const hasLinkedCv = !!linkedCv;
+  const atsScore = Math.round(job?.atsScore || job?.matchScore || cvAtsScore(linkedCv) || (linkedCv?.atsScore) || 0);
+
+  const dynamicStep = useMemo(() => {
+    if (!job) return null;
+    const status = String(job.status || '').toLowerCase();
+
+    // 1. If no CV created/linked yet
+    if (!hasLinkedCv) {
+      return {
+        statusText: 'CV not created yet',
+        statusColor: 'text-amber-700 dark:text-amber-400',
+        StatusIcon: AlertCircle,
+        buttonText: 'Create Tailored CV',
+        ButtonIcon: Plus,
+        buttonAction: () => {
+          const params = new URLSearchParams({
+            mode: 'create',
+            jobId: String(job.id || job._id || ''),
+            jobTitle: job.jobTitle || '',
+            company: job.company || '',
+          });
+          router.push(`/editor?${params.toString()}`);
+        },
+      };
+    }
+
+    // 2. If status is advanced stage (interviewing, applied, etc.)
+    if (['applied', 'interviewing', 'interview_scheduled', 'technical_round'].includes(status)) {
+      return {
+        statusText: 'Applied · Track interview prep',
+        statusColor: 'text-blue-700 dark:text-blue-400',
+        StatusIcon: Sparkles,
+        buttonText: 'Interview Prep',
+        ButtonIcon: Sparkles,
+        buttonAction: () => onOpenSidebar(job),
+      };
+    }
+
+    if (['offer', 'offer_received', 'accepted'].includes(status)) {
+      return {
+        statusText: 'Offer Received · Review terms',
+        statusColor: 'text-emerald-700 dark:text-emerald-400',
+        StatusIcon: CheckCircle2,
+        buttonText: 'Review Offer',
+        ButtonIcon: Briefcase,
+        buttonAction: () => onOpenSidebar(job),
+      };
+    }
+
+    // 3. CV is linked: check ATS score
+    if (atsScore > 0 && atsScore < 70) {
+      return {
+        statusText: `CV linked · Match score: ${atsScore}% (Needs boost)`,
+        statusColor: 'text-amber-700 dark:text-amber-400',
+        StatusIcon: Target,
+        buttonText: 'Improve ATS Score',
+        ButtonIcon: Target,
+        buttonAction: () => {
+          router.push(`/editor?mode=edit&cvId=${linkedCvId}&jobId=${job.id || job._id}`);
+        },
+      };
+    }
+
+    if (atsScore >= 70) {
+      return {
+        statusText: `High match (${atsScore}%) · Ready to apply`,
+        statusColor: 'text-emerald-700 dark:text-emerald-400',
+        StatusIcon: CheckCircle2,
+        buttonText: 'Review & Apply',
+        ButtonIcon: ArrowRight,
+        buttonAction: () => {
+          if (job.applyUrl || job.jobUrl) {
+            window.open(job.applyUrl || job.jobUrl, '_blank', 'noopener,noreferrer');
+          } else {
+            onOpenSidebar(job);
+          }
+        },
+      };
+    }
+
+    // 4. Default: CV linked
+    return {
+      statusText: 'CV linked · Ready to improve ATS',
+      statusColor: 'text-emerald-700 dark:text-emerald-400',
+      StatusIcon: Sparkles,
+      buttonText: 'Improve ATS Score',
+      ButtonIcon: Target,
+      buttonAction: () => {
+        router.push(`/editor?mode=edit&cvId=${linkedCvId}&jobId=${job.id || job._id}`);
+      },
+    };
+  }, [job, hasLinkedCv, linkedCvId, atsScore, router, onOpenSidebar]);
+
+  return (
+    <div className="rounded-xl bg-[#faf7ef] dark:bg-white/[0.03] border border-[var(--border-primary)] p-4 flex flex-col justify-between h-full">
+      <div>
+        <p className="text-sm font-semibold text-[var(--text-primary)] leading-snug line-clamp-1">
+          {job.jobTitle || 'Untitled role'}
+        </p>
+        <p className="mt-1 flex items-center gap-1.5 text-xs text-[var(--text-secondary)] truncate">
+          <CompanyLogo company={job.company} size={14} logoUrl={job.companyLogo} jobId={job.id || job._id} />
+          <span className="truncate">
+            {job.company || 'Company'} {job.location ? `· ${job.location}` : ''}
+          </span>
+        </p>
+        <p className="mt-2 text-[11px] text-[var(--text-tertiary)]">
+          Job added {timeAgo(job.createdAt || job.updatedAt)}
+        </p>
+
+        {dynamicStep && (
+          <div className={`mt-3 flex items-center gap-1.5 text-xs font-medium ${dynamicStep.statusColor}`}>
+            <dynamicStep.StatusIcon size={14} />
+            <span>{dynamicStep.statusText}</span>
+          </div>
+        )}
+      </div>
+
+      <div className="mt-4 flex items-center gap-2 pt-2 border-t border-black/5 dark:border-white/5">
+        {dynamicStep && (
+          <button
+            onClick={dynamicStep.buttonAction}
+            className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600 text-white dark:bg-emerald-500 dark:text-slate-900 px-3 py-1.5 text-xs font-medium hover:bg-emerald-700 dark:hover:bg-emerald-400 transition-colors truncate"
+          >
+            <dynamicStep.ButtonIcon size={13} />
+            <span className="truncate">{dynamicStep.buttonText}</span>
+          </button>
+        )}
+        <button
+          onClick={() => onOpenSidebar(job)}
+          className="inline-flex items-center justify-center gap-1 rounded-lg border border-[var(--border-primary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] px-3 py-1.5 text-xs font-medium transition-colors"
+        >
+          View Job
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ContinuePanel() {
+  const { jobs, cvs, secondaryLoading, refreshJobs } = useDashboardData();
+  const [selectedSidebarJob, setSelectedSidebarJob] = useState<any | null>(null);
+  const [pageIndex, setPageIndex] = useState(0);
+
+  const sortedJobs = useMemo(() => {
+    return [...jobs].sort(
       (a: any, b: any) => new Date(b.createdAt || b.updatedAt || 0).getTime() - new Date(a.createdAt || a.updatedAt || 0).getTime()
     );
-    return sorted.slice(0, 5);
   }, [jobs]);
 
-  // Clamp without state churn so the index stays valid while data loads.
-  const safeIndex = recentJobs.length > 0 ? Math.min(activeIndex, recentJobs.length - 1) : 0;
-  const nextJob = recentJobs[safeIndex] || null;
+  const totalPairs = Math.ceil(sortedJobs.length / 2);
+  const safePage = Math.max(0, Math.min(pageIndex, Math.max(0, totalPairs - 1)));
+  const currentPair = sortedJobs.slice(safePage * 2, safePage * 2 + 2);
 
-  const hasLinkedCv = useMemo(() => {
-    if (!nextJob) return false;
-    const id = jobLinkedCvId(nextJob);
-    return !!id && cvs.some((cv: any) => cvId(cv) === id);
-  }, [nextJob, cvs]);
-
-  const goTo = (i: number) => setActiveIndex(Math.max(0, Math.min(i, recentJobs.length - 1)));
-
-  if (!nextJob && secondaryLoading.jobs) {
+  if (sortedJobs.length === 0 && secondaryLoading.jobs) {
     return (
       <Panel title="Continue where you left off">
-        <div className="space-y-3" aria-hidden="true">
-          <Skeleton className="h-4 w-3/4" />
-          <Skeleton className="h-3 w-1/2" />
-          <Skeleton className="h-3 w-2/3" />
-          <Skeleton className="h-9 w-full rounded-lg" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" aria-hidden="true">
+          <Skeleton className="h-36 w-full rounded-xl" />
+          <Skeleton className="h-36 w-full rounded-xl" />
         </div>
       </Panel>
     );
   }
 
-  if (!nextJob) {
+  if (sortedJobs.length === 0) {
     return (
       <Panel title="Continue where you left off">
         <div className="py-8 text-center text-sm text-[var(--text-tertiary)]">
@@ -820,100 +1031,60 @@ function ContinuePanel() {
   }
 
   return (
-    <Panel
-      title="Continue where you left off"
-      actions={
-        recentJobs.length > 1 ? (
-          <span className="rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 flex items-center justify-center px-2 py-0.5 text-[10px] font-semibold tabular-nums">
-            {safeIndex + 1}/{recentJobs.length}
-          </span>
-        ) : undefined
-      }
-    >
-      <div className="relative">
-        {/* Card stack — slides vertically as you move through the jobs */}
-        <div className="min-h-[180px]">
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.div
-              key={nextJob.id || nextJob._id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.18, ease: 'easeOut' }}
-              // Swipe/drag up or down on the card to move through the stack
-              drag="y"
-              dragConstraints={{ top: 0, bottom: 0 }}
-              dragElastic={0.15}
-              dragTransition={{ bounceStiffness: 400, bounceDamping: 30 }}
-              whileDrag={{ scale: 0.99 }}
-              onDragEnd={(_e, info) => {
-                if (Math.abs(info.offset.y) < 40) return; // below threshold → springs back
-                goTo(safeIndex + (info.offset.y < 0 ? 1 : -1));
-              }}
-            >
-              <div className="rounded-lg bg-[#faf7ef] dark:bg-white/[0.03] border border-[var(--border-primary)] p-4 pr-8">
-                <div className="flex items-start gap-2 min-w-0">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-[var(--text-primary)] leading-snug">{nextJob.jobTitle || 'Untitled role'}</p>
-                    <p className="mt-0.5 flex items-center gap-1.5 text-xs text-[var(--text-secondary)]">
-                      <CompanyLogo company={nextJob.company} size={14} logoUrl={nextJob.companyLogo} jobId={nextJob.id || nextJob._id} />
-                      <span className="truncate">
-                        {nextJob.company || 'Company'} {nextJob.location ? `· ${nextJob.location}` : ''}
-                      </span>
-                    </p>
-                    <p className="mt-2 text-[11px] text-[var(--text-tertiary)]">Job added {timeAgo(nextJob.createdAt || nextJob.updatedAt)}</p>
-
-                    <div className="mt-3 flex items-center gap-1.5 text-xs font-medium text-amber-700 dark:text-amber-400">
-                      <AlertCircle size={14} />
-                      {hasLinkedCv ? 'CV linked — ready to apply' : 'CV not created yet'}
-                    </div>
-
-                    <div className="mt-4 flex items-center gap-2">
-                      <button
-                        onClick={() => router.push(hasLinkedCv ? `/editor?mode=edit&cvId=${jobLinkedCvId(nextJob)}` : '/editor?mode=create')}
-                        className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 text-white dark:bg-emerald-500 dark:text-slate-900 px-3.5 py-2 text-xs font-medium hover:bg-emerald-700 dark:hover:bg-emerald-400 transition-colors"
-                      >
-                        <Plus size={14} />
-                        Create CV
-                      </button>
-                      <button
-                        onClick={() => router.push('/dashboard/tracker')}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border-primary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] px-3.5 py-2 text-xs font-medium transition-colors"
-                      >
-                        View Job
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          </AnimatePresence>
-        </div>
-
-        {/* Vertical pagination dots on the right of the card */}
-        {recentJobs.length > 1 && (
-          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex flex-col items-center gap-1.5">
-            {recentJobs.map((j: any, i: number) => (
+    <>
+      <Panel
+        title="Continue where you left off"
+        actions={
+          totalPairs > 1 ? (
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] font-semibold text-[var(--text-tertiary)] tabular-nums mr-1">
+                {safePage + 1}/{totalPairs}
+              </span>
               <button
-                key={j.id || j._id || i}
-                onClick={() => goTo(i)}
-                aria-label={`Go to job ${i + 1} of ${recentJobs.length}`}
-                aria-current={i === safeIndex ? 'true' : undefined}
-                className="group p-0.5"
+                type="button"
+                onClick={() => setPageIndex((prev) => Math.max(0, prev - 1))}
+                disabled={safePage === 0}
+                className="w-5 h-5 rounded flex items-center justify-center text-xs border border-[var(--border-primary)] text-[var(--text-secondary)] disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[var(--bg-tertiary)]"
               >
-                <span
-                  className={`block rounded-full transition-all duration-200 ${
-                    i === safeIndex
-                      ? 'h-3.5 w-1.5 bg-[var(--accent-primary)]'
-                      : 'h-2 w-2 bg-[var(--text-secondary)] opacity-60 group-hover:bg-[var(--accent-primary)] group-hover:opacity-100'
-                  }`}
-                />
+                ‹
               </button>
-            ))}
-          </div>
-        )}
-      </div>
-    </Panel>
+              <button
+                type="button"
+                onClick={() => setPageIndex((prev) => Math.min(totalPairs - 1, prev + 1))}
+                disabled={safePage >= totalPairs - 1}
+                className="w-5 h-5 rounded flex items-center justify-center text-xs border border-[var(--border-primary)] text-[var(--text-secondary)] disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[var(--bg-tertiary)]"
+              >
+                ›
+              </button>
+            </div>
+          ) : undefined
+        }
+      >
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          {currentPair.map((job) => (
+            <ContinueJobCard
+              key={job.id || job._id}
+              job={job}
+              cvs={cvs}
+              onOpenSidebar={(j) => setSelectedSidebarJob(j)}
+            />
+          ))}
+        </div>
+      </Panel>
+
+      {/* Job sidebar opened right on dashboard */}
+      {selectedSidebarJob && (
+        <JobSidebar
+          job={{
+            ...selectedSidebarJob,
+            id: selectedSidebarJob.id || selectedSidebarJob._id,
+          }}
+          journeys={[]}
+          onClose={() => setSelectedSidebarJob(null)}
+          onRefresh={refreshJobs}
+        />
+      )}
+    </>
   );
 }
 
@@ -1198,6 +1369,9 @@ export default function RedesignedDashboardView() {
 
       {/* Compact KPI strip */}
       <KpiStrip />
+
+      {/* Top job matches */}
+      <TopJobMatchesSection />
 
       {/* Two-column workspace — fills the full content-area width */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">

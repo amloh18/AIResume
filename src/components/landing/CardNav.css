@@ -8,7 +8,17 @@
   z-index: 99999; /* Highest z-index to overlay video players, modal portals, and animations */
   isolation: isolate; /* Form an independent stacking context so z-index always wins */
   box-sizing: border-box;
-  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease;
+  transition: top 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease;
+}
+
+.card-nav-container.with-banner {
+  top: 3.4em;
+}
+
+@media (max-width: 640px) {
+  .card-nav-container.with-banner {
+    top: 3.8em;
+  }
 }
 
 .card-nav-container.nav-hidden {
@@ -72,13 +82,13 @@
 }
 
 .logo-image-wrapper {
-  width: 64px;
-  height: 64px;
+  width: 38px;
+  height: 38px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  border-radius: 20px;
+  border-radius: 10px;
   overflow: hidden;
 }
 

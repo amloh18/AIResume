@@ -14,7 +14,7 @@ export interface SyncResult {
 }
 
 /**
- * Syncs users from cvcircle.users to adminusers
+ * Syncs users from main users database to adminusers
  * This function extracts essential user data for campaign targeting
  */
 export async function syncUsersToAdmin(): Promise<SyncResult> {
@@ -27,7 +27,7 @@ export async function syncUsersToAdmin(): Promise<SyncResult> {
   };
 
   try {
-    console.log('🔄 Starting user sync from cvcircle.users to adminusers...');
+    console.log('🔄 Starting user sync from main users to adminusers...');
 
     // Connect to main database
     await getConnection();

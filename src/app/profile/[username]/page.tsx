@@ -16,7 +16,7 @@ export async function generateMetadata({
   
   if (!profile) {
     return {
-      title: 'Profile Not Found - CVCircle',
+      title: 'Profile Not Found',
       description: 'The requested profile could not be found.',
     };
   }
@@ -27,7 +27,7 @@ export async function generateMetadata({
   const summary = profile.professionalSummary || `View ${fullName}'s professional profile and portfolio.`;
 
   return {
-    title: `${fullName} - ${jobTitle} | CVCircle`,
+    title: `${fullName} - ${jobTitle} | AI Resume`,
     description: summary,
     openGraph: {
       title: `${fullName} - ${jobTitle}`,

@@ -29,7 +29,7 @@ const TermsContent: React.FC = () => {
           Agreement to Terms
         </h3>
         <p className="text-white/80 leading-relaxed mb-4">
-          By accessing and using CVCircle ("Service"), you accept and agree to be bound by the terms and provision of this agreement. CVCircle is a product of <strong>Morigrid Labs</strong>. If you do not agree to abide by the above, please do not use this service.
+          By accessing and using AI Resume ("Service"), you accept and agree to be bound by the terms and provision of this agreement. AI Resume is a product of <strong>Morigrid Labs</strong>. If you do not agree to abide by the above, please do not use this service.
         </p>
         <p className="text-white/80 leading-relaxed">
           These Terms of Service ("Terms") govern your use of our AI-powered CV creation and job application management platform operated by <strong>Morigrid Labs</strong> ("Company," "we," "us," or "our"). These Terms constitute a legally binding agreement between you and Morigrid Labs.
@@ -43,7 +43,7 @@ const TermsContent: React.FC = () => {
           Service Description
         </h3>
         <p className="text-white/80 leading-relaxed mb-4">
-          CVCircle provides a comprehensive CV creation and management platform that includes:
+          AI Resume provides a comprehensive CV creation and management platform that includes:
         </p>
         <ul className="list-disc list-inside space-y-2 text-white/80 ml-4">
           <li>AI-powered CV creation and optimization using OpenAI technology</li>
@@ -175,7 +175,7 @@ const TermsContent: React.FC = () => {
         <div className="bg-white/5 rounded-lg p-6">
           <h4 className="text-xl font-medium mb-4 text-lime-400">How to Request a Refund</h4>
           <ol className="list-decimal list-inside space-y-2 text-white/80 ml-4">
-            <li>Contact our support team at <strong>support@cvcircle.io</strong></li>
+            <li>Contact our support team at <strong>support@buildairesume.com</strong></li>
             <li>Include your account email and reason for refund</li>
             <li>Provide the date of your Pro plan purchase</li>
             <li>Refund will be issued to the original payment method within 7-10 business days</li>
@@ -258,13 +258,13 @@ const TermsContent: React.FC = () => {
       <div className="bg-white/5 backdrop-blur-sm rounded-xl p-8 border border-white/10">
         <h3 className="text-2xl font-semibold mb-6 text-lime-400">Contact Information</h3>
         <div className="space-y-2 text-white/80">
-          <p><strong>Legal Inquiries:</strong> <a href="mailto:legal@cvcircle.io" className="text-lime-400 underline">legal@cvcircle.io</a></p>
-          <p><strong>Support:</strong> <a href="mailto:support@cvcircle.io" className="text-lime-400 underline">support@cvcircle.io</a></p>
+          <p><strong>Legal Inquiries:</strong> <a href="mailto:legal@buildairesume.com" className="text-lime-400 underline">legal@buildairesume.com</a></p>
+          <p><strong>Support:</strong> <a href="mailto:support@buildairesume.com" className="text-lime-400 underline">support@buildairesume.com</a></p>
           <p><strong>Parent Company:</strong> Morigrid Labs</p>
         </div>
 
         <div className="mt-8 p-6 bg-lime-500/10 rounded-2xl border border-lime-500/20 text-center">
-          <p className="text-lime-400 font-bold mb-2">© 2026 CVCircle by Morigrid Labs</p>
+          <p className="text-lime-400 font-bold mb-2">© 2026 AI Resume by Morigrid Labs</p>
           <p className="text-white/60 text-sm italic">All rights reserved. Made with heart pulsing.</p>
         </div>
       </div>

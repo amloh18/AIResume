@@ -1,7 +1,7 @@
 {
-  "name": "cvcircle_app",
+  "name": "buildairesume_app",
   "version": "0.9.9",
-  "description": "CV Circle - A modern job application tracker and resume builder",
+  "description": "AI Resume - An AI-powered resume builder, ATS optimizer, and job application tracker",
   "private": true,
   "scripts": {
     "dev": "next dev",

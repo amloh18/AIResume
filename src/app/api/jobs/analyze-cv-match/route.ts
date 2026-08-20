@@ -148,13 +148,13 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           formatExtensionError(
             ExtensionErrorCode.CV_NOT_FOUND,
-            'Master CV or AI analysis not found. Please create a master CV on cvcircle.io'
+            'Master CV or AI analysis not found. Please create a master CV on buildairesume.com'
           ),
           { status: 404 }
         );
       }
       return NextResponse.json(
-        { error: 'Master CV or AI analysis not found. Please create a master CV on cvcircle.io' },
+        { error: 'Master CV or AI analysis not found. Please create a master CV on buildairesume.com' },
         { status: 404 }
       );
     }

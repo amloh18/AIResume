@@ -249,7 +249,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
         onResume(journey);
         return;
       case 'contact_support':
-        window.open('mailto:support@cvcircle.app?subject=Tracker%20document%20generation%20support', '_blank');
+        window.open('mailto:support@buildairesume.com?subject=Tracker%20document%20generation%20support', '_blank');
         return;
       default:
         return;

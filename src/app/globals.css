@@ -773,6 +773,31 @@ body.dark {
   line-height: 1.4 !important;
 }
 
+/* Onboarding welcome — match dashboard typography (Geist, compact scale).
+   The dashboard is scoped to .geist-ui with a 6-tier fluid scale; the welcome
+   page used oversized marketing-size headings, so we force the same
+   dashboard scale here. */
+.geist-ui .welcome-page .onboarding-title {
+  font-size: 1.75rem !important; /* 28px — same as dashboard greeting */
+  font-weight: var(--weight-semibold) !important;
+  letter-spacing: -0.02em !important;
+  line-height: 1.2 !important;
+}
+
+.geist-ui .welcome-page .onboarding-copy {
+  font-size: var(--font-size-body) !important; /* 13-14px — dashboard body */
+  font-weight: var(--weight-regular) !important;
+  letter-spacing: -0.01em !important;
+  line-height: 1.5 !important;
+}
+
+.geist-ui .welcome-page .onboarding-step-label {
+  font-size: 0.8125rem !important; /* 13px — dashboard panel-title scale */
+  font-weight: var(--weight-semibold) !important;
+  letter-spacing: -0.02em !important;
+  line-height: 1.4 !important;
+}
+
 /* LinkedIn Enhancer theme-aware mappings (applied globally for light/dark theme variables) */
 .linkedin-enhancer {
   --linkedin-panel-bg: #ffffff;

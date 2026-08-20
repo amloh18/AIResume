@@ -169,17 +169,21 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
       }
       const contentType = response.headers.get('content-type');
       if (contentType && contentType.includes('application/json')) {
-      const data = await response.json();
-      console.log(`✅ NotificationContext - Fetched ${data.notifications?.length || 0} notifications`);
-      const filtered = filterExpiredNotifications(data.notifications || []);
-      console.log(`🧹 NotificationContext - After expiration filter: ${filtered.length}`);
-      
-      // Log unread count for debugging
-      const unreadCount = filtered.filter((n: INotification) => !n.read).length;
-      console.log(`📊 NotificationContext - Unread notifications: ${unreadCount}`);
-      
-      // Set notifications - this will trigger the toast display effect
-      setNotifications(filtered);
+        const resData = await response.json();
+        const rawNotifs =
+          resData?.data?.notifications ||
+          resData?.notifications ||
+          (Array.isArray(resData?.data) ? resData.data : (Array.isArray(resData) ? resData : []));
+        console.log(`✅ NotificationContext - Fetched ${rawNotifs.length} notifications`);
+        const filtered = filterExpiredNotifications(rawNotifs);
+        console.log(`🧹 NotificationContext - After expiration filter: ${filtered.length}`);
+        
+        // Log unread count for debugging
+        const unreadCount = filtered.filter((n: INotification) => !n.read).length;
+        console.log(`📊 NotificationContext - Unread notifications: ${unreadCount}`);
+        
+        // Set notifications - this will trigger the toast display effect
+        setNotifications(filtered);
       
       // Manually trigger toast display for unread notifications IMMEDIATELY
       // This is a fallback when SSE isn't working - show toasts for all unread notifications

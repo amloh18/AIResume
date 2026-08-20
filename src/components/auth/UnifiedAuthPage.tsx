@@ -954,15 +954,15 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
   const getTitle = () => {
     switch (mode) {
       case 'signin':
-        return isModal ? 'Sign in to CVCircle' : 'Sign In';
+        return isModal ? 'Sign in to AI Resume' : 'Sign In';
       case 'signup':
-        return isModal ? 'Join CVCircle' : 'Create your account';
+        return isModal ? 'Join AI Resume' : 'Create your account';
       case 'reset':
         return 'Reset Password';
       case 'magic-link':
         return 'Sign In with Code';
       default:
-        return isModal ? 'Sign in to CVCircle' : 'Sign In';
+        return isModal ? 'Sign in to AI Resume' : 'Sign In';
     }
   };
 
