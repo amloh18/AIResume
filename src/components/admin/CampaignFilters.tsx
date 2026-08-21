@@ -207,7 +207,7 @@ export default function CampaignFilters({ filters, onChange, twoColumn = false }
         }
       }
     } catch {
-      setAvailablePlans(['free', 'pro', 'premium']);
+      setAvailablePlans(['free', 'starter_monthly', 'focused_monthly']);
     }
   };
 

@@ -12,13 +12,9 @@ interface JobMatch {
   deadline: string;
 }
 
-const defaultMatches: JobMatch[] = [
-  { job: 'Frontend Engineer', company: 'Google', match: 92, stage: 'Applied', deadline: 'Oct 28' },
-  { job: 'Senior React Dev', company: 'Meta', match: 88, stage: 'Interview', deadline: 'Tomorrow' },
-  { job: 'Fullstack Dev', company: 'Stripe', match: 95, stage: 'Assessment', deadline: 'Oct 24' },
-];
-
-export default function MatchScoreTable({ matches = defaultMatches, loading = false, empty = false }: { matches?: JobMatch[], loading?: boolean, empty?: boolean }) {
+export default function MatchScoreTable({ matches, loading = false, empty = false }: { matches?: JobMatch[], loading?: boolean, empty?: boolean }) {
+  const displayMatches = matches || [];
+  const isEmpty = empty || displayMatches.length === 0;
   return (
     <DashboardWidget
       id="match-score-table"
@@ -45,7 +41,7 @@ export default function MatchScoreTable({ matches = defaultMatches, loading = fa
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50 dark:divide-white/[0.02]">
-            {matches.map((match, i) => (
+            {displayMatches.map((match, i) => (
               <tr key={i} className="group hover:bg-gray-50/50 dark:hover:bg-white/[0.01] transition-colors">
                 <td className="py-4 pr-4">
                   <div className="text-small font-black text-gray-800 dark:text-gray-200">{match.job}</div>

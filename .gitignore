@@ -78,3 +78,6 @@ plan-*
 
 # Sentry Config File
 .env.sentry-build-plugin
+
+# ShipStudio metadata
+.shipstudio/

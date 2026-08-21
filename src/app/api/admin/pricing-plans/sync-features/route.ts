@@ -44,7 +44,7 @@ const updatedPlans = [
         ]
     },
     {
-        key: 'pro_monthly',
+        key: 'focused_monthly',
         description: 'Complete career toolkit with monthly flexibility',
         features: [
             'Unlimited CV creation',
@@ -60,7 +60,7 @@ const updatedPlans = [
         notIncludedFeatures: []
     },
     {
-        key: 'pro_quarterly',
+        key: 'focused_quarterly',
         description: 'Best value with priority support included',
         features: [
             'Everything in Monthly plan',
@@ -69,7 +69,7 @@ const updatedPlans = [
         notIncludedFeatures: []
     },
     {
-        key: 'pro_lifetime',
+        key: 'focused_yearly',
         description: 'One-time payment for lifetime access',
         features: [
             'All Professional features forever',

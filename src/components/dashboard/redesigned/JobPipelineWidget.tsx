@@ -14,12 +14,12 @@ interface Stage {
 }
 
 const defaultStages: Stage[] = [
-  { label: 'Draft', count: 0, color: 'bg-slate-400', path: '/dashboard/tracker?filter=draft' },
-  { label: 'Staging', count: 0, color: 'bg-cyan-500', path: '/dashboard/tracker?filter=created' },
-  { label: 'Applied', count: 3, color: 'bg-blue-500', path: '/dashboard/tracker?filter=applied' },
-  { label: 'Interview', count: 2, color: 'bg-amber-500', path: '/dashboard/tracker?filter=interview' },
-  { label: 'Offer', count: 1, color: 'bg-[#83d60d]', path: '/dashboard/tracker?filter=offer' },
-  { label: 'Rejected', count: 12, color: 'bg-rose-500', path: '/dashboard/tracker?filter=rejected' },
+  { label: 'Saved', count: 0, color: 'bg-slate-400', path: '/dashboard/jobs?tab=applications&filter=saved' },
+  { label: 'Staging', count: 0, color: 'bg-cyan-500', path: '/dashboard/jobs?tab=applications&filter=created' },
+  { label: 'Applied', count: 3, color: 'bg-blue-500', path: '/dashboard/jobs?tab=applications&filter=applied' },
+  { label: 'Interview', count: 2, color: 'bg-amber-500', path: '/dashboard/jobs?tab=applications&filter=interview' },
+  { label: 'Offer', count: 1, color: 'bg-[#83d60d]', path: '/dashboard/jobs?tab=applications&filter=offer' },
+  { label: 'Rejected', count: 12, color: 'bg-rose-500', path: '/dashboard/jobs?tab=applications&filter=rejected' },
 ];
 
 export default function JobPipelineWidget({ stages = defaultStages, loading = false, empty = false }: { stages?: Stage[], loading?: boolean, empty?: boolean }) {
@@ -40,7 +40,7 @@ export default function JobPipelineWidget({ stages = defaultStages, loading = fa
         description: "Start by adding your first application.",
         action: {
           label: "Add Job",
-          onClick: () => router.push('/dashboard/tracker?action=add-job'),
+          onClick: () => router.push('/dashboard/jobs?tab=applications&newJob=1'),
           primary: true
         }
       }}
@@ -80,7 +80,7 @@ export default function JobPipelineWidget({ stages = defaultStages, loading = fa
           <span className="text-[11px] font-bold text-gray-700 dark:text-gray-300">3 Interviews scheduled this week</span>
         </div>
         <button 
-          onClick={() => router.push('/dashboard/tracker?filter=interview')}
+          onClick={() => router.push('/dashboard/jobs?tab=applications&filter=interview')}
           className="text-[10px] font-black uppercase tracking-widest text-[#487e04] dark:text-[#83d60d] hover:underline"
         >
           View Schedule →

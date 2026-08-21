@@ -117,23 +117,23 @@ const PRESET_TEMPLATES: FilterPreset[] = [
     },
     {
         id: 'smart-members',
-        name: 'Smart Plan Members',
-        description: 'Users on Smart quarterly or yearly tiers',
+        name: 'Focused Plan Members',
+        description: 'Users on Focused monthly or yearly tiers',
         icon: <Star className="w-5 h-5" />,
         category: 'promotional',
         filters: {
-            membershipPlans: ['smart_quarterly', 'smart_yearly']
+            membershipPlans: ['focused_monthly', 'focused_yearly']
         },
         color: 'bg-yellow-500/10 border-yellow-500/30 hover:border-yellow-500/50'
     },
     {
         id: 'all-premium',
         name: 'All Paid Members',
-        description: 'Everyone on any active focused or smart plan',
+        description: 'Everyone on any active focused or starter yearly plan',
         icon: <Users className="w-5 h-5" />,
         category: 'promotional',
         filters: {
-            membershipPlans: ['focused_monthly', 'focused_yearly', 'smart_quarterly', 'smart_yearly']
+            membershipPlans: ['starter_yearly', 'focused_monthly', 'focused_yearly']
         },
         color: 'bg-indigo-500/10 border-indigo-500/30 hover:border-indigo-500/50'
     },
@@ -145,19 +145,19 @@ const PRESET_TEMPLATES: FilterPreset[] = [
         icon: <TrendingUp className="w-5 h-5" />,
         category: 'upsale',
         filters: {
-            membershipPlans: ['starter_monthly'],
+            membershipPlans: ['starter_monthly', 'starter_yearly'],
             usageMetrics: { minCVsCreated: 3 }
         },
         color: 'bg-emerald-500/10 border-emerald-500/30 hover:border-emerald-500/50'
     },
     {
-        id: 'smart-power-users',
-        name: 'Smart Plan Power Users',
-        description: 'Smart members with 5+ CVs and 3+ Job Journeys completed',
+        id: 'focused-power-users',
+        name: 'Focused Plan Power Users',
+        description: 'Focused members with 5+ CVs and 3+ Job Journeys completed',
         icon: <Star className="w-5 h-5" />,
         category: 'retention',
         filters: {
-            membershipPlans: ['smart_quarterly', 'smart_yearly'],
+            membershipPlans: ['focused_monthly', 'focused_yearly'],
             usageMetrics: { minCVsCreated: 5, minJourneysCompleted: 3 }
         },
         color: 'bg-amber-500/10 border-amber-500/30 hover:border-amber-500/50'
@@ -169,7 +169,7 @@ const PRESET_TEMPLATES: FilterPreset[] = [
         icon: <Zap className="w-5 h-5" />,
         category: 're-engagement',
         filters: {
-            membershipPlans: ['focused_monthly', 'focused_yearly', 'smart_quarterly', 'smart_yearly'],
+            membershipPlans: ['starter_yearly', 'focused_monthly', 'focused_yearly'],
             userAge: { type: 'existing_users', days: 90 }
         },
         color: 'bg-red-500/10 border-red-500/30 hover:border-red-500/50'

@@ -96,7 +96,7 @@ export class UserService {
           name: isAdminCollection ? 'Admin User' : `${user.firstName} ${user.lastName}`,
           image: (user as any).avatar || null,
           role: user.role || 'user',
-          planKey: (user as any).currentPlanKey || (isAdminCollection ? 'pro_lifetime' : 'free'),
+          planKey: (user as any).currentPlanKey || (isAdminCollection ? 'focused_yearly' : 'free'),
           subscriptionStatus: (user as any).subscription?.status || (isAdminCollection ? 'active' : 'inactive'),
         },
       };

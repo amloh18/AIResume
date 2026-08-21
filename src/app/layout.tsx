@@ -145,11 +145,14 @@ export default async function RootLayout({
   const session = await getServerSession(authConfig);
 
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <meta name="impact-site-verification" {...{ value: "044e0d11-071e-4480-aa4e-7fae5e6da834" }} />
         {/* Suppress third-party Chrome Extension wallet injection errors (e.g. Rabby Wallet evmAsk.js) */}
-        <script dangerouslySetInnerHTML={{ __html: `
+        <script
+          id="suppress-wallet-errors"
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={{ __html: `
           (function() {
             window.addEventListener('error', function(e) {
               if (e.message && (e.message.indexOf('ethereum') !== -1 || e.message.indexOf('evmAsk') !== -1 || (e.filename && e.filename.indexOf('evmAsk') !== -1))) {

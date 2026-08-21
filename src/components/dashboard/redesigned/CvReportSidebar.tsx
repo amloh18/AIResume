@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, TrendingUp, AlertCircle, CheckCircle2, Lightbulb, ArrowRight, FileSearch } from 'lucide-react';
 import { authenticatedFetch } from '@/lib/utils/apiUtils';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { getCvScoreForDisplay } from '@/lib/utils/cv-scoring';
 
 interface CvReportSidebarProps {
   cv: any;
@@ -18,7 +19,7 @@ function cvId(cv: any): string {
 }
 
 function cvAtsScore(cv: any): number {
-  return Math.round(cv?.metadata?.atsScore || cv?.cv_score_master || 0);
+  return Math.round(getCvScoreForDisplay(cv) || 0);
 }
 
 /** Same normalisation used by the CV Health panel on the dashboard. */

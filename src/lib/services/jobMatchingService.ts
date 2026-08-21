@@ -7,6 +7,7 @@ import type {
   User,
 } from '@/types/automation-schema';
 import { MATCH_SCORE_WEIGHTS, MATCH_SCORE_THRESHOLDS } from '@/types/automation-schema';
+import { calculateLevenshteinDistance } from '@/lib/services/semantic-matcher-service';
 
 export class JobMatchingService {
   static async computeScore(userId: string, jobId: string): Promise<JobMatch> {
@@ -92,7 +93,11 @@ export class JobMatchingService {
     if (!job.keywords || job.keywords.length === 0) {
       return 50;
     }
-    return 75;
+    // Score based on how many job keywords exist (more keywords = higher baseline)
+    const keywordCount = job.keywords.length;
+    if (keywordCount >= 10) return 85;
+    if (keywordCount >= 5) return 75;
+    return 60;
   }
 
   private static calculateTitleScore(
@@ -175,36 +180,8 @@ export class JobMatchingService {
       return 1.0;
     }
 
-    const editDistance = this.levenshteinDistance(longer, shorter);
+    const editDistance = calculateLevenshteinDistance(longer, shorter);
     return (longer.length - editDistance) / longer.length;
-  }
-
-  private static levenshteinDistance(str1: string, str2: string): number {
-    const matrix: number[][] = [];
-
-    for (let i = 0; i <= str2.length; i++) {
-      matrix[i] = [i];
-    }
-
-    for (let j = 0; j <= str1.length; j++) {
-      matrix[0][j] = j;
-    }
-
-    for (let i = 1; i <= str2.length; i++) {
-      for (let j = 1; j <= str1.length; j++) {
-        if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
-          matrix[i][j] = matrix[i - 1][j - 1];
-        } else {
-          matrix[i][j] = Math.min(
-            matrix[i - 1][j - 1] + 1,
-            matrix[i][j - 1] + 1,
-            matrix[i - 1][j] + 1
-          );
-        }
-      }
-    }
-
-    return matrix[str2.length][str1.length];
   }
 
   static async rematchAllJobsForUser(userId: string): Promise<void> {

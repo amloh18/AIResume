@@ -34,12 +34,9 @@ import { CVSurgeonService, SurgicalFix } from '@/lib/services/cv-surgeon-service
 import { logResumeEnhancerEvent } from '@/lib/services/resumeEnhancerLogClient';
 import { inferRoleContextFromCVData } from '@/lib/utils/resumeEnhancerRoleInference';
 import { calculateOptimalColumnDistribution } from '@/services/sectionRebalancer';
-import type { RecruiterFeatures } from '@/components/resume-enhancer/panels/RecruiterModePanel';
-import type { ATSFeatures } from '@/components/resume-enhancer/panels/ATSModePanel';
 import { getAnalysisModeWithValidation } from '@/lib/utils/analysis-mode';
 import toast from 'react-hot-toast';
 import FloatingFormEditor from '@/components/resume-enhancer/FloatingFormEditor';
-import FloatingPulsePill, { type FloatingPulsePillHandle } from '@/components/resume-enhancer/FloatingPulsePill';
 import ATSMeterPanel from '@/components/resume-enhancer/panels/ATSMeterPanel';
 import MoriChatInterface from '@/components/resume-enhancer/panels/MoriChatInterface';
 import UtilityPanelPill from '@/components/resume-enhancer/components/UtilityPanelPill';
@@ -139,7 +136,6 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
 
     const cvPreviewRef = useRef<HTMLDivElement>(null);
     const sidePanelRef = useRef<HTMLDivElement>(null);
-    const pillRef = useRef<FloatingPulsePillHandle>(null);
     const canvasBuilderRef = useRef<any>(null);
     const lastSavedSectionTitlesRef = useRef<string>('');
     const hasLoadedUserSectionTitlesRef = useRef(false);
@@ -1324,9 +1320,9 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
 
 
     return (
-      <div className="h-macro min-h-0 relative overflow-hidden bg-gray-50 dark:bg-[#0a0a0a]">
+      <div className="h-full flex-1 min-h-0 relative overflow-hidden bg-gray-50 dark:bg-[#0a0a0a]">
         {/* Main Container */}
-        <div className="h-full w-full flex overflow-hidden relative p-3 gap-3">
+        <div className="h-full w-full flex overflow-hidden relative px-3 pt-1.5 pb-3 gap-3">
           {/* CV Canvas Builder — full drag-drop snippet-based builder with inline editing */}
           <div 
             className="flex-1 lg:flex-none lg:w-[60%] min-h-0 relative flex flex-col rounded-xl overflow-hidden shadow-sm shadow-black/10 dark:shadow-black/30"

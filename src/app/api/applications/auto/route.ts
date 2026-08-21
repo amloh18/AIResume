@@ -26,6 +26,7 @@ export async function POST(request: NextRequest) {
       company,
       location,
       source,
+      atsType,
       applyUrl,
       jobUrl,
       salary,
@@ -63,14 +64,15 @@ export async function POST(request: NextRequest) {
       if (targetApplyUrl) existingJobApp.jobUrl = targetApplyUrl;
       if (matchScore) existingJobApp.matchScore = matchScore;
       if (jobDesc && !existingJobApp.jobDescription) existingJobApp.jobDescription = jobDesc;
+      if (atsType) existingJobApp.atsType = atsType;
       savedJob = await existingJobApp.save();
     } else {
       // Map source to valid schema enum
-      let cleanSource = 'direct';
+      let cleanSource = 'other';
       const validSources = ['extension', 'manual', 'import', 'linkedin', 'indeed', 'company-website', 'referral', 'other'];
       if (validSources.includes(source)) {
         cleanSource = source;
-      } else if (source === 'naukri' || source === 'adzuna' || source === 'greenhouse' || source === 'lever' || source === 'workable') {
+      } else if (source === 'naukri' || source === 'adzuna' || source === 'greenhouse' || source === 'lever' || source === 'workable' || source === 'ashby') {
         cleanSource = 'company-website';
       }
 
@@ -89,6 +91,7 @@ export async function POST(request: NextRequest) {
         status: 'applied',
         priority: 'medium',
         source: cleanSource,
+        atsType: atsType || 'unknown',
         matchScore: typeof matchScore === 'number' ? matchScore : 85,
         appliedAt: new Date(),
         applicationDate: new Date(),
@@ -110,7 +113,7 @@ export async function POST(request: NextRequest) {
         type: 'info',
         priority: 'medium',
         read: false,
-        actionUrl: `/dashboard/tracker?jobId=${savedJob._id}`,
+        actionUrl: `/dashboard/jobs?tab=applications&jobId=${savedJob._id}`,
         createdAt: new Date(),
       });
     } catch (notifErr) {

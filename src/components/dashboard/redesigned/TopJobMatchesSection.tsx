@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Briefcase,
   Sparkles,
+  Loader2,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
@@ -11,6 +12,14 @@ import { useNotifications } from '@/contexts/NotificationContext';
 import { JobDetailModal } from '@/components/jobs/JobDetailModal';
 import CompanyLogo from '@/components/ui/CompanyLogo';
 import type { JobListing } from '@/types/automation-schema';
+
+const CARD_TINTS = [
+  'bg-[#fff9e6] dark:bg-[#1a1c14]',
+  'bg-[#fef3e7] dark:bg-[#1c1914]',
+  'bg-[#eef7fe] dark:bg-[#14191c]',
+  'bg-[#eafaf1] dark:bg-[#131b15]',
+  'bg-[#fdf4ff] dark:bg-[#19141c]',
+];
 
 export interface TopMatchJob {
   _id: string;
@@ -28,86 +37,56 @@ export interface TopMatchJob {
   bgTintLight: string;
 }
 
-const INITIAL_TOP_MATCHES: TopMatchJob[] = [
-  {
-    _id: 'top-match-1',
-    title: 'Senior Manager Product Development',
-    company: 'Info Edge',
-    location: 'Bengaluru',
-    experienceYears: 2,
-    postedAgo: '6 days ago',
-    matchScore: 76,
-    skills: ['Product Strategy', 'Leadership', 'Product Management'],
-    applyUrl: 'https://www.naukri.com',
-    source: 'naukri',
-    bgTintLight: 'bg-[#fff9e6] dark:bg-[#1a1c14]',
-  },
-  {
-    _id: 'top-match-2',
-    title: 'Product Manager',
-    company: 'Dess Technologies',
-    location: 'Mumbai (All Areas)',
-    experienceYears: 3,
-    postedAgo: 'a day ago',
-    matchScore: 76,
-    skills: ['Product Management', 'Product Strategy', 'Product Concept'],
-    applyUrl: 'https://www.naukri.com',
-    source: 'naukri',
-    bgTintLight: 'bg-[#fef3e7] dark:bg-[#1c1914]',
-  },
-  {
-    _id: 'top-match-3',
-    title: 'IN_Senior Associate_Gen AI_CEDA Central_Advisory_Bangalore',
-    company: 'PwC',
-    location: 'Bengaluru, Karnataka, India',
-    experienceYears: 2,
-    postedAgo: 'a day ago',
-    matchScore: 76,
-    skills: ['Gen AI', 'Advisory', 'Python', 'LLMs'],
-    applyUrl: 'https://boards.greenhouse.io',
-    source: 'greenhouse',
-    bgTintLight: 'bg-[#eef7fe] dark:bg-[#14191c]',
-  },
-  {
-    _id: 'top-match-4',
-    title: 'Associate Product Manager',
-    company: 'Grazitti Interactive',
-    location: 'Panchkula',
-    experienceYears: 2,
-    postedAgo: '6 days ago',
-    matchScore: 75,
-    skills: ['Product Management', 'Product Strategy', 'L1 L2', 'Roadmaps'],
-    applyUrl: 'https://www.indeed.com',
-    source: 'indeed',
-    bgTintLight: 'bg-[#eafaf1] dark:bg-[#131b15]',
-  },
-  {
-    _id: 'top-match-5',
-    title: 'Associate Manager - Product Management',
-    company: 'Bakertilly',
-    location: 'Bengaluru, Karnataka, India',
-    experienceYears: 3,
-    postedAgo: 'a day ago',
-    matchScore: 75,
-    skills: ['Product Lifecycle', 'Analytics', 'Agile'],
-    applyUrl: 'https://www.adzuna.com',
-    source: 'adzuna',
-    bgTintLight: 'bg-[#fff9e6] dark:bg-[#1a1c14]',
-  },
-];
-
 export default function TopJobMatchesSection() {
   const router = useRouter();
   const { toast } = useToast();
   const { updateProgress } = useNotifications();
-  const [jobs, setJobs] = useState<TopMatchJob[]>(INITIAL_TOP_MATCHES);
+  const [jobs, setJobs] = useState<TopMatchJob[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedJob, setSelectedJob] = useState<JobListing | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set());
 
+  useEffect(() => {
+    const fetchTopMatches = async () => {
+      try {
+        setLoading(true);
+        const res = await fetch('/api/jobs/discover?limit=5&sortBy=matchScore');
+        const data = await res.json();
+        if (data.success && data.jobs?.length > 0) {
+          const mapped: TopMatchJob[] = data.jobs.slice(0, 5).map((job: any, i: number) => ({
+            _id: job._id,
+            title: job.title,
+            company: job.company,
+            location: job.location || 'Remote',
+            experienceYears: job.experienceYears,
+            postedAgo: job.postedDate ? `${Math.max(1, Math.floor((Date.now() - new Date(job.postedDate).getTime()) / 86400000))}d ago` : 'Recently',
+            matchScore: job.matchScore || 0,
+            skills: job.keywords?.slice(0, 3) || [],
+            companyLogo: job.companyLogo,
+            applyUrl: job.applyUrl || job.jobUrl || '',
+            source: job.source || 'discovery',
+            salary: job.salaryMin || job.salaryMax ? `${job.salaryCurrency || '$'}${(job.salaryMin || 0).toLocaleString()} - ${(job.salaryMax || 0).toLocaleString()}` : undefined,
+            bgTintLight: CARD_TINTS[i % CARD_TINTS.length],
+          }));
+          setJobs(mapped);
+        }
+      } catch {
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchTopMatches();
+  }, []);
+
   const handlePass = (id: string, e?: React.MouseEvent) => {
     e?.stopPropagation?.();
     setJobs((prev) => prev.filter((j) => j._id !== id));
+    fetch('/api/jobs/pass', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jobId: id }),
+    }).catch(() => {});
     toast({
       title: 'Job Dismissed',
       description: 'We will suggest different matching roles.',
@@ -180,6 +159,38 @@ export default function TopJobMatchesSection() {
     });
     setModalOpen(true);
   };
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">Top job matches</h2>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="rounded-2xl border border-gray-200/80 dark:border-white/10 p-4 animate-pulse bg-white/60 dark:bg-white/[0.02]">
+              <div className="flex justify-between items-start mb-4">
+                <div className="space-y-2 flex-1">
+                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-20" />
+                  <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded w-16" />
+                </div>
+                <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700" />
+              </div>
+              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-3" />
+              <div className="flex gap-1 mb-3">
+                <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded-full w-16" />
+                <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded-full w-14" />
+              </div>
+              <div className="pt-2 border-t border-gray-100 dark:border-white/5 flex justify-between items-center">
+                <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-20" />
+                <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-14" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   if (jobs.length === 0) return null;
 
@@ -254,13 +265,19 @@ export default function TopJobMatchesSection() {
                   </div>
 
                   {/* Circular Match Gauge */}
-                  <div className="w-10 h-10 rounded-full border-2 border-emerald-600 dark:border-emerald-400 flex flex-col items-center justify-center shrink-0 bg-white/70 dark:bg-black/30">
-                    <span className="text-[10px] font-black text-gray-900 dark:text-white leading-tight">
-                      {job.matchScore}%
-                    </span>
-                    <span className="text-[7px] font-bold tracking-tighter text-gray-500 dark:text-gray-400 uppercase leading-none">
-                      MATCH
-                    </span>
+                  <div className={`w-10 h-10 rounded-full border-2 flex flex-col items-center justify-center shrink-0 bg-white/70 dark:bg-black/30 ${job.matchScore > 0 ? 'border-emerald-600 dark:border-emerald-400' : 'border-gray-300 dark:border-gray-600'}`}>
+                    {job.matchScore > 0 ? (
+                      <>
+                        <span className="text-[10px] font-black text-gray-900 dark:text-white leading-tight">
+                          {job.matchScore}%
+                        </span>
+                        <span className="text-[7px] font-bold tracking-tighter text-gray-500 dark:text-gray-400 uppercase leading-none">
+                          MATCH
+                        </span>
+                      </>
+                    ) : (
+                      <Loader2 className="w-4 h-4 text-gray-400 animate-spin" />
+                    )}
                   </div>
                 </div>
 

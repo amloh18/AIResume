@@ -1,9 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { JobsMetrics, JobListing, JobsFilter } from '@/types/automation-schema';
 import FiltersBar from './JobsDashboard/FiltersBar';
-import JobsTable from './JobsDashboard/JobsTable';
 import JobsLoadingState from './JobsDashboard/JobsLoadingState';
 import JobsErrorState from './JobsDashboard/JobsErrorState';
 import { Sparkles, Zap, Briefcase, Settings, ChevronRight } from 'lucide-react';
@@ -17,7 +16,7 @@ import { ToastAction } from '@/components/ui/toast';
 import { Switch } from '@/components/ui/switch';
 import { JobCard } from '@/components/jobs/JobCard';
 import { JobDetailModal } from '@/components/jobs/JobDetailModal';
-import { detectUserCountry } from '@/components/jobs/CountrySelector';
+import { detectUserCountry, COUNTRIES_LIST } from '@/components/jobs/CountrySelector';
 import NaukriConnectCard from './JobsDashboard/NaukriConnectCard';
 import PortalIntegrationsPanel from './settings/PortalIntegrationsPanel';
 
@@ -31,23 +30,35 @@ export default function JobsDashboard() {
 
   useEffect(() => {
     const tabParam = searchParams.get('tab');
-    if (tabParam && ['discover', 'applications', 'settings'].includes(tabParam)) {
+    const jobIdParam = searchParams.get('jobId') || searchParams.get('job');
+    const newJobParam = searchParams.get('newJob') || searchParams.get('action') === 'add-job';
+    const filterParam = searchParams.get('filter') || searchParams.get('stage');
+
+    if (jobIdParam || newJobParam || filterParam) {
+      setActiveTab('applications');
+    } else if (tabParam && ['discover', 'applications', 'settings'].includes(tabParam)) {
       setActiveTab(tabParam as any);
     }
   }, [searchParams]);
 
-  const [countries, setCountries] = useState<string[]>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem('morigrid_selected_countries');
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+  const [countries, setCountries] = useState<string[]>([]);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('morigrid_selected_countries');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setCountries(parsed);
+          return;
         }
-      } catch {}
+      }
+    } catch {}
+    const detected = detectUserCountry();
+    if (detected && detected.name) {
+      setCountries([detected.name]);
     }
-    return [detectUserCountry().name];
-  });
+  }, []);
   const [metrics, setMetrics] = useState<JobsMetrics | null>(null);
   const [jobs, setJobs] = useState<JobListing[]>([]);
   const [filters, setFilters] = useState<JobsFilter>({
@@ -66,6 +77,8 @@ export default function JobsDashboard() {
   const [savingId, setSavingId] = useState<string | null>(null);
   const [naukriConnected, setNaukriConnected] = useState<boolean>(true);
   const [autoApplyEnabled, setAutoApplyEnabled] = useState<boolean>(false);
+  const [newJobsCount, setNewJobsCount] = useState(0);
+  const jobsSnapshotRef = useRef<string>('');
 
   useEffect(() => {
     fetch('/api/integrations/naukri/session')
@@ -87,15 +100,38 @@ export default function JobsDashboard() {
       .catch(() => {});
   }, [userId]);
 
-  // Fetch saved job IDs
+  // Map of discovered job ID / URL / titleKey -> MongoDB JobApplication _id
+  const [savedJobIdMap, setSavedJobIdMap] = useState<Map<string, string>>(new Map());
+
+  // Fetch saved job IDs on mount and userId change
   useEffect(() => {
     async function loadSavedJobIds() {
       try {
-        const res = await fetch('/api/jobs?savedOnly=true&limit=100');
+        const res = await fetch('/api/jobs?limit=100');
         if (res.ok) {
           const data = await res.json();
-          if (data.jobs && Array.isArray(data.jobs)) {
-            setSavedIds(new Set(data.jobs.map((j: JobListing) => j._id)));
+          const items = data.jobs || data.data || [];
+          if (Array.isArray(items)) {
+            const idSet = new Set<string>();
+            const idMap = new Map<string, string>();
+
+            items.forEach((j: any) => {
+              const dbId = j._id || j.id;
+              if (dbId) {
+                idSet.add(dbId);
+                idMap.set(dbId, dbId);
+              }
+              if (j.jobUrl || j.sourceUrl) {
+                idMap.set(j.jobUrl || j.sourceUrl, dbId);
+              }
+              if (j.company && (j.jobTitle || j.title)) {
+                const key = `${j.company.toLowerCase()}-${(j.jobTitle || j.title).toLowerCase()}`;
+                idMap.set(key, dbId);
+              }
+            });
+
+            setSavedIds(idSet);
+            setSavedJobIdMap(idMap);
           }
         }
       } catch (err) {
@@ -105,50 +141,121 @@ export default function JobsDashboard() {
     loadSavedJobIds();
   }, [userId]);
 
+  const isJobSaved = useCallback(
+    (job: JobListing) => {
+      const jobKey = `${(job.company || '').toLowerCase()}-${(job.title || '').toLowerCase()}`;
+      return (
+        savedIds.has(job._id) ||
+        savedJobIdMap.has(job._id) ||
+        (job.applyUrl ? savedJobIdMap.has(job.applyUrl) : false) ||
+        savedJobIdMap.has(jobKey)
+      );
+    },
+    [savedIds, savedJobIdMap]
+  );
+
   const handleSaveJob = async (job: JobListing) => {
-    const isCurrentlySaved = savedIds.has(job._id);
+    const jobKey = `${(job.company || '').toLowerCase()}-${(job.title || '').toLowerCase()}`;
+    const dbJobId =
+      savedJobIdMap.get(job._id) ||
+      (job.applyUrl ? savedJobIdMap.get(job.applyUrl) : null) ||
+      savedJobIdMap.get(jobKey) ||
+      (savedIds.has(job._id) ? job._id : null);
+    const currentlySaved = Boolean(dbJobId) || savedIds.has(job._id);
+
     setSavingId(job._id);
 
     try {
-      if (isCurrentlySaved) {
-        const res = await fetch(`/api/jobs/${job._id}`, { method: 'DELETE' });
-        if (res.ok) {
+      if (currentlySaved && dbJobId) {
+        const res = await fetch(`/api/jobs/${dbJobId}`, { method: 'DELETE' });
+        if (res.ok || res.status === 404) {
           setSavedIds((prev) => {
             const next = new Set(prev);
             next.delete(job._id);
+            next.delete(dbJobId);
+            return next;
+          });
+          setSavedJobIdMap((prev) => {
+            const next = new Map(prev);
+            next.delete(job._id);
+            if (job.applyUrl) next.delete(job.applyUrl);
+            next.delete(jobKey);
+            next.delete(dbJobId);
             return next;
           });
           toast({ title: 'Removed from saved jobs' });
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData?.error || 'Failed to remove saved job');
         }
       } else {
+        const salaryStr =
+          job.salaryMin || job.salaryMax
+            ? `${job.salaryMin ? `$${job.salaryMin.toLocaleString()}` : ''}${
+                job.salaryMin && job.salaryMax ? ' – ' : ''
+              }${job.salaryMax ? `$${job.salaryMax.toLocaleString()}` : ''} ${
+                job.salaryCurrency || ''
+              }`.trim()
+            : undefined;
+
         const res = await fetch('/api/jobs', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            title: job.title,
+            jobTitle: job.title,
             company: job.company,
             location: job.location,
-            remote: job.remote,
-            salaryMin: job.salaryMin,
-            salaryMax: job.salaryMax,
-            salaryCurrency: job.salaryCurrency,
+            jobUrl: job.applyUrl,
+            status: 'saved',
+            salary:
+              job.salaryMin || job.salaryMax
+                ? {
+                    min: job.salaryMin,
+                    max: job.salaryMax,
+                    currency: job.salaryCurrency || 'USD',
+                    period: 'yearly',
+                  }
+                : undefined,
             matchScore: job.matchScore,
-            source: job.source,
-            atsType: job.atsType,
-            applyUrl: job.applyUrl,
-            postedDate: job.postedDate,
-            description: job.description,
-            keywords: job.keywords,
+            source: 'manual',
+            atsType: job.atsType || 'unknown',
+            jobDescription: job.description || '',
+            tags: job.keywords || [],
           }),
         });
 
         if (res.ok) {
-          const saved = await res.json();
-          setSavedIds((prev) => new Set(prev).add(job._id));
+          const resData = await res.json();
+          const createdDbId =
+            resData?.data?.id ||
+            resData?.data?._id ||
+            resData?.job?.id ||
+            resData?.job?._id ||
+            resData?.jobId ||
+            job._id;
+
+          setSavedIds((prev) => {
+            const next = new Set(prev);
+            next.add(job._id);
+            if (createdDbId) next.add(createdDbId);
+            return next;
+          });
+
+          setSavedJobIdMap((prev) => {
+            const next = new Map(prev);
+            next.set(job._id, createdDbId);
+            if (job.applyUrl) next.set(job.applyUrl, createdDbId);
+            next.set(jobKey, createdDbId);
+            return next;
+          });
+
           toast({
             title: 'Job saved successfully',
-            description: 'Added to your saved shortlist',
+            description: 'Added to your applications shortlist',
           });
+        } else {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data?.error || data?.message || 'Failed to save job');
         }
       }
     } catch (err: any) {
@@ -291,6 +398,8 @@ export default function JobsDashboard() {
         params.set('datePosted', filters.datePosted);
       if (filters.sponsorsVisa)
         params.set('sponsorsVisa', 'true');
+      if (filters.savedOnly)
+        params.set('savedOnly', 'true');
 
       const response = await fetch(`/api/jobs/discover?${params}`, {});
 
@@ -302,7 +411,28 @@ export default function JobsDashboard() {
       }
 
       const data = await response.json();
-      setJobs(data.jobs);
+      const incomingJobs: JobListing[] = data.jobs || [];
+
+      setJobs((prev) => {
+        // First load or filter change — replace entirely
+        if (prev.length === 0 || jobsSnapshotRef.current !== JSON.stringify({ filters, page, pageSize, countries })) {
+          jobsSnapshotRef.current = JSON.stringify({ filters, page, pageSize, countries });
+          setNewJobsCount(0);
+          return incomingJobs;
+        }
+
+        // Subsequent loads — silently merge new jobs
+        const prevIds = new Set(prev.map((j) => j._id));
+        const newJobs = incomingJobs.filter((j) => !prevIds.has(j._id));
+
+        if (newJobs.length > 0) {
+          setNewJobsCount((c) => c + newJobs.length);
+        }
+
+        // Return existing jobs + new ones appended at the end
+        return [...prev, ...newJobs];
+      });
+
       setTotal(data.total);
       setHasMore(data.hasMore);
       setError(null);
@@ -479,6 +609,20 @@ export default function JobsDashboard() {
               savedCount={savedIds.size}
             />
 
+            {/* New jobs indicator — appears silently when fresh jobs arrive */}
+            {newJobsCount > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  setNewJobsCount(0);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                className="w-full py-2 px-4 bg-lime-50 dark:bg-lime-900/20 border border-lime-200 dark:border-lime-800 rounded-xl text-sm font-medium text-lime-700 dark:text-lime-300 hover:bg-lime-100 dark:hover:bg-lime-900/30 transition-colors"
+              >
+                {newJobsCount} new job{newJobsCount !== 1 ? 's' : ''} available — click to see
+              </button>
+            )}
+
             {/* Job Grid */}
             {loading ? (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
@@ -507,13 +651,12 @@ export default function JobsDashboard() {
                   />
                 )}
                 {jobs
-                  .filter((job) => (filters.savedOnly ? savedIds.has(job._id) : true))
                   .map((job, index) => (
                     <JobCard
                       key={job._id}
                       job={job}
                       colorIndex={index}
-                      isSaved={savedIds.has(job._id)}
+                      isSaved={isJobSaved(job)}
                       saving={savingId === job._id}
                       onOpen={() => {
                         setSelectedJob(job);
@@ -521,10 +664,25 @@ export default function JobsDashboard() {
                       }}
                       onSave={() => handleSaveJob(job)}
                       onPass={() => {
+                        const previousJobs = jobs;
                         setJobs((prev) => prev.filter((j) => j._id !== job._id));
-                        toast({
-                          title: 'Job Passed',
-                          description: `Dismissed ${job.title}`,
+                        fetch('/api/jobs/pass', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ jobId: job._id }),
+                        }).then((res) => {
+                          if (!res.ok) throw new Error('Failed to pass');
+                          toast({
+                            title: 'Job Passed',
+                            description: `Dismissed ${job.title}`,
+                          });
+                        }).catch(() => {
+                          setJobs(previousJobs);
+                          toast({
+                            title: 'Error',
+                            description: 'Failed to dismiss job. Please try again.',
+                            variant: 'destructive',
+                          });
                         });
                       }}
                       onApply={() => handleApplyJob(job)}
@@ -574,7 +732,7 @@ export default function JobsDashboard() {
               job={selectedJob}
               open={modalOpen}
               onOpenChange={setModalOpen}
-              isSaved={selectedJob ? savedIds.has(selectedJob._id) : false}
+              isSaved={selectedJob ? isJobSaved(selectedJob) : false}
               saving={selectedJob ? savingId === selectedJob._id : false}
               onSave={() => selectedJob && handleSaveJob(selectedJob)}
               onApply={() => selectedJob && handleApplyJob(selectedJob)}

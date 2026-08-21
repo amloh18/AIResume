@@ -20,12 +20,6 @@ export const PLAN_TIERS: Record<string, number> = {
   starter_yearly: 1, // Basic
   focused_monthly: 2, // Mid
   focused_yearly: 2, // Mid
-  smart_quarterly: 3, // Pro
-  smart_yearly: 3, // Pro
-  pro_monthly: 2,
-  pro_quarterly: 2,
-  pro_yearly: 3,
-  pro_lifetime: 3
 };
 
 /**
@@ -236,16 +230,16 @@ class SubscriptionService {
     let autoRenew = false;
 
     // Calculate expiry date based on plan type
-    if (planKey === 'pro_monthly' || planKey === 'focused_monthly' || planKey === 'starter_monthly') {
+    if (planKey === 'focused_monthly' || planKey === 'focused_monthly' || planKey === 'starter_monthly') {
       expiresAt.setMonth(expiresAt.getMonth() + 1);
       autoRenew = true;
-    } else if (planKey === 'pro_quarterly' || planKey === 'smart_quarterly') {
+    } else if (planKey === 'focused_quarterly') {
       expiresAt = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
       autoRenew = false;
-    } else if (planKey === 'pro_yearly' || planKey === 'starter_yearly' || planKey === 'focused_yearly' || planKey === 'smart_yearly') {
+    } else if (planKey === 'focused_yearly' || planKey === 'starter_yearly' || planKey === 'focused_yearly') {
       expiresAt = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
       autoRenew = billingCycle === 'yearly';
-    } else if (planKey === 'pro_lifetime') {
+    } else if (planKey === 'focused_yearly') {
       expiresAt = new Date(now.getTime() + 36500 * 24 * 60 * 60 * 1000);
       autoRenew = false;
     } else {
@@ -290,7 +284,7 @@ class SubscriptionService {
       }
     }
 
-    const usageResetDate = (planKey === 'pro_monthly' || planKey === 'focused_monthly' || planKey === 'starter_monthly')
+    const usageResetDate = (planKey === 'focused_monthly' || planKey === 'focused_monthly' || planKey === 'starter_monthly')
       ? new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
       : expiresAt;
 
@@ -358,7 +352,7 @@ class SubscriptionService {
    */
   async activateProPlan(
     userId: string,
-    planKey: 'starter_monthly' | 'starter_yearly' | 'focused_monthly' | 'focused_yearly' | 'smart_quarterly' | 'smart_yearly' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly' | 'pro_lifetime',
+    planKey: 'starter_monthly' | 'starter_yearly' | 'focused_monthly' | 'focused_yearly' | 'focused_monthly' | 'focused_quarterly' | 'focused_yearly' | 'focused_yearly',
     interval: 'monthly' | 'quarterly' | 'yearly' | 'lifetime' | 'one-time',
     paymentId: string,
     region: string,
@@ -405,34 +399,29 @@ class SubscriptionService {
       let autoRenew = false;
 
       // Calculate expiry based on plan type
-      if (planKey === 'pro_monthly' || planKey === 'focused_monthly' || planKey === 'starter_monthly') {
+      if (planKey === 'focused_monthly' || planKey === 'starter_monthly') {
         // Monthly: recurring subscription
         const nextMonth = new Date(now);
         nextMonth.setMonth(nextMonth.getMonth() + 1);
         expiresAt = nextMonth;
         daysRemaining = 30;
         autoRenew = true; // Monthly plans auto-renew
-      } else if (planKey === 'pro_quarterly' || planKey === 'smart_quarterly') {
+      } else if (planKey === 'focused_quarterly') {
         // Quarterly: one-time payment for 90 days
         expiresAt = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
         daysRemaining = 90;
         autoRenew = false;
-      } else if (planKey === 'pro_yearly' || planKey === 'starter_yearly' || planKey === 'focused_yearly' || planKey === 'smart_yearly') {
+      } else if (planKey === 'focused_yearly' || planKey === 'starter_yearly') {
         // Yearly: recurring or one-time payment for 365 days
         expiresAt = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
         daysRemaining = 365;
         autoRenew = interval === 'yearly';
-      } else if (planKey === 'pro_lifetime') {
-        // Lifetime: one-time payment for 100 years
-        expiresAt = new Date(now.getTime() + 36500 * 24 * 60 * 60 * 1000);
-        daysRemaining = 36500;
-        autoRenew = false;
       } else {
         return { success: false, error: 'Invalid plan key' };
       }
 
       // Calculate usage reset date (monthly for monthly, at expiry for quarterly/yearly)
-      const usageResetDate = (planKey === 'pro_monthly' || planKey === 'focused_monthly' || planKey === 'starter_monthly')
+      const usageResetDate = (planKey === 'focused_monthly' || planKey === 'starter_monthly')
         ? new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
         : expiresAt;
 
@@ -509,7 +498,7 @@ class SubscriptionService {
       const subscription = user.subscription;
 
       // Only monthly plans can auto-renew
-      if (subscription.planKey !== 'pro_monthly' || !subscription.autoRenew) {
+      if (subscription.planKey !== 'focused_monthly' || !subscription.autoRenew) {
         return { success: false, error: 'Subscription does not support auto-renewal' };
       }
 

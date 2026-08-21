@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
         }).catch(() => 0),
         CV.countDocuments().catch(() => 0),
         JobApplication.countDocuments().catch(() => 0),
-        JobApplication.countDocuments({ status: 'draft' }).catch(() => 0),
+        JobApplication.countDocuments({ status: 'saved' }).catch(() => 0),
         CoverLetter.countDocuments().catch(() => 0),
         User.countDocuments({
           createdAt: { $gte: startDate }

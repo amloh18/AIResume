@@ -16,10 +16,10 @@ export async function POST(request: NextRequest) {
 
         // Find and update the pro_yearly plan to pro_lifetime
         const result = await PricingPlan.findOneAndUpdate(
-            { key: 'pro_yearly' },
+            { key: 'focused_yearly' },
             {
                 $set: {
-                    key: 'pro_lifetime',
+                    key: 'focused_yearly',
                     name: 'Lifetime',
                     description: 'One-time payment for lifetime access',
                     features: [
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
             });
         } else {
             // Check if pro_lifetime already exists
-            const existingLifetime = await PricingPlan.findOne({ key: 'pro_lifetime' });
+            const existingLifetime = await PricingPlan.findOne({ key: 'focused_yearly' });
             if (existingLifetime) {
                 return NextResponse.json({
                     success: true,

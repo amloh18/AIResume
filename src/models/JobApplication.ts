@@ -24,7 +24,7 @@ export interface IJobApplication extends Document {
     deadline?: Date;
     status?: string;
   };
-  status: 'draft' | 'created' | 'applied' | 'screening' | 'interview' | 'offer' | 'rejected' | 'accepted' | 'withdrawn';
+  status: 'saved' | 'created' | 'applied' | 'screening' | 'interview' | 'offer' | 'rejected' | 'accepted' | 'withdrawn';
   priority: 'low' | 'medium' | 'high';
   applicationDate?: Date;
   deadline?: Date;
@@ -66,6 +66,7 @@ export interface IJobApplication extends Document {
   tags: string[];
   source?: 'extension' | 'manual' | 'import' | 'linkedin' | 'indeed' | 'company-website' | 'referral' | 'other';
   sourceUrl?: string;
+  atsType?: 'greenhouse' | 'lever' | 'workable' | 'naukri' | 'indeed' | 'adzuna' | 'ashby' | 'workday' | 'unknown';
   atsScore?: number;
   isArchived: boolean;
   // Phase 4: Intelligence & Automation fields
@@ -235,7 +236,7 @@ const jobApplicationSchema = new Schema<IJobApplication>({
   },
   status: {
     type: String,
-    enum: ['draft', 'created', 'applied', 'screening', 'interview', 'offer', 'rejected', 'accepted', 'withdrawn'],
+    enum: ['saved', 'created', 'applied', 'screening', 'interview', 'offer', 'rejected', 'accepted', 'withdrawn'],
     default: 'created',
     required: true
   },
@@ -324,6 +325,11 @@ const jobApplicationSchema = new Schema<IJobApplication>({
     type: String,
     trim: true,
     maxlength: [500, 'Source URL cannot exceed 500 characters']
+  },
+  atsType: {
+    type: String,
+    enum: ['greenhouse', 'lever', 'workable', 'naukri', 'indeed', 'adzuna', 'ashby', 'workday', 'unknown'],
+    default: 'unknown',
   },
   atsScore: {
     type: Number,

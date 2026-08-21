@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { FileText, MapPin, Download, TrendingUp, AlertTriangle, CheckCircle, Shield } from 'lucide-react';
 import CompanyLogo from '@/components/ui/CompanyLogo';
 import { CVJourney } from '@/types/cv';
+import { getCurrencySymbol } from '@/lib/config/job-constants';
 
 interface JobApplication {
   id: string;
@@ -48,7 +49,7 @@ const CreatedStageView: React.FC<CreatedStageViewProps> = ({
 
   const getCompRange = (job: JobApplication) => {
     if (!job.salary?.min && !job.salary?.max) return '-';
-    const currency = job.salary.currency || '$';
+    const currency = getCurrencySymbol(job.salary.currency);
     const min = job.salary.min ? `${currency}${job.salary.min >= 1000 ? (job.salary.min / 1000).toFixed(0) + 'k' : job.salary.min}` : '';
     const max = job.salary.max ? `${currency}${job.salary.max >= 1000 ? (job.salary.max / 1000).toFixed(0) + 'k' : job.salary.max}` : '';
     return min && max ? `${min} - ${max}` : min || max;

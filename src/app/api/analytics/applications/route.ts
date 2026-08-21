@@ -61,9 +61,9 @@ export async function GET(request: NextRequest) {
     // Calculate application stats
     const totalApplications = allJobs.length;
     
-    // Calculate status breakdown for spider chart: draft, created, applied, accepted, rejected
+    // Calculate status breakdown for spider chart: saved, created, applied, accepted, rejected
     const statusCounts = {
-      draft: 0,
+      saved: 0,
       created: 0,
       applied: 0,
       screening: 0,
@@ -78,8 +78,9 @@ export async function GET(request: NextRequest) {
     allJobs.forEach(job => {
       const status = job.status?.toLowerCase() || 'created';
       switch (status) {
+        case 'saved':
         case 'draft':
-          statusCounts.draft++;
+          statusCounts.saved++;
           break;
         case 'created':
           statusCounts.created++;
@@ -149,7 +150,7 @@ export async function GET(request: NextRequest) {
       interviewApplications,
       offerApplications,
       // Spider chart data - map to simplified categories
-      draft: statusCounts.draft,
+      saved: statusCounts.saved,
       created: statusCounts.created,
       applied: statusCounts.applied + statusCounts.screening + statusCounts.interview, // All active application stages
       accepted: statusCounts.accepted + statusCounts.offer, // Successful outcomes

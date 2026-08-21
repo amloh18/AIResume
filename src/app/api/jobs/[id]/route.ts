@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import { getAuthenticatedUser } from '@/lib/auth-helpers';
@@ -307,13 +307,13 @@ export async function PUT(
       console.log('🔍 Job Update API - Updating matchScore:', updateData.matchScore);
     }
 
-    // Check if we are updating a draft job
-    if (currentJob.status === 'draft') {
-      console.log('🔍 Job Update API - Updating DRAFT job. ID:', resolvedParams.id);
+    // Check if we are updating a saved job
+    if (currentJob.status === 'saved') {
+      console.log('🔍 Job Update API - Updating SAVED job. ID:', resolvedParams.id);
     }
 
     // VALIDATION: Prevent invalid status transitions
-    const validStatuses = ['draft', 'created', 'applied', 'screening', 'interview', 'offer', 'rejected', 'accepted', 'withdrawn'];
+    const validStatuses = ['saved', 'created', 'applied', 'screening', 'interview', 'offer', 'rejected', 'accepted', 'withdrawn'];
     const newStatus = body.status;
     if (newStatus && !validStatuses.includes(newStatus)) {
       return NextResponse.json(
@@ -323,12 +323,12 @@ export async function PUT(
     }
 
     // VALIDATION: Prevent status manipulation that could bypass credit checks
-    // Don't allow changing from 'created' back to 'draft' (prevents credit refund exploit)
+    // Don't allow changing from 'created' back to 'saved' (prevents credit refund exploit)
     const previousStatus = currentJob?.status;
-    if (previousStatus === 'created' && newStatus === 'draft') {
+    if (previousStatus === 'created' && newStatus === 'saved') {
       return NextResponse.json(
         {
-          error: 'Cannot change job status from "created" to "draft". Once a job is created, it cannot be reverted to draft status.',
+          error: 'Cannot change job status from "created" to "saved". Once a job is created, it cannot be reverted to saved status.',
           code: 'INVALID_STATUS_TRANSITION'
         },
         { status: 400 }
@@ -374,11 +374,11 @@ export async function PUT(
       }
     }
 
-    // Check if status changed from 'draft' to 'created' - handle this in transaction
+    // Check if status changed from 'saved' to 'created' - handle this in transaction
     let job: any = null;
     let jobLimitInfo: any = null;
 
-    if (previousStatus === 'draft' && newStatus === 'created') {
+    if (previousStatus === 'saved' && newStatus === 'created') {
       // ATOMIC OPERATION: Use transaction to ensure credit check + status update + credit spending are atomic
       // This prevents race conditions where multiple requests could bypass credit limits
       try {
@@ -495,12 +495,12 @@ export async function PUT(
 
         // Log job status change OUTSIDE transaction for better performance
         try {
-          const updatedJobForLog = await JobApplication.findById(resolvedParams.id).lean();
-          const userForLog = await User.findById(normalizedUserId).lean();
+          const updatedJobForLog = await JobApplication.findById(resolvedParams.id).lean() as any;
+          const userForLog = await User.findById(normalizedUserId).lean() as { currentPlanKey?: string; email?: string; jobTitle?: string; company?: string } | null;
 
           if (updatedJobForLog && userForLog) {
             const { ActivityLogService } = await import('@/lib/services/activityLogService');
-            const isUnlimited = ['pro_monthly', 'pro_quarterly', 'pro_lifetime'].includes(userForLog.currentPlanKey || 'free');
+            const isUnlimited = ['focused_monthly', 'focused_quarterly', 'focused_yearly'].includes(userForLog.currentPlanKey || 'free');
 
             // Log asynchronously - don't wait for it
             Promise.all([
@@ -516,8 +516,8 @@ export async function PUT(
                   request.headers.get('x-real-ip') ||
                   undefined,
                 metadata: {
-                  oldStatus: 'draft',
-                  newStatus: 'created',
+                  oldStatus: previousStatus || 'saved',
+                  newStatus: newStatus || 'created',
                   isUnlimited: !jobLimitInfo || jobLimitInfo.limit === -1,
                   jobsRemaining: (!jobLimitInfo || jobLimitInfo.limit === -1) ? -1 : Math.max(0, jobLimitInfo.limit - jobLimitInfo.currentCount - 1)
                 }
@@ -539,7 +539,7 @@ export async function PUT(
           name: creditError.name
         });
 
-        // Transaction automatically rolled back - status remains 'draft', limit check prevents status change
+        // Transaction automatically rolled back - status remains 'saved', limit check prevents status change
 
         // Check if error is due to job limit exceeded
         const isLimitError = creditError.message?.includes('limit exceeded') ||
@@ -551,6 +551,7 @@ export async function PUT(
           const { checkJobLimit } = await import('@/lib/utils/subscription-helpers');
           let limitInfo: any = {};
           try {
+            const User = (await import('@/models/User')).default;
             const user = await User.findById(normalizedUserId).select('currentPlanKey subscription');
             if (user) {
               const jobLimitCheck = await checkJobLimit(
@@ -640,7 +641,7 @@ export async function PUT(
         );
       }
     } else {
-      // For non-draft-to-created updates, update job normally
+      // For non-saved-to-created updates, update job normally
       // Use normalizedUserId to match the initial findOne query
       job = await JobApplication.findOneAndUpdate(
         {
@@ -667,7 +668,7 @@ export async function PUT(
     let trackerGenerationPreview: any = null;
 
     // Create ApplicationJourney after credit is spent (only if moved to created)
-    if (previousStatus === 'draft' && newStatus === 'created') {
+    if (previousStatus === 'saved' && newStatus === 'created') {
       try {
         const { ApplicationJourney } = await import('@/models');
         const { createJourneyDocuments } = await import('@/lib/services/journeyDocumentService');
@@ -681,7 +682,7 @@ export async function PUT(
         });
 
         if (!existingJourney) {
-          console.log(`🚀 Job Update API - Creating ApplicationJourney for job moved from draft to created: ${resolvedParams.id}`);
+          console.log(`🚀 Job Update API - Creating ApplicationJourney for job moved from saved to created: ${resolvedParams.id}`);
 
           // Determine if documents need to be created
           const needsDocuments = true; // Always create documents when moving to created

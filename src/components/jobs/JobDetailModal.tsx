@@ -1,5 +1,7 @@
 'use client';
 
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import type { JobListing } from '@/types/automation-schema';
 import {
   MapPin,
@@ -15,7 +17,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { MatchScoreBadge } from './MatchScoreBadge';
 import { MatchBreakdownBars } from './MatchBreakdownBars';
-import { renderRichText } from '@/lib/utils/format-utils';
+import { renderRichText, timeAgo } from '@/lib/utils/format-utils';
 
 export interface JobDetailModalProps {
   job: JobListing | null;
@@ -26,15 +28,6 @@ export interface JobDetailModalProps {
   onSave: () => void;
   onApply: () => void;
 }
-
-const timeAgo = (date?: Date | string): string => {
-  if (!date) return '';
-  const days = Math.floor((Date.now() - new Date(date).getTime()) / 86400000);
-  if (days <= 0) return 'Today';
-  if (days === 1) return '1 day ago';
-  if (days < 7) return `${days} days ago`;
-  return new Date(date).toLocaleDateString();
-};
 
 const formatSalary = (job: JobListing): string => {
   if (!job.salaryMin && !job.salaryMax) return '';
@@ -79,7 +72,14 @@ export function JobDetailModal({
   const decodedDescription = decodeHtmlEntities(rawDescription);
   const safeDescription = renderRichText(decodedDescription);
 
-  return (
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted || typeof document === 'undefined') return null;
+
+  return createPortal(
     <AnimatePresence>
       {open && job && (
         <>
@@ -89,7 +89,7 @@ export function JobDetailModal({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed bg-black/50 backdrop-blur-sm z-[9998]"
+            className="fixed bg-black/50 backdrop-blur-sm z-[99998]"
             style={{ top: 0, left: 0, right: 0, bottom: 0, width: '100vw', height: '100vh' }}
             onClick={() => onOpenChange(false)}
           />
@@ -100,7 +100,7 @@ export function JobDetailModal({
             animate={{ x: 0 }}
             exit={{ x: 'calc(100% + 12px)' }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            className="fixed right-3 top-3 bottom-3 h-auto bg-white dark:bg-[#141810] shadow-2xl z-[9999] flex flex-col rounded-2xl overflow-hidden transition-all duration-300"
+            className="fixed right-3 top-3 bottom-3 h-auto bg-white dark:bg-[#141810] shadow-2xl z-[99999] flex flex-col rounded-2xl overflow-hidden transition-all duration-300"
             style={{ width: 'min(560px, calc(100vw - 24px))' }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -226,6 +226,7 @@ export function JobDetailModal({
           </motion.div>
         </>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }

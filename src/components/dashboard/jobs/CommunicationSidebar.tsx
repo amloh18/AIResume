@@ -432,6 +432,48 @@ export const CommunicationSidebar: React.FC<CommunicationSidebarProps> = ({
     return `Application initiated for ${job.jobTitle || job.title} at ${job.company || 'Google'}. Last message was ${isOutbound ? 'sent by you' : 'received from ' + (lastMsg.senderName || lastMsg.senderEmail)} on ${new Date(lastMsg.receivedAt).toLocaleDateString()}. Email communication auto-synced and linked to pipeline status.`;
   };
 
+  const getNextAction = (): string | null => {
+    if (messages.length === 0) return null;
+    const lastInbound = [...messages].reverse().find(m => m.direction === 'inbound');
+    if (!lastInbound) return null;
+    const cls = lastInbound.stageClassification;
+    if (cls === 'INTERVIEW_SCHEDULED') return 'Interview scheduled — prepare with Interview Prep';
+    if (cls === 'SCREENING_REQUESTED') return 'Respond to screening request';
+    if (cls === 'OFFER_RECEIVED') return 'Review and respond to offer';
+    if (cls === 'REJECTION_RECEIVED') return 'Consider follow-up or archive this application';
+    return `Follow up on last message from ${new Date(lastInbound.receivedAt).toLocaleDateString()}`;
+  };
+
+  const getReplyLatency = (): string => {
+    if (messages.length < 2) return '-';
+    const pairs: number[] = [];
+    for (let i = 1; i < messages.length; i++) {
+      if (messages[i].direction === 'outbound' && messages[i - 1].direction === 'inbound') {
+        const inboundTime = new Date(messages[i - 1].receivedAt).getTime();
+        const outboundTime = new Date(messages[i].receivedAt).getTime();
+        pairs.push(outboundTime - inboundTime);
+      }
+    }
+    if (pairs.length === 0) return '-';
+    const avgMs = pairs.reduce((a, b) => a + b, 0) / pairs.length;
+    const hours = avgMs / (1000 * 60 * 60);
+    if (hours < 1) return `${Math.round(hours * 60)}m`;
+    if (hours < 24) return `${hours.toFixed(1)} hrs`;
+    return `${Math.round(hours / 24)}d`;
+  };
+
+  const getSentiment = (): { label: string; color: string } => {
+    if (messages.length === 0) return { label: 'N/A', color: 'text-gray-500' };
+    const positiveWords = ['thank', 'great', 'excited', 'congratulations', 'offer', 'approved', 'accepted', 'love', 'excellent', 'perfect'];
+    const negativeWords = ['unfortunately', 'regret', 'declined', 'rejected', 'not selected', 'closed', 'unable', 'sorry'];
+    const allText = messages.map(m => m.bodySnippet?.toLowerCase() || '').join(' ');
+    const posCount = positiveWords.filter(w => allText.includes(w)).length;
+    const negCount = negativeWords.filter(w => allText.includes(w)).length;
+    if (posCount > negCount) return { label: 'Positive', color: 'text-emerald-500' };
+    if (negCount > posCount) return { label: 'Needs Attention', color: 'text-red-500' };
+    return { label: 'Neutral', color: 'text-gray-500' };
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -784,15 +826,6 @@ export const CommunicationSidebar: React.FC<CommunicationSidebarProps> = ({
                                 {msg.bodySnippet}
                               </p>
 
-                              {/* Reactions block (mockup 👍 1 for Confirmation message) */}
-                              {msg.subject === 'Interview Confirmation' && (
-                                <div className="mt-3">
-                                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-gray-100 dark:bg-gray-800 text-[11px] font-bold text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-white/5 select-none w-fit transition hover:scale-105 cursor-pointer">
-                                    👍 1
-                                  </span>
-                                </div>
-                              )}
-
                               {/* Attachment chips */}
                               {msg.hasAttachments && msg.attachmentNames && msg.attachmentNames.length > 0 && (
                                 <div className="mt-3 flex flex-wrap gap-2">
@@ -1038,10 +1071,10 @@ export const CommunicationSidebar: React.FC<CommunicationSidebarProps> = ({
                   <p className="text-gray-600 dark:text-gray-300">
                     {getInsightsSummary()}
                   </p>
-                  {messages.length > 0 && (
+                  {getNextAction() && (
                     <div className="flex flex-col gap-1 text-[10px] font-bold bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 p-2.5 rounded-xl border border-yellow-500/10 animate-pulse">
                       <span className="uppercase tracking-wider">Recommended Next Action:</span>
-                      <span className="font-semibold text-small mt-0.5">Attend scheduled interview on Thursday, June 27 at 2:00 PM PT.</span>
+                      <span className="font-semibold text-small mt-0.5">{getNextAction()}</span>
                     </div>
                   )}
                 </div>
@@ -1052,11 +1085,11 @@ export const CommunicationSidebar: React.FC<CommunicationSidebarProps> = ({
                   <div className="grid grid-cols-2 gap-3 text-center">
                     <div className="bg-gray-50 dark:bg-[#181f15] p-3 rounded-xl border border-gray-200 dark:border-white/5 hover:scale-105 transition-transform duration-200">
                       <p className="text-[10px] text-gray-500 uppercase tracking-wide">Reply Latency</p>
-                      <p className="text-h3 font-bold text-gray-900 dark:text-white mt-1">4.5 hrs</p>
+                      <p className="text-h3 font-bold text-gray-900 dark:text-white mt-1">{getReplyLatency()}</p>
                     </div>
                     <div className="bg-gray-50 dark:bg-[#181f15] p-3 rounded-xl border border-gray-200 dark:border-white/5 hover:scale-105 transition-transform duration-200">
                       <p className="text-[10px] text-gray-500 uppercase tracking-wide">Recruiter Sentiment</p>
-                      <p className="text-h3 font-bold text-emerald-500 mt-1">Positive</p>
+                      <p className={`text-h3 font-bold mt-1 ${getSentiment().color}`}>{getSentiment().label}</p>
                     </div>
                   </div>
                 </div>

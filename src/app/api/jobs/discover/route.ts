@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { ObjectId } from 'mongodb';
 import type {
   JobListing,
   PaginatedJobsResponse,
@@ -97,10 +98,32 @@ export async function GET(request: NextRequest) {
         applyUrl: job.applyUrl,
         postedDate: job.postedDate || (job as any).postedAt,
         userId: userId || '',
+        country: job.country,
         description: job.description,
         keywords: job.keywords,
       };
     });
+
+    // Exclude jobs the user has already passed/dismissed
+    if (userId) {
+      try {
+        const { getDb } = await import('@/lib/db');
+        const db = await getDb();
+        const passedDocs = await db
+          .collection('passed_jobs')
+          .find({ userId: new ObjectId(userId) })
+          .toArray();
+        const passedExternalIds = new Set(passedDocs.map((d: any) => d.externalId));
+        if (passedExternalIds.size > 0) {
+          listings = listings.filter((job) => {
+            const discoveredJob = discovered.find((d) => d._id.toString() === job._id);
+            return !discoveredJob || !passedExternalIds.has(discoveredJob.externalId);
+          });
+        }
+      } catch (err) {
+        console.warn('[API] Failed to load passed jobs:', err);
+      }
+    }
 
     if (companyFilter.length > 0) {
       listings = listings.filter((job) =>
@@ -122,22 +145,273 @@ export async function GET(request: NextRequest) {
       listings = listings.filter((job) => atsFilter.includes(job.atsType));
     }
 
-    // Country list filter
+    // Country and Continent / Macro-Region list filter
     if (countryList.length > 0 && !countryList.includes('Worldwide / Remote')) {
       listings = listings.filter((job) => {
         if (job.remote) return true;
-        const locLower = job.location.toLowerCase();
+        const locLower = (job.location || '').toLowerCase();
+        const countryLower = (job.country || '').toLowerCase();
+
         return countryList.some((c) => {
           const cLower = c.toLowerCase();
-          if (cLower === 'india') return locLower.includes('india') || locLower.includes('bangalore') || locLower.includes('mumbai') || locLower.includes('pune') || locLower.includes('delhi') || locLower.includes('hyderabad') || locLower.includes('noida') || locLower.includes('gurgaon');
-          if (cLower === 'united kingdom' || cLower === 'uk') return locLower.includes('uk') || locLower.includes('united kingdom') || locLower.includes('london') || locLower.includes('manchester') || locLower.includes('edinburgh');
-          if (cLower === 'united states' || cLower === 'us') return locLower.includes('us') || locLower.includes('united states') || locLower.includes('san francisco') || locLower.includes('new york') || locLower.includes('austin') || locLower.includes('seattle');
-          if (cLower === 'germany') return locLower.includes('germany') || locLower.includes('berlin') || locLower.includes('munich');
-          if (cLower === 'canada') return locLower.includes('canada') || locLower.includes('toronto') || locLower.includes('vancouver');
-          if (cLower === 'singapore') return locLower.includes('singapore');
-          if (cLower === 'australia') return locLower.includes('australia') || locLower.includes('sydney') || locLower.includes('melbourne');
-          if (cLower === 'united arab emirates' || cLower === 'uae') return locLower.includes('dubai') || locLower.includes('abu dhabi') || locLower.includes('uae');
-          return locLower.includes(cLower);
+
+          // Continents & Macro Regions
+          if (cLower === 'europe') {
+            return (
+              locLower.includes('europe') ||
+              locLower.includes('uk') ||
+              locLower.includes('united kingdom') ||
+              locLower.includes('london') ||
+              locLower.includes('manchester') ||
+              locLower.includes('edinburgh') ||
+              locLower.includes('germany') ||
+              locLower.includes('berlin') ||
+              locLower.includes('munich') ||
+              locLower.includes('frankfurt') ||
+              locLower.includes('france') ||
+              locLower.includes('paris') ||
+              locLower.includes('netherlands') ||
+              locLower.includes('amsterdam') ||
+              locLower.includes('ireland') ||
+              locLower.includes('dublin') ||
+              locLower.includes('switzerland') ||
+              locLower.includes('zurich') ||
+              locLower.includes('geneva') ||
+              locLower.includes('spain') ||
+              locLower.includes('madrid') ||
+              locLower.includes('barcelona') ||
+              locLower.includes('sweden') ||
+              locLower.includes('stockholm') ||
+              locLower.includes('poland') ||
+              locLower.includes('warsaw') ||
+              locLower.includes('italy') ||
+              locLower.includes('rome') ||
+              locLower.includes('milan')
+            );
+          }
+
+          if (cLower === 'asia') {
+            return (
+              locLower.includes('asia') ||
+              locLower.includes('india') ||
+              locLower.includes('bangalore') ||
+              locLower.includes('bengaluru') ||
+              locLower.includes('mumbai') ||
+              locLower.includes('delhi') ||
+              locLower.includes('pune') ||
+              locLower.includes('hyderabad') ||
+              locLower.includes('noida') ||
+              locLower.includes('gurgaon') ||
+              locLower.includes('chennai') ||
+              locLower.includes('china') ||
+              locLower.includes('beijing') ||
+              locLower.includes('shanghai') ||
+              locLower.includes('shenzhen') ||
+              locLower.includes('guangzhou') ||
+              locLower.includes('hangzhou') ||
+              locLower.includes('hong kong') ||
+              locLower.includes('singapore') ||
+              locLower.includes('japan') ||
+              locLower.includes('tokyo') ||
+              locLower.includes('south korea') ||
+              locLower.includes('seoul') ||
+              locLower.includes('taiwan') ||
+              locLower.includes('vietnam') ||
+              locLower.includes('thailand') ||
+              locLower.includes('indonesia') ||
+              locLower.includes('malaysia') ||
+              locLower.includes('philippines')
+            );
+          }
+
+          if (cLower === 'north america') {
+            return (
+              locLower.includes('north america') ||
+              locLower.includes('united states') ||
+              locLower.includes('usa') ||
+              locLower.includes('us') ||
+              locLower.includes('canada') ||
+              locLower.includes('toronto') ||
+              locLower.includes('vancouver') ||
+              locLower.includes('montreal') ||
+              locLower.includes('mexico') ||
+              locLower.includes('san francisco') ||
+              locLower.includes('new york') ||
+              locLower.includes('austin') ||
+              locLower.includes('seattle') ||
+              locLower.includes('boston') ||
+              locLower.includes('los angeles') ||
+              locLower.includes('chicago')
+            );
+          }
+
+          if (cLower === 'latin america' || cLower === 'south america') {
+            return (
+              locLower.includes('latin america') ||
+              locLower.includes('south america') ||
+              locLower.includes('brazil') ||
+              locLower.includes('são paulo') ||
+              locLower.includes('argentina') ||
+              locLower.includes('buenos aires') ||
+              locLower.includes('chile') ||
+              locLower.includes('colombia') ||
+              locLower.includes('bogota')
+            );
+          }
+
+          if (cLower === 'middle east & africa' || cLower === 'middle east') {
+            return (
+              locLower.includes('middle east') ||
+              locLower.includes('uae') ||
+              locLower.includes('united arab emirates') ||
+              locLower.includes('dubai') ||
+              locLower.includes('abu dhabi') ||
+              locLower.includes('saudi') ||
+              locLower.includes('riyadh') ||
+              locLower.includes('qatar') ||
+              locLower.includes('doha') ||
+              locLower.includes('israel') ||
+              locLower.includes('tel aviv') ||
+              locLower.includes('south africa') ||
+              locLower.includes('egypt') ||
+              locLower.includes('cairo')
+            );
+          }
+
+          if (cLower === 'asia-pacific' || cLower === 'apac' || cLower === 'oceania') {
+            return (
+              locLower.includes('apac') ||
+              locLower.includes('asia-pacific') ||
+              locLower.includes('oceania') ||
+              locLower.includes('australia') ||
+              locLower.includes('sydney') ||
+              locLower.includes('melbourne') ||
+              locLower.includes('brisbane') ||
+              locLower.includes('new zealand') ||
+              locLower.includes('auckland') ||
+              locLower.includes('singapore')
+            );
+          }
+
+          // Specific Countries
+          if (cLower === 'china') {
+            return (
+              locLower.includes('china') ||
+              locLower.includes('beijing') ||
+              locLower.includes('shanghai') ||
+              locLower.includes('shenzhen') ||
+              locLower.includes('guangzhou') ||
+              locLower.includes('hangzhou') ||
+              locLower.includes('hong kong') ||
+              locLower.includes('chengdu') ||
+              locLower.includes('wuhan') ||
+              countryLower.includes('china') ||
+              countryLower === 'cn'
+            );
+          }
+
+          if (cLower === 'india') {
+            return (
+              locLower.includes('india') ||
+              locLower.includes('bangalore') ||
+              locLower.includes('bengaluru') ||
+              locLower.includes('mumbai') ||
+              locLower.includes('pune') ||
+              locLower.includes('delhi') ||
+              locLower.includes('hyderabad') ||
+              locLower.includes('noida') ||
+              locLower.includes('gurgaon') ||
+              locLower.includes('gurugram') ||
+              locLower.includes('chennai') ||
+              locLower.includes('kolkata') ||
+              countryLower.includes('india') ||
+              countryLower === 'in'
+            );
+          }
+
+          if (cLower === 'united kingdom' || cLower === 'uk') {
+            return (
+              locLower.includes('uk') ||
+              locLower.includes('united kingdom') ||
+              locLower.includes('london') ||
+              locLower.includes('manchester') ||
+              locLower.includes('edinburgh') ||
+              locLower.includes('bristol') ||
+              locLower.includes('birmingham') ||
+              locLower.includes('cambridge') ||
+              locLower.includes('oxford') ||
+              countryLower.includes('uk') ||
+              countryLower.includes('united kingdom') ||
+              countryLower === 'gb'
+            );
+          }
+
+          if (cLower === 'united states' || cLower === 'us' || cLower === 'usa') {
+            return (
+              locLower.includes('us') ||
+              locLower.includes('usa') ||
+              locLower.includes('united states') ||
+              locLower.includes('san francisco') ||
+              locLower.includes('new york') ||
+              locLower.includes('austin') ||
+              locLower.includes('seattle') ||
+              locLower.includes('boston') ||
+              locLower.includes('los angeles') ||
+              locLower.includes('chicago') ||
+              locLower.includes('ca') ||
+              locLower.includes('ny') ||
+              locLower.includes('tx') ||
+              locLower.includes('wa') ||
+              countryLower.includes('us') ||
+              countryLower.includes('united states')
+            );
+          }
+
+          if (cLower === 'germany') {
+            return locLower.includes('germany') || locLower.includes('berlin') || locLower.includes('munich') || locLower.includes('frankfurt') || locLower.includes('hamburg') || countryLower.includes('germany') || countryLower === 'de';
+          }
+
+          if (cLower === 'canada') {
+            return locLower.includes('canada') || locLower.includes('toronto') || locLower.includes('vancouver') || locLower.includes('montreal') || locLower.includes('ottawa') || countryLower.includes('canada') || countryLower === 'ca';
+          }
+
+          if (cLower === 'singapore') {
+            return locLower.includes('singapore') || countryLower.includes('singapore') || countryLower === 'sg';
+          }
+
+          if (cLower === 'australia') {
+            return locLower.includes('australia') || locLower.includes('sydney') || locLower.includes('melbourne') || locLower.includes('brisbane') || locLower.includes('perth') || countryLower.includes('australia') || countryLower === 'au';
+          }
+
+          if (cLower === 'united arab emirates' || cLower === 'uae') {
+            return locLower.includes('dubai') || locLower.includes('abu dhabi') || locLower.includes('uae') || locLower.includes('united arab emirates') || countryLower.includes('uae') || countryLower === 'ae';
+          }
+
+          if (cLower === 'netherlands') {
+            return locLower.includes('netherlands') || locLower.includes('amsterdam') || locLower.includes('rotterdam') || countryLower.includes('netherlands') || countryLower === 'nl';
+          }
+
+          if (cLower === 'ireland') {
+            return locLower.includes('ireland') || locLower.includes('dublin') || locLower.includes('cork') || countryLower.includes('ireland') || countryLower === 'ie';
+          }
+
+          if (cLower === 'switzerland') {
+            return locLower.includes('switzerland') || locLower.includes('zurich') || locLower.includes('geneva') || countryLower.includes('switzerland') || countryLower === 'ch';
+          }
+
+          if (cLower === 'france') {
+            return locLower.includes('france') || locLower.includes('paris') || locLower.includes('lyon') || countryLower.includes('france') || countryLower === 'fr';
+          }
+
+          if (cLower === 'japan') {
+            return locLower.includes('japan') || locLower.includes('tokyo') || locLower.includes('osaka') || locLower.includes('kyoto') || countryLower.includes('japan') || countryLower === 'jp';
+          }
+
+          if (cLower === 'south korea') {
+            return locLower.includes('korea') || locLower.includes('seoul') || countryLower.includes('korea') || countryLower === 'kr';
+          }
+
+          return locLower.includes(cLower) || countryLower.includes(cLower);
         });
       });
     }
@@ -145,8 +419,8 @@ export async function GET(request: NextRequest) {
     // Workplace Type filter (remote, hybrid, onsite)
     if (workplaceFilter.length > 0) {
       listings = listings.filter((job) => {
-        const locLower = job.location.toLowerCase();
-        const titleLower = job.title.toLowerCase();
+        const locLower = (job.location || '').toLowerCase();
+        const titleLower = (job.title || '').toLowerCase();
         const descLower = (job.description || '').toLowerCase();
         const isRemote = job.remote || locLower.includes('remote') || titleLower.includes('remote');
         const isHybrid = locLower.includes('hybrid') || descLower.includes('hybrid');
@@ -163,13 +437,28 @@ export async function GET(request: NextRequest) {
     // Role filter
     if (roleFilter.length > 0) {
       listings = listings.filter((job) => {
-        const titleLower = job.title.toLowerCase();
+        const titleLower = (job.title || '').toLowerCase();
         const descLower = (job.description || '').toLowerCase();
+        const keywordsLower = (job.keywords || []).map((k) => k.toLowerCase());
+
         return roleFilter.some((role) => {
           const rLower = role.toLowerCase();
+          if (rLower === 'full stack') return titleLower.includes('full stack') || titleLower.includes('fullstack') || keywordsLower.includes('fullstack') || keywordsLower.includes('full stack');
+          if (rLower === 'frontend') return titleLower.includes('frontend') || titleLower.includes('front-end') || titleLower.includes('ui') || titleLower.includes('react') || titleLower.includes('web developer');
+          if (rLower === 'backend') return titleLower.includes('backend') || titleLower.includes('back-end') || titleLower.includes('node') || titleLower.includes('python') || titleLower.includes('java') || titleLower.includes('golang');
+          if (rLower === 'react developer') return titleLower.includes('react') || titleLower.includes('next.js') || keywordsLower.includes('react');
+          if (rLower === 'devops / cloud') return titleLower.includes('devops') || titleLower.includes('cloud') || titleLower.includes('sre') || titleLower.includes('infrastructure') || titleLower.includes('aws') || titleLower.includes('kubernetes');
+          if (rLower === 'data / ai engineer') return titleLower.includes('data') || titleLower.includes('ai') || titleLower.includes('ml') || titleLower.includes('machine learning') || titleLower.includes('analytics');
+          if (rLower === 'machine learning') return titleLower.includes('machine learning') || titleLower.includes('ml') || titleLower.includes('deep learning') || titleLower.includes('ai engineer');
+          if (rLower === 'mobile (ios/android)') return titleLower.includes('mobile') || titleLower.includes('ios') || titleLower.includes('android') || titleLower.includes('react native') || titleLower.includes('flutter');
+          if (rLower === 'product manager') return titleLower.includes('product manager') || titleLower.includes('product owner') || titleLower.includes('pm');
+          if (rLower === 'software engineer') return titleLower.includes('software engineer') || titleLower.includes('software developer') || titleLower.includes('sde');
+          if (rLower === 'qa / automation') return titleLower.includes('qa') || titleLower.includes('test') || titleLower.includes('quality') || titleLower.includes('sdet');
+          if (rLower === 'ui/ux designer') return titleLower.includes('design') || titleLower.includes('ui') || titleLower.includes('ux') || titleLower.includes('product designer');
+
           return (
             titleLower.includes(rLower) ||
-            job.keywords?.some((k) => k.toLowerCase().includes(rLower)) ||
+            keywordsLower.some((k) => k.includes(rLower)) ||
             descLower.includes(rLower)
           );
         });
@@ -181,24 +470,26 @@ export async function GET(request: NextRequest) {
       listings = listings.filter((job) => {
         const text = `${job.title} ${job.description || ''}`.toLowerCase();
         return jobTypeFilter.some((jt) => {
-          if (jt === 'fulltime') return text.includes('full-time') || text.includes('full time') || !text.includes('contract');
-          if (jt === 'contract') return text.includes('contract') || text.includes('freelance') || text.includes('temporary');
+          if (jt === 'fulltime') return text.includes('full-time') || text.includes('full time') || (!text.includes('contract') && !text.includes('internship') && !text.includes('part-time'));
+          if (jt === 'contract') return text.includes('contract') || text.includes('freelance') || text.includes('temporary') || text.includes('contractor');
           if (jt === 'parttime') return text.includes('part-time') || text.includes('part time');
-          if (jt === 'internship') return text.includes('intern') || text.includes('internship');
+          if (jt === 'internship') return text.includes('intern') || text.includes('internship') || text.includes('trainee');
           return false;
         });
       });
     }
 
-    // Experience Level filter (entry, mid, senior, lead)
+    // Experience Level & Education filter (entry, mid, senior, lead, bachelor, master)
     if (experienceFilter.length > 0) {
       listings = listings.filter((job) => {
         const text = `${job.title} ${job.description || ''}`.toLowerCase();
         return experienceFilter.some((exp) => {
-          if (exp === 'entry') return text.includes('junior') || text.includes('entry') || text.includes('graduate') || text.includes('0-2') || text.includes('1-2');
-          if (exp === 'mid') return text.includes('mid') || text.includes('3-5') || text.includes('2-4');
-          if (exp === 'senior') return text.includes('senior') || text.includes('sr.') || text.includes('5-8') || text.includes('5+');
-          if (exp === 'lead') return text.includes('lead') || text.includes('principal') || text.includes('staff') || text.includes('architect') || text.includes('8+');
+          if (exp === 'entry') return text.includes('junior') || text.includes('entry') || text.includes('graduate') || text.includes('associate') || text.includes('0-2') || text.includes('1-2') || text.includes('fresher');
+          if (exp === 'mid') return text.includes('mid') || text.includes('intermediate') || text.includes('3-5') || text.includes('2-4') || text.includes('3+ years');
+          if (exp === 'senior') return text.includes('senior') || text.includes('sr.') || text.includes('5-8') || text.includes('5+') || text.includes('6+ years') || text.includes('7+ years');
+          if (exp === 'lead') return text.includes('lead') || text.includes('principal') || text.includes('staff') || text.includes('architect') || text.includes('director') || text.includes('head of') || text.includes('8+');
+          if (exp === 'bachelor') return text.includes('bachelor') || text.includes('bs') || text.includes('ba') || text.includes('b.tech') || text.includes('b.e.') || text.includes('degree');
+          if (exp === 'master') return text.includes('master') || text.includes('ms') || text.includes('phd') || text.includes('ph.d') || text.includes('m.tech') || text.includes('postgraduate');
           return true;
         });
       });
@@ -215,7 +506,10 @@ export async function GET(request: NextRequest) {
           : 30 * 24 * 60 * 60 * 1000;
 
       listings = listings.filter((job) => {
-        const postedTime = job.postedDate ? new Date(job.postedDate).getTime() : now;
+        const raw = job.postedDate || (job as any).postedAt || (job as any).createdAt;
+        if (!raw) return true;
+        const postedTime = new Date(raw).getTime();
+        if (isNaN(postedTime) || postedTime <= 0) return true;
         return now - postedTime <= maxAgeMs;
       });
     }
@@ -228,10 +522,41 @@ export async function GET(request: NextRequest) {
           text.includes('visa') ||
           text.includes('sponsor') ||
           text.includes('relocation') ||
+          text.includes('tier 2') ||
+          text.includes('h1b') ||
           text.includes('global') ||
           job.remote
         );
       });
+    }
+
+    // Saved Only filter (from query param)
+    const savedOnlyFilter = searchParams.get('savedOnly') === 'true';
+    if (savedOnlyFilter && userId) {
+      try {
+        const { getDb } = await import('@/lib/db');
+        const db = await getDb();
+        const savedJobsDocs = await db
+          .collection('jobs')
+          .find({ userId: new ObjectId(userId) })
+          .toArray();
+        const jobApps = await db
+          .collection('job_applications')
+          .find({ userId: new ObjectId(userId) })
+          .toArray();
+        const savedExternalIds = new Set([
+          ...savedJobsDocs.map((d: any) => d._id?.toString()),
+          ...savedJobsDocs.map((d: any) => d.externalId),
+          ...jobApps.map((d: any) => d._id?.toString()),
+          ...jobApps.map((d: any) => d.jobId),
+        ].filter(Boolean));
+
+        if (savedExternalIds.size > 0) {
+          listings = listings.filter((job) => savedExternalIds.has(job._id) || savedExternalIds.has((job as any).externalId));
+        }
+      } catch (err) {
+        console.warn('Failed to filter saved jobs on server:', err);
+      }
     }
 
     const minScore = parseInt(
@@ -244,15 +569,21 @@ export async function GET(request: NextRequest) {
     const dir = sortOrder === 'asc' ? 1 : -1;
     listings.sort((a, b) => {
       if (sortBy === 'postedDate') {
-        return ((a.postedDate?.getTime() || 0) - (b.postedDate?.getTime() || 0)) * dir;
+        const rawA = a.postedDate || (a as any).postedAt || (a as any).createdAt;
+        const rawB = b.postedDate || (b as any).postedAt || (b as any).createdAt;
+        const tA = rawA ? new Date(rawA).getTime() : 0;
+        const tB = rawB ? new Date(rawB).getTime() : 0;
+        return (tB - tA) * (sortOrder === 'asc' ? -1 : 1);
       }
       if (sortBy === 'salary') {
-        return ((a.salaryMin || 0) - (b.salaryMin || 0)) * dir;
+        const salA = a.salaryMax || a.salaryMin || 0;
+        const salB = b.salaryMax || b.salaryMin || 0;
+        return (salB - salA) * (sortOrder === 'asc' ? -1 : 1);
       }
       if (sortBy === 'company') {
-        return a.company.localeCompare(b.company) * dir;
+        return (a.company || '').localeCompare(b.company || '') * dir;
       }
-      return (a.matchScore - b.matchScore) * dir;
+      return (b.matchScore - a.matchScore) * (sortOrder === 'asc' ? -1 : 1);
     });
 
     const total = listings.length;

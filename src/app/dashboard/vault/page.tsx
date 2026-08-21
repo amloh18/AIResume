@@ -26,7 +26,7 @@ function VaultLockedContent({ user, onMobileMenuToggle, isMobileMenuOpen }: {
 
     const handleUpgrade = () => {
         openPaymentModal({
-            preselectedPlanKey: 'pro_lifetime',
+            preselectedPlanKey: 'focused_yearly',
             triggerContext: 'career-vault',
             returnUrl: window.location.href
         });

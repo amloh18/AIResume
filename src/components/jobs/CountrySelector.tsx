@@ -2,73 +2,55 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { ChevronDown, Search, Check, Globe, X, Sparkles, MapPin } from 'lucide-react';
+import { COUNTRIES_LIST, type CountryOption } from '@/lib/config/job-constants';
 
-export interface CountryOption {
-  code: string;
-  name: string;
-  flag: string;
-  currency: string;
-  region: string;
-}
-
-export const COUNTRIES_LIST: CountryOption[] = [
-  { code: 'IN', name: 'India', flag: '🇮🇳', currency: 'INR', region: 'Asia' },
-  { code: 'GB', name: 'United Kingdom', flag: '🇬🇧', currency: 'GBP', region: 'Europe' },
-  { code: 'US', name: 'United States', flag: '🇺🇸', currency: 'USD', region: 'North America' },
-  { code: 'CA', name: 'Canada', flag: '🇨🇦', currency: 'CAD', region: 'North America' },
-  { code: 'DE', name: 'Germany', flag: '🇩🇪', currency: 'EUR', region: 'Europe' },
-  { code: 'AE', name: 'United Arab Emirates', flag: '🇦🇪', currency: 'AED', region: 'Middle East' },
-  { code: 'SG', name: 'Singapore', flag: '🇸🇬', currency: 'SGD', region: 'Asia' },
-  { code: 'AU', name: 'Australia', flag: '🇦🇺', currency: 'AUD', region: 'Oceania' },
-  { code: 'NL', name: 'Netherlands', flag: '🇳🇱', currency: 'EUR', region: 'Europe' },
-  { code: 'IE', name: 'Ireland', flag: '🇮🇪', currency: 'EUR', region: 'Europe' },
-  { code: 'CH', name: 'Switzerland', flag: '🇨🇭', currency: 'CHF', region: 'Europe' },
-  { code: 'FR', name: 'France', flag: '🇫🇷', currency: 'EUR', region: 'Europe' },
-  { code: 'SE', name: 'Sweden', flag: '🇸🇪', currency: 'SEK', region: 'Europe' },
-  { code: 'PL', name: 'Poland', flag: '🇵🇱', currency: 'PLN', region: 'Europe' },
-  { code: 'ES', name: 'Spain', flag: '🇪🇸', currency: 'EUR', region: 'Europe' },
-  { code: 'JP', name: 'Japan', flag: '🇯🇵', currency: 'JPY', region: 'Asia' },
-  { code: 'BR', name: 'Brazil', flag: '🇧🇷', currency: 'BRL', region: 'South America' },
-  { code: 'ZA', name: 'South Africa', flag: '🇿🇦', currency: 'ZAR', region: 'Africa' },
-  { code: 'NZ', name: 'New Zealand', flag: '🇳🇿', currency: 'NZD', region: 'Oceania' },
-  { code: 'GLOBAL', name: 'Worldwide / Remote', flag: '🌍', currency: 'USD', region: 'Global' },
-];
+export type { CountryOption };
+export { COUNTRIES_LIST };
 
 /**
  * Detect user's country code based on browser timezone
  */
 export function detectUserCountry(): CountryOption {
-  if (typeof Intl === 'undefined') return COUNTRIES_LIST[0]; // fallback India
+  if (typeof Intl === 'undefined') return COUNTRIES_LIST[0]; // fallback
   try {
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
     if (tz.includes('Calcutta') || tz.includes('Kolkata') || tz.includes('Asia/Colombo')) {
-      return COUNTRIES_LIST.find((c) => c.code === 'IN') || COUNTRIES_LIST[0];
+      return COUNTRIES_LIST.find((c) => c.code === 'IN') || COUNTRIES_LIST[7];
+    }
+    if (tz.includes('Shanghai') || tz.includes('Beijing') || tz.includes('Chongqing') || tz.includes('Hong_Kong') || tz.includes('Taipei') || tz.includes('Urumqi')) {
+      return COUNTRIES_LIST.find((c) => c.code === 'CN') || COUNTRIES_LIST[8];
     }
     if (tz.includes('London') || tz.includes('Belfast') || tz.includes('Europe/London')) {
-      return COUNTRIES_LIST.find((c) => c.code === 'GB') || COUNTRIES_LIST[1];
+      return COUNTRIES_LIST.find((c) => c.code === 'GB') || COUNTRIES_LIST[10];
     }
-    if (tz.includes('America/New_York') || tz.includes('America/Los_Angeles') || tz.includes('America/Chicago')) {
-      return COUNTRIES_LIST.find((c) => c.code === 'US') || COUNTRIES_LIST[2];
+    if (tz.includes('America/New_York') || tz.includes('America/Los_Angeles') || tz.includes('America/Chicago') || tz.includes('America/Denver')) {
+      return COUNTRIES_LIST.find((c) => c.code === 'US') || COUNTRIES_LIST[9];
     }
     if (tz.includes('America/Toronto') || tz.includes('America/Vancouver')) {
-      return COUNTRIES_LIST.find((c) => c.code === 'CA') || COUNTRIES_LIST[3];
+      return COUNTRIES_LIST.find((c) => c.code === 'CA') || COUNTRIES_LIST[12];
     }
-    if (tz.includes('Europe/Berlin') || tz.includes('Europe/Frankfurt')) {
-      return COUNTRIES_LIST.find((c) => c.code === 'DE') || COUNTRIES_LIST[4];
+    if (tz.includes('Europe/Berlin') || tz.includes('Europe/Frankfurt') || tz.includes('Europe/Paris') || tz.includes('Europe/Amsterdam')) {
+      return COUNTRIES_LIST.find((c) => c.code === 'DE') || COUNTRIES_LIST[11];
     }
     if (tz.includes('Asia/Dubai')) {
-      return COUNTRIES_LIST.find((c) => c.code === 'AE') || COUNTRIES_LIST[5];
+      return COUNTRIES_LIST.find((c) => c.code === 'AE') || COUNTRIES_LIST[15];
     }
     if (tz.includes('Asia/Singapore')) {
-      return COUNTRIES_LIST.find((c) => c.code === 'SG') || COUNTRIES_LIST[6];
+      return COUNTRIES_LIST.find((c) => c.code === 'SG') || COUNTRIES_LIST[13];
     }
     if (tz.includes('Australia/Sydney') || tz.includes('Australia/Melbourne')) {
-      return COUNTRIES_LIST.find((c) => c.code === 'AU') || COUNTRIES_LIST[7];
+      return COUNTRIES_LIST.find((c) => c.code === 'AU') || COUNTRIES_LIST[14];
+    }
+    if (tz.includes('Asia/Tokyo')) {
+      return COUNTRIES_LIST.find((c) => c.code === 'JP') || COUNTRIES_LIST[0];
+    }
+    if (tz.includes('Asia/Seoul')) {
+      return COUNTRIES_LIST.find((c) => c.code === 'KR') || COUNTRIES_LIST[0];
     }
   } catch {
     // fallback
   }
-  return COUNTRIES_LIST[0]; // India default
+  return COUNTRIES_LIST.find((c) => c.code === 'IN') || COUNTRIES_LIST[0];
 }
 
 interface CountrySelectorProps {
@@ -82,7 +64,11 @@ export function CountrySelector({ value, onChange, disabled }: CountrySelectorPr
   const [search, setSearch] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const userDetectedCountry = useMemo(() => detectUserCountry(), []);
+  const [userDetectedCountry, setUserDetectedCountry] = useState<CountryOption>(COUNTRIES_LIST[0]);
+
+  useEffect(() => {
+    setUserDetectedCountry(detectUserCountry());
+  }, []);
 
   // Close dropdown on click outside
   useEffect(() => {
@@ -111,11 +97,16 @@ export function CountrySelector({ value, onChange, disabled }: CountrySelectorPr
     setIsOpen(false);
   };
 
-  const filteredCountries = COUNTRIES_LIST.filter((c) =>
-    c.name.toLowerCase().includes(search.toLowerCase()) ||
-    c.code.toLowerCase().includes(search.toLowerCase()) ||
-    c.region.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredCountries = useMemo(() => {
+    return COUNTRIES_LIST.filter((c) =>
+      c.name.toLowerCase().includes(search.toLowerCase()) ||
+      c.code.toLowerCase().includes(search.toLowerCase()) ||
+      c.region.toLowerCase().includes(search.toLowerCase())
+    );
+  }, [search]);
+
+  const continents = useMemo(() => filteredCountries.filter((c) => c.isContinent), [filteredCountries]);
+  const countriesOnly = useMemo(() => filteredCountries.filter((c) => !c.isContinent), [filteredCountries]);
 
   // Selected Country objects
   const selectedObjects = COUNTRIES_LIST.filter((c) => value.includes(c.name));
@@ -148,12 +139,12 @@ export function CountrySelector({ value, onChange, disabled }: CountrySelectorPr
                   </span>
                 ))}
               </div>
-              <span>{selectedObjects.length} Countries</span>
+              <span>{selectedObjects.length} Locations</span>
             </>
           ) : (
             <>
               <Globe className="w-3.5 h-3.5 text-lime-600" />
-              <span>Select Countries</span>
+              <span>Select Countries & Regions</span>
             </>
           )}
         </div>
@@ -162,7 +153,7 @@ export function CountrySelector({ value, onChange, disabled }: CountrySelectorPr
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute left-0 top-full mt-2 w-72 bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-2xl shadow-2xl z-50 p-2.5 animate-fadeIn space-y-2">
+        <div className="absolute left-0 top-full mt-2 w-80 bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-2xl shadow-2xl z-[100] p-2.5 animate-fadeIn space-y-2">
           {/* Search Bar */}
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
@@ -171,7 +162,7 @@ export function CountrySelector({ value, onChange, disabled }: CountrySelectorPr
               autoFocus
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search country..."
+              placeholder="Search country, continent (e.g. Europe, Asia, China)..."
               className="w-full pl-8 pr-3 py-1.5 bg-gray-50 dark:bg-[#1a230f] border border-gray-200 dark:border-gray-700 rounded-xl text-xs text-gray-900 dark:text-white outline-none focus:ring-1 focus:ring-lime-500"
             />
           </div>
@@ -204,45 +195,97 @@ export function CountrySelector({ value, onChange, disabled }: CountrySelectorPr
             </button>
           </div>
 
-          {/* List of Countries */}
-          <div className="max-h-56 overflow-y-auto space-y-0.5 pr-1 scrollbar-thin">
-            {filteredCountries.map((c) => {
-              const isSelected = value.includes(c.name);
-
-              return (
-                <div
-                  key={c.code}
-                  onClick={() => handleToggleCountry(c.name)}
-                  className={`group px-2.5 py-1.5 rounded-xl text-xs flex items-center justify-between cursor-pointer transition-colors ${
-                    isSelected
-                      ? 'bg-lime-500/10 text-lime-800 dark:text-lime-300 font-semibold'
-                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5">
+          {/* List of Continents & Countries */}
+          <div className="max-h-64 overflow-y-auto space-y-2 pr-1 scrollbar-thin">
+            {/* Continents & Regions */}
+            {continents.length > 0 && (
+              <div className="space-y-0.5">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 px-2 py-0.5">
+                  Continents & Macro Regions
+                </div>
+                {continents.map((c) => {
+                  const isSelected = value.includes(c.name);
+                  return (
                     <div
-                      className={`w-3.5 h-3.5 rounded border flex items-center justify-center transition-colors ${
+                      key={c.code}
+                      onClick={() => handleToggleCountry(c.name)}
+                      className={`group px-2.5 py-1.5 rounded-xl text-xs flex items-center justify-between cursor-pointer transition-colors ${
                         isSelected
-                          ? 'bg-lime-500 border-lime-500 text-white'
-                          : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800'
+                          ? 'bg-lime-500/15 text-lime-800 dark:text-lime-300 font-semibold'
+                          : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5'
                       }`}
                     >
-                      {isSelected && <Check className="w-2.5 h-2.5 stroke-[3]" />}
-                    </div>
-                    <span className="text-sm">{c.flag}</span>
-                    <span className="truncate">{c.name}</span>
-                  </div>
+                      <div className="flex items-center gap-2.5">
+                        <div
+                          className={`w-3.5 h-3.5 rounded border flex items-center justify-center transition-colors ${
+                            isSelected
+                              ? 'bg-lime-500 border-lime-500 text-white'
+                              : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800'
+                          }`}
+                        >
+                          {isSelected && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                        </div>
+                        <span className="text-sm">{c.flag}</span>
+                        <span className="truncate">{c.name}</span>
+                      </div>
 
-                  <button
-                    type="button"
-                    onClick={(e) => handleSelectOnly(c.name, e)}
-                    className="opacity-0 group-hover:opacity-100 text-[10px] text-gray-400 hover:text-lime-600 font-medium px-1.5 py-0.5 rounded hover:bg-gray-200 dark:hover:bg-white/10 transition-all"
-                  >
-                    Only
-                  </button>
+                      <button
+                        type="button"
+                        onClick={(e) => handleSelectOnly(c.name, e)}
+                        className="opacity-0 group-hover:opacity-100 text-[10px] text-gray-400 hover:text-lime-600 font-medium px-1.5 py-0.5 rounded hover:bg-gray-200 dark:hover:bg-white/10 transition-all"
+                      >
+                        Only
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Specific Countries */}
+            {countriesOnly.length > 0 && (
+              <div className="space-y-0.5">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 px-2 py-0.5 pt-1">
+                  Countries
                 </div>
-              );
-            })}
+                {countriesOnly.map((c) => {
+                  const isSelected = value.includes(c.name);
+                  return (
+                    <div
+                      key={c.code}
+                      onClick={() => handleToggleCountry(c.name)}
+                      className={`group px-2.5 py-1.5 rounded-xl text-xs flex items-center justify-between cursor-pointer transition-colors ${
+                        isSelected
+                          ? 'bg-lime-500/10 text-lime-800 dark:text-lime-300 font-semibold'
+                          : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <div
+                          className={`w-3.5 h-3.5 rounded border flex items-center justify-center transition-colors ${
+                            isSelected
+                              ? 'bg-lime-500 border-lime-500 text-white'
+                              : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800'
+                          }`}
+                        >
+                          {isSelected && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                        </div>
+                        <span className="text-sm">{c.flag}</span>
+                        <span className="truncate">{c.name}</span>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={(e) => handleSelectOnly(c.name, e)}
+                        className="opacity-0 group-hover:opacity-100 text-[10px] text-gray-400 hover:text-lime-600 font-medium px-1.5 py-0.5 rounded hover:bg-gray-200 dark:hover:bg-white/10 transition-all"
+                      >
+                        Only
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Footer Quick Actions */}

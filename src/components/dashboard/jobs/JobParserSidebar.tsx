@@ -8,6 +8,7 @@ import {
   DollarSign, GraduationCap, Shield, HelpCircle, Link, ChevronDown, 
   Zap, Clipboard, RefreshCw
 } from 'lucide-react';
+import { getCurrencySymbol } from '@/lib/config/job-constants';
 import { Button } from '@/components/ui/button';
 import toast from 'react-hot-toast';
 import { useUnifiedAuth } from '@/lib/hooks/useUnifiedAuth';
@@ -237,7 +238,7 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
           setEditedSalary({
             min: result.data.salary.min,
             max: result.data.salary.max,
-            currency: result.data.salary.currency || '$',
+            currency: getCurrencySymbol(result.data.salary.currency),
             period: result.data.salary.period || 'yearly'
           });
         }

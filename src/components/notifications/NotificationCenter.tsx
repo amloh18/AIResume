@@ -2,6 +2,7 @@
 'use client';
 
 import React, { useState, useEffect, useContext } from 'react';
+import { createPortal } from 'react-dom';
 import { Bell, X, AlertCircle, Info, CheckCircle, AlertTriangle, Clock, TrendingUp, Briefcase, FileText, Sparkles, Loader2 } from 'lucide-react';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { DashboardDataContext } from '@/contexts/DashboardDataContext';
@@ -76,6 +77,11 @@ export default function NotificationCenter({ variant = 'default' }: Notification
 
   const [activeTab, setActiveTab] = useState<'notifications' | 'activities'>('notifications');
   const [isOpen, setIsOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   
   // Convert progressEvents Map to Array for rendering
   const activeProgressArray = Array.from(progressEvents.values());
@@ -177,219 +183,228 @@ export default function NotificationCenter({ variant = 'default' }: Notification
         )}
       </button>
 
-      <AnimatePresence>
-        {isOpen && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[9998] bg-black/25 dark:bg-black/60 backdrop-blur-xs"
-              onClick={() => setIsOpen(false)}
-            />
-            
-            <motion.div
-              initial={{ opacity: 0, y: 10, scale: 0.96 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 10, scale: 0.96 }}
-              transition={{ duration: 0.16, ease: 'easeOut' }}
-              className="absolute right-0 mt-3 w-[360px] sm:w-[410px] max-h-[82vh] bg-white dark:bg-[#121611] rounded-2xl shadow-2xl z-[9999] flex flex-col overflow-hidden border border-gray-200 dark:border-white/10"
-            >
-              {/* Header */}
-              <div className="p-5 pb-3">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider">
-                      Updates
-                    </h2>
-                    {unreadCount > 0 && (
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-[#80FF00]/15 text-emerald-700 dark:text-[#80FF00] border border-emerald-200 dark:border-[#80FF00]/30 tabular-nums">
-                        {unreadCount} new
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {unreadCount > 0 && (
-                      <button
-                        onClick={markAllAsRead}
-                        className="text-[11px] font-semibold text-emerald-600 dark:text-[#80FF00] hover:underline transition-colors"
-                      >
-                        Mark all read
-                      </button>
-                    )}
-                    <button
-                      onClick={() => setIsOpen(false)}
-                      className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
-                    >
-                      <X size={17} />
-                    </button>
-                  </div>
-                </div>
+      {mounted && typeof document !== 'undefined'
+        ? createPortal(
+            <AnimatePresence>
+              {isOpen && (
+                <>
+                  {/* Backdrop */}
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="fixed inset-0 z-[99998] bg-black/40 dark:bg-black/70 backdrop-blur-xs"
+                    onClick={() => setIsOpen(false)}
+                  />
 
-                {showActivityTab && (
-                  <div className="flex p-1 bg-gray-100 dark:bg-white/5 rounded-xl border border-gray-200/80 dark:border-white/5">
-                    <button
-                      onClick={() => setActiveTab('notifications')}
-                      className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-[11px] font-bold uppercase tracking-wider rounded-lg transition-all ${
-                        activeTab === 'notifications'
-                          ? 'bg-white dark:bg-[#1c2415] text-emerald-800 dark:text-[#80FF00] shadow-xs border border-gray-200/60 dark:border-[#80FF00]/30'
-                          : 'text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white'
-                      }`}
-                    >
-                      <Bell size={13} />
-                      Notifications {unreadCount > 0 && `(${unreadCount})`}
-                    </button>
-                    <button
-                      onClick={() => setActiveTab('activities')}
-                      className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-[11px] font-bold uppercase tracking-wider rounded-lg transition-all ${
-                        activeTab === 'activities'
-                          ? 'bg-white dark:bg-[#1c2415] text-emerald-800 dark:text-[#80FF00] shadow-xs border border-gray-200/60 dark:border-[#80FF00]/30'
-                          : 'text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white'
-                      }`}
-                    >
-                      <Clock size={13} />
-                      Recent Activity
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* Content */}
-              <div className="flex-1 overflow-y-auto px-4 pb-5 custom-scrollbar min-h-[280px]">
-                {activeTab === 'notifications' || !showActivityTab ? (
-                  <div className="space-y-2.5">
-                    {/* Live Progress Section with Progress Circle */}
-                    {activeProgressArray.length > 0 && (
-                      <div className="mb-3 space-y-2">
-                        {activeProgressArray.map((p) => (
-                          <div
-                            key={p.id}
-                            className="p-3.5 rounded-xl bg-emerald-50/70 dark:bg-[#80FF00]/5 border border-emerald-200 dark:border-[#80FF00]/25 shadow-xs flex items-center gap-3.5"
+                  {/* Sidebar Panel — slides in from the right, with margin & rounded corners */}
+                  <motion.div
+                    initial={{ x: 'calc(100% + 12px)' }}
+                    animate={{ x: 0 }}
+                    exit={{ x: 'calc(100% + 12px)' }}
+                    transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
+                    className="fixed top-3 right-3 bottom-3 w-[320px] sm:w-[360px] bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-2xl z-[99999] flex flex-col shadow-2xl overflow-hidden"
+                  >
+                    {/* Header — same height as the global topbar (h-14) */}
+                    <div className="flex items-center justify-between h-14 px-5 border-b border-gray-200 dark:border-white/10 flex-shrink-0">
+                      <div className="flex items-center gap-2">
+                        <h2 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider">
+                          Updates
+                        </h2>
+                        {unreadCount > 0 && (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-[#80FF00]/15 text-emerald-700 dark:text-[#80FF00] border border-emerald-200 dark:border-[#80FF00]/30 tabular-nums">
+                            {unreadCount} new
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {unreadCount > 0 && (
+                          <button
+                            onClick={markAllAsRead}
+                            className="text-[11px] font-semibold text-emerald-600 dark:text-[#80FF00] hover:underline transition-colors"
                           >
-                            <ProgressCircle progress={p.progress || 0} size={40} strokeWidth={3.5} />
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center justify-between gap-2">
-                                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-[#80FF00]">
-                                  {p.type === 'progress' ? 'Applying...' : 'In Progress'}
-                                </span>
-                              </div>
-                              <h4 className="text-xs font-semibold text-gray-900 dark:text-white mt-0.5 truncate">
-                                {p.message || 'Updating status...'}
-                              </h4>
-                            </div>
-                          </div>
-                        ))}
+                            Mark all read
+                          </button>
+                        )}
+                        <button
+                          onClick={() => setIsOpen(false)}
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
+                        >
+                          <X size={17} />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Tab Bar */}
+                    {showActivityTab && (
+                      <div className="px-4 py-3 border-b border-gray-200 dark:border-white/10 flex-shrink-0">
+                        <div className="flex p-1 bg-gray-100 dark:bg-white/5 rounded-xl border border-gray-200/80 dark:border-white/5">
+                          <button
+                            onClick={() => setActiveTab('notifications')}
+                            className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-[11px] font-bold uppercase tracking-wider rounded-lg transition-all ${
+                              activeTab === 'notifications'
+                                ? 'bg-white dark:bg-[#1c2415] text-emerald-800 dark:text-[#80FF00] shadow-xs border border-gray-200/60 dark:border-[#80FF00]/30'
+                                : 'text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white'
+                            }`}
+                          >
+                            <Bell size={13} />
+                            Notifications {unreadCount > 0 && `(${unreadCount})`}
+                          </button>
+                          <button
+                            onClick={() => setActiveTab('activities')}
+                            className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-[11px] font-bold uppercase tracking-wider rounded-lg transition-all ${
+                              activeTab === 'activities'
+                                ? 'bg-white dark:bg-[#1c2415] text-emerald-800 dark:text-[#80FF00] shadow-xs border border-gray-200/60 dark:border-[#80FF00]/30'
+                                : 'text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white'
+                            }`}
+                          >
+                            <Clock size={13} />
+                            Recent Activity
+                          </button>
+                        </div>
                       </div>
                     )}
 
-                    {notifications.length === 0 && activeProgressArray.length === 0 ? (
-                      <EmptyState icon={Bell} title="No notifications" sub="You're all caught up!" />
-                    ) : (
-                      notifications.map((n) => (
-                        <div 
-                          key={n._id || n.id} 
-                          onClick={() => {
-                            markAsRead(n._id || n.id);
-                            if (n.actionUrl) window.location.href = n.actionUrl;
-                          }}
-                          className={`group relative p-3.5 rounded-xl border transition-all cursor-pointer ${
-                            n.read
-                              ? 'bg-gray-50/50 dark:bg-white/[0.02] border-gray-200/70 dark:border-white/5 hover:bg-gray-100/60 dark:hover:bg-white/[0.04]'
-                              : 'bg-white dark:bg-[#1a230f]/60 border-emerald-300/70 dark:border-[#80FF00]/30 shadow-xs hover:border-emerald-400 dark:hover:border-[#80FF00]/50'
-                          }`}
-                        >
-                          <div className="flex items-start gap-3">
-                            <div
-                              className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
-                                n.read
-                                  ? 'bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500'
-                                  : 'bg-emerald-100/80 text-emerald-700 dark:bg-[#80FF00]/15 dark:text-[#80FF00]'
-                              }`}
-                            >
-                              <Bell size={15} />
+                    {/* Scrollable Content */}
+                    <div className="flex-1 overflow-y-auto px-4 py-4 custom-scrollbar">
+                      {activeTab === 'notifications' || !showActivityTab ? (
+                        <div className="space-y-2.5">
+                          {/* Live Progress Section with Progress Circle */}
+                          {activeProgressArray.length > 0 && (
+                            <div className="mb-3 space-y-2">
+                              {activeProgressArray.map((p) => (
+                                <div
+                                  key={p.id}
+                                  className="p-3.5 rounded-xl bg-emerald-50/70 dark:bg-[#80FF00]/5 border border-emerald-200 dark:border-[#80FF00]/25 shadow-xs flex items-center gap-3.5"
+                                >
+                                  <ProgressCircle progress={p.progress || 0} size={40} strokeWidth={3.5} />
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center justify-between gap-2">
+                                      <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-[#80FF00]">
+                                        {p.type === 'progress' ? 'Applying...' : 'In Progress'}
+                                      </span>
+                                    </div>
+                                    <h4 className="text-xs font-semibold text-gray-900 dark:text-white mt-0.5 truncate">
+                                      {p.message || 'Updating status...'}
+                                    </h4>
+                                  </div>
+                                </div>
+                              ))}
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <h4
-                                className={`text-xs truncate ${
+                          )}
+
+                          {notifications.length === 0 && activeProgressArray.length === 0 ? (
+                            <EmptyState icon={Bell} title="No notifications" sub="You're all caught up!" />
+                          ) : (
+                            notifications.map((n) => (
+                              <div
+                                key={n._id || n.id}
+                                onClick={() => {
+                                  markAsRead(n._id || n.id);
+                                  if (n.actionUrl) window.location.href = n.actionUrl;
+                                }}
+                                className={`group relative p-3.5 rounded-xl border transition-all cursor-pointer ${
                                   n.read
-                                    ? 'font-medium text-gray-600 dark:text-gray-400'
-                                    : 'font-semibold text-gray-900 dark:text-white'
+                                    ? 'bg-gray-50/50 dark:bg-white/[0.02] border-gray-200/70 dark:border-white/5 hover:bg-gray-100/60 dark:hover:bg-white/[0.04]'
+                                    : 'bg-white dark:bg-[#1a230f]/60 border-emerald-300/70 dark:border-[#80FF00]/30 shadow-xs hover:border-emerald-400 dark:hover:border-[#80FF00]/50'
                                 }`}
                               >
-                                {n.title}
-                              </h4>
-                              <p className="text-[11px] text-gray-600 dark:text-gray-300 mt-0.5 leading-relaxed line-clamp-2">
-                                {n.message}
-                              </p>
-                              <div className="flex items-center gap-2 mt-1.5 text-[9.5px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
-                                <span>{formatSafeTimeAgo(n.createdAt)}</span>
-                                {n.category && (
-                                  <>
-                                    <span>•</span>
-                                    <span>{n.category}</span>
-                                  </>
+                                <div className="flex items-start gap-3">
+                                  <div
+                                    className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
+                                      n.read
+                                        ? 'bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500'
+                                        : 'bg-emerald-100/80 text-emerald-700 dark:bg-[#80FF00]/15 dark:text-[#80FF00]'
+                                    }`}
+                                  >
+                                    <Bell size={15} />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <h4
+                                      className={`text-xs truncate ${
+                                        n.read
+                                          ? 'font-medium text-gray-600 dark:text-gray-400'
+                                          : 'font-semibold text-gray-900 dark:text-white'
+                                      }`}
+                                    >
+                                      {n.title}
+                                    </h4>
+                                    <p className="text-[11px] text-gray-600 dark:text-gray-300 mt-0.5 leading-relaxed line-clamp-2">
+                                      {n.message}
+                                    </p>
+                                    <div className="flex items-center gap-2 mt-1.5 text-[9.5px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                                      <span>{formatSafeTimeAgo(n.createdAt)}</span>
+                                      {n.category && (
+                                        <>
+                                          <span>•</span>
+                                          <span>{n.category}</span>
+                                        </>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                                {!n.read && (
+                                  <div className="absolute top-3.5 right-3.5 w-2 h-2 bg-emerald-500 dark:bg-[#80FF00] rounded-full shadow-[0_0_6px_rgba(16,185,129,0.8)] dark:shadow-[0_0_6px_#80FF00]" />
                                 )}
                               </div>
-                            </div>
-                          </div>
-                          {!n.read && (
-                            <div className="absolute top-3.5 right-3.5 w-2 h-2 bg-emerald-500 dark:bg-[#80FF00] rounded-full shadow-[0_0_6px_rgba(16,185,129,0.8)] dark:shadow-[0_0_6px_#80FF00]" />
+                            ))
                           )}
                         </div>
-                      ))
-                    )}
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {secondaryLoading.activities && allActivities.length === 0 ? (
-                      <div className="flex justify-center py-10">
-                        <Loader2 className="animate-spin text-emerald-600 dark:text-[#80FF00]" size={24} />
-                      </div>
-                    ) : allActivities.length === 0 ? (
-                      <EmptyState icon={Clock} title="No activity" sub="Your timeline is empty" />
-                    ) : (
-                      allActivities.map((a, idx) => {
-                        const Icon = getActivityIcon(a.type);
-                        const colorClass = getActivityColor(a.type);
-                        return (
-                          <div
-                            key={a.id || idx}
-                            className="p-3 rounded-xl bg-gray-50/50 dark:bg-white/[0.02] hover:bg-gray-100/60 dark:hover:bg-white/[0.04] transition-all flex items-start gap-3 border border-gray-200/70 dark:border-white/5"
-                          >
-                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${colorClass}`}>
-                              <Icon size={15} />
+                      ) : (
+                        <div className="space-y-2">
+                          {secondaryLoading.activities && allActivities.length === 0 ? (
+                            <div className="flex justify-center py-10">
+                              <Loader2 className="animate-spin text-emerald-600 dark:text-[#80FF00]" size={24} />
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs text-gray-900 dark:text-white font-medium leading-snug">
-                                {a.message || a.title}
-                              </p>
-                              <span className="text-[9.5px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mt-1 block">
-                                {formatSafeTimeAgo(a.timestamp)}
-                              </span>
-                            </div>
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
-                )}
-              </div>
+                          ) : allActivities.length === 0 ? (
+                            <EmptyState icon={Clock} title="No activity" sub="Your timeline is empty" />
+                          ) : (
+                            allActivities.map((a, idx) => {
+                              const Icon = getActivityIcon(a.type);
+                              const colorClass = getActivityColor(a.type);
+                              return (
+                                <div
+                                  key={a.id || idx}
+                                  className="p-3 rounded-xl bg-gray-50/50 dark:bg-white/[0.02] hover:bg-gray-100/60 dark:hover:bg-white/[0.04] transition-all flex items-start gap-3 border border-gray-200/70 dark:border-white/5"
+                                >
+                                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${colorClass}`}>
+                                    <Icon size={15} />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-xs text-gray-900 dark:text-white font-medium leading-snug">
+                                      {a.message || a.title}
+                                    </p>
+                                    <span className="text-[9.5px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mt-1 block">
+                                      {formatSafeTimeAgo(a.timestamp)}
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
+                      )}
+                    </div>
 
-              {/* Footer */}
-              {activeTab === 'notifications' && unreadCount > 0 && (
-                <div className="p-3.5 bg-gray-50/60 dark:bg-white/[0.02] border-t border-gray-200/70 dark:border-white/5">
-                  <button
-                    onClick={markAllAsRead}
-                    className="w-full py-2 text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-[#80FF00] hover:bg-emerald-50 dark:hover:bg-[#80FF00]/10 rounded-xl transition-all"
-                  >
-                    Mark all as read
-                  </button>
-                </div>
+                    {/* Footer */}
+                    {activeTab === 'notifications' && unreadCount > 0 && (
+                      <div className="p-4 bg-gray-50/60 dark:bg-white/[0.02] border-t border-gray-200/70 dark:border-white/10 flex-shrink-0">
+                        <button
+                          onClick={markAllAsRead}
+                          className="w-full py-2 text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-[#80FF00] hover:bg-emerald-50 dark:hover:bg-[#80FF00]/10 rounded-xl transition-all"
+                        >
+                          Mark all as read
+                        </button>
+                      </div>
+                    )}
+                  </motion.div>
+                </>
               )}
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+            </AnimatePresence>,
+            document.body
+          )
+        : null}
     </div>
   );
 }

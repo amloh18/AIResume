@@ -230,7 +230,7 @@ function EditorSkeleton() {
   return (
     <div className="dashboard-workspace min-h-screen flex flex-col overflow-hidden pl-3 lg:pl-0 pb-3">
       {/* Editor top bar skeleton */}
-      <div className="h-16 shrink-0 bg-white dark:bg-[#141810] border-b border-[var(--border-primary)] flex items-center gap-3 px-4">
+      <div className="h-14 shrink-0 bg-white dark:bg-[#141810] border-b border-[var(--border-primary)] flex items-center gap-3 px-4">
         <Skeleton className="h-9 w-9 rounded-lg" />
         <Skeleton className="h-5 w-40" />
         <div className="ml-auto flex items-center gap-2">

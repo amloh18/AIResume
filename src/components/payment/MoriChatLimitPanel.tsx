@@ -43,7 +43,7 @@ export default function MoriChatLimitPanel({
       <button
         onClick={() =>
           openPaymentModal({
-            preselectedPlanKey: 'pro_monthly',
+            preselectedPlanKey: 'focused_monthly',
             triggerContext,
             returnUrl: typeof window !== 'undefined' ? window.location.href : undefined,
           })

@@ -99,7 +99,7 @@ export const PROMOTION_TYPES: PromotionConfig[] = [
       'Early access to new AI features'
     ],
     ctaText: 'Go Pro & Save',
-    ctaRoute: 'payment-modal:pro_monthly',
+    ctaRoute: 'payment-modal:focused_monthly',
     imageUrl: IMAGE_URLS.upgrade,
     contexts: ['credit-low'],
     priority: 9,
@@ -116,7 +116,7 @@ export const PROMOTION_TYPES: PromotionConfig[] = [
       'Priority AI Processing'
     ],
     ctaText: 'Unlock Unlimited Access',
-    ctaRoute: 'payment-modal:pro_monthly',
+    ctaRoute: 'payment-modal:focused_monthly',
     imageUrl: IMAGE_URLS.upgrade,
     contexts: ['credit-exhausted'],
     priority: 10,
@@ -133,7 +133,7 @@ export const PROMOTION_TYPES: PromotionConfig[] = [
       'Premium Resume Templates'
     ],
     ctaText: 'Supercharge My Search',
-    ctaRoute: 'payment-modal:pro_monthly',
+    ctaRoute: 'payment-modal:focused_monthly',
     imageUrl: IMAGE_URLS.upgrade,
     contexts: ['free-user', 'dashboard'],
     priority: 6,
@@ -150,7 +150,7 @@ export const PROMOTION_TYPES: PromotionConfig[] = [
       'Never miss a follow-up deadline'
     ],
     ctaText: 'Add Your First Job',
-    ctaRoute: '/dashboard/tracker?action=add-job',
+    ctaRoute: '/dashboard/jobs?tab=applications&newJob=1',
     imageUrl: IMAGE_URLS.jobTracking,
     contexts: ['dashboard'],
     priority: 5,

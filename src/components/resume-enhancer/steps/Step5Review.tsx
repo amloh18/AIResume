@@ -11,7 +11,6 @@ import { useRouter } from 'next/navigation';
 import { CentralScoreManager, type CVScoreBreakdown, type ATSScoreBreakdown } from '@/lib/pill-engine/CentralScoreManager';
 import TemplateSelector from '@/components/resume-enhancer/TemplateSelector';
 import DownloadModal, { DocumentType, FormatType } from '@/components/ui/DownloadModal';
-import ScorecardPanel from '@/components/resume-enhancer/panels/ScorecardPanel';
 import DateFormatSelector from '@/components/resume-enhancer/DateFormatSelector';
 import { getDefaultPaperSize } from '@/lib/services/paperSizeService';
 import type { DateFormatStyle } from '@/lib/utils/textFormatting';
@@ -784,9 +783,9 @@ export default function Step5Review({ onSave }: { onSave?: () => Promise<void> }
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-64px)] min-h-0 overflow-hidden bg-[#f3f2ee] dark:bg-[#0f140a]">
+    <div className="flex flex-col h-full flex-1 min-h-0 overflow-hidden bg-[#f3f2ee] dark:bg-[#0f140a]">
       {/* 3 Panels Layout: Left (Metrics/Recruiter), Center (Preview Canvas), Right (Actions/Next Steps) */}
-      <div className="flex-1 flex flex-col lg:flex-row gap-6 min-h-0 overflow-hidden p-6 max-w-[1700px] mx-auto w-full">
+      <div className="flex-1 flex flex-col lg:flex-row gap-6 min-h-0 overflow-hidden px-6 pt-3 pb-6 max-w-[1700px] mx-auto w-full">
         
         {/* LEFT PANEL - Scorecard & Recruiter Preview */}
         <div className="w-full lg:w-[280px] xl:w-[320px] lg:order-1 flex flex-col gap-5 overflow-y-auto scrollbar-hide shrink-0">
@@ -1177,7 +1176,7 @@ export default function Step5Review({ onSave }: { onSave?: () => Promise<void> }
           {/* View in Tracker */}
           {isJourneyCV && (
             <button
-              onClick={() => router.push('/dashboard/tracker')}
+              onClick={() => router.push('/dashboard/jobs?tab=applications')}
               className="w-full p-5 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white rounded-2xl text-left font-bold transition-all shadow-md shadow-blue-500/10 active:scale-[0.98] group flex items-center justify-between"
             >
               <div className="flex items-start gap-4">
@@ -1402,7 +1401,7 @@ export default function Step5Review({ onSave }: { onSave?: () => Promise<void> }
         }}
         onPaywallRequired={() => {
           openPaymentModal({
-            preselectedPlanKey: 'pro_monthly',
+            preselectedPlanKey: 'focused_monthly',
             triggerContext: 'docx-export',
             returnUrl: window.location.href
           });

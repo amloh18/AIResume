@@ -98,6 +98,42 @@ const PORTALS: PortalCardConfig[] = [
     authType: 'Free Public Index / API',
     isPublicApi: true,
   },
+  {
+    id: 'lever',
+    name: 'Lever Job Postings',
+    category: 'Startup & Tech Boards',
+    icon: Briefcase,
+    color: 'bg-violet-600',
+    borderHover: 'hover:border-violet-500/50',
+    gradient: 'from-violet-50/70 via-white to-lime-50/30 dark:from-violet-950/20 dark:via-[#141810] dark:to-lime-950/10',
+    desc: 'Direct postings from Lever-powered career pages (Netflix, Notion, Figma, Spotify, OpenAI).',
+    authType: 'Direct Public API',
+    isPublicApi: true,
+  },
+  {
+    id: 'ashby',
+    name: 'Ashby Job Boards',
+    category: 'Compensation-Enriched Boards',
+    icon: Building2,
+    color: 'bg-rose-600',
+    borderHover: 'hover:border-rose-500/50',
+    gradient: 'from-rose-50/70 via-white to-lime-50/30 dark:from-rose-950/20 dark:via-[#141810] dark:to-lime-950/10',
+    desc: 'Public Ashby boards with salary/compensation data included (Notion, Figma, Ramp, Vercel).',
+    authType: 'Direct Public API',
+    isPublicApi: true,
+  },
+  {
+    id: 'workable',
+    name: 'Workable Job Boards',
+    category: 'SMB & Agency Boards',
+    icon: Search,
+    color: 'bg-cyan-600',
+    borderHover: 'hover:border-cyan-500/50',
+    gradient: 'from-cyan-50/70 via-white to-lime-50/30 dark:from-cyan-950/20 dark:via-[#141810] dark:to-lime-950/10',
+    desc: 'Public Workable job boards for SMBs and agencies (Zapier, Sentry, Automattic, GitBook).',
+    authType: 'Direct Public API',
+    isPublicApi: true,
+  },
 ];
 
 export const PortalIntegrationsPanel: React.FC<PortalIntegrationsPanelProps> = ({
@@ -109,13 +145,15 @@ export const PortalIntegrationsPanel: React.FC<PortalIntegrationsPanelProps> = (
 
   const [naukriData, setNaukriData] = useState<PortalState | null>(null);
   const [indeedData, setIndeedData] = useState<PortalState | null>(null);
+  const [portalStats, setPortalStats] = useState<Map<string, PortalStats>>(new Map());
 
   const fetchStatus = async () => {
     try {
       setLoading(true);
-      const [naukriRes, indeedRes] = await Promise.all([
+      const [naukriRes, indeedRes, statsRes] = await Promise.all([
         fetch('/api/integrations/naukri/session'),
         fetch('/api/integrations/indeed/session'),
+        fetch('/api/jobs/portal-stats'),
       ]);
 
       if (naukriRes.ok) {
@@ -126,6 +164,15 @@ export const PortalIntegrationsPanel: React.FC<PortalIntegrationsPanelProps> = (
       if (indeedRes.ok) {
         const iJson = await indeedRes.json();
         setIndeedData(iJson);
+      }
+
+      if (statsRes.ok) {
+        const statsData = await statsRes.json();
+        const map = new Map<string, PortalStats>();
+        for (const s of statsData.stats || []) {
+          map.set(s.portal, { totalFetched: s.jobsDiscovered, totalApplied: s.applications });
+        }
+        setPortalStats(map);
       }
 
       if (onConnectionChange) {
@@ -145,12 +192,18 @@ export const PortalIntegrationsPanel: React.FC<PortalIntegrationsPanelProps> = (
   }, []);
 
   const getPortalStatus = (portalId: PortalType): { connected: boolean; statusLabel: string; stats: PortalStats } => {
+    // Merge real per-portal stats from the database
+    const realStats = portalStats.get(portalId) || { totalFetched: 0, totalApplied: 0 };
+
     if (portalId === 'naukri') {
       const active = naukriData?.sessionStatus === 'active';
       return {
         connected: active,
         statusLabel: active ? 'Connected & Active' : 'Not Linked',
-        stats: naukriData?.stats || { totalFetched: 0, totalApplied: 0 },
+        stats: {
+          totalFetched: realStats.totalFetched || naukriData?.stats?.totalFetched || 0,
+          totalApplied: realStats.totalApplied || naukriData?.stats?.totalApplied || 0,
+        },
       };
     }
     if (portalId === 'indeed') {
@@ -158,14 +211,17 @@ export const PortalIntegrationsPanel: React.FC<PortalIntegrationsPanelProps> = (
       return {
         connected: active,
         statusLabel: active ? 'Connected & Active' : 'Not Linked',
-        stats: indeedData?.stats || { totalFetched: 0, totalApplied: 0 },
+        stats: {
+          totalFetched: realStats.totalFetched || indeedData?.stats?.totalFetched || 0,
+          totalApplied: realStats.totalApplied || indeedData?.stats?.totalApplied || 0,
+        },
       };
     }
-    // Greenhouse and Adzuna are free live streams
+    // Greenhouse, Adzuna, Lever, Ashby, Workable are public APIs — no user login required
     return {
-      connected: true,
-      statusLabel: 'Active Stream',
-      stats: { totalFetched: 150, totalApplied: 24 },
+      connected: false,
+      statusLabel: 'Available (No login required)',
+      stats: realStats,
     };
   };
 

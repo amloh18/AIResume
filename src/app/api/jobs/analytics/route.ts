@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
     // Calculate analytics
     const totalJobs = jobs.length;
     const jobsByStatus = {
-      draft: jobs.filter(j => j.status === 'draft').length,
+      saved: jobs.filter(j => j.status === 'saved').length,
       created: jobs.filter(j => j.status === 'created').length,
       applied: jobs.filter(j => j.status === 'applied').length,
       interview: jobs.filter(j => j.status === 'interview').length,
@@ -87,18 +87,18 @@ export async function GET(request: NextRequest) {
     });
 
     // Success rate by source
-    const jobsBySource: Record<string, { total: number; offers: number; drafts: number; created: number }> = {};
+    const jobsBySource: Record<string, { total: number; offers: number; saved: number; created: number }> = {};
     jobs.forEach(job => {
       const source = job.source || 'unknown';
       if (!jobsBySource[source]) {
-        jobsBySource[source] = { total: 0, offers: 0, drafts: 0, created: 0 };
+        jobsBySource[source] = { total: 0, offers: 0, saved: 0, created: 0 };
       }
       jobsBySource[source].total++;
       if (job.status === 'offer') {
         jobsBySource[source].offers++;
       }
-      if (job.status === 'draft') {
-        jobsBySource[source].drafts++;
+      if (job.status === 'saved') {
+        jobsBySource[source].saved++;
       }
       if (job.status === 'created' || job.status === 'applied' || job.status === 'interview' || job.status === 'offer') {
         jobsBySource[source].created++;
@@ -106,30 +106,30 @@ export async function GET(request: NextRequest) {
     });
 
     const successRateBySource: Record<string, number> = {};
-    const sourceROI: Record<string, { conversionRate: number; draftRate: number; createdRate: number }> = {};
+    const sourceROI: Record<string, { conversionRate: number; savedRate: number; createdRate: number }> = {};
     Object.keys(jobsBySource).forEach(source => {
-      const { total, offers, drafts, created } = jobsBySource[source];
+      const { total, offers, saved, created } = jobsBySource[source];
       successRateBySource[source] = total > 0 ? Math.round((offers / total) * 100) : 0;
       
-      // Source ROI: conversion rate for created jobs (excludes drafts)
+      // Source ROI: conversion rate for created jobs (excludes saved)
       const conversionRate = created > 0 ? Math.round((offers / created) * 100) : 0;
-      const draftRate = total > 0 ? Math.round((drafts / total) * 100) : 0;
+      const savedRate = total > 0 ? Math.round((saved / total) * 100) : 0;
       const createdRate = total > 0 ? Math.round((created / total) * 100) : 0;
       
       sourceROI[source] = {
         conversionRate,
-        draftRate,
+        savedRate,
         createdRate
       };
     });
 
-    // Ghost Rate: Jobs in "Applied" status >30 days with no updates (exclude drafts)
+    // Ghost Rate: Jobs in "Applied" status >30 days with no updates (exclude saved)
     const now = new Date();
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     
     const appliedJobs = jobs.filter(job => 
       job.status === 'applied' && 
-      job.status !== 'draft' // Exclude drafts
+      job.status !== 'saved' // Exclude saved
     );
     
     const ghostJobs = appliedJobs.filter(job => {

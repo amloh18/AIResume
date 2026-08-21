@@ -1,7 +1,7 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IPricingPlan extends Document {
-  key: 'free' | 'starter_monthly' | 'starter_yearly' | 'focused_monthly' | 'focused_yearly' | 'smart_quarterly' | 'smart_yearly' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly' | 'pro_lifetime';
+  key: 'free' | 'starter_monthly' | 'starter_yearly' | 'focused_monthly' | 'focused_yearly' | 'smart_quarterly' | 'smart_yearly' | 'focused_monthly' | 'focused_quarterly' | 'focused_yearly' | 'focused_yearly';
   name: string;
   description: string;
 
@@ -85,7 +85,7 @@ const pricingPlanSchema = new Schema<IPricingPlan>({
       'free', 'starter_monthly', 'starter_yearly', 
       'focused_monthly', 'focused_yearly', 
       'smart_quarterly', 'smart_yearly',
-      'pro_monthly', 'pro_quarterly', 'pro_yearly', 'pro_lifetime'
+      'focused_monthly', 'focused_quarterly', 'focused_yearly', 'focused_yearly'
     ]
   },
   name: {

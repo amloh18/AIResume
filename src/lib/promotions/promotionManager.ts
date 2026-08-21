@@ -154,10 +154,10 @@ function buildCTARoute(
     case 'upgrade-credit-exhausted':
     case 'upgrade-free-user':
       // Use special route that will be handled by FeaturePromotionCard to open payment modal
-      return 'payment-modal:pro_monthly';
+      return 'payment-modal:focused_monthly';
     
     case 'job-tracking-no-jobs':
-      return '/dashboard/tracker?action=add-job';
+      return '/dashboard/jobs?tab=applications&newJob=1';
     
     default:
       return promotion.ctaRoute || '/dashboard';

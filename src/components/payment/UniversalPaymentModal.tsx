@@ -87,12 +87,6 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
     starter_yearly: 1,
     focused_monthly: 2,
     focused_yearly: 2,
-    smart_quarterly: 3,
-    smart_yearly: 3,
-    pro_monthly: 2,
-    pro_quarterly: 2,
-    pro_yearly: 3,
-    pro_lifetime: 3
   };
 
   const getTransitionInfo = (targetPlanKey: string) => {
@@ -305,13 +299,13 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
           const dbPlan = plan as unknown as DatabasePricingPlan;
           // Determine the correct price based on plan key and billing interval
         let planPrice = 0;
-        if (plan.key === 'pro_monthly') {
+        if (plan.key === 'focused_monthly') {
           planPrice = dbPlan.price_monthly || 0;
-        } else if (plan.key === 'pro_quarterly') {
+        } else if (plan.key === 'focused_quarterly') {
           planPrice = dbPlan.price_quarterly || 0;
-        } else if (plan.key === 'pro_yearly') {
+        } else if (plan.key === 'focused_yearly') {
           planPrice = dbPlan.price_yearly || 0;
-        } else if (plan.key === 'pro_lifetime') {
+        } else if (plan.key === 'focused_yearly') {
           planPrice = dbPlan.price_one_time || 0;
         } else {
           planPrice = getEffectivePrice(dbPlan) || 0;
@@ -349,7 +343,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
       // Default to first paid plan (prefer professional plans)
       // Try to find a professional plan first
       const professionalPlan = pricingPlans.find((p: PricingPlan) =>
-        p.key === 'pro_monthly' || p.key === 'pro_quarterly' || p.key === 'pro_yearly' || p.key === 'pro_lifetime'
+        p.key === 'focused_monthly' || p.key === 'focused_quarterly' || p.key === 'focused_yearly' || p.key === 'focused_yearly'
       );
 
       // Fallback to first paid plan (not free)
@@ -360,13 +354,13 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
         const dbPlan = paidPlan as unknown as DatabasePricingPlan;
         // Determine the correct price based on plan key and billing interval
         let planPrice = 0;
-        if (paidPlan.key === 'pro_monthly') {
+        if (paidPlan.key === 'focused_monthly') {
           planPrice = dbPlan.price_monthly || 0;
-        } else if (paidPlan.key === 'pro_quarterly') {
+        } else if (paidPlan.key === 'focused_quarterly') {
           planPrice = dbPlan.price_quarterly || 0;
-        } else if (paidPlan.key === 'pro_yearly') {
+        } else if (paidPlan.key === 'focused_yearly') {
           planPrice = dbPlan.price_yearly || 0;
-        } else if (paidPlan.key === 'pro_lifetime') {
+        } else if (paidPlan.key === 'focused_yearly') {
           planPrice = dbPlan.price_one_time || 0;
         } else {
           planPrice = getEffectivePrice(dbPlan) || 0;
@@ -590,24 +584,22 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
     const promotional = getPromotionalPricing(plan);
     const hasPromo = promotional && promotional.pricing;
     
-    if (plan.key.includes('pro_monthly')) {
+    if (plan.key.includes('focused_monthly')) {
       return (hasPromo && promotional.pricing.monthly) ? promotional.pricing.monthly : (dbPlan.price_monthly || 12.99);
-    } else if (plan.key.includes('pro_quarterly')) {
+    } else if (plan.key.includes('focused_quarterly')) {
       return (hasPromo && promotional.pricing.quarterly) ? promotional.pricing.quarterly : (dbPlan.price_quarterly || 34.99);
-    } else if (plan.key.includes('pro_yearly')) {
+    } else if (plan.key.includes('focused_yearly')) {
       return (hasPromo && promotional.pricing.yearly) ? promotional.pricing.yearly : (dbPlan.price_yearly || 99.00);
-    } else if (plan.key.includes('pro_lifetime')) {
+    } else if (plan.key.includes('focused_yearly')) {
       return (hasPromo && promotional.pricing.oneTime) ? promotional.pricing.oneTime : (dbPlan.price_one_time || 199.00);
+    } else if (plan.key === 'starter_monthly') {
+      return 0;
+    } else if (plan.key === 'starter_yearly') {
+      return 19.99;
     } else if (plan.key === 'focused_monthly') {
       return 9.99;
     } else if (plan.key === 'focused_yearly') {
       return 79.99;
-    } else if (plan.key === 'smart_quarterly') {
-      return 59.99;
-    } else if (plan.key === 'smart_yearly') {
-      return 199.00;
-    } else if (plan.key === 'starter_yearly') {
-      return 39.99;
     }
 
     return getEffectivePrice(dbPlan) || 0;
@@ -875,12 +867,6 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
       starter_yearly: 2,
       focused_monthly: 3,
       focused_yearly: 4,
-      smart_quarterly: 5,
-      smart_yearly: 6,
-      pro_monthly: 3,
-      pro_quarterly: 4,
-      pro_yearly: 5,
-      pro_lifetime: 7
     };
     
     const targetOrder = planOrder[plan.key] ?? 0;
@@ -894,13 +880,12 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
     if (key === 'free') return Brain;
     if (key.includes('starter')) return Target;
     if (key.includes('focused')) return Sparkles;
-    if (key.includes('smart')) return Zap;
     
     switch (key) {
-      case 'pro_monthly': return Crown;
-      case 'pro_quarterly': return Users;
-      case 'pro_yearly': return Globe;
-      case 'pro_lifetime': return Star;
+      case 'focused_monthly': return Crown;
+      case 'focused_quarterly': return Users;
+      case 'focused_yearly': return Globe;
+      case 'focused_yearly': return Star;
       default: return Brain;
     }
   };
@@ -908,7 +893,6 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
   const getPlanColor = (planKey: string) => {
     const key = planKey.toLowerCase();
     if (key.includes('focused')) return 'text-lime-500 bg-lime-500/10';
-    if (key.includes('smart')) return 'text-purple-500 bg-purple-500/10';
     
     switch (key) {
       case 'free': return 'text-gray-600 bg-gray-100 dark:text-gray-300 dark:bg-gray-800';
@@ -1197,21 +1181,26 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                           }
                         }
 
-                        // Filter plans based on selected billing cycle
+                        // Filter plans based on selected billing cycle for the 4 canonical plans
                         const subscriptionPlans = availablePlans.filter(plan => {
                           if (adminMode) return true;
                           const key = plan.key.toLowerCase();
+                          if (key.includes('smart')) return false;
                           if (billingCycle === 'yearly') {
-                            return key.includes('yearly') || key.includes('lifetime');
+                            return key === 'starter_yearly' || key === 'focused_yearly';
                           } else {
-                            // Exclude starter_monthly in the main cards list for monthly billing view
-                            if (key === 'starter_monthly') return false;
-                            return key.includes('monthly') || key.includes('quarterly');
+                            return key === 'starter_monthly' || key === 'focused_monthly';
                           }
+                        }).sort((a, b) => {
+                          if (a.key.includes('starter')) return -1;
+                          if (b.key.includes('starter')) return 1;
+                          return 0;
                         });
 
-                        // Fallback: if no plans for selected cycle, show all
-                        const displayPlans = subscriptionPlans.length > 0 ? subscriptionPlans : availablePlans;
+                        // Fallback: if no plans for selected cycle, show all non-smart plans
+                        const displayPlans = subscriptionPlans.length > 0
+                          ? subscriptionPlans
+                          : availablePlans.filter(p => !p.key.toLowerCase().includes('smart'));
 
                         return (
                           <div className="flex flex-col gap-6 max-w-full mx-auto w-full transition-all duration-300">
@@ -1249,7 +1238,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                                     }`}
                                   >
                                     Yearly
-                                    <span className="bg-lime-500 text-black text-[9px] px-1.5 py-0.5 rounded-md font-black">SAVE 25%</span>
+                                    <span className="bg-lime-500 text-black text-[9px] px-1.5 py-0.5 rounded-md font-black">SAVE 50%</span>
                                   </button>
                                 </div>
                               )}
@@ -1276,7 +1265,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
 
                             {/* Subscription Plans - Grid Layout */}
                             {displayPlans.length > 0 && (
-                              <div className={`grid grid-cols-1 ${displayPlans.length === 2 ? 'tablet:grid-cols-2 max-w-[800px] mx-auto' : 'tablet:grid-cols-3'} gap-3 px-0 w-full`}>
+                              <div className={`grid grid-cols-1 ${displayPlans.length === 2 ? 'tablet:grid-cols-2 max-w-[800px] mx-auto' : 'tablet:grid-cols-3'} gap-4 px-0 w-full`}>
                                 {displayPlans.map((plan) => {
                                   const dbPlan = plan as unknown as DatabasePricingPlan;
                                   const regionalPrice = getRegionalPrice(dbPlan);
@@ -1286,17 +1275,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                                   const isSelected = selectedPlan?.key === plan.key;
                                   const Icon = getPlanIcon(plan.key);
                                   const isFocused = plan.key.includes('focused');
-
-                                  const totalAmount = regionalPrice || `${currencySymbol}${effectivePrice}`;
-                                  const isQuarterlyPlan = plan.key.includes('quarterly') || plan.key.includes('quaterly');
-                                  
-                                  const displayPrice = isQuarterlyPlan
-                                    ? totalAmount
-                                    : (monthlyEquivalent.showMonthly ? monthlyEquivalent.price : totalAmount);
-                                    
-                                  const totalText = isQuarterlyPlan
-                                    ? ''
-                                    : (monthlyEquivalent.showMonthly ? `${totalAmount} total` : '');
+                                  const isFocusedYearly = plan.key === 'focused_yearly';
 
                                   return (
                                     <div
@@ -1328,8 +1307,8 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                                         <h3 className="font-bold text-lg mb-1 text-gray-900 dark:text-white">
                                           {plan.name.replace(' Monthly', '').replace(' Yearly', '').replace(' Quarterly', '')}
                                         </h3>
-                                        {isFocused && (
-                                          <span className="text-[9px] bg-lime-500 text-black px-2 py-0.5 rounded-md font-black uppercase tracking-wider mb-2 inline-block">
+                                        {isFocusedYearly && (
+                                          <span className="text-[9px] bg-lime-500 text-black px-2 py-0.5 rounded-md font-black uppercase tracking-wider mb-2 inline-block shadow-sm">
                                             Most Popular
                                           </span>
                                         )}
@@ -1347,33 +1326,59 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                                                  /month
                                                </span>
                                              </div>
-                                             <p className="text-[10px] font-bold text-indigo-500 dark:text-indigo-400 mt-1 leading-tight">
-                                               Free Subscription ($0 invoices will be emailed)
+                                             <p className="text-[10px] font-bold text-lime-600 dark:text-lime-400 mt-1 leading-tight">
+                                               Free for now ($0 invoices will be emailed)
+                                             </p>
+                                           </div>
+                                         ) : plan.key === 'starter_yearly' ? (
+                                           <div className="mt-2">
+                                             <div className="flex items-baseline gap-1">
+                                               <span className="text-3xl font-black text-gray-900 dark:text-white">
+                                                 $2
+                                               </span>
+                                               <span className="text-xs font-bold text-gray-500">
+                                                 /month
+                                               </span>
+                                             </div>
+                                             <p className="text-[10px] font-bold mt-1 text-gray-500 dark:text-gray-400">
+                                               $19.99 total (billed annually)
+                                             </p>
+                                           </div>
+                                         ) : plan.key === 'focused_monthly' ? (
+                                           <div className="mt-2">
+                                             <div className="flex items-baseline gap-1">
+                                               <span className="text-3xl font-black text-gray-900 dark:text-white">
+                                                 $9.99
+                                               </span>
+                                               <span className="text-xs font-bold text-gray-500">
+                                                 /month
+                                               </span>
+                                             </div>
+                                           </div>
+                                         ) : plan.key === 'focused_yearly' ? (
+                                           <div className="mt-2">
+                                             <div className="flex items-baseline gap-1">
+                                               <span className="text-3xl font-black text-gray-900 dark:text-white">
+                                                 $7
+                                               </span>
+                                               <span className="text-xs font-bold text-gray-500">
+                                                 /month
+                                               </span>
+                                             </div>
+                                             <p className="text-[10px] font-bold mt-1 text-gray-500 dark:text-gray-400">
+                                               $79.99 total (billed annually)
                                              </p>
                                            </div>
                                          ) : (
                                            <>
                                              <div className="flex items-baseline gap-1 mt-2">
                                                <span className="text-3xl font-black text-gray-900 dark:text-white">
-                                                 {displayPrice.split('/')[0]}
+                                                 {monthlyEquivalent.showMonthly ? monthlyEquivalent.price : (regionalPrice || `$${effectivePrice}`)}
                                                </span>
                                                <span className="text-xs font-bold text-gray-500">
-                                                 {isQuarterlyPlan
-                                                   ? '/quarter'
-                                                   : (monthlyEquivalent.showMonthly 
-                                                     ? '/month' 
-                                                     : plan.key.includes('lifetime') 
-                                                       ? '/one-time' 
-                                                       : plan.key.includes('monthly')
-                                                         ? '/month'
-                                                         : '/period')}
+                                                 {monthlyEquivalent.showMonthly ? '/month' : '/period'}
                                                </span>
                                              </div>
-                                             {totalText && (
-                                               <p className="text-[10px] font-bold mt-1 text-gray-500">
-                                                 {totalText}
-                                               </p>
-                                             )}
                                            </>
                                          )}
                                       </div>
@@ -1487,10 +1492,10 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                             <h3 className="text-2xl font-black text-gray-900 dark:text-white mb-1">
                               {(() => {
                                 if (!selectedPlan) return 'No Plan Selected';
-                                if (selectedPlan.key === 'pro_lifetime') return 'Pro Annual Plan';
-                                if (selectedPlan.key === 'pro_yearly') return 'Pro Yearly Plan';
-                                if (selectedPlan.key === 'pro_quarterly') return 'Pro Quarterly Plan';
-                                if (selectedPlan.key === 'pro_monthly') return 'Pro Monthly Plan';
+                                if (selectedPlan.key === 'focused_yearly') return 'Pro Annual Plan';
+                                if (selectedPlan.key === 'focused_yearly') return 'Pro Yearly Plan';
+                                if (selectedPlan.key === 'focused_quarterly') return 'Pro Quarterly Plan';
+                                if (selectedPlan.key === 'focused_monthly') return 'Pro Monthly Plan';
                                 return selectedPlan.name || `Plan ${selectedPlan.key}`;
                               })()}
                             </h3>

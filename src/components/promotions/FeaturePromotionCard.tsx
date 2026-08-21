@@ -72,7 +72,7 @@ export default function FeaturePromotionCard({ promotion, onDismiss }: FeaturePr
     if (promotion.ctaRoute.startsWith('payment-modal:')) {
       const planKey = promotion.ctaRoute.replace('payment-modal:', '');
       openPaymentModal({
-        preselectedPlanKey: planKey || 'pro_monthly',
+        preselectedPlanKey: planKey || 'focused_monthly',
         triggerContext: 'feature-promotion',
         returnUrl: window.location.href,
       });

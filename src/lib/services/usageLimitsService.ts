@@ -37,13 +37,6 @@ export interface ActionContext {
 const UNLIMITED_PLAN_KEYS = [
   'focused_monthly',
   'focused_yearly',
-  'smart_quarterly',
-  'smart_yearly',
-  'pro_monthly',
-  'pro_quarterly',
-  'pro_yearly',
-  'pro_lifetime',
-  'pro',
   'starter_yearly',
 ];
 
@@ -92,7 +85,7 @@ class UsageLimitsService {
       const GRACE_PERIOD_MS = GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000;
 
       // For quarterly/yearly (one-time payments): check accessExpiresAt
-      if ((user.currentPlanKey === 'pro_quarterly' || user.currentPlanKey === 'pro_lifetime' || user.currentPlanKey === 'pro_lifetime') && subscription.accessExpiresAt) {
+      if ((user.currentPlanKey === 'focused_quarterly' || user.currentPlanKey === 'focused_yearly' || user.currentPlanKey === 'focused_yearly') && subscription.accessExpiresAt) {
         const expiresAt = new Date(subscription.accessExpiresAt);
         const daysRemaining = Math.max(0, (expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
@@ -127,7 +120,7 @@ class UsageLimitsService {
       }
 
       // For lifetime plan: always has access
-      if (user.currentPlanKey === 'pro_lifetime') {
+      if (user.currentPlanKey === 'focused_yearly') {
         return {
           hasAccess: true,
           subscription,
@@ -136,7 +129,7 @@ class UsageLimitsService {
       }
 
       // For monthly (recurring): check currentPeriodEnd
-      if (user.currentPlanKey === 'pro_monthly' && subscription.currentPeriodEnd) {
+      if (user.currentPlanKey === 'focused_monthly' && subscription.currentPeriodEnd) {
         const periodEnd = new Date(subscription.currentPeriodEnd);
         const daysRemaining = Math.max(0, (periodEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 

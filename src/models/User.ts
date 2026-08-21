@@ -7,12 +7,10 @@ export type UserPlanKey =
   | 'starter_yearly'
   | 'focused_monthly'
   | 'focused_yearly'
-  | 'smart_quarterly'
-  | 'smart_yearly'
-  | 'pro_monthly'
-  | 'pro_quarterly'
-  | 'pro_yearly'
-  | 'pro_lifetime';
+  | 'focused_monthly'
+  | 'focused_quarterly'
+  | 'focused_yearly'
+  | 'focused_yearly';
 
 export type UserLifecycleState =
   | 'NEW'
@@ -30,12 +28,10 @@ const USER_PLAN_KEYS: UserPlanKey[] = [
   'starter_yearly',
   'focused_monthly',
   'focused_yearly',
-  'smart_quarterly',
-  'smart_yearly',
-  'pro_monthly',
-  'pro_quarterly',
-  'pro_yearly',
-  'pro_lifetime'
+  'focused_monthly',
+  'focused_quarterly',
+  'focused_yearly',
+  'focused_yearly'
 ];
 
 export interface IUser extends Document {

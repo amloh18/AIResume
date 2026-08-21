@@ -37,11 +37,7 @@ export function QuotaIndicator({ userId, initialData, onRefresh }: QuotaIndicato
     
     async function fetchQuota() {
       if (!userId) {
-        // Use mock data for demo
-        setQuota({
-          hourly: { used: 0, limit: 5, remaining: 5 },
-          daily: { used: 0, limit: 10, remaining: 10 },
-        });
+        setError('Sign in to view quota');
         setLoading(false);
         return;
       }
@@ -57,11 +53,6 @@ export function QuotaIndicator({ userId, initialData, onRefresh }: QuotaIndicato
         }
       } catch (err) {
         setError('Failed to load quota');
-        // Use fallback
-        setQuota({
-          hourly: { used: 0, limit: 5, remaining: 5 },
-          daily: { used: 0, limit: 10, remaining: 10 },
-        });
       } finally {
         setLoading(false);
       }

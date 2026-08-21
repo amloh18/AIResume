@@ -3,6 +3,7 @@
 import React, { useMemo, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import { getCvScoreForDisplay } from '@/lib/utils/cv-scoring';
 import {
   FileText,
   Briefcase,
@@ -19,7 +20,6 @@ import {
   ArrowRight,
   Clock,
   Sparkles,
-  Activity,
   CheckCircle2,
   AlertCircle,
   TrendingUp,
@@ -47,14 +47,7 @@ import DocumentPreviewSidebar from '@/components/dashboard/jobs/DocumentPreviewS
 import JobSidebar from '@/components/dashboard/jobs/JobSidebar';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { authenticatedFetch } from '@/lib/utils/apiUtils';
-
-interface ActivityItem {
-  id: string;
-  icon: React.ReactNode;
-  title: string;
-  subtitle?: string;
-  time?: string | null;
-}
+import { useMembership } from '@/lib/hooks/useMembership';
 
 /* ------------------------------------------------------------------ */
 /* Helpers                                                             */
@@ -91,7 +84,7 @@ function cvId(cv: any): string {
 }
 
 function cvAtsScore(cv: any): number {
-  return Math.round(cv?.metadata?.atsScore || cv?.cv_score_master || cv?.atsScore || 0);
+  return Math.round(getCvScoreForDisplay(cv) || 0);
 }
 
 function findLinkedCvForJob(job: any, cvList: any[]): any | null {
@@ -275,7 +268,7 @@ function GreenLabel({ children }: { children: React.ReactNode }) {
 /* KPI strip                                                           */
 /* ------------------------------------------------------------------ */
 
-function computeKpiStats(cvs: any[], jobs: any[], goals: any) {
+function computeKpiStats(cvs: any[], jobs: any[], goals: any, coverLetters: any[] = []) {
   const now = Date.now();
   const weekMs = 7 * 24 * 60 * 60 * 1000;
 
@@ -323,6 +316,35 @@ function computeKpiStats(cvs: any[], jobs: any[], goals: any) {
     : 0;
   const strongMatches = scored.filter((j: any) => (j.atsScore || 0) >= 70).length;
 
+  // Calculate automated AI Journey applications / generated documents
+  const journeyApplicationIds = new Set<string>();
+
+  // Jobs that have linked journey CV, cover letter, or automated flag
+  jobs.forEach((j: any) => {
+    const jId = String(j.id || j._id || '');
+    if (j.journeyId || j.isAutomated || j.autoApplied || j.linkedCvId || j.cvId || j.coverLetterId) {
+      if (jId) journeyApplicationIds.add(jId);
+    }
+  });
+
+  // Journey CVs
+  cvs.forEach((c: any) => {
+    if (c.cvType === 'journey' || c.journeyId || c.isJourney || c.metadata?.journeyId || c.jobId || c.targetJobId) {
+      const key = c.journeyId || c.jobId || c.targetJobId || c.metadata?.jobId || c.id || c._id;
+      if (key) journeyApplicationIds.add(String(key));
+    }
+  });
+
+  // Journey / AI Tailored Cover Letters
+  coverLetters.forEach((cl: any) => {
+    if (cl.journeyId || cl.isJourney || cl.metadata?.journeyId || cl.jobId || cl.jobApplicationId || cl.isTailored) {
+      const key = cl.journeyId || cl.jobId || cl.jobApplicationId || cl.metadata?.jobId || cl.id || cl._id;
+      if (key) journeyApplicationIds.add(String(key));
+    }
+  });
+
+  const aiJourneyUsage = journeyApplicationIds.size;
+
   return {
     cvs: cvs.length,
     cvsThisWeek,
@@ -334,14 +356,37 @@ function computeKpiStats(cvs: any[], jobs: any[], goals: any) {
     interviewsThisWeek,
     avgMatch,
     strongMatches,
-    cvsCreatedThisMonth: goals.cvsCreatedThisMonth,
+    aiJourneyUsage,
+    cvsCreatedThisMonth: goals?.cvsCreatedThisMonth,
   };
 }
 
 function KpiStrip() {
-  const { cvs, jobs, goals, criticalLoading, secondaryLoading } = useDashboardData();
-  const stats = computeKpiStats(cvs, jobs, goals);
-  const kpisLoading = criticalLoading || secondaryLoading.streak || secondaryLoading.goals || secondaryLoading.cvs || secondaryLoading.jobs;
+  const { cvs, coverLetters, jobs, goals, criticalLoading, secondaryLoading } = useDashboardData();
+  const { membership, loading: membershipLoading } = useMembership();
+  const stats = computeKpiStats(cvs, jobs, goals, coverLetters);
+  const kpisLoading = criticalLoading || membershipLoading || secondaryLoading.streak || secondaryLoading.goals || secondaryLoading.cvs || secondaryLoading.jobs;
+
+  const planKey = membership?.planKey || 'free';
+  const isStarterMonthly = planKey === 'starter_monthly' || planKey === 'free';
+  const limit = 10;
+  const remaining = Math.max(0, limit - stats.aiJourneyUsage);
+
+  const usageMetric = isStarterMonthly
+    ? {
+        label: 'Usage',
+        value: `${stats.aiJourneyUsage} / ${limit}`,
+        icon: <Zap size={16} strokeWidth={1.75} />,
+        trend: `${remaining} left`,
+        trendUp: stats.aiJourneyUsage < limit,
+      }
+    : {
+        label: 'Usage',
+        value: 'Unlimited',
+        icon: <Zap size={16} strokeWidth={1.75} />,
+        trend: `${stats.aiJourneyUsage} generated`,
+        trendUp: true,
+      };
 
   const metrics = [
     {
@@ -379,10 +424,11 @@ function KpiStrip() {
       trend: stats.strongMatches > 0 ? `${stats.strongMatches} jobs ≥ 70%` : 'No matches scored',
       trendUp: stats.strongMatches > 0,
     },
+    usageMetric,
   ];
 
   return (
-    <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-xl shadow-sm grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 divide-x divide-y md:divide-y-0 divide-[var(--border-primary)]">
+    <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-xl shadow-sm grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 divide-x divide-y md:divide-y-0 divide-[var(--border-primary)]">
       {metrics.map((m) => (
         <div key={m.label} className="px-5 py-4 flex items-center gap-3.5 min-w-0">
           <div className="w-9 h-9 rounded-full bg-[var(--bg-tertiary)] text-[var(--text-secondary)] flex items-center justify-center shrink-0">
@@ -654,7 +700,7 @@ function RecentJobsPanel() {
       title="Recent Jobs"
       subtitle="Jobs you're tracking and their current status."
       actions={
-        <GhostButton onClick={() => router.push('/dashboard/tracker')}>
+        <GhostButton onClick={() => router.push('/dashboard/jobs?tab=applications')}>
           View all <ArrowUpRight size={13} />
         </GhostButton>
       }
@@ -738,7 +784,7 @@ function RecentJobsPanel() {
                           <Eye size={14} />
                         </button>
                         <button
-                          onClick={() => router.push(`/dashboard/tracker?jobId=${j.id || j._id}&edit=1`)}
+                          onClick={() => router.push(`/dashboard/jobs?tab=applications&jobId=${j.id || j._id}&edit=1`)}
                           aria-label={`Edit ${j.jobTitle}`}
                           title="Edit job"
                           className="w-7 h-7 inline-flex items-center justify-center rounded-md border border-[var(--border-primary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] transition-colors"
@@ -1060,7 +1106,7 @@ function ContinuePanel() {
           ) : undefined
         }
       >
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+        <div className={`grid gap-3.5 ${currentPair.length === 1 ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2'}`}>
           {currentPair.map((job) => (
             <ContinueJobCard
               key={job.id || job._id}
@@ -1257,94 +1303,6 @@ function CvHealthPanel() {
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* Recent Activity                                                     */
-/* ------------------------------------------------------------------ */
-
-function ActivityPanel() {
-  const router = useRouter();
-  const { activities, secondaryLoading } = useDashboardData();
-
-  const items = useMemo<ActivityItem[]>(
-    () =>
-      activities.slice(0, 6).map((a: any, i: number) => {
-        const type = a.type || '';
-        let icon = <Activity size={14} />;
-        let title = a.title || a.description || 'Activity';
-        let subtitle: string | undefined;
-
-        if (type.includes('cover')) {
-          icon = <FileText size={14} />;
-          title = 'Cover letter generated';
-          subtitle = a.description || 'For a recent application';
-        } else if (type.includes('cv') || type.includes('improve') || type.includes('score')) {
-          icon = <Sparkles size={14} />;
-          title = a.title || 'You improved your CV';
-          subtitle = a.description;
-        } else if (type.includes('appl')) {
-          icon = <Send size={14} />;
-          title = a.title || 'Application submitted';
-          subtitle = a.description;
-        } else if (type.includes('job')) {
-          icon = <Briefcase size={14} />;
-          title = a.title || 'Job added';
-          subtitle = a.description;
-        } else if (type.includes('interview')) {
-          icon = <CalendarCheck2 size={14} />;
-          title = a.title || 'Interview scheduled';
-          subtitle = a.description;
-        }
-
-        return { id: a.id || a._id || `activity-${i}`, icon, title, subtitle, time: a.timestamp || a.createdAt || a.updatedAt };
-      }),
-    [activities]
-  );
-
-  return (
-    <Panel
-      title="Recent Activity"
-      actions={
-        <GhostButton onClick={() => router.push('/dashboard/tracker')}>
-          View all <ArrowUpRight size={13} />
-        </GhostButton>
-      }
-    >
-      {items.length === 0 && secondaryLoading.activities ? (
-        <div className="divide-y divide-[var(--border-primary)]" aria-hidden="true">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="py-3 flex items-start gap-3">
-              <Skeleton className="mt-0.5 h-6 w-6 rounded-full" />
-              <div className="flex-1 space-y-1.5">
-                <Skeleton className="h-3.5 w-2/3" />
-                <Skeleton className="h-3 w-1/2" />
-              </div>
-              <Skeleton className="h-3 w-12" />
-            </div>
-          ))}
-        </div>
-      ) : items.length === 0 ? (
-        <div className="py-10 text-center text-sm text-[var(--text-tertiary)]">
-          No activity yet.
-        </div>
-      ) : (
-        <ul className="divide-y divide-[var(--border-primary)]">
-          {items.map((item) => (
-            <li key={item.id} className="py-3 flex items-start gap-3">
-              <span className="mt-0.5 w-6 h-6 rounded-full bg-[var(--bg-tertiary)] text-[var(--text-secondary)] flex items-center justify-center shrink-0">
-                {item.icon}
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-[var(--text-primary)] leading-snug">{item.title}</p>
-                {item.subtitle && <p className="mt-0.5 text-xs text-[var(--text-secondary)] leading-snug">{item.subtitle}</p>}
-              </div>
-              <span className="shrink-0 text-[11px] text-[var(--text-tertiary)] whitespace-nowrap">{timeAgo(item.time)}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-    </Panel>
-  );
-}
 
 /* ------------------------------------------------------------------ */
 /* Root view                                                           */
@@ -1386,7 +1344,6 @@ export default function RedesignedDashboardView() {
           <UpgradeSuggestionCard />
           <ContinuePanel />
           <CvHealthPanel />
-          <ActivityPanel />
         </div>
       </div>
     </div>
