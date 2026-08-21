@@ -283,7 +283,7 @@ const OptimizedNavigation: React.FC = () => {
       'analytics': '/dashboard',
       'jobs': '/dashboard/jobs',
       'jobs-dashboard': '/dashboard/jobs',
-      'tracker': '/dashboard/tracker',
+      'tracker': '/dashboard/jobs?tab=applications',
       'settings': '/dashboard/settings',
       'cv-builder-pro': '/editor',
       'cover-letter-generator': '/editor?tab=cover-letters',
@@ -368,7 +368,7 @@ const OptimizedNavigation: React.FC = () => {
       name: 'Tracker',
       icon: Kanban,
       description: 'Job application tracker',
-      route: '/dashboard/tracker',
+      route: '/dashboard/jobs?tab=applications',
       color: 'text-gray-600 dark:text-gray-400',
       bg: 'bg-gray-50 dark:bg-gray-800/30',
       activeBg: 'bg-[#1a230f] border-[rgb(129,255,0)]/40',
@@ -672,7 +672,7 @@ const OptimizedNavigation: React.FC = () => {
 
             // Calculate time remaining for annual pass (updates with currentTime state)
             const getTimeRemaining = () => {
-              if (currentPlan !== 'pro_yearly' && currentPlan !== 'pro_lifetime') return null;
+              if (currentPlan !== 'focused_yearly' && currentPlan !== 'focused_yearly') return null;
 
               const accessExpiresAt = userData?.subscription?.accessExpiresAt;
               if (!accessExpiresAt) return null;
@@ -689,7 +689,7 @@ const OptimizedNavigation: React.FC = () => {
             };
 
             const timeRemaining = getTimeRemaining();
-            const isAnnual = currentPlan === 'pro_yearly' || currentPlan === 'pro_lifetime';
+            const isAnnual = currentPlan === 'focused_yearly' || currentPlan === 'focused_yearly';
             const isExpired = isAnnual && timeRemaining && timeRemaining.hours === 0 && timeRemaining.minutes === 0;
 
             // Urgency indicators
@@ -772,7 +772,7 @@ const OptimizedNavigation: React.FC = () => {
                   <div className="space-y-2">
                     <motion.button
                       onClick={() => {
-                        setPreselectedPlanKey('pro_yearly');
+                        setPreselectedPlanKey('focused_yearly');
                         setShowSubscriptionModal(true);
                       }}
                       className="w-full bg-white/20 hover:bg-white/30 text-white text-small font-semibold py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5"
@@ -785,7 +785,7 @@ const OptimizedNavigation: React.FC = () => {
 
                     <motion.button
                       onClick={() => {
-                        setPreselectedPlanKey('pro_monthly');
+                        setPreselectedPlanKey('focused_monthly');
                         setShowSubscriptionModal(true);
                       }}
                       className="w-full bg-white/20 hover:bg-white/30 text-white text-small font-semibold py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5"
@@ -814,7 +814,7 @@ const OptimizedNavigation: React.FC = () => {
             }
 
             // Yearly plan card
-            if (currentPlan === 'pro_yearly') {
+            if (currentPlan === 'focused_yearly') {
               return (
                 <motion.div
                   className={`hidden ${isDesktopExpanded ? 'lg:block' : ''} bg-gradient-to-r ${isUrgent ? 'from-red-500 to-red-600' : 'from-purple-500 to-purple-600'} rounded-2xl p-3 text-white border-2 ${isUrgent ? 'border-red-300' : 'border-white/20'}`}
@@ -893,7 +893,7 @@ const OptimizedNavigation: React.FC = () => {
             }
 
             // Monthly plan card (with upsell)
-            if (currentPlan === 'pro_monthly') {
+            if (currentPlan === 'focused_monthly') {
               return (
                 <div className={`hidden ${isDesktopExpanded ? 'lg:block' : ''} rounded-2xl p-3 bg-gradient-to-br from-blue-500 to-blue-600 text-white border-2 border-white/20`}>
                   <div className="flex items-center justify-between mb-2">
@@ -938,7 +938,7 @@ const OptimizedNavigation: React.FC = () => {
             }
 
             // Quarterly plan card (no upsell)
-            if (currentPlan === 'pro_quarterly') {
+            if (currentPlan === 'focused_quarterly') {
               return (
                 <div className={`hidden ${isDesktopExpanded ? 'lg:block' : ''} rounded-2xl p-3 bg-gradient-to-br from-green-500 to-green-600 text-white border-2 border-white/20`}>
                   <div className="flex items-center justify-between mb-2">
@@ -973,7 +973,7 @@ const OptimizedNavigation: React.FC = () => {
             }
 
             // Yearly plan card (no upsell, best value badge)
-            if (currentPlan === 'pro_lifetime') {
+            if (currentPlan === 'focused_yearly') {
               return (
                 <div className={`hidden ${isDesktopExpanded ? 'lg:block' : ''} rounded-2xl p-3 bg-gradient-to-br from-amber-500 to-amber-600 text-white border-2 border-amber-300/50 relative overflow-hidden`}>
                   {/* Best Value Badge */}

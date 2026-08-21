@@ -23,6 +23,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { COMMON_ROLES, COMMON_LOCATIONS } from '@/lib/config/job-constants';
 
 export interface GlobalAutoApplyPreferences {
   enabled: boolean;
@@ -37,29 +38,8 @@ export interface GlobalAutoApplyPreferences {
   useTailoredCV: boolean;
   useCoverLetter: boolean;
   autoAnswerQuestions: boolean;
-  enabledPortals: ('naukri' | 'indeed' | 'greenhouse' | 'adzuna')[];
+  enabledPortals: ('naukri' | 'indeed' | 'greenhouse' | 'adzuna' | 'lever' | 'ashby' | 'workable')[];
 }
-
-const COMMON_ROLES = [
-  'Full Stack Developer',
-  'Software Engineer',
-  'Frontend Developer',
-  'Backend Lead',
-  'React Developer',
-  'Cloud / DevOps Engineer'
-];
-
-const COMMON_LOCATIONS = [
-  'Remote',
-  'Bangalore',
-  'London',
-  'Mumbai',
-  'Hyderabad',
-  'New York',
-  'Pune',
-  'Delhi / NCR',
-  'San Francisco'
-];
 
 interface AutoApplyPanelProps {
   userId?: string;
@@ -85,7 +65,7 @@ export function AutoApplyPanel({ userId, region }: AutoApplyPanelProps) {
     useTailoredCV: true,
     useCoverLetter: true,
     autoAnswerQuestions: true,
-    enabledPortals: ['naukri', 'indeed', 'greenhouse', 'adzuna'],
+    enabledPortals: ['naukri', 'indeed', 'greenhouse', 'adzuna', 'lever', 'ashby', 'workable'],
   });
 
   useEffect(() => {
@@ -491,19 +471,19 @@ export function AutoApplyPanel({ userId, region }: AutoApplyPanelProps) {
               <input
                 type="range"
                 min="5"
-                max="50"
+                max="25"
                 step="5"
                 value={preferences.maxPerDay}
                 onChange={(e) =>
                   setPreferences((prev) => ({
                     ...prev,
-                    maxPerDay: parseInt(e.target.value, 10),
+                    maxPerDay: Math.min(parseInt(e.target.value, 10), 25),
                   }))
                 }
                 className="w-full accent-lime-500"
               />
               <p className="text-[11px] text-gray-400 mt-1">
-                Evenly distributed across active portals with anti-spam rate limiting.
+                Maximum 25 applications per day. Evenly distributed across active portals with anti-spam rate limiting.
               </p>
             </div>
 

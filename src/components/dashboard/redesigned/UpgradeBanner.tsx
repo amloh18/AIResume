@@ -22,42 +22,31 @@ export default function UpgradeBanner({ tier, isYearly = false }: UpgradeBannerP
       case 'starter':
         return {
           title: "Unlock Your Full Career Potential",
-          description: "You're currently using the Starter plan. Upgrade to Focused or Smart to access strategic job tracking, advanced ATS analytics, and our autonomous AI job hunter.",
-          features: ["Strategic Job Pipeline", "Advanced ATS Heatmaps", "AI Cover Letter Engine"],
-          cta: "View Premium Plans",
+          description: "You're currently using the Starter plan. Upgrade to Focused to access unlimited CV edits, Mock Interview Coach, LinkedIn Enhancer, and full Kanban tracking.",
+          features: ["Unlimited CV & Cover Letter Edits", "AI Interview Coach Simulator", "LinkedIn Profile Enhancer"],
+          cta: "Upgrade to Focused",
           gradient: "from-emerald-600 via-teal-700 to-cyan-800",
           icon: <Rocket className="w-12 h-12 text-[#83d60d]" />,
           path: "/pricing",
           planKey: 'focused_monthly'
         };
       case 'focused':
-        return {
-          title: "Go on Autopilot with Smart AI",
-          description: "Don't spend hours applying manually. Smart users unlock our Autonomous Bot that finds, tailors, and applies to jobs for you 24/7 with 95% match accuracy.",
-          features: ["AI Autonomous Bot", "Priority Application Queue", "Behavioral AI Insights"],
-          cta: "Activate Smart Autopilot",
-          gradient: "from-indigo-600 via-purple-700 to-rose-700",
-          icon: <Zap className="w-12 h-12 text-amber-400" />,
-          path: "/pricing?plan=smart",
-          planKey: 'smart_quarterly'
-        };
-      case 'smart':
         if (!isYearly) {
           return {
-            title: "Maximize Your Savings",
-            description: "You're on the Smart monthly plan. Switch to Yearly and save significantly while keeping your career on autopilot for the entire year.",
-            features: ["Full Year of Autopilot", "Unlock Exclusive Templates", "VIP Support Access"],
+            title: "Save Big with Focused Yearly",
+            description: "Switch to Focused Yearly for just $7/mo ($79.99/year) and enjoy all features unlimited all year long.",
+            features: ["All Features Unlimited", "Priority VIP Support", "Save over 30% compared to monthly"],
             cta: "Switch to Yearly & Save",
             gradient: "from-[#0f172a] via-[#1e293b] to-[#334155]",
             icon: <Star className="w-12 h-12 text-[#83d60d]" />,
             path: "/pricing?interval=yearly",
-            planKey: 'smart_yearly'
+            planKey: 'focused_yearly'
           };
         }
         return {
-          title: "You're at the Peak of Innovation",
-          description: "You are currently on the Smart Yearly plan. Your career is on full autopilot. Keep your profile updated for the best AI match results.",
-          features: ["Active AI Autopilot", "Premium Priority", "Full Suite Access"],
+          title: "You're on the Ultimate Plan",
+          description: "You are currently on Focused Yearly with all features unlimited. Keep your CVs and applications optimized for maximum interview callbacks.",
+          features: ["All Features Unlimited", "Priority VIP Support", "Full Suite Access"],
           cta: "Manage Subscription",
           gradient: "from-[#163d32] to-[#0f172a]",
           icon: <ShieldCheck className="w-12 h-12 text-[#83d60d]" />,

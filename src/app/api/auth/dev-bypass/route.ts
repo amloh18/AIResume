@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
         lastName: name.split(' ')[1] || '',
         isEmailVerified: true,
         role: userRole,
-        currentPlanKey: role === 'admin' ? 'pro_lifetime' : 'free',
+        currentPlanKey: role === 'admin' ? 'focused_yearly' : 'free',
         userLifecycleState: 'ACTIVE',
         usage: {
           cvJourneyCount: 0,
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
           lastResetDate: new Date(),
         },
         subscription: {
-          planKey: role === 'admin' ? 'pro_lifetime' : 'free',
+          planKey: role === 'admin' ? 'focused_yearly' : 'free',
           status: role === 'admin' ? 'active' : 'inactive',
           startDate: new Date(),
           provider: 'none',

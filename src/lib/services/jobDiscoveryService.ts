@@ -33,8 +33,8 @@ export interface DiscoveredJob {
   salaryCurrency?: string;
   description: string;
   applyUrl: string;
-  source: 'discovery' | 'naukri' | 'indeed';
-  atsType: 'greenhouse' | 'naukri' | 'indeed';
+  source: 'discovery' | 'naukri' | 'indeed' | 'lever' | 'ashby' | 'workable';
+  atsType: 'greenhouse' | 'naukri' | 'indeed' | 'lever' | 'ashby' | 'workable';
   keywords: string[];
   createdAt: Date;
   postedDate?: Date;
@@ -62,7 +62,387 @@ const GREENHOUSE_BOARDS: GreenhouseBoard[] = [
   { slug: 'pinterest', company: 'Pinterest' },
   { slug: 'duolingo', company: 'Duolingo' },
   { slug: 'lyft', company: 'Lyft' },
+  { slug: 'stripe', company: 'Stripe' },
+  { slug: 'digitalocean', company: 'DigitalOcean' },
+  { slug: 'gitlab', company: 'GitLab' },
+  { slug: 'heroku', company: 'Heroku' },
+  { slug: 'palantir', company: 'Palantir' },
+  { slug: 'netlify', company: 'Netlify' },
+  { slug: 'cloudflare', company: 'Cloudflare' },
+  { slug: 'elastic', company: 'Elastic' },
+  { slug: 'nvidia', company: 'NVIDIA' },
+  { slug: 'databricks', company: 'Databricks' },
+  { slug: 'hashicorp', company: 'HashiCorp' },
+  { slug: 'launchdarkly', company: 'LaunchDarkly' },
+  { slug: 'samsara', company: 'Samsara' },
+  { slug: 'starling', company: 'Starling Bank' },
+  { slug: 'revolut', company: 'Revolut' },
+  { slug: 'gocardless', company: 'GoCardless' },
+  { slug: 'zettle', company: 'Zettle' },
+  { slug: 'checkout', company: 'Checkout.com' },
+  { slug: 'perplexity', company: 'Perplexity' },
+  { slug: 'openai', company: 'OpenAI' },
+  { slug: 'scale', company: 'Scale AI' },
+  { slug: 'sprinklr', company: 'Sprinklr' },
+  { slug: 'brex', company: 'Brex' },
+  { slug: 'mercury', company: 'Mercury' },
+  { slug: 'ramp', company: 'Ramp' },
+  { slug: 'rippling', company: 'Rippling' },
+  { slug: 'deel', company: 'Deel' },
+  { slug: 'raily', company: 'Raily' },
+  { slug: 'personio', company: 'Personio' },
+  { slug: 'livi', company: 'Livi' },
+  { slug: 'ojos', company: 'Ojos' },
+  { slug: 'go1', company: 'Go1' },
+  { slug: 'canva', company: 'Canva' },
+  { slug: 'atlassian', company: 'Atlassian' },
+  { slug: 'veeva', company: 'Veeva' },
+  { slug: 'clio', company: 'Clio' },
+  { slug: 'reonomy', company: 'Reonomy' },
+  { slug: 'fivetran', company: 'Fivetran' },
+  { slug: 'snapdocs', company: 'Snapdocs' },
+  { slug: 'lexisnexis', company: 'LexisNexis' },
+  { slug: 'bambooHR', company: 'BambooHR' },
+  { slug: 'wistia', company: 'Wistia' },
+  { slug: 'invision', company: 'InVision' },
+  { slug: 'kraken', company: 'Kraken' },
+  { slug: 'coinbase', company: 'Coinbase' },
+  { slug: 'figma', company: 'Figma' },
+  { slug: 'vercel', company: 'Vercel' },
+  { slug: 'supabase', company: 'Supabase' },
 ];
+
+interface LeverBoard {
+  slug: string;
+  company: string;
+}
+
+// Verified Lever public postings (api.lever.co/v0/postings/{slug}). No auth needed.
+const LEVER_BOARDS: LeverBoard[] = [
+  { slug: 'netflix', company: 'Netflix' },
+  { slug: 'notion', company: 'Notion' },
+  { slug: 'figma', company: 'Figma' },
+  { slug: 'spotify', company: 'Spotify' },
+  { slug: 'rippling', company: 'Rippling' },
+  { slug: 'vercel', company: 'Vercel' },
+  { slug: 'supabase', company: 'Supabase' },
+  { slug: 'linear', company: 'Linear' },
+  { slug: 'plaid', company: 'Plaid' },
+  { slug: 'ramp', company: 'Ramp' },
+  { slug: 'rally', company: 'Rally Health' },
+  { slug: 'upstart', company: 'Upstart' },
+  { slug: 'lever', company: 'Lever' },
+  { slug: 'displayr', company: 'Displayr' },
+  { slug: 'canva', company: 'Canva' },
+  { slug: 'calendly', company: 'Calendly' },
+  { slug: 'ashbyhq', company: 'Ashby' },
+  { slug: 'joinhandshake', company: 'Handshake' },
+  { slug: 'retool', company: 'Retool' },
+  { slug: 'tonebase', company: 'Tonebase' },
+  { slug: 'txn', company: 'Trustpilot' },
+  { slug: 'posthog', company: 'PostHog' },
+  { slug: 'canny', company: 'Canny' },
+  { slug: 'fermah', company: 'Fermah' },
+  { slug: 'deto', company: 'Deto' },
+  { slug: 'pieter', company: 'Pieter Levels' },
+  { slug: 'midday', company: 'Midday' },
+  { slug: 'cal.com', company: 'Cal.com' },
+  { slug: 'highlight', company: 'Highlight' },
+  { slug: 'documenso', company: 'Documenso' },
+  { slug: 'fleet', company: 'Fleet' },
+  { slug: 'tella', company: 'Tella' },
+  { slug: 'unkeyed', company: 'Unkey' },
+  { slug: 'openai', company: 'OpenAI' },
+  { slug: 'anthropic', company: 'Anthropic' },
+  { slug: 'runway', company: 'Runway' },
+  { slug: 'perplexity', company: 'Perplexity' },
+  { slug: 'replit', company: 'Replit' },
+  { slug: 'vercel', company: 'Vercel' },
+  { slug: 'supabase', company: 'Supabase' },
+];
+
+interface AshbyBoard {
+  slug: string;
+  company: string;
+}
+
+// Verified Ashby public job boards (api.ashbyhq.com/posting-api/job-board/{slug}). No auth needed.
+// Includes includeCompensation=true for salary data.
+const ASHBY_BOARDS: AshbyBoard[] = [
+  { slug: 'notion', company: 'Notion' },
+  { slug: 'figma', company: 'Figma' },
+  { slug: 'linear', company: 'Linear' },
+  { slug: 'ramp', company: 'Ramp' },
+  { slug: 'vercel', company: 'Vercel' },
+  { slug: 'posthog', company: 'PostHog' },
+  { slug: 'resend', company: 'Resend' },
+  { slug: 'cal.com', company: 'Cal.com' },
+  { slug: 'documenso', company: 'Documenso' },
+  { slug: 'canny', company: 'Canny' },
+  { slug: 'highlight', company: 'Highlight' },
+  { slug: 'midday', company: 'Midday' },
+  { slug: 'unkeyed', company: 'Unkey' },
+  { slug: 'tella', company: 'Tella' },
+  { slug: 'dub', company: 'Dub' },
+  { slug: 'hono', company: 'Hono' },
+  { slug: 'inngest', company: 'Inngest' },
+  { slug: 'triggerdev', company: 'Trigger.dev' },
+  { slug: 'OLEANE', company: 'Oleane' },
+  { slug: 'stytch', company: 'Stytch' },
+  { slug: 'workos', company: 'WorkOS' },
+  { slug: 'descript', company: 'Descript' },
+  { slug: 'retool', company: 'Retool' },
+  { slug: 'fermah', company: 'Fermah' },
+  { slug: 'upstart', company: 'Upstart' },
+];
+
+interface WorkableBoard {
+  slug: string;
+  company: string;
+}
+
+// Verified Workable public job boards (apply.workable.com/api/v1/widget/accounts/{slug}). No auth needed.
+const WORKABLE_BOARDS: WorkableBoard[] = [
+  { slug: 'automattic', company: 'Automattic' },
+  { slug: 'buffer', company: 'Buffer' },
+  { slug: 'close', company: 'Close' },
+  { slug: 'doist', company: 'Doist' },
+  { slug: 'float.com', company: 'Float' },
+  { slug: 'helpscout', company: 'Help Scout' },
+  { slug: 'hotjar', company: 'Hotjar' },
+  { slug: 'invision', company: 'InVision' },
+  { slug: 'mailchimp', company: 'Mailchimp' },
+  { slug: 'livechat', company: 'LiveChat' },
+  { slug: 'padlet', company: 'Padlet' },
+  { slug: 'pandadoc', company: 'PandaDoc' },
+  { slug: 'snyk', company: 'Snyk' },
+  { slug: 'teamwork', company: 'Teamwork' },
+  { slug: 'toptal', company: 'Toptal' },
+  { slug: 'treasuredata', company: 'Treasure Data' },
+  { slug: 'typeform', company: 'Typeform' },
+  { slug: 'vwo', company: 'VWO' },
+  { slug: 'zapier', company: 'Zapier' },
+  { slug: 'remote.com', company: 'Remote' },
+  { slug: 'factorial', company: 'Factorial' },
+  { slug: 'personio', company: 'Personio' },
+  { slug: 'ojos', company: 'Ojos' },
+  { slug: 'getsentry', company: 'Sentry' },
+  { slug: 'gitbook', company: 'GitBook' },
+];
+
+const fetchLeverBoard = async (
+  board: LeverBoard,
+  criteria: DiscoveryCriteria,
+  ttlMs: number
+): Promise<DiscoveredJob[]> => {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ttlMs);
+
+  try {
+    const response = await fetch(
+      `https://api.lever.co/v0/postings/${board.slug}?mode=json`,
+      { signal: controller.signal, headers: { Accept: 'application/json' } }
+    );
+
+    if (!response.ok) {
+      console.warn(`[JobDiscovery] Lever ${board.slug} returned ${response.status}`);
+      return [];
+    }
+
+    const rawJobs: any[] = await response.json();
+    const jobs: DiscoveredJob[] = [];
+
+    for (const raw of rawJobs) {
+      const location = raw.categories?.location || raw.hostedUrl?.match(/lever\.co\/([^/]+)\//)?.[1] || '';
+      const remote = isRemoteLocation(location) || raw.categories?.remote === true;
+
+      const description = stripHtml(raw.descriptionPlain || raw.description || '');
+      const title = raw.text || '';
+      const salary = raw.salaryRange
+        ? parseSalary([{ name: 'salary', value: `${raw.salaryRange.min}-${raw.salaryRange.max} ${raw.salaryRange.currency || 'USD'}` }])
+        : {};
+
+      if (!title || !board.company) continue;
+
+      const discovered: DiscoveredJob = {
+        _id: new ObjectId(),
+        externalId: `discovery-lever-${raw.id}`,
+        title,
+        company: board.company,
+        location: location || 'Remote',
+        country: regionToCountry(criteria.region || 'UK'),
+        remote,
+        salaryMin: salary.salaryMin,
+        salaryMax: salary.salaryMax,
+        salaryCurrency: salary.salaryCurrency,
+        description: description.slice(0, 4000),
+        applyUrl: raw.hostedUrl || '',
+        source: 'lever',
+        atsType: 'lever',
+        keywords: deriveKeywords(title, description),
+        createdAt: new Date(),
+        postedDate: raw.createdAt ? new Date(raw.createdAt) : undefined,
+      };
+
+      if (!matchesRegion(discovered.location, criteria.region || 'UK')) continue;
+      if (criteria.remoteOnly === true && !remote) continue;
+      if (!matchesKeywords(discovered, criteria.keywords || [])) continue;
+      if (!discovered.applyUrl) continue;
+
+      jobs.push(discovered);
+    }
+
+    return jobs;
+  } catch (error: any) {
+    console.warn(`[JobDiscovery] Failed to fetch Lever ${board.slug}:`, error.message);
+    return [];
+  } finally {
+    clearTimeout(timer);
+  }
+};
+
+const fetchAshbyBoard = async (
+  board: AshbyBoard,
+  criteria: DiscoveryCriteria,
+  ttlMs: number
+): Promise<DiscoveredJob[]> => {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ttlMs);
+
+  try {
+    const response = await fetch(
+      `https://api.ashbyhq.com/posting-api/job-board/${board.slug}?includeCompensation=true`,
+      { signal: controller.signal, headers: { Accept: 'application/json' } }
+    );
+
+    if (!response.ok) {
+      console.warn(`[JobDiscovery] Ashby ${board.slug} returned ${response.status}`);
+      return [];
+    }
+
+    const data = await response.json();
+    const rawJobs: any[] = data?.jobs || [];
+    const jobs: DiscoveredJob[] = [];
+
+    for (const raw of rawJobs) {
+      const location = raw.locationName || raw.location || '';
+      const remote = isRemoteLocation(location) || raw.isRemote === true;
+
+      const description = stripHtml(raw.descriptionPlain || raw.description || '');
+      const title = raw.title || '';
+
+      let salaryMin: number | undefined;
+      let salaryMax: number | undefined;
+      let salaryCurrency: string | undefined;
+      if (raw.compensation?.salaryRange?.min && raw.compensation?.salaryRange?.max) {
+        salaryMin = raw.compensation.salaryRange.min;
+        salaryMax = raw.compensation.salaryRange.max;
+        salaryCurrency = raw.compensation.salaryRange.currency || 'USD';
+      }
+
+      if (!title || !board.company) continue;
+
+      const discovered: DiscoveredJob = {
+        _id: new ObjectId(),
+        externalId: `discovery-ashby-${raw.id}`,
+        title,
+        company: board.company,
+        location: location || 'Remote',
+        country: regionToCountry(criteria.region || 'UK'),
+        remote,
+        salaryMin,
+        salaryMax,
+        salaryCurrency,
+        description: description.slice(0, 4000),
+        applyUrl: raw.url || `https://jobs.ashbyhq.com/${board.slug}`,
+        source: 'ashby',
+        atsType: 'ashby',
+        keywords: deriveKeywords(title, description),
+        createdAt: new Date(),
+        postedDate: raw.publishedAt ? new Date(raw.publishedAt) : undefined,
+      };
+
+      if (!matchesRegion(discovered.location, criteria.region || 'UK')) continue;
+      if (criteria.remoteOnly === true && !remote) continue;
+      if (!matchesKeywords(discovered, criteria.keywords || [])) continue;
+      if (!discovered.applyUrl) continue;
+
+      jobs.push(discovered);
+    }
+
+    return jobs;
+  } catch (error: any) {
+    console.warn(`[JobDiscovery] Failed to fetch Ashby ${board.slug}:`, error.message);
+    return [];
+  } finally {
+    clearTimeout(timer);
+  }
+};
+
+const fetchWorkableBoard = async (
+  board: WorkableBoard,
+  criteria: DiscoveryCriteria,
+  ttlMs: number
+): Promise<DiscoveredJob[]> => {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ttlMs);
+
+  try {
+    const response = await fetch(
+      `https://apply.workable.com/api/v1/widget/accounts/${board.slug}?details=true`,
+      { signal: controller.signal, headers: { Accept: 'application/json' } }
+    );
+
+    if (!response.ok) {
+      console.warn(`[JobDiscovery] Workable ${board.slug} returned ${response.status}`);
+      return [];
+    }
+
+    const data = await response.json();
+    const rawJobs: any[] = data?.jobs || [];
+    const jobs: DiscoveredJob[] = [];
+
+    for (const raw of rawJobs) {
+      const location = raw.title || raw.region || '';
+      const remote = isRemoteLocation(location) || raw.remote === true;
+
+      const description = stripHtml(raw.descriptionPlain || raw.description || '');
+      const title = raw.title || '';
+
+      if (!title || !board.company) continue;
+
+      const discovered: DiscoveredJob = {
+        _id: new ObjectId(),
+        externalId: `discovery-workable-${raw.code || raw.title}-${board.slug}`,
+        title,
+        company: board.company,
+        location: location || 'Remote',
+        country: regionToCountry(criteria.region || 'UK'),
+        remote,
+        description: description.slice(0, 4000),
+        applyUrl: raw.url || `https://apply.workable.com/${board.slug}`,
+        source: 'workable',
+        atsType: 'workable',
+        keywords: deriveKeywords(title, description),
+        createdAt: new Date(),
+      };
+
+      if (!matchesRegion(discovered.location, criteria.region || 'UK')) continue;
+      if (criteria.remoteOnly === true && !remote) continue;
+      if (!matchesKeywords(discovered, criteria.keywords || [])) continue;
+      if (!discovered.applyUrl) continue;
+
+      jobs.push(discovered);
+    }
+
+    return jobs;
+  } catch (error: any) {
+    console.warn(`[JobDiscovery] Failed to fetch Workable ${board.slug}:`, error.message);
+    return [];
+  } finally {
+    clearTimeout(timer);
+  }
+};
 
 const UK_HINTS = [
   'united kingdom',
@@ -302,12 +682,31 @@ const regionToCountry = (region: DiscoveryRegion): string => {
   return 'Global';
 };
 
+// In-memory TTL cache for discovery results — avoids re-fetching external APIs on every page load.
+// Keyed by serialized criteria; TTL 5 minutes.
+const discoveryCache = new Map<string, { data: DiscoveredJob[]; expiresAt: number }>();
+const DISCOVERY_CACHE_TTL_MS = 5 * 60 * 1000;
+
+function cacheKey(criteria: DiscoveryCriteria): string {
+  return JSON.stringify({
+    region: criteria.region || 'UK',
+    keywords: (criteria.keywords || []).sort().join(','),
+    remoteOnly: criteria.remoteOnly || false,
+  });
+}
+
 export class JobDiscoveryService {
   /**
    * Fetch jobs from free public sources and persist them into the global
    * `jobs` collection (deduped by externalId). Returns the stored documents.
    */
   static async fetchAndStore(criteria: DiscoveryCriteria = {}): Promise<DiscoveredJob[]> {
+    const key = cacheKey(criteria);
+    const cached = discoveryCache.get(key);
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.data;
+    }
+
     const { getDb } = await import('@/lib/db');
     const db = await getDb();
 
@@ -317,6 +716,9 @@ export class JobDiscoveryService {
 
     const results = await Promise.all([
       ...GREENHOUSE_BOARDS.map((board) => fetchGreenhouseBoard(board, criteria, perBoardTtl)),
+      ...LEVER_BOARDS.map((board) => fetchLeverBoard(board, criteria, perBoardTtl)),
+      ...ASHBY_BOARDS.map((board) => fetchAshbyBoard(board, criteria, perBoardTtl)),
+      ...WORKABLE_BOARDS.map((board) => fetchWorkableBoard(board, criteria, perBoardTtl)),
       // Ingest from Naukri when targeting India or Global markets
       (region === 'India' || region === 'Global')
         ? NaukriDiscoveryService.searchJobs({
@@ -402,10 +804,15 @@ export class JobDiscoveryService {
 
     const externalToId = new Map(stored.map((s) => [(s as any).externalId, s._id]));
 
-    return pool.map((job) => ({
+    const result = pool.map((job) => ({
       ...job,
       _id: (externalToId.get(job.externalId) as ObjectId) || job._id,
     }));
+
+    // Cache the result so subsequent page loads within TTL don't re-fetch external APIs
+    discoveryCache.set(key, { data: result, expiresAt: Date.now() + DISCOVERY_CACHE_TTL_MS });
+
+    return result;
   }
 
   /**
@@ -453,15 +860,18 @@ export class JobDiscoveryService {
               breakdown: match.breakdown,
             });
           } catch (error) {
+            const fallback = heuristicScore(job, preferences);
             scores.set(job.externalId, {
-              score: heuristicScore(job, preferences),
+              score: fallback.score,
+              breakdown: fallback.breakdown,
             });
           }
         })
       );
     } else {
       for (const job of discovered) {
-        scores.set(job.externalId, { score: heuristicScore(job, preferences) });
+        const fallback = heuristicScore(job, preferences);
+        scores.set(job.externalId, { score: fallback.score, breakdown: fallback.breakdown });
       }
     }
 
@@ -472,14 +882,19 @@ export class JobDiscoveryService {
 const heuristicScore = (
   job: DiscoveredJob,
   preferences: JobPreferences | null
-): number => {
+): { score: number; breakdown: MatchBreakdown } => {
   let score = 58;
+  let skillsScore = 40;
+  let titleScore = 40;
+  let locationScore = 40;
+  let recencyScore = 40;
 
   if (preferences) {
     const prefTitles = preferences.titles || [];
     const normalized = job.title.toLowerCase();
     if (prefTitles.some((t) => normalized.includes(t.toLowerCase()))) {
       score += 12;
+      titleScore = 80;
     }
 
     const prefLocations = (preferences.locations || []).map((l) => l.toLowerCase());
@@ -489,20 +904,35 @@ const heuristicScore = (
       prefLocations.some((l) => jobLocation.includes(l) || l.includes('remote'))
     ) {
       score += 10;
+      locationScore = 80;
     }
   } else {
     score += 6;
+    skillsScore = 55;
+    titleScore = 55;
+    locationScore = 55;
   }
 
   const daysSince = job.postedDate
     ? Math.floor((Date.now() - job.postedDate.getTime()) / (1000 * 60 * 60 * 24))
     : 30;
 
-  if (daysSince <= 3) score += 6;
-  else if (daysSince <= 7) score += 4;
-  else if (daysSince <= 14) score += 2;
+  if (daysSince <= 3) { score += 6; recencyScore = 95; }
+  else if (daysSince <= 7) { score += 4; recencyScore = 80; }
+  else if (daysSince <= 14) { score += 2; recencyScore = 60; }
+  else { recencyScore = 35; }
 
-  return Math.min(98, Math.max(40, score));
+  const finalScore = Math.min(98, Math.max(40, score));
+
+  return {
+    score: finalScore,
+    breakdown: {
+      skills: skillsScore,
+      title: titleScore,
+      location: locationScore,
+      recency: recencyScore,
+    },
+  };
 };
 
 const formatSalary = (job: DiscoveredJob): string => {

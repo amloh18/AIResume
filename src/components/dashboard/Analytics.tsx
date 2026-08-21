@@ -15,6 +15,7 @@ import { useCreateCV } from '@/lib/utils/cvCreationUtils';
 import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
 import { useUserData, getUserDisplayName, getUserEmail, getUserAvatar } from '@/lib/hooks/useUserData';
 import { useDashboardData } from '@/contexts/DashboardDataContext';
+import { getCvScoreForDisplay } from '@/lib/utils/cv-scoring';
 
 import ProgressTrackingWidget from './ProgressTrackingWidget';
 import ApplicationStatsWidget from './ApplicationStatsWidget';
@@ -103,13 +104,17 @@ const calculateProjectsScore = (projects: any[]): number => {
 
 // Helper function to calculate CV completion percentage
 const calculateCompletionPercentage = (cv: any): number => {
-  // Prioritize overall score from analysis report or metadata score syncs
+  // Use canonical score selector first
+  const canonicalScore = getCvScoreForDisplay(cv);
+  if (canonicalScore !== undefined && canonicalScore !== null) {
+    return canonicalScore;
+  }
+
+  // Fallback to report score
   const reportScore = 
     cv.metadata?.surgeonAnalysis?.scoreReport?.overall_score ??
     cv.scoreReport?.overall_score ??
     cv.metadata?.cvScore ??
-    cv.metadata?.atsScore ??
-    cv.atsScore ??
     cv.cvScore;
 
   if (reportScore !== undefined && reportScore !== null) {
@@ -1146,7 +1151,7 @@ export const IntelligenceDashboard: React.FC<{
               </div>
             </div>
           </div>
-          <Link href="/dashboard/tracker" className="w-full flex items-center justify-center gap-2 p-2.5 bg-lime-500/10 text-lime-600 dark:text-lime-400 hover:bg-lime-500/20 transition-colors rounded-lg text-small font-medium mt-auto">
+          <Link href="/dashboard/jobs?tab=applications" className="w-full flex items-center justify-center gap-2 p-2.5 bg-lime-500/10 text-lime-600 dark:text-lime-400 hover:bg-lime-500/20 transition-colors rounded-lg text-small font-medium mt-auto">
             <Briefcase size={16} /> Track New Application
           </Link>
         </div>
@@ -1571,7 +1576,7 @@ const RecentJobsWidget: React.FC<{
           {hasMoreJobs && (
             <div className="mt-3 pt-3 border-t border-gray-200 dark:border-white/10 text-center flex-shrink-0">
               <button
-                onClick={() => window.location.href = '/dashboard/tracker'}
+                onClick={() => window.location.href = '/dashboard/jobs?tab=applications'}
                 className="text-red-500 hover:text-red-600 text-small font-medium transition-colors"
               >
                 View All ({sortedJobs.length}) →
@@ -1662,13 +1667,17 @@ const Analytics: React.FC = () => {
   };
 
   const calculateCompletionPercentage = (cv: any): number => {
-    // Prioritize overall score from analysis report or metadata score syncs
+    // Use canonical score selector first
+    const canonicalScore = getCvScoreForDisplay(cv);
+    if (canonicalScore !== undefined && canonicalScore !== null) {
+      return canonicalScore;
+    }
+
+    // Fallback to report score
     const reportScore = 
       cv.metadata?.surgeonAnalysis?.scoreReport?.overall_score ??
       cv.scoreReport?.overall_score ??
       cv.metadata?.cvScore ??
-      cv.metadata?.atsScore ??
-      cv.atsScore ??
       cv.cvScore;
 
     if (reportScore !== undefined && reportScore !== null) {
@@ -1866,12 +1875,10 @@ const Analytics: React.FC = () => {
                 console.error('Error creating CV:', error);
               }
             }}
-            onAddJob={() => router.push('/dashboard/tracker')}
-            // For new cover letters, navigate to dashboard tracker to create a journey first
-            // Or create cover letter via API then navigate
-            onWriteCoverLetter={() => router.push('/dashboard/tracker')}
-            onCreateCoverLetter={() => router.push('/dashboard/tracker')}
-            onCreateJob={() => router.push('/dashboard/tracker')}
+            onAddJob={() => router.push('/dashboard/jobs?tab=applications&newJob=1')}
+            onWriteCoverLetter={() => router.push('/dashboard/jobs?tab=applications')}
+            onCreateCoverLetter={() => router.push('/dashboard/jobs?tab=applications')}
+            onCreateJob={() => router.push('/dashboard/jobs?tab=applications&newJob=1')}
             onSetMasterCV={handleSetMasterCV}
             predictions={analyticsData?.predictions}
             onUpdateGoal={handleUpdateMonthlyGoal}
@@ -1882,8 +1889,8 @@ const Analytics: React.FC = () => {
         <div className="flex w-full min-h-[320px]">
           <RecentJobsWidget
             jobs={jobs}
-            onViewJob={(jobId) => router.push(`/dashboard/tracker?job=${jobId}`)}
-            onCreateJob={() => router.push('/dashboard/tracker')}
+            onViewJob={(jobId) => router.push(`/dashboard/jobs?tab=applications&jobId=${jobId}`)}
+            onCreateJob={() => router.push('/dashboard/jobs?tab=applications&newJob=1')}
             analyticsData={analyticsData}
           />
         </div>

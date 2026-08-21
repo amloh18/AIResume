@@ -14,13 +14,9 @@ interface Match {
   status: 'Auto-applied' | 'Ready' | 'Review';
 }
 
-const defaultMatches: Match[] = [
-  { id: '1', role: 'React Engineer', company: 'Atlassian', location: 'Remote', matchScore: 94, status: 'Auto-applied' },
-  { id: '2', role: 'Frontend Lead', company: 'Canva', location: 'Sydney', matchScore: 89, status: 'Ready' },
-  { id: '3', role: 'Senior Dev', company: 'Linktree', location: 'Melbourne', matchScore: 91, status: 'Review' },
-];
-
-export default function AIMatchDiscoveryWidget({ matches = defaultMatches, loading = false, empty = false }: { matches?: Match[], loading?: boolean, empty?: boolean }) {
+export default function AIMatchDiscoveryWidget({ matches, loading = false, empty = false }: { matches?: Match[], loading?: boolean, empty?: boolean }) {
+  const displayMatches = matches || [];
+  const isEmpty = empty || displayMatches.length === 0;
   return (
     <DashboardWidget
       id="ai-match-discovery"
@@ -37,7 +33,7 @@ export default function AIMatchDiscoveryWidget({ matches = defaultMatches, loadi
       className="h-[450px]"
     >
       <div className="space-y-4">
-        {matches.map((match) => (
+        {displayMatches.map((match) => (
           <div 
             key={match.id} 
             className="group relative p-4 rounded-[24px] bg-white dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 hover:border-[#83d60d]/30 transition-all cursor-pointer shadow-sm hover:shadow-md"

@@ -2,6 +2,16 @@
  * Formatting utilities for WYSIWYG rich text editing
  */
 
+export const timeAgo = (date?: Date | string): string => {
+  if (!date) return 'Recently';
+  const days = Math.floor((Date.now() - new Date(date).getTime()) / 86400000);
+  if (days <= 0) return 'Today';
+  if (days === 1) return 'a day ago';
+  if (days < 7) return `${days} days ago`;
+  if (days < 30) return `${Math.floor(days / 7)} weeks ago`;
+  return new Date(date).toLocaleDateString();
+};
+
 /**
  * Fix formatting of messy text by converting it to clean bullet points.
  * - Removes excessive whitespace

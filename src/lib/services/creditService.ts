@@ -45,24 +45,19 @@ class CreditService {
       // Fallback to hardcoded values if plan not found in database
       switch (planKey) {
         case 'free':
-          return { jobCredits: 1, aiCredits: 3 }; // 1 job credit, 3 AI credits for free
+        case 'starter_monthly':
+          return { jobCredits: 10, aiCredits: 10 }; // 10 job credits, 10 AI credits for starter_monthly
         case 'starter_yearly':
         case 'focused_monthly':
         case 'focused_yearly':
-        case 'smart_quarterly':
-        case 'smart_yearly':
-        case 'pro_monthly':
-        case 'pro_quarterly':
-        case 'pro_yearly':
-        case 'pro_lifetime':
           return { jobCredits: -1, aiCredits: -1 }; // Unlimited
         default:
-          return { jobCredits: 1, aiCredits: 3 }; // Default to free plan
+          return { jobCredits: 10, aiCredits: 10 };
       }
     } catch (error) {
       console.error('Error getting plan credits:', error);
       // Fallback on error
-      return { jobCredits: 1, aiCredits: 3 }; // Default to free plan on error
+      return { jobCredits: 10, aiCredits: 10 };
     }
   }
 
@@ -100,13 +95,10 @@ class CreditService {
   private readonly UNLIMITED_PLAN_KEYS = [
     'focused_monthly',
     'focused_yearly',
-    'smart_quarterly',
-    'smart_yearly',
-    'pro_monthly',
-    'pro_quarterly',
-    'pro_yearly',
-    'pro_lifetime',
-    'pro',
+    'focused_monthly',
+    'focused_quarterly',
+    'focused_yearly',
+    'focused_yearly',
   ];
 
   /**
@@ -373,16 +365,11 @@ class CreditService {
   private getResetScheduleForPlan(planKey: string): CreditResetSchedule {
     switch (planKey) {
       case 'free':
+      case 'starter_monthly':
         return 'monthly'; // Resets on 1st of month
       case 'starter_yearly':
       case 'focused_monthly':
       case 'focused_yearly':
-      case 'smart_quarterly':
-      case 'smart_yearly':
-      case 'pro_monthly':
-      case 'pro_quarterly':
-      case 'pro_yearly':
-      case 'pro_lifetime':
         return 'never'; // Unlimited, no reset needed
       default:
         return 'monthly';

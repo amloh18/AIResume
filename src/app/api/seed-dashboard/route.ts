@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
         ];
 
         const locations = ['Remote', 'San Francisco, CA', 'New York, NY', 'Seattle, WA', 'Austin, TX', 'London, UK', 'Berlin, DE'];
-        const statuses = ['draft', 'created', 'applied', 'screening', 'interview', 'offer', 'rejected', 'withdrawn'];
+        const statuses = ['saved', 'created', 'applied', 'screening', 'interview', 'offer', 'rejected', 'withdrawn'];
         const priorities = ['low', 'medium', 'high'];
 
         const jobsData = [];

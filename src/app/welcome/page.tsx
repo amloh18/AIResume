@@ -678,16 +678,13 @@ Please find the CV data attached.`;
       let recommended_plan = 'starter_monthly';
       const isScratch = seedingMethod === 'scratch';
 
-      if (rec.type === 3) {
-        primary_goal = 'auto_apply';
-        recommended_plan = 'smart_quarterly';
-      } else if (rec.type === 2) {
+      if (rec.type === 2) {
         primary_goal = 'tracker';
         recommended_plan = 'focused_monthly';
       }
 
       const dashboard_layout_type: 'cv' | 'tracker' | 'auto_apply' =
-        rec.type === 3 ? 'auto_apply' : rec.type === 2 ? 'tracker' : 'cv';
+        rec.type === 2 ? 'tracker' : 'cv';
 
       // Route by recommendation so each user type lands on the view that
       // matches their goal. CV-focused (Type 1) users finish their primary CV
@@ -699,7 +696,7 @@ Please find the CV data attached.`;
           : rec.type === 3
             ? '/dashboard/jobs?tab=auto-apply&setup=1'
             : rec.type === 2
-              ? '/dashboard/tracker?newJob=1'
+              ? '/dashboard/jobs?tab=applications&newJob=1'
               : isScratch
                 ? '/editor?mode=create&step=2&master=true'
                 : activeCvId && activeCvId !== 'guest-draft'
@@ -794,34 +791,22 @@ Please find the CV data attached.`;
     }
 
     // Final Recommendation Resolution
-    if (score3 >= score2 && score3 >= score1) {
-      const plan = plans.find(p => p.key === 'smart_quarterly') || plans.find(p => p.key === 'pro_quarterly');
+    if (score3 >= score1 || score2 >= score1) {
+      const plan = plans.find(p => p.key === 'focused_monthly') || plans.find(p => p.key === 'focused_yearly');
       const priceText = plan?.regionalPricing?.price 
         ? `${currencySymbol}${plan.regionalPricing.price}`
-        : `${currencySymbol}34.99`;
-      return {
-        tier: 'Smart',
-        description: 'Best for scale. AI will search, match, customize, and automatically submit applications for you.',
-        price: `${priceText}/quarter`,
-        redirectUrl: '/dashboard/jobs?tab=auto-apply&setup=1',
-        type: 3
-      };
-    } else if (score2 >= score1) {
-      const plan = plans.find(p => p.key === 'focused_monthly') || plans.find(p => p.key === 'pro_monthly');
-      const priceText = plan?.regionalPricing?.price 
-        ? `${currencySymbol}${plan.regionalPricing.price}`
-        : `${currencySymbol}12.99`;
+        : `${currencySymbol}9.99`;
       return {
         tier: 'Focused',
-        description: 'Perfect for active searchers looking to organize, track applications, and optimize CVs.',
+        description: 'Complete job search suite with unlimited CV edits, AI Cover Letters, Mock Interviews, and Application Tracker.',
         price: `${priceText}/month`,
-        redirectUrl: '/dashboard/tracker?newJob=1',
+        redirectUrl: '/dashboard/jobs?tab=applications&newJob=1',
         type: 2
       };
     } else {
       return {
         tier: 'Starter',
-        description: 'Create, edit, and export professional templates with basic ATS feedback.',
+        description: 'Create, edit, and export professional templates with ATS feedback.',
         price: 'Free',
         redirectUrl: '/editor?doc=master-cv&mode=improve',
         type: 1

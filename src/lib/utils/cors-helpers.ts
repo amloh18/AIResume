@@ -9,7 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
  * Sets CORS headers for Chrome extension requests
  * Following the guide pattern: checks for chrome-extension:// origin
  */
-export function setCorsHeaders(response: NextResponse, request: NextRequest): NextResponse {
+export function setCorsHeaders(response: NextResponse | Response, request: NextRequest): NextResponse | Response {
   const origin = request.headers.get('origin');
   
   if (origin && origin.startsWith('chrome-extension://')) {

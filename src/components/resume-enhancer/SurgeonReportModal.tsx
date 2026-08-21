@@ -708,7 +708,7 @@ export default function SurgeonReportModal({ isOpen, onClose, onReviewAndFix }: 
                   type="button"
                   onClick={() =>
                     openPaymentModal({
-                      preselectedPlanKey: 'pro_monthly',
+                      preselectedPlanKey: 'focused_monthly',
                       triggerContext: 'surgeon-report-restricted',
                       returnUrl: window.location.href
                     })

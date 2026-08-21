@@ -17,7 +17,7 @@ const JobCreationPaywall: React.FC<JobCreationPaywallProps> = ({
   onClose,
   currentCount,
   limit,
-  preselectedPlanKey = 'pro_monthly',
+  preselectedPlanKey = 'focused_monthly',
 }) => {
   const pct = limit > 0 ? Math.min(100, Math.round((currentCount / limit) * 100)) : 0;
 

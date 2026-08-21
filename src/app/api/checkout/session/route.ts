@@ -15,9 +15,7 @@ type PaidPlanKey =
   | 'starter_monthly'
   | 'starter_yearly' 
   | 'focused_monthly' 
-  | 'focused_yearly' 
-  | 'smart_quarterly' 
-  | 'smart_yearly';
+  | 'focused_yearly';
 
 interface ZeroAmountActivationParams {
   user: any;

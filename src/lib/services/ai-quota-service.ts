@@ -29,7 +29,7 @@ export class AIQuotaService {
     }
 
     // Determine if user is Pro
-    const isPro = ['pro_monthly', 'pro_quarterly', 'pro_lifetime'].includes(user.subscription?.planKey || user.currentPlanKey);
+    const isPro = ['focused_monthly', 'focused_quarterly', 'focused_yearly'].includes(user.subscription?.planKey || user.currentPlanKey);
     const isTrial = user.subscription?.status === 'trialing'; // Assuming standard status, check if exists
     
     // Reset quotas if needed based on join date / monthly schedule
@@ -133,7 +133,7 @@ export class AIQuotaService {
     // If lastReset is older than the latestValidResetDate, we need to reset
     if (lastReset < latestValidResetDate) {
       // Reset logic
-      const isPro = ['pro_monthly', 'pro_quarterly', 'pro_lifetime'].includes(user.subscription?.planKey || user.currentPlanKey);
+      const isPro = ['focused_monthly', 'focused_quarterly', 'focused_yearly'].includes(user.subscription?.planKey || user.currentPlanKey);
       
       user.credits.aiCredits = isPro ? -1 : 3; // 3 for free, -1 for unlimited or we could limit Pro too. The prompt says "Full Analysis (Pro limited)", so maybe Pro gets 30? Wait, let's keep it to user model's default or prompt. Prompt says "e.g., 3 free analysis credits per month".
       

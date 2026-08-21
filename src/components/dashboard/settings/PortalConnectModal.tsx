@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-export type PortalType = 'naukri' | 'indeed' | 'greenhouse' | 'adzuna';
+export type PortalType = 'naukri' | 'indeed' | 'greenhouse' | 'adzuna' | 'lever' | 'ashby' | 'workable';
 
 interface PortalConnectModalProps {
   portal: PortalType;
@@ -73,6 +73,27 @@ export const PortalConnectModal: React.FC<PortalConnectModalProps> = ({
           color: 'bg-amber-600',
           desc: 'Free public search index & API key credentials',
         };
+      case 'lever':
+        return {
+          name: 'Lever Job Postings',
+          icon: Briefcase,
+          color: 'bg-violet-600',
+          desc: 'Direct company job board integration via Lever public API',
+        };
+      case 'ashby':
+        return {
+          name: 'Ashby Job Boards',
+          icon: Layers,
+          color: 'bg-rose-600',
+          desc: 'Public Ashby job boards with compensation data included',
+        };
+      case 'workable':
+        return {
+          name: 'Workable Job Boards',
+          icon: Search,
+          color: 'bg-cyan-600',
+          desc: 'Public Workable job board integration for SMBs and agencies',
+        };
     }
   };
 
@@ -125,6 +146,13 @@ export const PortalConnectModal: React.FC<PortalConnectModalProps> = ({
       if (portal === 'adzuna') {
         // Save Adzuna API settings
         toast.success('Adzuna free job index connected!');
+        onSuccess();
+        onClose();
+        return;
+      }
+
+      if (portal === 'lever' || portal === 'ashby' || portal === 'workable') {
+        toast.success(`${info.name} enabled — free public API stream active!`);
         onSuccess();
         onClose();
         return;
@@ -229,6 +257,12 @@ export const PortalConnectModal: React.FC<PortalConnectModalProps> = ({
                   placeholder="••••••••••••••••"
                   className="w-full px-3 py-2 text-xs rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#1a230f] text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-lime-500"
                 />
+              </div>
+            </div>
+          ) : (portal === 'lever' || portal === 'ashby' || portal === 'workable') ? (
+            <div className="space-y-3">
+              <div className="p-3 bg-violet-500/10 border border-violet-500/20 rounded-xl text-xs text-violet-900 dark:text-violet-300">
+                <span className="font-semibold">Free Public API:</span> {info.name} streams jobs directly from public company job boards. No login or API key required — already active.
               </div>
             </div>
           ) : (

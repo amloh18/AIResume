@@ -235,7 +235,6 @@ function LoadingFallback() {
                   </div>
                   <PanelSkeleton title="Continue where you left off" rows={2} compact />
                   <PanelSkeleton title="CV Health" rows={3} compact />
-                  <PanelSkeleton title="Recent Activity" rows={3} compact />
                 </div>
               </div>
             </div>

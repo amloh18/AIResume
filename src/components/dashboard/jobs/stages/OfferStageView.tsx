@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { CheckCircle, Building, DollarSign, Calendar, Clock, AlertCircle, Eye, MapPin, TrendingUp, XCircle, Handshake } from 'lucide-react';
 import CompanyLogo from '@/components/ui/CompanyLogo';
 import toast from 'react-hot-toast';
+import { getCurrencySymbol } from '@/lib/config/job-constants';
 
 interface JobApplication {
   id: string;
@@ -133,7 +134,7 @@ const OfferStageView: React.FC<OfferStageViewProps> = ({
             {sortedJobs.map((job) => {
               const daysUntilDeadline = getDaysUntilDeadline(job.deadline);
               const offerValue = getOfferValue(job);
-              const currency = job.offerDetails?.salary ? '$' : (job.salary?.currency || '$');
+              const currency = getCurrencySymbol(job.offerDetails?.salary ? undefined : job.salary?.currency);
 
               return (
                 <motion.tr

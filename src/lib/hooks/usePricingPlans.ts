@@ -241,10 +241,10 @@ export function usePricingPlans(options: UsePricingPlansOptions = {}): UsePricin
     if (regionalPricing) {
       let priceStr = '';
       switch (plan.key) {
-        case 'pro_monthly': priceStr = regionalPricing.monthly; break;
-        case 'pro_quarterly': priceStr = regionalPricing.quarterly; break;
-        case 'pro_yearly': priceStr = regionalPricing.yearly; break;
-        case 'pro_lifetime': priceStr = regionalPricing.lifetime || regionalPricing.yearly; break;
+        case 'focused_monthly': priceStr = regionalPricing.monthly; break;
+        case 'focused_quarterly': priceStr = regionalPricing.quarterly; break;
+        case 'focused_yearly': priceStr = regionalPricing.yearly; break;
+        case 'focused_yearly': priceStr = regionalPricing.lifetime || regionalPricing.yearly; break;
         case 'day_pass': priceStr = (regionalPricing as any).dayPass || regionalPricing.monthly; break;
         default:
           priceStr = `${symbol}${(plan as any).price || 0}`;
@@ -271,7 +271,7 @@ export function usePricingPlans(options: UsePricingPlansOptions = {}): UsePricin
     };
 
     const isQuarterly = false; // Disabled monthly equivalent for quarterly plans to show price/3months directly
-    const isYearly = plan.key === 'pro_yearly' || plan.key === 'starter_yearly' || plan.key === 'starter_yealry' || plan.key === 'focused_yearly' || plan.key === 'smart_yearly' || plan.key.includes('yearly') || plan.key.includes('yealry');
+    const isYearly = plan.key === 'focused_yearly' || plan.key === 'starter_yearly' || plan.key === 'starter_yealry' || plan.key === 'focused_yearly' || plan.key === 'smart_yearly' || plan.key.includes('yearly') || plan.key.includes('yealry');
 
     if (isQuarterly || isYearly) {
       const totalPrice = regionalData?.price || (plan as any).price || 0;

@@ -199,7 +199,7 @@ const FloatingAICard = ({ pointSuggestion, setPointSuggestion, handleFetchSugges
                 type="button"
                 onClick={() =>
                   openPaymentModal({
-                    preselectedPlanKey: 'pro_monthly',
+                    preselectedPlanKey: 'focused_monthly',
                     triggerContext: 'ai-contextual-suggestion-limit',
                     returnUrl: window.location.href
                   })

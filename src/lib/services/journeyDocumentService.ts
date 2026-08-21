@@ -386,7 +386,7 @@ export async function createJourneyDocuments(
           company: currentJourney.company,
           jobDescription: job.jobDescription || job.description || '',
           location: job.location || '',
-          contactPerson: job.contactPerson || 'Hiring Manager',
+          contactPerson: job.contactDetails?.name || 'Hiring Manager',
           ...job.toObject()
         });
 
@@ -436,7 +436,7 @@ export async function createJourneyDocuments(
           console.log('✅ Journey Document Service - Using header-only cover letter fallback for non-tailored generation');
         } else {
           usedFallbackContent = true;
-          const recipientName = job?.contactPerson || currentJourney.contactPerson || 'Hiring Manager';
+          const recipientName = job?.contactDetails?.name || currentJourney.contactPerson || 'Hiring Manager';
           body = `Dear ${recipientName},
 
 I am writing to express my interest in the ${currentJourney.jobTitle} position at ${currentJourney.company}. This version is based on my existing Master CV and is intended as a solid starting point for this application.

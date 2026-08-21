@@ -45,6 +45,7 @@ import { defaultCoverLetterService } from '@/lib/services/defaultCoverLetterServ
 import DownloadModal, { DocumentType, FormatType } from '@/components/ui/DownloadModal';
 import { usePaymentModal } from '@/contexts/PaymentModalContext';
 import { useATS } from '@/contexts/ATSContext';
+import { getCvScoreForDisplay } from '@/lib/utils/cv-scoring';
 import DocumentPreviewSidebar from './jobs/DocumentPreviewSidebar';
 
 interface Journey {
@@ -242,7 +243,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
         handleRetryDocuments();
         return;
       case 'upgrade':
-        openPaymentModal({ preselectedPlanKey: 'pro_monthly', triggerContext: 'tracker-generation' });
+        openPaymentModal({ preselectedPlanKey: 'focused_monthly', triggerContext: 'tracker-generation' });
         return;
       case 'edit_manually':
       case 'review':
@@ -1423,7 +1424,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
 
   const fetchATSScore = async (cvId: string, jobId: string, forceRecalculate: boolean = false) => {
     if (userProfile?.currentPlanKey === 'free' || !userProfile?.subscription || userProfile.subscription.status !== 'active') {
-        openPaymentModal({ preselectedPlanKey: 'pro_monthly', triggerContext: 'ats-score' });
+        openPaymentModal({ preselectedPlanKey: 'focused_monthly', triggerContext: 'ats-score' });
         return;
     }
 
@@ -1449,12 +1450,12 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
         return;
       }
 
-      // If not in journey, check CV metadata
-      if (!forceRecalculate && linkedCV?.metadata?.atsScore !== undefined && linkedCV.metadata.atsScore !== null) {
-        console.log('📊 JourneyTimelineCard - Using cached ATS score from CV metadata:', linkedCV.metadata.atsScore);
-        const cachedScore = linkedCV.metadata.atsScore;
-        setAtsScore(cachedScore);
-        updateAtsScore(cachedScore);
+      // If not in journey, check CV metadata using canonical selector
+      const cachedCvScore = getCvScoreForDisplay(linkedCV);
+      if (!forceRecalculate && cachedCvScore !== undefined && cachedCvScore !== null) {
+        console.log('📊 JourneyTimelineCard - Using cached ATS score from CV metadata:', cachedCvScore);
+        setAtsScore(cachedCvScore);
+        updateAtsScore(cachedCvScore);
 
         // Also update journey with cached score
         const journeyResponse = await fetch(`/api/application-journey/${journey.id}`, {
@@ -2845,7 +2846,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                               <motion.button
                                 onClick={() => {
                                   if (userProfile?.currentPlanKey === 'free' || !userProfile?.subscription || userProfile.subscription.status !== 'active') {
-                                      openPaymentModal({ preselectedPlanKey: 'pro_monthly', triggerContext: 'cover-letter-edit' });
+                                      openPaymentModal({ preselectedPlanKey: 'focused_monthly', triggerContext: 'cover-letter-edit' });
                                       return;
                                   }
                                   // Navigate to cv-builder-pro in edit-cover-letter mode
@@ -3720,7 +3721,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
         coverLetterId={journey.coverLetterId}
         onPaywallRequired={() => {
           openPaymentModal({
-            preselectedPlanKey: 'pro_monthly',
+            preselectedPlanKey: 'focused_monthly',
             triggerContext: 'docx-export',
             returnUrl: window.location.href
           });

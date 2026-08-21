@@ -64,7 +64,7 @@ export default function UserActivityModal({ userId, isOpen, onClose }: { userId:
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<UserActivityData | null>(null);
-  const [selectedPlan, setSelectedPlan] = useState('smart_quarterly');
+  const [selectedPlan, setSelectedPlan] = useState('focused_monthly');
   const [granting, setGranting] = useState(false);
 
   // Custom Dialog Modal State
@@ -572,8 +572,6 @@ export default function UserActivityModal({ userId, isOpen, onClose }: { userId:
                       <option value="starter_yearly">Starter Yearly</option>
                       <option value="focused_monthly">Focused Monthly</option>
                       <option value="focused_yearly">Focused Yearly</option>
-                      <option value="smart_quarterly">Smart Quarterly</option>
-                      <option value="smart_yearly">Smart Yearly</option>
                     </select>
                     <button 
                       onClick={handleGrantPlan}

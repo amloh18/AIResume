@@ -40,7 +40,7 @@ interface JobApplication {
   title?: string;
   company: string;
   status:
-    | "draft"
+    | "saved"
     | "created"
     | "applied"
     | "screening"
@@ -83,7 +83,7 @@ interface JobApplication {
 interface JobsKanbanViewProps {
   jobs: JobApplication[];
   jobsByStatus: {
-    draft: JobApplication[];
+    saved: JobApplication[];
     created: JobApplication[];
     applied: JobApplication[];
     interview: JobApplication[];
@@ -254,49 +254,49 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
   onImproveATS,
   onDownload,
 }) => {
-  // Draft color (used as default for all stages)
-  const draftColor =
+  // Saved color (used as default for all stages)
+  const savedColor =
     "bg-gray-100 dark:bg-gray-500/20 border-gray-300 dark:border-gray-500/30 text-gray-600 dark:text-white";
 
   const allStages = [
     {
-      status: "draft",
-      title: "Draft",
-      color: draftColor,
-      hoverColor: draftColor,
+      status: "saved",
+      title: "Saved",
+      color: savedColor,
+      hoverColor: savedColor,
     },
     {
       status: "created",
       title: "Staging",
-      color: draftColor,
+      color: savedColor,
       hoverColor:
         "bg-purple-100 dark:bg-purple-500/20 border-purple-300 dark:border-purple-500/30 text-purple-600 dark:text-white",
     },
     {
       status: "applied",
       title: "Applied",
-      color: draftColor,
+      color: savedColor,
       hoverColor:
         "bg-blue-100 dark:bg-blue-500/20 border-blue-300 dark:border-blue-500/30 text-blue-600 dark:text-white",
     },
     {
       status: "interview",
       title: "Interview",
-      color: draftColor,
+      color: savedColor,
       hoverColor:
         "bg-orange-100 dark:bg-orange-500/20 border-orange-300 dark:border-orange-500/30 text-orange-600 dark:text-white",
     },
     {
       status: "offer",
       title: "Offer",
-      color: draftColor,
+      color: savedColor,
       hoverColor:
         "bg-green-100 dark:bg-green-500/20 border-green-300 dark:border-green-500/30 text-green-600 dark:text-white",
     },
     {
       status: "rejected",
       title: "Rejected",
-      color: draftColor,
+      color: savedColor,
       hoverColor:
         "bg-red-100 dark:bg-red-500/20 border-red-300 dark:border-red-500/30 text-red-600 dark:text-white",
     },
@@ -305,7 +305,7 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
   // Filter stages based on focus mode
   const stages = isFocusMode
     ? allStages.filter(
-        (stage) => stage.status !== "draft" && stage.status !== "rejected",
+        (stage) => stage.status !== "saved" && stage.status !== "rejected",
       )
     : allStages;
 
@@ -314,14 +314,6 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
     const now = new Date();
     return Math.floor(
       (now.getTime() - lastUpdate.getTime()) / (1000 * 60 * 60 * 24),
-    );
-  };
-
-  const isFollowUpNeeded = (job: JobApplication) => {
-    const days = getDaysSinceLastUpdate(job);
-    return (
-      ["applied", "interview", "offer"].includes(job.status) &&
-      (days >= 3 || days >= 7)
     );
   };
 
@@ -403,7 +395,7 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
 
                   {/* Stage-Specific Content */}
                   <div className="mt-4">
-                    {stage.status === "draft" && onCreateJourney && (
+                    {stage.status === "saved" && onCreateJourney && (
                       <DraftStageView
                         jobs={stageJobs as any}
                         onJobClick={onJobClick as any}
@@ -541,7 +533,7 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
                             </div>
                           </div>
                         ))
-                      : (stage.status === "draft" ||
+                      : (stage.status === "saved" ||
                             stage.status === "created") &&
                           zoomedStage
                         ? // Show journey cards for created stage when zoomed

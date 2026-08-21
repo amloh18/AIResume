@@ -34,7 +34,7 @@ export default function UpgradePromptCard({
   primaryLabel = 'Upgrade Now',
   secondaryLabel = 'Maybe Later',
   onSecondary,
-  preselectedPlanKey = 'pro_monthly',
+  preselectedPlanKey = 'focused_monthly',
   triggerContext = 'upgrade-prompt',
 }: UpgradePromptCardProps) {
   const { openPaymentModal } = usePaymentModal();

@@ -636,7 +636,6 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
     const { skipCreatedStageModal = false } = options;
     // Prevent concurrent saves
     if (isSavingRef.current && !isAutoSave) {
-      console.log('⚠️ EditJobSidebar - Save already in progress, ignoring duplicate call');
       return;
     }
 
@@ -654,16 +653,6 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
       const jobId = editingJob?.id || editingJob?._id;
       const url = jobId ? `/api/jobs/${jobId}` : '/api/jobs';
       const method = jobId ? 'PUT' : 'POST';
-
-      console.log('🔍 EditJobSidebar - Saving job:', {
-        method,
-        url,
-        isNewJob,
-        hasEditingJob: !!editingJob,
-        editingJobId: editingJob?.id || editingJob?._id,
-        jobId,
-        jobDataKeys: Object.keys(jobData)
-      });
 
       // Clear previous errors
       setErrorMessage('');
@@ -775,8 +764,6 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
         body: JSON.stringify(jobData),
       });
 
-      console.log('🔍 EditJobSidebar - Response status:', response.status);
-
       if (!response.ok) {
         let errorResult: any = {};
         let errorText = '';
@@ -784,11 +771,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
           errorText = await response.text();
           errorResult = errorText ? JSON.parse(errorText) : {};
         } catch (parseError) {
-          console.error('Failed to parse error response:', parseError);
         }
-
-        console.error('❌ EditJobSidebar - Save failed with status:', response.status, 'Error:', errorText);
-        console.log('🔍 EditJobSidebar - Error response:', errorResult);
 
         const isTrackerLimitError =
           errorResult.gateType === 'hard' ||
@@ -831,7 +814,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
               limit,
               reason: customMessage
             },
-            'pro_monthly'
+            'focused_monthly'
           );
 
           if (userId) {
@@ -845,7 +828,6 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
 
         // Handle 404 error - job not found (might be trying to update a non-existent job)
         if (response.status === 404 && method === 'PUT') {
-          console.log('⚠️ EditJobSidebar - Job not found on PUT, retrying as new job creation (POST)');
           // Remove any ID fields and retry as POST
           const newJobData = { ...jobData };
           delete newJobData.id;
@@ -907,7 +889,6 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
       }
 
       const result = await response.json();
-      console.log('🔍 EditJobSidebar - Save response:', result);
 
       // Check if the API returned a job object directly (for updates) or success/data structure (for creates)
       if (result.job || result.success !== false || result.data) {
@@ -934,13 +915,10 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
         // Create an Application Package automatically (only if not a draft job)
         if (isNewJob && !isAutoSave && user?.id && savedJob.status !== 'draft') {
           try {
-            console.log('🎯 EditJobSidebar - Creating Application Package for new job:', savedJob.id || savedJob._id);
-
             // Use the job ID from savedJob (could be id or _id)
             const jobId = savedJob.id || savedJob._id;
 
             if (!jobId) {
-              console.warn('⚠️ EditJobSidebar - No job ID available, skipping package creation');
             } else {
               const packageResult = await ApplicationPackageService.createNewPackage({
                 userId: user.id,
@@ -955,15 +933,11 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
                 }
               });
 
-              if (packageResult.success) {
-                console.log('✅ EditJobSidebar - Application Package created:', packageResult.data?.journeyId);
-              } else {
-                console.warn('⚠️ EditJobSidebar - Failed to create Application Package:', packageResult.message);
+              if (!packageResult.success) {
                 // Don't fail the job creation if package creation fails
               }
             }
           } catch (packageError) {
-            console.error('❌ EditJobSidebar - Error creating Application Package:', packageError);
             // Don't fail the job creation if package creation fails
           }
         }
@@ -972,11 +946,8 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
           onJobSaved(savedJob);
           setHasUnsavedChanges(false);
           onClose();
-        } else {
-          console.log('✅ Auto-save completed successfully');
         }
       } else {
-        console.error('❌ API returned success: false:', result);
         if (!isAutoSave) {
           setErrorMessage(result.message || result.error || 'Unknown error');
         }
@@ -1610,9 +1581,6 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
             setShowDuplicateWarning(false);
             setDuplicateCheck(null);
             onClose();
-            // TODO: Implement viewing existing job in JobSidebar
-            // This would require passing a callback from JobsTracker
-            console.log('View existing job:', jobId);
           }}
         />
       )}

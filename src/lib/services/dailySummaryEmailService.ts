@@ -101,7 +101,7 @@ class DailySummaryEmailService {
 
     // Get current job counts by status
     const jobsByStatus = {
-      draft: await JobApplication.countDocuments({ userId: userObjectId, status: 'draft' }),
+      saved: await JobApplication.countDocuments({ userId: userObjectId, status: 'saved' }),
       created: await JobApplication.countDocuments({ userId: userObjectId, status: 'created' }),
       applied: await JobApplication.countDocuments({ userId: userObjectId, status: 'applied' }),
       interview: await JobApplication.countDocuments({ userId: userObjectId, status: 'interview' }),

@@ -109,12 +109,12 @@ class CreditResetService {
     switch (planKey) {
       case 'free':
         return 'monthly';
-      case 'pro_monthly':
+      case 'focused_monthly':
         return 'monthly';
-      case 'pro_quarterly':
+      case 'focused_quarterly':
         return 'quarterly';
-      case 'pro_yearly':
-      case 'pro_lifetime':
+      case 'focused_yearly':
+      case 'focused_yearly':
         return 'yearly';
       default:
         return 'monthly';

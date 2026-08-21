@@ -85,12 +85,10 @@ const planKeySchema = z.enum([
   'starter_yearly',
   'focused_monthly',
   'focused_yearly',
-  'smart_quarterly',
-  'smart_yearly',
-  'pro_monthly',
-  'pro_quarterly',
-  'pro_yearly',
-  'pro_lifetime'
+  'focused_monthly',
+  'focused_quarterly',
+  'focused_yearly',
+  'focused_yearly'
 ]);
 
 export const createPaymentIntentSchema = z.object({

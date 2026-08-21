@@ -339,6 +339,11 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       {
+        source: '/dashboard/tracker',
+        destination: '/dashboard/jobs?tab=applications',
+        permanent: true,
+      },
+      {
         source: '/business',
         destination: '/b2b',
         permanent: true,

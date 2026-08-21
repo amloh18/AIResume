@@ -75,6 +75,7 @@ export async function POST(request: NextRequest) {
       jobDescription: description || '',
       location: location || 'Remote',
       source: 'indeed',
+      atsType: 'indeed',
       status: 'applied',
       priority: 'high',
       salary: salary || undefined,

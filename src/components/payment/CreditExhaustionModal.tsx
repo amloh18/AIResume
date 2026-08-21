@@ -21,7 +21,7 @@ const CreditExhaustionModal: React.FC<CreditExhaustionModalProps> = ({
   creditsRemaining,
   limit,
   resetTime,
-  preselectedPlanKey = 'pro_monthly',
+  preselectedPlanKey = 'focused_monthly',
   reason,
   exhaustionType = 'meter',
 }) => {

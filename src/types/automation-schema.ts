@@ -1,12 +1,12 @@
 import { ObjectId } from 'mongodb';
 
-export type UserTier = 'free' | 'pro' | 'auto' | 'power';
+export type UserTier = 'free' | 'auto' | 'power';
 export type UserRole = 'user' | 'admin' | 'super_admin';
-export type JobSource = 'google_talent' | 'serpapi' | 'apify' | 'discovery' | 'naukri' | 'linkedin' | 'indeed' | 'adzuna';
-export type ATSType = 'greenhouse' | 'lever' | 'workable' | 'naukri' | 'indeed' | 'adzuna' | 'workday' | 'unknown';
+export type JobSource = 'google_talent' | 'serpapi' | 'apify' | 'discovery' | 'naukri' | 'linkedin' | 'indeed' | 'adzuna' | 'lever' | 'ashby' | 'workable';
+export type ATSType = 'greenhouse' | 'lever' | 'workable' | 'naukri' | 'indeed' | 'adzuna' | 'ashby' | 'workday' | 'unknown';
 export type AutomationMode = 'assisted' | 'auto';
 export type ApplicationStatus =
-  | 'draft'
+  | 'saved'
   | 'created'
   | 'queued'
   | 'applying'
@@ -164,8 +164,10 @@ export interface AuditLog {
 
 export interface JobListing {
   _id: string;
+  id?: string;
   title: string;
   company: string;
+  companyLogo?: string;
   location: string;
   remote: boolean;
   salaryMin?: number;
@@ -179,8 +181,10 @@ export interface JobListing {
   postedDate?: Date;
   appliedStatus?: ApplicationStatus;
   userId: string;
+  country?: string;
   description?: string;
   keywords?: string[];
+  experienceYears?: number;
 }
 
 export interface MatchDistribution {
@@ -308,11 +312,6 @@ export const TIER_LIMITS: Record<UserTier, { dailyApplyCap: number; jobsFetchedP
   free: {
     dailyApplyCap: 0,
     jobsFetchedPerMonth: 0,
-    autoModeAllowed: false,
-  },
-  pro: {
-    dailyApplyCap: 3,
-    jobsFetchedPerMonth: 100,
     autoModeAllowed: false,
   },
   auto: {

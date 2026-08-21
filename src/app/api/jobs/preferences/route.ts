@@ -86,8 +86,8 @@ export async function GET(request: NextRequest) {
       portalStatus: {
         naukri: user.naukriIntegration?.sessionStatus === 'active',
         indeed: user.indeedIntegration?.sessionStatus === 'active',
-        greenhouse: true,
-        adzuna: true,
+        greenhouse: false,
+        adzuna: false,
       },
     });
   } catch (error: any) {
@@ -132,11 +132,11 @@ export async function POST(request: NextRequest) {
       salaryCurrency: preferences.salaryCurrency || 'INR_LPA',
       experienceYears: Number(preferences.experienceYears || 2),
       maxNoticePeriodDays: Number(preferences.maxNoticePeriodDays || 30),
-      maxPerDay: Math.min(Math.max(Number(preferences.maxPerDay || 25), 1), 50),
+      maxPerDay: Math.min(Math.max(Number(preferences.maxPerDay || 25), 1), 25),
       useTailoredCV: Boolean(preferences.useTailoredCV ?? true),
       useCoverLetter: Boolean(preferences.useCoverLetter ?? true),
       autoAnswerQuestions: Boolean(preferences.autoAnswerQuestions ?? true),
-      enabledPortals: preferences.enabledPortals || ['naukri', 'indeed', 'greenhouse', 'adzuna'],
+      enabledPortals: preferences.enabledPortals || ['naukri', 'indeed', 'greenhouse', 'adzuna', 'lever', 'ashby', 'workable'],
     };
 
     // Save on user document

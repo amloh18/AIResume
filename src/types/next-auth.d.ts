@@ -6,12 +6,10 @@ type AuthPlanKey =
   | 'starter_yearly'
   | 'focused_monthly'
   | 'focused_yearly'
-  | 'smart_quarterly'
-  | 'smart_yearly'
-  | 'pro_monthly'
-  | 'pro_quarterly'
-  | 'pro_yearly'
-  | 'pro_lifetime';
+  | 'focused_monthly'
+  | 'focused_quarterly'
+  | 'focused_yearly'
+  | 'focused_yearly';
 
 declare module 'next-auth' {
   interface Session {

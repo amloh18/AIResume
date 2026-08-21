@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import { JobApplication, ApplicationJourney, CV } from '@/models';
@@ -166,7 +166,7 @@ export async function POST(request: NextRequest) {
     const userId = auth.userId;
     // Use source from auth, but fallback to body.source if provided (for compatibility)
     // NOTE: auth.source is narrower (e.g. 'extension' | 'web'); we normalize to a string here.
-    let source: string | undefined = auth.source;
+    let source: string = auth.source || '';
 
     // Parse the request body
     const body = await request.json();
@@ -192,7 +192,8 @@ export async function POST(request: NextRequest) {
       transparencySnapshot,
       source: bodySource, // Allow source to be passed in body as fallback
       cvId, // Optional CV ID to link to journey
-      extractedJd
+      extractedJd,
+      atsType,
     } = body;
 
     // If source is not set from auth, use body source or default based on auth method
@@ -203,16 +204,28 @@ export async function POST(request: NextRequest) {
       source = auth.method === 'token' ? 'extension' : 'manual';
     }
 
-    // Map 'web' to 'manual' for compatibility (web is not a valid enum value)
-    if (source === 'web') {
-      source = 'manual';
+    // Normalize source
+    const VALID_SOURCES = ['extension', 'manual', 'import', 'linkedin', 'indeed', 'company-website', 'referral', 'other'];
+    let normalizedSource: any = source;
+    if (normalizedSource === 'web' || normalizedSource === 'discover') {
+      normalizedSource = 'manual';
+    } else if (!VALID_SOURCES.includes(normalizedSource)) {
+      normalizedSource = 'manual';
     }
+    source = normalizedSource;
 
     console.log(`🔍 Jobs API - Source determined: ${source} (from auth: ${auth.source}, method: ${auth.method}, body: ${bodySource})`);
 
-    // Set default status: 'draft' for extension, 'created' for web
-    const defaultStatus = source === 'extension' ? 'draft' : 'created';
-    const jobStatus = status || defaultStatus;
+    // Set default status: 'saved' for extension, 'created' for web
+    const defaultStatus = source === 'extension' ? 'saved' : 'created';
+    const VALID_STATUSES = ['saved', 'created', 'applied', 'screening', 'interview', 'offer', 'rejected', 'accepted', 'withdrawn'];
+    let normalizedStatus = (status || defaultStatus).toString().toLowerCase();
+    if (['wishlist', 'saved', 'staging', 'shortlist', 'new', 'active'].includes(normalizedStatus)) {
+      normalizedStatus = 'saved';
+    } else if (!VALID_STATUSES.includes(normalizedStatus)) {
+      normalizedStatus = defaultStatus;
+    }
+    let jobStatus = normalizedStatus;
 
     // Validate required fields
     if (!jobTitle || !company) {
@@ -224,6 +237,46 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Clean & normalize salary
+    let cleanedSalary: any = undefined;
+    if (salary && typeof salary === 'object' && !Array.isArray(salary)) {
+      const minNum = typeof salary.min === 'number' ? salary.min : (salary.min ? parseFloat(salary.min) : undefined);
+      const maxNum = typeof salary.max === 'number' ? salary.max : (salary.max ? parseFloat(salary.max) : undefined);
+      cleanedSalary = {
+        min: typeof minNum === 'number' && !isNaN(minNum) ? minNum : undefined,
+        max: typeof maxNum === 'number' && !isNaN(maxNum) ? maxNum : undefined,
+        currency: typeof salary.currency === 'string' && salary.currency ? salary.currency : 'USD',
+        period: ['hourly', 'monthly', 'yearly'].includes(salary.period) ? salary.period : 'yearly'
+      };
+      if (cleanedSalary.min === undefined && cleanedSalary.max === undefined) {
+        cleanedSalary = undefined;
+      }
+    } else if (typeof salary === 'string' && salary.trim()) {
+      const nums = salary.replace(/,/g, '').match(/\d+(\.\d+)?/g);
+      if (nums && nums.length > 0) {
+        const minVal = parseFloat(nums[0]);
+        const maxVal = nums[1] ? parseFloat(nums[1]) : minVal;
+        let curr = 'USD';
+        if (salary.includes('£')) curr = 'GBP';
+        else if (salary.includes('€')) curr = 'EUR';
+        else if (salary.includes('₹')) curr = 'INR';
+        else if (salary.includes('C$') || salary.includes('CAD')) curr = 'CAD';
+        else if (salary.includes('A$') || salary.includes('AUD')) curr = 'AUD';
+        cleanedSalary = {
+          min: !isNaN(minVal) ? minVal : undefined,
+          max: !isNaN(maxVal) ? maxVal : undefined,
+          currency: curr,
+          period: salary.toLowerCase().includes('hour') ? 'hourly' : (salary.toLowerCase().includes('month') ? 'monthly' : 'yearly')
+        };
+      }
+    }
+
+    const VALID_PRIORITIES = ['low', 'medium', 'high'];
+    const normalizedPriority = VALID_PRIORITIES.includes((priority || '').toLowerCase()) ? (priority || '').toLowerCase() : 'medium';
+
+    const VALID_ATS = ['greenhouse', 'lever', 'workable', 'naukri', 'indeed', 'adzuna', 'ashby', 'workday', 'unknown'];
+    const normalizedAtsType = VALID_ATS.includes((atsType || '').toLowerCase()) ? (atsType || '').toLowerCase() : 'unknown';
+
     await getConnection();
 
     // Normalize userId to ObjectId to ensure consistent storage and querying
@@ -231,18 +284,15 @@ export async function POST(request: NextRequest) {
       ? new mongoose.Types.ObjectId(userId)
       : userId;
 
-    // MASTER CV CHECK: Ensure user has a Master CV before creating jobs
-    // Exception: Draft jobs can be created without Master CV (with a reminder banner in UI)
+    // MASTER CV CHECK: Ensure user has CVs or fallback to draft
     if (jobStatus === 'created') {
       const cvCount = await CV.countDocuments({
         userId: normalizedUserId
       });
 
       if (cvCount === 0) {
-        console.log(`❌ [${source.toUpperCase()}] Jobs API - Cannot create job without any CVs`);
-
-        // Use extension error format for extension requests
         if (source === 'extension') {
+          console.log(`❌ [${source.toUpperCase()}] Jobs API - Cannot create job without any CVs`);
           return setCorsHeaders(
             NextResponse.json(
               formatExtensionError(
@@ -257,19 +307,10 @@ export async function POST(request: NextRequest) {
             ),
             request
           );
+        } else {
+          console.log(`ℹ️ [${source.toUpperCase()}] Jobs API - No CVs found for user, creating job as draft bookmark`);
+          jobStatus = 'draft';
         }
-
-        return NextResponse.json(
-          {
-            success: false,
-            error: 'Please create your Master CV first before adding jobs',
-            requiresMasterCV: true,
-            redirectTo: '/editor?mode=create&type=master',
-            suggestedAction: 'Create Master CV',
-            cvCount: 0
-          },
-          { status: 409 } // 409 Conflict
-        );
       }
 
       // Check if user has a Master CV specifically (warn but don't block)
@@ -285,8 +326,6 @@ export async function POST(request: NextRequest) {
 
       if (!hasMasterCV) {
         console.log(`⚠️ [${source.toUpperCase()}] Jobs API - User has CVs but no Master CV (will proceed with warning)`);
-        // User has CVs but no Master CV - allow but log for analytics
-        // This handles edge case where user somehow has journey/standalone CVs without master
       }
     } else if (jobStatus === 'draft') {
       // For draft jobs, just log if no Master CV exists (UI will show reminder banner)
@@ -358,10 +397,10 @@ export async function POST(request: NextRequest) {
             jobUrl: cleanedJobUrl,
             jobDescription: jobDescription || '',
             location: location || '',
-            source,
+            source: normalizedSource,
             status: jobStatus,
-            priority,
-            salary: salary || undefined,
+            priority: normalizedPriority,
+            salary: cleanedSalary,
             notes: notes || '',
             deadline: deadline ? new Date(deadline) : undefined,
             applicationDate: applicationDate ? new Date(applicationDate) : undefined,
@@ -376,7 +415,8 @@ export async function POST(request: NextRequest) {
             followUps: [],
             attachments: [],
             tags: source === 'extension' ? ['extension-saved'] : (tags || []),
-            extractedJd: extractedJd || undefined
+            extractedJd: extractedJd || undefined,
+            atsType: normalizedAtsType,
           };
 
           const [createdJob] = await JobApplication.create([jobData], session ? { session } : undefined);
@@ -469,10 +509,10 @@ export async function POST(request: NextRequest) {
           jobUrl: cleanedJobUrl,
           jobDescription: jobDescription || '',
           location: location || '',
-          source,
+          source: normalizedSource,
           status: jobStatus,
-          priority,
-          salary: salary || undefined,
+          priority: normalizedPriority,
+          salary: cleanedSalary,
           notes: notes || '',
           deadline: deadline ? new Date(deadline) : undefined,
           applicationDate: applicationDate ? new Date(applicationDate) : undefined,
@@ -487,7 +527,8 @@ export async function POST(request: NextRequest) {
           followUps: [],
           attachments: [],
           tags: source === 'extension' ? ['extension-saved'] : (tags || []),
-          extractedJd: extractedJd || undefined
+          extractedJd: extractedJd || undefined,
+          atsType: normalizedAtsType,
         };
 
         jobApplication = await JobApplication.create(jobData);
@@ -503,7 +544,7 @@ export async function POST(request: NextRequest) {
         try {
           const { ActivityLogService } = await import('@/lib/services/activityLogService');
           // Fetch user for email (draft jobs don't have user in scope)
-          const userForLogging = await User.findById(normalizedUserId).select('email').lean();
+          const userForLogging = await User.findById(normalizedUserId).select('email').lean() as { email?: string } | null;
           await ActivityLogService.logUserAction({
             userId: normalizedUserId.toString(),
             userEmail: userForLogging?.email || undefined,
@@ -685,8 +726,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create ApplicationJourney only if status is 'created' (not 'draft')
-    // Draft jobs will have their journey created when moved to 'created' status
+    // Create ApplicationJourney only if status is 'created' (not 'saved')
+    // Saved jobs will have their journey created when moved to 'created' status
     if (jobStatus === 'created') {
       let newJourney: any = null;
       try {

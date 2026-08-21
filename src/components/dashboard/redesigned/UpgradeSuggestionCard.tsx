@@ -32,16 +32,10 @@ const PLAN_TIER: Record<string, number> = {
   starter_monthly: 0,
   starter_yearly: 1,
   focused_monthly: 2,
-  focused_yearly: 2,
-  smart_quarterly: 3,
-  smart_yearly: 3,
-  pro_monthly: 4,
-  pro_quarterly: 5,
-  pro_yearly: 6,
-  pro_lifetime: 7,
+  focused_yearly: 3,
 };
 
-const TOP_TIER = 7; // pro_lifetime — nothing above it to suggest
+const TOP_TIER = 3; // focused_yearly — nothing above it to suggest
 
 interface UsageSignals {
   jobCount: number;
@@ -58,182 +52,79 @@ interface Suggestion {
   description: string;
   features: string[];
   cta: string;
-  usage: UsageSignals;
+  usage?: {
+    type: 'jobs' | 'cvs' | 'cover_letters';
+    current: number;
+    limit: number;
+  };
 }
 
-function buildSuggestion(planKey: string, usage: UsageSignals): Suggestion | null {
-  const tier = PLAN_TIER[planKey] ?? 0;
+function buildSuggestion(
+  currentPlanKey: string,
+  usageSignals: UsageSignals
+): Suggestion | null {
+  const tier = PLAN_TIER[currentPlanKey] ?? 0;
   if (tier >= TOP_TIER) return null;
 
-  const { jobCount, cvCount, coverLetterCount } = usage;
+  const { jobCount, cvCount, coverLetterCount } = usageSignals;
+
+  const usage = (() => {
+    if (jobCount >= 3) return { type: 'jobs' as const, current: jobCount, limit: 3 };
+    if (cvCount >= 3) return { type: 'cvs' as const, current: cvCount, limit: 3 };
+    if (coverLetterCount >= 3)
+      return { type: 'cover_letters' as const, current: coverLetterCount, limit: 3 };
+    return undefined;
+  })();
 
   if (tier === 0) {
-    // Free / Starter Monthly → Focused
-    const freeTrackerCap = 3;
-    if (jobCount >= freeTrackerCap) {
-      return {
-        planKey: 'focused_monthly',
-        planName: 'Focused',
-        tier,
-        eyebrow: 'You’re outgrowing the free plan',
-        headline: `You’re tracking ${jobCount} jobs — the free plan caps at ${freeTrackerCap}`,
-        description:
-          'Focused unlocks unlimited job tracking, AI cover letters, full ATS optimisation and the interview coach. Keep your whole search in one place.',
-        features: ['Unlimited job tracking', 'AI cover letter engine', 'Interview coach'],
-        cta: 'Upgrade to Focused',
-        usage,
-      };
-    }
-    if (coverLetterCount > 0) {
-      return {
-        planKey: 'focused_monthly',
-        planName: 'Focused',
-        tier,
-        eyebrow: 'Recommended for you',
-        headline:
-          `You've written ${coverLetterCount} cover letter${coverLetterCount === 1 ? '' : 's'} — unlock them on Focused`,
-        description:
-          'On the free plan your AI cover letters stay locked. Focused includes unlimited AI cover letters, full ATS optimisation and unlimited tracking.',
-        features: ['Unlimited AI cover letters', 'Live ATS scoring', 'Unlimited job tracking'],
-        cta: 'Upgrade to Focused',
-        usage,
-      };
-    }
-    if (cvCount > 0) {
-      return {
-        planKey: 'focused_monthly',
-        planName: 'Focused',
-        tier,
-        eyebrow: 'Your CV deserves better',
-        headline: 'Turn your CV into an application machine',
-        description:
-          'Focused unlocks full ATS optimisation, unlimited tailoring, AI cover letters and the interview coach — so every version of your CV is built to get past recruiters.',
-        features: ['Full ATS optimisation', 'Unlimited AI tailoring', 'Interview coach'],
-        cta: 'Upgrade to Focused',
-        usage,
-      };
-    }
+    // Free / Starter Monthly → Starter Yearly or Focused Monthly
     return {
       planKey: 'focused_monthly',
       planName: 'Focused',
       tier,
-      eyebrow: 'Unlock your full potential',
-      headline: 'Stop searching. Start landing interviews.',
+      eyebrow: 'Supercharge your job hunt',
+      headline: 'Unlock unlimited CVs, AI Cover Letters & Mock Interviews',
       description:
-        'Focused gives you unlimited job tracking, AI cover letters, full ATS optimisation and interview coaching — everything you need to move your search forward.',
-      features: ['Unlimited job tracking', 'AI cover letter engine', 'Interview coach'],
+        'Focused gives you everything unlimited — ATS scoring, AI interview mock simulator, LinkedIn enhancer, and Kanban job tracker.',
+      features: ['Unlimited CV & Cover Letter Edits', 'AI Interview Coach Mock Simulator', 'LinkedIn Enhancer'],
       cta: 'Upgrade to Focused',
       usage,
     };
   }
 
   if (tier === 1) {
-    // Starter Yearly → Focused (adds tracker + interview coach)
+    // Starter Yearly → Focused (adds unlimited features + interview coach + linkedin enhancer)
     return {
       planKey: 'focused_monthly',
       planName: 'Focused',
       tier,
       eyebrow: 'Complete your toolkit',
-      headline: 'Add the job tracker to your starter toolkit',
+      headline: 'Upgrade to Focused for unlimited features & mock interview prep',
       description:
-        'Starter covers AI documents — Focused adds unlimited job tracking, interview coaching and priority support so you can manage the whole search end to end.',
-      features: ['Unlimited job tracking', 'Interview coach', 'Priority support'],
+        'Starter covers AI documents — Focused adds all features unlimited, interview coaching simulator, and LinkedIn profile enhancer.',
+      features: ['Unlimited CV edits & exports', 'AI Interview Coach Simulator', 'LinkedIn Profile Enhancer'],
       cta: 'Upgrade to Focused',
       usage,
     };
   }
 
   if (tier === 2) {
-    // Focused → Smart (auto-apply bot)
-    if (jobCount >= 8) {
-      return {
-        planKey: 'smart_quarterly',
-        planName: 'Smart',
-        tier,
-        eyebrow: 'Your search is heating up',
-        headline: `You're tracking ${jobCount} roles — let Smart apply for you`,
-        description:
-          'Smart’s autonomous application bot finds, tailors and applies to matching roles for you around the clock, while you focus on interviews.',
-        features: ['AI autonomous application bot', 'Priority application queue', 'Behavioral AI insights'],
-        cta: 'Activate Smart',
-        usage,
-      };
-    }
+    // Focused Monthly → Focused Yearly (save 30% / $7/mo)
     return {
-      planKey: 'smart_quarterly',
-      planName: 'Smart',
+      planKey: 'focused_yearly',
+      planName: 'Focused Yearly',
       tier,
-      eyebrow: 'Put your search on autopilot',
-      headline: 'From tracking jobs to landing them',
+      eyebrow: 'Save over 30%',
+      headline: 'Switch to Focused Yearly at just $7/mo',
       description:
-        'Smart’s autonomous bot applies to matching roles for you 24/7 with high match accuracy — you focus on interviews, not spreadsheets.',
-      features: ['AI autonomous application bot', 'Priority application queue', 'Behavioral AI insights'],
-      cta: 'Activate Smart',
+        'Keep all your unlimited tools active year-round for $79.99/year ($7/mo) and maximize your interview callback rate.',
+      features: ['All Features Unlimited', 'Priority VIP Support', 'Save 30% vs monthly'],
+      cta: 'Switch to Yearly & Save',
       usage,
     };
   }
 
-  if (tier === 3) {
-    // Smart → Pro (career vault + priority)
-    return {
-      planKey: 'pro_yearly',
-      planName: 'Pro',
-      tier,
-      eyebrow: 'Own your career archive',
-      headline: 'Preserve everything you’ve built with Pro',
-      description:
-        'Pro adds the permanent Career Vault — every CV, cover letter and document stored forever — plus priority support and advanced analytics on top of Smart’s autopilot.',
-      features: ['Permanent Career Vault', 'Priority support', 'Advanced analytics'],
-      cta: 'Upgrade to Pro',
-      usage,
-    };
-  }
-
-  if (tier === 4) {
-    // Pro Monthly → Pro Yearly
-    return {
-      planKey: 'pro_yearly',
-      planName: 'Pro Yearly',
-      tier,
-      eyebrow: 'You’re on Pro Monthly',
-      headline: 'Go yearly and keep more of your budget',
-      description:
-        'Switch to Pro Yearly and save on the same full Pro suite — Career Vault, priority support and advanced analytics, billed once a year.',
-      features: ['Save vs. monthly billing', 'Permanent Career Vault', 'Priority support'],
-      cta: 'Switch to Yearly',
-      usage,
-    };
-  }
-
-  if (tier === 5) {
-    // Pro Quarterly → Pro Yearly
-    return {
-      planKey: 'pro_yearly',
-      planName: 'Pro Yearly',
-      tier,
-      eyebrow: 'A smarter billing rhythm',
-      headline: 'Lock in yearly pricing and save',
-      description:
-        'Move from quarterly to yearly billing and save while keeping the full Pro suite — Career Vault, priority support and advanced analytics.',
-      features: ['Save vs. quarterly billing', 'Permanent Career Vault', 'Priority support'],
-      cta: 'Switch to Yearly',
-      usage,
-    };
-  }
-
-  // Pro Yearly → Pro Lifetime
-  return {
-    planKey: 'pro_lifetime',
-    planName: 'Pro Lifetime',
-    tier,
-    eyebrow: 'One-time payment. Lifetime access.',
-    headline: 'Own Pro forever with a single payment',
-    description:
-      'Pro Lifetime locks in every current and future feature for life — including the permanent Career Vault — with no renewals, ever.',
-    features: ['Lifetime access, no renewals', 'All future features included', 'Permanent Career Vault'],
-    cta: 'Go Lifetime',
-    usage,
-  };
+  return null;
 }
 
 /* ------------------------------------------------------------------ */

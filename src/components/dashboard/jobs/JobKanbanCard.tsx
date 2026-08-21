@@ -38,7 +38,7 @@ interface JobApplication {
   company: string;
   companyLogo?: string;
   status:
-    | "draft"
+    | "saved"
     | "created"
     | "applied"
     | "screening"
@@ -125,19 +125,15 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
   // Prevent infinite loops by tracking attempts locally
   const hasAnalyzedRef = React.useRef(false);
 
-  const [progress, setProgress] = useState(15);
-  const primaryJourney = jobJourneys[0];
-  const atsScore = primaryJourney?.atsScore || job.atsScore;
-  const isGenerating = stage === "created" && (
-    !primaryJourney ||
-    primaryJourney.status === "processing_documents" ||
-    (primaryJourney.status !== "creation_failed" && primaryJourney.status !== "ready" && (!primaryJourney.cvId || !primaryJourney.coverLetterId))
-  );
+  const [progress, setProgress] = useState(0);
+  const primaryJourney = jobJourneys && jobJourneys.length > 0 ? jobJourneys[0] : null;
+  const atsScore = primaryJourney?.atsScore || job.atsScore || job.matchScore;
+  const isGenerating = stage === "created" && primaryJourney?.status === "processing_documents";
 
   // Progress simulation timer
   React.useEffect(() => {
     if (!isGenerating) {
-      setProgress(15);
+      setProgress(0);
       return;
     }
 
@@ -152,30 +148,27 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
     return () => clearInterval(timer);
   }, [isGenerating]);
 
-  // Polling database for updates on journey status
+  // Polling database for updates on journey status ONLY if actively generating
   React.useEffect(() => {
     if (!isGenerating) return;
 
     let isMounted = true;
     const pollTimer = setInterval(async () => {
       try {
-        const res = await fetch(`/api/application-journey?jobId=${job.id || job._id}`);
+        const jobId = job.id || job._id;
+        const res = await fetch(`/api/application-journey?jobId=${jobId}`);
         if (res.ok && isMounted) {
           const result = await res.json();
           if (result.success && result.data?.journeys && result.data.journeys.length > 0) {
             const updatedJourney = primaryJourney
               ? result.data.journeys.find(
-                  (j: any) => j.id === primaryJourney.id || j._id === primaryJourney.id || j.jobId === job.id || j.jobId === job._id
+                  (j: any) => j.id === primaryJourney.id || j._id === primaryJourney.id || j.jobId === jobId
                 )
               : result.data.journeys[0];
-            if (updatedJourney) {
-              const hasBoth = updatedJourney.cvId && updatedJourney.coverLetterId;
-              const notProcessing = updatedJourney.status !== "processing_documents";
-              if (hasBoth || notProcessing || updatedJourney.status === "ready" || updatedJourney.status === "creation_failed") {
-                clearInterval(pollTimer);
-                if (isMounted) {
-                  onRefresh?.();
-                }
+            if (updatedJourney && updatedJourney.status !== "processing_documents") {
+              clearInterval(pollTimer);
+              if (isMounted) {
+                onRefresh?.();
               }
             }
           }
@@ -183,59 +176,13 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
       } catch (err) {
         console.error("Error polling journey status in Kanban card:", err);
       }
-    }, 2500);
+    }, 3000);
 
     return () => {
       isMounted = false;
       clearInterval(pollTimer);
     };
   }, [isGenerating, primaryJourney?.id, job.id, job._id, onRefresh]);
-
-  // Auto-trigger analysis if score is missing
-  React.useEffect(() => {
-    const checkAndAnalyze = async () => {
-      // Only trigger if:
-      // 1. matchScore is undefined
-      // 2. job has description (needed for analysis)
-      // 3. Not already analyzing
-      // 3. Not already analyzing
-      // 4. Not analyzed in this session (global check)
-      if (
-        job.matchScore === undefined &&
-        job.jobDescription &&
-        !isAnalyzing &&
-        !hasAnalyzedRef.current &&
-        !analyzedJobIds.has(job.id)
-      ) {
-        try {
-          setIsAnalyzing(true);
-          hasAnalyzedRef.current = true; // Mark as attempted locally
-          analyzedJobIds.add(job.id); // Mark as attempted globally
-
-          // Dynamically import to avoid circular dependencies if any
-          const { triggerJobAnalysis } =
-            await import("@/lib/services/jobAnalysisService");
-          const result = await triggerJobAnalysis(job);
-
-          if (result) {
-            // Dispatch event to refresh jobs
-            window.dispatchEvent(
-              new CustomEvent("jobUpdated", {
-                detail: { jobId: job.id, ...result },
-              }),
-            );
-          }
-        } catch (error) {
-          console.error("Failed to auto-analyze job:", error);
-        } finally {
-          setIsAnalyzing(false);
-        }
-      }
-    };
-
-    const timeoutId = setTimeout(checkAndAnalyze, 1000); // Small delay to prevent immediate flood on mount
-    return () => clearTimeout(timeoutId);
-  }, [job.matchScore, job.jobDescription, job.id, isAnalyzing]); // Dependencies
 
   const handlePracticeClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -779,7 +726,7 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
 
         {/* Stage Specific Content */}
         <div className="mt-1">
-          {stage === "draft" && renderDraftContent()}
+          {stage === "saved" && renderDraftContent()}
           {stage === "created" && renderCreatedContent()}
           {stage === "applied" && renderAppliedContent()}
           {stage === "interview" && renderInterviewContent()}

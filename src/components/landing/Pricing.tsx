@@ -54,10 +54,10 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
   const getPlanIcon = (planKey: string) => {
     switch (planKey) {
       case 'free': return Brain;
-      case 'pro_monthly': return Crown;
-      case 'pro_quarterly': return Users;
-      case 'pro_yearly': return Globe;
-      case 'pro_lifetime': return Star;
+      case 'focused_monthly': return Crown;
+      case 'focused_quarterly': return Users;
+      case 'focused_yearly': return Globe;
+      case 'focused_yearly': return Star;
       default: return Brain;
     }
   };
@@ -100,25 +100,17 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
     // Ensure pricingPlans is always an array
     const safePlans = Array.isArray(pricingPlans) ? pricingPlans : [];
     
-    // Support both spellings for robustness — exclude 'free' plan from the table
+    // Filter for the 4 canonical plans
     const activeKeys = billingInterval === 'monthly'
-      ? ['starter_monthly', 'focused_monthly', 'smart_quarterly']
-      : ['starter_yearly', 'focused_yearly', 'smart_yearly'];
+      ? ['starter_monthly', 'focused_monthly']
+      : ['starter_yearly', 'focused_yearly'];
       
     return safePlans
       .filter(plan => activeKeys.includes(plan.key))
       .sort((a, b) => {
-        // Find best match in activeKeys to preserve intended order
         const getIndex = (key: string) => {
-          if (billingInterval === 'monthly') {
-            if (key === 'starter_monthly') return 0;
-            if (key === 'focused_monthly') return 1;
-            if (key.includes('smart')) return 2;
-          } else {
-            if (key.includes('starter')) return 0;
-            if (key.includes('focused')) return 1;
-            if (key.includes('smart')) return 2;
-          }
+          if (key.includes('starter')) return 0;
+          if (key.includes('focused')) return 1;
           return 99;
         };
         return getIndex(a.key) - getIndex(b.key);
@@ -288,36 +280,41 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
         {/* Comparison Table Data */}
         {(() => {
           const comparisonFeatures = [
-            { name: 'Access to All Templates', free: '✓', starter_monthly: '✓', starter_yearly: '✓', focused_monthly: '✓', focused_yearly: '✓', smart_quarterly: '✓', smart_yearly: '✓', pro_monthly: '✓', pro_quarterly: '✓', pro_yearly: '✓', pro_lifetime: '✓' },
-            { name: 'CV & Cover Letter Editing', free: 'Unlimited', starter_monthly: 'Unlimited', starter_yearly: 'Unlimited', focused_monthly: 'Unlimited', focused_yearly: 'Unlimited', smart_quarterly: 'Unlimited', smart_yearly: 'Unlimited', pro_monthly: 'Unlimited', pro_quarterly: 'Unlimited', pro_yearly: 'Unlimited', pro_lifetime: 'Unlimited' },
-            { name: 'Real-time ATS Scoring & Editor', free: 'Spelling Only', starter_monthly: 'Spelling Only', starter_yearly: '✓ (Live ATS)', focused_monthly: '✓ (Live ATS)', focused_yearly: '✓ (Live ATS)', smart_quarterly: '✓ (Live ATS)', smart_yearly: '✓ (Live ATS)', pro_monthly: '✓', pro_quarterly: '✓', pro_yearly: '✓', pro_lifetime: '✓' },
-            { name: 'AI Cover Letter Generator', free: '✗', starter_monthly: '✗', starter_yearly: '✓', focused_monthly: '✓', focused_yearly: '✓', smart_quarterly: '✓', smart_yearly: '✓', pro_monthly: '✓', pro_quarterly: '✓', pro_yearly: '✓', pro_lifetime: '✓' },
-            { name: 'LinkedIn Enhancer (Optimizer)', free: '✗', starter_monthly: '✗', starter_yearly: '✗', focused_monthly: '✓', focused_yearly: '✓', smart_quarterly: '✓', smart_yearly: '✓', pro_monthly: '✓', pro_quarterly: '✓', pro_yearly: '✓', pro_lifetime: '✓' },
-            { name: 'Mori AI Chat', free: '✗', starter_monthly: '✗', starter_yearly: '✓', focused_monthly: '✗', focused_yearly: '✓', smart_quarterly: '✓', smart_yearly: '✓', pro_monthly: '✓', pro_quarterly: '✓', pro_yearly: '✓', pro_lifetime: '✓' },
-            { name: 'AI Interview Coach Simulator', free: '✗', starter_monthly: '✗', starter_yearly: '✗', focused_monthly: '✓', focused_yearly: '✓', smart_quarterly: '✓', smart_yearly: '✓', pro_monthly: '✓', pro_quarterly: '✓', pro_yearly: '✓', pro_lifetime: '✓' },
-            { name: 'Job Application Tracker', free: '✓ (Basic)', starter_monthly: '✗', starter_yearly: '✗', focused_monthly: '✓ (Full)', focused_yearly: '✓ (Full)', smart_quarterly: '✓ (Full)', smart_yearly: '✓ (Full)', pro_monthly: '✓ (Full)', pro_quarterly: '✓ (Full)', pro_yearly: '✓ (Full)', pro_lifetime: '✓ (Full)' },
-            { name: 'Auto Job Application Bot', free: '✗', starter_monthly: '✗', starter_yearly: '✗', focused_monthly: '✗', focused_yearly: '✗', smart_quarterly: '✓', smart_yearly: '✓', pro_monthly: '✗', pro_quarterly: '✗', pro_yearly: '✗', pro_lifetime: '✗' },
-            { name: 'Permanent Career Vault', free: '✗', starter_monthly: '✗', starter_yearly: '✗', focused_monthly: '✗', focused_yearly: '✗', smart_quarterly: '✗', smart_yearly: '✗', pro_monthly: '✗', pro_quarterly: '✗', pro_yearly: '✗', pro_lifetime: '✓' },
-            { name: 'Snippets', free: '✓', starter_monthly: '✓', starter_yearly: '✓', focused_monthly: '✓', focused_yearly: '✓', smart_quarterly: '✓', smart_yearly: '✓', pro_monthly: '✓', pro_quarterly: '✓', pro_yearly: '✓', pro_lifetime: '✓' },
-            { name: 'Custom ATS Templates', free: '✓', starter_monthly: '✓', starter_yearly: '✓', focused_monthly: '✓', focused_yearly: '✓', smart_quarterly: '✓', smart_yearly: '✓', pro_monthly: '✓', pro_quarterly: '✓', pro_yearly: '✓', pro_lifetime: '✓' },
-            { name: 'Customer Support Level', free: 'Standard', starter_monthly: 'Standard', starter_yearly: 'Standard', focused_monthly: 'Priority', focused_yearly: 'Priority', smart_quarterly: 'VIP 24/7 Support', smart_yearly: 'VIP 24/7 Support', pro_monthly: 'Standard', pro_quarterly: 'Priority Support', pro_yearly: 'Priority Support', pro_lifetime: 'VIP 24/7 Support' },
+            { name: 'Access to All Templates & Snippets', starter_monthly: '✓', starter_yearly: '✓', focused_monthly: '✓', focused_yearly: '✓' },
+            { name: 'CV & Cover Letter Editing', starter_monthly: 'Unlimited', starter_yearly: 'Unlimited', focused_monthly: 'Unlimited', focused_yearly: 'Unlimited' },
+            { name: 'Real-time ATS Scoring & Editor', starter_monthly: '✓ (Live ATS)', starter_yearly: '✓ (Live ATS)', focused_monthly: '✓ (Live ATS)', focused_yearly: '✓ (Live ATS)' },
+            { name: 'AI Cover Letter Generator', starter_monthly: '✓', starter_yearly: '✓', focused_monthly: '✓', focused_yearly: '✓' },
+            { name: 'PDF & DOCX Downloads', starter_monthly: '✓', starter_yearly: '✓', focused_monthly: '✓', focused_yearly: '✓' },
+            { name: 'Mori AI Chat', starter_monthly: '✓', starter_yearly: '✓', focused_monthly: '✓', focused_yearly: '✓' },
+            { name: 'LinkedIn Enhancer (Optimizer)', starter_monthly: '✗', starter_yearly: '✗', focused_monthly: '✓', focused_yearly: '✓' },
+            { name: 'AI Interview Coach Mock Simulator', starter_monthly: '✗', starter_yearly: '✗', focused_monthly: '✓', focused_yearly: '✓' },
+            { name: 'Application Tracker (Full Kanban)', starter_monthly: '10 Applications', starter_yearly: '10 Applications', focused_monthly: 'Unlimited', focused_yearly: 'Unlimited' },
+            { name: 'Auto Applications & Journeys', starter_monthly: '10 Auto Applies', starter_yearly: '10 Auto Applies', focused_monthly: 'Unlimited', focused_yearly: 'Unlimited' },
+            { name: 'Feature Limits', starter_monthly: 'Standard', starter_yearly: 'Standard', focused_monthly: 'All Features Unlimited', focused_yearly: 'All Features Unlimited' },
+            { name: 'Customer Support Level', starter_monthly: 'Standard', starter_yearly: 'Standard', focused_monthly: 'Priority', focused_yearly: 'Priority Support' },
           ];
 
           const leftPlan = billingInterval === 'monthly'
             ? filteredPlans.find(p => p.key === 'starter_monthly')
             : filteredPlans.find(p => p.key === 'starter_yearly');
-          const selectedProPlan = filteredPlans.find(p => p.key === selectedMobilePlanKey);
+          const selectedProPlan = billingInterval === 'monthly'
+            ? filteredPlans.find(p => p.key === 'focused_monthly')
+            : filteredPlans.find(p => p.key === 'focused_yearly');
 
           const getMobilePlanPriceDisplay = (plan: DatabasePricingPlan) => {
             if (plan.key === 'starter_monthly') {
               return 'FREE';
             }
-            const regionalPrice = getRegionalPrice(plan);
             if (plan.key === 'starter_yearly') {
-              const symbol = plan.regionalPricing?.currencySymbol || '$';
-              const yearlyTotalVal = plan.price_yearly || 19.99;
-              return `${symbol}${(yearlyTotalVal / 12).toFixed(2)}/mo`;
+              return '$2/mo';
             }
+            if (plan.key === 'focused_monthly') {
+              return '$9.99/mo';
+            }
+            if (plan.key === 'focused_yearly') {
+              return '$7/mo';
+            }
+            const regionalPrice = getRegionalPrice(plan);
             const monthlyEquivalent = getMonthlyEquivalent(plan);
             return monthlyEquivalent.showMonthly ? monthlyEquivalent.price : regionalPrice;
           };
@@ -326,46 +323,35 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
             if (plan.key === 'starter_monthly') {
               return (
                 <div className="flex flex-col items-center text-center">
-                  <span className="text-[8px] text-gray-400 line-through font-normal">$3.99/mo</span>
+                  <span className="text-[8px] text-gray-400 line-through font-normal">$4.99/mo</span>
+                  <span className="text-[8px] text-lime-600 dark:text-lime-400 font-normal">free for now</span>
                 </div>
               );
             }
             if (plan.key === 'starter_yearly') {
-              const rPrice = getRegionalPrice(plan);
               return (
                 <div className="flex flex-col items-center">
-                  {plan.isPromotionActive && plan.price_yearly !== 19.99 && plan.price_yearly !== 39.99 && (
-                    <span className="text-[8px] text-gray-400 line-through font-normal">
-                      {plan.regionalPricing?.currencySymbol || '$'}{plan.price_yearly || 39.99} total
-                    </span>
-                  )}
-                  <span className="text-[8px] text-gray-500 dark:text-white/60 font-normal">
-                    {rPrice.endsWith('*') ? `${rPrice.slice(0, -1)} total*` : `${rPrice} total`}
-                  </span>
+                  <span className="text-[8px] text-gray-500 dark:text-white/60 font-normal">$19.99 total</span>
                   <span className="text-[8px] text-gray-400 font-normal mt-0.5">billed annually</span>
                 </div>
               );
             }
-            const monthlyEquivalent = getMonthlyEquivalent(plan);
-            const regionalPrice = getRegionalPrice(plan);
-            return (
-              <div className="flex flex-col items-center">
-                {monthlyEquivalent.showMonthly && (
-                  <span className="text-[8px] text-gray-500 dark:text-white/60 font-normal">
-                    {regionalPrice.endsWith('*') ? `${regionalPrice.slice(0, -1)} total*` : `${regionalPrice} total`}
-                  </span>
-                )}
-                <span className="text-[8px] text-gray-400 font-normal mt-0.5">
-                  {plan.key.includes('monthly')
-                    ? 'recurring monthly'
-                    : plan.key.includes('quarterly')
-                      ? 'billed quarterly'
-                      : plan.key.includes('yearly')
-                        ? 'billed annually'
-                        : 'one-time'}
-                </span>
-              </div>
-            );
+            if (plan.key === 'focused_monthly') {
+              return (
+                <div className="flex flex-col items-center">
+                  <span className="text-[8px] text-gray-400 font-normal mt-0.5">recurring monthly</span>
+                </div>
+              );
+            }
+            if (plan.key === 'focused_yearly') {
+              return (
+                <div className="flex flex-col items-center">
+                  <span className="text-[8px] text-gray-500 dark:text-white/60 font-normal">$79.99 total</span>
+                  <span className="text-[8px] text-gray-400 font-normal mt-0.5">billed annually</span>
+                </div>
+              );
+            }
+            return null;
           };
 
           const renderFeatureVal = (value: string) => {
@@ -396,19 +382,18 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
                   <thead>
                     {/* Row 1: Plan Names */}
                     <tr className="bg-gray-50/50 dark:bg-black/20">
-                      <th className="p-4 text-left border-b border-gray-200 dark:border-white/10 w-[25%] sticky left-0 bg-gray-50 dark:bg-[#1A2015] z-20">
+                      <th className="p-4 text-left border-b border-gray-200 dark:border-white/10 w-[30%] sticky left-0 bg-gray-50 dark:bg-[#1A2015] z-20">
                         <div className="flex flex-col">
                           <span className="text-[10px] font-semibold text-lime-600 dark:text-lime-400 uppercase tracking-widest mb-0.5">AI Resume Plans</span>
                           <span className="text-h3 font-bold text-gray-900 dark:text-white">Compare Features</span>
                         </div>
                       </th>
                       {filteredPlans.map((plan) => {
-                        const isPopular = plan.isPopular;
-                        const isBestValue = plan.isBestValue;
+                        const isPopular = plan.key === 'focused_yearly';
                         return (
                           <th
                             key={`header-${plan.key}`}
-                            className={`p-4 text-center align-middle w-[15%] border-b border-gray-200 dark:border-white/10 ${
+                            className={`p-4 text-center align-middle w-[35%] border-b border-gray-200 dark:border-white/10 ${
                               isPopular ? 'bg-lime-500/[0.03] dark:bg-lime-400/[0.02] border-x border-lime-500/30' : ''
                             }`}
                           >
@@ -419,15 +404,10 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
                                   Most Popular
                                 </span>
                               )}
-                              {isBestValue && (
-                                <span className="bg-blue-500 text-white text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full mb-1.5 shadow-md">
-                                  Best Value
-                                </span>
-                              )}
-                              {!isPopular && !isBestValue && <div className="h-[19px] mb-1.5" />}
-                               <h3 className="text-small font-bold text-gray-900 dark:text-white">
-                                 {plan.name.replace(/\s*(Monthly|Yearly|Quarterly)/gi, '')}
-                               </h3>
+                              {!isPopular && <div className="h-[19px] mb-1.5" />}
+                              <h3 className="text-body font-bold text-gray-900 dark:text-white">
+                                {plan.name.replace(/\s*(Monthly|Yearly|Quarterly)/gi, '')}
+                              </h3>
                             </div>
                           </th>
                         );
@@ -440,18 +420,18 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
                         key={rowIndex}
                         className="group hover:bg-gray-50/50 dark:hover:bg-[#81ff00]/[0.02] transition-colors"
                       >
-                        <td className="p-4 text-small font-semibold text-gray-800 dark:text-white/90 border-b border-gray-200 dark:border-white/10 text-left sticky left-0 bg-white dark:bg-[#1A2015] z-10 group-hover:bg-gray-50/80 dark:group-hover:bg-[#20291d] transition-colors duration-200 w-[25%]">
+                        <td className="p-4 text-small font-semibold text-gray-800 dark:text-white/90 border-b border-gray-200 dark:border-white/10 text-left sticky left-0 bg-white dark:bg-[#1A2015] z-10 group-hover:bg-gray-50/80 dark:group-hover:bg-[#20291d] transition-colors duration-200 w-[30%]">
                           {row.name}
                         </td>
 
                         {filteredPlans.map((plan) => {
                           const value = (row as any)[plan.key];
-                          const isPopular = plan.isPopular;
+                          const isPopular = plan.key === 'focused_yearly';
 
                           return (
                             <td
                               key={`${plan.key}-${rowIndex}`}
-                              className={`p-4 text-center border-b border-gray-200 dark:border-white/10 text-small font-medium text-gray-600 dark:text-white/70 w-[15%] ${
+                              className={`p-4 text-center border-b border-gray-200 dark:border-white/10 text-small font-medium text-gray-600 dark:text-white/70 w-[35%] ${
                                 isPopular ? 'bg-lime-500/[0.015] dark:bg-lime-400/[0.01] border-x border-lime-500/20' : ''
                               }`}
                             >
@@ -473,74 +453,55 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
                   <tfoot>
                     {/* Row 2: Prices */}
                     <tr className="bg-gray-50/30 dark:bg-black/10 border-t border-gray-200 dark:border-white/10">
-                      <td className="p-4 border-b border-gray-200 dark:border-white/10 w-[25%] bg-gray-50 dark:bg-[#1A2015] sticky left-0 z-20 font-bold text-small text-gray-800 dark:text-white/90">
+                      <td className="p-4 border-b border-gray-200 dark:border-white/10 w-[30%] bg-gray-50 dark:bg-[#1A2015] sticky left-0 z-20 font-bold text-small text-gray-800 dark:text-white/90">
                         Price
                       </td>
                       {filteredPlans.map((plan) => {
-                        const regionalPrice = getRegionalPrice(plan);
-                        const monthlyEquivalent = getMonthlyEquivalent(plan);
-                        const isPopular = plan.isPopular;
+                        const isPopular = plan.key === 'focused_yearly';
                         return (
                           <td
                             key={`price-${plan.key}`}
-                            className={`p-4 text-center align-top w-[15%] border-b border-gray-200 dark:border-white/10 ${
+                            className={`p-4 text-center align-top w-[35%] border-b border-gray-200 dark:border-white/10 ${
                               isPopular ? 'bg-lime-500/[0.03] dark:bg-lime-400/[0.02] border-x border-lime-500/30' : ''
                             }`}
                           >
                             <div className="flex flex-col items-center justify-start min-h-[64px]">
-                               {plan.key === 'free' ? (
+                              {plan.key === 'starter_monthly' ? (
                                 <div className="flex flex-col items-center">
-                                  <span className="text-h3 tablet:text-h2 font-extrabold text-gray-900 dark:text-white leading-tight">Free</span>
-                                  <span className="text-[9px] text-gray-400 mt-0.5 font-normal">no subscription</span>
-                                </div>
-                              ) : plan.key === 'starter_monthly' ? (
-                                <div className="flex flex-col items-center">
-                                  <span className="text-small text-gray-400 line-through font-normal mb-0.5">$3.99/mo</span>
+                                  <span className="text-small text-gray-400 line-through font-normal mb-0.5">$4.99/mo</span>
                                   <span className="text-h3 tablet:text-h2 font-extrabold text-lime-600 dark:text-lime-400 leading-tight">FREE</span>
+                                  <span className="text-[9px] text-lime-600 dark:text-lime-400 mt-0.5 font-bold">Free for now</span>
                                 </div>
                               ) : plan.key === 'starter_yearly' ? (
                                 <div className="flex flex-col items-center">
-                                  {plan.isPromotionActive && plan.price_yearly !== 19.99 && plan.price_yearly !== 39.99 && (
-                                    <span className="text-small text-gray-400 line-through font-normal mb-0.5">
-                                      {plan.regionalPricing?.currencySymbol || '$'}{plan.price_yearly || 39.99}
-                                    </span>
-                                  )}
                                   <span className="text-h3 tablet:text-h2 font-extrabold text-gray-900 dark:text-white leading-tight">
-                                    {plan.regionalPricing?.currencySymbol || '$'}{( (plan.price_yearly || 19.99) / 12 ).toFixed(2)}/mo
+                                    $2/mo
                                   </span>
                                   <span className="text-[9px] text-gray-500 dark:text-white/60 mt-0.5 font-normal">
-                                    {regionalPrice.endsWith('*') ? `${regionalPrice.slice(0, -1)} total*` : `${regionalPrice} total`}
+                                    $19.99 total
                                   </span>
                                   <span className="text-[9px] text-gray-400 mt-0.5 font-normal">billed annually</span>
                                 </div>
-                              ) : (
+                              ) : plan.key === 'focused_monthly' ? (
                                 <div className="flex flex-col items-center">
                                   <span className="text-h3 tablet:text-h2 font-extrabold text-gray-900 dark:text-white leading-tight">
-                                    {(() => {
-                                      const basePriceStr = monthlyEquivalent.showMonthly ? monthlyEquivalent.price : regionalPrice;
-                                      const suffix = plan.key.includes('monthly') ? '/m' : plan.key.includes('quarterly') ? '/3months' : '';
-                                      if (basePriceStr.endsWith('*')) {
-                                        return `${basePriceStr.slice(0, -1)}${suffix}*`;
-                                      }
-                                      return `${basePriceStr}${suffix}`;
-                                    })()}
+                                    $9.99/mo
                                   </span>
-                                  {monthlyEquivalent.showMonthly && (
-                                    <span className="text-[9px] text-gray-500 dark:text-white/60 mt-0.5 font-normal">
-                                      {regionalPrice.endsWith('*') ? `${regionalPrice.slice(0, -1)} total*` : `${regionalPrice} total`}
-                                    </span>
-                                  )}
                                   <span className="text-[9px] text-gray-400 mt-0.5 font-normal">
-                                    {plan.key.includes('monthly')
-                                      ? 'recurring monthly'
-                                      : plan.key.includes('quarterly')
-                                        ? 'billed quarterly'
-                                        : plan.key.includes('yearly')
-                                          ? 'billed annually'
-                                          : 'one-time'}
+                                    recurring monthly
                                   </span>
                                 </div>
-                              )}
+                              ) : plan.key === 'focused_yearly' ? (
+                                <div className="flex flex-col items-center">
+                                  <span className="text-h3 tablet:text-h2 font-extrabold text-gray-900 dark:text-white leading-tight">
+                                    $7/mo
+                                  </span>
+                                  <span className="text-[9px] text-gray-500 dark:text-white/60 mt-0.5 font-normal">
+                                    $79.99 total
+                                  </span>
+                                  <span className="text-[9px] text-gray-400 mt-0.5 font-normal">billed annually</span>
+                                </div>
+                              ) : null}
                             </div>
                           </td>
                         );
@@ -549,17 +510,17 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
 
                     {/* Row 3: Action Buttons */}
                     <tr className="bg-gray-50/30 dark:bg-black/10">
-                      <td className="p-4 border-b border-gray-200 dark:border-white/10 w-[25%] bg-gray-50 dark:bg-[#1A2015] sticky left-0 z-20" />
+                      <td className="p-4 border-b border-gray-200 dark:border-white/10 w-[30%] bg-gray-50 dark:bg-[#1A2015] sticky left-0 z-20" />
                       {filteredPlans.map((plan) => {
-                        const isPopular = plan.isPopular;
+                        const isPopular = plan.key === 'focused_yearly';
                         return (
                           <td
                             key={`cta-${plan.key}`}
-                            className={`p-4 text-center align-middle w-[15%] border-b border-gray-200 dark:border-white/10 ${
+                            className={`p-4 text-center align-middle w-[35%] border-b border-gray-200 dark:border-white/10 ${
                               isPopular ? 'bg-lime-500/[0.03] dark:bg-lime-400/[0.02] border-x border-lime-500/30' : ''
                             }`}
                           >
-                              <motion.button
+                             <motion.button
                                onClick={() => handlePlanSelect(plan)}
                                className={`w-full py-2 px-3 text-small font-bold rounded-lg transition-all duration-300 ${
                                  plan.key === 'starter_monthly'
@@ -581,37 +542,6 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
 
               {/* Mobile Version */}
               <div className="block desktop:hidden w-full overflow-visible">
-                {/* Pro Plan Selector */}
-                <div className="flex justify-center my-4 px-2">
-                  <div className="inline-flex p-1 rounded-xl bg-gray-100 dark:bg-black/30 border border-gray-200 dark:border-white/5 backdrop-blur-sm">
-                    {(billingInterval === 'monthly'
-                      ? [
-                          { key: 'focused_monthly', label: 'Focused Mo' },
-                          { key: 'smart_quarterly', label: 'Smart Qtr' }
-                        ]
-                      : [
-                          { key: 'focused_yearly', label: 'Focused Yr' },
-                          { key: 'smart_yearly', label: 'Smart Yr' }
-                        ]
-                    ).map((interval) => {
-                      const isActive = selectedMobilePlanKey === interval.key;
-                      return (
-                        <button
-                          key={interval.key}
-                          onClick={() => setSelectedMobilePlanKey(interval.key)}
-                          className={`px-3 py-1.5 text-[10px] font-semibold rounded-lg transition-all duration-200 ${
-                            isActive
-                              ? 'bg-[#81ff00] text-black shadow-md'
-                              : 'text-gray-600 dark:text-white/60 hover:text-gray-900 dark:hover:text-white'
-                          }`}
-                        >
-                          {interval.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
                 {/* Mobile Table */}
                 <table className="w-full border-collapse table-layout-fixed">
                   <thead>
@@ -622,16 +552,18 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
                       </th>
                       <th className="p-3 text-center border-b border-gray-200 dark:border-white/10 w-[30%]">
                         <span className="text-small font-bold text-gray-900 dark:text-white">
-                          {leftPlan ? leftPlan.name.replace(/\s*(Monthly|Yearly|Quarterly)/gi, '') : 'Starter'}
+                          Starter
                         </span>
                       </th>
                       <th className="p-3 text-center border-b border-gray-200 dark:border-white/10 w-[30%] bg-lime-500/[0.03] dark:bg-lime-400/[0.02] border-x border-lime-500/20">
                         <div className="flex flex-col items-center">
-                          <span className="bg-lime-500 dark:bg-lime-400 text-white dark:text-gray-900 text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full mb-1 shadow-md">
-                            Pro Choice
-                          </span>
+                          {billingInterval === 'yearly' && (
+                            <span className="bg-lime-500 dark:bg-lime-400 text-white dark:text-gray-900 text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full mb-1 shadow-md">
+                              Most Popular
+                            </span>
+                          )}
                           <span className="text-small font-bold text-gray-900 dark:text-white text-center leading-tight">
-                            {selectedProPlan ? selectedProPlan.name.replace(/\s*(Monthly|Yearly|Quarterly)/gi, '') : 'Pro'}
+                            Focused
                           </span>
                         </div>
                       </th>
@@ -735,7 +667,7 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
           transition={{ duration: 0.6, delay: 0.5 }}
           viewport={{ once: true }}
         >
-          * Prices shown in non-USD currencies are calculated using live exchange rates from the base USD plan price (e.g. Starter Yearly: $39.99/y, Focused Monthly: $9.99/m, Focused Yearly: $79.99/y, Smart Quarterly: $59.99/q, Smart Yearly: $199.00/y) and converted using live exchange values. Actual billing amounts at checkout may vary slightly depending on real-time conversions and payment processing options.
+          * Prices shown in non-USD currencies are calculated using live exchange rates from the base USD plan price (e.g. Starter Yearly: $19.99/y, Focused Monthly: $9.99/m, Focused Yearly: $79.99/y) and converted using live exchange values. Actual billing amounts at checkout may vary slightly depending on real-time conversions and payment processing options.
         </motion.div>
 
         {/* Bottom CTA */}

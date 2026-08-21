@@ -28,7 +28,7 @@ export default function TrackerCreatedStageModal({
   jobTitle,
   company,
   preview,
-  preselectedPlanKey = 'pro_monthly',
+  preselectedPlanKey = 'focused_monthly',
   isSubmitting = false,
   actionContext = null,
 }: TrackerCreatedStageModalProps) {

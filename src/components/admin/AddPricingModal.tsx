@@ -54,19 +54,19 @@ export default function AddPricingModal({ isOpen, onClose, onSuccess, plans }: A
                     },
                     monthly: {
                         price: parseFloat(formData.monthly) || 0,
-                        planId: findPlanId('pro_monthly')
+                        planId: findPlanId('focused_monthly')
                     },
                     quarterly: {
                         price: parseFloat(formData.quarterly) || 0,
-                        planId: findPlanId('pro_quarterly')
+                        planId: findPlanId('focused_quarterly')
                     },
                     yearly: {
                         price: parseFloat(formData.yearly) || 0,
-                        planId: findPlanId('pro_yearly')
+                        planId: findPlanId('focused_yearly')
                     },
                     lifetime: {
                         price: parseFloat(formData.lifetime) || 0,
-                        planId: findPlanId('pro_lifetime')
+                        planId: findPlanId('focused_yearly')
                     }
                 }
             };

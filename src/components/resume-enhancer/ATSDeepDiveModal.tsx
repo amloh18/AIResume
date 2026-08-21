@@ -378,7 +378,7 @@ function ATSDeepDiveContent({ isOpen, onClose, userId }: ATSDeepDiveModalProps) 
     }
 
     if (userData?.currentPlanKey === 'free' || !userData?.subscription || userData.subscription.status !== 'active') {
-      openPaymentModal({ preselectedPlanKey: 'pro_monthly', triggerContext: 'ats-score' });
+      openPaymentModal({ preselectedPlanKey: 'focused_monthly', triggerContext: 'ats-score' });
       return;
     }
 

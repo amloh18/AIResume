@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUnifiedAuth, getUserIdForAPI } from '@/lib/hooks/useUnifiedAuth';
 import { authenticatedFetch, authenticatedFetchWithUserId } from '@/lib/utils/apiUtils';
@@ -80,6 +81,8 @@ interface JobApplication {
   followUps?: any[];
   attachments?: any[];
   atsScore?: number;
+  matchScore?: number;
+  atsType?: string;
   atsAnalysis?: any;
   statusHistory?: any[];
   extractedJd?: any;
@@ -105,7 +108,7 @@ const JobSidebar: React.FC<JobSidebarProps> = ({
   const { user } = useUnifiedAuth();
   const { userData } = useUserData();
   const userPlanKey = userData?.currentPlanKey || userData?.subscription?.planKey || 'free';
-  const isPremiumUser = ['focused_monthly', 'focused_yearly', 'smart_quarterly', 'smart_yearly', 'pro_monthly', 'pro_quarterly', 'pro_yearly', 'pro_lifetime', 'pro'].includes(userPlanKey);
+  const isPremiumUser = ['focused_monthly', 'focused_yearly', 'focused_monthly', 'focused_quarterly', 'focused_yearly', 'focused_yearly', 'pro'].includes(userPlanKey);
   const router = useRouter();
   const { showExhaustionModal } = useCreditExhaustionHandler();
   const { shouldShow: shouldShowUpgradePopup, show: showUpgradePopup, dismiss: dismissUpgradePopup } = useUpgradePopupTrigger();
@@ -235,19 +238,15 @@ const JobSidebar: React.FC<JobSidebarProps> = ({
 
     setLoadingJourneys(true);
     try {
-      console.log('🔍 Loading journeys for job:', jobId);
       const response = await authenticatedFetchWithUserId(`/api/application-journey?jobId=${jobId}`, user.id);
       const result = await response.json();
 
       if (result.success && result.data.journeys) {
-        console.log('✅ Loaded journeys for job:', result.data.journeys);
         setJourneys(result.data.journeys);
       } else {
-        console.log('ℹ️ No journeys found for job:', jobId);
         setJourneys([]);
       }
     } catch (error) {
-      console.error('❌ Error loading journeys for job:', error);
       setJourneys([]);
     } finally {
       setLoadingJourneys(false);
@@ -1027,7 +1026,7 @@ ${userName}`
 
   const handleContinueJourney = (journey: any) => {
     // Navigate to editor with journey context
-    const returnUrl = `/dashboard/tracker?journeyId=${journey.id}`;
+    const returnUrl = `/dashboard/jobs?tab=applications&journeyId=${journey.id}`;
     const params = new URLSearchParams();
     params.set('mode', 'journey');
     params.set('journeyId', journey.id);
@@ -1041,23 +1040,111 @@ ${userName}`
     router.push(`/editor?${params.toString()}`);
   };
 
-  const handleApplyNow = (journey: any) => {
-    // Mark as applied and move job to applied stage
-    console.log('Applying with journey:', journey.id);
-    // TODO: Implement apply functionality
+  const handleApplyNow = async (journey: any) => {
+    try {
+      const jobId = job._id || job.id;
+      const atsType = (job as any).atsType || 'unknown';
+
+      // Check if this portal supports auto-apply
+      const supportedPortals = ['naukri', 'indeed'];
+      const isAutoApplySupported = supportedPortals.includes(atsType);
+
+      if (isAutoApplySupported) {
+        // Use portal-specific auto-apply endpoint
+        const applyEndpoint = `/api/jobs/${atsType}/auto-apply`;
+        const applyRes = await fetch(applyEndpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: job.jobTitle || job.title,
+            company: job.company,
+            description: job.jobDescription || job.description || '',
+            jobUrl: job.jobUrl || '',
+            location: job.location || '',
+            salary: job.salary,
+          }),
+        });
+
+        if (!applyRes.ok) {
+          const errData = await applyRes.json().catch(() => ({}));
+          throw new Error(errData?.error?.message || 'Auto-apply failed');
+        }
+      } else {
+        // Record the application via generic endpoint
+        await fetch('/api/applications/auto', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            jobId,
+            title: job.jobTitle || job.title,
+            company: job.company,
+            location: job.location,
+            source: job.source || 'manual',
+            atsType,
+            applyUrl: job.jobUrl || '',
+            matchScore: job.matchScore || job.atsScore,
+          }),
+        });
+
+        // Update job status to applied
+        await fetch(`/api/jobs/${jobId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'applied' }),
+        });
+      }
+
+      toast.success('Applied successfully!');
+      onRefresh?.();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to apply');
+    }
+  };
+
+  const handleTailorAndApply = async () => {
+    try {
+      const jobId = job._id || job.id;
+      const atsType = (job as any).atsType || 'unknown';
+      const supportedPortals = ['naukri', 'indeed'];
+      const isAutoApplySupported = supportedPortals.includes(atsType);
+
+      // If no journey exists yet, create one first (triggers CV/cover letter tailoring)
+      if (!primaryJourney) {
+        await handleCreateJourney();
+        toast.success('Journey created! Documents are being tailored...');
+        return;
+      }
+
+      // If journey exists but documents aren't ready yet
+      if (primaryJourney.status !== 'ready' && primaryJourney.status !== 'completed') {
+        toast.success('Documents are still being generated. Please wait...');
+        return;
+      }
+
+      // Apply
+      await handleApplyNow(primaryJourney);
+
+      // For unsupported portals, set status to indicate manual action needed
+      if (!isAutoApplySupported && atsType !== 'unknown') {
+        await fetch(`/api/jobs/${jobId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'created' }),
+        });
+        toast.success('Application recorded. Manual submission required for this portal.');
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to tailor & apply');
+    }
   };
 
   const handleUpdateJourney = (journeyId: string, updates: any) => {
-    console.log('🔍 ApplicationJourneyModal - Updating journey:', journeyId, 'with updates:', updates);
-
     // Update the specific journey in local state
     setJourneys(prev => prev.map(journey =>
       journey.id === journeyId
         ? { ...journey, ...updates }
         : journey
     ));
-
-    console.log('✅ ApplicationJourneyModal - Journey updated in local state');
   };
 
   const executeMoveToCreated = async () => {
@@ -1080,9 +1167,7 @@ ${userName}`
         let errorData: any = {};
         try {
           errorData = await statusResponse.json();
-          console.log('🔍 JobSidebar - Error response data:', errorData);
         } catch (parseError) {
-          console.error('Failed to parse error response:', parseError);
         }
 
         // Handle insufficient credits error (403) - show paywall
@@ -1091,24 +1176,15 @@ ${userName}`
           const currentUsage = errorData.currentUsage || limit;
           const creditsRemaining = Math.max(0, limit - currentUsage);
 
-          console.log('🔍 JobSidebar - Credit error detected:', {
-            requiresUpgrade: errorData.requiresUpgrade,
-            limit,
-            currentUsage,
-            creditsRemaining,
-            error: errorData.error
-          });
-
           // Show paywall if requiresUpgrade is true OR if it's a 403 (credit error)
           if (errorData.requiresUpgrade || errorData.error?.includes('limit exceeded') || errorData.error?.includes('insufficient credits')) {
-            console.log('🔍 JobSidebar - Showing paywall modal');
             showExhaustionModal(
               {
                 creditsRemaining,
                 limit,
                 reason: errorData.message || errorData.error || 'Buy premium plans to create automatic CV and CL with ATS for multiple jobs'
               },
-              'pro_monthly'
+              'focused_monthly'
             );
             return;
           }
@@ -1137,7 +1213,7 @@ ${userName}`
             limit: 1,
             reason: 'Buy premium plans to create automatic CV and CL with ATS for multiple jobs'
           },
-          'pro_monthly'
+          'focused_monthly'
         );
       } else {
         toast.error('Failed to move job to created stage. Please try again.');
@@ -1165,35 +1241,25 @@ ${userName}`
 
   const handleDeleteJourney = async (journeyId: string) => {
     try {
-      console.log('🔍 ApplicationJourneyModal - handleDeleteJourney called with journeyId:', journeyId);
       setIsDeleting(true);
       const userId = user?.id;
       if (!userId) {
-        console.error('❌ ApplicationJourneyModal - No user ID available');
         return;
       }
 
-      console.log('🔍 ApplicationJourneyModal - Deleting journey:', journeyId, 'userId:', userId);
-
       // Call the CV Journey API to delete the journey
-      console.log('🔍 ApplicationJourneyModal - Making DELETE request to /api/application-journey');
       const response = await authenticatedFetchWithUserId('/api/application-journey', user.id, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ journeyId })
       });
 
-      console.log('🔍 ApplicationJourneyModal - Response status:', response.status);
-      console.log('🔍 ApplicationJourneyModal - Response ok:', response.ok);
-
       if (!response.ok) {
         const errorData = await response.json();
-        console.error('❌ ApplicationJourneyModal - API error:', errorData);
         throw new Error(errorData.message || 'Failed to delete journey');
       }
 
       const result = await response.json();
-      console.log('🔍 ApplicationJourneyModal - Journey deleted successfully:', result);
 
       // Remove from local state
       setJourneys(prev => prev.filter(journey => journey.id !== journeyId));
@@ -1308,9 +1374,6 @@ ${userName}`
         return;
       }
 
-      console.log('🔍 JobSidebar - Deleting job with ID:', jobId);
-      console.log('🔍 JobSidebar - Job object:', { id: job.id, _id: job._id });
-
       const response = await authenticatedFetchWithUserId(`/api/jobs/${jobId}`, user.id, {
         method: 'DELETE',
       });
@@ -1417,6 +1480,11 @@ ${userName}`
   const touchStartX = React.useRef<number | null>(null);
   const touchStartY = React.useRef<number | null>(null);
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 768);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Track window width for responsive sidebar
   useEffect(() => {
@@ -1621,7 +1689,10 @@ ${userName}`
   }, [handleOpenInterviewCoach, handleOpenEditModal, job.status, openContext, sidebarConfig.actionPayloads]);
 
   const journeyCardData = sidebarConfig.journeyCard;
-  return (
+
+  if (!mounted || typeof document === 'undefined') return null;
+
+  return createPortal(
     <AnimatePresence>
       <>
         {/* Backdrop */}
@@ -1630,7 +1701,7 @@ ${userName}`
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="fixed bg-black/50 backdrop-blur-sm z-[9998]"
+          className="fixed bg-black/50 backdrop-blur-sm z-[99998]"
           style={{
             top: 0,
             left: 0,
@@ -1649,7 +1720,7 @@ ${userName}`
           animate={{ x: 0 }}
           exit={{ x: 'calc(100% + 12px)' }}
           transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-          className="fixed right-3 top-3 bottom-3 h-auto bg-white dark:bg-[#141810] shadow-2xl z-[9999] flex flex-col rounded-2xl overflow-hidden transition-all duration-300"
+          className="fixed right-3 top-3 bottom-3 h-auto bg-white dark:bg-[#141810] shadow-2xl z-[99999] flex flex-col rounded-2xl overflow-hidden transition-all duration-300"
           style={{ width: sidebarWidth, right: showCommsSidebar && windowWidth >= 768 ? '474px' : '12px' }}
           onClick={(e) => e.stopPropagation()}
         >
@@ -1677,6 +1748,22 @@ ${userName}`
                       <span>No Sponsorship</span>
                     </>
                   )}
+                </div>
+              )}
+
+              {/* Portal / ATS Type Badge */}
+              {(job as any).atsType && (job as any).atsType !== 'unknown' && (
+                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 ml-0 sm:ml-1">
+                  <Building2 size={11} />
+                  <span>{(job as any).atsType}</span>
+                </div>
+              )}
+
+              {/* Manual Application Required Badge */}
+              {(job as any).atsType && (job as any).atsType === 'unknown' && job.status === 'draft' && (
+                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 ml-0 sm:ml-1">
+                  <AlertCircle size={11} />
+                  <span>Manual Apply Required</span>
                 </div>
               )}
             </div>
@@ -1891,6 +1978,28 @@ ${userName}`
                           >
                             {journeyCardData.secondaryLabel}
                           </motion.button>
+                        )}
+
+                        {/* Tailor & Apply — only for jobs with an ATS type */}
+                        {(job as any).atsType && (job as any).atsType !== 'unknown' && job.status !== 'applied' && job.status !== 'rejected' && job.status !== 'accepted' && (
+                          <motion.button
+                            onClick={() => void handleTailorAndApply()}
+                            disabled={isCreatingJourney || isMovingToCreated}
+                            className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2.5 text-small font-black text-white shadow-sm transition hover:bg-blue-700 disabled:opacity-60"
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                          >
+                            <Sparkles className="h-3.5 w-3.5" />
+                            <span>Tailor & Apply</span>
+                          </motion.button>
+                        )}
+
+                        {/* Manual Apply Required — for unknown ATS */}
+                        {((job as any).atsType === 'unknown' || !(job as any).atsType) && job.status === 'draft' && (
+                          <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-small font-semibold text-amber-700 dark:text-amber-400">
+                            <AlertCircle className="h-3.5 w-3.5" />
+                            <span>Manual Application Required</span>
+                          </div>
                         )}
                       </div>
 
@@ -2190,8 +2299,6 @@ ${userName}`
                 </motion.button>
                 <motion.button
                   onClick={() => {
-                    console.log('🔍 ApplicationJourneyModal - Delete button clicked, journeyId:', showDeleteConfirm);
-                    console.log('🔍 ApplicationJourneyModal - isDeleting state:', isDeleting);
                     handleDeleteJourney(showDeleteConfirm);
                   }}
                   disabled={isDeleting}
@@ -2893,7 +3000,8 @@ ${userName}`
           }}
         />
       </>
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 };
 

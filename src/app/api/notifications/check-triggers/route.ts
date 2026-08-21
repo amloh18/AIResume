@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
         const staleJobs = await JobApplication.find({
             userId,
             updatedAt: { $lt: thirtyDaysAgo },
-            status: { $nin: ['rejected', 'withdrawn', 'offer', 'accepted', 'draft'] }, // Only active jobs
+            status: { $nin: ['rejected', 'withdrawn', 'offer', 'accepted', 'saved'] }, // Only active jobs
             isArchived: false,
         }).limit(3); // Limit to 3 to avoid spam
 

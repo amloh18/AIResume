@@ -21,12 +21,10 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 min
 
 /** Canonical USD prices — single source of truth. Matches Polar catalog. */
 export const PLAN_USD_PRICES: Record<string, number> = {
-  starter_monthly:  0,
-  starter_yearly:   19.99,
-  focused_monthly:  9.99,
-  focused_yearly:   79.99,
-  smart_quarterly:  59.99,
-  smart_yearly:     199.00,
+  starter_monthly:  0,     // Regular $4.99 (free for now)
+  starter_yearly:   19.99, // $2/month ($19.99 total billed annually)
+  focused_monthly:  9.99,  // $9.99/month
+  focused_yearly:   79.99, // $7/month ($79.99 total billed annually)
 };
 
 export async function GET(request: NextRequest) {
@@ -98,7 +96,10 @@ export async function GET(request: NextRequest) {
 
     const currentDate = new Date();
 
-    const enhancedPlans = plans.map((plan: any) => {
+    // Filter out smart plans completely
+    const filteredDbPlans = plans.filter((plan: any) => !plan.key?.includes('smart'));
+
+    const enhancedPlans = filteredDbPlans.map((plan: any) => {
       const usdPrice = PLAN_USD_PRICES[plan.key] ?? 0;
 
       // Promotion check
@@ -118,22 +119,46 @@ export async function GET(request: NextRequest) {
       // Duration metadata derived from plan key/billing cycle
       let durationInfo = null;
       if (plan.key?.includes('monthly'))  durationInfo = { durationInDays: 30,   durationType: 'month',    displayText: '1 month' };
-      else if (plan.key?.includes('quarterly')) durationInfo = { durationInDays: 90, durationType: 'quarter', displayText: '3 months' };
       else if (plan.key?.includes('yearly'))   durationInfo = { durationInDays: 365, durationType: 'year',   displayText: '1 year' };
 
-      // Dynamically add/remove "Mori AI chat" as feature for all plans except focused_monthly
-      const currentFeatures = Array.isArray(plan.features) ? [...plan.features] : [];
-      let updatedFeatures = currentFeatures;
-      if (plan.key !== 'focused_monthly') {
-        if (!currentFeatures.some((f: string) => f.toLowerCase().includes('mori'))) {
-          updatedFeatures.push('Mori AI chat');
-        }
+      // Set canonical features for each of the 4 plans
+      let updatedFeatures: string[] = [];
+      if (plan.key === 'starter_monthly') {
+        updatedFeatures = [
+          'Access to ALL templates and snippets',
+          'Unlimited CV & Cover Letter Edits',
+          'Real-time ATS Scoring & Editor',
+          'AI Cover Letter Generator',
+          'PDF & DOCX Downloads',
+          'Mori AI chat',
+          '10 Auto Job Applications (includes CV generation & Journeys)'
+        ];
+      } else if (plan.key === 'starter_yearly') {
+        updatedFeatures = [
+          'Access to ALL templates and snippets',
+          'Unlimited CV & Cover Letter Edits',
+          'Real-time ATS Scoring & Editor',
+          'AI Cover Letter Generator',
+          'PDF & DOCX Downloads',
+          'Mori AI chat'
+        ];
+      } else if (plan.key === 'focused_monthly' || plan.key === 'focused_yearly') {
+        updatedFeatures = [
+          'Unlimited CV & Cover Letter Edits',
+          'Real-time ATS Scoring & Editor',
+          'AI Cover Letter Generator',
+          'LinkedIn Enhancer',
+          'AI Interview Coach Mock Simulator',
+          'Application Tracker (Full Kanban access)',
+          'All features unlimited'
+        ];
       } else {
-        updatedFeatures = currentFeatures.filter((f: string) => !f.toLowerCase().includes('mori'));
+        updatedFeatures = Array.isArray(plan.features) ? [...plan.features] : [];
       }
 
       return {
         ...plan,
+        isPopular: plan.key === 'focused_yearly',
         features: updatedFeatures,
         // Canonical USD price — use this for checkout amount validation
         usdPrice: effectiveUsdPrice,

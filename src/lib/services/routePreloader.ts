@@ -82,7 +82,7 @@ class RoutePreloader {
           component = await import('@/components/dashboard/Analytics');
           break;
         case 'jobs':
-          component = await import('@/components/dashboard/JobsTracker');
+          component = await import('@/components/dashboard/JobsDashboard');
           break;
         case 'editor':
           component = await import('@/app/editor/page');

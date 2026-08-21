@@ -66,16 +66,16 @@ export async function POST(
     let endDate = new Date();
     let currentPeriodEnd = new Date();
 
-    if (interval === 'monthly' || planKey === 'pro_monthly') {
+    if (interval === 'monthly' || planKey === 'focused_monthly') {
       endDate.setMonth(endDate.getMonth() + 1);
       currentPeriodEnd.setMonth(currentPeriodEnd.getMonth() + 1);
-    } else if (interval === 'quarterly' || planKey === 'pro_quarterly') {
+    } else if (interval === 'quarterly' || planKey === 'focused_quarterly') {
       endDate.setMonth(endDate.getMonth() + 3);
       currentPeriodEnd.setMonth(currentPeriodEnd.getMonth() + 3);
-    } else if (interval === 'yearly' || planKey === 'pro_yearly') {
+    } else if (interval === 'yearly' || planKey === 'focused_yearly') {
       endDate.setFullYear(endDate.getFullYear() + 1);
       currentPeriodEnd.setFullYear(currentPeriodEnd.getFullYear() + 1);
-    } else if (planKey === 'pro_lifetime') {
+    } else if (planKey === 'focused_yearly') {
       // Lifetime plan lasts essentially forever
       endDate = new Date('2099-12-31');
       currentPeriodEnd = new Date('2099-12-31');
@@ -98,7 +98,7 @@ export async function POST(
           currentPeriodStart: startDate,
           currentPeriodEnd: currentPeriodEnd,
           provider: 'admin',
-          interval: interval || (planKey === 'pro_lifetime' ? 'one-time' : 'monthly'),
+          interval: interval || (planKey === 'focused_yearly' ? 'one-time' : 'monthly'),
           seats: plan.maxCVs === -1 ? 1 : plan.maxCVs,
           storageUsed: 0
         }
@@ -128,7 +128,7 @@ export async function POST(
         status: 'active',
         startDate: startDate,
         endDate: endDate,
-        billingCycle: interval || (planKey === 'pro_lifetime' ? 'one-time' : 'monthly'),
+        billingCycle: interval || (planKey === 'focused_yearly' ? 'one-time' : 'monthly'),
         amount: 0,
         currency: 'USD',
         paymentMethod: 'polar',
@@ -172,7 +172,7 @@ export async function POST(
           status: 'paid',
           planName: plan.name,
           planId: plan._id,
-          billingCycle: interval || (planKey === 'pro_lifetime' ? 'one-time' : 'monthly'),
+          billingCycle: interval || (planKey === 'focused_yearly' ? 'one-time' : 'monthly'),
           paymentMethodType: 'admin',
           paymentMethodLast4: 'ADMIN',
           paidAt: new Date(),

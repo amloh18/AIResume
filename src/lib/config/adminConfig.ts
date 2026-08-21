@@ -36,7 +36,7 @@ export async function getPlanKeys(): Promise<string[]> {
   } catch (error) {
     console.error('Error fetching plan keys:', error);
     // Fallback to default plans
-    return ['starter_monthly', 'starter_yearly', 'focused_monthly', 'focused_yearly', 'smart_quarterly', 'smart_yearly'];
+    return ['starter_monthly', 'starter_yearly', 'focused_monthly', 'focused_yearly'];
   }
 }
 
@@ -63,9 +63,7 @@ export async function getPlanDisplayNames(): Promise<Record<string, string>> {
       'starter_monthly': 'Starter Monthly',
       'starter_yearly': 'Starter Yearly',
       'focused_monthly': 'Focused Monthly',
-      'focused_yearly': 'Focused Yearly',
-      'smart_quarterly': 'Smart Quarterly',
-      'smart_yearly': 'Smart Yearly'
+      'focused_yearly': 'Focused Yearly'
     };
   }
 }

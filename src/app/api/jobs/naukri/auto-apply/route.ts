@@ -76,6 +76,7 @@ export async function POST(request: NextRequest) {
       jobDescription: description || '',
       location: location || 'India',
       source: 'naukri',
+      atsType: 'naukri',
       status: 'applied',
       priority: 'high',
       salary: salary || undefined,
