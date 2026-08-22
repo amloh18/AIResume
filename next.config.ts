@@ -191,7 +191,6 @@ const nextConfig: NextConfig = {
       config.externals = config.externals || [];
       config.externals.push({
         'tesseract.js': 'commonjs tesseract.js',
-        'canvas': 'commonjs canvas',
         '@napi-rs/canvas': 'commonjs @napi-rs/canvas',
         'puppeteer': 'commonjs puppeteer',
         'pdf2pic': 'commonjs pdf2pic',
@@ -387,7 +386,6 @@ const nextConfig: NextConfig = {
   serverExternalPackages: [
     'pdfjs-dist',
     '@napi-rs/canvas',
-    'canvas',
     'tesseract.js',
     'puppeteer',
     'mongoose',
