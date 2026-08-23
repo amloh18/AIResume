@@ -412,50 +412,41 @@ Be thorough and accurate. Consider:
   } catch (error) {
     console.error('AI analysis error:', error);
     // Fallback to basic keyword matching if AI fails
-    return fallbackKeywordMatching(cvProfile, jobDescription);
+    return await fallbackKeywordMatching(cvProfile, jobDescription);
   }
 }
 
-// Fallback function if AI fails
-function fallbackKeywordMatching(cvProfile: any, jobDescription: string) {
-  const jobLower = jobDescription.toLowerCase();
+// Fallback function if AI fails — uses SmartSkillMatcher
+async function fallbackKeywordMatching(cvProfile: any, jobDescription: string) {
+  const { extractJobSkills, matchSkills } = await import('@/lib/services/smartSkillMatcher');
+
   const cvSkills = (cvProfile.skills || []).map((s: string) => s.toLowerCase());
-  
-  // Extract skills from job description (basic keyword matching)
-  const commonSkills = [
-    'react', 'vue', 'angular', 'javascript', 'typescript', 'python', 'java',
-    'node.js', 'express', 'django', 'aws', 'docker', 'kubernetes', 'sql',
-    'mongodb', 'postgresql', 'git', 'agile', 'scrum', 'ci/cd', 'devops',
-    'html', 'css', 'redux', 'graphql', 'rest', 'api', 'microservices',
-    'machine learning', 'ml', 'ai', 'data science', 'analytics', 'tableau',
-    'project management', 'leadership', 'communication', 'teamwork'
-  ];
-  
-  const jobSkills = commonSkills.filter(skill => jobLower.includes(skill));
-  const matchedSkills = jobSkills.filter(skill => 
-    cvSkills.some(cvSkill => cvSkill.includes(skill) || skill.includes(cvSkill))
-  );
-  const missingSkills = jobSkills.filter(skill => !matchedSkills.includes(skill));
-  
-  const skillMatchScore = jobSkills.length > 0 
-    ? (matchedSkills.length / jobSkills.length) * 100 
-    : 0;
-  
+
+  // Extract skills from job description using smart extraction
+  const jobSkills = extractJobSkills({
+    description: jobDescription,
+    keywords: [],
+    title: '',
+  });
+
+  // Use semantic matching
+  const result = matchSkills(cvSkills, jobSkills);
+
   return {
-    matchScore: Math.round(skillMatchScore * 0.7), // Weighted score
-    isTopApplicant: skillMatchScore >= 80,
-    matchedSkills,
-    missingSkills,
-    experienceMatch: true, // Assume match for fallback
+    matchScore: result.matchScore,
+    isTopApplicant: result.matchRatio >= 0.7,
+    matchedSkills: result.matchedSkills,
+    missingSkills: result.missingSkills,
+    experienceMatch: true,
     educationMatch: true,
-    summary: `Matched ${matchedSkills.length} of ${jobSkills.length} required skills`,
-    skillMatchScore: Math.round(skillMatchScore),
+    summary: `Matched ${result.matchCount} of ${result.totalJobSkills} required skills`,
+    skillMatchScore: result.matchScore,
     experienceMatchScore: 50,
     educationMatchScore: 50,
     skillGapAnalysis: {
-      critical: [],
-      important: missingSkills,
-      recommendations: missingSkills.map(skill => `Consider learning ${skill}`)
+      critical: result.missingSkills.slice(0, 3),
+      important: result.missingSkills.slice(3),
+      recommendations: result.missingSkills.map((skill: string) => `Consider learning ${skill}`)
     },
     cvRecommendations: []
   };

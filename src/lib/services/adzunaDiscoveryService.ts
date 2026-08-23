@@ -132,46 +132,7 @@ export class AdzunaDiscoveryService {
     countryName: string,
     currency: string
   ): DiscoveredJob[] {
-    const roles = [
-      {
-        title: `Full Stack Engineer (${query})`,
-        company: 'CloudScale Technologies',
-        salaryMin: currency === 'GBP' ? 55000 : currency === 'INR' ? 1400000 : 115000,
-        salaryMax: currency === 'GBP' ? 80000 : currency === 'INR' ? 2200000 : 155000,
-      },
-      {
-        title: `Senior ${query} Architect`,
-        company: 'Apex Systems',
-        salaryMin: currency === 'GBP' ? 75000 : currency === 'INR' ? 2400000 : 140000,
-        salaryMax: currency === 'GBP' ? 105000 : currency === 'INR' ? 3500000 : 190000,
-      },
-      {
-        title: `${query} Tech Lead`,
-        company: 'NextGen Digital',
-        salaryMin: currency === 'GBP' ? 85000 : currency === 'INR' ? 2800000 : 160000,
-        salaryMax: currency === 'GBP' ? 120000 : currency === 'INR' ? 4000000 : 210000,
-      },
-    ];
-
-    return roles.map((r, i) => ({
-      _id: new ObjectId(),
-      externalId: `adzuna_sample_${i}_${Date.now()}`,
-      title: r.title,
-      company: r.company,
-      location: location || `${countryName} (Hybrid / Remote)`,
-      country: countryName,
-      remote: true,
-      salaryMin: r.salaryMin,
-      salaryMax: r.salaryMax,
-      salaryCurrency: currency,
-      description: `Exciting opportunity for a ${r.title} to develop scalable applications and microservices.`,
-      applyUrl: `https://www.adzuna.com/search?q=${encodeURIComponent(query)}`,
-      source: 'adzuna' as any,
-      atsType: 'adzuna' as any,
-      postedAt: new Date(),
-      createdAt: new Date(),
-      status: 'active',
-      keywords: [query, 'TypeScript', 'React', 'Node.js'],
-    }));
+    // Return empty array instead of mock data - real jobs should come from the Adzuna API
+    return [];
   }
 }

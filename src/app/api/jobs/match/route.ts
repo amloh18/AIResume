@@ -205,7 +205,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<JobsMatch
         // ─────────────────────────────────────────────
         // STEP 2: Job Match Score (deterministic heuristic)
         // ─────────────────────────────────────────────
-        const jobMatchBreakdown = calculateJobMatchBreakdown(cvData, jobTitle, jobDescription);
+        const jobMatchBreakdown = await calculateJobMatchBreakdown(cvData, jobTitle, jobDescription);
         const jobMatchScore = Math.round(
             jobMatchBreakdown.skills * 0.4 +
             jobMatchBreakdown.title * 0.3 +
@@ -374,57 +374,65 @@ export async function POST(request: NextRequest): Promise<NextResponse<JobsMatch
 }
 
 /**
- * Deterministic job match breakdown (Skills×0.4 + Title×0.3 + Location×0.2 + Recency×0.1)
+ * Deterministic job match breakdown using SmartSkillMatcher
+ * Skills×0.4 + Title×0.3 + Location×0.2 + Recency×0.1
  */
-function calculateJobMatchBreakdown(
+async function calculateJobMatchBreakdown(
     cvData: UnifiedCVDataStructure,
     jobTitle?: string,
     jobDescription?: string
-): { skills: number; title: number; location: number; recency: number } {
-    // Skills: based on keyword overlap between CV and JD
-    const cvText = extractCVSearchText(cvData);
-    const jdLower = (jobDescription || '').toLowerCase();
-    
-    const commonKeywords = [
-        'javascript', 'typescript', 'python', 'java', 'react', 'vue', 'angular',
-        'node.js', 'express', 'aws', 'docker', 'kubernetes', 'sql', 'mongodb',
-        'postgresql', 'git', 'agile', 'scrum', 'ci/cd', 'devops', 'graphql',
-        'rest', 'api', 'microservices', 'machine learning', 'ai', 'data science',
-        'project management', 'leadership', 'communication',
-    ];
+): Promise<{ skills: number; title: number; location: number; recency: number }> {
+    const { extractUserSkills, extractJobSkills, matchSkills, matchTitles } = await import('@/lib/services/smartSkillMatcher');
 
-    const cvKeywords = commonKeywords.filter(k => cvText.includes(k));
-    const jdKeywords = commonKeywords.filter(k => jdLower.includes(k));
-    const matched = cvKeywords.filter(k => jdKeywords.includes(k));
-    const skillsScore = jdKeywords.length > 0
-        ? Math.round((matched.length / jdKeywords.length) * 100)
-        : 50;
+    // Extract skills from CV
+    const userSkills = extractUserSkills(cvData);
 
-    // Title: basic similarity
-    let titleScore = 30;
+    // Extract skills from job
+    const jobSkills = extractJobSkills({
+        description: jobDescription || '',
+        keywords: [],
+        title: jobTitle,
+    });
+
+    // Match skills
+    const skillResult = matchSkills(userSkills, jobSkills);
+
+    // Match title (using CV text as pseudo-title source)
+    let titleScore = 50;
     if (jobTitle) {
-        const normalizedTitle = jobTitle.toLowerCase();
-        if (cvText.includes(normalizedTitle)) {
-            titleScore = 100;
+        // Extract likely role titles from CV
+        const cvTitles: string[] = [];
+        if ((cvData as any).work?.length) {
+            for (const exp of (cvData as any).work) {
+                if (exp.position) cvTitles.push(exp.position);
+                if (exp.title) cvTitles.push(exp.title);
+            }
+        }
+        if (cvData.basics?.label) cvTitles.push(cvData.basics.label);
+
+        if (cvTitles.length > 0) {
+            const titleResult = matchTitles(cvTitles, jobTitle);
+            titleScore = titleResult.score;
         } else {
-            const titleWords = normalizedTitle.split(/\s+/);
-            const matchedWords = titleWords.filter(w => cvText.includes(w));
-            if (matchedWords.length > 0) {
-                titleScore = Math.round((matchedWords.length / titleWords.length) * 80) + 10;
+            // Fallback: word overlap
+            const cvText = extractCVSearchText(cvData);
+            const normalizedTitle = jobTitle.toLowerCase();
+            if (cvText.includes(normalizedTitle)) {
+                titleScore = 100;
+            } else {
+                const titleWords = normalizedTitle.split(/\s+/);
+                const matchedWords = titleWords.filter(w => w.length > 2 && cvText.includes(w));
+                if (matchedWords.length > 0) {
+                    titleScore = Math.round((matchedWords.length / titleWords.length) * 80) + 10;
+                }
             }
         }
     }
 
-    // Location: default 50 (we don't have user preferences in this context)
-    const locationScore = 50;
-
-    // Recency: default 70 (assume reasonably recent)
-    const recencyScore = 70;
-
     return {
-        skills: Math.min(skillsScore, 100),
+        skills: Math.min(skillResult.matchScore, 100),
         title: Math.min(titleScore, 100),
-        location: locationScore,
-        recency: recencyScore,
+        location: 50,
+        recency: 70,
     };
 }

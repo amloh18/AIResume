@@ -25,7 +25,7 @@ export class IndeedApplyService {
       experienceYears: user?.indeedIntegration?.preferences?.experienceYears ?? 4,
       minSalary: user?.indeedIntegration?.preferences?.minSalary ?? 90000,
       currency: user?.indeedIntegration?.preferences?.salaryCurrency ?? 'USD',
-      skills: primaryCv?.skills || ['React', 'TypeScript', 'Node.js', 'Next.js', 'Python', 'AWS'],
+      skills: primaryCv?.skills || [],
       summary: primaryCv?.summary || '',
       experience: primaryCv?.experience || [],
     };

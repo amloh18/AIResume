@@ -195,31 +195,7 @@ export class IndeedDiscoveryService {
   }
 
   private static getFallbackIndeedJobs(query: string, location: string, country: string): DiscoveredJob[] {
-    const roles = [
-      { title: `${query} (Full Stack / Cloud)`, company: 'Global Tech Systems', salaryMin: 90000, salaryMax: 130000 },
-      { title: `Senior ${query}`, company: 'Apex Solutions', salaryMin: 110000, salaryMax: 155000 },
-      { title: `Lead ${query} Developer`, company: 'Innovate Digital', salaryMin: 125000, salaryMax: 170000 },
-    ];
-
-    return roles.map((r, i) => ({
-      _id: new ObjectId(),
-      externalId: `indeed_mock_${i}_${Date.now()}`,
-      title: r.title,
-      company: r.company,
-      location: location || 'Remote / Hybrid',
-      country,
-      remote: true,
-      salaryMin: r.salaryMin,
-      salaryMax: r.salaryMax,
-      salaryCurrency: country === 'UK' ? 'GBP' : country === 'India' ? 'INR' : 'USD',
-      description: `We are hiring a talented ${r.title} to lead core technical systems and scalable cloud infrastructure.`,
-      applyUrl: `https://www.indeed.com/jobs?q=${encodeURIComponent(query)}`,
-      source: 'indeed' as any,
-      atsType: 'indeed' as any,
-      postedAt: new Date(),
-      createdAt: new Date(),
-      status: 'active',
-      keywords: [query, 'TypeScript', 'React', 'Node.js'],
-    }));
+    // Return empty array instead of mock data - real jobs should come from the RSS feed
+    return [];
   }
 }

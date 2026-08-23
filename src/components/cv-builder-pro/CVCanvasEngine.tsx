@@ -680,10 +680,11 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     pageSize: design.pageSize,
     pageMargin: design.pageMargin,
     sectionGap: design.sectionGap,
+    itemGap: design.itemGap || 12,
     viewportWidth: viewport.width,
     viewportHeight: viewport.height,
     devicePixelRatio: viewport.devicePixelRatio,
-  }), [design.pageMargin, design.pageSize, design.sectionGap, viewport.devicePixelRatio, viewport.height, viewport.width]);
+  }), [design.pageMargin, design.pageSize, design.sectionGap, design.itemGap, viewport.devicePixelRatio, viewport.height, viewport.width]);
 
   const canvasStyleVars = useMemo(() => ({
     width: 'var(--cv-page-width)',
@@ -697,9 +698,10 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     '--cv-page-height': layoutMetrics.pageHeightCss,
     '--cv-sidebar-bg': design.sidebarBgColor,
     '--cv-section-gap': `${layoutMetrics.sectionGapPx}px`,
+    '--cv-item-gap': `${layoutMetrics.itemGapPx}px`,
     '--cv-column-gap': `${Math.max(24, layoutMetrics.sectionGapPx + 12)}px`,
     '--cv-workspace-bg': isDarkUI ? '#1a1a1a' : '#f3f2ee',
-  } as React.CSSProperties), [design.accentColor, design.font, design.fontSize, design.sidebarBgColor, design.spacing, isDarkUI, layoutMetrics.pageGapPx, layoutMetrics.pageHeightCss, layoutMetrics.pageMarginPx, layoutMetrics.pageWidthCss, layoutMetrics.sectionGapPx]);
+  } as React.CSSProperties), [design.accentColor, design.font, design.fontSize, design.itemGap, design.sidebarBgColor, design.spacing, isDarkUI, layoutMetrics.itemGapPx, layoutMetrics.pageGapPx, layoutMetrics.pageHeightCss, layoutMetrics.pageMarginPx, layoutMetrics.pageWidthCss, layoutMetrics.sectionGapPx]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -840,6 +842,11 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
       });
     }
     setZones(initialZones);
+    setDesign((prev: any) => ({
+      ...prev,
+      sectionGap: template.preferredSectionGap ?? prev.sectionGap,
+      itemGap: template.preferredItemGap ?? prev.itemGap,
+    }));
     const portalTarget = typeof document !== 'undefined' && document.getElementById('builder-utility-panel-portal');
     if (!portalTarget) {
       setIsTemplateModalOpen(false);
@@ -2226,6 +2233,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
                   <div><label className={`text-small font-bold uppercase tracking-widest mb-2 flex justify-between ${textMuted}`}><span>Line Spacing</span><span className={brandGreen}>{design.spacing.toFixed(1)}x</span></label><input type="range" min="0.5" max="2" step="0.1" value={design.spacing} onChange={(e) => setDesign({...design, spacing: parseFloat(e.target.value)})} className="w-full accent-emerald-500" /></div>
                   <div><label className={`text-small font-bold uppercase tracking-widest mb-2 flex justify-between ${textMuted}`}><span>Page Margin</span><span className={brandGreen}>{design.pageMargin}px</span></label><input type="range" min="0" max="80" step="1" value={design.pageMargin} onChange={(e) => setDesign({...design, pageMargin: parseInt(e.target.value)})} className="w-full accent-emerald-500" /></div>
                   <div><label className={`text-small font-bold uppercase tracking-widest mb-2 flex justify-between ${textMuted}`}><span>Section Gap</span><span className={brandGreen}>{design.sectionGap}px</span></label><input type="range" min="0" max="60" step="1" value={design.sectionGap} onChange={(e) => setDesign({...design, sectionGap: parseInt(e.target.value)})} className="w-full accent-emerald-500" /></div>
+                  <div><label className={`text-small font-bold uppercase tracking-widest mb-2 flex justify-between ${textMuted}`}><span>Item Gap</span><span className={brandGreen}>{design.itemGap || 12}px</span></label><input type="range" min="0" max="24" step="1" value={design.itemGap || 12} onChange={(e) => setDesign({...design, itemGap: parseInt(e.target.value)})} className="w-full accent-emerald-500" /></div>
                 </div>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-5">
                   <div><label className={`text-small font-bold uppercase tracking-widest mb-2 block ${textMuted}`}>Accent Color</label><div className="flex gap-2 flex-wrap">{['#7EE787', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#1f2937', '#000000', '#ffffff'].map(c => (<button key={c} onClick={() => setDesign({...design, accentColor: c})} className={`w-6 h-6 rounded-full border-2 transition-transform ${design.accentColor === c ? 'border-white scale-125 shadow-lg' : 'border-transparent hover:scale-110'}`} style={{ backgroundColor: c }} />))}</div></div>
@@ -2767,9 +2775,9 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
         .cv-accent-text { color: var(--cv-accent) !important; }
         .cv-accent-bg { background-color: var(--cv-accent) !important; }
         .cv-accent-border { border-color: var(--cv-accent) !important; }
-        .cv-document .cv-gap-sm { gap: calc(8px * var(--cv-spacing)) !important; }
-        .cv-document .cv-gap-md { gap: calc(12px * var(--cv-spacing)) !important; }
-        .cv-document .cv-gap-lg { gap: calc(16px * var(--cv-spacing)) !important; }
+        .cv-document .cv-gap-sm { gap: calc(var(--cv-item-gap, 12px) * 0.67 * var(--cv-spacing)) !important; }
+        .cv-document .cv-gap-md { gap: calc(var(--cv-item-gap, 12px) * var(--cv-spacing)) !important; }
+        .cv-document .cv-gap-lg { gap: calc(var(--cv-item-gap, 12px) * 1.33 * var(--cv-spacing)) !important; }
 
         /* ─── UNIFIED SPACING RHYTHM ────────────────────────────────
          * The snippet registry mixes fixed Tailwind utilities (pb-5, mb-4, p-4…)

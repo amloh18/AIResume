@@ -8,6 +8,11 @@ import type {
 } from '@/types/automation-schema';
 import { MATCH_SCORE_WEIGHTS, MATCH_SCORE_THRESHOLDS } from '@/types/automation-schema';
 import { calculateLevenshteinDistance } from '@/lib/services/semantic-matcher-service';
+import {
+  extractUserSkills,
+  extractJobSkills,
+  computeSmartMatch,
+} from '@/lib/services/smartSkillMatcher';
 
 export class JobMatchingService {
   static async computeScore(userId: string, jobId: string): Promise<JobMatch> {
@@ -27,7 +32,26 @@ export class JobMatchingService {
         throw new Error('User, job, or preferences not found');
       }
 
-      const breakdown = await this.calculateBreakdown(user, job, preferences);
+      // Load user's master CV for skill extraction
+      const primaryCvId = (user as any).primary_cv_id || (user as any).settings?.primaryCvId;
+      let userSkills: string[] = [];
+
+      if (primaryCvId) {
+        try {
+          const CV = (await import('@/models/CV')).default;
+          const cv = await CV.findById(primaryCvId).lean() as any;
+          if (cv?.cvData) {
+            userSkills = extractUserSkills(cv.cvData);
+          }
+        } catch {}
+      }
+
+      // Fallback: extract skills from user preferences titles as keywords
+      if (userSkills.length === 0 && preferences.titles?.length) {
+        userSkills = preferences.titles.map((t) => t.toLowerCase());
+      }
+
+      const breakdown = await this.calculateBreakdown(user, job, preferences, userSkills);
       const score =
         breakdown.skills * MATCH_SCORE_WEIGHTS.SKILLS +
         breakdown.title * MATCH_SCORE_WEIGHTS.TITLE +
@@ -67,65 +91,30 @@ export class JobMatchingService {
   private static async calculateBreakdown(
     user: User,
     job: Job,
-    preferences: JobPreferences
+    preferences: JobPreferences,
+    userSkills: string[] = []
   ): Promise<MatchBreakdown> {
-    const skillsScore = await this.calculateSkillsScore(job);
-    const titleScore = this.calculateTitleScore(preferences.titles, job.title);
-    const locationScore = this.calculateLocationScore(
-      preferences.locations,
-      job.location,
-      preferences.remoteOnly,
-      job.remote
-    );
-    const recencyScore = this.calculateRecencyScore(
+    const jobSkills = extractJobSkills({
+      description: (job as any).description || (job as any).jobDescription || '',
+      keywords: job.keywords || [],
+      title: job.title,
+    });
+
+    const userTitles = preferences.titles || [];
+
+    const smartResult = computeSmartMatch(
+      userSkills,
+      jobSkills,
+      userTitles,
+      job.title,
+      job.location || '',
+      preferences.locations || [],
+      job.remote || false,
+      preferences.remoteOnly || false,
       job.postedDate || job.createdAt
     );
 
-    return {
-      skills: skillsScore,
-      title: titleScore,
-      location: locationScore,
-      recency: recencyScore,
-    };
-  }
-
-  private static async calculateSkillsScore(job: Job): Promise<number> {
-    if (!job.keywords || job.keywords.length === 0) {
-      return 50;
-    }
-    // Score based on how many job keywords exist (more keywords = higher baseline)
-    const keywordCount = job.keywords.length;
-    if (keywordCount >= 10) return 85;
-    if (keywordCount >= 5) return 75;
-    return 60;
-  }
-
-  private static calculateTitleScore(
-    userTitles: string[],
-    jobTitle: string
-  ): number {
-    const normalizedJobTitle = jobTitle.toLowerCase();
-    const normalizedUserTitles = userTitles.map((t) => t.toLowerCase());
-
-    for (const userTitle of normalizedUserTitles) {
-      if (normalizedJobTitle.includes(userTitle)) {
-        return 100;
-      }
-
-      if (userTitle.includes(normalizedJobTitle)) {
-        return 90;
-      }
-
-      const similarity = this.calculateStringSimilarity(
-        userTitle,
-        normalizedJobTitle
-      );
-      if (similarity > 0.7) {
-        return 80;
-      }
-    }
-
-    return 30;
+    return smartResult.breakdown;
   }
 
   private static calculateLocationScore(

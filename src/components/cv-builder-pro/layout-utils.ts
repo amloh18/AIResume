@@ -18,6 +18,7 @@ export interface CanvasLayoutMetrics {
   pageTopPaddingPx: number;
   pageBottomPaddingPx: number;
   sectionGapPx: number;
+  itemGapPx: number;
   workspacePaddingX: number;
   workspacePaddingY: number;
   slotHeightPx: number;
@@ -31,6 +32,7 @@ export function computeCanvasLayoutMetrics({
   pageSize,
   pageMargin,
   sectionGap,
+  itemGap,
   viewportWidth,
   viewportHeight,
   devicePixelRatio,
@@ -38,6 +40,7 @@ export function computeCanvasLayoutMetrics({
   pageSize: CanvasPageSize;
   pageMargin: number;
   sectionGap: number;
+  itemGap: number;
   viewportWidth: number;
   viewportHeight: number;
   devicePixelRatio?: number;
@@ -62,6 +65,7 @@ export function computeCanvasLayoutMetrics({
   const safeMargin = clamp(pageMargin, 0, 96);
   const pageMarginPx = roundToDevicePixel(safeMargin, dpr);
   const normalizedSectionGap = roundToDevicePixel(clamp(sectionGap, 8, 64), dpr);
+  const normalizedItemGap = roundToDevicePixel(clamp(itemGap, 2, 24), dpr);
   const pageHeightPx = roundToDevicePixel(dims.heightPx, dpr);
   const pageWidthPx = roundToDevicePixel(dims.widthPx, dpr);
 
@@ -75,6 +79,7 @@ export function computeCanvasLayoutMetrics({
     pageTopPaddingPx: pageMarginPx,
     pageBottomPaddingPx: pageMarginPx,
     sectionGapPx: normalizedSectionGap,
+    itemGapPx: normalizedItemGap,
     workspacePaddingX,
     workspacePaddingY,
     slotHeightPx: roundToDevicePixel(pageHeightPx + pageGapPx, dpr),
