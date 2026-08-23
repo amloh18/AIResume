@@ -192,8 +192,6 @@ export default function TopJobMatchesSection() {
     );
   }
 
-  if (jobs.length === 0) return null;
-
   return (
     <div className="space-y-4">
       {/* Section Header */}
@@ -221,7 +219,7 @@ export default function TopJobMatchesSection() {
             <Sparkles className="w-6 h-6" />
           </div>
           <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-1">
-            You're all caught up with your top matches!
+            You&apos;re all caught up with your top matches!
           </h4>
           <p className="text-xs text-gray-500 dark:text-gray-400 max-w-sm mb-4">
             We continuously match new openings from connected job streams. You can discover more live opportunities anytime.

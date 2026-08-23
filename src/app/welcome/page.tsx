@@ -594,21 +594,39 @@ Please find the CV data attached.`;
   // Handle Next Navigation
   const handleNext = (overrideSeedingMethod?: string) => {
     const activeSeedingMethod = overrideSeedingMethod || seedingMethod;
-    // Skip Step 3 (Analysis) for scratch CVs, go directly to Step 4 (LinkedIn Promo)
+
+    // CV-only users: fast-track after Step 3 (skip LinkedIn promo and all job search steps)
+    const isCVOnly = intent === 'cv' || intent === 'cv_scratch';
+
+    // Skip Step 3 (Analysis) for scratch CVs, go directly to completion
     if (currentStep === 2 && (intent === 'cv_scratch' || activeSeedingMethod === 'scratch')) {
-      setCurrentStep(4);
+      if (isCVOnly) {
+        completeOnboarding('/editor');
+      } else {
+        setCurrentStep(4);
+      }
       return;
     }
 
     if (currentStep === 3) {
-      // Go to Step 4 (LinkedIn Promo)
-      setCurrentStep(4);
+      if (isCVOnly) {
+        // CV-only users: complete after analysis
+        completeOnboarding('/editor');
+      } else {
+        // Job seekers: go to LinkedIn Promo (Step 4)
+        setCurrentStep(4);
+      }
       return;
     }
 
-    if (currentStep === 4 && (intent === 'cv' || intent === 'cv_scratch')) {
-      // Type 1 User Fast-Track check: Route directly to editor after showing LinkedIn Promo
-      completeOnboarding('/editor');
+    if (currentStep === 4) {
+      if (isCVOnly) {
+        // CV-only users should have already completed at Step 3, but handle edge case
+        completeOnboarding('/editor');
+      } else {
+        // Job seekers: go to Step 5
+        setCurrentStep(5);
+      }
       return;
     }
 
@@ -619,6 +637,12 @@ Please find the CV data attached.`;
       const rec = getRecommendedTier();
       completeOnboarding(rec.redirectUrl);
     }
+  };
+
+  // Dynamic step count based on user intent
+  const getTotalSteps = () => {
+    const isCVOnly = intent === 'cv' || intent === 'cv_scratch';
+    return isCVOnly ? 3 : 11; // CV users: Intent→Import→Analysis (3 steps, then complete)
   };
 
   const handleBack = () => {
@@ -1150,10 +1174,10 @@ Please find the CV data attached.`;
                 <div className="flex-1 h-1.5 rounded-full bg-gray-200 dark:bg-white/10 overflow-hidden">
                   <div
                     className="h-full rounded-full bg-black dark:bg-[#80FF00] transition-all duration-500"
-                    style={{ width: `${Math.max(4, Math.round((Math.min(currentStep, 11) / 11) * 100))}%` }}
+                    style={{ width: `${Math.max(4, Math.round((Math.min(currentStep, getTotalSteps()) / getTotalSteps()) * 100))}%` }}
                   />
                 </div>
-                <span className="whitespace-nowrap font-semibold">Step {Math.min(currentStep, 11)} of 11</span>
+                <span className="whitespace-nowrap font-semibold">Step {Math.min(currentStep, getTotalSteps())} of {getTotalSteps()}</span>
               </div>
             )}
           </div>
@@ -1193,7 +1217,7 @@ Please find the CV data attached.`;
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-black uppercase tracking-widest text-gray-400">Your Progress</span>
                     <span className="text-xs font-black text-black bg-[#80FF00] px-2.5 py-1 rounded-full shadow-sm">
-                      Step {currentStep} of 11
+                      Step {currentStep} of {getTotalSteps()}
                     </span>
                   </div>
 
@@ -1203,7 +1227,7 @@ Please find the CV data attached.`;
                       <motion.div 
                         className="bg-gradient-to-r from-[#80FF00] to-emerald-400 h-full rounded-full transition-all duration-500 shadow-[0_0_8px_rgba(128,255,0,0.5)]" 
                         initial={{ width: 0 }}
-                        animate={{ width: `${(currentStep / 11) * 100}%` }}
+                        animate={{ width: `${(currentStep / getTotalSteps()) * 100}%` }}
                       />
                     </div>
                   </div>
@@ -1221,7 +1245,7 @@ Please find the CV data attached.`;
 
                     <div className="flex items-center gap-3 text-sm font-bold text-gray-500">
                       <div className="w-5 h-5 rounded-full border-2 border-gray-300 bg-white" />
-                      <span>{11 - currentStep} steps remaining to unlock full dashboard</span>
+                      <span>{getTotalSteps() - currentStep} steps remaining to unlock full dashboard</span>
                     </div>
                   </div>
                 </div>
@@ -2240,6 +2264,15 @@ Please find the CV data attached.`;
                     </button>
                   ))}
                 </div>
+
+                <div className="text-center">
+                  <button 
+                    onClick={handleNext}
+                    className="text-xs text-gray-400 hover:text-black font-semibold uppercase tracking-wider transition-colors"
+                  >
+                    Skip for now →
+                  </button>
+                </div>
               </div>
             )}
 
@@ -2276,6 +2309,15 @@ Please find the CV data attached.`;
                       <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">{vol.desc}</span>
                     </button>
                   ))}
+                </div>
+
+                <div className="text-center">
+                  <button 
+                    onClick={handleNext}
+                    className="text-xs text-gray-400 hover:text-black font-semibold uppercase tracking-wider transition-colors"
+                  >
+                    Skip for now →
+                  </button>
                 </div>
               </div>
             )}
@@ -2784,11 +2826,7 @@ Please find the CV data attached.`;
               onClick={handleNext}
               disabled={
                 (currentStep === 1 && !intent) ||
-                (currentStep === 2 && (!seedingMethod || (seedingMethod !== 'scratch' && !parsedCVData))) ||
-                (currentStep === 5 && !searchStatus) ||
-                (currentStep === 6 && !monthlyVolume) ||
-                (currentStep === 8 && !trackerInterest) ||
-                (currentStep === 9 && !autoapplyInterest)
+                (currentStep === 2 && (!seedingMethod || (seedingMethod !== 'scratch' && !parsedCVData)))
               }
               className="bg-black text-white hover:bg-slate-900 font-bold flex items-center gap-1.5 rounded-xl px-5 py-2.5 shadow-sm disabled:opacity-35 dark:bg-[#80FF00] dark:text-black dark:hover:bg-[#70e600]"
             >

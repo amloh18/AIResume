@@ -60,6 +60,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check daily limit for Naukri
+    const dailyLimit = (user as any).naukriIntegration?.preferences?.dailyLimit ?? 25;
+    const today = new Date().toISOString().split('T')[0];
+    const todayStart = new Date(today + 'T00:00:00Z');
+    const todayCount = await JobApplication.countDocuments({
+      userId: auth.userId,
+      source: 'naukri',
+      applicationDate: { $gte: todayStart },
+    });
+
+    if (todayCount >= dailyLimit) {
+      return NextResponse.json(
+        { error: `Daily Naukri limit reached (${dailyLimit}/${dailyLimit}). Try again tomorrow.` },
+        { status: 429 }
+      );
+    }
+
     // 2. Generate AI screening answers
     const answers = await NaukriApplyService.answerScreeningQuestions(
       auth.userId,

@@ -859,7 +859,7 @@ export class JobDiscoveryService {
               score: match.score,
               breakdown: match.breakdown,
             });
-          } catch (error) {
+          } catch {
             const fallback = heuristicScore(job, preferences);
             scores.set(job.externalId, {
               score: fallback.score,
@@ -883,46 +883,72 @@ const heuristicScore = (
   job: DiscoveredJob,
   preferences: JobPreferences | null
 ): { score: number; breakdown: MatchBreakdown } => {
-  let score = 58;
-  let skillsScore = 40;
+  let skillsScore = 50;
   let titleScore = 40;
   let locationScore = 40;
   let recencyScore = 40;
 
-  if (preferences) {
-    const prefTitles = preferences.titles || [];
-    const normalized = job.title.toLowerCase();
-    if (prefTitles.some((t) => normalized.includes(t.toLowerCase()))) {
-      score += 12;
-      titleScore = 80;
-    }
+  // ── Title matching (flexible, role-family based) ──
+  if (preferences?.titles?.length) {
+    // Simple role-family check: see if any preferred title shares words with job title
+    const normalizedJob = job.title.toLowerCase();
+    const titleMatch = preferences.titles.some((t) => {
+      const normalizedPref = t.toLowerCase();
+      // Direct substring match
+      if (normalizedJob.includes(normalizedPref) || normalizedPref.includes(normalizedJob)) return true;
+      // Word overlap
+      const prefWords = new Set(normalizedPref.split(/\s+/));
+      const jobWords = normalizedJob.split(/\s+/);
+      const overlap = jobWords.filter((w) => w.length > 2 && prefWords.has(w));
+      return overlap.length > 0;
+    });
+    titleScore = titleMatch ? 85 : 35;
+  } else {
+    titleScore = 55;
+  }
 
+  // ── Skills matching (extract from job keywords + description) ──
+  const jobKeywords = job.keywords || [];
+  if (jobKeywords.length > 0) {
+    const skillDensity = Math.min(1, jobKeywords.length / 15);
+    skillsScore = Math.round(40 + skillDensity * 45);
+  } else {
+    skillsScore = 50;
+  }
+
+  // ── Location matching ──
+  if (preferences) {
     const prefLocations = (preferences.locations || []).map((l) => l.toLowerCase());
     const jobLocation = job.location.toLowerCase();
     if (
       job.remote ||
       prefLocations.some((l) => jobLocation.includes(l) || l.includes('remote'))
     ) {
-      score += 10;
-      locationScore = 80;
+      locationScore = 85;
+    } else {
+      locationScore = 45;
     }
   } else {
-    score += 6;
-    skillsScore = 55;
-    titleScore = 55;
     locationScore = 55;
   }
 
+  // ── Recency scoring ──
   const daysSince = job.postedDate
     ? Math.floor((Date.now() - job.postedDate.getTime()) / (1000 * 60 * 60 * 24))
     : 30;
 
-  if (daysSince <= 3) { score += 6; recencyScore = 95; }
-  else if (daysSince <= 7) { score += 4; recencyScore = 80; }
-  else if (daysSince <= 14) { score += 2; recencyScore = 60; }
+  if (daysSince <= 3) { recencyScore = 95; }
+  else if (daysSince <= 7) { recencyScore = 80; }
+  else if (daysSince <= 14) { recencyScore = 60; }
   else { recencyScore = 35; }
 
-  const finalScore = Math.min(98, Math.max(40, score));
+  // ── Composite score ──
+  const finalScore = Math.min(98, Math.max(15, Math.round(
+    skillsScore * 0.4 +
+    titleScore * 0.3 +
+    locationScore * 0.2 +
+    recencyScore * 0.1
+  )));
 
   return {
     score: finalScore,

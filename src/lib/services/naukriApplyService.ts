@@ -37,7 +37,7 @@ export class NaukriApplyService {
       experienceYears: user?.naukriIntegration?.preferences?.experienceYears ?? 3,
       expectedCtcLakhs: user?.naukriIntegration?.preferences?.minCtcLakhs ?? 15,
       noticePeriodDays: user?.naukriIntegration?.preferences?.maxNoticePeriodDays ?? 30,
-      skills: primaryCv?.skills || ['JavaScript', 'React', 'Node.js', 'TypeScript', 'Full Stack Development'],
+      skills: primaryCv?.skills || [],
       summary: primaryCv?.summary || '',
       experience: primaryCv?.experience || [],
     };
@@ -89,17 +89,27 @@ export class NaukriApplyService {
       }
 
       if (/highest\s*(?:qualification|degree|education)/i.test(lower)) {
+        const edu = userProfile.experience?.[0];
+        if (edu) {
+          return {
+            question: qText,
+            answer: `${edu.studyType || 'Degree'} in ${edu.area || 'relevant field'}`,
+            confidence: 0.9,
+          };
+        }
         return {
           question: qText,
-          answer: "Bachelor's Degree in Computer Science / Engineering",
-          confidence: 0.9,
+          answer: "Bachelor's Degree",
+          confidence: 0.85,
         };
       }
 
       // Default contextual response
       return {
         question: qText,
-        answer: 'Yes, I have relevant hands-on experience and can deliver effectively in this role.',
+        answer: userProfile.skills.length > 0
+          ? `Yes, I have experience with ${userProfile.skills.slice(0, 3).join(', ')} and can deliver effectively in this role.`
+          : 'Yes, I have relevant hands-on experience and can deliver effectively in this role.',
         confidence: 0.8,
       };
     });

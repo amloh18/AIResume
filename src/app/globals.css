@@ -3067,6 +3067,21 @@ img[src*="/images/"] {
   animation: fadeIn 0.5s ease-in-out;
 }
 
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 20px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+.animate-slideUp {
+  animation: slideUp 0.3s ease-out;
+}
+
 /* Jobs table alternating rows */
 .jobs-table-row:nth-child(even) {
   background: rgba(255, 255, 255, 0.05);

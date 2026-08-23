@@ -15,6 +15,7 @@ export const SnippetPreviewFrame = ({
     spacing?: number;
     accentColor?: string;
     sectionGap?: number;
+    itemGap?: number;
   };
 }) => {
   const innerRef = useRef<HTMLDivElement>(null);
@@ -56,6 +57,7 @@ export const SnippetPreviewFrame = ({
           ['--cv-spacing']: String(design?.spacing ?? 1),
           ['--cv-accent']: design?.accentColor || '#22c55e',
           ['--cv-section-gap']: `${design?.sectionGap || 16}px`,
+          ['--cv-item-gap']: `${design?.itemGap || 12}px`,
         } as React.CSSProperties}
       >
         {children}

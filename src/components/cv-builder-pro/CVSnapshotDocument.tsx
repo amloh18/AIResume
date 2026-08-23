@@ -113,9 +113,9 @@ export const SNAPSHOT_STYLES = `
   .cv-snapshot-wrapper .cv-accent-text { color: var(--cv-accent) !important; }
   .cv-snapshot-wrapper .cv-accent-bg { background-color: var(--cv-accent) !important; }
   .cv-snapshot-wrapper .cv-accent-border { border-color: var(--cv-accent) !important; }
-  .cv-snapshot-wrapper .cv-document .cv-gap-sm { gap: calc(0.5rem * var(--cv-spacing)) !important; }
-  .cv-snapshot-wrapper .cv-document .cv-gap-md { gap: calc(0.75rem * var(--cv-spacing)) !important; }
-  .cv-snapshot-wrapper .cv-document .cv-gap-lg { gap: calc(1rem * var(--cv-spacing)) !important; }
+  .cv-snapshot-wrapper .cv-document .cv-gap-sm { gap: calc(var(--cv-item-gap, 12px) * 0.67 * var(--cv-spacing)) !important; }
+  .cv-snapshot-wrapper .cv-document .cv-gap-md { gap: calc(var(--cv-item-gap, 12px) * var(--cv-spacing)) !important; }
+  .cv-snapshot-wrapper .cv-document .cv-gap-lg { gap: calc(var(--cv-item-gap, 12px) * 1.33 * var(--cv-spacing)) !important; }
   
   /* Layout formats */
   .cv-format-bullets-only .cv-prose p {
@@ -185,6 +185,7 @@ export default function CVSnapshotDocument({
           '--cv-page-margin': `${design?.pageMargin || 40}px`,
           '--cv-sidebar-bg': design?.sidebarBgColor || '#f8fafc',
           '--cv-section-gap': `${design?.sectionGap || 16}px`,
+          '--cv-item-gap': `${design?.itemGap || 12}px`,
           '--cv-page-width': '210mm',
           '--cv-page-height': '297mm',
         } as React.CSSProperties}

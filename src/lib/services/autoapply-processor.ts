@@ -747,11 +747,11 @@ export async function processApplicationQueue(userId: string): Promise<{
   let application: IApplicationQueue | null = null;
   
   try {
-    // Check quota first
+    // Check global quota first
     const { canApply, remaining } = await checkUserQuota(userId);
     
     if (!canApply || remaining.hourly <= 0) {
-      results.errors.push('Quota exceeded');
+      results.errors.push('Daily application limit reached');
       return results;
     }
     
@@ -760,6 +760,35 @@ export async function processApplicationQueue(userId: string): Promise<{
     
     if (!application) {
       return results;
+    }
+    
+    // Check per-source daily limits from User model preferences
+    const User = (await import('@/models/User')).default;
+    const user = await User.findById(userId).lean() as any;
+    if (user) {
+      const source = application.source;
+      let dailyLimit = 25; // default
+
+      if (source === 'naukri' && user.naukriIntegration?.preferences?.dailyLimit) {
+        dailyLimit = user.naukriIntegration.preferences.dailyLimit;
+      } else if (source === 'indeed' && user.indeedIntegration?.preferences?.dailyLimit) {
+        dailyLimit = user.indeedIntegration.preferences.dailyLimit;
+      }
+
+      // Count today's applications for this source
+      const today = new Date().toISOString().split('T')[0];
+      const todayStart = new Date(today + 'T00:00:00Z');
+      await initializeModels();
+      const todayCount = await ApplicationHistory.countDocuments({
+        userId,
+        source,
+        appliedAt: { $gte: todayStart },
+      });
+
+      if (todayCount >= dailyLimit) {
+        results.errors.push(`Daily limit for ${source} reached (${dailyLimit}/${dailyLimit})`);
+        return results;
+      }
     }
     
     // Check API rate limits
@@ -780,39 +809,51 @@ export async function processApplicationQueue(userId: string): Promise<{
     // Record API request
     await recordApiRequest(application.source);
     
-    // In a real implementation, this would:
-    // 1. Generate tailored CV using AI
-    // 2. Generate cover letter
-    // 3. Submit application to the job portal
+    // Use unified apply service for real application submission
+    const { UnifiedApplyService } = await import('./unifiedApplyService');
     
-    // Simulate processing time
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Mark as applied
-    await updateApplicationStatus(application._id!.toString(), 'applied');
-    
-    // Record in quota
-    await recordApplication(userId);
-    
-    // Add to history
-    await addToApplicationHistory({
-      userId: application.userId,
+    const applyResult = await UnifiedApplyService.apply(userId, {
       jobId: application.jobId,
-      jobTitle: application.jobTitle,
+      title: application.jobTitle,
       company: application.company,
+      description: application.metadata?.description || '',
       location: application.location,
-      source: application.source,
-      sourceUrl: application.sourceUrl,
       salary: application.salary,
-      status: 'applied',
-      cvUsed: application.cvTemplateId,
-      coverLetterUsed: application.coverLetterId
+      jobUrl: application.sourceUrl || '',
+      atsType: (application.metadata?.atsType || application.source || 'unknown') as any,
+      source: application.source,
+      screeningQuestions: application.metadata?.screeningQuestions || [],
     });
     
-    // Record success
-    await recordApplicationSuccess(userId);
-    
-    results.successful += 1;
+    if (applyResult.success && applyResult.status === 'applied') {
+      // Successfully applied
+      await updateApplicationStatus(application._id!.toString(), 'applied');
+      await recordApplication(userId);
+      await addToApplicationHistory({
+        userId: application.userId,
+        jobId: application.jobId,
+        jobTitle: application.jobTitle,
+        company: application.company,
+        location: application.location,
+        source: application.source,
+        sourceUrl: application.sourceUrl,
+        salary: application.salary,
+        status: 'applied',
+        cvUsed: application.cvTemplateId,
+        coverLetterUsed: application.coverLetterId
+      });
+      await recordApplicationSuccess(userId);
+      results.successful += 1;
+    } else if (applyResult.status === 'action_required') {
+      // Needs manual action - mark as queued with action required note
+      await updateApplicationStatus(application._id!.toString(), 'queued', applyResult.message);
+      results.errors.push(`Action required: ${applyResult.message}`);
+    } else {
+      // Failed
+      await updateApplicationStatus(application._id!.toString(), 'failed', applyResult.message);
+      results.failed += 1;
+      results.errors.push(applyResult.message);
+    }
     
   } catch (error: any) {
     results.failed += 1;

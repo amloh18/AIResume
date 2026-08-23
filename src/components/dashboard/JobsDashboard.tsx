@@ -3,9 +3,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { JobsMetrics, JobListing, JobsFilter } from '@/types/automation-schema';
 import FiltersBar from './JobsDashboard/FiltersBar';
-import JobsLoadingState from './JobsDashboard/JobsLoadingState';
 import JobsErrorState from './JobsDashboard/JobsErrorState';
-import { Sparkles, Zap, Briefcase, Settings, ChevronRight } from 'lucide-react';
+import { Sparkles, Zap, Briefcase, Settings, ChevronRight, ArrowUp } from 'lucide-react';
 import { AutoApplyPanel } from '@/components/jobs/AutoApplyPanel';
 import { ApplicationsPanel } from '@/components/jobs/ApplicationsPanel';
 import { useSearchParams } from 'next/navigation';
@@ -16,9 +15,10 @@ import { ToastAction } from '@/components/ui/toast';
 import { Switch } from '@/components/ui/switch';
 import { JobCard } from '@/components/jobs/JobCard';
 import { JobDetailModal } from '@/components/jobs/JobDetailModal';
-import { detectUserCountry, COUNTRIES_LIST } from '@/components/jobs/CountrySelector';
+import { detectUserCountry } from '@/components/jobs/CountrySelector';
 import NaukriConnectCard from './JobsDashboard/NaukriConnectCard';
 import PortalIntegrationsPanel from './settings/PortalIntegrationsPanel';
+import { getCachedJobs, setCachedJobs } from '@/lib/utils/jobCache';
 
 export default function JobsDashboard() {
   const [activeTab, setActiveTab] = useState<'discover' | 'applications' | 'settings'>('discover');
@@ -66,10 +66,20 @@ export default function JobsDashboard() {
     sortOrder: 'desc',
   });
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(50);
+  const [pageSize] = useState(50);
   const [total, setTotal] = useState(0);
   const [hasMore, setHasMore] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => {
+    // Check if we have cached data for initial filter state
+    const initialParams: Record<string, string> = {
+      page: '1',
+      limit: '50',
+      countries: '',
+      sortBy: 'matchScore',
+      sortOrder: 'desc',
+    };
+    return !getCachedJobs(initialParams);
+  });
   const [error, setError] = useState<string | null>(null);
   const [selectedJob, setSelectedJob] = useState<JobListing | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -189,15 +199,6 @@ export default function JobsDashboard() {
           throw new Error(errData?.error || 'Failed to remove saved job');
         }
       } else {
-        const salaryStr =
-          job.salaryMin || job.salaryMax
-            ? `${job.salaryMin ? `$${job.salaryMin.toLocaleString()}` : ''}${
-                job.salaryMin && job.salaryMax ? ' – ' : ''
-              }${job.salaryMax ? `$${job.salaryMax.toLocaleString()}` : ''} ${
-                job.salaryCurrency || ''
-              }`.trim()
-            : undefined;
-
         const res = await fetch('/api/jobs', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -361,57 +362,61 @@ export default function JobsDashboard() {
     }
   }, []);
 
-  const fetchJobs = useCallback(async () => {
+  const fetchJobs = useCallback(async (isBackground = false) => {
     try {
-      setLoading(true);
-      const params = new URLSearchParams({
+      const params: Record<string, string> = {
         page: page.toString(),
         limit: pageSize.toString(),
         countries: countries.join(','),
         sortBy: filters.sortBy || 'matchScore',
         sortOrder: filters.sortOrder || 'desc',
-      });
+      };
 
-      if (filters.searchText) params.set('keywords', filters.searchText);
-      if (filters.remoteOnly) params.set('remoteOnly', 'true');
-      if (filters.matchScoreMin !== undefined)
-        params.set('matchScoreMin', filters.matchScoreMin.toString());
-      if (filters.matchScoreMax !== undefined)
-        params.set('matchScoreMax', filters.matchScoreMax.toString());
-      if (filters.companies?.length)
-        params.set('companies', filters.companies.join(','));
-      if (filters.locations?.length)
-        params.set('locations', filters.locations.join(','));
-      if (filters.sources?.length)
-        params.set('sources', filters.sources.join(','));
-      if (filters.atsTypes?.length)
-        params.set('atsTypes', filters.atsTypes.join(','));
-      if (filters.workplaceType?.length)
-        params.set('workplaceType', filters.workplaceType.join(','));
-      if (filters.roles?.length)
-        params.set('roles', filters.roles.join(','));
-      if (filters.jobTypes?.length)
-        params.set('jobTypes', filters.jobTypes.join(','));
-      if (filters.experienceLevel?.length)
-        params.set('experienceLevel', filters.experienceLevel.join(','));
-      if (filters.datePosted && filters.datePosted !== 'all')
-        params.set('datePosted', filters.datePosted);
-      if (filters.sponsorsVisa)
-        params.set('sponsorsVisa', 'true');
-      if (filters.savedOnly)
-        params.set('savedOnly', 'true');
+      if (filters.searchText) params.keywords = filters.searchText;
+      if (filters.remoteOnly) params.remoteOnly = 'true';
+      if (filters.matchScoreMin !== undefined) params.matchScoreMin = filters.matchScoreMin.toString();
+      if (filters.matchScoreMax !== undefined) params.matchScoreMax = filters.matchScoreMax.toString();
+      if (filters.companies?.length) params.companies = filters.companies.join(',');
+      if (filters.locations?.length) params.locations = filters.locations.join(',');
+      if (filters.sources?.length) params.sources = filters.sources.join(',');
+      if (filters.atsTypes?.length) params.atsTypes = filters.atsTypes.join(',');
+      if (filters.workplaceType?.length) params.workplaceType = filters.workplaceType.join(',');
+      if (filters.roles?.length) params.roles = filters.roles.join(',');
+      if (filters.jobTypes?.length) params.jobTypes = filters.jobTypes.join(',');
+      if (filters.experienceLevel?.length) params.experienceLevel = filters.experienceLevel.join(',');
+      if (filters.datePosted && filters.datePosted !== 'all') params.datePosted = filters.datePosted;
+      if (filters.sponsorsVisa) params.sponsorsVisa = 'true';
+      if (filters.savedOnly) params.savedOnly = 'true';
 
-      const response = await fetch(`/api/jobs/discover?${params}`, {});
+      // Check cache first — show cached data instantly
+      const cached = getCachedJobs(params);
+      if (cached) {
+        setJobs(cached.jobs);
+        setTotal(cached.total);
+        setHasMore(cached.hasMore);
+        setError(null);
+        setLoading(false);
+        // Still fetch fresh data in background
+      } else if (!isBackground) {
+        setLoading(true);
+      }
+
+      const queryString = new URLSearchParams(params).toString();
+      const response = await fetch(`/api/jobs/discover?${queryString}`, {});
 
       if (!response.ok) {
-        console.warn('Failed to fetch jobs, using default values');
-        setJobs([]);
-        setLoading(false);
+        if (!cached) {
+          setJobs([]);
+          setLoading(false);
+        }
         return;
       }
 
       const data = await response.json();
       const incomingJobs: JobListing[] = data.jobs || [];
+
+      // Update cache
+      setCachedJobs(params, incomingJobs, data.total, data.hasMore);
 
       setJobs((prev) => {
         // First load or filter change — replace entirely
@@ -421,7 +426,7 @@ export default function JobsDashboard() {
           return incomingJobs;
         }
 
-        // Subsequent loads — silently merge new jobs
+        // Background refresh — merge new jobs silently
         const prevIds = new Set(prev.map((j) => j._id));
         const newJobs = incomingJobs.filter((j) => !prevIds.has(j._id));
 
@@ -429,7 +434,6 @@ export default function JobsDashboard() {
           setNewJobsCount((c) => c + newJobs.length);
         }
 
-        // Return existing jobs + new ones appended at the end
         return [...prev, ...newJobs];
       });
 
@@ -438,7 +442,7 @@ export default function JobsDashboard() {
       setError(null);
     } catch (err: any) {
       console.error('Error fetching jobs:', err);
-      setError(err.message);
+      if (!isBackground) setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -609,18 +613,21 @@ export default function JobsDashboard() {
               savedCount={savedIds.size}
             />
 
-            {/* New jobs indicator — appears silently when fresh jobs arrive */}
+            {/* New jobs indicator — subtle floating pill */}
             {newJobsCount > 0 && (
-              <button
-                type="button"
-                onClick={() => {
-                  setNewJobsCount(0);
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                }}
-                className="w-full py-2 px-4 bg-lime-50 dark:bg-lime-900/20 border border-lime-200 dark:border-lime-800 rounded-xl text-sm font-medium text-lime-700 dark:text-lime-300 hover:bg-lime-100 dark:hover:bg-lime-900/30 transition-colors"
-              >
-                {newJobsCount} new job{newJobsCount !== 1 ? 's' : ''} available — click to see
-              </button>
+              <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-slideUp">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNewJobsCount(0);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-[#0f172a] dark:bg-[#80FF00] text-white dark:text-black text-sm font-semibold rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all"
+                >
+                  <ArrowUp className="w-4 h-4" />
+                  {newJobsCount} new job{newJobsCount !== 1 ? 's' : ''}
+                </button>
+              </div>
             )}
 
             {/* Job Grid */}

@@ -235,6 +235,7 @@ export default function CVOverlayDocument({
           '--cv-page-margin': `${design?.pageMargin || 40}px`,
           '--cv-sidebar-bg': design?.sidebarBgColor || '#f8fafc',
           '--cv-section-gap': `${design?.sectionGap || 16}px`,
+          '--cv-item-gap': `${design?.itemGap || 12}px`,
           '--cv-page-width': '210mm',
           '--cv-page-height': '297mm',
         } as React.CSSProperties}
