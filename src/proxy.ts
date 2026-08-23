@@ -99,6 +99,8 @@ export default async function proxy(req: NextRequest) {
       '/api/cvs',
       '/api/cv/analysis-snapshot',
       '/api/pricing-plans',
+      '/api/pricing',
+      '/api/activity-log',
       '/api/user/subscription',
       '/api/check-email',
       '/api/testimonials',
