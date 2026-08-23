@@ -100,6 +100,8 @@ export default async function proxy(req: NextRequest) {
       '/api/cv/analysis-snapshot',
       '/api/pricing-plans',
       '/api/user/subscription',
+      '/api/check-email',
+      '/api/testimonials',
     ];
 
     if (publicApiRoutes.some(route => pathname.startsWith(route))) {
