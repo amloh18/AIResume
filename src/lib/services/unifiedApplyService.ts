@@ -284,6 +284,10 @@ export class UnifiedApplyService {
       notes: `Submitted via ${context.atsType} Auto-Apply`,
     });
 
+    // Sanitize source to valid enum values
+    const validSources = ['extension', 'manual', 'import', 'linkedin', 'indeed', 'company-website', 'referral', 'discovery', 'other'];
+    const sanitizedSource = validSources.includes(context.source) ? context.source : 'other';
+
     return JobApplication.create({
       userId,
       jobTitle: context.title,
@@ -291,7 +295,7 @@ export class UnifiedApplyService {
       jobUrl: context.jobUrl,
       jobDescription: context.description || '',
       location: context.location || 'Remote',
-      source: context.source,
+      source: sanitizedSource,
       atsType: context.atsType,
       status: status === 'completed' ? 'applied' : 'saved',
       priority: 'high',

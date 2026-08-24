@@ -98,7 +98,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Build application context
+    // Build application context — sanitize source to valid enum values
+    const validSources = ['extension', 'manual', 'import', 'linkedin', 'indeed', 'company-website', 'referral', 'discovery', 'other'];
+    const sanitizedSource = source && validSources.includes(source) ? source : (resolvedAtsType || 'other');
+
     const context: ApplyJobContext = {
       jobId: jobId || `job_${Date.now()}`,
       title,
@@ -108,7 +111,7 @@ export async function POST(request: NextRequest) {
       salary,
       jobUrl: jobUrl || '',
       atsType: resolvedAtsType,
-      source: source || resolvedAtsType,
+      source: sanitizedSource,
       screeningQuestions,
     };
 
