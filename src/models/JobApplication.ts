@@ -64,7 +64,7 @@ export interface IJobApplication extends Document {
     size: number;
   }>;
   tags: string[];
-  source?: 'extension' | 'manual' | 'import' | 'linkedin' | 'indeed' | 'company-website' | 'referral' | 'other';
+  source?: 'extension' | 'manual' | 'import' | 'linkedin' | 'indeed' | 'company-website' | 'referral' | 'discovery' | 'other';
   sourceUrl?: string;
   atsType?: 'greenhouse' | 'lever' | 'workable' | 'naukri' | 'indeed' | 'adzuna' | 'ashby' | 'workday' | 'unknown';
   atsScore?: number;
@@ -318,7 +318,7 @@ const jobApplicationSchema = new Schema<IJobApplication>({
   tags: [{ type: String, trim: true }],
   source: {
     type: String,
-    enum: ['extension', 'manual', 'import', 'linkedin', 'indeed', 'company-website', 'referral', 'other'],
+    enum: ['extension', 'manual', 'import', 'linkedin', 'indeed', 'company-website', 'referral', 'discovery', 'other'],
     default: 'manual'
   },
   sourceUrl: {
