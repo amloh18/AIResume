@@ -101,7 +101,7 @@ export function JobDetailModal({
             exit={{ x: 'calc(100% + 12px)' }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
             className="fixed right-3 top-3 bottom-3 h-auto bg-white dark:bg-[#141810] shadow-2xl z-[99999] flex flex-col rounded-2xl overflow-hidden transition-all duration-300"
-            style={{ width: 'min(560px, calc(100vw - 24px))' }}
+            style={{ width: 'min(680px, calc(100vw - 24px))' }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}

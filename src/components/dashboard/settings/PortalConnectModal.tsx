@@ -10,7 +10,7 @@ import {
   X,
   Loader2,
   CheckCircle2,
-  ExternalLink,
+  ArrowLeft,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -96,7 +96,8 @@ export const PortalConnectModal: React.FC<PortalConnectModalProps> = ({
   if (!isOpen) return null;
 
   const handleOpenPortal = () => {
-    window.open(config.loginUrl, '_blank');
+    // For session-based portals, skip the portal tab — just show credentials form
+    // The user enters the same credentials they use on the portal
     setStep('credentials');
   };
 
@@ -238,8 +239,16 @@ export const PortalConnectModal: React.FC<PortalConnectModalProps> = ({
               </button>
             </form>
 
-            <p className="text-[11px] text-gray-400 dark:text-gray-500 text-center mt-3">
-              Your credentials are encrypted and stored securely
+            <button
+              onClick={() => setStep('idle')}
+              className="w-full mt-2 py-2 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 flex items-center justify-center gap-1"
+            >
+              <ArrowLeft className="w-3 h-3" />
+              Back
+            </button>
+
+            <p className="text-[11px] text-gray-400 dark:text-gray-500 text-center mt-2">
+              Credentials are encrypted with AES-256 and stored securely
             </p>
           </div>
         )}
@@ -266,14 +275,16 @@ export const PortalConnectModal: React.FC<PortalConnectModalProps> = ({
             {config.sessionBased ? (
               <div className="space-y-3">
                 <p className="text-sm text-gray-600 dark:text-gray-300">
-                  We&apos;ll open {config.name} so you can log in, then connect your account automatically.
+                  Enter your {config.name} email and password to enable auto-apply and job syncing.
+                </p>
+                <p className="text-[11px] text-gray-400 dark:text-gray-500">
+                  Credentials are encrypted and never stored in plain text.
                 </p>
                 <button
                   onClick={handleOpenPortal}
-                  className={`w-full py-2.5 text-sm font-semibold text-white ${config.color} hover:opacity-90 rounded-xl transition-all shadow-md flex items-center justify-center gap-2`}
+                  className={`w-full py-2.5 text-sm font-semibold text-white ${config.color} hover:opacity-90 rounded-xl transition-all shadow-md`}
                 >
-                  Login to {config.name}
-                  <ExternalLink className="w-3.5 h-3.5" />
+                  Connect {config.name}
                 </button>
               </div>
             ) : (
