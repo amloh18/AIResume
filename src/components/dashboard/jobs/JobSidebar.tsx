@@ -1045,56 +1045,38 @@ ${userName}`
       const jobId = job._id || job.id;
       const atsType = (job as any).atsType || 'unknown';
 
-      // Check if this portal supports auto-apply
-      const supportedPortals = ['naukri', 'indeed'];
-      const isAutoApplySupported = supportedPortals.includes(atsType);
+      // Use unified auto-apply endpoint for all ATS types
+      const applyRes = await fetch('/api/jobs/auto-apply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jobId,
+          title: job.jobTitle || job.title,
+          company: job.company,
+          description: job.jobDescription || job.description || '',
+          jobUrl: job.jobUrl || '',
+          location: job.location || '',
+          salary: job.salary,
+          atsType,
+          source: job.source || 'manual',
+          screeningQuestions: [],
+        }),
+      });
 
-      if (isAutoApplySupported) {
-        // Use portal-specific auto-apply endpoint
-        const applyEndpoint = `/api/jobs/${atsType}/auto-apply`;
-        const applyRes = await fetch(applyEndpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            title: job.jobTitle || job.title,
-            company: job.company,
-            description: job.jobDescription || job.description || '',
-            jobUrl: job.jobUrl || '',
-            location: job.location || '',
-            salary: job.salary,
-          }),
-        });
+      const applyData = await applyRes.json();
 
-        if (!applyRes.ok) {
-          const errData = await applyRes.json().catch(() => ({}));
-          throw new Error(errData?.error?.message || 'Auto-apply failed');
-        }
-      } else {
-        // Record the application via generic endpoint
-        await fetch('/api/applications/auto', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            jobId,
-            title: job.jobTitle || job.title,
-            company: job.company,
-            location: job.location,
-            source: job.source || 'manual',
-            atsType,
-            applyUrl: job.jobUrl || '',
-            matchScore: job.matchScore || job.atsScore,
-          }),
-        });
-
-        // Update job status to applied
-        await fetch(`/api/jobs/${jobId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status: 'applied' }),
-        });
+      if (!applyRes.ok) {
+        throw new Error(applyData?.error?.message || 'Auto-apply failed');
       }
 
-      toast.success('Applied successfully!');
+      // Update the existing record's status to applied
+      await fetch(`/api/jobs/${jobId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'applied' }),
+      });
+
+      toast.success(applyData.message || 'Applied successfully!');
       onRefresh?.();
     } catch (err: any) {
       toast.error(err.message || 'Failed to apply');
@@ -1104,9 +1086,6 @@ ${userName}`
   const handleTailorAndApply = async () => {
     try {
       const jobId = job._id || job.id;
-      const atsType = (job as any).atsType || 'unknown';
-      const supportedPortals = ['naukri', 'indeed'];
-      const isAutoApplySupported = supportedPortals.includes(atsType);
 
       // If no journey exists yet, create one first (triggers CV/cover letter tailoring)
       if (!primaryJourney) {
@@ -1121,18 +1100,8 @@ ${userName}`
         return;
       }
 
-      // Apply
+      // Apply using the unified endpoint
       await handleApplyNow(primaryJourney);
-
-      // For unsupported portals, set status to indicate manual action needed
-      if (!isAutoApplySupported && atsType !== 'unknown') {
-        await fetch(`/api/jobs/${jobId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status: 'created' }),
-        });
-        toast.success('Application recorded. Manual submission required for this portal.');
-      }
     } catch (err: any) {
       toast.error(err.message || 'Failed to tailor & apply');
     }

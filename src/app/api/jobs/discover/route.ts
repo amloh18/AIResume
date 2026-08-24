@@ -7,6 +7,7 @@ import type {
 import { MATCH_SCORE_THRESHOLDS } from '@/types/automation-schema';
 import { authenticateRequest } from '@/lib/utils/auth-helpers-api';
 import { JobDiscoveryService, type DiscoveryCriteria, type DiscoveryRegion } from '@/lib/services/jobDiscoveryService';
+import { GlobalJobService } from '@/lib/services/globalJobService';
 
 const validRegions: DiscoveryRegion[] = ['UK', 'India', 'Global'];
 
@@ -103,6 +104,24 @@ export async function GET(request: NextRequest) {
         keywords: job.keywords,
       };
     });
+
+    // Fetch global jobs (complete manual/extension jobs from all users)
+    try {
+      const portalJobTitles = discovered.map(j => j.title);
+      const portalJobCompanies = discovered.map(j => j.company);
+
+      const globalJobs = await GlobalJobService.getGlobalJobs({
+        excludeUserIds: userId ? [userId] : [],
+        limit: 100,
+        portalJobTitles,
+        portalJobCompanies,
+      });
+
+      // Merge global jobs into listings (dedup already handled by GlobalJobService)
+      listings = [...listings, ...globalJobs];
+    } catch (err) {
+      console.warn('Failed to fetch global jobs:', err);
+    }
 
     // Exclude jobs the user has already passed/dismissed
     if (userId) {
@@ -541,7 +560,7 @@ export async function GET(request: NextRequest) {
           .find({ userId: new ObjectId(userId) })
           .toArray();
         const jobApps = await db
-          .collection('job_applications')
+          .collection('jobapplications')
           .find({ userId: new ObjectId(userId) })
           .toArray();
         const savedExternalIds = new Set([

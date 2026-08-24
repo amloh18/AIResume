@@ -9,6 +9,7 @@ import {
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { useNotifications } from '@/contexts/NotificationContext';
+import { useApplyProgress } from '@/hooks/useApplyProgress';
 import { JobDetailModal } from '@/components/jobs/JobDetailModal';
 import CompanyLogo from '@/components/ui/CompanyLogo';
 import type { JobListing } from '@/types/automation-schema';
@@ -41,6 +42,7 @@ export default function TopJobMatchesSection() {
   const router = useRouter();
   const { toast } = useToast();
   const { updateProgress } = useNotifications();
+  const applyProgress = useApplyProgress();
   const [jobs, setJobs] = useState<TopMatchJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedJob, setSelectedJob] = useState<JobListing | null>(null);
@@ -96,19 +98,19 @@ export default function TopJobMatchesSection() {
   const handleApply = async (job: TopMatchJob | JobListing, e?: React.MouseEvent) => {
     e?.stopPropagation?.();
     setAppliedIds((prev) => new Set(prev).add(job._id));
-    toast({
-      title: 'Application Initiated',
-      description: `Applying to ${job.title} at ${job.company}`,
-    });
 
     const appId = `apply-${job._id}`;
+
+    // Start progress toast
+    applyProgress.startApplyProgress(job.title);
     updateProgress(appId, 15, `Matching CV for ${job.title}...`, 'progress');
 
     try {
-      setTimeout(() => updateProgress(appId, 45, `Tailoring application for ${job.company}...`, 'progress'), 600);
-      setTimeout(() => updateProgress(appId, 80, `Submitting application...`, 'progress'), 1400);
+      // Update progress: tailoring
+      applyProgress.updateToTailoring(job.title, job.company);
+      updateProgress(appId, 45, `Tailoring application for ${job.company}...`, 'progress');
 
-      const res = await fetch('/api/applications/auto', {
+      const res = await fetch('/api/jobs/auto-apply', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -117,7 +119,9 @@ export default function TopJobMatchesSection() {
           company: job.company,
           location: job.location,
           source: job.source,
-          applyUrl: job.applyUrl,
+          jobUrl: job.applyUrl,
+          description: (job as any).description,
+          atsType: (job as any).atsType || 'unknown',
           salary: (job as any).salary || ((job as any).salaryMin || (job as any).salaryMax ? {
             min: (job as any).salaryMin,
             max: (job as any).salaryMax,
@@ -125,20 +129,35 @@ export default function TopJobMatchesSection() {
             period: 'yearly',
           } : undefined),
           matchScore: job.matchScore,
-          skills: (job as any).skills || (job as any).keywords || [],
+          screeningQuestions: [],
         }),
       });
 
+      // Update progress: submitting
+      applyProgress.updateToSubmitting(job.company);
+      updateProgress(appId, 80, `Submitting application...`, 'progress');
+
       const resData = await res.json();
-      const createdId = resData?.jobId || resData?.applicationId || job._id;
 
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('jobUpdated', { detail: { jobId: createdId } }));
+      if (res.ok && resData.success) {
+        const createdId = resData.applicationId || job._id;
+
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('jobUpdated', { detail: { jobId: createdId } }));
+        }
+
+        // Complete with success
+        applyProgress.completeApply(job.title, job.company, true, resData.message);
+        updateProgress(appId, 100, `Applied to ${job.title}!`, 'progress');
+      } else {
+        // Complete with queued status
+        applyProgress.completeApply(job.title, job.company, true, resData.message || 'Application has been queued');
+        updateProgress(appId, 100, `Application queued`, 'progress');
       }
-
-      setTimeout(() => updateProgress(appId, 100, `Applied to ${job.title}!`, 'progress'), 2200);
     } catch {
-      setTimeout(() => updateProgress(appId, 100, `Applied to ${job.title}!`, 'progress'), 2200);
+      // Complete with error
+      applyProgress.completeApply(job.title, job.company, false, 'Something went wrong. Please try again.');
+      updateProgress(appId, 100, `Application failed`, 'progress');
     }
   };
 

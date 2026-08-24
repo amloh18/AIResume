@@ -3371,7 +3371,7 @@ export default function ResumeEnhancerContainer({
               <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 lg:flex-initial">
                 <button
                   onClick={handleHomeStepClick}
-                  className="hidden md:flex w-9 h-9 rounded-xl bg-white dark:bg-[#1a2312] border border-lime-200 dark:border-lime-900/30 items-center justify-center text-lime-600 dark:text-lime-400 hover:bg-lime-50 dark:hover:bg-lime-950/20 active:scale-95 transition-all duration-200 flex-shrink-0 shadow-sm"
+                  className="flex w-9 h-9 rounded-xl bg-white dark:bg-[#1a2312] border border-lime-200 dark:border-lime-900/30 items-center justify-center text-lime-600 dark:text-lime-400 hover:bg-lime-50 dark:hover:bg-lime-950/20 active:scale-95 transition-all duration-200 flex-shrink-0 shadow-sm"
                   title="Back to Step 1"
                 >
                   <Home className="w-4 h-4 text-lime-600 dark:text-lime-400" />
@@ -3414,7 +3414,7 @@ export default function ResumeEnhancerContainer({
                   </div>
                   
                   {/* CV type chip */}
-                  <div className="relative group/chip cursor-help z-50 shrink-0">
+                  <div className="relative group/chip cursor-help z-50 shrink-0 hidden sm:block">
                     <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider shrink-0 ${
                       state.cvType === 'master'
                         ? 'bg-blue-500/15 text-blue-500 dark:text-blue-400 border border-blue-500/30'
@@ -3664,7 +3664,7 @@ export default function ResumeEnhancerContainer({
           )}
 
           {/* Theme Toggle */}
-          <div className="hidden sm:block">
+          <div>
             <ThemeToggle variant="pill" />
           </div>
 
