@@ -585,6 +585,28 @@ export async function GET(request: NextRequest) {
       (job) => job.matchScore >= minScore && job.matchScore <= matchScoreMax
     );
 
+    // Keyword search filter — filter results by search text
+    if (keywords && keywords.length > 0) {
+      listings = listings.filter((job) => {
+        const titleLower = (job.title || '').toLowerCase();
+        const companyLower = (job.company || '').toLowerCase();
+        const descLower = (job.description || '').toLowerCase();
+        const locLower = (job.location || '').toLowerCase();
+        const keywordsLower = ((job as unknown as Record<string, unknown>).keywords as string[] || []).map((k: string) => k.toLowerCase());
+
+        return keywords.some((kw) => {
+          const kwLower = kw.toLowerCase();
+          return (
+            titleLower.includes(kwLower) ||
+            companyLower.includes(kwLower) ||
+            descLower.includes(kwLower) ||
+            locLower.includes(kwLower) ||
+            keywordsLower.some((k) => k.includes(kwLower))
+          );
+        });
+      });
+    }
+
     const dir = sortOrder === 'asc' ? 1 : -1;
     listings.sort((a, b) => {
       if (sortBy === 'postedDate') {

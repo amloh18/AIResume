@@ -1,20 +1,15 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import type { JobsFilter, JobsMetrics, JobSource, ATSType } from '@/types/automation-schema';
+import type { JobsFilter, JobsMetrics, ATSType } from '@/types/automation-schema';
 import {
   Search,
   X,
   ArrowUpDown,
   ChevronDown,
-  MapPin,
-  Building2,
   Bookmark,
   Check,
-  Globe,
-  Briefcase,
   Layers,
-  Sparkles
 } from 'lucide-react';
 import { CountrySelector } from '@/components/jobs/CountrySelector';
 import { QuotaIndicator } from '@/components/jobs/QuotaIndicator';
@@ -157,8 +152,6 @@ export default function FiltersBar({
     >
       {/* Top Search / Country / ATS Platform Dropdown / Quota Row */}
       <div className="flex flex-wrap items-center gap-3 relative z-20">
-        <CountrySelector value={countries} onChange={onCountriesChange} />
-        
         <div className="flex-1 min-w-[220px] relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
@@ -169,6 +162,8 @@ export default function FiltersBar({
             className="w-full pl-9 pr-4 py-2 bg-gray-50 dark:bg-[#1a230f] border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-lime-500 text-xs text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
           />
         </div>
+
+        <CountrySelector value={countries} onChange={onCountriesChange} />
 
         {/* ATS Platform Multi-Select Dropdown next to search */}
         <div className="relative">
