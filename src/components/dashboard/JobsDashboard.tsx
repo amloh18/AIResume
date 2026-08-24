@@ -11,6 +11,7 @@ import { useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useToast } from '@/hooks/use-toast';
 import { useNotifications } from '@/contexts/NotificationContext';
+import { useApplyProgress } from '@/hooks/useApplyProgress';
 import { ToastAction } from '@/components/ui/toast';
 import { Switch } from '@/components/ui/switch';
 import { JobCard } from '@/components/jobs/JobCard';
@@ -27,6 +28,7 @@ export default function JobsDashboard() {
   const userId = session?.user?.id;
   const { toast } = useToast();
   const { updateProgress } = useNotifications();
+  const applyProgress = useApplyProgress();
 
   useEffect(() => {
     const tabParam = searchParams.get('tab');
@@ -85,6 +87,7 @@ export default function JobsDashboard() {
   const [modalOpen, setModalOpen] = useState(false);
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [isApplying, setIsApplying] = useState<string | null>(null);
   const [naukriConnected, setNaukriConnected] = useState<boolean>(true);
   const [autoApplyEnabled, setAutoApplyEnabled] = useState<boolean>(false);
   const [newJobsCount, setNewJobsCount] = useState(0);
@@ -290,13 +293,18 @@ export default function JobsDashboard() {
     }
 
     const appId = `apply-${job._id}`;
+    setIsApplying(appId);
+
+    // Start progress toast
+    applyProgress.startApplyProgress(job.title);
     updateProgress(appId, 15, `Matching CV for ${job.title}...`, 'progress');
 
     try {
-      setTimeout(() => updateProgress(appId, 45, `Tailoring application for ${job.company}...`, 'progress'), 600);
-      setTimeout(() => updateProgress(appId, 80, `Submitting application to ${job.company}...`, 'progress'), 1400);
+      // Update progress: tailoring
+      applyProgress.updateToTailoring(job.title, job.company);
+      updateProgress(appId, 45, `Tailoring application for ${job.company}...`, 'progress');
 
-      const res = await fetch('/api/applications/auto', {
+      const res = await fetch('/api/jobs/auto-apply', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -305,7 +313,9 @@ export default function JobsDashboard() {
           company: job.company,
           location: job.location,
           source: job.source,
-          applyUrl: job.applyUrl,
+          jobUrl: job.applyUrl,
+          description: job.description,
+          atsType: job.atsType || 'unknown',
           salary: job.salaryMin || job.salaryMax ? {
             min: job.salaryMin,
             max: job.salaryMax,
@@ -313,36 +323,37 @@ export default function JobsDashboard() {
             period: 'yearly',
           } : undefined,
           matchScore: job.matchScore,
-          description: job.description,
-          skills: job.keywords || [],
+          screeningQuestions: [],
         }),
       });
 
-      if (res.ok) {
-        const resData = await res.json();
-        const createdId = resData?.jobId || resData?.applicationId || job._id;
+      // Update progress: submitting
+      applyProgress.updateToSubmitting(job.company);
+      updateProgress(appId, 80, `Submitting application to ${job.company}...`, 'progress');
+
+      const resData = await res.json();
+
+      if (res.ok && resData.success) {
+        const createdId = resData.applicationId || job._id;
 
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('jobUpdated', { detail: { jobId: createdId } }));
         }
 
-        setTimeout(() => updateProgress(appId, 100, `Applied to ${job.title}!`, 'progress'), 2200);
-        toast({
-          title: 'Application Initiated',
-          description: `Applying to ${job.title} at ${job.company}`,
-        });
+        // Complete with success
+        applyProgress.completeApply(job.title, job.company, true, resData.message);
+        updateProgress(appId, 100, `Applied to ${job.title}!`, 'progress');
       } else {
-        setTimeout(() => updateProgress(appId, 100, `Application submitted!`, 'progress'), 2200);
-        const data = await res.json();
-        throw new Error(data?.error?.message || 'Failed to trigger application');
+        // Complete with queued status
+        applyProgress.completeApply(job.title, job.company, true, resData.message || 'Application has been queued for processing');
+        updateProgress(appId, 100, `Application queued`, 'progress');
       }
     } catch (err: any) {
-      setTimeout(() => updateProgress(appId, 100, `Application queued`, 'progress'), 2200);
-      toast({
-        title: 'Application Failed',
-        description: err.message,
-        variant: 'destructive',
-      });
+      // Complete with error
+      applyProgress.completeApply(job.title, job.company, false, err.message || 'Something went wrong');
+      updateProgress(appId, 100, `Application failed`, 'progress');
+    } finally {
+      setIsApplying(null);
     }
   };
 

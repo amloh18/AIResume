@@ -12,6 +12,7 @@ import { CreditExhaustionProvider } from '@/contexts/CreditExhaustionContext';
 import CookieConsent from '@/components/CookieConsent';
 import { ConsoleLoggerProvider } from '@/contexts/ConsoleLoggerProvider';
 import { NotificationProvider } from '@/contexts/NotificationContext';
+import { ProgressToastProvider } from '@/components/ui/ProgressToaster';
 import SessionCleanup from '@/components/SessionCleanup';
 import { setupEventErrorHandling } from '@/lib/utils/errorHandler';
 import { Toaster } from '@/components/ui/toaster';
@@ -29,21 +30,23 @@ interface ClientProvidersProps {
 function ConditionalProviders({ children }: ClientProvidersProps) {
   return (
     <ThemeProvider>
-      <PaymentModalProvider>
-        <CreditExhaustionProvider>
-          <ConsoleLoggerProvider>
-            <FeaturePromotionProvider>
-              <PerformanceMonitor />
-              <CookieConsent />
-              <SessionCleanup />
-              <Toaster />
-              <HotToaster position="top-right" />
-              <AuthModal />
-              {children}
-            </FeaturePromotionProvider>
-          </ConsoleLoggerProvider>
-        </CreditExhaustionProvider>
-      </PaymentModalProvider>
+      <ProgressToastProvider>
+        <PaymentModalProvider>
+          <CreditExhaustionProvider>
+            <ConsoleLoggerProvider>
+              <FeaturePromotionProvider>
+                <PerformanceMonitor />
+                <CookieConsent />
+                <SessionCleanup />
+                <Toaster />
+                <HotToaster position="top-right" />
+                <AuthModal />
+                {children}
+              </FeaturePromotionProvider>
+            </ConsoleLoggerProvider>
+          </CreditExhaustionProvider>
+        </PaymentModalProvider>
+      </ProgressToastProvider>
     </ThemeProvider>
   );
 }

@@ -13,7 +13,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import {
   Sparkles,
   Component, Eye, Target, ZoomIn, ZoomOut, Plus, Shuffle, Palette, X,
-  Check, Info, LayoutTemplate, FileJson
+  Info, LayoutTemplate, FileJson
 } from 'lucide-react';
 
 // Import CV Builder form components
@@ -92,36 +92,7 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [showRoleProfiler, setShowRoleProfiler] = useState(false);
 
-    const isImproveMode = searchParams.get('improve') === 'true' || searchParams.get('mode') === 'improve';
-    const [isSectionEdited, setIsSectionEdited] = useState(false);
-    const [isPdfExported, setIsPdfExported] = useState(false);
 
-    // Improve mode now keeps analysis in the right rail instead of opening the
-    // modal automatically. Users can still run analysis from the rail.
-
-    const handleFinishOnboarding = async () => {
-      try {
-        const res = await fetch('/api/user/onboarding', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            onboarding: {
-              activation_status: 'completed'
-            }
-          })
-        });
-        if (res.ok) {
-          toast.success('Onboarding completed! Welcome to your dashboard.');
-          router.push('/dashboard');
-        } else {
-          toast.error('Failed to update onboarding status.');
-        }
-      } catch (err) {
-        console.error(err);
-        toast.error('An error occurred. Moving to dashboard.');
-        router.push('/dashboard');
-      }
-    };
     const [showJobParserDialog, setShowJobParserDialog] = useState(false);
     const [isATSUnlockDismissed, setIsATSUnlockDismissed] = useState(false);
     const [totalPages, setTotalPages] = useState(1);
@@ -174,7 +145,6 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
             paperSize: (state.paperSize as 'A4' | 'Letter') || 'A4',
           });
           toast.success('Downloaded successfully!');
-          setIsPdfExported(true);
         } else if (format === 'docx') {
           // DOCX: use the server export API which generates a content-faithful
           // Word document from cvData (all sections present, visual styling differs).
@@ -1375,7 +1345,6 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
                   role={state.jobData?.jobTitle || state.jobData?.title || state.targetRole || null}
                   onDataChange={(updatedData: any) => {
                     dispatch({ type: 'SET_CV_DATA', payload: updatedData });
-                    setIsSectionEdited(true);
                   }}
                   onTemplateChange={(newTemplate: any) => {
                     setTemplate(newTemplate);
@@ -1389,10 +1358,10 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
             </div>
           </div>
           
-          {/* Right rail: onboarding setup checklist and AI analysis */}
+          {/* Right rail: AI analysis */}
           <div 
             className={`
-              fixed inset-y-0 right-0 z-50 w-full bg-white dark:bg-[#0a0a0a] flex flex-col h-full gap-3 min-h-0 shadow-2xl transition-all duration-300
+              fixed inset-y-0 right-0 z-50 w-[95%] bg-white dark:bg-[#0a0a0a] flex flex-col h-full gap-3 min-h-0 shadow-2xl transition-all duration-300
               ${isControlPanelOpen
                 ? 'hidden lg:hidden'
                 : 'lg:static lg:w-[40%] lg:min-w-0 lg:shadow-none lg:border lg:border-white/20 lg:dark:border-white/10 lg:rounded-xl lg:flex lg:z-10 lg:p-0 lg:overflow-hidden lg:bg-transparent lg:panel-glass overflow-hidden'}
@@ -1400,121 +1369,6 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
             `}
             style={{ order: isControlPanelOpen ? 1 : 2 }}
           >
-            {isImproveMode && (() => {
-              const isPersonalInfoVerified = !!(state.cvData?.basics?.name?.trim() && state.cvData?.basics?.email?.trim());
-              const isQualityScoreReviewed = !!(state.surgeonAnalysis || atsScore);
-
-              const checklistItems = [
-                {
-                  id: 'personal',
-                  title: 'Verify Personal Info',
-                  description: 'Ensure your name and email are filled in basics.',
-                  completed: isPersonalInfoVerified,
-                },
-                {
-                  id: 'quality',
-                  title: 'Review Quality Score',
-                  description: 'Review the AI Analysis score for CV health.',
-                  completed: isQualityScoreReviewed,
-                },
-                {
-                  id: 'optimize',
-                  title: 'Optimize Section Data',
-                  description: 'Make at least one edit to any CV section.',
-                  completed: isSectionEdited,
-                },
-                {
-                  id: 'export',
-                  title: 'Export PDF Copy',
-                  description: 'Download the compiled PDF file of your resume.',
-                  completed: isPdfExported,
-                }
-              ];
-
-              const completedCount = checklistItems.filter(item => item.completed).length;
-              const isChecklistComplete = completedCount === checklistItems.length;
-
-              return (
-                <div className="shrink-0 max-h-[46%] bg-white dark:bg-[var(--bg-secondary)] border border-gray-200 dark:border-gray-800 rounded-xl p-4 shadow-sm select-none overflow-y-auto scrollbar-hide">
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 text-teal-600 dark:text-teal-400">
-                      <Sparkles className="h-4 w-4 stroke-[2.5]" />
-                      <h3 className="font-extrabold text-sm tracking-tight text-gray-900 dark:text-white">Onboarding Checklist</h3>
-                    </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Finish these steps to set up your Master CV.
-                    </p>
-
-                  {/* Progress Bar */}
-                  <div className="space-y-1.5 pt-2">
-                    <div className="flex justify-between text-xs font-bold">
-                      <span className="text-gray-400">Setup Progress</span>
-                      <span className="text-teal-700 dark:text-teal-400">{completedCount} of 4 completed</span>
-                    </div>
-                    <div className="w-full bg-gray-150 dark:bg-gray-800 h-2 rounded-full overflow-hidden">
-                      <div 
-                        className="bg-teal-500 h-full transition-all duration-500 ease-out" 
-                        style={{ width: `${(completedCount / 4) * 100}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Checklist List */}
-                  <div className="space-y-2 pt-2">
-                    {checklistItems.map(item => (
-                      <div 
-                        key={item.id} 
-                        className={`p-3 rounded-lg border transition-all flex items-start gap-3 ${
-                          item.completed 
-                            ? 'bg-teal-50/40 border-teal-100 dark:bg-teal-950/20 dark:border-teal-900/30' 
-                            : 'bg-slate-50/50 border-gray-150 dark:bg-gray-900/30 dark:border-gray-800/40'
-                        }`}
-                      >
-                        <div className={`mt-0.5 rounded-full p-0.5 ${
-                          item.completed 
-                            ? 'bg-teal-500 text-white' 
-                            : 'bg-gray-200 text-gray-400 dark:bg-gray-800 dark:text-gray-600'
-                        }`}>
-                          <Check className="h-3.5 w-3.5 stroke-[3]" />
-                        </div>
-                        <div className="space-y-0.5">
-                          <h4 className={`text-xs font-bold ${
-                            item.completed 
-                              ? 'text-gray-900 dark:text-white line-through decoration-teal-500/40' 
-                              : 'text-gray-700 dark:text-gray-300'
-                          }`}>
-                            {item.title}
-                          </h4>
-                          <p className="text-[10px] text-gray-500 leading-relaxed dark:text-gray-500">
-                            {item.description}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Action Button */}
-                  <div className="pt-2">
-                    <button
-                      onClick={handleFinishOnboarding}
-                      className={`w-full py-2.5 px-4 rounded-lg font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${
-                        isChecklistComplete 
-                          ? 'bg-teal-600 hover:bg-teal-700 text-white shadow-md shadow-teal-100 dark:shadow-none' 
-                          : 'bg-gray-100 hover:bg-gray-200 text-gray-400 dark:bg-gray-800 dark:text-gray-500'
-                      }`}
-                    >
-                      Finish Onboarding
-                    </button>
-                    {!isChecklistComplete && (
-                      <p className="text-[9px] text-center text-gray-400 mt-2">
-                        Finish all steps before heading to your dashboard.
-                      </p>
-                    )}
-                  </div>
-                  </div>
-                </div>
-              );
-            })()}
             <div className="flex-1 min-h-0">
               <ATSMeterPanel isUtilityPanelOpen={!!activeUtilityPanel} onClose={() => setActiveUtilityPanel(null)} />
             </div>
@@ -1523,7 +1377,7 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
           {/* Unified Utility Panel (Mori Chat, Design, JSON, Layout) */}
           <div 
             className={`
-              fixed inset-y-0 right-0 z-50 w-full bg-white dark:bg-[var(--bg-secondary)] flex flex-col h-full gap-3 min-h-0 shadow-2xl transition-all duration-300
+              fixed inset-y-0 right-0 z-50 w-[95%] bg-white dark:bg-[var(--bg-secondary)] flex flex-col h-full gap-3 min-h-0 shadow-2xl transition-all duration-300
               ${isControlPanelOpen 
                 ? 'translate-x-0 flex lg:static lg:w-[40%] lg:min-w-0 lg:shadow-sm lg:border lg:border-gray-200 lg:dark:border-white/[0.06] lg:rounded-xl lg:z-10 lg:overflow-hidden' 
                 : 'translate-x-full hidden lg:hidden w-0'}
