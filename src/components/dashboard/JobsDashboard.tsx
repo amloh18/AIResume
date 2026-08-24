@@ -4,31 +4,37 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { JobsMetrics, JobListing, JobsFilter } from '@/types/automation-schema';
 import FiltersBar from './JobsDashboard/FiltersBar';
 import JobsErrorState from './JobsDashboard/JobsErrorState';
-import { Sparkles, Zap, Briefcase, Settings, ChevronRight, ArrowUp } from 'lucide-react';
+import { Sparkles, Zap, Briefcase, Settings, ChevronRight, ArrowUp, Linkedin, Mic } from 'lucide-react';
 import { AutoApplyPanel } from '@/components/jobs/AutoApplyPanel';
 import { ApplicationsPanel } from '@/components/jobs/ApplicationsPanel';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { useToast } from '@/hooks/use-toast';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { useApplyProgress } from '@/hooks/useApplyProgress';
+import { useMembership } from '@/lib/hooks/useMembership';
 import { ToastAction } from '@/components/ui/toast';
 import { Switch } from '@/components/ui/switch';
 import { JobCard } from '@/components/jobs/JobCard';
 import { JobDetailModal } from '@/components/jobs/JobDetailModal';
 import { detectUserCountry } from '@/components/jobs/CountrySelector';
 import NaukriConnectCard from './JobsDashboard/NaukriConnectCard';
+import LimitedOptionsBanner from './JobsDashboard/LimitedOptionsBanner';
 import PortalIntegrationsPanel from './settings/PortalIntegrationsPanel';
 import { getCachedJobs, setCachedJobs } from '@/lib/utils/jobCache';
 
 export default function JobsDashboard() {
   const [activeTab, setActiveTab] = useState<'discover' | 'applications' | 'settings'>('discover');
   const searchParams = useSearchParams();
+  const router = useRouter();
   const { data: session } = useSession();
   const userId = session?.user?.id;
   const { toast } = useToast();
   const { updateProgress } = useNotifications();
   const applyProgress = useApplyProgress();
+  const { isPaidMember } = useMembership();
+  const isPaidUser = isPaidMember;
 
   useEffect(() => {
     const tabParam = searchParams.get('tab');
@@ -624,6 +630,27 @@ export default function JobsDashboard() {
               savedCount={savedIds.size}
             />
 
+            {/* Premium feature hints — only for free/starter users */}
+            {!isPaidUser && (
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                <span className="text-[11px] text-gray-400 dark:text-gray-500 shrink-0 font-medium">Level up:</span>
+                <Link
+                  href="/dashboard/interview"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-[11px] font-medium text-gray-600 dark:text-gray-300 hover:border-lime-500 hover:text-lime-600 dark:hover:text-lime-400 transition-colors shrink-0"
+                >
+                  <Mic className="w-3 h-3" />
+                  AI Interview Coach
+                </Link>
+                <Link
+                  href="/linkedin-enhancer"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-[11px] font-medium text-gray-600 dark:text-gray-300 hover:border-lime-500 hover:text-lime-600 dark:hover:text-lime-400 transition-colors shrink-0"
+                >
+                  <Linkedin className="w-3 h-3" />
+                  LinkedIn Enhancer
+                </Link>
+              </div>
+            )}
+
             {/* New jobs indicator — subtle floating pill */}
             {newJobsCount > 0 && (
               <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-slideUp">
@@ -659,53 +686,62 @@ export default function JobsDashboard() {
                 ))}
               </div>
             ) : jobs.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
-                {!naukriConnected && !filters.savedOnly && (
-                  <NaukriConnectCard
-                    onConnected={() => {
-                      setNaukriConnected(true);
-                      fetchJobs();
-                    }}
-                  />
-                )}
-                {jobs
-                  .map((job, index) => (
-                    <JobCard
-                      key={job._id}
-                      job={job}
-                      colorIndex={index}
-                      isSaved={isJobSaved(job)}
-                      saving={savingId === job._id}
-                      onOpen={() => {
-                        setSelectedJob(job);
-                        setModalOpen(true);
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
+                  {!naukriConnected && !filters.savedOnly && (
+                    <NaukriConnectCard
+                      onConnected={() => {
+                        setNaukriConnected(true);
+                        fetchJobs();
                       }}
-                      onSave={() => handleSaveJob(job)}
-                      onPass={() => {
-                        const previousJobs = jobs;
-                        setJobs((prev) => prev.filter((j) => j._id !== job._id));
-                        fetch('/api/jobs/pass', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ jobId: job._id }),
-                        }).then((res) => {
-                          if (!res.ok) throw new Error('Failed to pass');
-                          toast({
-                            title: 'Job Passed',
-                            description: `Dismissed ${job.title}`,
-                          });
-                        }).catch(() => {
-                          setJobs(previousJobs);
-                          toast({
-                            title: 'Error',
-                            description: 'Failed to dismiss job. Please try again.',
-                            variant: 'destructive',
-                          });
-                        });
-                      }}
-                      onApply={() => handleApplyJob(job)}
                     />
-                  ))}
+                  )}
+                  {jobs
+                    .map((job, index) => (
+                      <JobCard
+                        key={job._id}
+                        job={job}
+                        colorIndex={index}
+                        isSaved={isJobSaved(job)}
+                        saving={savingId === job._id}
+                        onOpen={() => {
+                          setSelectedJob(job);
+                          setModalOpen(true);
+                        }}
+                        onSave={() => handleSaveJob(job)}
+                        onPass={() => {
+                          const previousJobs = jobs;
+                          setJobs((prev) => prev.filter((j) => j._id !== job._id));
+                          fetch('/api/jobs/pass', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ jobId: job._id }),
+                          }).then((res) => {
+                            if (!res.ok) throw new Error('Failed to pass');
+                            toast({
+                              title: 'Job Passed',
+                              description: `Dismissed ${job.title}`,
+                            });
+                          }).catch(() => {
+                            setJobs(previousJobs);
+                            toast({
+                              title: 'Error',
+                              description: 'Failed to dismiss job. Please try again.',
+                              variant: 'destructive',
+                            });
+                          });
+                        }}
+                        onApply={() => handleApplyJob(job)}
+                      />
+                    ))}
+                </div>
+
+                {/* Limited options banner */}
+                <LimitedOptionsBanner
+                  onAddManually={() => {
+                    router.push('/dashboard/jobs?tab=applications&action=add-job');
+                  }}
+                />
               </div>
             ) : (
               <div className="text-center py-16 bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-2xl">
@@ -713,9 +749,18 @@ export default function JobsDashboard() {
                 <h3 className="text-h3 font-semibold text-gray-900 dark:text-white mb-2">
                   No jobs found
                 </h3>
-                <p className="text-gray-500 dark:text-gray-400">
+                <p className="text-gray-500 dark:text-gray-400 mb-4">
                   Try adjusting your search criteria or switching region
                 </p>
+                {!isPaidUser && (
+                  <Link
+                    href="/linkedin-enhancer"
+                    className="inline-flex items-center gap-1.5 text-xs font-medium text-lime-600 dark:text-lime-400 hover:underline"
+                  >
+                    <Linkedin className="w-3.5 h-3.5" />
+                    Optimize your LinkedIn to attract recruiters
+                  </Link>
+                )}
               </div>
             )}
 
