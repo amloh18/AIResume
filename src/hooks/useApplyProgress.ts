@@ -2,14 +2,18 @@
 
 import { useCallback, useRef } from 'react';
 import { useProgressToast } from '@/components/ui/ProgressToaster';
+import { useMembership } from '@/lib/hooks/useMembership';
 
 /**
  * Hook for showing real-time progress toasts during the job apply flow.
  * Tracks: CV matching → Document tailoring → Application submission → Completion
+ * Also shows contextual premium feature promotions after successful apply.
  */
 export function useApplyProgress() {
   const toast = useProgressToast();
   const activeToastId = useRef<string | null>(null);
+  const { isPaidMember } = useMembership();
+  const isPaidUser = isPaidMember;
 
   const startApplyProgress = useCallback(
     (jobTitle: string) => {
@@ -61,13 +65,27 @@ export function useApplyProgress() {
     (jobTitle: string, company: string, success: boolean, message?: string) => {
       if (activeToastId.current) {
         if (success) {
+          // For free/starter users, show a soft premium nudge after success
+          const action = !isPaidUser
+            ? {
+                label: 'Prep for the interview',
+                onClick: () => {
+                  window.location.href = '/dashboard/interview';
+                },
+              }
+            : undefined;
+
           toast.updateToast(activeToastId.current, {
             variant: 'success',
             title: 'Application Submitted',
-            description: message || `Successfully applied to ${jobTitle} at ${company}`,
+            description: success
+              ? (message || `Successfully applied to ${jobTitle} at ${company}`) +
+                (!isPaidUser ? ' — Nail the next step with AI Interview Coach.' : '')
+              : message || `Failed to apply to ${jobTitle}. Please try again.`,
             progress: 100,
             showTimer: true,
-            duration: 5000,
+            duration: action ? 8000 : 5000,
+            action,
           });
         } else {
           toast.updateToast(activeToastId.current, {
@@ -80,7 +98,7 @@ export function useApplyProgress() {
         activeToastId.current = null;
       }
     },
-    [toast]
+    [toast, isPaidUser]
   );
 
   const cancelProgress = useCallback(() => {
