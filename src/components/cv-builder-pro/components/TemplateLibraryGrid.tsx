@@ -101,10 +101,12 @@ export function TemplateLibraryGrid({
               {catTemplates.map((tpl) => {
                 const isActive = activeTemplateId === tpl.id;
                 return (
-                  <button
-                    type="button"
+                  <div
+                    role="button"
+                    tabIndex={0}
                     key={tpl.id}
                     onClick={() => onSelect(tpl)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(tpl); } }}
                     className="group relative flex flex-col gap-1.5 text-left bg-transparent p-0 border-0 cursor-pointer"
                   >
                     <TemplateThumbnail isActive={isActive}>
@@ -126,7 +128,7 @@ export function TemplateLibraryGrid({
                       )}
                     </div>
                     {renderMeta?.(tpl, isActive)}
-                  </button>
+                  </div>
                 );
               })}
             </div>
