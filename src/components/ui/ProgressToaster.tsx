@@ -86,8 +86,8 @@ export function ProgressToastProvider({ children }: { children: React.ReactNode 
     >
       {children}
 
-      {/* Toast container - top left */}
-      <div className="fixed top-4 left-4 z-[10000] flex flex-col gap-3 max-h-screen overflow-hidden pointer-events-none">
+      {/* Toast container - bottom right */}
+      <div className="fixed bottom-4 right-4 z-[10000] flex flex-col gap-3 max-h-screen overflow-hidden pointer-events-none">
         {toasts.map((toast) => (
           <ProgressToast
             key={toast.id}
