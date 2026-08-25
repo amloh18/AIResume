@@ -1,275 +1,166 @@
 'use client';
 
 import React from 'react';
-import { FileText, Scale, CreditCard, Shield, Users, AlertTriangle, CheckCircle, Clock, XCircle, Ban } from 'lucide-react';
+import { FileText, Scale, CheckCircle2, Shield, AlertTriangle, Clock, Ban, DollarSign, Briefcase, Zap } from 'lucide-react';
 import Link from 'next/link';
 
-const TermsContent: React.FC = () => {
+export default function TermsContent() {
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-4xl mx-auto space-y-10 text-white/85 leading-relaxed">
       {/* Title */}
-      <div className="text-center mb-12">
-        <div className="flex items-center justify-center mb-4">
-          <FileText className="w-12 h-12 text-lime-400 mr-3" />
-          <h2 className="text-4xl font-bold">Terms of Service</h2>
+      <div className="text-center pb-6 border-b border-white/10">
+        <div className="inline-flex items-center justify-center p-3 rounded-2xl bg-white/5 border border-white/10 mb-4 text-lime-400">
+          <FileText className="w-8 h-8" />
         </div>
-        <p className="text-white/60 text-lg">
-          Last updated: {new Date().toLocaleDateString('en-US', { 
-            year: 'numeric', 
-            month: 'long', 
-            day: 'numeric' 
-          })}
+        <h2 className="text-3xl sm:text-4xl font-bold text-white tracking-tight">Terms of Service</h2>
+        <p className="text-white/50 text-sm mt-2">
+          Last Updated: August 25, 2026 · Morigrid Labs (AIResume)
         </p>
       </div>
 
-      {/* Introduction */}
-      <div className="bg-white/5 backdrop-blur-sm rounded-xl p-8 mb-8 border border-white/10">
-        <h3 className="text-2xl font-semibold mb-4 flex items-center">
-          <Scale className="w-6 h-6 text-lime-400 mr-2" />
-          Agreement to Terms
+      {/* 1. Agreement to Terms */}
+      <div className="bg-white/[0.02] border border-white/10 rounded-2xl p-6 sm:p-8 space-y-4">
+        <h3 className="text-xl font-semibold text-white flex items-center gap-2.5">
+          <Scale className="w-5 h-5 text-lime-400 shrink-0" />
+          1. Acceptance of Terms
         </h3>
-        <p className="text-white/80 leading-relaxed mb-4">
-          By accessing and using AIResume ("Service"), you accept and agree to be bound by the terms and provision of this agreement. AIResume is a product of <strong>Morigrid Labs</strong>. If you do not agree to abide by the above, please do not use this service.
+        <p>
+          These Terms of Service ("Terms") constitute a legally binding agreement between you ("User," "Candidate," or "you") and <strong>Morigrid Labs</strong> ("Company," "AIResume," "we," "us," or "our") regarding your access to and use of the <strong>AIResume</strong> website, applications, AI resume creation tools, job search engines, and automated application services (collectively, the "Platform").
         </p>
-        <p className="text-white/80 leading-relaxed">
-          These Terms of Service ("Terms") govern your use of our AI-powered CV creation and job application management platform operated by <strong>Morigrid Labs</strong> ("Company," "we," "us," or "our"). These Terms constitute a legally binding agreement between you and Morigrid Labs.
+        <p>
+          By creating an account, accessing, or using the Platform, you affirm that you are at least 18 years of age and agree to be bound by these Terms and our Privacy Policy. If you do not agree to these Terms, you must immediately discontinue using AIResume.
         </p>
       </div>
 
-      {/* Service Description */}
-      <div className="bg-white/5 backdrop-blur-sm rounded-xl p-8 mb-8 border border-white/10">
-        <h3 className="text-2xl font-semibold mb-6 flex items-center">
-          <CheckCircle className="w-6 h-6 text-lime-400 mr-2" />
-          Service Description
+      {/* 2. Platform Services & Capabilities */}
+      <div className="bg-white/[0.02] border border-white/10 rounded-2xl p-6 sm:p-8 space-y-4">
+        <h3 className="text-xl font-semibold text-white flex items-center gap-2.5">
+          <Briefcase className="w-5 h-5 text-lime-400 shrink-0" />
+          2. Platform Services & Core Capabilities
         </h3>
-        <p className="text-white/80 leading-relaxed mb-4">
-          AIResume provides a comprehensive CV creation and management platform that includes:
-        </p>
-        <ul className="list-disc list-inside space-y-2 text-white/80 ml-4">
-          <li>AI-powered CV creation and optimization using OpenAI technology</li>
-          <li>Professional CV templates with real-time editing capabilities</li>
-          <li>Cover letter creation and management with AI assistance</li>
-          <li>Job application tracking and career journey analytics</li>
-          <li>ATS (Applicant Tracking System) optimization and scoring</li>
-          <li>Email verification and secure user authentication systems</li>
-          <li>Multi-format CV export (PDF, Word, Web formats)</li>
-          <li>Version control and CV revision tracking</li>
-          <li>Career insights and job matching recommendations</li>
-          <li>Chrome extension for job board integration</li>
+        <p>AIResume provides an integrated career acceleration workspace comprising:</p>
+        <ul className="list-disc list-inside space-y-2 text-white/75 ml-2 text-sm sm:text-base">
+          <li><strong>AI-Powered Resume & Cover Letter Suite:</strong> Master CV management, job-tailored resume generation, ATS scoring, metric-driven bullet point enhancements, and modern PDF formatting.</li>
+          <li><strong>Job Discovery & Matching Engine:</strong> Aggregation and matching of career opportunities across thousands of employer career pages and supported job search portals.</li>
+          <li><strong>Application Automation & Career Agent:</strong> Automated and semi-automated job application submission workflows designed to save time while strictly adhering to user preferences.</li>
+          <li><strong>Application Journey Tracker:</strong> Real-time stage management, interview tracking, and candidate analytics.</li>
         </ul>
       </div>
 
-      {/* User Accounts */}
-      <div className="bg-white/5 backdrop-blur-sm rounded-xl p-8 mb-8 border border-white/10">
-        <h3 className="text-2xl font-semibold mb-6 flex items-center">
-          <Users className="w-6 h-6 text-lime-400 mr-2" />
-          User Accounts and Registration
+      {/* 3. Job Finding & Search Clauses */}
+      <div className="bg-white/[0.02] border border-white/10 rounded-2xl p-6 sm:p-8 space-y-4">
+        <h3 className="text-xl font-semibold text-white flex items-center gap-2.5">
+          <Zap className="w-5 h-5 text-lime-400 shrink-0" />
+          3. Job Discovery & Listings Clauses
         </h3>
-        
-        <div className="space-y-6">
-          <div>
-            <h4 className="text-xl font-medium mb-3 text-lime-400">Account Creation</h4>
-            <ul className="list-disc list-inside space-y-2 text-white/80 ml-4">
-              <li>You must be at least 13 years old (or 16 in the EU) to create an account</li>
-              <li>You must provide accurate, current, and complete information during registration</li>
-              <li>You are responsible for maintaining the security and confidentiality of your account credentials</li>
-              <li>You must notify us immediately of any unauthorized access or use of your account</li>
-              <li>You may not create multiple accounts to circumvent subscription limits</li>
-            </ul>
-          </div>
-
-          <div>
-            <h4 className="text-xl font-medium mb-3 text-lime-400">Account Responsibilities</h4>
-            <ul className="list-disc list-inside space-y-2 text-white/80 ml-4">
-              <li>You are responsible for all activities that occur under your account</li>
-              <li>You must not share your account credentials with others</li>
-              <li>You must not use the service for any illegal or unauthorized purpose</li>
-              <li>You must comply with all applicable laws and regulations in your jurisdiction</li>
-              <li>You must ensure the accuracy of information in your CVs and cover letters</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      {/* Subscription and Payment */}
-      <div className="bg-white/5 backdrop-blur-sm rounded-xl p-8 mb-8 border border-white/10">
-        <h3 className="text-2xl font-semibold mb-6 flex items-center">
-          <CreditCard className="w-6 h-6 text-lime-400 mr-2" />
-          Subscription Plans and Payment
-        </h3>
-        
-        <div className="space-y-6">
-          <div>
-            <h4 className="text-xl font-medium mb-3 text-lime-400">Available Plans</h4>
-            <ul className="list-disc list-inside space-y-2 text-white/80 ml-4">
-              <li><strong>Free Plan:</strong> Basic CV creation with limited templates and features</li>
-              <li><strong>Day Pass:</strong> 24-hour access to all Pro features (one-time payment)</li>
-              <li><strong>Pro Monthly:</strong> Full access to all features with monthly billing</li>
-              <li><strong>Pro Quarterly:</strong> Full access with quarterly billing (discounted rate)</li>
-              <li><strong>Pro Yearly:</strong> Full access with annual billing (best value)</li>
-            </ul>
-          </div>
-
-          <div>
-            <h4 className="text-xl font-medium mb-3 text-lime-400">Payment Terms</h4>
-            <ul className="list-disc list-inside space-y-2 text-white/80 ml-4">
-              <li>All fees are charged in advance on a recurring basis (for monthly/quarterly/yearly plans)</li>
-              <li>Day Pass is a one-time payment valid for 24 hours from activation</li>
-              <li>Prices are displayed in your local currency based on regional pricing</li>
-              <li>Prices are subject to change with 30 days written notice to existing subscribers</li>
-              <li>Failed payments may result in service suspension until payment is resolved</li>
-              <li>Payment processing is handled securely by Polar.sh</li>
-              <li>Refunds are subject to our Refund and Cancellation Policy</li>
-            </ul>
-          </div>
-
-          <div>
-            <h4 className="text-xl font-medium mb-3 text-lime-400">Cancellation</h4>
-            <ul className="list-disc list-inside space-y-2 text-white/80 ml-4">
-              <li>You may cancel your subscription at any time from your account settings</li>
-              <li>Cancellation takes effect at the end of the current billing period</li>
-              <li>No refunds for partial billing periods</li>
-              <li>Day Pass cannot be cancelled once activated</li>
-              <li>Your data will be retained for 30 days after cancellation</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      {/* Refund Policy */}
-      <div className="bg-gradient-to-r from-lime-500/10 to-green-500/10 backdrop-blur-sm rounded-xl p-8 mb-8 border border-lime-500/20">
-        <h3 className="text-2xl font-semibold mb-6 flex items-center">
-          <Clock className="w-6 h-6 text-lime-400 mr-2" />
-          Refund and Cancellation Policy
-        </h3>
-        
-        <div className="bg-white/5 rounded-lg p-6 mb-4">
-          <h4 className="text-xl font-medium mb-4 text-lime-400">7-Day Money-Back Guarantee (Pro Plans Only)</h4>
-          <p className="text-white/80 mb-4">
-            Morigrid Labs offers a 7-day money-back guarantee for Pro plan subscriptions (Monthly, Quarterly, Yearly), subject to the following conditions:
+        <div className="space-y-4 text-sm sm:text-base">
+          <p>
+            <strong>A. Nature of Listings:</strong> AIResume discovers and indexes employment opportunities published by third-party hiring organizations and job boards. AIResume is not an employer, recruiter, or staffing agency, and does not control the content, accuracy, requirements, compensation details, or hiring timelines of third-party job listings.
           </p>
-          
-          <div className="grid tablet:grid-cols-2 gap-6">
-            <div>
-              <h5 className="text-lg font-medium mb-3 text-lime-400">Eligibility Requirements</h5>
-              <ul className="list-disc list-inside space-y-2 text-white/80">
-                <li>Request must be made within 7 days of initial purchase</li>
-                <li>No CV or cover letter documents have been exported/downloaded</li>
-                <li>Account must be in good standing</li>
-                <li>First-time Pro plan subscribers only</li>
-              </ul>
-            </div>
-
-            <div>
-              <h5 className="text-lg font-medium mb-3 text-lime-400">Non-Eligible Cases</h5>
-              <ul className="list-disc list-inside space-y-2 text-white/80">
-                <li>Any CV or cover letter has been exported</li>
-                <li>More than 7 days have passed since purchase</li>
-                <li>Previous refund requests for the same account</li>
-                <li>Day Pass purchases are non-refundable</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white/5 rounded-lg p-6">
-          <h4 className="text-xl font-medium mb-4 text-lime-400">How to Request a Refund</h4>
-          <ol className="list-decimal list-inside space-y-2 text-white/80 ml-4">
-            <li>Contact our support team at <strong>support@buildairesume.com</strong></li>
-            <li>Include your account email and reason for refund</li>
-            <li>Provide the date of your Pro plan purchase</li>
-            <li>Refund will be issued to the original payment method within 7-10 business days</li>
-          </ol>
+          <p>
+            <strong>B. Matching Algorithms:</strong> Our matching algorithms score job listings based on candidate-provided job titles, target locations, salary expectations, experience levels, and skills. Matches and compatibility scores are informational tools designed to assist prioritization and do not guarantee an interview or job offer.
+          </p>
+          <p>
+            <strong>C. Employer Independence:</strong> Employers reserve the right to modify job requirements, alter compensation ranges, pause hiring, or close positions without prior notice. AIResume makes reasonable efforts to keep listings updated but does not warrant that all displayed listings remain actively open.
+          </p>
         </div>
       </div>
 
-      {/* Acceptable Use */}
-      <div className="bg-white/5 backdrop-blur-sm rounded-xl p-8 mb-8 border border-white/10">
-        <h3 className="text-2xl font-semibold mb-6 flex items-center">
-          <Shield className="w-6 h-6 text-lime-400 mr-2" />
-          Acceptable Use Policy
+      {/* 4. Application Automation & Auto-Apply Clauses */}
+      <div className="bg-white/[0.02] border border-white/10 rounded-2xl p-6 sm:p-8 space-y-4">
+        <h3 className="text-xl font-semibold text-white flex items-center gap-2.5">
+          <Shield className="w-5 h-5 text-lime-400 shrink-0" />
+          4. Application Automation & Auto-Apply Terms
         </h3>
-        
-        <div className="space-y-6">
-          <div>
-            <h4 className="text-xl font-medium mb-3 text-lime-400">Permitted Uses</h4>
-            <ul className="list-disc list-inside space-y-2 text-white/80 ml-4">
-              <li>Creating and managing your own professional documents</li>
-              <li>Using tools for legitimate career development</li>
-              <li>Sharing CVs with recruiters and employers</li>
-            </ul>
-          </div>
-
-          <div>
-            <h4 className="text-xl font-medium mb-3 text-lime-400">Prohibited Uses</h4>
-            <ul className="list-disc list-inside space-y-2 text-white/80 ml-4">
-              <li>Creating fraudulent information</li>
-              <li>Attempting to hack or scrap the platform</li>
-              <li>Reselling templates or proprietary content</li>
-              <li>Reverse engineering the AI models or software</li>
-            </ul>
-          </div>
-
-          <div className="bg-red-500/10 rounded-lg p-4 border border-red-500/20">
-            <h5 className="text-lg font-medium mb-2 text-red-400 flex items-center">
-              <Ban className="w-5 h-5 mr-2" />
-              Account Termination
-            </h5>
-            <p className="text-white/80 text-sm">
-              Violation of these terms may result in immediate termination of access by Morigrid Labs without refund.
-            </p>
-          </div>
+        <div className="space-y-4 text-sm sm:text-base">
+          <p>
+            <strong>A. Candidate Authorization:</strong> When you enable Auto-Apply or use 1-Click Application features, you explicitly authorize AIResume to act as your authorized agent to: (i) format and tailor your resume and cover letter for the targeted position, (ii) populate required application fields using your provided career profile, and (iii) submit your application directly to the designated employer or job board on your behalf.
+          </p>
+          <p>
+            <strong>B. Candidate Responsibility for Information Accuracy:</strong> You represent and warrant that all career history, qualifications, contact information, work authorizations, education, and credentials provided in your AIResume profile are accurate, truthful, and up to date. You are solely responsible for all information submitted to employers in your name.
+          </p>
+          <p>
+            <strong>C. Application Modes & Control:</strong> You maintain full control over automation settings. You may select between:
+          </p>
+          <ul className="list-disc list-inside space-y-1.5 text-white/75 ml-4 text-sm">
+            <li><em>Manual Review Mode:</em> AI prepares and stages tailored applications for your preview and manual approval before submission.</li>
+            <li><em>Active Auto-Apply Mode:</em> AI automatically submits applications to matching roles within your explicit daily or monthly application limits.</li>
+          </ul>
+          <p>
+            <strong>D. Plan Quotas & Rate Limiting:</strong> To safeguard candidate reputation and avoid automated spamming, application submissions are subject to plan entitlements (such as Starter plan limits of 10 applications per month, or Focused plan daily limits of up to 50 automated applications per day). Rate limits are strictly enforced.
+          </p>
+          <p>
+            <strong>E. Connected Accounts & Portal Guidelines:</strong> If you connect external accounts (such as Naukri, Indeed, or LinkedIn), you represent that you hold valid credentials for those accounts and agree to comply with the respective terms of service of each platform.
+          </p>
+          <p>
+            <strong>F. No Hiring Outcome Guarantee:</strong> AIResume provides productivity, optimization, and submission tools. We do not guarantee interview callbacks, assessments, or employment offers, as all hiring decisions are made exclusively by independent employers.
+          </p>
         </div>
       </div>
 
-      {/* Intellectual Property */}
-      <div className="bg-white/5 backdrop-blur-sm rounded-xl p-8 mb-8 border border-white/10">
-        <h3 className="text-2xl font-semibold mb-6 text-lime-400">Intellectual Property Rights</h3>
-        <p className="text-white/80 leading-relaxed mb-4">
-          All Service content, templates, designs, algorithms, and software are the exclusive property of <strong>Morigrid Labs</strong>.
-        </p>
-        <p className="text-white/80 leading-relaxed">
-          You retain ownership of the personal content you input. You grant Morigrid Labs a license to process this data solely to provide the Service.
-        </p>
-      </div>
-
-      {/* Disclaimers */}
-      <div className="bg-white/5 backdrop-blur-sm rounded-xl p-8 mb-8 border border-white/10">
-        <h3 className="text-2xl font-semibold mb-6 flex items-center text-lime-400">
-          <AlertTriangle className="w-6 h-6 mr-2" />
-          Disclaimers and Limitations
+      {/* 5. Subscriptions, Billing, Quotas & Cancellation */}
+      <div className="bg-white/[0.02] border border-white/10 rounded-2xl p-6 sm:p-8 space-y-4">
+        <h3 className="text-xl font-semibold text-white flex items-center gap-2.5">
+          <DollarSign className="w-5 h-5 text-lime-400 shrink-0" />
+          5. Subscriptions, Billing & Cancellation
         </h3>
-        <div className="space-y-4 text-white/80">
-          <p><strong>No Guarantee of Employment:</strong> We do not guarantee job offers or interviews.</p>
-          <p><strong>AI Content:</strong> Users must review and verify all AI-generated suggestions.</p>
-          <p><strong>Limitation of Liability:</strong> Morigrid Labs is not liable for indirect or consequential damages arising from Service use.</p>
+        <div className="space-y-3 text-sm sm:text-base">
+          <p>
+            <strong>A. Plan Tiers & Billing Cadences:</strong> AIResume offers free tier access and premium paid subscriptions (such as Starter and Focused plans) billed on either a monthly or annual cadence. Paid plans unlock higher application quotas, advanced AI tailoring, and automated submission features.
+          </p>
+          <p>
+            <strong>B. Recurring Billing:</strong> Paid subscriptions automatically renew at the conclusion of each billing period unless cancelled prior to the renewal date. Payments are processed securely through certified third-party billing providers.
+          </p>
+          <p>
+            <strong>C. Self-Service Cancellation:</strong> You may cancel your subscription at any time through your account Settings under Billing. Upon cancellation, you retain access to paid features until the end of your current prepaid billing cycle.
+          </p>
+          <p>
+            <strong>D. Refund Policy:</strong> Except where required by applicable consumer protection laws, subscription fees are non-refundable once the billing cycle begins.
+          </p>
         </div>
       </div>
 
-      {/* Governing Law */}
-      <div className="bg-white/5 backdrop-blur-sm rounded-xl p-8 mb-8 border border-white/10">
-        <h3 className="text-2xl font-semibold mb-4 text-lime-400">Governing Law</h3>
-        <p className="text-white/80 leading-relaxed">
-          These Terms are governed by the laws of <strong>England and Wales</strong>. Any disputes shall be subject to the exclusive jurisdiction of the courts in London, England.
+      {/* 6. User Conduct & Prohibited Activities */}
+      <div className="bg-white/[0.02] border border-white/10 rounded-2xl p-6 sm:p-8 space-y-4">
+        <h3 className="text-xl font-semibold text-white flex items-center gap-2.5">
+          <Ban className="w-5 h-5 text-lime-400 shrink-0" />
+          6. User Conduct & Prohibited Uses
+        </h3>
+        <p>You agree not to:</p>
+        <ul className="list-disc list-inside space-y-2 text-white/75 ml-2 text-sm sm:text-base">
+          <li>Submit fraudulent, forged, or misleading employment credentials or identities.</li>
+          <li>Use the platform to distribute unsolicited spam, abusive content, or malicious scripts to employers.</li>
+          <li>Attempt to reverse-engineer, decompile, or disrupt the security infrastructure of the Platform.</li>
+          <li>Resell, sublicense, or commercialize AIResume services to third parties without prior written consent.</li>
+        </ul>
+      </div>
+
+      {/* 7. Limitation of Liability & Disclaimers */}
+      <div className="bg-white/[0.02] border border-white/10 rounded-2xl p-6 sm:p-8 space-y-4">
+        <h3 className="text-xl font-semibold text-white flex items-center gap-2.5">
+          <AlertTriangle className="w-5 h-5 text-lime-400 shrink-0" />
+          7. Disclaimers & Limitation of Liability
+        </h3>
+        <p className="text-sm sm:text-base">
+          AIResume is provided on an "AS IS" and "AS AVAILABLE" basis. To the maximum extent permitted by law, Morigrid Labs disclaims all warranties, express or implied. In no event shall Morigrid Labs be liable for any indirect, incidental, special, consequential, or punitive damages arising out of your use of the Platform or hiring outcomes.
         </p>
       </div>
 
-      {/* Contact Information */}
-      <div className="bg-white/5 backdrop-blur-sm rounded-xl p-8 border border-white/10">
-        <h3 className="text-2xl font-semibold mb-6 text-lime-400">Contact Information</h3>
-        <div className="space-y-2 text-white/80">
-          <p><strong>Legal Inquiries:</strong> <a href="mailto:legal@buildairesume.com" className="text-lime-400 underline">legal@buildairesume.com</a></p>
-          <p><strong>Support:</strong> <a href="mailto:support@buildairesume.com" className="text-lime-400 underline">support@buildairesume.com</a></p>
-          <p><strong>Parent Company:</strong> Morigrid Labs</p>
-        </div>
-
-        <div className="mt-8 p-6 bg-lime-500/10 rounded-2xl border border-lime-500/20 text-center">
-          <p className="text-lime-400 font-bold mb-2">© 2026 AIResume by Morigrid Labs</p>
-          <p className="text-white/60 text-sm italic">All rights reserved. Made with heart pulsing.</p>
+      {/* 8. Contact Information */}
+      <div className="bg-white/[0.02] border border-white/10 rounded-2xl p-6 sm:p-8 space-y-4">
+        <h3 className="text-xl font-semibold text-white flex items-center gap-2.5">
+          <CheckCircle2 className="w-5 h-5 text-lime-400 shrink-0" />
+          8. Contact & Legal Inquiries
+        </h3>
+        <p className="text-sm sm:text-base">
+          For legal notices or questions regarding these Terms, please contact:
+        </p>
+        <div className="pt-2 text-sm text-white/80 space-y-1">
+          <p><strong>Entity:</strong> Morigrid Labs (AIResume Legal)</p>
+          <p><strong>Email:</strong> legal@buildairesume.com</p>
+          <p><strong>Support:</strong> <Link href="/legal#support" className="text-lime-400 underline hover:text-lime-300">Support Desk</Link></p>
         </div>
       </div>
     </div>
   );
-};
-
-export default TermsContent;
+}

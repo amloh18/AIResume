@@ -67,7 +67,21 @@ export async function GET(request: NextRequest) {
       ingestLimit: Math.max(60, limit * 2),
     };
 
-    const discovered = await JobDiscoveryService.fetchAndStore(criteria);
+    // Get user's profile version for cache isolation
+    let profileVersion: number | undefined;
+    if (userId) {
+      try {
+        const { JobSearchProfileService } = await import('@/lib/services/jobSearchProfileService');
+        const profile = await JobSearchProfileService.getProfile(userId);
+        if (profile) {
+          profileVersion = profile.profileVersion;
+        }
+      } catch {
+        // Profile may not exist yet, that's okay
+      }
+    }
+
+    const discovered = await JobDiscoveryService.fetchAndStore(criteria, userId, profileVersion);
 
     if (discovered.length === 0) {
       return NextResponse.json({

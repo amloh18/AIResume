@@ -25,7 +25,7 @@ import PortalConnectModal, { PortalType } from '@/components/dashboard/settings/
 import ContextualLimitModal from './ContextualLimitModal';
 import type { UserEntitlements } from '@/lib/services/entitlement-service';
 
-export interface GlobalAutoApplyPreferences {
+interface AutoApplyPreferences {
   enabled: boolean;
   targetRoles: string[];
   locations: string[];
@@ -39,6 +39,9 @@ export interface GlobalAutoApplyPreferences {
   useCoverLetter: boolean;
   autoAnswerQuestions: boolean;
   enabledPortals: ('naukri' | 'indeed' | 'linkedin' | 'greenhouse' | 'adzuna' | 'lever' | 'ashby' | 'workable')[];
+  searchIntensity: 'browsing' | 'exploring' | 'active' | 'aggressive';
+  expectedApplicationsPerMonth: number;
+  applicationMode: 'find_only' | 'manual_review' | 'automatic';
 }
 
 interface AutoApplyPanelProps {
@@ -101,12 +104,12 @@ export function AutoApplyPanel({ userId, region }: AutoApplyPanelProps) {
   
   const [whatHappensOpen, setWhatHappensOpen] = useState(false);
 
-  const [preferences, setPreferences] = useState<GlobalAutoApplyPreferences>({
+const [preferences, setPreferences] = useState<AutoApplyPreferences>({
     enabled: false,
-    targetRoles: ['Full Stack Developer', 'Software Engineer'],
-    locations: ['Remote', 'Bangalore', 'London'],
+    targetRoles: ['Software Engineer', 'Full Stack Developer', 'Frontend Developer'],
+    locations: ['Remote', 'London', 'Bangalore'],
     remoteOnly: false,
-    minSalary: 15,
+    minSalary: 12,
     salaryCurrency: 'INR_LPA',
     experienceYears: 3,
     maxNoticePeriodDays: 30,
@@ -114,7 +117,10 @@ export function AutoApplyPanel({ userId, region }: AutoApplyPanelProps) {
     useTailoredCV: true,
     useCoverLetter: true,
     autoAnswerQuestions: true,
-    enabledPortals: ['naukri', 'indeed', 'linkedin', 'greenhouse', 'adzuna', 'lever', 'ashby', 'workable'],
+    enabledPortals: ['naukri', 'indeed', 'greenhouse', 'adzuna'],
+    searchIntensity: 'exploring',
+    expectedApplicationsPerMonth: 50,
+    applicationMode: 'manual_review',
   });
 
   const [savedPreferences, setSavedPreferences] = useState<string>('');
@@ -148,14 +154,14 @@ export function AutoApplyPanel({ userId, region }: AutoApplyPanelProps) {
 
   const fetchPreferences = async () => {
     try {
-      const res = await fetch('/api/jobs/preferences');
+      const res = await fetch('/api/job-search-profile');
       if (res.ok) {
         const json = await res.json();
-        if (json.preferences) {
+        if (json.profile) {
           const loadedPrefs = {
             ...preferences,
-            ...json.preferences,
-            salaryCurrency: json.preferences.salaryCurrency || 'INR_LPA',
+            ...json.profile,
+            salaryCurrency: json.profile.salaryCurrency || 'INR_LPA',
           };
           setPreferences(loadedPrefs);
           setSavedPreferences(JSON.stringify(loadedPrefs));
@@ -220,10 +226,10 @@ export function AutoApplyPanel({ userId, region }: AutoApplyPanelProps) {
   const handleSave = async () => {
     try {
       setSaving(true);
-      const res = await fetch('/api/jobs/preferences', {
+      const res = await fetch('/api/job-search-profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ preferences }),
+        body: JSON.stringify({ profileData: preferences }),
       });
 
       if (!res.ok) throw new Error('Failed to save preferences');

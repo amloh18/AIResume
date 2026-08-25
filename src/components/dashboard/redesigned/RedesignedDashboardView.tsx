@@ -565,11 +565,11 @@ function MyCvsPanel() {
           <table className="w-full text-left text-xs">
             <thead className="bg-gray-50/80 dark:bg-white/[0.02] border-b border-gray-200 dark:border-white/10 text-gray-500 dark:text-gray-400 font-semibold uppercase tracking-wider text-[11px]">
               <tr>
-                <th className="py-3.5 px-5">CV Name</th>
-                <th className="py-3.5 px-4 w-[140px]">ATS Score</th>
-                <th className="py-3.5 px-4">Linked Jobs</th>
-                <th className="py-3.5 px-4">Last Updated</th>
-                <th className="py-3.5 px-5 text-right">Actions</th>
+                <th className="py-3 px-5">CV Name</th>
+                <th className="py-3 px-4 w-[140px]">ATS Score</th>
+                <th className="py-3 px-4">Linked Jobs</th>
+                <th className="py-3 px-4">Last Updated</th>
+                <th className="py-3 px-5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-white/5 font-medium">
@@ -579,7 +579,7 @@ function MyCvsPanel() {
                 const linked = linkedCounts.get(cvId(cv)) || 0;
                 return (
                   <tr key={cvId(cv) || cv.title} className="hover:bg-gray-50/60 dark:hover:bg-white/[0.02] transition-colors cursor-pointer group" onClick={() => openCv(cv)}>
-                    <td className="py-3.5 px-5 max-w-[280px]">
+                    <td className="py-3 px-5 max-w-[280px]">
                       <div className="flex items-center gap-2 min-w-0">
                         <span className="truncate font-semibold text-gray-900 dark:text-white text-xs group-hover:text-lime-600 dark:group-hover:text-lime-400 transition-colors" title={cv.title}>
                           {cv.title || 'Untitled CV'}
@@ -591,7 +591,7 @@ function MyCvsPanel() {
                         )}
                       </div>
                     </td>
-                    <td className="py-3.5 px-4">
+                    <td className="py-3 px-4">
                       {score > 0 ? (
                         <div className="flex items-center gap-2">
                           <div className={`w-2 h-2 rounded-full shrink-0 ${score >= 70 ? 'bg-lime-500' : score >= 50 ? 'bg-yellow-500' : 'bg-red-400'}`} />
@@ -601,7 +601,7 @@ function MyCvsPanel() {
                         <span className="text-xs text-gray-400 dark:text-gray-500 italic">—</span>
                       )}
                     </td>
-                    <td className="py-3.5 px-4 text-gray-600 dark:text-gray-400 text-xs">
+                    <td className="py-3 px-4 text-gray-600 dark:text-gray-400 text-xs">
                       {linked > 0 ? (
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
                           {linked} {linked === 1 ? 'Job' : 'Jobs'}
@@ -610,16 +610,16 @@ function MyCvsPanel() {
                         <span className="text-xs text-gray-400 dark:text-gray-500 italic">—</span>
                       )}
                     </td>
-                    <td className="py-3.5 px-4 text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">
+                    <td className="py-3 px-4 text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">
                       {timeAgo(cv.updatedAt || cv.createdAt)}
                     </td>
-                    <td className="py-3.5 px-5 text-right" onClick={(e) => e.stopPropagation()}>
+                    <td className="py-3 px-5 text-right" onClick={(e) => e.stopPropagation()}>
                       <div className="inline-flex items-center justify-end gap-1.5">
                         <button
                           onClick={() => openPreview(cv)}
                           aria-label={`Preview ${cv.title}`}
                           title="Preview"
-                          className="p-1.5 rounded-lg border border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300 hover:text-lime-600 dark:hover:text-lime-400 transition-colors"
+                          className="w-7 h-7 inline-flex items-center justify-center rounded-lg border border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300 hover:text-lime-600 dark:hover:text-lime-400 transition-colors"
                         >
                           <Eye className="w-3.5 h-3.5" />
                         </button>
@@ -627,7 +627,7 @@ function MyCvsPanel() {
                           onClick={() => openCv(cv)}
                           aria-label={`Edit ${cv.title}`}
                           title="Edit CV"
-                          className="p-1.5 rounded-lg border border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                          className="w-7 h-7 inline-flex items-center justify-center rounded-lg border border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
                         >
                           <Pencil className="w-3.5 h-3.5" />
                         </button>

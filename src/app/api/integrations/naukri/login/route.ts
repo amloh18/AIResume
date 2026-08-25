@@ -76,16 +76,8 @@ export async function POST(request: NextRequest) {
 
     const encryptedCookieJar = encryptToken(userSessionToken || `auth_${Date.now()}`);
 
-    const updatedPreferences = {
-      targetTitles: preferences?.targetTitles ?? user.naukriIntegration?.preferences?.targetTitles ?? [],
-      targetLocations: preferences?.targetLocations ?? user.naukriIntegration?.preferences?.targetLocations ?? ['Bangalore', 'Remote', 'Mumbai', 'Hyderabad', 'Pune'],
-      minCtcLakhs: preferences?.minCtcLakhs ?? user.naukriIntegration?.preferences?.minCtcLakhs ?? 0,
-      experienceYears: preferences?.experienceYears ?? user.naukriIntegration?.preferences?.experienceYears ?? 2,
-      maxNoticePeriodDays: preferences?.maxNoticePeriodDays ?? user.naukriIntegration?.preferences?.maxNoticePeriodDays ?? 30,
-      dailyLimit: preferences?.dailyLimit ?? user.naukriIntegration?.preferences?.dailyLimit ?? 25,
-      autoApplyEnabled: preferences?.autoApplyEnabled ?? user.naukriIntegration?.preferences?.autoApplyEnabled ?? true,
-    };
-
+    // Only update portal connection data, NOT general job-search preferences.
+    // General job-search preferences belong in JobSearchProfile.
     const currentStats = {
       totalFetched: Number(user.naukriIntegration?.stats?.totalFetched || 0),
       totalApplied: Number(user.naukriIntegration?.stats?.totalApplied || 0),
@@ -101,7 +93,6 @@ export async function POST(request: NextRequest) {
           'naukriIntegration.sessionStatus': 'active',
           'naukriIntegration.userEmail': connectedEmail,
           'naukriIntegration.encryptedCookieJar': encryptedCookieJar,
-          'naukriIntegration.preferences': updatedPreferences,
           'naukriIntegration.stats': currentStats,
         },
       },
@@ -113,7 +104,6 @@ export async function POST(request: NextRequest) {
       message: 'Naukri.com account linked and authenticated successfully!',
       sessionStatus: 'active',
       userEmail: connectedEmail,
-      preferences: updatedPreferences,
       stats: currentStats,
     });
   } catch (error: any) {

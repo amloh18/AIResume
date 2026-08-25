@@ -59,32 +59,54 @@ export function fixFormattingToBullets(html: string): string {
 }
 
 /**
- * Sanitize and render rich text HTML for safe display.
- * Allows only safe formatting tags: b, strong, i, em, u, ul, ol, li, p, br
+ * Decode HTML entities (e.g. &lt;h2&gt; -> <h2>, &#39; -> ', &nbsp; -> space)
  */
-export function renderRichText(html: string): string {
-    if (!html || !html.trim()) return '';
+export function decodeHtmlEntities(html: string): string {
+  if (!html) return '';
+  let decoded = html
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&#x27;/g, "'")
+    .replace(/&#x2F;/g, '/')
+    .replace(/&nbsp;/g, ' ');
 
-    // If it's plain text (no HTML tags), convert to paragraph
-    if (!/&lt;[^&gt;]+&gt;/.test(html) && !/<[^>]+>/.test(html)) {
-        // Convert newlines to <br> for plain text
+  // If there are still HTML entities and running in browser, do secondary unescape
+  if (/&[a-z0-9#]+;/i.test(decoded) && typeof window !== 'undefined') {
+    try {
+      const textarea = document.createElement('textarea');
+      textarea.innerHTML = decoded;
+      decoded = textarea.value;
+    } catch {
+      // ignore
+    }
+  }
+  return decoded;
+}
+
+/**
+ * Sanitize and render rich text HTML for safe display.
+ * Supports headings, paragraphs, lists, and safe typography formatting.
+ */
+export function renderRichText(raw: string): string {
+    if (!raw || !raw.trim()) return '';
+
+    const html = decodeHtmlEntities(raw);
+
+    // If it's plain text (no HTML tags), convert newlines to <br>
+    if (!/<[a-z][\s\S]*>/i.test(html)) {
         return html.replace(/\n/g, '<br>');
     }
 
-    // Allow only safe tags for formatting
-    const allowedTags = ['b', 'strong', 'i', 'em', 'u', 'ul', 'ol', 'li', 'p', 'br', 'span'];
-
-    // Simple sanitizer - remove scripts and event handlers
+    // Remove scripts, styles, iframes, and event handlers
     let sanitized = html
         .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+        .replace(/<iframe[^>]*>[\s\S]*?<\/iframe>/gi, '')
         .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '')
         .replace(/javascript:/gi, '');
-
-    // Add proper styles to lists if not already styled
-    sanitized = sanitized
-        .replace(/<ul(?![^>]*style)/gi, '<ul style="list-style-type: disc; padding-left: 1.5rem; margin: 0.5rem 0;"')
-        .replace(/<ol(?![^>]*style)/gi, '<ol style="list-style-type: decimal; padding-left: 1.5rem; margin: 0.5rem 0;"')
-        .replace(/<li(?![^>]*style)/gi, '<li style="margin: 0.25rem 0;"');
 
     return sanitized;
 }

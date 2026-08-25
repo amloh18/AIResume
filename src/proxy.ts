@@ -27,7 +27,7 @@ const publicRoutes = [
   '/onboarding-universal',
   '/privacy-policy',
   '/terms',
-  '/cookie-policy',
+  '/legal',
   '/force-logout',
   '/editor',
 ];

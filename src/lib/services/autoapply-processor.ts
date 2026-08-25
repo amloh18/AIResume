@@ -670,22 +670,76 @@ export async function getApplicationStats(userId: string): Promise<{
 }
 
 // Auto-Apply Job Matching
+/**
+ * Find matching jobs for auto-apply.
+ * 
+ * IMPORTANT: Now reads from JobSearchProfile instead of UserQuota.autoApplySettings.
+ * Falls back to legacy settings if profile doesn't exist.
+ */
 export async function findMatchingJobsForAutoApply(
   userId: string,
   limit: number = 10
 ): Promise<IApplicationQueue[]> {
   await initializeModels();
   
-  // Get user's auto-apply settings
-  const quota = await UserQuota.findOne({ userId });
-  if (!quota || !quota.autoApplyEnabled) {
-    return [];
+  // CRITICAL: Read from JobSearchProfile instead of legacy autoApplySettings
+  let targetRoles: string[] = [];
+  let locations: string[] = [];
+  let remoteOnly = false;
+  let minSalary = 0;
+  let excludeCompanies: string[] = [];
+  
+  try {
+    const { JobSearchProfileService } = await import('./jobSearchProfileService');
+    const profile = await JobSearchProfileService.getProfile(userId);
+    
+    if (profile) {
+      targetRoles = profile.targetRoles || [];
+      locations = profile.locations || [];
+      remoteOnly = profile.remoteOnly;
+      minSalary = profile.minSalary || 0;
+      
+      // Get auto-apply config
+      const { AutoApplyConfigurationService } = await import('./autoApplyConfigurationService');
+      const config = await AutoApplyConfigurationService.getConfig(userId);
+      
+      if (!config || !config.enabled) {
+        return [];
+      }
+    } else {
+      // Fallback to legacy UserQuota.autoApplySettings
+      const quota = await UserQuota.findOne({ userId });
+      if (!quota || !quota.autoApplyEnabled) {
+        return [];
+      }
+      
+      const settings = quota.autoApplySettings;
+      targetRoles = settings.targetRoles || [];
+      locations = settings.locations || [];
+      remoteOnly = settings.remoteOnly || false;
+      minSalary = settings.minSalary || 0;
+      excludeCompanies = settings.excludeCompanies || [];
+    }
+  } catch (error) {
+    console.warn('[AutoApply] Could not load JobSearchProfile, falling back to legacy:', error);
+    
+    // Fallback to legacy UserQuota.autoApplySettings
+    const quota = await UserQuota.findOne({ userId });
+    if (!quota || !quota.autoApplyEnabled) {
+      return [];
+    }
+    
+    const settings = quota.autoApplySettings;
+    targetRoles = settings.targetRoles || [];
+    locations = settings.locations || [];
+    remoteOnly = settings.remoteOnly || false;
+    minSalary = settings.minSalary || 0;
+    excludeCompanies = settings.excludeCompanies || [];
   }
   
-  const settings = quota.autoApplySettings;
   const { remaining } = await checkUserQuota(userId);
   
-  if (!settings.targetRoles?.length || remaining.hourly <= 0) {
+  if (!targetRoles.length || remaining.hourly <= 0) {
     return [];
   }
   
@@ -693,18 +747,18 @@ export async function findMatchingJobsForAutoApply(
   const matchQuery: any = {
     status: 'queued',
     userId: { $ne: userId }, // Jobs from discovery that match criteria
-    $or: settings.targetRoles.map((role: string) => ({
+    $or: targetRoles.map((role: string) => ({
       jobTitle: { $regex: role, $options: 'i' }
     }))
   };
   
-  if (settings.locations?.length) {
-    matchQuery.$and = settings.locations.map((loc: string) => ({
+  if (locations.length) {
+    matchQuery.$and = locations.map((loc: string) => ({
       location: { $regex: loc, $options: 'i' }
     }));
   }
   
-  if (settings.remoteOnly) {
+  if (remoteOnly) {
     matchQuery.$or = [
       ...(matchQuery.$or || []),
       { location: { $regex: /remote/i } },
@@ -712,14 +766,14 @@ export async function findMatchingJobsForAutoApply(
     ];
   }
   
-  if (settings.excludeCompanies?.length) {
-    matchQuery.company = { $nin: settings.excludeCompanies };
+  if (excludeCompanies.length) {
+    matchQuery.company = { $nin: excludeCompanies };
   }
   
-  if (settings.minSalary) {
+  if (minSalary) {
     matchQuery.$or = [
       ...(matchQuery.$or || []),
-      { salary: { $gte: settings.minSalary } }
+      { salary: { $gte: minSalary } }
     ];
   }
   

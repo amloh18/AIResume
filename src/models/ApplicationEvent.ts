@@ -1,62 +1,101 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export type ApplicationEventType =
-  | 'APPLICATION_CREATED'
-  | 'APPLICATION_STAGED'
-  | 'CV_READY'
-  | 'COVER_LETTER_READY'
-  | 'APPLICATION_QUEUED'
-  | 'APPLICATION_STARTED'
-  | 'FORM_DETECTED'
-  | 'FORM_FILLED'
-  | 'DOCUMENTS_UPLOADED'
-  | 'SUBMISSION_STARTED'
+  | 'stage_change'
+  | 'status_update'
+  | 'note_added'
+  | 'tag_updated'
   | 'SUBMISSION_CONFIRMED'
-  | 'APPLICATION_FAILED'
-  | 'APPLICATION_UNKNOWN'
   | 'APPLICATION_REQUIRES_REVIEW'
+  | 'APPLICATION_STAGED'
   | 'INTERVIEW_DETECTED'
   | 'OFFER_DETECTED'
   | 'REJECTION_DETECTED'
-  | 'MANUAL_STAGE_CHANGE';
+  | (string & {});
 
-export interface IApplicationEvent extends Document {
-  applicationId: mongoose.Types.ObjectId | string;
-  userId: mongoose.Types.ObjectId | string;
-  jobId: mongoose.Types.ObjectId | string;
+export type ApplicationEventSource = 'user' | 'automation' | 'email_intelligence' | 'admin' | (string & {});
+
+export interface IApplicationEventDocument extends Document {
+  applicationId: mongoose.Types.ObjectId;
+  userId: mongoose.Types.ObjectId;
+  
   type: ApplicationEventType;
   previousStage?: string;
   newStage?: string;
-  previousStatus?: string;
-  newStatus?: string;
-  source: 'user' | 'automation_worker' | 'email_intelligence' | 'admin' | 'system';
-  runId?: string;
+  source: ApplicationEventSource;
+  
   metadata?: Record<string, any>;
   createdAt: Date;
 }
 
-const ApplicationEventSchema = new Schema<IApplicationEvent>(
+const ApplicationEventSchema = new Schema<IApplicationEventDocument>(
   {
-    applicationId: { type: Schema.Types.Mixed, required: true, index: true },
-    userId: { type: Schema.Types.Mixed, required: true, index: true },
-    jobId: { type: Schema.Types.Mixed, required: true },
-    type: { type: String, required: true, index: true },
-    previousStage: { type: String },
-    newStage: { type: String },
-    previousStatus: { type: String },
-    newStatus: { type: String },
+    applicationId: {
+      type: Schema.Types.ObjectId,
+      ref: 'ApplicationUnified',
+      required: true,
+      index: true,
+    },
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+      index: true,
+    },
+    
+    type: {
+      type: String,
+      required: true,
+      index: true,
+    },
+    previousStage: {
+      type: String,
+      enum: ['saved', 'staging', 'applied', 'interview', 'offer', 'rejected'],
+    },
+    newStage: {
+      type: String,
+      enum: ['saved', 'staging', 'applied', 'interview', 'offer', 'rejected'],
+    },
     source: {
       type: String,
-      enum: ['user', 'automation_worker', 'email_intelligence', 'admin', 'system'],
-      default: 'system',
+      enum: ['user', 'automation', 'email_intelligence', 'admin'],
+      required: true,
     },
-    runId: { type: String },
+    
     metadata: { type: Schema.Types.Mixed },
-    createdAt: { type: Date, default: Date.now, index: true },
+    
+    createdAt: {
+      type: Date,
+      default: Date.now,
+      immutable: true, // Events cannot be modified
+    },
   },
-  { timestamps: false }
+  {
+    timestamps: false, // No updatedAt — immutable
+    toJSON: {
+      transform: function (doc, ret: any) {
+        ret.id = ret._id;
+        delete ret._id;
+        delete ret.__v;
+        return ret;
+      },
+    },
+  }
 );
 
+// Indexes
 ApplicationEventSchema.index({ applicationId: 1, createdAt: -1 });
+ApplicationEventSchema.index({ userId: 1, type: 1 });
+ApplicationEventSchema.index({ createdAt: -1 }, { expireAfterSeconds: 7776000 }); // 90 days TTL
 
-export default mongoose.models.ApplicationEvent || mongoose.model<IApplicationEvent>('ApplicationEvent', ApplicationEventSchema);
+// Prevent updates — events are immutable
+ApplicationEventSchema.pre('findOneAndUpdate', function () {
+  throw new Error('ApplicationEvents are immutable and cannot be updated');
+});
+
+ApplicationEventSchema.pre('updateOne', function () {
+  throw new Error('ApplicationEvents are immutable and cannot be updated');
+});
+
+export default mongoose.models.ApplicationEvent ||
+  mongoose.model<IApplicationEventDocument>('ApplicationEvent', ApplicationEventSchema);
