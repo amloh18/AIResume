@@ -43,8 +43,6 @@ const AutoApplyConfigurationSchema = new Schema<IAutoApplyConfigurationDocument>
       type: Schema.Types.ObjectId,
       ref: 'User',
       required: true,
-      unique: true,
-      index: true,
     },
     
     // Reference to canonical profile (read-only)
@@ -52,7 +50,6 @@ const AutoApplyConfigurationSchema = new Schema<IAutoApplyConfigurationDocument>
       type: Schema.Types.ObjectId,
       ref: 'JobSearchProfile',
       required: true,
-      index: true,
     },
     
     // Auto-apply execution settings
