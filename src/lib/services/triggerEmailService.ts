@@ -89,7 +89,7 @@ class TriggerEmailService {
                         opened: 0,
                         clicked: 0
                     },
-                    fromName: template.defaultFromName || 'AI Resume Team',
+                    fromName: template.defaultFromName || 'AIResume Team',
                     fromEmail: template.defaultFromEmail || 'noreply@buildairesume.com',
                     creatorId: 'automation',
                     createdByName: 'Automation Engine',

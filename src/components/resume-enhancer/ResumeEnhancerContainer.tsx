@@ -97,11 +97,20 @@ export default function ResumeEnhancerContainer({
   const pathname = usePathname();
   const { state, dispatch, goToStep, loadCV, setRoleContext, resetState, setJobSidebarOpen, setTemplateOverlayOpen } = useResumeEnhancer();
   const { isOpen: isMobileMenuOpen, toggleSidebar, isDesktopExpanded } = useMobileSidebar();
+  const requestedStep = useMemo(() => {
+    const rawStep = searchParams.get('step');
+    const parsed = Number(rawStep);
+    return Number.isInteger(parsed) && parsed >= 1 && parsed <= 5
+      ? (parsed as 1 | 2 | 3 | 4 | 5)
+      : null;
+  }, [searchParams]);
+
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const [stepOneDocumentTab, setStepOneDocumentTab] = useState<'cvs' | 'cover-letters'>(
     searchParams.get('tab') === 'cover-letters' ? 'cover-letters' : 'cvs'
   );
-  const showTemplateOverlay = state.isTemplateOverlayOpen;
+  const [isTemplateOverlayActive, setIsTemplateOverlayActive] = useState(requestedStep === 2);
+  const showTemplateOverlay = state.isTemplateOverlayOpen || isTemplateOverlayActive;
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [tempTitle, setTempTitle] = useState('');
@@ -155,13 +164,6 @@ export default function ResumeEnhancerContainer({
   const [isTransferringDraft, setIsTransferringDraft] = useState(false);
   const [showSaveWarningModal, setShowSaveWarningModal] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState<{ type: 'step' | 'path', target: number | string } | null>(null);
-  const requestedStep = useMemo(() => {
-    const rawStep = searchParams.get('step');
-    const parsed = Number(rawStep);
-    return Number.isInteger(parsed) && parsed >= 1 && parsed <= 5
-      ? (parsed as 1 | 2 | 3 | 4 | 5)
-      : null;
-  }, [searchParams]);
 
   // Use ATS Context for shared ATS data
   const {
@@ -202,6 +204,15 @@ export default function ResumeEnhancerContainer({
     );
   }, [state.cvData, state.keywordGapAnalysis, state.atsScoreCap]);
   // Check if this is a master CV - check mode, state, or sessionStorage flag
+  const isFromOnboarding = useMemo(() => {
+    if (typeof window !== 'undefined') {
+      const fromOnboardingSession = sessionStorage.getItem('fromOnboarding') === 'true';
+      const fromOnboardingQuery = searchParams.get('fromOnboarding') === 'true';
+      return fromOnboardingSession || fromOnboardingQuery;
+    }
+    return false;
+  }, [searchParams]);
+
   const isMasterCV = useMemo(() => {
     if (mode === 'edit-master' || state.cvType === 'master') {
       return true;
@@ -219,7 +230,7 @@ export default function ResumeEnhancerContainer({
   const scoreLabel = isMasterCV ? 'CV score' : (isJourneyCV ? 'ATS score' : 'CV score');
   const openIssuesCount = (state.fixAnnotations || []).filter((f) => f.status === 'open').length;
 
-  const coverLetterBlockedMessage = 'Cover letter editing is unavailable for Master CVs. Use a journey or standalone CV to write a job-specific cover letter.';
+  const coverLetterBlockedMessage = 'Cover letter editing is unavailable for Profile. Use a tailored application or standalone CV to write a job-specific cover letter.';
 
   const goToStepSafely = useCallback((step: 1 | 2 | 3 | 4 | 5, options?: { silent?: boolean }) => {
     // Phase 1: Master CV Guard
@@ -1288,7 +1299,7 @@ export default function ResumeEnhancerContainer({
           }
 
           // Fetch associated cover letter if we don't have it yet (e.g. loading CV directly in edit mode)
-          if (!coverLetterData && actualCvId && userId !== 'guest') {
+          if (!coverLetterData && actualCvId && userId !== 'guest' && !isMasterCV && !isFromOnboarding) {
              try {
                 const clListResponse = await fetch(`/api/cover-letters?userId=${userId}&cvId=${actualCvId}`);
                 if (clListResponse.ok) {
@@ -1325,7 +1336,7 @@ export default function ResumeEnhancerContainer({
             cv.cvType || (cv.metadata?.isMaster ? 'master' : cv.journeyId ? 'journey' : 'standalone');
 
           // For journey CVs: ensure we have jobData to show journey-based interface
-          if (resolvedCvType === 'journey' || cv.journeyId || journeyId || effectiveJourneyId) {
+          if ((resolvedCvType === 'journey' || cv.journeyId || journeyId || effectiveJourneyId) && !isMasterCV && !isFromOnboarding) {
             // Journey CV detected
             const finalJourneyId = cv.journeyId || journeyId || effectiveJourneyId;
 
@@ -2255,6 +2266,7 @@ export default function ResumeEnhancerContainer({
   };
 
   const handleStep2Complete = () => {
+    setIsTemplateOverlayActive(false);
     setTemplateOverlayOpen(false);
 
     // Guest mode: Save draft after template selection
@@ -2380,6 +2392,11 @@ export default function ResumeEnhancerContainer({
   };
 
   const handleExit = async () => {
+    if (isFromOnboarding) {
+      await handleOnboardingExit();
+      return;
+    }
+
     if (state.currentStep > 1) {
       if (hasUnsavedChanges) {
         await handleSmartSave();
@@ -2904,7 +2921,60 @@ export default function ResumeEnhancerContainer({
     }
   };
 
+  const isSavingAndExitingRef = useRef(false);
+
+  const handleOnboardingExit = async () => {
+    if (isSavingAndExitingRef.current) return;
+    isSavingAndExitingRef.current = true;
+
+    try {
+      setSaveStatus('saving');
+      await handleSmartSave(true);
+
+      // Persist onboarding stage update to database
+      try {
+        await fetch('/api/user/onboarding', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            current_stage: 'CV_READY_FORK',
+            userLifecycleState: 'PRIMARY_CV_CREATED'
+          })
+        });
+      } catch (err) {
+        console.error('Failed to update onboarding session:', err);
+      }
+
+      // Update local storage backup
+      try {
+        const saved = localStorage.getItem('buildairesume_onboarding_state');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          localStorage.setItem('buildairesume_onboarding_state', JSON.stringify({
+            ...parsed,
+            stage: 'CV_READY_FORK',
+            step: 4,
+            editorCompleted: true
+          }));
+        }
+      } catch (e) {
+        console.error('Failed to update local storage onboarding state:', e);
+      }
+
+      const returnUrl = (typeof window !== 'undefined' && sessionStorage.getItem('onboardingReturnUrl')) || '/welcome?stage=cv_ready';
+      router.push(returnUrl);
+    } catch (err) {
+      console.error('Failed to save CV on onboarding exit:', err);
+      toast.error('We could not save your latest changes. Please try again.');
+      isSavingAndExitingRef.current = false;
+    }
+  };
+
   const handleHomeStepClick = async () => {
+    if (isFromOnboarding) {
+      await handleOnboardingExit();
+      return;
+    }
     // Guests should sign up before navigating away — show auth prompt instead
     if (isGuestMode) {
       setShowAuthPrompt(true);
@@ -2963,6 +3033,36 @@ export default function ResumeEnhancerContainer({
     const isCreateMode = mode === 'create' || mode === 'create-cover-letter';
     const isCoverLetterMode = mode === 'edit-cover-letter' || mode === 'create-cover-letter';
     
+    // For users in the onboarding flow, present a clean "Design → Edit → Review" lifecycle
+    if (isFromOnboarding) {
+      return [
+        {
+          id: 'layout',
+          label: 'Design',
+          isActive: state.isTemplateOverlayOpen,
+          isCompleted: !state.isTemplateOverlayOpen && !!state.selectedTemplate,
+          targetStep: 3,
+          openTemplateOverlay: true
+        },
+        {
+          id: 'edit',
+          label: 'Edit',
+          isActive: state.currentStep === 3 && !state.isTemplateOverlayOpen,
+          isCompleted: state.currentStep > 3 && !state.isTemplateOverlayOpen,
+          targetStep: 3,
+          openTemplateOverlay: false
+        },
+        {
+          id: 'review',
+          label: 'Review',
+          isActive: state.currentStep === 5,
+          isCompleted: false,
+          targetStep: 5,
+          openTemplateOverlay: false
+        }
+      ];
+    }
+
     // 1. Determine if we show Layout Selection (only for new Master or new Journey CVs, or when editing/creating cover letter)
     const showLayoutStep = (isCreateMode && (state.cvType === 'master' || state.cvType === 'journey')) || isCoverLetterMode;
     
@@ -3195,7 +3295,7 @@ export default function ResumeEnhancerContainer({
     }
   }, []); // Empty deps - only run on mount
 
-  if (isLoading) {
+  if (isLoading && !showTemplateOverlay && requestedStep !== 2) {
     // Keep the editor chrome visible while the document loads: header skeleton + a
     // step-aware body skeleton (CV sheet + control panel, or letter sheet + panel).
     const isCanvasStep = state.currentStep === 3;
@@ -3369,13 +3469,15 @@ export default function ResumeEnhancerContainer({
             <>
               {/* Left Column: Home Button & CV Title Inline Editor & Save Status - all inline */}
               <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 lg:flex-initial">
-                <button
-                  onClick={handleHomeStepClick}
-                  className="flex w-9 h-9 rounded-xl bg-white dark:bg-[#1a2312] border border-lime-200 dark:border-lime-900/30 items-center justify-center text-lime-600 dark:text-lime-400 hover:bg-lime-50 dark:hover:bg-lime-950/20 active:scale-95 transition-all duration-200 flex-shrink-0 shadow-sm"
-                  title="Back to Step 1"
-                >
-                  <Home className="w-4 h-4 text-lime-600 dark:text-lime-400" />
-                </button>
+                {!isFromOnboarding && (
+                  <button
+                    onClick={handleHomeStepClick}
+                    className="flex w-9 h-9 rounded-xl bg-white dark:bg-[#1a2312] border border-lime-200 dark:border-lime-900/30 items-center justify-center text-lime-600 dark:text-lime-400 hover:bg-lime-50 dark:hover:bg-lime-950/20 active:scale-95 transition-all duration-200 flex-shrink-0 shadow-sm"
+                    title="Back to Step 1"
+                  >
+                    <Home className="w-4 h-4 text-lime-600 dark:text-lime-400" />
+                  </button>
+                )}
                 
                 <div className="flex items-center gap-2 min-w-0 flex-wrap sm:flex-nowrap">
                   {/* Title editor */}
@@ -3654,6 +3756,19 @@ export default function ResumeEnhancerContainer({
                 )}
               </div>
             </>
+          )}
+
+          {/* Onboarding Save & Continue Action */}
+          {isFromOnboarding && (
+            <button
+              onClick={handleOnboardingExit}
+              disabled={saveStatus === 'saving'}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#80FF00] hover:bg-[#70e600] text-black font-extrabold text-xs rounded-full shadow-sm hover:shadow transition-all active:scale-95"
+              title="Save & Continue to Onboarding"
+            >
+              <Check className="w-3.5 h-3.5 stroke-[3]" />
+              <span className="hidden sm:inline">Save &amp; Continue</span>
+            </button>
           )}
 
           {/* Guest Mode Tag */}

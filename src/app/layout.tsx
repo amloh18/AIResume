@@ -31,7 +31,7 @@ const APP_URL = process.env.NEXTAUTH_URL || 'https://buildairesume.com';
 export const metadata: Metadata = {
   title: {
     default: 'AI Resume Builder | Build an ATS-Friendly Resume with AI',
-    template: '%s | AI Resume'
+    template: '%s | AIResume'
   },
   description: 'Build, optimize, and tailor an ATS-friendly resume with AI. Create professional resumes, improve your content, and prepare every application faster.',
   keywords: [
@@ -60,8 +60,8 @@ export const metadata: Metadata = {
     'international CV',
     'AI career tools'
   ],
-  authors: [{ name: 'AI Resume Team' }],
-  creator: 'AI Resume by Morigrid Labs',
+  authors: [{ name: 'AIResume Team' }],
+  creator: 'AIResume by Morigrid Labs',
   publisher: 'Morigrid Labs',
   formatDetection: {
     email: false,
@@ -78,13 +78,13 @@ export const metadata: Metadata = {
     url: APP_URL,
     title: 'Build a Better Resume With AI',
     description: 'Create an ATS-friendly resume, tailor it to every job, and apply with confidence using AI-powered resume tools.',
-    siteName: 'AI Resume',
+    siteName: 'AIResume',
     images: [
       {
         url: '/images/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'AI Resume - Build a Better Resume With AI',
+        alt: 'AIResume - Build a Better Resume With AI',
       },
     ],
   },

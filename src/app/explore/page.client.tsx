@@ -408,7 +408,7 @@ export default function ExploreStudioClient() {
 
       {/* Main Landing Navbar */}
       <CardNav
-        logo="AI Resume"
+        logo="AIResume"
         links={navLinks}
         withBanner={bannerActive}
         onCtaClick={() => router.push('/sign-in')}

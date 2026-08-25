@@ -70,7 +70,6 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
   const publicRoutes = [
     '/',
     '/sign-in',
-    '/custom-signin',
     '/sign-up',
     '/sign-in',
     '/auth/verify-email',

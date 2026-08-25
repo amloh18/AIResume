@@ -8,14 +8,14 @@ import Footer from '@/components/landing/Footer';
 import { navLinks } from '@/data/navigation';
 
 export const metadata: Metadata = {
-  title: 'Blog — Career Advice, CV Tips & ATS Optimization | AI Resume',
-  description: 'Expert career advice, CV writing tips, ATS optimization strategies, and resume guides from AI Resume. Learn how to build a resume that gets callbacks in 2026.',
+  title: 'Blog — Career Advice, CV Tips & ATS Optimization | AIResume',
+  description: 'Expert career advice, CV writing tips, ATS optimization strategies, and resume guides from AIResume. Learn how to build a resume that gets callbacks in 2026.',
   keywords: ['CV blog', 'resume tips', 'ATS optimization', 'career advice', 'job search 2026', 'AI resume'],
   alternates: { canonical: '/blog' },
 };
 
 const categoryColors: Record<string, { badge: string; dot: string }> = {
-  'AI Resume vs Competitors': { badge: 'bg-purple-900/40 text-purple-300 border-purple-700/30', dot: 'bg-purple-400' },
+  'AIResume vs Competitors': { badge: 'bg-purple-900/40 text-purple-300 border-purple-700/30', dot: 'bg-purple-400' },
   'AI & Technology':         { badge: 'bg-blue-900/40 text-blue-300 border-blue-700/30',       dot: 'bg-blue-400'   },
   'ATS Optimization':        { badge: 'bg-amber-900/40 text-amber-300 border-amber-700/30',    dot: 'bg-amber-400'  },
   'Resume Guides':           { badge: 'bg-green-900/40 text-green-300 border-green-700/30',    dot: 'bg-green-400'  },
@@ -49,7 +49,7 @@ export default async function BlogPage(props: {
 
       <div className="relative z-10">
         <CardNav
-          logo="AI Resume"
+          logo="AIResume"
           links={navLinks}
         />
 
@@ -63,7 +63,7 @@ export default async function BlogPage(props: {
               className="inline-flex items-center gap-2 px-4 py-2 bg-[#81ff00]/10 border border-[#81ff00]/20 rounded-full text-[#81ff00] text-small font-medium mb-6"
             >
               <BookOpen className="w-4 h-4" />
-              AI Resume Career Journal
+              AIResume Career Journal
             </MotionDiv>
 
             <MotionH1
@@ -82,7 +82,7 @@ export default async function BlogPage(props: {
               transition={{ duration: 0.4, delay: 0.2 }}
               className="text-h3 text-gray-400 max-w-2xl mx-auto"
             >
-              Expert guides on CV building, ATS optimisation, interview prep, and job search strategy — written by the AI Resume research team.
+              Expert guides on CV building, ATS optimisation, interview prep, and job search strategy — written by the AIResume research team.
             </MotionP>
           </div>
         </section>
@@ -278,7 +278,7 @@ export default async function BlogPage(props: {
                   Ready to Build Your <span className="text-[#81ff00] bg-clip-text bg-gradient-to-r from-[#81ff00] via-[#a2ff54] to-emerald-400">Perfect Resume?</span>
                 </h2>
                 <p className="text-gray-300 mb-10 max-w-3xl text-body md:text-h2 leading-relaxed">
-                  AI Resume&apos;s resume builder uses the same keyword strategies from our blog articles — automated for you. Free to start.
+                  AIResume&apos;s resume builder uses the same keyword strategies from our blog articles — automated for you. Free to start.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-5 justify-center w-full sm:w-auto">
                   <Link href="/sign-up" className="inline-flex items-center justify-center gap-2.5 bg-[#81ff00] text-black px-12 py-5 rounded-full font-extrabold hover:bg-lime-400 hover:text-black active:scale-[0.98] transition-all text-body shadow-[0_0_40px_rgba(129,255,0,0.4)] group/btn">

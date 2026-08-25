@@ -15,7 +15,7 @@ export default function AIResumeBuilderPage() {
               <div className="w-8 h-8 bg-[#81ff00] rounded-lg flex items-center justify-center">
                 <span className="text-black font-bold text-sm">CV</span>
               </div>
-              <span className="text-white font-bold text-lg">AI Resume</span>
+              <span className="text-white font-bold text-lg">AIResume</span>
             </Link>
             <div className="hidden md:flex items-center gap-8">
               <Link href="/#features" className="text-gray-400 hover:text-white transition-colors text-sm">Features</Link>
@@ -154,7 +154,7 @@ export default function AIResumeBuilderPage() {
               { icon: '✨', title: 'Professional Templates', desc: 'Choose from 20+ ATS-friendly templates designed by professionals.' },
               { icon: '📊', title: 'Real-time Scoring', desc: 'Get instant feedback on your resume ATS score and improvements.' },
               { icon: '📝', title: 'Cover Letter Generator', desc: 'Generate matching cover letters with one click.' },
-              { icon: '🔄', title: 'Easy Updates', desc: 'Update once, apply everywhere. Our Master CV system keeps you ready.' },
+              { icon: '🔄', title: 'Easy Updates', desc: 'Update once, apply everywhere. Your Profile keeps you ready.' },
             ].map((feature, i) => (
               <motion.div
                 key={i}
@@ -184,7 +184,7 @@ export default function AIResumeBuilderPage() {
             Ready to Create Your Resume?
           </h2>
           <p className="text-green-100 mb-8">
-            Join thousands who landed their dream jobs with AI Resume.
+            Join thousands who landed their dream jobs with AIResume.
           </p>
           <Link
             href="/sign-up?callbackUrl=/editor"
@@ -202,7 +202,7 @@ export default function AIResumeBuilderPage() {
             <div className="w-6 h-6 bg-[#81ff00] rounded flex items-center justify-center">
               <span className="text-black font-bold text-xs">CV</span>
             </div>
-            <span className="text-gray-500 text-sm">© 2026 AI Resume. All rights reserved.</span>
+            <span className="text-gray-500 text-sm">© 2026 AIResume. All rights reserved.</span>
           </div>
           <div className="flex items-center gap-6">
             <Link href="/privacy-policy" className="text-gray-500 hover:text-white text-sm">Privacy</Link>

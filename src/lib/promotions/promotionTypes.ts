@@ -135,7 +135,7 @@ export const PROMOTION_TYPES: PromotionConfig[] = [
     ctaText: 'Supercharge My Search',
     ctaRoute: 'payment-modal:focused_monthly',
     imageUrl: IMAGE_URLS.upgrade,
-    contexts: ['free-user', 'dashboard'],
+    contexts: ['free-user'],
     priority: 6,
     autoDismissMs: 25000,
     cooldownDays: 3,

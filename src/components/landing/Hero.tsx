@@ -175,7 +175,7 @@ const Hero = ({ withBanner = false }: { withBanner?: boolean }) => {
               {/* Placeholder Image */}
               <Image
                 src="/images/herobanner.webp"
-                alt="AI Resume - Resume Builder Dashboard"
+                alt="AIResume - Resume Builder Dashboard"
                 fill
                 className="object-cover transition-opacity duration-1000"
                 priority
@@ -186,7 +186,7 @@ const Hero = ({ withBanner = false }: { withBanner?: boolean }) => {
               <div className={`absolute inset-0 w-full h-full transition-opacity duration-1000 pointer-events-none overflow-hidden ${isVideoLoaded ? 'opacity-100' : 'opacity-0'}`}>
                 <iframe
                   src="https://www.youtube-nocookie.com/embed/U1ElC0WlJWQ?autoplay=1&mute=1&loop=1&playlist=U1ElC0WlJWQ&controls=0&showinfo=0&rel=0&modestbranding=1&iv_load_policy=3&disablekb=1&enablejsapi=1&origin=https://buildairesume.com&playsinline=1"
-                  title="AI Resume Demo"
+                  title="AIResume Demo"
                   className="absolute inset-0 w-full h-full border-0 pointer-events-none"
                   allow="autoplay; encrypted-media"
                   onLoad={() => setIsVideoLoaded(true)}
@@ -236,7 +236,7 @@ const Hero = ({ withBanner = false }: { withBanner?: boolean }) => {
               {/* YouTube embed inside popup */}
               <iframe
                 src={`https://www.youtube-nocookie.com/embed/U1ElC0WlJWQ?autoplay=1&mute=${isPopupMuted ? '1' : '0'}&controls=1&showinfo=0&rel=0&modestbranding=1&enablejsapi=1`}
-                title="AI Resume Demo Popup"
+                title="AIResume Demo Popup"
                 className="w-full h-full border-0"
                 allow="autoplay; encrypted-media; picture-in-picture"
                 allowFullScreen

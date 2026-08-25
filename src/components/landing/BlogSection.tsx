@@ -5,7 +5,7 @@ import { getAllArticles } from '@/data/blogs';
 import { MotionDiv, MotionH2 } from '@/components/ui/motion-wrapper';
 
 const categoryColors: Record<string, string> = {
-  'AI Resume vs Competitors': 'bg-purple-900/40 text-purple-300 border-purple-700/30',
+  'AIResume vs Competitors': 'bg-purple-900/40 text-purple-300 border-purple-700/30',
   'AI & Technology':         'bg-blue-900/40 text-blue-300 border-blue-700/30',
   'ATS Optimization':        'bg-amber-900/40 text-amber-300 border-amber-700/30',
   'Resume Guides':           'bg-green-900/40 text-green-300 border-green-700/30',
@@ -72,7 +72,7 @@ export default function BlogSection() {
             Outsmart the ATS. <span className="text-[#81ff00]">Get the Interview.</span>
           </MotionH2>
           <p className="text-h3 text-gray-400 max-w-2xl leading-relaxed text-left">
-            Expert guides on CV building, ATS optimization, and job search strategy — written by the AI Resume research team.
+            Expert guides on CV building, ATS optimization, and job search strategy — written by the AIResume research team.
           </p>
         </MotionDiv>
 

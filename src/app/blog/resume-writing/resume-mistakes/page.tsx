@@ -5,7 +5,7 @@ import { MotionDiv } from '@/components/ui/motion-wrapper';
 import CardNav from '@/components/landing/CardNav';
 
 export const metadata: Metadata = {
-  title: 'Resume Mistakes to Avoid in 2026 | AI Resume',
+  title: 'Resume Mistakes to Avoid in 2026 | AIResume',
   description: 'Discover the most common resume mistakes that hurt your job search. Learn what to avoid and how to create a winning resume.',
   keywords: ['resume mistakes', 'resume errors', 'bad resume', 'resume tips'],
   alternates: { canonical: '/blog/resume-writing/resume-mistakes' },
@@ -91,9 +91,9 @@ const navLinks = [
       },
       {
         label: 'Blog',
-        description: 'Research-backed career guides, ATS tips, and resume tutorials from AI Resume.',
+        description: 'Research-backed career guides, ATS tips, and resume tutorials from AIResume.',
         href: '/blog',
-        ariaLabel: 'Read the AI Resume blog',
+        ariaLabel: 'Read the AIResume blog',
         icon: <BookOpen className="w-5 h-5 text-gray-400" />,
       },
     ],
@@ -119,7 +119,7 @@ export default function ResumeMistakesPage() {
     <div className="min-h-screen bg-[#0d1209]">
       <div className="relative z-10">
         <CardNav
-          logo="AI Resume"
+          logo="AIResume"
           links={navLinks}
         />
 
@@ -225,7 +225,7 @@ export default function ResumeMistakesPage() {
             <div className="w-6 h-6 bg-[#81ff00] rounded flex items-center justify-center">
               <span className="text-black font-bold text-small">CV</span>
             </div>
-            <span className="text-gray-500 text-small">© 2026 AI Resume</span>
+            <span className="text-gray-500 text-small">© 2026 AIResume</span>
           </div>
           <div className="flex gap-6">
             <Link href="/privacy-policy" className="text-gray-500 text-small">Privacy</Link>

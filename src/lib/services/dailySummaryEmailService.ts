@@ -151,7 +151,7 @@ class DailySummaryEmailService {
     <!-- Header -->
     <div style="background-color: #141810; padding: 30px; text-align: center; border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
       <div style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 20px;">
-        <img src="${process.env.NEXT_PUBLIC_APP_URL || 'https://buildairesume.com'}/images/logo.png" alt="AI Resume" style="height: 40px; display: block;">
+        <img src="${process.env.NEXT_PUBLIC_APP_URL || 'https://buildairesume.com'}/images/logo.png" alt="AIResume" style="height: 40px; display: block;">
       </div>
       <p style="color: #757575; margin: 0; font-size: 14px;">${date}</p>
     </div>
@@ -186,7 +186,7 @@ class DailySummaryEmailService {
       ${isFreePlan ? `
       <div style="background: linear-gradient(135deg, rgba(153, 255, 0, 0.1) 0%, rgba(153, 255, 0, 0.05) 100%); border: 1px solid rgba(153, 255, 0, 0.3); border-radius: 12px; padding: 20px; text-align: center; margin-bottom: 30px;">
         <h3 style="color: #ffffff; margin: 0 0 10px 0; font-size: 18px;">Unlock Your Full Potential 🚀</h3>
-        <p style="color: #e5e5e5; font-size: 14px; margin: 0 0 20px 0;">Get unlimited AI tailoring, advanced analytics, and priority support with AI Resume Pro.</p>
+        <p style="color: #e5e5e5; font-size: 14px; margin: 0 0 20px 0;">Get unlimited AI tailoring, advanced analytics, and priority support with AIResume Pro.</p>
         <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://buildairesume.com'}/dashboard/settings?tab=billing" 
            style="display: inline-block; background: linear-gradient(to right, #99FF00, #88e600); color: #000000; padding: 10px 24px; text-decoration: none; border-radius: 9999px; font-weight: 700; font-size: 14px;">
           Upgrade to Pro
@@ -206,7 +206,7 @@ class DailySummaryEmailService {
     
     <div style="background-color: #141810; padding: 20px; text-align: center; border-top: 1px solid rgba(255, 255, 255, 0.08);">
       <p style="font-size: 12px; color: #757575; margin: 0;">
-        &copy; 2026 AI Resume by Morigrid Labs. All rights reserved.<br>
+        &copy; 2026 AIResume by Morigrid Labs. All rights reserved.<br>
         You received this email because you have active job applications.
       </p>
     </div>
@@ -246,14 +246,14 @@ Docs Ready: ${summary.documentsReady}
 ${isFreePlan ? `
 UNLOCK YOUR FULL POTENTIAL
 --------------------------
-Get unlimited AI tailoring, advanced analytics, and priority support with AI Resume Pro.
+Get unlimited AI tailoring, advanced analytics, and priority support with AIResume Pro.
 Upgrade here: ${process.env.NEXT_PUBLIC_APP_URL || 'https://buildairesume.com'}/dashboard/settings?tab=billing
 ` : ''}
 
 View your dashboard: ${process.env.NEXT_PUBLIC_APP_URL || 'https://buildairesume.com'}/dashboard
 
 ---
-© 2026 AI Resume by Morigrid Labs. All rights reserved.
+© 2026 AIResume by Morigrid Labs. All rights reserved.
     `.trim();
   }
 

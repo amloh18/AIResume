@@ -1322,23 +1322,65 @@ export default function Step5Review({ onSave }: { onSave?: () => Promise<void> }
           {/* Finish & Exit button */}
           <button
             onClick={async () => {
-              // Guests must sign up before finishing — open auth modal instead
-              if (!session) {
+              const isFromOnboarding = typeof window !== 'undefined' && (
+                sessionStorage.getItem('fromOnboarding') === 'true' || 
+                sessionStorage.getItem('onboardingReturnUrl') !== null
+              );
+
+              // Guests who are NOT in onboarding must sign up before finishing
+              if (!session && !isFromOnboarding) {
                 setShowAuthPrompt(true);
                 return;
               }
+
               setIsDownloading(true);
               try {
                 if (onSave) {
                   await onSave();
                 }
+
+                if (isFromOnboarding) {
+                  // Persist onboarding stage update
+                  try {
+                    await fetch('/api/user/onboarding', {
+                      method: 'PATCH',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        current_stage: 'CV_READY_FORK',
+                        userLifecycleState: 'PRIMARY_CV_CREATED'
+                      })
+                    });
+                  } catch (err) {
+                    console.error('Failed to update onboarding session:', err);
+                  }
+
+                  try {
+                    const saved = localStorage.getItem('buildairesume_onboarding_state');
+                    if (saved) {
+                      const parsed = JSON.parse(saved);
+                      localStorage.setItem('buildairesume_onboarding_state', JSON.stringify({
+                        ...parsed,
+                        stage: 'CV_READY_FORK',
+                        step: 4,
+                        editorCompleted: true
+                      }));
+                    }
+                  } catch (e) {
+                    console.error('Failed to update local storage onboarding state:', e);
+                  }
+
+                  const returnUrl = (typeof window !== 'undefined' && sessionStorage.getItem('onboardingReturnUrl')) || '/welcome?stage=cv_ready';
+                  router.push(returnUrl);
+                  return;
+                }
+
                 if (typeof window !== 'undefined') {
                   sessionStorage.setItem('masterCVCreated', 'true');
                 }
                 router.push('/editor');
               } catch (err) {
                 console.error('Failed to save CV:', err);
-                alert('Failed to save CV. Please try again.');
+                toast.error('Failed to save CV. Please try again.');
               } finally {
                 setIsDownloading(false);
               }

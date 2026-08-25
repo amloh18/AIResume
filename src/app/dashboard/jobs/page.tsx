@@ -4,7 +4,7 @@ import JobsLoadingState from '@/components/dashboard/JobsDashboard/JobsLoadingSt
 import RouteGuard from '@/components/auth/RouteGuard';
 
 export const metadata = {
-  title: 'Jobs - AI Resume',
+  title: 'Jobs - AIResume',
   description: 'AI-powered job matching and automation dashboard',
 };
 

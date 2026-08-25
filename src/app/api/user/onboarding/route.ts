@@ -20,13 +20,32 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
     }
 
-    // Additional status checks from the old onboarding-status
+    // Additional status checks
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
     const isNewUser = user.createdAt ? user.createdAt > fiveMinutesAgo : false;
     
-    const masterCV = await CV.findOne({ userId: user._id, 'metadata.isMaster': true });
+    // Find master CV / Profile for this user
+    const masterCV = await CV.findOne({ 
+      userId: user._id, 
+      $or: [{ 'metadata.isMaster': true }, { isMaster: true }, { cvType: 'master' }]
+    }).sort({ updatedAt: -1 });
+    
     const hasMasterCV = !!masterCV;
     const hasSeenWelcome = (user.settings as any)?.hasSeenWelcome || false;
+
+    // Extract personalized name and role from Master CV / Profile or user record
+    const profileName = masterCV?.cvData?.basics?.name || 
+                        masterCV?.cvData?.personalInfo?.fullName || 
+                        user.onboarding?.candidate_name ||
+                        (user.firstName ? `${user.firstName}${user.lastName ? ' ' + user.lastName : ''}` : '') ||
+                        '';
+
+    const profileRole = masterCV?.cvData?.basics?.label || 
+                        masterCV?.cvData?.personalInfo?.jobTitle || 
+                        masterCV?.cvData?.work?.[0]?.position || 
+                        user.onboarding?.candidate_role ||
+                        user.jobTitle || 
+                        '';
 
     return NextResponse.json({
       success: true,
@@ -37,6 +56,10 @@ export async function GET(request: NextRequest) {
         isNewUser,
         hasMasterCV,
         hasSeenWelcome,
+        masterCVId: masterCV?._id?.toString() || masterCV?.id || null,
+        profileName,
+        profileRole,
+        masterCVData: masterCV?.cvData || null,
         subscription: user.subscription
       }
     });
@@ -63,21 +86,57 @@ export async function PATCH(request: NextRequest) {
     // Support nested onboarding body or flat body
     const onboardingData = body.onboarding || body;
 
+    // Core journey stages
     if (onboardingData.current_stage) updateFields['onboarding.current_stage'] = onboardingData.current_stage;
     if (onboardingData.completed_stages) updateFields['onboarding.completed_stages'] = onboardingData.completed_stages;
     if (onboardingData.primary_goal) updateFields['onboarding.primary_goal'] = onboardingData.primary_goal;
     if (onboardingData.confidence_score !== undefined) updateFields['onboarding.confidence_score'] = onboardingData.confidence_score;
+    if (onboardingData.initial_score !== undefined) updateFields['onboarding.initial_score'] = onboardingData.initial_score;
+    if (onboardingData.transformed_score !== undefined) updateFields['onboarding.transformed_score'] = onboardingData.transformed_score;
     if (onboardingData.recommended_plan) updateFields['onboarding.recommended_plan'] = onboardingData.recommended_plan;
+    
     if (onboardingData.primary_cv_id) {
       if (/^[0-9a-fA-F]{24}$/.test(onboardingData.primary_cv_id)) {
         updateFields['onboarding.primary_cv_id'] = onboardingData.primary_cv_id;
       } else {
-        console.log(`[Onboarding API] Skipping invalid primary_cv_id format: ${onboardingData.primary_cv_id}`);
+        console.log(`[Onboarding API] Skipping non-ObjectId primary_cv_id format: ${onboardingData.primary_cv_id}`);
       }
     }
+
     if (onboardingData.activation_status) updateFields['onboarding.activation_status'] = onboardingData.activation_status;
     if (onboardingData.activation_route) updateFields['onboarding.activation_route'] = onboardingData.activation_route;
     if (onboardingData.dashboard_layout_type) updateFields['onboarding.dashboard_layout_type'] = onboardingData.dashboard_layout_type;
+
+    // Career Preferences & Profiling
+    if (onboardingData.career_pathway) updateFields['onboarding.career_pathway'] = onboardingData.career_pathway;
+    if (onboardingData.target_roles !== undefined) updateFields['onboarding.target_roles'] = onboardingData.target_roles;
+    if (onboardingData.locations !== undefined) updateFields['onboarding.locations'] = onboardingData.locations;
+    if (onboardingData.experience_level) {
+      updateFields['onboarding.experience_level'] = onboardingData.experience_level;
+      updateFields['experience'] = onboardingData.experience_level;
+    }
+    if (onboardingData.salary_range !== undefined) updateFields['onboarding.salary_range'] = onboardingData.salary_range;
+    if (onboardingData.visa_required !== undefined) updateFields['onboarding.visa_required'] = onboardingData.visa_required;
+    if (onboardingData.search_status) updateFields['onboarding.search_status'] = onboardingData.search_status;
+    if (onboardingData.monthly_volume) updateFields['onboarding.monthly_volume'] = onboardingData.monthly_volume;
+    if (onboardingData.tracker_interest) updateFields['onboarding.tracker_interest'] = onboardingData.tracker_interest;
+    if (onboardingData.autoapply_interest) updateFields['onboarding.autoapply_interest'] = onboardingData.autoapply_interest;
+    
+    if (onboardingData.candidate_name) {
+      updateFields['onboarding.candidate_name'] = onboardingData.candidate_name;
+      const nameParts = onboardingData.candidate_name.trim().split(' ');
+      if (nameParts.length > 0) {
+        updateFields['firstName'] = nameParts[0];
+        if (nameParts.length > 1) {
+          updateFields['lastName'] = nameParts.slice(1).join(' ');
+        }
+      }
+    }
+
+    if (onboardingData.candidate_role) {
+      updateFields['onboarding.candidate_role'] = onboardingData.candidate_role;
+      updateFields['jobTitle'] = onboardingData.candidate_role;
+    }
 
     if (body.userLifecycleState) updateFields['userLifecycleState'] = body.userLifecycleState;
     if (body.hasSeenWelcome !== undefined) updateFields['settings.hasSeenWelcome'] = body.hasSeenWelcome;

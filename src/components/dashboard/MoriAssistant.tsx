@@ -115,19 +115,19 @@ export default function MoriAssistant() {
         email: 'support@buildairesume.com',
         name: 'Customer Support',
         subject: 'Customer Assistance Query',
-        body: 'Hello AI Resume Team,\n\nI need assistance with my account. [Describe your query].\n\nThank you.'
+        body: 'Hello AIResume Team,\n\nI need assistance with my account. [Describe your query].\n\nThank you.'
       },
       hello: {
         email: 'hello@buildairesume.com',
         name: 'General Inquiries',
         subject: 'General Inquiry / Partnership',
-        body: 'Hello AI Resume Team,\n\nI would like to query about [general topic].\n\nThank you.'
+        body: 'Hello AIResume Team,\n\nI would like to query about [general topic].\n\nThank you.'
       },
       feedback: {
         email: 'feedback@buildairesume.com',
         name: 'Feedback & Testimonial Support',
-        subject: `AI Resume User Testimonial: ${rating}-Star Rating`,
-        body: `Dear AI Resume Team,\n\nHere is my rating and testimonial for my experience using the platform:\n\nRating: ${rating} / 5 Stars\nComment: ${feedbackComment || 'No additional comments.'}\n\nThank you!`
+        subject: `AIResume User Testimonial: ${rating}-Star Rating`,
+        body: `Dear AIResume Team,\n\nHere is my rating and testimonial for my experience using the platform:\n\nRating: ${rating} / 5 Stars\nComment: ${feedbackComment || 'No additional comments.'}\n\nThank you!`
       }
     };
     return details[dept];
@@ -274,7 +274,7 @@ export default function MoriAssistant() {
     if (action === 'Downgrade to Free' || action === 'Keep Free Tier') {
       setCancelLayer(0);
       addMoriMessage(
-        "Excellent choice! Your subscription will transition to the Free Tier at the end of the billing period. We'd love to hear your feedback on AI Resume to help us improve.",
+        "Excellent choice! Your subscription will transition to the Free Tier at the end of the billing period. We'd love to hear your feedback on AIResume to help us improve.",
         'feedback_card'
       );
     } else if (action === 'Contact Finance') {

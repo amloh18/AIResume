@@ -189,7 +189,7 @@ export class CampaignEmailService {
                         let sendResponse: { success: boolean; messageId?: string; error?: string };
                         try {
                             const mailResult = await transporter!.sendMail({
-                                from: (campaign.fromEmail ? `"${campaign.fromName || 'AI Resume'}" <${campaign.fromEmail}>` : undefined),
+                                from: (campaign.fromEmail ? `"${campaign.fromName || 'AIResume'}" <${campaign.fromEmail}>` : undefined),
                                 to: user.email,
                                 subject,
                                 text: campaign.plainTextContent || htmlContent,

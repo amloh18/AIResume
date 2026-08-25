@@ -10,7 +10,7 @@ const sections = [
     id: 'ai-resume-builder',
     eyebrow: 'AI Resume Builder',
     h2: 'Create Your Resume With AI',
-    copy: 'Generate professional resume content in minutes. AI Resume helps you write a compelling professional summary, create achievement-focused bullet points, improve your existing experience, customize sections, and choose a professional template — all in one place.',
+    copy: 'Generate professional resume content in minutes. AIResume helps you write a compelling professional summary, create achievement-focused bullet points, improve your existing experience, customize sections, and choose a professional template — all in one place.',
     points: [
       'Generate professional resume content from your experience',
       'Improve existing resumes with better phrasing and stronger bullets',
@@ -24,7 +24,7 @@ const sections = [
     id: 'ats-optimization',
     eyebrow: 'ATS Optimization',
     h2: 'Build an ATS-Friendly Resume',
-    copy: 'Applicant tracking systems reject many resumes because of formatting and keyword gaps. AI Resume builds resumes with ATS-compatible formatting, keyword optimization, and clear, recruiter-friendly structure so your application is easy to parse and evaluate.',
+    copy: 'Applicant tracking systems reject many resumes because of formatting and keyword gaps. AIResume builds resumes with ATS-compatible formatting, keyword optimization, and clear, recruiter-friendly structure so your application is easy to parse and evaluate.',
     points: [
       'ATS-compatible formatting that parses cleanly',
       'Keyword optimization aligned with the job description',
@@ -38,7 +38,7 @@ const sections = [
     id: 'job-tailoring',
     eyebrow: 'Job-Specific Resume Tailoring',
     h2: 'Tailor Your Resume to Every Job',
-    copy: 'Provide a job description or a job URL and AI Resume identifies the most important keywords, compares the job with your resume, and recommends specific changes. Rewrite relevant sections and improve alignment with the role — without starting from scratch.',
+    copy: 'Provide a job description or a job URL and AIResume identifies the most important keywords, compares the job with your resume, and recommends specific changes. Rewrite relevant sections and improve alignment with the role — without starting from scratch.',
     points: [
       'Identify the keywords that matter for each job',
       'Compare the job description with your resume',
@@ -144,7 +144,7 @@ const SeoSections = () => {
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.15 }}
           >
-            AI Resume is your AI-powered workspace for building better resumes and applying to jobs faster.
+            AIResume is your AI-powered workspace for building better resumes and applying to jobs faster.
           </motion.p>
         </div>
 

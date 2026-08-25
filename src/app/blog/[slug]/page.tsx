@@ -14,10 +14,10 @@ export async function generateMetadata(props: {
 }): Promise<Metadata> {
   const params = await props.params;
   const article = getArticleBySlug(params.slug);
-  if (!article) return { title: 'Article Not Found | AI Resume' };
+  if (!article) return { title: 'Article Not Found | AIResume' };
 
   return {
-    title: `${article.title} | Career Tips & ATS Strategy | AI Resume`,
+    title: `${article.title} | Career Tips & ATS Strategy | AIResume`,
     description: article.excerpt || article.subtitle,
     alternates: { canonical: `/blog/${params.slug}` },
     openGraph: {
@@ -108,9 +108,9 @@ const navLinks = [
       },
       {
         label: 'Blog',
-        description: 'Research-backed career guides, ATS tips, and resume tutorials from AI Resume.',
+        description: 'Research-backed career guides, ATS tips, and resume tutorials from AIResume.',
         href: '/blog',
-        ariaLabel: 'Read the AI Resume blog',
+        ariaLabel: 'Read the AIResume blog',
         icon: <BookOpen className="w-5 h-5 text-gray-400" />,
       },
       {
@@ -137,7 +137,7 @@ const navLinks = [
 ];
 
 const categoryColors: Record<string, string> = {
-  'AI Resume vs Competitors': 'bg-purple-900/30 text-purple-300 border-purple-700/30',
+  'AIResume vs Competitors': 'bg-purple-900/30 text-purple-300 border-purple-700/30',
   'AI & Technology': 'bg-blue-900/30 text-blue-300 border-blue-700/30',
   'ATS Optimization': 'bg-amber-900/30 text-amber-300 border-amber-700/30',
   'Resume Guides': 'bg-green-900/30 text-green-300 border-green-700/30',
@@ -196,12 +196,12 @@ export default async function BlogPostPage(props: {
     "image": article.featuredImage,
     "author": {
       "@type": "Organization",
-      "name": "AI Resume Research Team",
+      "name": "AIResume Research Team",
       "url": "https://buildairesume.com"
     },
     "publisher": {
       "@type": "Organization",
-      "name": "AI Resume",
+      "name": "AIResume",
       "logo": {
         "@type": "ImageObject",
         "url": "https://buildairesume.com/images/favicon.png"
@@ -256,7 +256,7 @@ export default async function BlogPostPage(props: {
 
       <div className="relative z-10">
         <CardNav
-          logo="AI Resume"
+          logo="AIResume"
           links={navLinks}
         />
 
@@ -293,7 +293,7 @@ export default async function BlogPostPage(props: {
                 </div>
                 <div>
                   <p className="text-white font-semibold text-small">{article.author}</p>
-                  <p className="text-gray-500 text-small">AI Resume Research Team</p>
+                  <p className="text-gray-500 text-small">AIResume Research Team</p>
                 </div>
               </div>
             </MotionDiv>
@@ -427,7 +427,7 @@ export default async function BlogPostPage(props: {
                   Ready to Build Your <span className="text-[#81ff00] bg-clip-text bg-gradient-to-r from-[#81ff00] via-[#a2ff54] to-emerald-400">Perfect Resume?</span>
                 </h2>
                 <p className="text-gray-300 mb-10 max-w-3xl text-body md:text-h2 leading-relaxed">
-                  Apply the strategies from this article in AI Resume&apos;s resume builder. Build your ATS-optimised resume in minutes — free to start.
+                  Apply the strategies from this article in AIResume&apos;s resume builder. Build your ATS-optimised resume in minutes — free to start.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-5 justify-center w-full sm:w-auto">
                   <Link href="/sign-up" className="inline-flex items-center justify-center gap-2.5 bg-[#81ff00] text-black px-12 py-5 rounded-full font-extrabold hover:bg-lime-400 hover:text-black active:scale-[0.98] transition-all text-body shadow-[0_0_40px_rgba(129,255,0,0.4)] group/btn">

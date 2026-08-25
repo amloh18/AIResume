@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { PROMOTION_TYPES, type PromotionContext } from './promotionTypes';
 import type { PromotionConfig } from '@/contexts/FeaturePromotionContext';
 
@@ -84,7 +83,8 @@ export function selectPromotion(options: PromotionManagerOptions): PromotionConf
         return !isPaidUser;
       
       case 'upgrade-free-user':
-        // Show for free users only
+        // Show for free users only outside the dashboard page
+        if (contexts.includes('dashboard')) return false;
         return !isPaidUser;
       
       case 'job-tracking-no-jobs':

@@ -29,10 +29,10 @@ const PrivacyPolicyContent: React.FC = () => {
           Introduction
         </h3>
         <p className="text-white/80 leading-relaxed mb-4">
-          At AI Resume ("we," "our," or "us"), a product of <strong>Morigrid Labs</strong>, we are committed to protecting your privacy and ensuring the security of your personal information. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our AI-powered CV creation and job application management platform.
+          At AIResume ("we," "our," or "us"), a product of <strong>Morigrid Labs</strong>, we are committed to protecting your privacy and ensuring the security of your personal information. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our AI-powered CV creation and job application management platform.
         </p>
         <p className="text-white/80 leading-relaxed">
-          By using AI Resume, you agree to the collection and use of information in accordance with this policy. This policy complies with global data protection standards, including GDPR (General Data Protection Regulation), CCPA (California Consumer Privacy Act), and India's Digital Personal Data Protection Act 2023. If you do not agree with our policies and practices, please do not use our service.
+          By using AIResume, you agree to the collection and use of information in accordance with this policy. This policy complies with global data protection standards, including GDPR (General Data Protection Regulation), CCPA (California Consumer Privacy Act), and India's Digital Personal Data Protection Act 2023. If you do not agree with our policies and practices, please do not use our service.
         </p>
       </div>
 
@@ -328,7 +328,7 @@ const PrivacyPolicyContent: React.FC = () => {
 
         <div className="mt-6 p-4 bg-lime-500/10 rounded-lg border border-lime-500/20">
           <p className="text-lime-400 text-sm text-center">
-            © 2026 AI Resume by <strong>Morigrid Labs</strong>. All rights reserved.
+            © 2026 AIResume by <strong>Morigrid Labs</strong>. All rights reserved.
           </p>
         </div>
       </div>

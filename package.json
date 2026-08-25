@@ -1,7 +1,7 @@
 {
   "name": "buildairesume_app",
   "version": "0.9.9",
-  "description": "AI Resume - An AI-powered resume builder, ATS optimizer, and job application tracker",
+  "description": "AIResume - An AI-powered resume builder, ATS optimizer, and job application tracker",
   "private": true,
   "scripts": {
     "dev": "next dev",

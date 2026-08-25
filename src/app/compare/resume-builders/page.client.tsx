@@ -11,7 +11,7 @@ export default function CompareResumeBuildersPage() {
   return (
     <div className="min-h-screen bg-[#0d1209]">
       {/* Navigation */}
-      <CardNav logo="AI Resume" links={navLinks} />
+      <CardNav logo="AIResume" links={navLinks} />
 
       <section className="relative pt-32 pb-16 px-4">
         <div className="absolute inset-0 z-0 pointer-events-none">
@@ -55,7 +55,7 @@ export default function CompareResumeBuildersPage() {
               <thead>
                 <tr className="bg-[#141810]">
                   <th className="p-4 text-white font-bold">Feature</th>
-                  <th className="p-4 text-[#81ff00] font-bold text-center">AI Resume</th>
+                  <th className="p-4 text-[#81ff00] font-bold text-center">AIResume</th>
                   <th className="p-4 text-white font-bold text-center">Novoresume</th>
                   <th className="p-4 text-white font-bold text-center">Zety</th>
                   <th className="p-4 text-white font-bold text-center">Resume.io</th>
@@ -83,14 +83,14 @@ export default function CompareResumeBuildersPage() {
             </table>
           </motion.div>
 
-          {/* Why AI Resume */}
+          {/* Why AIResume */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
             className="mt-16 bg-gradient-to-r from-green-900/50 to-emerald-900/50 rounded-2xl p-8 border border-green-800/50"
           >
-            <h2 className="text-2xl font-bold text-white mb-6 text-center">Why Choose AI Resume?</h2>
+            <h2 className="text-2xl font-bold text-white mb-6 text-center">Why Choose AIResume?</h2>
             <div className="grid md:grid-cols-3 gap-6">
               {[
                 { icon: '🤖', title: 'AI-Powered', desc: 'Advanced AI generates role-specific content tailored to your target job' },
@@ -108,7 +108,7 @@ export default function CompareResumeBuildersPage() {
 
           <div className="mt-12 text-center">
             <Link href="/ai-resume-builder" className="inline-flex items-center gap-2 bg-[#81ff00] text-black px-8 py-4 rounded-full font-bold hover:bg-[#6dd600] transition-all hover:scale-105">
-              Try AI Resume Free <ArrowRight className="w-5 h-5" />
+              Try AIResume Free <ArrowRight className="w-5 h-5" />
             </Link>
           </div>
         </div>

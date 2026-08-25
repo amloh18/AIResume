@@ -21,13 +21,13 @@ const FAQ = () => {
     },
     {
       id: 2,
-      question: "Is AI Resume ATS-friendly?",
-      answer: "Yes. AI Resume builds resumes with ATS-compatible formatting, clear sections, and simple layouts that applicant tracking systems can parse reliably. Templates avoid tables and complex styling that commonly break ATS parsers, and the ATS checker highlights keyword gaps before you apply."
+      question: "Is AIResume ATS-friendly?",
+      answer: "Yes. AIResume builds resumes with ATS-compatible formatting, clear sections, and simple layouts that applicant tracking systems can parse reliably. Templates avoid tables and complex styling that commonly break ATS parsers, and the ATS checker highlights keyword gaps before you apply."
     },
     {
       id: 3,
-      question: "Can AI Resume tailor my resume to a job?",
-      answer: "Yes. Paste a job description or a job URL and AI Resume analyzes the role, identifies important keywords, compares the job with your resume, and recommends changes. You can rewrite relevant sections to improve alignment with the specific role you are applying for."
+      question: "Can AIResume tailor my resume to a job?",
+      answer: "Yes. Paste a job description or a job URL and AIResume analyzes the role, identifies important keywords, compares the job with your resume, and recommends changes. You can rewrite relevant sections to improve alignment with the specific role you are applying for."
     },
     {
       id: 4,
@@ -37,7 +37,7 @@ const FAQ = () => {
     {
       id: 5,
       question: "Can I improve an existing resume?",
-      answer: "Yes. Upload or paste your existing resume and AI Resume will analyze it, improve the content, strengthen weak bullet points, fix formatting, and suggest keywords so your resume performs better with both ATS systems and recruiters."
+      answer: "Yes. Upload or paste your existing resume and AIResume will analyze it, improve the content, strengthen weak bullet points, fix formatting, and suggest keywords so your resume performs better with both ATS systems and recruiters."
     },
     {
       id: 6,
@@ -51,13 +51,13 @@ const FAQ = () => {
     },
     {
       id: 8,
-      question: "Can I use AI Resume for CVs?",
-      answer: "Yes. AI Resume works for both resumes and CVs. Use it to create a CV with your full career history or a tailored resume for a specific job. The builder supports both formats with professional templates, so you can apply internationally with confidence."
+      question: "Can I use AIResume for CVs?",
+      answer: "Yes. AIResume works for both resumes and CVs. Use it to create a CV with your full career history or a tailored resume for a specific job. The builder supports both formats with professional templates, so you can apply internationally with confidence."
     },
     {
       id: 9,
       question: "Are the resume templates ATS-friendly?",
-      answer: "Yes. Every template in AI Resume uses ATS-compatible formatting, readable headings, and clean layouts. Choose from professional, modern, and simple resume templates with confidence that applicant tracking systems can parse them correctly."
+      answer: "Yes. Every template in AIResume uses ATS-compatible formatting, readable headings, and clean layouts. Choose from professional, modern, and simple resume templates with confidence that applicant tracking systems can parse them correctly."
     },
     {
       id: 10,

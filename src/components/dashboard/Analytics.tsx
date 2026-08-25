@@ -1864,7 +1864,7 @@ const Analytics: React.FC = () => {
             cvHealthScore={cvHealthScore}
             cvs={cvs}
             drafts={drafts}
-            onImproveScore={() => router.push('/dashboard/vault')}
+            onImproveScore={() => router.push('/resume-score')}
             onCreateCV={async () => {
               try {
                 const currentUserId = userId;

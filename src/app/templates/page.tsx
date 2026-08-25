@@ -20,16 +20,16 @@ export const metadata: Metadata = {
     'professional resume designs'
   ],
   openGraph: {
-    title: 'Professional Resume Templates - ATS-Optimized | AI Resume',
+    title: 'Professional Resume Templates - ATS-Optimized | AIResume',
     description: 'Browse professional, ATS-optimized resume templates. Modern, executive, and minimal designs - all free and optimized for job applications.',
     url: 'https://buildairesume.com/templates',
-    siteName: 'AI Resume',
+    siteName: 'AIResume',
     images: [
       {
         url: '/images/templates-og.png',
         width: 1200,
         height: 630,
-        alt: 'AI Resume Professional Resume Templates',
+        alt: 'AIResume Professional Resume Templates',
       },
     ],
     locale: 'en_US',

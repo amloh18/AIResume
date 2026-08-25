@@ -143,7 +143,7 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
     tags: [],
     notes: "",
     campaignType: "marketing",
-    fromName: "AI Resume Team",
+    fromName: "AIResume Team",
     fromEmail: "support@buildairesume.com",
     replyTo: "support@buildairesume.com",
     previewText: "",
@@ -412,9 +412,9 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
           description: aiPrompt.slice(0, 50) + "...",
           category: templateCategoryFilter !== "all" ? (templateCategoryFilter as any) : "newsletter",
           scenario: "AI Generated",
-          subjectTemplate: data.subject || "Exciting news from AI Resume",
+          subjectTemplate: data.subject || "Exciting news from AIResume",
           htmlContent: generatedHtml,
-          defaultFromName: "AI Resume Team",
+          defaultFromName: "AIResume Team",
           defaultFromEmail: "support@buildairesume.com"
         };
         

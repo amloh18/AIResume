@@ -890,7 +890,7 @@ export default function Step1Dashboard({
       setIsCreatingBlank(true);
       try {
         const payload = {
-          title: cvType === 'master' ? 'Master CV' : 'Standalone CV',
+          title: cvType === 'master' ? 'Primary Profile' : 'Standalone CV',
           cvData: freshCvData,
           cvType: cvType,
           status: 'draft',
@@ -909,7 +909,7 @@ export default function Step1Dashboard({
         const result = await response.json().catch(() => ({}));
         
         if (response.status === 409 && result.requiresMasterCV) {
-          toast.error(result.error || 'Please create your Master CV first.');
+          toast.error(result.error || 'Please create your Profile first.');
           return;
         }
 
@@ -1183,15 +1183,15 @@ export default function Step1Dashboard({
                       {isDuplicating ? <Loader2 className="w-6 h-6 sm:w-7 sm:h-7 animate-spin" /> : <Copy className="w-6 h-6 sm:w-7 sm:h-7 stroke-[2.5]" />}
                     </div>
                     <div>
-                      <h3 className="text-lg sm:text-xl font-black text-gray-900 dark:text-white mb-1 tracking-tight">Duplicate Primary CV</h3>
+                      <h3 className="text-lg sm:text-xl font-black text-gray-900 dark:text-white mb-1 tracking-tight">Duplicate Profile</h3>
                       <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 font-medium leading-relaxed">
                         Create a copy of your <br className="hidden xs:block" />
-                        master CV.
+                        profile.
                       </p>
                     </div>
                     {!userHasMasterCV && (
                       <span className="text-[9px] sm:text-[10px] font-black px-3 sm:px-4 py-1 sm:py-1.5 bg-red-100 dark:bg-red-500/10 text-red-500 rounded-full">
-                        Requires Master CV
+                        Requires Profile
                       </span>
                     )}
                   </div>

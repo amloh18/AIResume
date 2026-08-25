@@ -32,7 +32,7 @@ const CookiePolicyContent: React.FC = () => {
           Cookies are small text files that are placed on your device (computer, tablet, or mobile) when you visit our website. They help us provide you with a better experience by remembering your preferences, analyzing how you use our site, and personalizing content.
         </p>
         <p className="text-white/80 leading-relaxed mb-4">
-          This Cookie Policy explains how AI Resume uses cookies and similar tracking technologies when you visit our website and how you can control them. This policy complies with GDPR, CCPA, and the ePrivacy Directive.
+          This Cookie Policy explains how AIResume uses cookies and similar tracking technologies when you visit our website and how you can control them. This policy complies with GDPR, CCPA, and the ePrivacy Directive.
         </p>
         <div className="bg-lime-500/10 rounded-lg p-4 border border-lime-500/20">
           <p className="text-lime-400 text-sm">

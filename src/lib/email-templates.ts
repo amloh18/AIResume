@@ -325,7 +325,7 @@ const getBaseTemplate = (title: string, content: string, footerText?: string) =>
               <!-- Header -->
               <div style="margin-bottom: 30px;">
                 <div style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 10px;">
-                  <img src="${getEmailImageUrl('/images/logo.png')}" alt="AI Resume Logo" width="40" height="40" style="display: block; max-width: 40px; height: auto;">
+                  <img src="${getEmailImageUrl('/images/logo.png')}" alt="AIResume Logo" width="40" height="40" style="display: block; max-width: 40px; height: auto;">
                 </div>
                 <p style="color: rgba(255, 255, 255, 0.6); margin: 5px 0 0 0; font-size: 14px; line-height: 1.4;">Professional CV Builder</p>
               </div>
@@ -334,7 +334,7 @@ const getBaseTemplate = (title: string, content: string, footerText?: string) =>
               
               <!-- Footer -->
               <div style="margin-top: 40px; text-align: center; color: rgba(255, 255, 255, 0.5); font-size: 12px; line-height: 1.4; border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 20px;">
-                <p style="margin: 5px 0; color: rgba(255, 255, 255, 0.5); font-size: 12px;">© 2026 AI Resume by <strong>Morigrid Labs</strong>. All rights reserved.</p>
+                <p style="margin: 5px 0; color: rgba(255, 255, 255, 0.5); font-size: 12px;">© 2026 AIResume by <strong>Morigrid Labs</strong>. All rights reserved.</p>
                 <p style="margin: 5px 0; color: rgba(255, 255, 255, 0.5); font-size: 12px;">Made with ❤️ by Morigrid Labs</p>
                 <p style="margin: 5px 0; color: rgba(255, 255, 255, 0.5); font-size: 12px;">buildairesume.com</p>
                 ${footerText ? `<p style="margin: 5px 0; color: rgba(255, 255, 255, 0.5); font-size: 12px;">${footerText}</p>` : ''}
@@ -356,11 +356,11 @@ export function getNewUserTemplate(data: EmailTemplateData) {
       <img src="https://buildairesume.com/images/one_click_career_kit.png" alt="One-Click Career Kit" width="200" height="auto" style="display: block; margin: 0 auto; max-width: 200px; height: auto; border-radius: 8px;">
     </div>
     <h2 class="title">One-Click Career Kit</h2>
-    <h2 class="title" style="margin-top: 0;">Welcome to AI Resume, ${data.firstName}!</h2>
+    <h2 class="title" style="margin-top: 0;">Welcome to AIResume, ${data.firstName}!</h2>
     <p class="subtitle">Your journey to creating the perfect CV starts here.</p>
     
     <div class="content">
-      <p>We're thrilled to have you join our community of professionals who are building their dream careers. AI Resume is designed to help you create stunning, ATS-friendly CVs that get you noticed by employers.</p>
+      <p>We're thrilled to have you join our community of professionals who are building their dream careers. AIResume is designed to help you create stunning, ATS-friendly CVs that get you noticed by employers.</p>
       
       <div class="highlight">
         <p class="highlight-text">🎉 Your account is ready to use!</p>
@@ -396,7 +396,7 @@ export function getNewUserTemplate(data: EmailTemplateData) {
     </div>
   `;
   
-  return getBaseTemplate('Welcome to AI Resume', content);
+  return getBaseTemplate('Welcome to AIResume', content);
 }
 
 // 2. Limit Exhausted (Upgrade) Email
@@ -448,7 +448,7 @@ export function getLimitExhaustedTemplate(data: EmailTemplateData) {
     </div>
   `;
   
-  return getBaseTemplate('Upgrade Your AI Resume Plan', content);
+  return getBaseTemplate('Upgrade Your AIResume Plan', content);
 }
 
 // 3. Special Offers (Coupon Code) Email
@@ -459,7 +459,7 @@ export function getSpecialOffersTemplate(data: EmailTemplateData) {
     </div>
     <h2 class="title">Gain Your Edge</h2>
     <h2 class="title" style="margin-top: 0;">🎉 Special Offer Just for You!</h2>
-    <p class="subtitle">Exclusive discount on your AI Resume Pro subscription.</p>
+    <p class="subtitle">Exclusive discount on your AIResume Pro subscription.</p>
     
     <div class="content">
       <p>We've prepared something special for you, ${data.firstName}! As a valued member of our community, you deserve the best deal on professional CV building tools.</p>
@@ -494,7 +494,7 @@ export function getSpecialOffersTemplate(data: EmailTemplateData) {
     </div>
   `;
   
-  return getBaseTemplate('Special Offer - AI Resume', content);
+  return getBaseTemplate('Special Offer - AIResume', content);
 }
 
 // 4. 4-Digit Verification Code Email
@@ -524,14 +524,14 @@ export function getVerificationCodeTemplate(data: EmailTemplateData) {
     </div>
   `;
   
-  return getBaseTemplate('Verification Code - AI Resume', content);
+  return getBaseTemplate('Verification Code - AIResume', content);
 }
 
 // 5. Account Deletion Email
 export function getAccountDeletionTemplate(data: EmailTemplateData) {
   const content = `
     <h2 class="title">Account Deletion Confirmation</h2>
-    <p class="subtitle">Your AI Resume account has been successfully deleted.</p>
+    <p class="subtitle">Your AIResume account has been successfully deleted.</p>
     
     <div class="content">
       <p>We're sorry to see you go, ${data.firstName}. Your account and all associated data have been permanently removed from our systems.</p>
@@ -559,7 +559,7 @@ export function getAccountDeletionTemplate(data: EmailTemplateData) {
     </div>
   `;
   
-  return getBaseTemplate('Account Deleted - AI Resume', content, 'If you have any questions, please contact our support team.');
+  return getBaseTemplate('Account Deleted - AIResume', content, 'If you have any questions, please contact our support team.');
 }
 
 // 6. Email Verification Template
@@ -569,7 +569,7 @@ export function getEmailVerificationTemplate(data: EmailTemplateData) {
     <p class="subtitle">Click the button below to complete your account setup.</p>
     
     <div class="content">
-      <p>Welcome to AI Resume, ${data.firstName}! To get started with creating your professional CV, please verify your email address.</p>
+      <p>Welcome to AIResume, ${data.firstName}! To get started with creating your professional CV, please verify your email address.</p>
       
       <a href="${data.link}" class="button">Verify Email Address</a>
       
@@ -587,7 +587,7 @@ export function getEmailVerificationTemplate(data: EmailTemplateData) {
     </div>
   `;
   
-  return getBaseTemplate('Verify Your Email - AI Resume', content);
+  return getBaseTemplate('Verify Your Email - AIResume', content);
 }
 
 // 7. Password Reset Template
@@ -597,7 +597,7 @@ export function getPasswordResetTemplate(data: EmailTemplateData) {
     <p class="subtitle">Click the button below to set a new password for your account.</p>
 
     <div class="content">
-      <p>We received a request to reset your password for your AI Resume account. If you made this request, click the button below to set a new password.</p>
+      <p>We received a request to reset your password for your AIResume account. If you made this request, click the button below to set a new password.</p>
 
       <a href="${data.link}" class="button">Reset Password</a>
 
@@ -614,7 +614,7 @@ export function getPasswordResetTemplate(data: EmailTemplateData) {
     </div>
   `;
 
-  return getBaseTemplate('Reset Your Password - AI Resume', content);
+  return getBaseTemplate('Reset Your Password - AIResume', content);
 }
 
 // 8. Welcome Email Template (alias for new user template)
@@ -627,10 +627,10 @@ export function getMembershipReminderTemplate(data: EmailTemplateData) {
   const daysText = data.daysLeft === 1 ? 'day' : 'days';
   const content = `
     <h2 class="title">Membership Expiring Soon</h2>
-    <p class="subtitle">Don't lose access to your premium AI Resume features.</p>
+    <p class="subtitle">Don't lose access to your premium AIResume features.</p>
 
     <div class="content">
-      <p>Hi ${data.firstName}, your AI Resume membership will expire in ${data.daysLeft} ${daysText}. Renew now to continue enjoying all premium features!</p>
+      <p>Hi ${data.firstName}, your AIResume membership will expire in ${data.daysLeft} ${daysText}. Renew now to continue enjoying all premium features!</p>
 
       <div class="highlight">
         <p class="highlight-text">🎯 What you'll lose without membership:</p>
@@ -668,17 +668,17 @@ export function getMembershipReminderTemplate(data: EmailTemplateData) {
     </div>
   `;
 
-  return getBaseTemplate('Membership Expiring Soon - AI Resume', content);
+  return getBaseTemplate('Membership Expiring Soon - AIResume', content);
 }
 
 // 10. Test Email Template
 export function getTestEmailTemplate() {
   const content = `
     <h2 class="title">Test Email</h2>
-    <p class="subtitle">This is a test email from AI Resume.</p>
+    <p class="subtitle">This is a test email from AIResume.</p>
 
     <div class="content">
-      <p>This email confirms that your AI Resume email service is working correctly.</p>
+      <p>This email confirms that your AIResume email service is working correctly.</p>
 
       <div class="highlight">
         <p class="highlight-text">✅ Email service is operational</p>
@@ -688,7 +688,7 @@ export function getTestEmailTemplate() {
       <div class="info">
         <p class="info-text">
           <strong>Test completed at:</strong> ${new Date().toLocaleString()}<br>
-          <strong>Service:</strong> AI Resume Email System
+          <strong>Service:</strong> AIResume Email System
         </p>
       </div>
 
@@ -698,5 +698,5 @@ export function getTestEmailTemplate() {
     </div>
   `;
 
-  return getBaseTemplate('Test Email - AI Resume', content);
+  return getBaseTemplate('Test Email - AIResume', content);
 }
