@@ -19,7 +19,7 @@ export const useJobsPersistence = () => {
   const [preferences, setPreferences] = useState<ViewPreferences>(() => {
     if (typeof window === 'undefined') {
       return {
-        mode: 'kanban',
+        mode: 'list',
         filterStatus: 'all',
         sortBy: 'lastUpdated',
         lastUpdatedFilter: 'all',
@@ -39,7 +39,7 @@ export const useJobsPersistence = () => {
     }
 
     return {
-      mode: 'kanban',
+      mode: 'list',
       filterStatus: 'all',
       sortBy: 'lastUpdated',
       lastUpdatedFilter: 'all',

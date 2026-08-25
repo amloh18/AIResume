@@ -263,14 +263,18 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
         setSecondaryLoading(prev => ({ ...prev, jobs: true }));
         setErrors(prev => ({ ...prev, jobs: null }));
         console.log('🔍 DashboardData - Fetching jobs');
-        const response = await authenticatedFetch(endpoint);
+        let response = await authenticatedFetch(endpoint);
+        if (!response || !response.ok) {
+          response = await fetch(endpoint, { cache: 'no-store' });
+        }
         const contentType = response.headers.get('content-type');
         if (contentType && contentType.includes('application/json')) {
           const result = await response.json();
 
-          if (result.success && result.data?.jobs) {
-            console.log(`✅ DashboardData - Jobs loaded: ${result.data.jobs.length} items`);
-            setJobs(result.data.jobs);
+          const jobsList = result.data?.jobs || result.jobs || [];
+          if (Array.isArray(jobsList)) {
+            console.log(`✅ DashboardData - Jobs loaded: ${jobsList.length} items`);
+            setJobs(jobsList);
           }
         } else {
           console.error('Jobs response is not JSON. Content-Type:', contentType);

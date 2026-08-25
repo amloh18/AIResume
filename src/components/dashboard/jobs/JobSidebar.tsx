@@ -9,7 +9,7 @@ import {
   X, Briefcase, MapPin, DollarSign, Calendar, ExternalLink,
   FileText, CheckCircle, Clock, AlertCircle, Plus, Edit, Trash2,
   Target, Building2, Star, Copy, Archive, ChevronDown, User, Mail, Phone, TrendingUp,
-  Eye, ArrowRight, Sparkles, Loader2
+  Eye, ArrowRight, Sparkles, Loader2, FileCheck, Tag, Download, Pencil, Check, RefreshCw, Send, Shield, Save
 } from 'lucide-react';
 
 // Ensure all icons are properly tree-shaken and available
@@ -129,6 +129,99 @@ const JobSidebar: React.FC<JobSidebarProps> = ({
   const [showCreatedStageModal, setShowCreatedStageModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [detailsModalView, setDetailsModalView] = useState<'details' | 'insights'>('details');
+  
+  // 5 Tab Navigation: details | insights | communication | notes | documents
+  type SidebarTab = 'details' | 'insights' | 'communication' | 'notes' | 'documents';
+  const [activeTab, setActiveTab] = useState<SidebarTab>('details');
+  const [jobNotes, setJobNotes] = useState<string>(job.notes || '');
+  const [isSavingNotes, setIsSavingNotes] = useState(false);
+  const [jobTags, setJobTags] = useState<string[]>(job.tags || []);
+  const [newTagInput, setNewTagInput] = useState('');
+
+  useEffect(() => {
+    setJobNotes(job.notes || '');
+    setJobTags(job.tags || []);
+  }, [job]);
+
+  const handleSaveNotes = async () => {
+    const targetJobId = job._id || job.id;
+    if (!targetJobId) {
+      toast.error('Unable to save: Job ID not found');
+      return;
+    }
+    setIsSavingNotes(true);
+    try {
+      const currentUserId = user?.id || (user as any)?._id;
+      const res = currentUserId
+        ? await authenticatedFetchWithUserId(`/api/jobs/${targetJobId}`, currentUserId, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              notes: jobNotes,
+              tags: jobTags,
+            }),
+          })
+        : await authenticatedFetch(`/api/jobs/${targetJobId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              notes: jobNotes,
+              tags: jobTags,
+            }),
+          });
+      if (res.ok) {
+        toast.success('Notes & tags saved successfully!');
+        job.notes = jobNotes;
+        job.tags = jobTags;
+        if (typeof onRefresh === 'function') {
+          onRefresh();
+        }
+      } else {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || data.message || 'Failed to save notes');
+      }
+    } catch (err: any) {
+      console.error('Error saving notes:', err);
+      toast.error(err.message || 'Failed to save notes');
+    } finally {
+      setIsSavingNotes(false);
+    }
+  };
+
+  const handleAddTag = () => {
+    const trimmed = newTagInput.trim();
+    if (!trimmed) return;
+    if (jobTags.includes(trimmed)) {
+      setNewTagInput('');
+      return;
+    }
+    const updated = [...jobTags, trimmed];
+    setJobTags(updated);
+    setNewTagInput('');
+  };
+
+  const handleRemoveTag = (tagToRemove: string) => {
+    setJobTags(jobTags.filter((t) => t !== tagToRemove));
+  };
+
+  const [fallbackMasterCvId, setFallbackMasterCvId] = useState<string | null>(null);
+
+  const handleDownloadDocument = (docType: 'cv' | 'coverLetter') => {
+    const targetId =
+      docType === 'cv'
+        ? primaryJourney?.cvId || (job as any).cvId || fallbackMasterCvId
+        : primaryJourney?.coverLetterId || (job as any).coverLetterId;
+    if (!targetId) {
+      toast.error(`No ${docType === 'cv' ? 'CV' : 'Cover Letter'} available to download.`);
+      return;
+    }
+    const url =
+      docType === 'cv'
+        ? `/api/cvs/${targetId}/download?format=pdf`
+        : `/api/cover-letters/${targetId}/download`;
+    window.open(url, '_blank');
+  };
+
   const [activeActionId, setActiveActionId] = useState<TrackerSidebarActionId | null>(null);
   const [activeActionPayload, setActiveActionPayload] = useState<TrackerSidebarActionPayload | null>(null);
   const [previewDocumentType, setPreviewDocumentType] = useState<'cv' | 'coverLetter' | null>(null);
@@ -233,15 +326,15 @@ const JobSidebar: React.FC<JobSidebarProps> = ({
   }, [trackerGenerationPreview]);
 
   const loadJourneysForJob = async () => {
-    const jobId = job.id || job._id;
-    if (!user?.id || !jobId) return;
+    const targetJobId = job._id || job.id;
+    if (!user?.id || !targetJobId) return;
 
     setLoadingJourneys(true);
     try {
-      const response = await authenticatedFetchWithUserId(`/api/application-journey?jobId=${jobId}`, user.id);
+      const response = await authenticatedFetchWithUserId(`/api/application-journey?jobId=${targetJobId}`, user.id);
       const result = await response.json();
 
-      if (result.success && result.data.journeys) {
+      if (result.success && result.data?.journeys) {
         setJourneys(result.data.journeys);
       } else {
         setJourneys([]);
@@ -253,14 +346,14 @@ const JobSidebar: React.FC<JobSidebarProps> = ({
     }
   };
 
-  // Load CV data for user information
+  // Load CV data for user information and document previews
   const loadCVData = async (cvId?: string) => {
     if (!user?.id) return;
 
     setLoadingCV(true);
     try {
       // First try to get CV from journey if cvId provided
-      let targetCvId = cvId;
+      let targetCvId = cvId || (job as any).cvId;
 
       // If no cvId from journey, try to get master CV
       if (!targetCvId) {
@@ -268,10 +361,14 @@ const JobSidebar: React.FC<JobSidebarProps> = ({
         const masterCVResult = await masterCVResponse.json();
         if (masterCVResult.success && masterCVResult.data?.masterCV) {
           targetCvId = masterCVResult.data.masterCV._id || masterCVResult.data.masterCV.id;
+          if (targetCvId) {
+            setFallbackMasterCvId(targetCvId);
+          }
         }
       }
 
       if (targetCvId) {
+        setFallbackMasterCvId(targetCvId);
         const cvResponse = await authenticatedFetchWithUserId(`/api/cvs/${targetCvId}`, user.id);
         const cvResult = await cvResponse.json();
         if (cvResult.success && cvResult.data?.cv) {
@@ -286,8 +383,12 @@ const JobSidebar: React.FC<JobSidebarProps> = ({
       try {
         const masterCVResponse = await authenticatedFetchWithUserId('/api/cvs/master', user.id);
         const masterCVResult = await masterCVResponse.json();
-        if (masterCVResult.success && masterCVResult.data?.masterCV?.cvData) {
-          setCvData(masterCVResult.data.masterCV.cvData);
+        if (masterCVResult.success && masterCVResult.data?.masterCV) {
+          const masterId = masterCVResult.data.masterCV._id || masterCVResult.data.masterCV.id;
+          if (masterId) setFallbackMasterCvId(masterId);
+          if (masterCVResult.data.masterCV.cvData) {
+            setCvData(masterCVResult.data.masterCV.cvData);
+          }
         }
       } catch (fallbackError) {
         console.error('❌ Error loading master CV:', fallbackError);
@@ -299,26 +400,21 @@ const JobSidebar: React.FC<JobSidebarProps> = ({
 
   // Load journeys for this specific job when modal opens
   useEffect(() => {
-    if (user?.id && job?.id) {
+    const currentJobId = job?._id || job?.id;
+    if (user?.id && currentJobId) {
       loadJourneysForJob();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, job?.id]);
+  }, [user?.id, job?._id, job?.id]);
 
   // Load CV data when journeys are loaded or when modal opens
   useEffect(() => {
     if (user?.id) {
-      // Try to get CV from first journey, otherwise get master CV
       const firstJourneyWithCV = journeys.find(j => j.cvId);
-      if (firstJourneyWithCV?.cvId) {
-        loadCVData(firstJourneyWithCV.cvId);
-      } else {
-        // Do not fallback to master CV - if no journey CV, we have no CV data
-        setLoadingCV(false);
-      }
+      loadCVData(firstJourneyWithCV?.cvId);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [journeys, user?.id]);
+  }, [journeys, user?.id, job?._id, job?.id]);
 
   // Calculate days since job status last changed
   const getDaysSinceLastUpdate = (job: JobApplication) => {
@@ -835,12 +931,17 @@ ${userName}`
     router.push(`/dashboard/interview/${jobId}`);
   }, [jobId, router]);
   const handleOpenDocumentPreview = useCallback(async (documentType: 'cv' | 'coverLetter') => {
-    if (!user?.id || !primaryJourney) {
+    if (!user?.id) {
       return;
     }
 
-    const targetId = documentType === 'cv' ? primaryJourney.cvId : primaryJourney.coverLetterId;
+    const targetId =
+      documentType === 'cv'
+        ? primaryJourney?.cvId || (job as any).cvId || fallbackMasterCvId
+        : primaryJourney?.coverLetterId || (job as any).coverLetterId;
+
     if (!targetId) {
+      toast.error(`No ${documentType === 'cv' ? 'CV' : 'cover letter'} document linked.`);
       return;
     }
 
@@ -885,7 +986,7 @@ ${userName}`
     } finally {
       setPreviewLoading(null);
     }
-  }, [primaryJourney, user?.id]);
+  }, [primaryJourney, job, fallbackMasterCvId, user?.id]);
 
   const openDetailsView = (view: 'details' | 'insights') => {
     setDetailsModalView(view);
@@ -1328,74 +1429,39 @@ ${userName}`
 
   const handleDeleteJob = async () => {
     try {
-      const userId = user?.id;
+      const currentUserId = user?.id || (user as any)?._id;
+      const targetJobId = job._id || job.id;
 
-      if (!userId) {
-        toast.error('User session not found. Please log in again.');
-        return;
-      }
-
-      // Use job._id if available, otherwise fall back to job.id
-      const jobId = job._id || job.id;
-
-      if (!jobId) {
+      if (!targetJobId) {
         toast.error('Job ID not found. Please refresh and try again.');
         return;
       }
 
-      const response = await authenticatedFetchWithUserId(`/api/jobs/${jobId}`, user.id, {
-        method: 'DELETE',
-      });
+      const response = currentUserId
+        ? await authenticatedFetchWithUserId(`/api/jobs/${targetJobId}`, currentUserId, {
+            method: 'DELETE',
+          })
+        : await authenticatedFetch(`/api/jobs/${targetJobId}`, {
+            method: 'DELETE',
+          });
 
       if (!response.ok) {
-        let errorMessage = 'Failed to delete job';
-        try {
-          // Check if response has content before parsing
-          const contentType = response.headers.get('content-type');
-          const hasJsonContent = contentType && contentType.includes('application/json');
-
-          if (hasJsonContent) {
-            const text = await response.text();
-            if (text && text.trim()) {
-              const errorData = JSON.parse(text);
-              console.error('❌ JobSidebar - Delete failed:', errorData);
-
-              // Check if errorData has meaningful content
-              if (errorData && Object.keys(errorData).length > 0) {
-                errorMessage = errorData.error || errorData.message || errorMessage;
-              } else {
-                // If empty object, use status text or status code
-                errorMessage = response.statusText || `Server returned status ${response.status}`;
-              }
-            } else {
-              // Empty response body
-              errorMessage = response.statusText || `Server returned status ${response.status}`;
-            }
-          } else {
-            // Not JSON response
-            errorMessage = response.statusText || `Server returned status ${response.status}`;
-          }
-        } catch (parseError) {
-          // If JSON parsing fails, use status text
-          console.error('❌ JobSidebar - Failed to parse error response:', parseError);
-          errorMessage = response.statusText || `Server returned status ${response.status}`;
-        }
-
-        console.error('❌ JobSidebar - Delete error details:', {
-          status: response.status,
-          statusText: response.statusText,
-          errorMessage
-        });
-
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage =
+          errorData.error || errorData.message || response.statusText || `Failed to delete job (Status ${response.status})`;
         throw new Error(errorMessage);
       }
 
       toast.success('Job deleted successfully!');
-      window.dispatchEvent(new CustomEvent('jobDeleted', { detail: { jobId } }));
-      onClose(); // Close modal after deletion
-      onRefresh();
-
-    } catch (error) {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('jobDeleted', { detail: { jobId: targetJobId } }));
+      }
+      setShowDeleteConfirm(null);
+      onClose();
+      if (typeof onRefresh === 'function') {
+        onRefresh();
+      }
+    } catch (error: any) {
       console.error('❌ Error deleting job:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to delete job. Please try again.');
     }
@@ -1467,9 +1533,9 @@ ${userName}`
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Calculate sidebar width
+  // Calculate sidebar width (70% width on desktop with margins, 100% full width on mobile)
   const sidebarWidth = useMemo(() => {
-    return windowWidth >= 768 ? '50vw' : '100%';
+    return windowWidth >= 768 ? 'calc(70vw - 24px)' : '100%';
   }, [windowWidth]);
 
   // Swipe gesture handling for mobile
@@ -1689,8 +1755,15 @@ ${userName}`
           animate={{ x: 0 }}
           exit={{ x: 'calc(100% + 12px)' }}
           transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-          className="fixed right-3 top-3 bottom-3 h-auto bg-white dark:bg-[#141810] shadow-2xl z-[99999] flex flex-col rounded-2xl overflow-hidden transition-all duration-300"
-          style={{ width: sidebarWidth, right: showCommsSidebar && windowWidth >= 768 ? '474px' : '12px' }}
+          className={`fixed shadow-2xl z-[99999] flex flex-col overflow-hidden transition-all duration-300 bg-white dark:bg-[#141810] ${
+            windowWidth >= 768 ? 'top-3 right-3 bottom-3 rounded-2xl' : 'top-0 right-0 bottom-0 left-0 rounded-none'
+          }`}
+          style={{
+            width: sidebarWidth,
+            right: windowWidth >= 768 ? (showCommsSidebar ? '474px' : '12px') : '0px',
+            top: windowWidth >= 768 ? '12px' : '0px',
+            bottom: windowWidth >= 768 ? '12px' : '0px',
+          }}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
@@ -1789,17 +1862,13 @@ ${userName}`
           <div className="flex-1 overflow-y-auto min-h-0">
             <div className="space-y-6 px-6 py-5 pb-8">
               <section className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-small font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">Stages</p>
-                    <h3 className="text-h3 font-semibold text-gray-900 dark:text-white">Application timeline</h3>
-                  </div>
-                  {terminalStageLabel && (
+                {terminalStageLabel && (
+                  <div className="flex items-center justify-end">
                     <span className="rounded-full bg-red-100 px-3 py-1 text-small font-semibold text-red-700 dark:bg-red-900/30 dark:text-red-300">
                       {terminalStageLabel}
                     </span>
-                  )}
-                </div>
+                  </div>
+                )}
 
                 <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-emerald-500/10 dark:bg-[#131810] relative overflow-hidden">
                   {/* Progress Line Background */}
@@ -1853,16 +1922,6 @@ ${userName}`
               </section>
 
               <section className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-small font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">Journey Card</p>
-                    <h3 className="text-h3 font-semibold text-gray-900 dark:text-white">What matters right now</h3>
-                  </div>
-                  <span className={`rounded-full px-3 py-1 text-small font-semibold ${journeyCardData.accentClasses}`}>
-                    {journeyCardData.eyebrow}
-                  </span>
-                </div>
-
                 <div className={`rounded-[24px] border p-5 shadow-sm ${journeyCardData.toneClasses}`}>
                   <div className="flex flex-col gap-4">
                     {/* Top Row: Title, Eyebrow & Description */}
@@ -1989,242 +2048,648 @@ ${userName}`
                 </div>
               </section>
 
-              {isRecruiterVisibilityStage && (
-                <section className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810]">
-                  <div className="mb-4 flex items-start justify-between gap-4">
-                    <div>
-                      <p className="text-small font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">Recruiter Visibility</p>
-                      <h3 className="text-h3 font-semibold text-gray-900 dark:text-white">Outreach that keeps this application visible</h3>
-                    </div>
-                    <span className="rounded-full bg-indigo-100 px-3 py-1 text-small font-semibold text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300">
-                      {job.status === 'screening' ? 'Screening follow-up' : 'Applied follow-up'}
-                    </span>
-                  </div>
-
-                  <div className="grid gap-5 lg:grid-cols-[1.15fr_0.85fr]">
-                    <div className="space-y-3">
-                      {recruiterVisibilitySteps.map((step, index) => (
-                        <div key={`${step}-${index}`} className="flex items-start gap-3">
-                          <Mail className="mt-0.5 h-4 w-4 shrink-0 text-indigo-500" />
-                          <p className="text-small leading-6 text-gray-700 dark:text-gray-300">{step}</p>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="space-y-3 rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-4 dark:border-white/10 dark:bg-[#181f16]">
-                      <div>
-                        <p className="text-small font-semibold text-gray-900 dark:text-white">Current action path</p>
-                        <p className="mt-1 text-small leading-6 text-gray-600 dark:text-gray-300">
-                          {hasRecruiterEmail
-                            ? 'Open the draft email now, then confirm whether you sent it so the tracker can keep the timeline honest.'
-                            : 'Use the manual fallback first: copy the draft, add a recruiter email, or send the same message through LinkedIn.'}
-                        </p>
-                      </div>
-                      <div className="flex flex-col gap-3">
-                        <button
-                          onClick={() => handleOpenEmail(0)}
-                          className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#80FF00] px-4 py-3 text-small font-semibold text-black shadow-sm transition hover:brightness-95"
-                        >
-                          <Mail className="h-4 w-4" />
-                          {hasRecruiterEmail ? 'Open Recruiter Email Draft' : 'Open Manual Outreach Draft'}
-                        </button>
-                        <button
-                          onClick={() => {
-                            setActiveActionId('open_details');
-                            setActiveActionPayload(sidebarConfig.actionPayloads.open_details || null);
-                            setShowEmailTemplate(!showEmailTemplate);
-                          }}
-                          className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 text-small font-semibold text-gray-800 transition hover:bg-gray-50 dark:border-white/10 dark:bg-[#20281d] dark:text-white dark:hover:bg-[#273021]"
-                        >
-                          {showEmailTemplate ? 'Hide Manual Script' : 'View Manual Script'}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {showEmailTemplate && (
-                    <div className="mt-4 rounded-2xl border border-gray-200 bg-gray-50 p-4 dark:border-white/10 dark:bg-[#181f16]">
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div>
-                          <p className="text-small font-semibold text-gray-900 dark:text-white">Manual outreach fallback</p>
-                          <p className="text-small text-gray-500 dark:text-gray-400">
-                            Subject: {getEmailSubject(job)}
-                          </p>
-                        </div>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => handleCopyToClipboard(getEmailSubject(job), 'subject')}
-                            className="rounded-lg border border-gray-200 px-3 py-2 text-small font-medium text-gray-700 transition hover:bg-white dark:border-white/10 dark:text-gray-200 dark:hover:bg-[#20281d]"
-                          >
-                            Copy Subject
-                          </button>
-                          <button
-                            onClick={() => handleCopyToClipboard(getEmailTemplate(job), 'email')}
-                            className="rounded-lg border border-gray-200 px-3 py-2 text-small font-medium text-gray-700 transition hover:bg-white dark:border-white/10 dark:text-gray-200 dark:hover:bg-[#20281d]"
-                          >
-                            Copy Message
-                          </button>
-                        </div>
-                      </div>
-                      <div className="mt-3 whitespace-pre-wrap rounded-xl bg-white px-4 py-4 text-small leading-6 text-gray-700 dark:bg-[#20281d] dark:text-gray-300">
-                        {getEmailTemplate(job)}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Integrated Inbox & Emails */}
-                  <div className="mt-5 pt-5 border-t border-gray-100 dark:border-white/5">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-1.5">
-                        <Mail className="h-4 w-4 text-emerald-500" />
-                        <p className="text-small font-semibold text-gray-900 dark:text-white">Inbox & Emails</p>
-                      </div>
-                      
-                      {isPremiumUser ? (
-                        isEmailConnected ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400">
-                            <span className="h-1 w-1 rounded-full bg-emerald-500"></span>
-                            Connected
+              {/* 5 Tab Navigation: Job Details, Insights, Communication, Notes, Documents */}
+              <section className="space-y-4">
+                {/* Tab Bar */}
+                <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-gray-100/80 dark:bg-white/[0.04] border border-gray-200/80 dark:border-white/10 overflow-x-auto scrollbar-none">
+                  {[
+                    { id: 'details', label: 'Job Details', icon: Briefcase },
+                    { id: 'insights', label: 'Insights', icon: Sparkles, badge: typeof keywordMatchScore === 'number' && keywordMatchScore > 0 ? `${keywordMatchScore}%` : undefined },
+                    { id: 'communication', label: 'Communication', icon: Mail, badge: isEmailConnected ? 'Synced' : undefined },
+                    { id: 'notes', label: 'Notes', icon: FileText, badge: (jobNotes || job.notes || jobTags.length > 0) ? (jobTags.length > 0 ? `${jobTags.length}` : '1') : undefined },
+                    { id: 'documents', label: 'Documents', icon: FileCheck, badge: (primaryJourney?.cvId || primaryJourney?.coverLetterId || (job as any).cvId || fallbackMasterCvId || job.status !== 'draft') ? 'Ready' : undefined },
+                  ].map((tab) => {
+                    const Icon = tab.icon;
+                    const isActive = activeTab === tab.id;
+                    return (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => setActiveTab(tab.id as SidebarTab)}
+                        className={`flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex-1 ${
+                          isActive
+                            ? 'bg-white dark:bg-[#1a2315] text-gray-900 dark:text-white shadow-sm border border-gray-200/80 dark:border-white/10'
+                            : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-white/40 dark:hover:bg-white/5'
+                        }`}
+                      >
+                        <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-[#80FF00] dark:text-[#99FF00]' : ''}`} />
+                        <span>{tab.label}</span>
+                        {tab.badge && (
+                          <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                            isActive 
+                              ? 'bg-[#80FF00]/20 text-emerald-800 dark:text-[#99FF00]' 
+                              : 'bg-gray-200 dark:bg-white/10 text-gray-600 dark:text-gray-400'
+                          }`}>
+                            {tab.badge}
                           </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-400">
-                            Disconnected
-                          </span>
-                        )
-                      ) : (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-500 border border-amber-500/20 shadow-sm animate-pulse">
-                          🔒 Focused / Pro
-                        </span>
-                      )}
-                    </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
 
-                    <div className="text-small leading-5">
-                      {isPremiumUser ? (
-                        isEmailConnected ? (
-                          <div className="space-y-2">
-                            <p className="text-gray-500 dark:text-gray-400">
-                              Inbox connection active (<b>{connectedEmailAddress}</b>). Recruiter threads are linked and stages are updated automatically.
-                            </p>
-                            <button
-                              type="button"
-                              onClick={() => setShowCommsSidebar(true)}
-                              className="inline-flex items-center gap-1 text-emerald-500 hover:text-emerald-600 font-semibold"
-                            >
-                              View Recruiter Threads & Reply <ArrowRight size={12} />
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="space-y-2">
-                            <p className="text-gray-500 dark:text-gray-400">
-                              Connect your inbox (Gmail/Outlook) to automatically sync emails from recruiters and track pipeline status.
-                            </p>
-                            <button
-                              type="button"
-                              onClick={() => setShowCommsSidebar(true)}
-                              className="inline-flex items-center gap-1 text-emerald-500 hover:text-emerald-600 font-semibold"
-                            >
-                              Connect Inbox / View Comms <ArrowRight size={12} />
-                            </button>
-                          </div>
-                        )
-                      ) : (
-                        <div className="relative rounded-2xl border border-white/5 bg-[#161d12] p-4 text-center overflow-hidden">
-                          <p className="text-gray-300 font-semibold mb-1">Recruiter Auto-Sync</p>
-                          <p className="text-[11px] text-gray-500 mb-3 max-w-sm mx-auto leading-relaxed">
-                            Upgrade to Focused or Pro to connect Gmail, Outlook, or IMAP. Automatically match emails, parse interviews, and auto-update journey stages.
-                          </p>
-                          <button
-                            type="button"
-                            onClick={() => setShowUpgradePopupState(true)}
-                            className="px-4 py-2 bg-lime-500 hover:bg-lime-600 text-black rounded-xl text-small font-bold transition shadow-md shadow-lime-500/10"
-                          >
-                            Upgrade to Unlock
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </section>
-              )}
-
-              {(sidebarConfig.sections.showJobDetails || sidebarConfig.sections.showInsights) && (
-                <section className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
-                  {sidebarConfig.sections.showJobDetails && (
+                {/* Tab 1: Job Details */}
+                {activeTab === 'details' && (
+                  <div className="space-y-5">
+                    {/* Core Metadata Card */}
                     <div className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810]">
-                      <div className="mb-4 flex items-center justify-between gap-3">
+                      <div className="mb-4 flex items-center justify-between gap-3 border-b border-gray-100 dark:border-white/5 pb-3">
                         <div>
-                          <p className="text-small font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">Job Details</p>
-                          <h3 className="text-h3 font-semibold text-gray-900 dark:text-white">Core job information</h3>
+                          <p className="text-small font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">Job Information</p>
+                          <h3 className="text-h3 font-semibold text-gray-900 dark:text-white">{job.jobTitle}</h3>
                         </div>
                         <button
-                          onClick={() => void runSidebarAction('open_details')}
-                          className="rounded-xl border border-gray-200 px-4 py-2 text-small font-medium text-gray-700 transition hover:bg-gray-50 dark:border-white/10 dark:text-white dark:hover:bg-[#273021]"
+                          type="button"
+                          onClick={() => setShowEditJobSidebar(true)}
+                          className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-white/10 dark:text-white dark:hover:bg-[#273021] transition-colors"
                         >
-                          View Full Details
+                          <Pencil className="w-3.5 h-3.5" />
+                          Edit Job
                         </button>
                       </div>
 
+                      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        <div className="space-y-1">
+                          <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Company</p>
+                          <div className="flex items-center gap-2">
+                            <Building2 className="w-4 h-4 text-gray-400" />
+                            <p className="text-small font-semibold text-gray-900 dark:text-white truncate">{job.company}</p>
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Location</p>
+                          <div className="flex items-center gap-2">
+                            <MapPin className="w-4 h-4 text-gray-400 shrink-0" />
+                            <p className="text-small font-semibold text-gray-900 dark:text-white truncate">{job.location || fallbacks.defaultLocation}</p>
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Job Type</p>
+                          <div className="flex items-center gap-2">
+                            <Briefcase className="w-4 h-4 text-gray-400" />
+                            <p className="text-small font-semibold capitalize text-gray-900 dark:text-white">{job.jobType || job.type || 'Full-time'}</p>
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Salary</p>
+                          <div className="flex items-center gap-2">
+                            <DollarSign className="w-4 h-4 text-gray-400" />
+                            <p className="text-small font-semibold text-gray-900 dark:text-white">
+                              {formatJobSalary(job.salary, fallbacks.defaultSalary)}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Application Deadline</p>
+                          <div className="flex items-center gap-2">
+                            <Calendar className="w-4 h-4 text-gray-400" />
+                            <p className="text-small font-semibold text-gray-900 dark:text-white">{formatJobDate(job.deadline, 'No deadline set')}</p>
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Portal / Source</p>
+                          <p className="text-small font-semibold text-gray-900 dark:text-white capitalize">{job.source || 'Direct ATS'}</p>
+                        </div>
+
+                        {job.jobUrl && (
+                          <div className="space-y-1 sm:col-span-2 lg:col-span-3">
+                            <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Job Posting Link</p>
+                            <a
+                              href={job.jobUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-[#80FF00] hover:underline break-all"
+                            >
+                              <ExternalLink className="w-3.5 h-3.5 shrink-0" />
+                              {job.jobUrl}
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Job Description */}
+                    <div className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810]">
+                      <h4 className="text-h3 font-semibold text-gray-900 dark:text-white mb-3">Job Description</h4>
+                      <div className="max-h-[350px] overflow-y-auto whitespace-pre-wrap text-small leading-relaxed text-gray-700 dark:text-gray-300 pr-2 border border-gray-100 dark:border-white/5 rounded-xl p-4 bg-gray-50/50 dark:bg-white/[0.02]">
+                        {job.jobDescription || fallbacks.defaultJobDescription}
+                      </div>
+                    </div>
+
+                    {/* Requirements & Skills if parsed */}
+                    {job.extractedJd?.role_content && (
+                      <div className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810] space-y-4">
+                        <h4 className="text-h3 font-semibold text-gray-900 dark:text-white">Role Requirements</h4>
+                        {job.extractedJd.role_content.requirements_must_have?.length > 0 && (
+                          <div>
+                            <h5 className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Must Have</h5>
+                            <ul className="space-y-1.5 text-small text-gray-700 dark:text-gray-300">
+                              {job.extractedJd.role_content.requirements_must_have.map((req: any, i: number) => (
+                                <li key={i} className="flex items-start gap-2">
+                                  <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-red-500 flex-shrink-0" />
+                                  <span>{req.text} {req.years_required ? `(${req.years_required} yrs)` : ''}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        {job.extractedJd.role_content.requirements_nice_to_have?.length > 0 && (
+                          <div>
+                            <h5 className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Nice to Have</h5>
+                            <ul className="space-y-1.5 text-small text-gray-700 dark:text-gray-300">
+                              {job.extractedJd.role_content.requirements_nice_to_have.map((req: any, i: number) => (
+                                <li key={i} className="flex items-start gap-2">
+                                  <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-lime-500 flex-shrink-0" />
+                                  <span>{req.text} {req.years_required ? `(${req.years_required} yrs)` : ''}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Technical Skills */}
+                    {job.extractedJd?.skills?.skills_technical?.length > 0 && (
+                      <div className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810]">
+                        <h4 className="text-h3 font-semibold text-gray-900 dark:text-white mb-3">Key Technical Skills</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {job.extractedJd.skills.skills_technical.map((item: any, i: number) => (
+                            <span
+                              key={i}
+                              className={`px-3 py-1 text-xs font-semibold rounded-xl ${
+                                item.importance === 'critical'
+                                  ? 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300 border border-red-200 dark:border-red-800'
+                                  : 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-200 dark:border-blue-800'
+                              }`}
+                            >
+                              {item.skill}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Tab 2: Insights */}
+                {activeTab === 'insights' && (
+                  <div className="space-y-5">
+                    {/* Performance & Score Card */}
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                      <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-[#131810]">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Match Score</span>
+                        <div className="mt-2 flex items-baseline gap-2">
+                          <span className="text-2xl font-black text-emerald-600 dark:text-[#80FF00]">{insightsLoading ? '...' : `${keywordMatchScore}%`}</span>
+                          <span className="text-xs text-gray-500">ATS Alignment</span>
+                        </div>
+                      </div>
+
+                      <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-[#131810]">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Success Probability</span>
+                        <div className="mt-2 flex items-baseline gap-2">
+                          <span className="text-2xl font-black text-blue-600 dark:text-blue-400">{successProb}%</span>
+                          <span className="text-xs text-gray-500">Estimated</span>
+                        </div>
+                      </div>
+
+                      <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-[#131810]">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Sponsorship</span>
+                        <div className="mt-2 flex items-baseline gap-2">
+                          <span className="text-lg font-black capitalize text-gray-900 dark:text-white">
+                            {job.sponsorship === 'yes' ? 'Verified' : job.sponsorship === 'no' ? 'Not Provided' : 'Unknown'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-[#131810]">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Priority Level</span>
+                        <div className="mt-2 flex items-baseline gap-2">
+                          <span className="text-lg font-black capitalize text-gray-900 dark:text-white">{job.priority || 'Medium'}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Market & Trend Insights */}
+                    <div className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810] space-y-3">
+                      <h4 className="text-h3 font-semibold text-gray-900 dark:text-white mb-3">Market Intelligence & Trends</h4>
                       <div className="grid gap-4 sm:grid-cols-2">
-                        {sidebarConfig.detailRows.map((row) => (
-                          <div
-                            key={row.label}
-                            className={`space-y-1 ${row.label === 'Job URL' ? 'sm:col-span-2' : ''}`}
-                          >
-                            <p className="text-small uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">{row.label}</p>
-                            <div className="flex items-center gap-2">
-                              <p className="min-w-0 truncate text-small font-medium text-gray-900 dark:text-white">{row.value}</p>
-                              {row.label === 'Job URL' && job.jobUrl && (
-                                <a
-                                  href={job.jobUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="shrink-0 text-emerald-600 hover:text-emerald-700 dark:text-[#80FF00]"
-                                >
-                                  <ExternalLink className="h-4 w-4" />
-                                </a>
-                              )}
-                            </div>
+                        <div className="p-3.5 rounded-xl bg-gray-50 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5">
+                          <span className="text-xs text-gray-500 dark:text-gray-400 block mb-1">Company Hiring Pace</span>
+                          <span className="text-small font-bold text-gray-900 dark:text-white">{insightsLoading ? '...' : insights?.companyHiringTrend || 'Steady Hiring'}</span>
+                        </div>
+                        <div className="p-3.5 rounded-xl bg-gray-50 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5">
+                          <span className="text-xs text-gray-500 dark:text-gray-400 block mb-1">Salary Competitiveness</span>
+                          <span className="text-small font-bold text-emerald-600 dark:text-emerald-400">
+                            {salaryComp.comparison === 'above' ? 'Above Market Average' : salaryComp.comparison === 'below' ? 'Below Market Average' : 'At Market Average'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* JD Quality Audit & Flags */}
+                    {job.extractedJd?.jd_quality && (
+                      <div className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810] space-y-4">
+                        <div className="flex items-center justify-between border-b border-gray-100 dark:border-white/5 pb-3">
+                          <h4 className="text-h3 font-semibold text-gray-900 dark:text-white">Job Posting Quality Audit</h4>
+                          <span className={`px-2.5 py-1 rounded-lg text-xs font-black ${
+                            job.extractedJd.jd_quality.jd_quality_score >= 70
+                              ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                              : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
+                          }`}>
+                            Score: {job.extractedJd.jd_quality.jd_quality_score}/100 ({job.extractedJd.jd_quality.jd_quality_grade})
+                          </span>
+                        </div>
+
+                        {job.extractedJd.jd_quality.jd_red_flags?.length > 0 && (
+                          <div className="space-y-2">
+                            <span className="text-xs font-bold text-red-600 dark:text-red-400 uppercase tracking-wider">Potential Flags ({job.extractedJd.jd_quality.jd_red_flags.length})</span>
+                            {job.extractedJd.jd_quality.jd_red_flags.map((flag: any, i: number) => (
+                              <div key={i} className="flex items-start gap-2.5 p-3 bg-red-50/60 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 rounded-xl text-xs text-gray-700 dark:text-gray-300">
+                                <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+                                <div>
+                                  <strong className="block text-red-900 dark:text-red-300">{flag.flag}</strong>
+                                  <span className="text-gray-600 dark:text-gray-400 mt-0.5 block">{flag.detail}</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Tab 3: Communication */}
+                {activeTab === 'communication' && (
+                  <div className="space-y-5">
+                    {/* Recruiter Outreach Action Card */}
+                    <div className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810] space-y-4">
+                      <div className="flex items-start justify-between gap-4 border-b border-gray-100 dark:border-white/5 pb-3">
+                        <div>
+                          <p className="text-small font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">Recruiter Visibility</p>
+                          <h3 className="text-h3 font-semibold text-gray-900 dark:text-white">Direct Recruiter Outreach</h3>
+                        </div>
+                        <span className="rounded-full bg-indigo-100 px-3 py-1 text-xs font-bold text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300">
+                          {job.status === 'screening' ? 'Screening follow-up' : 'Applied follow-up'}
+                        </span>
+                      </div>
+
+                      <div className="space-y-3">
+                        {recruiterVisibilitySteps.map((step, index) => (
+                          <div key={`${step}-${index}`} className="flex items-start gap-3 text-small text-gray-700 dark:text-gray-300">
+                            <Mail className="mt-0.5 h-4 w-4 shrink-0 text-indigo-500" />
+                            <p>{step}</p>
                           </div>
                         ))}
                       </div>
-                    </div>
-                  )}
 
-                  {sidebarConfig.sections.showInsights && (
-                    <div className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810]">
-                      <div className="mb-4 flex items-center justify-between gap-3">
-                        <div>
-                          <p className="text-small font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">Application Insights</p>
-                          <h3 className="text-h3 font-semibold text-gray-900 dark:text-white">Performance snapshot</h3>
-                        </div>
+                      {/* 1-Click Outreach Buttons */}
+                      <div className="flex flex-wrap gap-3 pt-2">
                         <button
-                          onClick={() => void runSidebarAction('open_insights')}
-                          className="rounded-xl border border-gray-200 px-4 py-2 text-small font-medium text-gray-700 transition hover:bg-gray-50 dark:border-white/10 dark:text-white dark:hover:bg-[#273021]"
+                          type="button"
+                          onClick={() => handleOpenEmail(0)}
+                          className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#80FF00] px-4 py-2.5 text-xs font-black text-black shadow-sm transition hover:brightness-95"
                         >
-                          View Full Insights
+                          <Send className="w-3.5 h-3.5" />
+                          {hasRecruiterEmail ? 'Open Recruiter Email Draft' : 'Open Manual Outreach Draft'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleCopyToClipboard(getEmailTemplate(job), 'email')}
+                          className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-xs font-bold text-gray-800 transition hover:bg-gray-50 dark:border-white/10 dark:bg-[#20281d] dark:text-white dark:hover:bg-[#273021]"
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                          Copy Message Script
                         </button>
                       </div>
 
-                      {sidebarConfig.insightRows.length > 0 ? (
-                        <div className="space-y-3">
-                          {sidebarConfig.insightRows.map((row) => (
-                            <div key={row.label} className="flex items-center justify-between rounded-xl bg-gray-50 px-4 py-3 dark:bg-[#181f16]">
-                              <span className="text-small text-gray-600 dark:text-gray-300">{row.label}</span>
-                              <span className="text-small font-semibold text-gray-900 dark:text-white">
-                                {row.label === 'Match Score' && insightsLoading ? '...' : row.value}
-                              </span>
-                            </div>
-                          ))}
+                      {/* Script Preview Box */}
+                      <div className="mt-3 rounded-xl border border-gray-200/80 bg-gray-50/50 p-4 dark:border-white/10 dark:bg-[#181f16]">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Subject: {getEmailSubject(job)}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleCopyToClipboard(getEmailSubject(job), 'subject')}
+                            className="text-[11px] font-bold text-emerald-600 dark:text-[#80FF00] hover:underline"
+                          >
+                            Copy Subject
+                          </button>
                         </div>
-                      ) : (
-                        <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-4 py-5 text-small leading-6 text-gray-600 dark:border-white/10 dark:bg-[#181f16] dark:text-gray-300">
-                          {sidebarConfig.insightsEmptyState}
+                        <div className="whitespace-pre-wrap rounded-lg bg-white p-3 text-xs leading-relaxed text-gray-700 dark:bg-[#20281d] dark:text-gray-300 border border-gray-100 dark:border-white/5 max-h-[220px] overflow-y-auto">
+                          {getEmailTemplate(job)}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Integrated Inbox & Emails Sync */}
+                    <div className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810]">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <Mail className="h-4 w-4 text-emerald-500" />
+                          <h4 className="text-small font-bold text-gray-900 dark:text-white">Recruiter Inbox Sync</h4>
+                        </div>
+                        {isEmailConnected ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400">
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                            Connected: {connectedEmailAddress || 'Active'}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-400">
+                            Disconnected
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">
+                        Sync recruiter responses, automated interview invitations, and status updates directly from your connected inbox.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setShowCommsSidebar(true)}
+                        className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-[#80FF00] hover:underline"
+                      >
+                        Open Communication Threads Drawer <ArrowRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Tab 4: Notes */}
+                {activeTab === 'notes' && (
+                  <div className="space-y-5">
+                    {/* Live Interactive Notes Editor */}
+                    <div className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810] space-y-4">
+                      <div className="flex items-center justify-between border-b border-gray-100 dark:border-white/5 pb-3">
+                        <div>
+                          <p className="text-small font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">Job Notes</p>
+                          <h3 className="text-h3 font-semibold text-gray-900 dark:text-white">Personal Interview & Role Notes</h3>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleSaveNotes}
+                          disabled={isSavingNotes}
+                          className="inline-flex items-center gap-1.5 rounded-xl bg-[#80FF00] px-4 py-2 text-xs font-black text-black shadow-sm transition hover:brightness-95 disabled:opacity-60"
+                        >
+                          {isSavingNotes ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                          Save Notes
+                        </button>
+                      </div>
+
+                      {/* Quick Template Buttons */}
+                      <div className="flex flex-wrap gap-2">
+                        {[
+                          { label: '+ Recruiter Call', text: '\n\n--- Recruiter Call Takeaways ---\n- Recruiter Name:\n- Salary Mentioned:\n- Next Stage Timeline:' },
+                          { label: '+ Interview Prep', text: '\n\n--- Interview Preparation ---\n- Key Projects to Highlight:\n- System Design Points:\n- Tech Stack Overlap:' },
+                          { label: '+ System Design / Tech', text: '\n\n--- Technical / Architecture Focus ---\n- Core Frameworks & DBs:\n- Scaling Bottlenecks & Solutions:\n- Performance & Reliability Goals:' },
+                          { label: '+ Questions for Team', text: '\n\n--- Questions for Interviewer ---\n1. What does the day-to-day look like?\n2. What are the key engineering challenges this quarter?\n3. How is engineering success and velocity measured?' },
+                          { label: '+ Salary & Offer Comp', text: '\n\n--- Compensation & Negotiation Target ---\n- Base Salary Goal:\n- Equity / Bonus Expected:\n- Competing Deadlines:' },
+                          { label: '+ Referral & Contacts', text: '\n\n--- Key Referral & Contact Notes ---\n- Contact Person:\n- Role / Connection:\n- Date Followed Up:' },
+                        ].map((prompt, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => setJobNotes(prev => (prev ? prev + prompt.text : prompt.text.trim()))}
+                            className="px-2.5 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-white/5 dark:hover:bg-white/10 text-[11px] font-semibold text-gray-700 dark:text-gray-300 transition-colors"
+                          >
+                            {prompt.label}
+                          </button>
+                        ))}
+                      </div>
+
+                      <textarea
+                        value={jobNotes}
+                        onChange={(e) => setJobNotes(e.target.value)}
+                        placeholder="Type any interview prep notes, referral contacts, salary requirements, or recruiter discussion points here..."
+                        rows={8}
+                        className="w-full rounded-xl border border-gray-200 bg-gray-50/50 p-4 text-xs leading-relaxed text-gray-900 placeholder:text-gray-400 focus:border-lime-500 focus:bg-white focus:outline-none dark:border-white/10 dark:bg-white/[0.02] dark:text-white dark:focus:bg-[#181f16]"
+                      />
+                    </div>
+
+                    {/* Job Tags Manager */}
+                    <div className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810] space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Tag className="w-4 h-4 text-gray-500" />
+                        <h4 className="text-small font-bold text-gray-900 dark:text-white">Custom Job Tags</h4>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        {jobTags.map((tag, i) => (
+                          <span
+                            key={i}
+                            className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-200 dark:border-blue-800"
+                          >
+                            {tag}
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveTag(tag)}
+                              className="hover:text-red-500"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+
+                      <div className="flex items-center gap-2 mt-2">
+                        <input
+                          type="text"
+                          value={newTagInput}
+                          onChange={(e) => setNewTagInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleAddTag();
+                            }
+                          }}
+                          placeholder="Add new tag (e.g. Remote, Referral, High Priority)..."
+                          className="flex-1 rounded-xl border border-gray-200 bg-gray-50/50 px-3.5 py-2 text-xs text-gray-900 placeholder:text-gray-400 focus:border-lime-500 focus:outline-none dark:border-white/10 dark:bg-white/[0.02] dark:text-white"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleAddTag}
+                          className="rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-xs font-bold text-gray-800 hover:bg-gray-50 dark:border-white/10 dark:bg-[#20281d] dark:text-white"
+                        >
+                          Add Tag
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Tab 5: Documents */}
+                {activeTab === 'documents' && (() => {
+                  const resolvedCvId = primaryJourney?.cvId || (job as any).cvId || fallbackMasterCvId;
+                  const resolvedCoverLetterId = primaryJourney?.coverLetterId || (job as any).coverLetterId;
+                  const isAdvancedStage = job.status !== 'draft';
+                  const hasCv = Boolean(resolvedCvId);
+                  const hasCoverLetter = Boolean(resolvedCoverLetterId);
+
+                  return (
+                    <div className="space-y-5">
+                      {/* Applied / Tailored CV Card */}
+                      <div className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810]">
+                        <div className="flex items-center justify-between mb-4 border-b border-gray-100 dark:border-white/5 pb-3">
+                          <div className="flex items-center gap-2.5">
+                            <div className="p-2 rounded-xl bg-lime-50 dark:bg-[#80FF00]/10 text-emerald-600 dark:text-[#80FF00]">
+                              <FileText className="w-5 h-5" />
+                            </div>
+                            <div>
+                              <h4 className="text-small font-bold text-gray-900 dark:text-white">
+                                {primaryJourney?.cvId ? 'Tailored CV' : isAdvancedStage ? 'Applied CV' : 'Resume / CV'}
+                              </h4>
+                              <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                                {cvData?.title || `Customized for ${job.jobTitle} at ${job.company}`}
+                              </p>
+                            </div>
+                          </div>
+                          {hasCv ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400">
+                              <CheckCircle className="w-3.5 h-3.5" />
+                              {primaryJourney?.cvId ? 'Tailored & Ready' : isAdvancedStage ? 'Attached to Application' : 'Ready'}
+                            </span>
+                          ) : (
+                            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-400">
+                              Not Generated
+                            </span>
+                          )}
+                        </div>
+
+                        {hasCv ? (
+                          <div className="flex flex-wrap gap-2.5">
+                            <button
+                              type="button"
+                              onClick={() => void handleOpenDocumentPreview('cv')}
+                              disabled={previewLoading === 'cv'}
+                              className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-xs font-bold text-gray-800 hover:bg-gray-50 dark:border-white/10 dark:bg-[#20281d] dark:text-white dark:hover:bg-[#273021] transition-colors"
+                            >
+                              {previewLoading === 'cv' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Eye className="w-3.5 h-3.5" />}
+                              Preview CV
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => router.push(`/editor?mode=edit&cvId=${resolvedCvId}`)}
+                              className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-xs font-bold text-blue-600 hover:bg-blue-50 dark:border-white/10 dark:bg-[#20281d] dark:text-blue-400 transition-colors"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                              Edit in CV Builder
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDownloadDocument('cv')}
+                              className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-xs font-bold text-gray-800 hover:bg-gray-50 dark:border-white/10 dark:bg-[#20281d] dark:text-white transition-colors"
+                            >
+                              <Download className="w-3.5 h-3.5" />
+                              Download PDF
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="rounded-xl border border-dashed border-gray-200 dark:border-white/10 p-4 text-center">
+                            <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">No tailored CV has been created for this job application yet.</p>
+                            <button
+                              type="button"
+                              onClick={() => void handleTailorAndApply()}
+                              disabled={isCreatingJourney}
+                              className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#80FF00] hover:brightness-95 text-black rounded-xl text-xs font-black shadow-sm"
+                            >
+                              <Sparkles className="w-3.5 h-3.5" />
+                              Generate Tailored CV
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Tailored / Applied Cover Letter Card */}
+                      <div className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810]">
+                        <div className="flex items-center justify-between mb-4 border-b border-gray-100 dark:border-white/5 pb-3">
+                          <div className="flex items-center gap-2.5">
+                            <div className="p-2 rounded-xl bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400">
+                              <FileText className="w-5 h-5" />
+                            </div>
+                            <div>
+                              <h4 className="text-small font-bold text-gray-900 dark:text-white">Cover Letter</h4>
+                              <p className="text-[11px] text-gray-500 dark:text-gray-400">Targeted for {job.company}</p>
+                            </div>
+                          </div>
+                          {hasCoverLetter ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400">
+                              <CheckCircle className="w-3.5 h-3.5" />
+                              {primaryJourney?.coverLetterId ? 'Generated' : 'Attached'}
+                            </span>
+                          ) : (
+                            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-400">
+                              Not Generated
+                            </span>
+                          )}
+                        </div>
+
+                        {hasCoverLetter ? (
+                          <div className="flex flex-wrap gap-2.5">
+                            <button
+                              type="button"
+                              onClick={() => void handleOpenDocumentPreview('coverLetter')}
+                              disabled={previewLoading === 'coverLetter'}
+                              className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-xs font-bold text-gray-800 hover:bg-gray-50 dark:border-white/10 dark:bg-[#20281d] dark:text-white dark:hover:bg-[#273021] transition-colors"
+                            >
+                              {previewLoading === 'coverLetter' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Eye className="w-3.5 h-3.5" />}
+                              Preview Cover Letter
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDownloadDocument('coverLetter')}
+                              className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-xs font-bold text-gray-800 hover:bg-gray-50 dark:border-white/10 dark:bg-[#20281d] dark:text-white transition-colors"
+                            >
+                              <Download className="w-3.5 h-3.5" />
+                              Download PDF
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="rounded-xl border border-dashed border-gray-200 dark:border-white/10 p-4 text-center">
+                            <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">No tailored cover letter has been generated yet.</p>
+                            <button
+                              type="button"
+                              onClick={() => void handleTailorAndApply()}
+                              disabled={isCreatingJourney}
+                              className="inline-flex items-center gap-1.5 px-4 py-2 bg-white dark:bg-white/10 border border-gray-200 dark:border-white/10 hover:bg-gray-50 text-gray-900 dark:text-white rounded-xl text-xs font-bold shadow-sm"
+                            >
+                              <Sparkles className="w-3.5 h-3.5" />
+                              Generate Cover Letter
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Application Submission Evidence & Verified Receipt */}
+                      {isAdvancedStage && (
+                        <div className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810]">
+                          <div className="flex items-center gap-2 mb-3">
+                            <Shield className="w-4 h-4 text-emerald-500" />
+                            <h4 className="text-small font-bold text-gray-900 dark:text-white">Application Submission Evidence</h4>
+                          </div>
+                          <div className="grid gap-3 sm:grid-cols-3 text-xs">
+                            <div className="p-3 rounded-xl bg-gray-50 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5">
+                              <span className="text-gray-500 dark:text-gray-400 block text-[11px]">Current Stage</span>
+                              <span className="font-bold text-gray-900 dark:text-white capitalize">{job.status}</span>
+                            </div>
+                            <div className="p-3 rounded-xl bg-gray-50 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5">
+                              <span className="text-gray-500 dark:text-gray-400 block text-[11px]">Portal / ATS</span>
+                              <span className="font-bold text-gray-900 dark:text-white capitalize">{job.source || (job as any).atsType || 'Direct Portal'}</span>
+                            </div>
+                            <div className="p-3 rounded-xl bg-gray-50 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5">
+                              <span className="text-gray-500 dark:text-gray-400 block text-[11px]">Submission Record</span>
+                              <span className="font-bold text-emerald-600 dark:text-[#80FF00]">✓ Verified Applied</span>
+                            </div>
+                          </div>
                         </div>
                       )}
                     </div>
-                  )}
-                </section>
-              )}
+                  );
+                })()}
+              </section>
             </div>
           </div>
         </motion.div>
@@ -2314,7 +2779,7 @@ ${userName}`
               animate={{ x: 0 }}
               exit={{ x: 'calc(100% + 12px)' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed top-3 right-3 bottom-3 w-full max-w-2xl bg-white dark:bg-[#141810] shadow-2xl z-[10002] flex flex-col rounded-2xl overflow-hidden"
+              className="fixed top-0 right-0 bottom-0 left-0 md:left-auto md:top-3 md:right-3 md:bottom-3 w-full md:w-[calc(70vw-24px)] md:max-w-[70vw] bg-white dark:bg-[#141810] shadow-2xl z-[10002] flex flex-col rounded-none md:rounded-2xl overflow-hidden"
             >
               <div className="p-6 border-b border-gray-200 dark:border-white/10 flex-shrink-0 flex items-start justify-between gap-4">
                 <div>

@@ -242,12 +242,12 @@ async function generateSalaryInsights(job: any): Promise<any> {
     if (similarJobs.length === 0) return null;
     
     // Calculate average salary range
-    const salaries = similarJobs
-      .filter(j => j.salary?.min && j.salary?.max)
-      .map(j => ({
-        min: j.salary.min,
-        max: j.salary.max
-      }));
+    const salaries: { min: number; max: number }[] = [];
+    for (const j of similarJobs) {
+      if (j.salary && typeof j.salary.min === 'number' && typeof j.salary.max === 'number') {
+        salaries.push({ min: j.salary.min, max: j.salary.max });
+      }
+    }
     
     if (salaries.length === 0) return null;
     
@@ -260,7 +260,7 @@ async function generateSalaryInsights(job: any): Promise<any> {
         max: Math.round(avgMax)
       },
       sampleSize: salaries.length,
-      currency: job.salary.currency || 'USD'
+      currency: job.salary?.currency || 'USD'
     };
   } catch (error) {
     console.error('Error generating salary insights:', error);

@@ -1,9 +1,11 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { getCvScoreForDisplay } from '@/lib/utils/cv-scoring';
+import JobsListView from '@/components/dashboard/jobs/JobsListView';
+import { CVJourney } from '@/types/cv';
 import {
   FileText,
   Briefcase,
@@ -211,15 +213,19 @@ function statusMeta(status?: string) {
 function Panel({
   title,
   subtitle,
+  count,
   actions,
   children,
   className = '',
+  noPadding = false,
 }: {
   title: string;
   subtitle?: string;
+  count?: number;
   actions?: React.ReactNode;
   children: React.ReactNode;
   className?: string;
+  noPadding?: boolean;
 }) {
   return (
     <section
@@ -227,12 +233,19 @@ function Panel({
     >
       <header className="px-5 pt-4 pb-3 flex items-start justify-between gap-4 border-b border-[var(--border-primary)]">
         <div className="min-w-0">
-          <h2 className="dashboard-panel-title text-[var(--text-primary)]">{title}</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="dashboard-panel-title text-[var(--text-primary)]">{title}</h2>
+            {typeof count === 'number' && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-white/10 tabular-nums">
+                {count}
+              </span>
+            )}
+          </div>
           {subtitle && <p className="mt-0.5 text-xs text-[var(--text-secondary)]">{subtitle}</p>}
         </div>
         {actions && <div className="flex items-center gap-3 shrink-0">{actions}</div>}
       </header>
-      <div className="p-5">{children}</div>
+      <div className={noPadding ? 'w-full' : 'p-5'}>{children}</div>
     </section>
   );
 }
@@ -506,6 +519,8 @@ function MyCvsPanel() {
     <Panel
       title="My CVs"
       subtitle="Your CVs and their performance overview."
+      count={cvs.length}
+      noPadding
       actions={
         <>
           <button
@@ -522,7 +537,7 @@ function MyCvsPanel() {
       }
     >
       {sorted.length === 0 && secondaryLoading.cvs ? (
-        <div className="divide-y divide-[var(--border-primary)]" aria-hidden="true">
+        <div className="divide-y divide-gray-100 dark:divide-white/5 p-4" aria-hidden="true">
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="flex items-center gap-4 py-3.5">
               <Skeleton className="h-4 w-1/3" />
@@ -534,81 +549,87 @@ function MyCvsPanel() {
           ))}
         </div>
       ) : sorted.length === 0 ? (
-        <div className="py-10 text-center text-sm text-[var(--text-tertiary)]">
-          No CVs yet — create your first one.
+        <div className="py-16 px-4 text-center">
+          <div className="w-12 h-12 rounded-2xl bg-gray-100 dark:bg-white/5 flex items-center justify-center mx-auto mb-3 text-gray-400">
+            <FileText className="w-6 h-6" />
+          </div>
+          <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-1">
+            No CVs yet
+          </h4>
+          <p className="text-xs text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
+            Create your first master CV to start matching and applying to jobs.
+          </p>
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm min-w-[640px]">
-            <thead>
-              <tr className="text-left text-xs font-medium text-[var(--text-tertiary)]">
-                <th className="py-2.5 pr-4 font-medium">CV Name</th>
-                <th className="py-2.5 pr-4 font-medium w-[140px]">ATS Score</th>
-                <th className="py-2.5 pr-4 font-medium">Linked Jobs</th>
-                <th className="py-2.5 pr-4 font-medium">Last Updated</th>
-                <th className="py-2.5 font-medium text-right">Actions</th>
+        <div className="w-full overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-gray-50/80 dark:bg-white/[0.02] border-b border-gray-200 dark:border-white/10 text-gray-500 dark:text-gray-400 font-semibold uppercase tracking-wider text-[11px]">
+              <tr>
+                <th className="py-3.5 px-5">CV Name</th>
+                <th className="py-3.5 px-4 w-[140px]">ATS Score</th>
+                <th className="py-3.5 px-4">Linked Jobs</th>
+                <th className="py-3.5 px-4">Last Updated</th>
+                <th className="py-3.5 px-5 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[var(--border-primary)]">
-              {sorted.slice(0, 8).map((cv: any) => {
+            <tbody className="divide-y divide-gray-100 dark:divide-white/5 font-medium">
+              {sorted.slice(0, 10).map((cv: any) => {
                 const isMaster = cv.metadata?.isMaster || cv.cvType === 'master';
                 const score = cvAtsScore(cv);
                 const linked = linkedCounts.get(cvId(cv)) || 0;
                 return (
-                  <tr key={cvId(cv) || cv.title} className="hover:bg-[var(--bg-tertiary)]/40 transition-colors">
-                    <td className="py-3 pr-4 max-w-[280px]">
+                  <tr key={cvId(cv) || cv.title} className="hover:bg-gray-50/60 dark:hover:bg-white/[0.02] transition-colors cursor-pointer group" onClick={() => openCv(cv)}>
+                    <td className="py-3.5 px-5 max-w-[280px]">
                       <div className="flex items-center gap-2 min-w-0">
-                        <span className="truncate font-medium text-[var(--text-primary)]" title={cv.title}>
+                        <span className="truncate font-semibold text-gray-900 dark:text-white text-xs group-hover:text-lime-600 dark:group-hover:text-lime-400 transition-colors" title={cv.title}>
                           {cv.title || 'Untitled CV'}
                         </span>
                         {isMaster && (
-                          <span className="shrink-0 inline-flex items-center rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 px-1.5 py-0.5 text-[10px] font-medium">
+                          <span className="shrink-0 inline-flex items-center rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 px-1.5 py-0.5 text-[10px] font-medium border border-emerald-200 dark:border-emerald-800/40">
                             Default
                           </span>
                         )}
                       </div>
                     </td>
-                    <td className="py-3 pr-4">
+                    <td className="py-3.5 px-4">
                       {score > 0 ? (
-                        <div className="flex items-center gap-2.5">
-                          <span className="text-[var(--text-primary)] font-medium tabular-nums w-9">{score}%</span>
-                          <div className="w-16 h-1 bg-[var(--bg-tertiary)] rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-[var(--accent-primary)] rounded-full"
-                              style={{ width: `${Math.min(100, score)}%` }}
-                            />
-                          </div>
+                        <div className="flex items-center gap-2">
+                          <div className={`w-2 h-2 rounded-full shrink-0 ${score >= 70 ? 'bg-lime-500' : score >= 50 ? 'bg-yellow-500' : 'bg-red-400'}`} />
+                          <span className="font-bold text-gray-900 dark:text-white text-xs tabular-nums">{score}%</span>
                         </div>
                       ) : (
-                        <span className="text-[var(--text-tertiary)]">—</span>
+                        <span className="text-xs text-gray-400 dark:text-gray-500 italic">—</span>
                       )}
                     </td>
-                    <td className="py-3 pr-4 text-[var(--text-secondary)]">{linked > 0 ? linked : '—'}</td>
-                    <td className="py-3 pr-4 text-[var(--text-secondary)] whitespace-nowrap">
+                    <td className="py-3.5 px-4 text-gray-600 dark:text-gray-400 text-xs">
+                      {linked > 0 ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                          {linked} {linked === 1 ? 'Job' : 'Jobs'}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-gray-400 dark:text-gray-500 italic">—</span>
+                      )}
+                    </td>
+                    <td className="py-3.5 px-4 text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">
                       {timeAgo(cv.updatedAt || cv.createdAt)}
                     </td>
-                    <td className="py-3 text-right">
-                      <div className="inline-flex items-center justify-end gap-1">
+                    <td className="py-3.5 px-5 text-right" onClick={(e) => e.stopPropagation()}>
+                      <div className="inline-flex items-center justify-end gap-1.5">
                         <button
                           onClick={() => openPreview(cv)}
                           aria-label={`Preview ${cv.title}`}
                           title="Preview"
-                          className="w-7 h-7 inline-flex items-center justify-center rounded-md border border-[var(--border-primary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] transition-colors"
+                          className="p-1.5 rounded-lg border border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300 hover:text-lime-600 dark:hover:text-lime-400 transition-colors"
                         >
-                          <Eye size={14} />
+                          <Eye className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => openCv(cv)}
                           aria-label={`Edit ${cv.title}`}
-                          className="w-7 h-7 inline-flex items-center justify-center rounded-md border border-[var(--border-primary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] transition-colors"
+                          title="Edit CV"
+                          className="p-1.5 rounded-lg border border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
                         >
-                          <Pencil size={14} />
-                        </button>
-                        <button
-                          aria-label={`More options for ${cv.title}`}
-                          className="w-7 h-7 inline-flex items-center justify-center rounded-md border border-[var(--border-primary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] transition-colors"
-                        >
-                          <MoreHorizontal size={14} />
+                          <Pencil className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </td>
@@ -639,248 +660,159 @@ function MyCvsPanel() {
 
 function RecentJobsPanel() {
   const router = useRouter();
-  const { jobs, cvs, secondaryLoading, refreshJobs } = useDashboardData();
-  const [menuJobId, setMenuJobId] = useState<string | null>(null);
-  const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
-  const [deleting, setDeleting] = useState(false);
+  const { jobs: contextJobs, secondaryLoading, refreshJobs } = useDashboardData();
+  const [directJobs, setDirectJobs] = useState<any[]>([]);
+  const [directJourneys, setDirectJourneys] = useState<any[]>([]);
+  const [loadingDirect, setLoadingDirect] = useState(true);
   const [selectedJob, setSelectedJob] = useState<any | null>(null);
   const { toast } = useToast();
 
-  const openJobMenu = (e: React.MouseEvent, job: any) => {
-    e.stopPropagation();
-    const rect = e.currentTarget.getBoundingClientRect();
-    setMenuJobId(job.id || job._id || '');
-    setMenuPos({ top: rect.bottom + 4, right: Math.max(8, window.innerWidth - rect.right) });
-  };
+  const fetchDirectData = useCallback(async () => {
+    try {
+      const [jobsRes, journeysRes] = await Promise.all([
+        fetch('/api/jobs?limit=all', { cache: 'no-store' }),
+        fetch('/api/journeys?limit=all', { cache: 'no-store' }),
+      ]);
+      if (jobsRes.ok) {
+        const jobsData = await jobsRes.json();
+        const rawJobs = jobsData?.data?.jobs || (Array.isArray(jobsData?.jobs) ? jobsData.jobs : []);
+        setDirectJobs(
+          rawJobs.map((j: any) => ({
+            ...j,
+            id: j.id || j._id,
+            jobTitle: j.jobTitle || j.title || 'Untitled Role',
+            company: j.company || 'Unknown Company',
+          }))
+        );
+      }
+      if (journeysRes.ok) {
+        const journeysData = await journeysRes.json();
+        const rawJourneys = journeysData?.data?.journeys || (Array.isArray(journeysData?.journeys) ? journeysData.journeys : []);
+        setDirectJourneys(rawJourneys);
+      }
+    } catch (err) {
+      console.error('Error fetching dashboard recent jobs:', err);
+    } finally {
+      setLoadingDirect(false);
+    }
+  }, []);
 
-  const handleDeleteJob = async () => {
-    const job = deleteTarget;
-    if (!job) return;
+  useEffect(() => {
+    fetchDirectData();
+    const handleJobUpdate = () => {
+      fetchDirectData();
+      refreshJobs();
+    };
+    window.addEventListener('jobUpdated', handleJobUpdate);
+    return () => window.removeEventListener('jobUpdated', handleJobUpdate);
+  }, [fetchDirectData, refreshJobs]);
+
+  const effectiveJobs = directJobs.length > 0 ? directJobs : contextJobs;
+  const effectiveLoading = loadingDirect && secondaryLoading.jobs;
+
+  const sorted = useMemo(
+    () =>
+      [...effectiveJobs].sort(
+        (a: any, b: any) =>
+          new Date(b.createdAt || b.updatedAt || 0).getTime() -
+          new Date(a.createdAt || a.updatedAt || 0).getTime()
+      ),
+    [effectiveJobs]
+  );
+
+  const getJobJourneys = useCallback(
+    (jobId: string): CVJourney[] => {
+      const foundInDirect = directJourneys.filter(
+        (j) => j.jobId === jobId || (j as any).targetJobId === jobId
+      );
+      if (foundInDirect.length > 0) return foundInDirect;
+
+      const job = effectiveJobs.find((j: any) => (j._id?.toString() || j.id?.toString()) === jobId);
+      if (job?.journey) {
+        return [job.journey as any];
+      }
+      return [];
+    },
+    [directJourneys, effectiveJobs]
+  );
+
+  const getJourneyProgress = useCallback((journey: CVJourney): number => {
+    if (!journey) return 0;
+    if (journey.status === 'completed') return 100;
+    const totalSteps = journey.totalSteps || 5;
+    const currentStep = journey.currentStep || 1;
+    return Math.round(((currentStep - 1) / totalSteps) * 100);
+  }, []);
+
+  const getJourneyStatusText = useCallback((jobJourneys: CVJourney[], jobStatus?: string): string => {
+    if (jobJourneys && jobJourneys.length > 0) {
+      const journey = jobJourneys[0];
+      if (journey.status === 'completed') return 'Ready to apply';
+      if (journey.status === 'ready') return 'Documents prepared';
+      if (journey.status === 'processing_documents') return 'Generating documents...';
+      return `Step ${journey.currentStep || 1} of 5`;
+    }
+    if (jobStatus === 'applied') return 'Applied';
+    if (jobStatus === 'created') return 'Ready to apply';
+    return 'Saved';
+  }, []);
+
+  const handleDeleteJob = async (job: any) => {
     const id = job.id || job._id;
     if (!id) return;
-    setDeleting(true);
     try {
       const res = await authenticatedFetch(`/api/jobs/${id}`, { method: 'DELETE' });
       if (res.ok) {
+        await fetchDirectData();
         await refreshJobs();
         toast({
           title: 'Job deleted',
           description: `Removed "${job.jobTitle || 'this job'}"${job.company ? ` at ${job.company}` : ''}.`,
         });
-      } else {
-        toast({ title: 'Delete failed', description: 'Please try again.', variant: 'destructive' });
       }
     } catch (err) {
       console.error('Failed to delete job:', err);
-      toast({ title: 'Delete failed', description: 'Something went wrong. Please try again.', variant: 'destructive' });
-    } finally {
-      setDeleting(false);
-      setDeleteTarget(null);
-      setMenuJobId(null);
     }
   };
-
-  const cvById = useMemo(() => {
-    const map = new Map<string, any>();
-    cvs.forEach((cv: any) => map.set(cvId(cv), cv));
-    return map;
-  }, [cvs]);
-
-  const sorted = useMemo(
-    () =>
-      [...jobs].sort(
-        (a: any, b: any) => new Date(b.createdAt || b.updatedAt || 0).getTime() - new Date(a.createdAt || a.updatedAt || 0).getTime()
-      ),
-    [jobs]
-  );
 
   return (
     <Panel
       title="Recent Jobs"
       subtitle="Jobs you're tracking and their current status."
+      count={effectiveJobs.length}
+      noPadding
       actions={
         <GhostButton onClick={() => router.push('/dashboard/jobs?tab=applications')}>
           View all <ArrowUpRight size={13} />
         </GhostButton>
       }
     >
-      {sorted.length === 0 && secondaryLoading.jobs ? (
-        <div className="divide-y divide-[var(--border-primary)]" aria-hidden="true">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-4 py-3.5">
-              <Skeleton className="h-4 w-1/3" />
-              <Skeleton className="h-4 w-20" />
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-5 w-16 rounded-full" />
-              <Skeleton className="ml-auto h-8 w-8 rounded-lg" />
-            </div>
-          ))}
-        </div>
-      ) : sorted.length === 0 ? (
-        <div className="py-10 text-center text-sm text-[var(--text-tertiary)]">
-          No jobs tracked yet.
-        </div>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm min-w-[680px]">
-            <thead>
-              <tr className="text-left text-xs font-medium text-[var(--text-tertiary)]">
-                <th className="py-2.5 pr-4 font-medium">Job Title</th>
-                <th className="py-2.5 pr-4 font-medium">Company</th>
-                <th className="py-2.5 pr-4 font-medium">Linked CV</th>
-                <th className="py-2.5 pr-4 font-medium">Status</th>
-                <th className="py-2.5 pr-4 font-medium">Match</th>
-                <th className="py-2.5 pr-4 font-medium">Added</th>
-                <th className="py-2.5 pr-4 font-medium" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[var(--border-primary)]">
-              {sorted.slice(0, 8).map((j: any, i: number) => {
-                const linkedCv = findLinkedCvForJob(j, cvs);
-                const meta = statusMeta(j.status);
-                const match = Math.round(j.atsScore || j.matchScore || cvAtsScore(linkedCv) || (linkedCv?.atsScore) || 0);
-                return (
-                  <tr key={j.id || j._id || i} className="hover:bg-[var(--bg-tertiary)]/40 transition-colors">
-                    <td className="py-3 pr-4 font-medium text-[var(--text-primary)] whitespace-nowrap">{j.jobTitle || 'Untitled role'}</td>
-                    <td className="py-3 pr-4 text-[var(--text-secondary)] whitespace-nowrap">
-                      <div className="flex items-center gap-2">
-                        <CompanyLogo company={j.company} size={18} logoUrl={j.companyLogo} jobId={j.id || j._id} />
-                        <span>{j.company || '—'}</span>
-                      </div>
-                    </td>
-                    <td className="py-3 pr-4">
-                      {linkedCv ? (
-                        <GreenLabel>{linkedCv.title || 'Linked CV'}</GreenLabel>
-                      ) : (
-                        <span className="text-[var(--text-tertiary)]">—</span>
-                      )}
-                    </td>
-                    <td className="py-3 pr-4">
-                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap ${meta.cls}`}>
-                        {meta.label}
-                      </span>
-                    </td>
-                    <td className="py-3 pr-4">
-                      {match > 0 ? (
-                        <span className="inline-flex items-center rounded-full border border-emerald-200 dark:border-emerald-500/30 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-400 tabular-nums">
-                          {match}%
-                        </span>
-                      ) : (
-                        <span className="text-[var(--text-tertiary)]">—</span>
-                      )}
-                    </td>
-                    <td className="py-3 pr-4 text-[var(--text-secondary)] whitespace-nowrap">
-                      {timeAgo(j.createdAt || j.updatedAt)}
-                    </td>
-                    <td className="py-3 pr-4">
-                      <div className="inline-flex items-center justify-end gap-1">
-                        <button
-                          onClick={() => setSelectedJob(j)}
-                          aria-label={`View ${j.jobTitle}`}
-                          title="View job"
-                          className="w-7 h-7 inline-flex items-center justify-center rounded-md border border-[var(--border-primary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] transition-colors"
-                        >
-                          <Eye size={14} />
-                        </button>
-                        <button
-                          onClick={() => router.push(`/dashboard/jobs?tab=applications&jobId=${j.id || j._id}&edit=1`)}
-                          aria-label={`Edit ${j.jobTitle}`}
-                          title="Edit job"
-                          className="w-7 h-7 inline-flex items-center justify-center rounded-md border border-[var(--border-primary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] transition-colors"
-                        >
-                          <Pencil size={14} />
-                        </button>
-                        <button
-                          onClick={(e) => openJobMenu(e, j)}
-                          aria-label={`More options for ${j.jobTitle}`}
-                          title="More options"
-                          className="w-7 h-7 inline-flex items-center justify-center rounded-md border border-[var(--border-primary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] transition-colors"
-                        >
-                          <MoreHorizontal size={14} />
-                        </button>
-                      </div>
+      <div className="w-full overflow-hidden">
+        <JobsListView
+          jobs={sorted.slice(0, 10)}
+          loading={effectiveLoading}
+          onJobClick={(job) => setSelectedJob(job)}
+          onEditJob={(job) => router.push(`/dashboard/jobs?tab=applications&jobId=${job.id || job._id}&edit=1`)}
+          onDeleteJob={handleDeleteJob}
+          getJobJourneys={getJobJourneys}
+          getJourneyProgress={getJourneyProgress}
+          getJourneyStatusText={getJourneyStatusText}
+          borderless
+          hideSelection
+          hideActions
+        />
+      </div>
 
-                      {/* Row actions menu (fixed-position so the table's overflow doesn't clip it) */}
-                      {menuJobId === (j.id || j._id) && menuPos && (
-                        <>
-                          <div className="fixed inset-0 z-40" onClick={() => setMenuJobId(null)} />
-                          <div
-                            className="fixed z-50 min-w-[160px] rounded-lg border border-[var(--border-primary)] bg-[var(--bg-secondary)] py-1 shadow-xl"
-                            style={{ top: menuPos.top, right: menuPos.right }}
-                          >
-                            <button
-                              onClick={() => {
-                                setMenuJobId(null);
-                                setDeleteTarget(j);
-                              }}
-                              className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-[var(--bg-tertiary)] transition-colors"
-                            >
-                              <Trash2 size={13} />
-                              Delete job
-                            </button>
-                          </div>
-                        </>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* Delete confirmation modal (fixed-position, rendered inside the panel) */}
-      {deleteTarget && (
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
-          <div
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm"
-            onClick={() => !deleting && setDeleteTarget(null)}
-          />
-          <div className="relative w-full max-w-sm rounded-2xl border border-[var(--border-primary)] bg-white dark:bg-[#141810] shadow-2xl p-5">
-            <div className="flex items-start gap-3">
-              <div className="w-9 h-9 rounded-lg bg-rose-100 text-rose-600 dark:bg-rose-500/15 dark:text-rose-400 flex items-center justify-center shrink-0">
-                <Trash2 size={17} />
-              </div>
-              <div className="min-w-0">
-                <h3 className="text-sm font-semibold text-[var(--text-primary)]">Delete this job?</h3>
-                <p className="mt-1 text-xs text-[var(--text-secondary)] leading-relaxed">
-                  &ldquo;{deleteTarget.jobTitle || 'Untitled role'}&rdquo; at {deleteTarget.company || 'this company'} will be permanently removed along with its linked documents. This can&apos;t be undone.
-                </p>
-              </div>
-            </div>
-            <div className="mt-5 flex justify-end gap-2.5">
-              <button
-                onClick={() => setDeleteTarget(null)}
-                disabled={deleting}
-                className="px-4 py-2 rounded-lg border border-[var(--border-primary)] text-xs font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] transition-colors disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDeleteJob}
-                disabled={deleting}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-rose-600 text-white text-xs font-semibold hover:bg-rose-700 transition-colors disabled:opacity-60"
-              >
-                {deleting && <Loader2 size={13} className="animate-spin" />}
-                {deleting ? 'Deleting...' : 'Delete'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Job sidebar opened right on dashboard */}
+      {/* Slide-in Job Sidebar */}
       {selectedJob && (
         <JobSidebar
-          job={{
-            ...selectedJob,
-            id: selectedJob.id || selectedJob._id,
-          }}
-          journeys={[]}
+          job={selectedJob}
+          journeys={getJobJourneys(selectedJob.id || selectedJob._id)}
           onClose={() => setSelectedJob(null)}
-          onRefresh={refreshJobs}
+          onRefresh={() => {
+            fetchDirectData();
+            refreshJobs();
+          }}
         />
       )}
     </Panel>

@@ -107,7 +107,7 @@ export async function GET(req: NextRequest) {
         const session = await getServerSession(authOptions);
         const userId = (session?.user as any)?.id;
         if (userId) {
-          const candidateProfile = await extractCandidateProfile(db, userId);
+          const candidateProfile = await extractCandidateProfile(db as any, userId);
           finalJobs = rawJobs.map((job) => {
             const matchResult = scoreJobForCandidate(job, candidateProfile!);
             return {
@@ -217,6 +217,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       success: true,
       jobs: enrichedJobs,
+      data: {
+        jobs: enrichedJobs,
+        total: enrichedJobs.length,
+      },
       total: enrichedJobs.length,
       latencyMs: Date.now() - startTime,
     });
