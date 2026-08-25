@@ -34,7 +34,7 @@ const features: Feature[] = [
 ];
 
 const competitors = [
-  { key: 'aiResume',   label: 'AI Resume',   highlight: true  },
+  { key: 'aiResume',   label: 'AIResume',   highlight: true  },
   { key: 'zety',       label: 'Zety',       highlight: false },
   { key: 'resumeio',   label: 'Resume.io',  highlight: false },
   { key: 'kickresume', label: 'Kickresume', highlight: false },
@@ -124,7 +124,7 @@ const CompetitorComparison: React.FC = () => {
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.15 }}
           >
-            Most resume builders stop at templates — AI Resume gives you the full stack.
+            Most resume builders stop at templates — AIResume gives you the full stack.
           </motion.p>
         </div>
 

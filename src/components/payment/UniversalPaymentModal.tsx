@@ -1050,7 +1050,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                     </h1>
                     
                     <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed max-w-md">
-                      Join thousands of top professionals who use AI Resume to land roles at Google, Stripe, and Apple. Fully integrated toolkit for CV analysis, tracking, and preparation.
+                      Join thousands of top professionals who use AIResume to land roles at Google, Stripe, and Apple. Fully integrated toolkit for CV analysis, tracking, and preparation.
                     </p>
                   </div>
 
@@ -1106,7 +1106,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                         ))}
                       </div>
                       <p className="text-xs text-gray-700 dark:text-gray-300 italic leading-relaxed">
-                        "AI Resume completely modernized my application flow. The ATS scoring was spot-on, and I secured 3 callbacks within the first week of upgrading."
+                        "AIResume completely modernized my application flow. The ATS scoring was spot-on, and I secured 3 callbacks within the first week of upgrading."
                       </p>
                       <div className="flex items-center gap-3 mt-3">
                         <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-lime-400 to-lime-600 flex items-center justify-center text-[10px] font-black text-black">

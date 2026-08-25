@@ -384,7 +384,7 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
                     <tr className="bg-gray-50/50 dark:bg-black/20">
                       <th className="p-4 text-left border-b border-gray-200 dark:border-white/10 w-[30%] sticky left-0 bg-gray-50 dark:bg-[#1A2015] z-20">
                         <div className="flex flex-col">
-                          <span className="text-[10px] font-semibold text-lime-600 dark:text-lime-400 uppercase tracking-widest mb-0.5">AI Resume Plans</span>
+                          <span className="text-[10px] font-semibold text-lime-600 dark:text-lime-400 uppercase tracking-widest mb-0.5">AIResume Plans</span>
                           <span className="text-h3 font-bold text-gray-900 dark:text-white">Compare Features</span>
                         </div>
                       </th>

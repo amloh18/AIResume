@@ -40,13 +40,13 @@ export const metadata: Metadata = {
     title: 'AI Resume Builder Features - AI-Powered Resume Tools',
     description: 'Powerful resume builder features: AI analysis, ATS optimization, job tracking, and professional templates.',
     url: 'https://buildairesume.com/features',
-    siteName: 'AI Resume',
+    siteName: 'AIResume',
     images: [
       {
         url: '/images/features-og.png',
         width: 1200,
         height: 630,
-        alt: 'AI Resume Features - AI-Powered Resume Builder',
+        alt: 'AIResume Features - AI-Powered Resume Builder',
       },
     ],
     locale: 'en_US',
@@ -154,9 +154,9 @@ const navLinks = [
       },
       {
         label: 'Blog',
-        description: 'Research-backed career guides, ATS tips, and resume tutorials from AI Resume.',
+        description: 'Research-backed career guides, ATS tips, and resume tutorials from AIResume.',
         href: '/blog',
-        ariaLabel: 'Read the AI Resume blog',
+        ariaLabel: 'Read the AIResume blog',
         icon: <BookOpen className="w-5 h-5 text-gray-400" />
       },
       { 
@@ -190,7 +190,7 @@ export default function FeaturesPage() {
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
-    "name": "AI Resume Features",
+    "name": "AIResume Features",
     "description": "Comprehensive resume builder with AI-powered features, ATS optimization, and job tracking",
     "url": "https://buildairesume.com/features",
     "applicationCategory": "BusinessApplication",
@@ -233,7 +233,7 @@ export default function FeaturesPage() {
 
         <div className="relative z-10">
           <CardNav
-            logo="AI Resume"
+            logo="AIResume"
             links={navLinks}
           />
 
@@ -272,7 +272,7 @@ export default function FeaturesPage() {
           <section className="py-20 px-4 bg-white/5 border-y border-white/5 backdrop-blur-sm">
             <div className="max-w-7xl mx-auto">
               <h2 className="text-4xl font-bold text-white text-center mb-12">
-                Why Choose AI Resume?
+                Why Choose AIResume?
               </h2>
               <div className="grid tablet:grid-cols-3 gap-8">
                 <div className="bg-white/5 p-8 rounded-2xl border border-white/10 backdrop-blur-sm hover:border-[#80FF00]/30 hover:bg-white/10 transition-all duration-300 shadow-xl">
@@ -324,7 +324,7 @@ export default function FeaturesPage() {
                     Ready to Build Your <span className="text-[#80FF00] bg-clip-text bg-gradient-to-r from-[#80FF00] via-[#a2ff54] to-emerald-400">Perfect CV?</span>
                   </h2>
                   <p className="text-gray-300 mb-10 max-w-3xl text-body md:text-h2 leading-relaxed">
-                    Join thousands of professionals who have landed their dream jobs with AI Resume. Built in minutes — free to start.
+                    Join thousands of professionals who have landed their dream jobs with AIResume. Built in minutes — free to start.
                   </p>
                   <div className="flex flex-col sm:flex-row gap-5 justify-center w-full sm:w-auto">
                     <Link

@@ -176,7 +176,7 @@ export async function GET(request: NextRequest) {
             paidAt: order.created_at,
             dueDate: order.created_at,
             invoiceDate: order.created_at,
-            description: `Order for ${order.product?.name || 'AI Resume Pro'}`,
+            description: `Order for ${order.product?.name || 'AIResume Pro'}`,
             createdAt: order.created_at,
             isPolar: true,
             items: []

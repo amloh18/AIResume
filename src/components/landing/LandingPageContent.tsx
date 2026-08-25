@@ -70,7 +70,7 @@ export default function LandingPageContent() {
     <div className="min-h-screen bg-[#141810] relative overflow-hidden">
       <AnnouncementBanner onDismiss={() => setBannerActive(false)} />
       <CardNav
-        logo="AI Resume"
+        logo="AIResume"
         links={navLinks}
         onCtaClick={handleCtaClick}
         withBanner={bannerActive}

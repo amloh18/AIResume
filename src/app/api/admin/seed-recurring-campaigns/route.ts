@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
         // 1. Define the Daily Usage Report Campaign
         const campaignData = {
             campaignName: 'Daily Usage Report (High Activity)',
-            subject: 'Your Daily AI Resume Activity Summary',
+            subject: 'Your Daily AIResume Activity Summary',
             htmlContent: `
                 <div style="font-family: Arial, sans-serif; color: #333;">
                     <h1>Hi {{firstName}},</h1>

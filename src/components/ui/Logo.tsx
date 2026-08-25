@@ -22,7 +22,7 @@ const Logo = ({ className = '', size = 'md', priority = true }: LogoProps) => {
       <div className="relative flex items-center justify-center">
         <Image
           src="/images/logo.svg"
-          alt="CVCircle Logo"
+          alt="AIResume Logo"
           width={dim}
           height={dim}
           className="object-contain"

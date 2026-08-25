@@ -218,7 +218,7 @@ const Testimonials = () => {
             <span className="text-lime-400">15,000+</span> professionals celebrating new jobs
           </h2>
           <p className="text-white/60 text-small tablet:text-body max-w-2xl text-left">
-            Join thousands of successful job seekers who have landed their dream positions using AI Resume.
+            Join thousands of successful job seekers who have landed their dream positions using AIResume.
           </p>
         </div>
 

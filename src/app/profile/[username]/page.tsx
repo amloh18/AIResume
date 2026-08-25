@@ -27,7 +27,7 @@ export async function generateMetadata({
   const summary = profile.professionalSummary || `View ${fullName}'s professional profile and portfolio.`;
 
   return {
-    title: `${fullName} - ${jobTitle} | AI Resume`,
+    title: `${fullName} - ${jobTitle} | AIResume`,
     description: summary,
     openGraph: {
       title: `${fullName} - ${jobTitle}`,

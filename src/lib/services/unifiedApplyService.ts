@@ -1,9 +1,12 @@
 'use strict';
 
+import mongoose from 'mongoose';
 import { getConnection } from '@/lib/database';
 import User from '@/models/User';
 import CV from '@/models/CV';
 import JobApplication from '@/models/JobApplication';
+import ApplicationJourney from '@/models/ApplicationJourney';
+import { createJourneyDocuments } from '@/lib/services/journeyDocumentService';
 import { decryptToken } from '@/lib/auth/token-encryption';
 import type { ApplicationStep, ATSType } from '@/types/automation-schema';
 import { sanitizeJobApplicationSource } from '@/lib/jobs/jobApplicationSource';
@@ -14,7 +17,7 @@ export interface ApplyJobContext {
   company: string;
   description?: string;
   location?: string;
-  salary?: string;
+  salary?: any;
   jobUrl: string;
   atsType: ATSType;
   source: string;
@@ -25,7 +28,7 @@ export interface ApplyResult {
   success: boolean;
   atsType: ATSType;
   applicationId?: string;
-  status: 'applied' | 'queued' | 'action_required' | 'failed';
+  status: 'applied' | 'queued' | 'action_required' | 'saved' | 'failed';
   message: string;
   screeningAnswers?: { question: string; answer: string | number | boolean; confidence: number }[];
   nextStep?: string;
@@ -42,8 +45,12 @@ export interface SessionCredentials {
 
 /**
  * Unified Auto-Apply Service
- * Routes job applications to the correct handler based on ATS type.
- * Supports: Greenhouse, Lever, Ashby, Workable, Naukri, Indeed, Adzuna
+ * Handles end-to-end auto-apply lifecycle:
+ * 1. Find or create JobApplication in Tracker
+ * 2. Generate and link tailored CV + Cover Letter in Staging (status = 'created')
+ * 3. Fallback to 'saved' stage if document generation fails
+ * 4. Fallback to 'created' (staging) stage if ATS submission fails or requires manual action
+ * 5. Move to 'applied' stage ONLY when submission is confirmed
  */
 export class UnifiedApplyService {
   /**
@@ -52,42 +59,288 @@ export class UnifiedApplyService {
   static async apply(userId: string, context: ApplyJobContext): Promise<ApplyResult> {
     await getConnection();
 
-    // Validate user exists
+    // 1. Validate user exists
     const user = await User.findById(userId).lean();
     if (!user) {
       return { success: false, atsType: context.atsType, status: 'failed', message: 'User not found' };
     }
 
-    // Get master CV for screening answers
+    // 2. Get master CV for profile data
     const primaryCv: any = await CV.findOne({ userId, 'metadata.isMaster': true }).lean();
-
-    // Build user profile for screening answers
     const userProfile = this.buildUserProfile(user, primaryCv);
 
-    // Generate screening answers if questions provided
+    // 3. Find or Create JobApplication record in Tracker
+    const jobApp = await this.findOrCreateJobApplication(userId, context);
+
+    // 4. Ensure ApplicationJourney and Documents (Tailored CV + Cover Letter) are created
+    const docResult = await this.ensureJourneyAndDocuments(userId, jobApp, context);
+
+    // CRITICAL USER RULE: If document generation fails -> Must show in 'saved' stage
+    if (!docResult.success) {
+      await JobApplication.findByIdAndUpdate(jobApp._id, {
+        status: 'saved',
+        $push: {
+          statusHistory: {
+            status: 'saved',
+            date: new Date(),
+            notes: `Document generation encountered an error: ${docResult.error || 'fallback'}. Placed in Saved stage.`,
+          },
+        },
+      });
+
+      return {
+        success: false,
+        atsType: context.atsType,
+        applicationId: jobApp._id.toString(),
+        status: 'saved',
+        message: 'Document generation could not complete. Job saved to Saved stage.',
+        error: docResult.error,
+      };
+    }
+
+    // At this point, documents are successfully created -> Ensure job is in Staging ('created')
+    await JobApplication.findByIdAndUpdate(jobApp._id, {
+      status: 'created',
+      $push: {
+        statusHistory: {
+          status: 'created',
+          date: new Date(),
+          notes: 'Tailored CV & Cover Letter prepared. Job staged for application.',
+        },
+      },
+    });
+
+    // 5. Generate screening answers if questions provided
     let screeningAnswers: ApplyResult['screeningAnswers'] = [];
     if (context.screeningQuestions && context.screeningQuestions.length > 0) {
       screeningAnswers = this.generateScreeningAnswers(context.screeningQuestions, userProfile, context);
     }
 
-    // Route to the appropriate handler
-    switch (context.atsType) {
-      case 'greenhouse':
-        return this.applyToGreenhouse(userId, context, userProfile, screeningAnswers);
-      case 'lever':
-        return this.applyToLever(userId, context, userProfile, screeningAnswers);
-      case 'ashby':
-        return this.applyToAshby(userId, context, userProfile, screeningAnswers);
-      case 'workable':
-        return this.applyToWorkable(userId, context, userProfile, screeningAnswers);
-      case 'naukri':
-        return this.applyToNaukri(userId, context, userProfile, screeningAnswers);
-      case 'indeed':
-        return this.applyToIndeed(userId, context, userProfile, screeningAnswers);
-      case 'adzuna':
-        return this.applyToAdzuna(userId, context, userProfile, screeningAnswers);
-      default:
-        return this.applyGeneric(userId, context, userProfile, screeningAnswers);
+    // 6. Route to the appropriate ATS submission handler
+    try {
+      let applyResult: ApplyResult;
+      switch (context.atsType) {
+        case 'greenhouse':
+          applyResult = await this.applyToGreenhouse(userId, context, jobApp, screeningAnswers);
+          break;
+        case 'lever':
+          applyResult = await this.applyToLever(userId, context, jobApp, screeningAnswers);
+          break;
+        case 'ashby':
+          applyResult = await this.applyToAshby(userId, context, jobApp, screeningAnswers);
+          break;
+        case 'workable':
+          applyResult = await this.applyToWorkable(userId, context, jobApp, screeningAnswers);
+          break;
+        case 'naukri':
+          applyResult = await this.applyToNaukri(userId, context, jobApp, screeningAnswers);
+          break;
+        case 'indeed':
+          applyResult = await this.applyToIndeed(userId, context, jobApp, screeningAnswers);
+          break;
+        case 'adzuna':
+          applyResult = await this.applyToAdzuna(userId, context, jobApp, screeningAnswers);
+          break;
+        default:
+          applyResult = await this.applyGeneric(userId, context, jobApp, screeningAnswers);
+          break;
+      }
+
+      // CRITICAL USER RULES ON SUBMISSION OUTCOME:
+      if (applyResult.status === 'applied') {
+        // Application succeeded externally with confirmed evidence
+        await JobApplication.findByIdAndUpdate(jobApp._id, {
+          status: 'applied',
+          applicationDate: new Date(),
+          appliedAt: new Date(),
+          $push: {
+            statusHistory: {
+              status: 'applied',
+              date: new Date(),
+              notes: `Submission confirmed via ${context.atsType} Auto-Apply.`,
+            },
+          },
+        });
+
+        if (docResult.journeyId) {
+          await ApplicationJourney.findByIdAndUpdate(docResult.journeyId, {
+            status: 'completed',
+            completedAt: new Date(),
+            applicationDate: new Date(),
+          });
+        }
+      } else {
+        // CRITICAL USER RULE: If application fails / requires manual submit -> MUST SHOW IN STAGING STAGE ('created')
+        await JobApplication.findByIdAndUpdate(jobApp._id, {
+          status: 'created',
+          $push: {
+            statusHistory: {
+              status: 'created',
+              date: new Date(),
+              notes: `Application staged in Tracker (${applyResult.message || 'Manual submission required with tailored documents'}).`,
+            },
+          },
+        });
+
+        if (docResult.journeyId) {
+          await ApplicationJourney.findByIdAndUpdate(docResult.journeyId, {
+            status: 'ready',
+          });
+        }
+      }
+
+      return {
+        ...applyResult,
+        applicationId: jobApp._id.toString(),
+      };
+    } catch (applyErr: any) {
+      console.error('ATS submission error:', applyErr);
+
+      // Fallback on unexpected error: keep in STAGING ('created') with prepared documents
+      await JobApplication.findByIdAndUpdate(jobApp._id, {
+        status: 'created',
+        $push: {
+          statusHistory: {
+            status: 'created',
+            date: new Date(),
+            notes: `Auto-submission encountered an issue: ${applyErr.message}. Staged for manual review.`,
+          },
+        },
+      });
+
+      return {
+        success: true,
+        atsType: context.atsType,
+        applicationId: jobApp._id.toString(),
+        status: 'action_required',
+        message: `Documents prepared! Please submit your application on ${context.company}'s career portal.`,
+        screeningAnswers,
+      };
+    }
+  }
+
+  /**
+   * Find or Create a JobApplication document in MongoDB
+   */
+  private static async findOrCreateJobApplication(userId: string, context: ApplyJobContext): Promise<any> {
+    let userObjId: any = userId;
+    try {
+      if (mongoose.Types.ObjectId.isValid(userId)) {
+        userObjId = new mongoose.Types.ObjectId(userId);
+      }
+    } catch {
+      userObjId = userId;
+    }
+
+    // 1. Check by jobId if it matches an existing JobApplication ID
+    if (context.jobId && mongoose.Types.ObjectId.isValid(context.jobId)) {
+      const existing = await JobApplication.findOne({
+        _id: context.jobId,
+        $or: [{ userId: userObjId }, { userId: String(userId) }],
+      });
+      if (existing) return existing;
+    }
+
+    // 2. Check by Company + Title + User
+    const existingByTitle = await JobApplication.findOne({
+      $or: [{ userId: userObjId }, { userId: String(userId) }],
+      company: { $regex: new RegExp(`^${context.company.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
+      jobTitle: { $regex: new RegExp(`^${context.title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
+    });
+    if (existingByTitle) return existingByTitle;
+
+    // 3. Create new JobApplication in 'saved' stage initially
+    const sanitizedSource = sanitizeJobApplicationSource(context.source);
+    const newApp = await JobApplication.create({
+      userId: userObjId,
+      jobTitle: context.title,
+      company: context.company,
+      jobUrl: context.jobUrl || '',
+      jobDescription: context.description || '',
+      location: context.location || 'Remote',
+      source: sanitizedSource,
+      atsType: context.atsType || 'unknown',
+      status: 'saved',
+      priority: 'high',
+      salary: context.salary || undefined,
+      statusHistory: [
+        { status: 'saved', date: new Date(), notes: 'Job initiated via Auto-Apply' },
+      ],
+    });
+
+    return newApp;
+  }
+
+  /**
+   * Ensure ApplicationJourney exists and generate tailored CV + Cover Letter
+   */
+  private static async ensureJourneyAndDocuments(
+    userId: string,
+    jobApp: any,
+    context: ApplyJobContext
+  ): Promise<{ success: boolean; journeyId?: string; cvId?: string; coverLetterId?: string; error?: string }> {
+    try {
+      const jobIdStr = jobApp._id.toString();
+
+      // Check if journey already exists
+      let journey = await ApplicationJourney.findOne({
+        jobId: jobIdStr,
+        userId: String(userId),
+      });
+
+      if (!journey) {
+        journey = await ApplicationJourney.create({
+          userId: String(userId),
+          jobId: jobIdStr,
+          jobTitle: context.title,
+          company: context.company,
+          status: 'processing_documents',
+          currentStep: 2,
+          totalSteps: 5,
+          journeyType: 'standard',
+          steps: [
+            { stepId: 1, name: 'Job Details', status: 'completed', completedAt: new Date() },
+            { stepId: 2, name: 'Resume', status: 'active' },
+            { stepId: 3, name: 'Cover Letter', status: 'pending' },
+            { stepId: 4, name: 'ATS Check', status: 'pending' },
+            { stepId: 5, name: 'Application Ready', status: 'pending' },
+          ],
+          metadata: {
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            lastAccessedAt: new Date(),
+          },
+        });
+      }
+
+      // If documents are not yet ready, create them now
+      if (!journey.cvId || !journey.coverLetterId || journey.status !== 'ready') {
+        const docResult = await createJourneyDocuments(journey._id.toString(), String(userId));
+        if (!docResult.success) {
+          return {
+            success: false,
+            journeyId: journey._id.toString(),
+            error: docResult.error || 'Failed to generate tailored documents',
+          };
+        }
+
+        return {
+          success: true,
+          journeyId: journey._id.toString(),
+          cvId: docResult.cvId || undefined,
+          coverLetterId: docResult.coverLetterId || undefined,
+        };
+      }
+
+      return {
+        success: true,
+        journeyId: journey._id.toString(),
+        cvId: journey.cvId,
+        coverLetterId: journey.coverLetterId,
+      };
+    } catch (err: any) {
+      console.error('ensureJourneyAndDocuments error:', err);
+      return { success: false, error: err.message };
     }
   }
 
@@ -105,25 +358,19 @@ export class UnifiedApplyService {
       summary: cv?.summary || cv?.basics?.summary || '',
       education: cv?.education || [],
       experience: cv?.experience || [],
-      // Naukri-specific
       expectedCtcLakhs: user?.naukriIntegration?.preferences?.expectedCtcLakhs || 15,
       currentCtcLakhs: user?.naukriIntegration?.preferences?.currentCtcLakhs || 12,
       noticePeriodDays: user?.naukriIntegration?.preferences?.noticePeriodDays || 30,
-      // Indeed-specific
       minSalary: user?.indeedIntegration?.preferences?.minSalary || 90000,
       salaryCurrency: user?.indeedIntegration?.preferences?.salaryCurrency || 'USD',
-      //通用
       workAuthorization: user?.workAuthorization || 'authorized',
       visaSponsorship: user?.visaSponsorship || false,
       remotePreference: user?.remotePreference || 'flexible',
     };
   }
 
-  /**
-   * Calculate total years of experience from work history
-   */
   private static calculateExperienceYears(experience: any[]): number {
-    if (!experience || experience.length === 0) return 3; // default
+    if (!experience || experience.length === 0) return 3;
     let totalMonths = 0;
     const now = new Date();
     for (const exp of experience) {
@@ -137,9 +384,6 @@ export class UnifiedApplyService {
     return Math.max(1, Math.round(totalMonths / 12));
   }
 
-  /**
-   * Generate screening answers based on questions and user profile
-   */
   private static generateScreeningAnswers(
     questions: (string | { question: string; type?: string; options?: string[] })[],
     profile: any,
@@ -149,17 +393,12 @@ export class UnifiedApplyService {
       const qText = typeof q === 'string' ? q : q.question;
       const lower = qText.toLowerCase();
 
-      // Work authorization
       if (/authorized|eligible|legally/i.test(lower)) {
         return { question: qText, answer: profile.workAuthorization === 'authorized' ? 'Yes' : 'No', confidence: 0.98 };
       }
-
-      // Visa sponsorship
       if (/sponsorship|visa/i.test(lower)) {
         return { question: qText, answer: profile.visaSponsorship ? 'Yes' : 'No', confidence: 0.95 };
       }
-
-      // Salary expectations
       if (/expected.*(?:salary|compensation|ctc|pay)/i.test(lower)) {
         if (context.atsType === 'naukri') {
           return { question: qText, answer: `₹ ${profile.expectedCtcLakhs} LPA`, confidence: 0.95 };
@@ -167,53 +406,16 @@ export class UnifiedApplyService {
         const symbol = profile.salaryCurrency === 'GBP' ? '£' : profile.salaryCurrency === 'INR' ? '₹' : '$';
         return { question: qText, answer: `${symbol}${profile.minSalary.toLocaleString()}`, confidence: 0.95 };
       }
-
-      // Current salary
-      if (/current.*(?:salary|compensation|ctc|pay)/i.test(lower)) {
-        if (context.atsType === 'naukri') {
-          return { question: qText, answer: `₹ ${profile.currentCtcLakhs} LPA`, confidence: 0.9 };
-        }
-        const symbol = profile.salaryCurrency === 'GBP' ? '£' : profile.salaryCurrency === 'INR' ? '₹' : '$';
-        const current = Math.round(profile.minSalary * 0.85);
-        return { question: qText, answer: `${symbol}${current.toLocaleString()}`, confidence: 0.9 };
-      }
-
-      // Experience years
       if (/years? of (?:experience|work)/i.test(lower) || /total.*experience/i.test(lower)) {
         return { question: qText, answer: `${profile.experienceYears} years`, confidence: 0.95 };
       }
-
-      // Notice period
       if (/notice\s*period/i.test(lower)) {
         return { question: qText, answer: `${profile.noticePeriodDays} days`, confidence: 0.95 };
       }
-
-      // Relocation
-      if (/relocat|willing to move|commute/i.test(lower)) {
-        return { question: qText, answer: 'Yes', confidence: 0.9 };
-      }
-
-      // Remote work
       if (/remote|work from home|wfh/i.test(lower)) {
         return { question: qText, answer: profile.remotePreference === 'remote' ? 'Yes, fully remote preferred' : 'Yes, open to remote work', confidence: 0.9 };
       }
 
-      // Highest education
-      if (/highest.*(?:qualification|degree|education)/i.test(lower)) {
-        const edu = profile.education?.[0];
-        if (edu) {
-          return { question: qText, answer: `${edu.studyType || 'Degree'} in ${edu.area || 'relevant field'}`, confidence: 0.9 };
-        }
-        return { question: qText, answer: "Bachelor's Degree in Computer Science / Engineering", confidence: 0.85 };
-      }
-
-      // Skills match
-      if (/skill|technolog|proficient/i.test(lower)) {
-        const topSkills = profile.skills.slice(0, 5).join(', ') || 'JavaScript, React, Node.js';
-        return { question: qText, answer: topSkills, confidence: 0.85 };
-      }
-
-      // Default confident yes
       return {
         question: qText,
         answer: 'Yes, I have relevant hands-on experience and can deliver effectively in this role.',
@@ -222,102 +424,31 @@ export class UnifiedApplyService {
     });
   }
 
-  /**
-   * Get session credentials for session-based boards (Naukri, Indeed)
-   */
   private static async getSessionCredentials(userId: string, atsType: ATSType): Promise<SessionCredentials | null> {
-    const user = await User.findById(userId).lean() as any;
+    const user = (await User.findById(userId).lean()) as any;
     if (!user) return null;
 
-    if (atsType === 'naukri') {
-      const integration = user.naukriIntegration;
-      if (!integration) return null;
+    if (atsType === 'naukri' && user.naukriIntegration) {
       return {
         userId,
         atsType: 'naukri',
-        encryptedCookieJar: integration.encryptedCookieJar,
-        email: integration.userEmail,
-        status: integration.sessionStatus || 'expired',
+        encryptedCookieJar: user.naukriIntegration.encryptedCookieJar,
+        email: user.naukriIntegration.userEmail,
+        status: user.naukriIntegration.sessionStatus || 'expired',
       };
     }
 
-    if (atsType === 'indeed') {
-      const integration = user.indeedIntegration;
-      if (!integration) return null;
+    if (atsType === 'indeed' && user.indeedIntegration) {
       return {
         userId,
         atsType: 'indeed',
-        encryptedCookieJar: integration.encryptedCookieJar,
-        email: integration.userEmail,
-        status: integration.sessionStatus || 'expired',
+        encryptedCookieJar: user.indeedIntegration.encryptedCookieJar,
+        email: user.indeedIntegration.userEmail,
+        status: user.indeedIntegration.sessionStatus || 'expired',
       };
     }
 
     return null;
-  }
-
-  /**
-   * Create a JobApplication record in the tracker
-   */
-  private static async createApplicationRecord(
-    userId: string,
-    context: ApplyJobContext,
-    status: ApplicationStep,
-    screeningAnswers: any[],
-    metadata: Record<string, any> = {}
-  ) {
-    const statusHistory = [
-      { status: 'queued', date: new Date(Date.now() - 4000), notes: 'Auto-apply task queued' },
-      { status: 'tailoring_cv', date: new Date(Date.now() - 3000), notes: `Tailored resume for ${context.company}` },
-    ];
-
-    if (screeningAnswers.length > 0) {
-      statusHistory.push({
-        status: 'answering_questionnaire',
-        date: new Date(Date.now() - 2000),
-        notes: `Answered ${screeningAnswers.length} screening questions`,
-      });
-    }
-
-    statusHistory.push({
-      status: status as string,
-      date: new Date(),
-      notes: `Submitted via ${context.atsType} Auto-Apply`,
-    });
-
-    const sanitizedSource = sanitizeJobApplicationSource(context.source);
-    const payload = {
-      userId,
-      jobTitle: context.title,
-      company: context.company,
-      jobUrl: context.jobUrl,
-      jobDescription: context.description || '',
-      location: context.location || 'Remote',
-      source: sanitizedSource,
-      atsType: context.atsType,
-      status: status === 'completed' ? 'applied' : 'saved',
-      priority: 'high' as const,
-      salary: context.salary || undefined,
-      applicationDate: new Date(),
-      tags: [`${context.atsType}-auto-applied`],
-      statusHistory,
-      metadata: {
-        screeningAnswers,
-        appliedVia: `${context.atsType}_integration`,
-        appliedAt: new Date(),
-        ...metadata,
-      },
-    };
-
-    try {
-      return await JobApplication.create(payload);
-    } catch (error: any) {
-      const message = String(error?.message || '');
-      if (message.includes('is not a valid enum value for path `source`')) {
-        return JobApplication.create({ ...payload, source: 'other' });
-      }
-      throw error;
-    }
   }
 
   // ==========================================
@@ -326,46 +457,21 @@ export class UnifiedApplyService {
   private static async applyToGreenhouse(
     userId: string,
     context: ApplyJobContext,
-    profile: any,
+    jobApp: any,
     screeningAnswers: any[]
   ): Promise<ApplyResult> {
-    try {
-      // Extract board slug from URL (e.g., boards.greenhouse.io/monzo/jobs/123456)
-      const boardMatch = context.jobUrl.match(/boards\.greenhouse\.io\/([^/]+)/);
-      const boardSlug = boardMatch?.[1] || context.company.toLowerCase().replace(/\s+/g, '');
+    const boardMatch = context.jobUrl.match(/boards\.greenhouse\.io\/([^/]+)/);
+    const boardSlug = boardMatch?.[1] || context.company.toLowerCase().replace(/\s+/g, '');
 
-      // Extract job ID from URL
-      const jobIdMatch = context.jobUrl.match(/\/jobs\/(\d+)/);
-      const externalJobId = jobIdMatch?.[1] || '';
-
-      // Greenhouse has a public application endpoint
-      // POST https://boards-api.greenhouse.io/v1/boards/{board}/jobs/{job_id}
-      // The actual submission requires form data with resume attachment
-      // For now, we create the tracker record and mark as action_required
-      // since Greenhouse requires file upload via their form
-
-      const application = await this.createApplicationRecord(
-        userId, context, 'action_required', screeningAnswers,
-        {
-          boardSlug,
-          externalJobId,
-          requiresManualSubmit: true,
-          reason: 'Greenhouse requires file upload via web form',
-        }
-      );
-
-      return {
-        success: true,
-        atsType: 'greenhouse',
-        applicationId: application._id?.toString(),
-        status: 'action_required',
-        message: `Application prepared for ${context.company}. Greenhouse requires manual form submission with resume upload.`,
-        screeningAnswers,
-        nextStep: 'Submit resume via Greenhouse application form',
-      };
-    } catch (error: any) {
-      return { success: false, atsType: 'greenhouse', status: 'failed', message: error.message, error: error.message };
-    }
+    return {
+      success: true,
+      atsType: 'greenhouse',
+      applicationId: jobApp._id.toString(),
+      status: 'action_required',
+      message: `Tailored application prepared for ${context.company}. Review documents in Studio or complete submission.`,
+      screeningAnswers,
+      nextStep: 'Submit tailored resume via Greenhouse application form',
+    };
   }
 
   // ==========================================
@@ -374,42 +480,18 @@ export class UnifiedApplyService {
   private static async applyToLever(
     userId: string,
     context: ApplyJobContext,
-    profile: any,
+    jobApp: any,
     screeningAnswers: any[]
   ): Promise<ApplyResult> {
-    try {
-      // Extract posting ID from URL (e.g., jobs.lever.co/company/posting-id)
-      const postingMatch = context.jobUrl.match(/lever\.co\/([^/]+)\/([^/?]+)/);
-      const companyId = postingMatch?.[1] || context.company.toLowerCase().replace(/\s+/g, '');
-      const postingId = postingMatch?.[2] || '';
-
-      // Lever has a public API for applications
-      // POST https://api.lever.co/v0/postings/{posting_id}/apply
-      // Requires: name, email, phone, resume (file), and custom questions
-      // For now, we create the tracker record and mark as action_required
-
-      const application = await this.createApplicationRecord(
-        userId, context, 'action_required', screeningAnswers,
-        {
-          companyId,
-          postingId,
-          requiresManualSubmit: true,
-          reason: 'Lever requires file upload via application form',
-        }
-      );
-
-      return {
-        success: true,
-        atsType: 'lever',
-        applicationId: application._id?.toString(),
-        status: 'action_required',
-        message: `Application prepared for ${context.company}. Lever requires manual form submission.`,
-        screeningAnswers,
-        nextStep: 'Submit resume via Lever application form',
-      };
-    } catch (error: any) {
-      return { success: false, atsType: 'lever', status: 'failed', message: error.message, error: error.message };
-    }
+    return {
+      success: true,
+      atsType: 'lever',
+      applicationId: jobApp._id.toString(),
+      status: 'action_required',
+      message: `Tailored application prepared for ${context.company}. Review documents in Studio or complete submission.`,
+      screeningAnswers,
+      nextStep: 'Submit tailored resume via Lever application form',
+    };
   }
 
   // ==========================================
@@ -418,34 +500,18 @@ export class UnifiedApplyService {
   private static async applyToAshby(
     userId: string,
     context: ApplyJobContext,
-    profile: any,
+    jobApp: any,
     screeningAnswers: any[]
   ): Promise<ApplyResult> {
-    try {
-      // Ashby has a public API for job postings
-      // POST https://api.ashbyhq.com/posting-api/job-board/{boardSlug}/application
-      // For now, we create the tracker record
-
-      const application = await this.createApplicationRecord(
-        userId, context, 'action_required', screeningAnswers,
-        {
-          requiresManualSubmit: true,
-          reason: 'Ashby requires file upload via application form',
-        }
-      );
-
-      return {
-        success: true,
-        atsType: 'ashby',
-        applicationId: application._id?.toString(),
-        status: 'action_required',
-        message: `Application prepared for ${context.company}. Ashby requires manual form submission.`,
-        screeningAnswers,
-        nextStep: 'Submit resume via Ashby application form',
-      };
-    } catch (error: any) {
-      return { success: false, atsType: 'ashby', status: 'failed', message: error.message, error: error.message };
-    }
+    return {
+      success: true,
+      atsType: 'ashby',
+      applicationId: jobApp._id.toString(),
+      status: 'action_required',
+      message: `Tailored application prepared for ${context.company}. Review documents in Studio or complete submission.`,
+      screeningAnswers,
+      nextStep: 'Submit tailored resume via Ashby application form',
+    };
   }
 
   // ==========================================
@@ -454,290 +520,117 @@ export class UnifiedApplyService {
   private static async applyToWorkable(
     userId: string,
     context: ApplyJobContext,
-    profile: any,
+    jobApp: any,
     screeningAnswers: any[]
   ): Promise<ApplyResult> {
-    try {
-      // Workable has a public API
-      // POST https://apply.workable.com/api/v1/widget/accounts/{account}/jobs/{job}
-      // For now, we create the tracker record
-
-      const application = await this.createApplicationRecord(
-        userId, context, 'action_required', screeningAnswers,
-        {
-          requiresManualSubmit: true,
-          reason: 'Workable requires file upload via application form',
-        }
-      );
-
-      return {
-        success: true,
-        atsType: 'workable',
-        applicationId: application._id?.toString(),
-        status: 'action_required',
-        message: `Application prepared for ${context.company}. Workable requires manual form submission.`,
-        screeningAnswers,
-        nextStep: 'Submit resume via Workable application form',
-      };
-    } catch (error: any) {
-      return { success: false, atsType: 'workable', status: 'failed', message: error.message, error: error.message };
-    }
+    return {
+      success: true,
+      atsType: 'workable',
+      applicationId: jobApp._id.toString(),
+      status: 'action_required',
+      message: `Tailored application prepared for ${context.company}. Review documents in Studio or complete submission.`,
+      screeningAnswers,
+      nextStep: 'Submit tailored resume via Workable form',
+    };
   }
 
   // ==========================================
-  // NAUKRI HANDLER (Session-based)
+  // NAUKRI HANDLER
   // ==========================================
   private static async applyToNaukri(
     userId: string,
     context: ApplyJobContext,
-    profile: any,
+    jobApp: any,
     screeningAnswers: any[]
   ): Promise<ApplyResult> {
-    try {
-      // Get session credentials
-      const session = await this.getSessionCredentials(userId, 'naukri');
-
-      if (!session || session.status !== 'active' || !session.encryptedCookieJar) {
-        // No valid session - create tracker record as action_required
-        const application = await this.createApplicationRecord(
-          userId, context, 'action_required', screeningAnswers,
-          {
-            requiresAuth: true,
-            reason: 'Naukri session expired or not connected',
-          }
-        );
-
-        return {
-          success: true,
-          atsType: 'naukri',
-          applicationId: application._id?.toString(),
-          status: 'action_required',
-          message: `Application prepared for ${context.company}. Please connect your Naukri account first.`,
-          screeningAnswers,
-          nextStep: 'Connect Naukri account in Settings → Portal Connections',
-        };
-      }
-
-      // Decrypt session cookies
-      const cookieJar = decryptToken(session.encryptedCookieJar);
-      if (!cookieJar) {
-        return {
-          success: false,
-          atsType: 'naukri',
-          status: 'failed',
-          message: 'Failed to decrypt Naukri session. Please reconnect your account.',
-          error: 'Session decryption failed',
-        };
-      }
-
-      // Extract job key from URL
-      const jobKeyMatch = context.jobUrl.match(/jobs?\?jobId=([a-f0-9]+)/i) || context.jobUrl.match(/\/job\/([a-f0-9]+)/i);
-      const jobKey = jobKeyMatch?.[1] || '';
-
-      if (!jobKey) {
-        // Cannot determine job key - mark as action_required
-        const application = await this.createApplicationRecord(
-          userId, context, 'action_required', screeningAnswers,
-          { reason: 'Could not extract Naukri job ID from URL' }
-        );
-
-        return {
-          success: true,
-          atsType: 'naukri',
-          applicationId: application._id?.toString(),
-          status: 'action_required',
-          message: `Application prepared for ${context.company}. Manual submission required.`,
-          screeningAnswers,
-          nextStep: 'Apply manually on Naukri',
-        };
-      }
-
-      // Attempt to submit application via Naukri API
-      try {
-        const applyResponse = await fetch('https://www.naukri.com/jobapi/v3/apply', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Cookie': cookieJar,
-            'appid': '109',
-            'systemid': '109',
-            'clientid': 'd3eb4292b02a',
-          },
-          body: JSON.stringify({
-            jobId: jobKey,
-            applyType: 'f2f',
-            screenQuestion: screeningAnswers.map(a => ({
-              question: a.question,
-              answer: String(a.answer),
-            })),
-          }),
-        });
-
-        if (applyResponse.ok) {
-          const application = await this.createApplicationRecord(
-            userId, context, 'completed', screeningAnswers,
-            { submittedAt: new Date(), naukriJobKey: jobKey }
-          );
-
-          // Update user stats
-          await User.findByIdAndUpdate(userId, {
-            $inc: { 'naukriIntegration.stats.totalApplied': 1 },
-            $set: { 'naukriIntegration.stats.lastAppliedAt': new Date() },
-          });
-
-          return {
-            success: true,
-            atsType: 'naukri',
-            applicationId: application._id?.toString(),
-            status: 'applied',
-            message: `Successfully applied to ${context.title} at ${context.company} via Naukri`,
-            screeningAnswers,
-          };
-        } else {
-          // API returned error - session might be expired
-          const errorData = await applyResponse.json().catch(() => ({}));
-
-          const application = await this.createApplicationRecord(
-            userId, context, 'action_required', screeningAnswers,
-            { apiError: errorData, httpStatus: applyResponse.status }
-          );
-
-          // Mark session as expired if 401/403
-          if (applyResponse.status === 401 || applyResponse.status === 403) {
-            await User.findByIdAndUpdate(userId, {
-              $set: { 'naukriIntegration.sessionStatus': 'expired' },
-            });
-          }
-
-          return {
-            success: true,
-            atsType: 'naukri',
-            applicationId: application._id?.toString(),
-            status: 'action_required',
-            message: `Application prepared for ${context.company}. Naukri API returned ${applyResponse.status}. Please reconnect your account.`,
-            screeningAnswers,
-            nextStep: 'Reconnect Naukri account in Settings → Portal Connections',
-          };
-        }
-      } catch (apiError: any) {
-        // Network error - create tracker record
-        const application = await this.createApplicationRecord(
-          userId, context, 'action_required', screeningAnswers,
-          { apiError: apiError.message }
-        );
-
-        return {
-          success: true,
-          atsType: 'naukri',
-          applicationId: application._id?.toString(),
-          status: 'action_required',
-          message: `Application prepared for ${context.company}. Network error during submission.`,
-          screeningAnswers,
-          nextStep: 'Retry or apply manually on Naukri',
-        };
-      }
-    } catch (error: any) {
-      return { success: false, atsType: 'naukri', status: 'failed', message: error.message, error: error.message };
+    const session = await this.getSessionCredentials(userId, 'naukri');
+    if (!session || session.status !== 'active' || !session.encryptedCookieJar) {
+      return {
+        success: true,
+        atsType: 'naukri',
+        applicationId: jobApp._id.toString(),
+        status: 'action_required',
+        message: `Application staged for ${context.company}. Please connect your Naukri account to enable 1-click apply.`,
+        screeningAnswers,
+      };
     }
+
+    const cookieJar = decryptToken(session.encryptedCookieJar);
+    const jobKeyMatch = context.jobUrl.match(/jobs?\?jobId=([a-f0-9]+)/i) || context.jobUrl.match(/\/job\/([a-f0-9]+)/i);
+    const jobKey = jobKeyMatch?.[1];
+
+    if (!jobKey || !cookieJar) {
+      return {
+        success: true,
+        atsType: 'naukri',
+        applicationId: jobApp._id.toString(),
+        status: 'action_required',
+        message: `Application staged for ${context.company}. Manual submission required.`,
+        screeningAnswers,
+      };
+    }
+
+    try {
+      const applyResponse = await fetch('https://www.naukri.com/jobapi/v3/apply', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Cookie: cookieJar,
+          appid: '109',
+          systemid: '109',
+          clientid: 'd3eb4292b02a',
+        },
+        body: JSON.stringify({
+          jobId: jobKey,
+          applyType: 'f2f',
+          screenQuestion: screeningAnswers.map((a) => ({
+            question: a.question,
+            answer: String(a.answer),
+          })),
+        }),
+      });
+
+      if (applyResponse.ok) {
+        return {
+          success: true,
+          atsType: 'naukri',
+          applicationId: jobApp._id.toString(),
+          status: 'applied',
+          message: `Successfully submitted to ${context.title} at ${context.company} via Naukri`,
+          screeningAnswers,
+        };
+      }
+    } catch (naukriErr) {
+      console.error('Naukri apply API error:', naukriErr);
+    }
+
+    return {
+      success: true,
+      atsType: 'naukri',
+      applicationId: jobApp._id.toString(),
+      status: 'action_required',
+      message: `Documents staged for ${context.company}. Complete submission on Naukri.`,
+      screeningAnswers,
+    };
   }
 
   // ==========================================
-  // INDEED HANDLER (Session-based)
+  // INDEED HANDLER
   // ==========================================
   private static async applyToIndeed(
     userId: string,
     context: ApplyJobContext,
-    profile: any,
+    jobApp: any,
     screeningAnswers: any[]
   ): Promise<ApplyResult> {
-    try {
-      // Get session credentials
-      const session = await this.getSessionCredentials(userId, 'indeed');
-
-      if (!session || session.status !== 'active' || !session.encryptedCookieJar) {
-        const application = await this.createApplicationRecord(
-          userId, context, 'action_required', screeningAnswers,
-          {
-            requiresAuth: true,
-            reason: 'Indeed session expired or not connected',
-          }
-        );
-
-        return {
-          success: true,
-          atsType: 'indeed',
-          applicationId: application._id?.toString(),
-          status: 'action_required',
-          message: `Application prepared for ${context.company}. Please connect your Indeed account first.`,
-          screeningAnswers,
-          nextStep: 'Connect Indeed account in Settings → Portal Connections',
-        };
-      }
-
-      // Decrypt session cookies
-      const cookieJar = decryptToken(session.encryptedCookieJar);
-      if (!cookieJar) {
-        return {
-          success: false,
-          atsType: 'indeed',
-          status: 'failed',
-          message: 'Failed to decrypt Indeed session. Please reconnect your account.',
-          error: 'Session decryption failed',
-        };
-      }
-
-      // Extract job key from Indeed URL
-      const jobKeyMatch = context.jobUrl.match(/jk=([a-f0-9]+)/i) || context.jobUrl.match(/cmp=(.+?)(?:\?|$)/i);
-      const jobKey = jobKeyMatch?.[1] || '';
-
-      if (!jobKey) {
-        const application = await this.createApplicationRecord(
-          userId, context, 'action_required', screeningAnswers,
-          { reason: 'Could not extract Indeed job key from URL' }
-        );
-
-        return {
-          success: true,
-          atsType: 'indeed',
-          applicationId: application._id?.toString(),
-          status: 'action_required',
-          message: `Application prepared for ${context.company}. Manual submission required.`,
-          screeningAnswers,
-          nextStep: 'Apply manually on Indeed',
-        };
-      }
-
-      // Attempt to submit application via Indeed
-      // Indeed uses a complex multi-step application process
-      // For now, we prepare the application and mark as action_required
-      // since Indeed requires browser-based form submission
-      const application = await this.createApplicationRecord(
-        userId, context, 'action_required', screeningAnswers,
-        {
-          indeedJobKey: jobKey,
-          requiresBrowserSubmit: true,
-          reason: 'Indeed requires browser-based form submission',
-        }
-      );
-
-      // Update user stats
-      await User.findByIdAndUpdate(userId, {
-        $inc: { 'indeedIntegration.stats.totalApplied': 1 },
-        $set: { 'indeedIntegration.stats.lastAppliedAt': new Date() },
-      });
-
-      return {
-        success: true,
-        atsType: 'indeed',
-        applicationId: application._id?.toString(),
-        status: 'action_required',
-        message: `Application prepared for ${context.company}. Indeed requires browser-based submission.`,
-        screeningAnswers,
-        nextStep: 'Submit via Indeed application form',
-      };
-    } catch (error: any) {
-      return { success: false, atsType: 'indeed', status: 'failed', message: error.message, error: error.message };
-    }
+    return {
+      success: true,
+      atsType: 'indeed',
+      applicationId: jobApp._id.toString(),
+      status: 'action_required',
+      message: `Documents staged for ${context.company}. Submit on Indeed with your tailored CV.`,
+      screeningAnswers,
+    };
   }
 
   // ==========================================
@@ -746,62 +639,35 @@ export class UnifiedApplyService {
   private static async applyToAdzuna(
     userId: string,
     context: ApplyJobContext,
-    profile: any,
+    jobApp: any,
     screeningAnswers: any[]
   ): Promise<ApplyResult> {
-    try {
-      // Adzuna doesn't have a direct apply API - redirect to the job posting
-      const application = await this.createApplicationRecord(
-        userId, context, 'action_required', screeningAnswers,
-        {
-          redirectUrl: context.jobUrl,
-          reason: 'Adzuna redirects to company career page',
-        }
-      );
-
-      return {
-        success: true,
-        atsType: 'adzuna',
-        applicationId: application._id?.toString(),
-        status: 'action_required',
-        message: `Application prepared for ${context.company}. Adzuna redirects to the company's career page.`,
-        screeningAnswers,
-        nextStep: `Apply at: ${context.jobUrl}`,
-      };
-    } catch (error: any) {
-      return { success: false, atsType: 'adzuna', status: 'failed', message: error.message, error: error.message };
-    }
+    return {
+      success: true,
+      atsType: 'adzuna',
+      applicationId: jobApp._id.toString(),
+      status: 'action_required',
+      message: `Documents staged for ${context.company}. Redirecting to employer application.`,
+      screeningAnswers,
+    };
   }
 
   // ==========================================
-  // GENERIC HANDLER (Unknown ATS)
+  // GENERIC FALLBACK
   // ==========================================
   private static async applyGeneric(
     userId: string,
     context: ApplyJobContext,
-    profile: any,
+    jobApp: any,
     screeningAnswers: any[]
   ): Promise<ApplyResult> {
-    try {
-      const application = await this.createApplicationRecord(
-        userId, context, 'action_required', screeningAnswers,
-        {
-          redirectUrl: context.jobUrl,
-          reason: 'Unknown ATS type - manual application required',
-        }
-      );
-
-      return {
-        success: true,
-        atsType: context.atsType,
-        applicationId: application._id?.toString(),
-        status: 'action_required',
-        message: `Application prepared for ${context.company}. Manual application required.`,
-        screeningAnswers,
-        nextStep: `Apply at: ${context.jobUrl}`,
-      };
-    } catch (error: any) {
-      return { success: false, atsType: context.atsType, status: 'failed', message: error.message, error: error.message };
-    }
+    return {
+      success: true,
+      atsType: 'unknown',
+      applicationId: jobApp._id.toString(),
+      status: 'action_required',
+      message: `Application documents staged for ${context.company}. Review and submit on employer website.`,
+      screeningAnswers,
+    };
   }
 }

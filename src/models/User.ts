@@ -207,6 +207,8 @@ export interface IUser extends Document {
   onboarding?: {
     primary_goal?: 'cv' | 'tracker' | 'auto_apply';
     confidence_score?: number;
+    initial_score?: number;
+    transformed_score?: number;
     recommended_plan?: string;
     activation_status?: 'pending' | 'completed';
     activation_route?: string;
@@ -217,6 +219,20 @@ export interface IUser extends Document {
     completed_stages?: string[];
     onboarding_version?: number;
     primary_cv_id?: string | mongoose.Types.ObjectId;
+
+    // Career Preferences & Profiling
+    career_pathway?: string;
+    target_roles?: string[];
+    locations?: string[];
+    experience_level?: string;
+    salary_range?: string;
+    visa_required?: boolean;
+    search_status?: string;
+    monthly_volume?: string;
+    tracker_interest?: string;
+    autoapply_interest?: string;
+    candidate_name?: string;
+    candidate_role?: string;
   };
 
   naukriIntegration?: {
@@ -773,6 +789,8 @@ const userSchema = new Schema<IUser>({
   onboarding: {
     primary_goal: { type: String, enum: ['cv', 'tracker', 'auto_apply'] },
     confidence_score: { type: Number },
+    initial_score: { type: Number },
+    transformed_score: { type: Number },
     recommended_plan: { type: String },
     activation_status: { type: String, enum: ['pending', 'completed'], default: 'pending' },
     activation_route: { type: String },
@@ -782,7 +800,21 @@ const userSchema = new Schema<IUser>({
     current_stage: { type: String },
     completed_stages: { type: [String], default: [] },
     onboarding_version: { type: Number, default: 1 },
-    primary_cv_id: { type: Schema.Types.ObjectId, ref: 'CV' }
+    primary_cv_id: { type: Schema.Types.ObjectId, ref: 'CV' },
+
+    // Career Preferences & Profiling
+    career_pathway: { type: String },
+    target_roles: { type: [String], default: [] },
+    locations: { type: [String], default: [] },
+    experience_level: { type: String },
+    salary_range: { type: String },
+    visa_required: { type: Boolean },
+    search_status: { type: String },
+    monthly_volume: { type: String },
+    tracker_interest: { type: String },
+    autoapply_interest: { type: String },
+    candidate_name: { type: String },
+    candidate_role: { type: String }
   },
   naukriIntegration: {
     enabled: { type: Boolean, default: false },

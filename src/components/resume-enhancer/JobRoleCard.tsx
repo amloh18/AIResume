@@ -70,7 +70,7 @@ export default function JobRoleCard({
       <div className="flex flex-wrap gap-1.5 mb-3">
         {isMaster && (
           <span className="px-2 py-0.5 text-[10px] font-medium bg-[#80FF00]/20 text-[#80FF00] rounded border border-[#80FF00]/30">
-            Master CV
+            Profile
           </span>
         )}
         {isStandalone && (

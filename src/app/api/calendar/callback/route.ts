@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
               <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(128,255,0,0.1); border: 1px solid rgba(128,255,0,0.2); display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto; color: #80FF00; font-size: 28px;">✓</div>
               <h1 style="font-size: 18px; font-weight: 700; margin: 0 0 8px 0; letter-spacing: -0.01em;">Inbox Connected!</h1>
               <p style="font-size: 13px; color: #8a8a8f; margin: 0 0 24px 0; line-height: 1.5;">Your Gmail account <b>${emailAddress}</b> was linked successfully. We're closing this window now.</p>
-              <div style="font-size: 11px; color: #5a5a5f;">AI Resume Secure Auth Flow</div>
+              <div style="font-size: 11px; color: #5a5a5f;">AIResume Secure Auth Flow</div>
             </div>
             <script>
               if (window.opener) {
@@ -125,7 +125,7 @@ export async function GET(request: NextRequest) {
               <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.2); display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto; color: #3b82f6; font-size: 28px;">✓</div>
               <h1 style="font-size: 18px; font-weight: 700; margin: 0 0 8px 0; letter-spacing: -0.01em;">Calendar Linked!</h1>
               <p style="font-size: 13px; color: #8a8a8f; margin: 0 0 24px 0; line-height: 1.5;">Your Google Calendar is successfully configured and active. We're closing this window now.</p>
-              <div style="font-size: 11px; color: #5a5a5f;">AI Resume Secure Auth Flow</div>
+              <div style="font-size: 11px; color: #5a5a5f;">AIResume Secure Auth Flow</div>
             </div>
             <script>
               if (window.opener) {

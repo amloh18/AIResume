@@ -1,16 +1,16 @@
-# AI Resume - SEO Meta Content and Structured Data
+# AIResume - SEO Meta Content and Structured Data
 
 ## Short Description (150-160 characters)
 AI-powered CV builder with ATS optimization, professional templates, and free career analysis. Create ATS-friendly resumes that get you hired.
 
 ## Medium Description (300-320 characters)
-AI Resume is an AI-powered CV builder and job application management platform. Create ATS-optimized resumes, generate personalized cover letters, track applications, and get free AI career analysis. Professional templates, real-time editing, and comprehensive job tracking in one platform.
+AIResume is an AI-powered CV builder and job application management platform. Create ATS-optimized resumes, generate personalized cover letters, track applications, and get free AI career analysis. Professional templates, real-time editing, and comprehensive job tracking in one platform.
 
 ## Long Description (500-600 characters)
-AI Resume revolutionizes job searching with AI-powered CV creation and optimization. Build ATS-friendly resumes using professional templates, generate personalized cover letters, and track all job applications in one dashboard. Features include free AI career analysis, real-time ATS scoring, one-click career kit downloads, and intelligent follow-up automation. Master CV system allows you to create once and tailor for each application. Chrome extension enables one-click job saving from any job board. Perfect for professionals at all career stages seeking to land their dream job.
+AIResume revolutionizes job searching with AI-powered CV creation and optimization. Build ATS-friendly resumes using professional templates, generate personalized cover letters, and track all job applications in one dashboard. Features include free AI career analysis, real-time ATS scoring, one-click career kit downloads, and intelligent follow-up automation. Master CV system allows you to create once and tailor for each application. Chrome extension enables one-click job saving from any job board. Perfect for professionals at all career stages seeking to land their dream job.
 
 ## Extended Description (1000-1200 characters)
-AI Resume is the comprehensive AI-powered CV builder and job application management platform designed for modern job seekers. Create professional, ATS-optimized resumes using our Master CV system - build once, tailor for each application. Our platform combines cutting-edge AI technology with intuitive design tools to help you create compelling application materials.
+AIResume is the comprehensive AI-powered CV builder and job application management platform designed for modern job seekers. Create professional, ATS-optimized resumes using our Master CV system - build once, tailor for each application. Our platform combines cutting-edge AI technology with intuitive design tools to help you create compelling application materials.
 
 Key features include: AI-powered CV analysis with free career reports, ATS compatibility scoring and optimization, professional template library with 10+ ATS-friendly designs, intelligent cover letter generator, comprehensive job application tracker with visual kanban board, one-click career kit downloads, real-time analytics and career insights, Chrome extension for seamless job board integration, and intelligent follow-up automation with email templates.
 
@@ -20,7 +20,7 @@ Every CV is automatically optimized for Applicant Tracking Systems used by 98% o
 
 Track all your job applications in one place with our visual kanban board. Save jobs from any job board with our Chrome extension, manage application timelines, set follow-up reminders, and analyze your success rates. The platform provides comprehensive analytics showing which CVs perform best, interview conversion rates, and industry-specific insights.
 
-Perfect for entry-level professionals, mid-career changers, executives, and anyone seeking career advancement. Whether you're a recent graduate or seasoned professional, AI Resume provides the tools and insights needed to create compelling application materials and manage a successful job search campaign.
+Perfect for entry-level professionals, mid-career changers, executives, and anyone seeking career advancement. Whether you're a recent graduate or seasoned professional, AIResume provides the tools and insights needed to create compelling application materials and manage a successful job search campaign.
 
 ## Schema.org Structured Data (JSON-LD)
 
@@ -28,8 +28,8 @@ Perfect for entry-level professionals, mid-career changers, executives, and anyo
 {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
-  "name": "AI Resume",
-  "alternateName": "AI Resume",
+  "name": "AIResume",
+  "alternateName": "AIResume",
   "description": "AI-powered CV builder with ATS optimization, professional templates, free career analysis, and comprehensive job application tracking. Create ATS-friendly resumes that get you hired.",
   "url": "https://buildairesume.com",
   "applicationCategory": "BusinessApplication",
@@ -67,13 +67,13 @@ Perfect for entry-level professionals, mid-career changers, executives, and anyo
   "releaseNotes": "Latest version with enhanced AI analysis and improved ATS optimization",
   "provider": {
     "@type": "Organization",
-    "name": "AI Resume",
+    "name": "AIResume",
     "url": "https://buildairesume.com",
     "logo": "https://buildairesume.com/images/logo.png"
   },
   "creator": {
     "@type": "Organization",
-    "name": "AI Resume",
+    "name": "AIResume",
     "url": "https://buildairesume.com"
   },
   "keywords": "CV builder, resume builder, ATS optimization, AI CV builder, professional CV templates, job application tracker, career management platform, ATS-friendly resume, CV analyzer, resume optimizer, job search tools, career kit, cover letter generator",
@@ -86,14 +86,14 @@ Perfect for entry-level professionals, mid-career changers, executives, and anyo
 ## Open Graph Meta Tags
 
 ```html
-<meta property="og:title" content="AI Resume - AI-Powered CV Builder with ATS Optimization" />
+<meta property="og:title" content="AIResume - AI-Powered CV Builder with ATS Optimization" />
 <meta property="og:description" content="Create ATS-optimized resumes, generate personalized cover letters, track job applications, and get free AI career analysis. Professional templates and comprehensive job tracking in one platform." />
 <meta property="og:type" content="website" />
 <meta property="og:url" content="https://buildairesume.com" />
 <meta property="og:image" content="https://buildairesume.com/images/og-image.png" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
-<meta property="og:site_name" content="AI Resume" />
+<meta property="og:site_name" content="AIResume" />
 <meta property="og:locale" content="en_US" />
 ```
 
@@ -101,7 +101,7 @@ Perfect for entry-level professionals, mid-career changers, executives, and anyo
 
 ```html
 <meta name="twitter:card" content="summary_large_image" />
-<meta name="twitter:title" content="AI Resume - AI-Powered CV Builder" />
+<meta name="twitter:title" content="AIResume - AI-Powered CV Builder" />
 <meta name="twitter:description" content="Create ATS-optimized resumes, track job applications, and get free AI career analysis. Professional templates and comprehensive job tracking." />
 <meta name="twitter:image" content="https://buildairesume.com/images/twitter-card.png" />
 <meta name="twitter:site" content="@airesume" />
@@ -218,16 +218,16 @@ Perfect for entry-level professionals, mid-career changers, executives, and anyo
 
 ## FAQ Schema Markup Topics
 
-1. What is AI Resume?
+1. What is AIResume?
 2. How does ATS optimization work?
-3. Is AI Resume free to use?
+3. Is AIResume free to use?
 4. What makes a CV ATS-friendly?
 5. How do I create a Master CV?
 6. Can I track multiple job applications?
-7. Does AI Resume work with all job boards?
+7. Does AIResume work with all job boards?
 8. What file formats can I export?
 9. How accurate is the ATS scoring?
-10. Can I use AI Resume on mobile devices?
+10. Can I use AIResume on mobile devices?
 
 ## Local SEO Considerations
 

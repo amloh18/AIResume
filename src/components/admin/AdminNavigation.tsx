@@ -71,6 +71,36 @@ export default function AdminNavigation({ activeTab, activeSubTab, onTabChange, 
       ]
     },
     {
+      title: 'Job Ingestion & Automation',
+      items: [
+        {
+          id: 'job-intelligence',
+          label: 'Job Intelligence',
+          icon: Globe,
+          subItems: [
+            { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+            { id: 'jobs', label: 'Live Jobs', icon: Database },
+            { id: 'sources', label: 'Sources', icon: Activity },
+            { id: 'runs', label: 'Ingestion Runs', icon: FileText },
+            { id: 'errors', label: 'Diagnostics Hub', icon: Shield },
+            { id: 'duplicates', label: 'Duplicate Matrix', icon: BarChart3 },
+            { id: 'analytics', label: 'Supply Analytics', icon: BarChart3 },
+          ],
+        },
+        {
+          id: 'automation',
+          label: 'Auto-Apply Engine',
+          icon: Sparkles,
+          subItems: [
+            { id: 'overview', label: 'Queue & Health', icon: LayoutDashboard },
+            { id: 'runs', label: 'Run Inspector', icon: Activity },
+            { id: 'review', label: 'Review Queue', icon: Shield },
+            { id: 'controls', label: 'Kill Switch', icon: Settings },
+          ],
+        },
+      ],
+    },
+    {
       title: 'Insights',
       items: [
         { 

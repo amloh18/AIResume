@@ -31,7 +31,7 @@ const PanelWorkflowDemo: React.FC<{ panelType: string }> = ({ panelType }) => {
         return [
           { title: 'Search Target Job', desc: 'Input the job position you are optimizing your CV towards.' },
           { title: 'Set Professional Level', desc: 'Select your career seniority level (e.g. Lead, Senior, Entry).' },
-          { title: 'Align Analysis Base', desc: 'AI Resume updates keyword targets, grading matrices and checks.' }
+          { title: 'Align Analysis Base', desc: 'AIResume updates keyword targets, grading matrices and checks.' }
         ];
       case 'mori':
         return [

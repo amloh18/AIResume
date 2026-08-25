@@ -32,13 +32,13 @@ export const metadata: Metadata = {
     title: 'Build a Better Resume With AI',
     description: 'Create an ATS-friendly resume, tailor it to every job, and apply with confidence using AI-powered resume tools.',
     url: 'https://buildairesume.com',
-    siteName: 'AI Resume',
+    siteName: 'AIResume',
     images: [
       {
         url: '/images/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'AI Resume - Build a Better Resume With AI',
+        alt: 'AIResume - Build a Better Resume With AI',
       },
     ],
     locale: 'en_US',
@@ -51,11 +51,11 @@ export default function LandingPage() {
     {
       "@context": "https://schema.org",
       "@type": "Organization",
-      "name": "Build AI Resume",
+      "name": "Build AIResume",
       "url": "https://buildairesume.com",
       "brand": {
         "@type": "Brand",
-        "name": "AI Resume"
+        "name": "AIResume"
       },
       "logo": "https://buildairesume.com/images/logo.png",
       "contactPoint": {
@@ -67,19 +67,19 @@ export default function LandingPage() {
     {
       "@context": "https://schema.org",
       "@type": "WebSite",
-      "name": "AI Resume",
+      "name": "AIResume",
       "url": "https://buildairesume.com",
       "publisher": {
         "@type": "Organization",
-        "name": "Build AI Resume"
+        "name": "Build AIResume"
       }
     },
     {
       "@context": "https://schema.org",
       "@type": "SoftwareApplication",
-      "name": "AI Resume",
-      "alternateName": ["AI Resume Builder", "Build AI Resume"],
-      "description": "AI Resume is an AI-powered resume builder with ATS optimization, job-specific resume tailoring, resume scoring, AI cover letter generation, professional resume templates, and a job application tracker.",
+      "name": "AIResume",
+      "alternateName": ["AI Resume Builder", "Build AIResume"],
+      "description": "AIResume is an AI-powered resume builder with ATS optimization, job-specific resume tailoring, resume scoring, AI cover letter generation, professional resume templates, and a job application tracker.",
       "url": "https://buildairesume.com",
       "applicationCategory": "BusinessApplication",
       "operatingSystem": "Web",
@@ -100,7 +100,7 @@ export default function LandingPage() {
       ],
       "provider": {
         "@type": "Organization",
-        "name": "Build AI Resume",
+        "name": "Build AIResume",
         "url": "https://buildairesume.com"
       }
     }
@@ -120,18 +120,18 @@ export default function LandingPage() {
       },
       {
         "@type": "Question",
-        "name": "Is AI Resume ATS-friendly?",
+        "name": "Is AIResume ATS-friendly?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Yes. AI Resume builds resumes with ATS-compatible formatting, clear sections, and simple layouts that applicant tracking systems can parse reliably. Templates are designed to avoid tables and complex styling that commonly break ATS parsers."
+          "text": "Yes. AIResume builds resumes with ATS-compatible formatting, clear sections, and simple layouts that applicant tracking systems can parse reliably. Templates are designed to avoid tables and complex styling that commonly break ATS parsers."
         }
       },
       {
         "@type": "Question",
-        "name": "Can AI Resume tailor my resume to a job?",
+        "name": "Can AIResume tailor my resume to a job?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Yes. Paste a job description or a job URL and AI Resume analyzes the role, identifies important keywords, compares the job with your resume, and recommends changes. You can rewrite relevant sections to improve alignment with the specific role."
+          "text": "Yes. Paste a job description or a job URL and AIResume analyzes the role, identifies important keywords, compares the job with your resume, and recommends changes. You can rewrite relevant sections to improve alignment with the specific role."
         }
       },
       {
@@ -147,7 +147,7 @@ export default function LandingPage() {
         "name": "Can I improve an existing resume?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Yes. Upload or paste your existing resume and AI Resume will analyze it, improve the content, strengthen weak bullet points, fix formatting, and suggest keywords so your resume performs better with ATS systems and recruiters."
+          "text": "Yes. Upload or paste your existing resume and AIResume will analyze it, improve the content, strengthen weak bullet points, fix formatting, and suggest keywords so your resume performs better with ATS systems and recruiters."
         }
       },
       {
@@ -168,10 +168,10 @@ export default function LandingPage() {
       },
       {
         "@type": "Question",
-        "name": "Can I use AI Resume for CVs?",
+        "name": "Can I use AIResume for CVs?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Yes. AI Resume works for both resumes and CVs. Use it to create a CV with your full career history or a tailored resume for a specific job. The builder supports both formats with professional templates."
+          "text": "Yes. AIResume works for both resumes and CVs. Use it to create a CV with your full career history or a tailored resume for a specific job. The builder supports both formats with professional templates."
         }
       },
       {
@@ -179,7 +179,7 @@ export default function LandingPage() {
         "name": "Are the resume templates ATS-friendly?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Yes. Every template in AI Resume uses ATS-compatible formatting, readable headings, and clean layouts. Choose from professional, modern, and simple resume templates with confidence that applicant tracking systems can parse them."
+          "text": "Yes. Every template in AIResume uses ATS-compatible formatting, readable headings, and clean layouts. Choose from professional, modern, and simple resume templates with confidence that applicant tracking systems can parse them."
         }
       },
       {

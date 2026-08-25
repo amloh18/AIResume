@@ -317,7 +317,7 @@ async function detectRegionFromIP(ip: string): Promise<RegionInfo> {
         signal: controller.signal,
         headers: {
           'Accept': 'application/json',
-          'User-Agent': 'AI-Resume/1.0'
+          'User-Agent': 'AIResume/1.0'
         }
       });
 

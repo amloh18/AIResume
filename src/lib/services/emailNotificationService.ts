@@ -63,7 +63,7 @@ class EmailNotificationService {
             </p>
             ${actionButton}
             <p style="color: #9ca3af; font-size: 14px; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
-              © ${new Date().getFullYear()} AI Resume. All rights reserved.<br>
+              © ${new Date().getFullYear()} AIResume. All rights reserved.<br>
               <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://app.buildairesume.com'}/dashboard/settings?tab=notifications" style="color: #4F46E5; text-decoration: none;">Manage notification preferences</a>
             </p>
           </div>
@@ -88,7 +88,7 @@ Hello ${firstName},
 ${notification.message}
 ${actionText}
 
-© ${new Date().getFullYear()} AI Resume. All rights reserved.
+© ${new Date().getFullYear()} AIResume. All rights reserved.
 Manage notification preferences: ${process.env.NEXT_PUBLIC_APP_URL || 'https://app.buildairesume.com'}/dashboard/settings?tab=notifications
     `.trim();
   }

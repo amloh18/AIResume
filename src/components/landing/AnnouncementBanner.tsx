@@ -70,7 +70,7 @@ export default function AnnouncementBanner({ onDismiss }: AnnouncementBannerProp
               Update
             </span>
             <span className="leading-snug text-black">
-              <strong className="font-bold text-black">CVCIRCLE</strong> is now <strong className="font-extrabold text-black">AIRESUME</strong> with fully automated job application features.
+              <strong className="font-bold text-black">CVCIRCLE</strong> is now <strong className="font-extrabold text-black">AIResume</strong> with fully automated job application features.
             </span>
           </div>
 

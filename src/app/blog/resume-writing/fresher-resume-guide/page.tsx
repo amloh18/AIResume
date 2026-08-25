@@ -5,7 +5,7 @@ import { MotionDiv } from '@/components/ui/motion-wrapper';
 import CardNav from '@/components/landing/CardNav';
 
 export const metadata: Metadata = {
-  title: 'How to Write a Resume for Freshers in 2026 | AI Resume',
+  title: 'How to Write a Resume for Freshers in 2026 | AIResume',
   description: 'Complete guide on how to write a resume for freshers. Learn what to include, how to highlight skills, and tips to get your first job.',
   keywords: ['how to write a resume for freshers', 'fresher resume guide', 'first job resume'],
   alternates: { canonical: '/blog/resume-writing/fresher-resume-guide' },
@@ -91,9 +91,9 @@ const navLinks = [
       },
       {
         label: 'Blog',
-        description: 'Research-backed career guides, ATS tips, and resume tutorials from AI Resume.',
+        description: 'Research-backed career guides, ATS tips, and resume tutorials from AIResume.',
         href: '/blog',
-        ariaLabel: 'Read the AI Resume blog',
+        ariaLabel: 'Read the AIResume blog',
         icon: <BookOpen className="w-5 h-5 text-gray-400" />,
       },
     ],
@@ -110,7 +110,7 @@ export default function FresherResumeGuidePage() {
     <div className="min-h-screen bg-[#0d1209]">
       <div className="relative z-10">
         <CardNav
-          logo="AI Resume"
+          logo="AIResume"
           links={navLinks}
         />
 
@@ -230,7 +230,7 @@ export default function FresherResumeGuidePage() {
           <div className="max-w-7xl mx-auto flex justify-between items-center">
             <div className="flex items-center gap-2">
               <div className="w-6 h-6 bg-[#81ff00] rounded"><span className="text-black font-bold text-small">CV</span></div>
-              <span className="text-gray-500 text-small">© 2026 AI Resume</span>
+              <span className="text-gray-500 text-small">© 2026 AIResume</span>
             </div>
             <div className="flex gap-6">
               <Link href="/privacy-policy" className="text-gray-500 text-small">Privacy</Link>

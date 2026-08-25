@@ -45,7 +45,7 @@ const ErrorPageTemplate: React.FC<ErrorPageTemplateProps> = ({
             damping: 20,
             delay: 0.1 
           }}
-          className="text-[120px] md:text-[180px] font-black text-[#81ff00] leading-none select-none opacity-20 dark:opacity-10"
+          className="text-[200px] md:text-[320px] font-black font-[1000] text-[#81ff00] leading-none select-none opacity-25 dark:opacity-15 [-webkit-text-stroke:2px_rgba(129,255,0,0.45)]"
         >
           {code}
         </motion.h1>

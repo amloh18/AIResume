@@ -8,21 +8,21 @@ import { MotionDiv, MotionH1, MotionP } from '@/components/ui/motion-wrapper';
 import { navLinks } from '@/data/navigation';
 
 export const metadata: Metadata = {
-  title: 'AI Resume vs CakeResume Comparison | Best AI Resume Builder 2026',
-  description: 'Detailed comparison between AI Resume and CakeResume (CakeCV). See why job seekers switch to AI Resume for better AI resume generation, ATS scoring, and transparent pricing.',
+  title: 'AIResume vs CakeResume Comparison | Best AI Resume Builder 2026',
+  description: 'Detailed comparison between AIResume and CakeResume (CakeCV). See why job seekers switch to AIResume for better AI resume generation, ATS scoring, and transparent pricing.',
   keywords: ['ai resume vs cakeresume', 'best ai resume builder', 'ats resume checker comparison', 'cakeresume alternative', 'ai cv builder 2026'],
   alternates: { canonical: 'https://buildairesume.com/compare/ai-resume-vs-cakeresume' },
 };
 
 const comparisonFeatures = [
-  { name: 'AI Resume Builder', aiResume: true, cakeresume: true, note: 'AI Resume uses role-specific models' },
-  { name: 'ATS Scoring Engine', aiResume: true, cakeresume: false, note: 'AI Resume has native real-time scoring' },
-  { name: 'Job Application Tracker', aiResume: true, cakeresume: false, note: 'AI Resume includes full application CRM' },
-  { name: 'Cover Letter Generator', aiResume: true, cakeresume: false, note: 'Included in AI Resume Pro' },
-  { name: 'LinkedIn Profile Enhancer', aiResume: true, cakeresume: false, note: 'AI Resume exclusive feature' },
+  { name: 'AI Resume Builder', aiResume: true, cakeresume: true, note: 'AIResume uses role-specific models' },
+  { name: 'ATS Scoring Engine', aiResume: true, cakeresume: false, note: 'AIResume has native real-time scoring' },
+  { name: 'Job Application Tracker', aiResume: true, cakeresume: false, note: 'AIResume includes full application CRM' },
+  { name: 'Cover Letter Generator', aiResume: true, cakeresume: false, note: 'Included in AIResume Pro' },
+  { name: 'LinkedIn Profile Enhancer', aiResume: true, cakeresume: false, note: 'AIResume exclusive feature' },
   { name: 'Interview Coach', aiResume: true, cakeresume: false, note: 'Tailored AI interview prep' },
-  { name: 'Chrome/Edge Extension', aiResume: true, cakeresume: true, note: 'AI Resume extension is more comprehensive' },
-  { name: 'Transparent Pricing', aiResume: true, cakeresume: false, note: 'AI Resume has no hidden regional markups' },
+  { name: 'Chrome/Edge Extension', aiResume: true, cakeresume: true, note: 'AIResume extension is more comprehensive' },
+  { name: 'Transparent Pricing', aiResume: true, cakeresume: false, note: 'AIResume has no hidden regional markups' },
 ];
 
 export default function ComparisonPage() {
@@ -30,10 +30,10 @@ export default function ComparisonPage() {
     "@context": "https://schema.org",
     "@type": "Product",
     "name": "AI Resume Builder",
-    "description": "Comparison of AI Resume vs CakeResume showing superior AI features and value.",
+    "description": "Comparison of AIResume vs CakeResume showing superior AI features and value.",
     "brand": {
       "@type": "Brand",
-      "name": "AI Resume"
+      "name": "AIResume"
     },
     "offers": {
       "@type": "Offer",
@@ -48,18 +48,18 @@ export default function ComparisonPage() {
     "mainEntity": [
       {
         "@type": "Question",
-        "name": "Why is AI Resume better than CakeResume for ATS?",
+        "name": "Why is AIResume better than CakeResume for ATS?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "AI Resume includes a native ATS scoring engine that analyzes your resume against job descriptions in real-time, whereas CakeResume lacks built-in ATS optimization tools."
+          "text": "AIResume includes a native ATS scoring engine that analyzes your resume against job descriptions in real-time, whereas CakeResume lacks built-in ATS optimization tools."
         }
       },
       {
         "@type": "Question",
-        "name": "Does AI Resume have a free tier?",
+        "name": "Does AIResume have a free tier?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Yes, AI Resume offers a comprehensive free tier that includes resume building, basic ATS scanning, and job tracking."
+          "text": "Yes, AIResume offers a comprehensive free tier that includes resume building, basic ATS scanning, and job tracking."
         }
       }
     ]
@@ -71,21 +71,21 @@ export default function ComparisonPage() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
       
       <div className="min-h-screen bg-[#0d1209]">
-        <CardNav logo="AI Resume" links={navLinks} />
+        <CardNav logo="AIResume" links={navLinks} />
 
         {/* Hero */}
         <section className="pt-32 pb-16 px-4">
           <div className="max-w-5xl mx-auto text-center">
             <MotionDiv initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
               <span className="px-4 py-2 bg-[#81ff00]/10 border border-[#81ff00]/20 rounded-full text-[#81ff00] text-sm font-medium mb-6 inline-block">
-                AI Resume vs Competitors
+                AIResume vs Competitors
               </span>
             </MotionDiv>
             <MotionH1 initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="text-4xl md:text-6xl font-bold text-white mb-6">
-              AI Resume vs <span className="text-gray-500">CakeResume</span>
+              AIResume vs <span className="text-gray-500">CakeResume</span>
             </MotionH1>
             <MotionP initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="text-xl text-gray-400 max-w-3xl mx-auto">
-              Why professional job seekers are switching to AI Resume for their 2026 job search. Better AI, native ATS optimization, and a complete career suite.
+              Why professional job seekers are switching to AIResume for their 2026 job search. Better AI, native ATS optimization, and a complete career suite.
             </MotionP>
           </div>
         </section>
@@ -100,7 +100,7 @@ export default function ComparisonPage() {
                   <tr className="border-b border-white/10 bg-[#0d1209]">
                     <th className="p-6 text-white font-bold">Feature</th>
                     <th className="p-6 text-center text-gray-400 font-bold">CakeResume</th>
-                    <th className="p-6 text-center text-[#81ff00] font-bold">AI Resume</th>
+                    <th className="p-6 text-center text-[#81ff00] font-bold">AIResume</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -135,7 +135,7 @@ export default function ComparisonPage() {
             <div className="p-8 rounded-2xl bg-[#1a1f1a] border border-white/5">
               <Zap className="w-12 h-12 text-[#81ff00] mb-6" />
               <h3 className="text-xl font-bold text-white mb-4">Role-Specific AI</h3>
-              <p className="text-gray-400 leading-relaxed">Generic AI produces generic results. AI Resume uses models trained specifically for Software Engineering, Data, and Product roles.</p>
+              <p className="text-gray-400 leading-relaxed">Generic AI produces generic results. AIResume uses models trained specifically for Software Engineering, Data, and Product roles.</p>
             </div>
             <div className="p-8 rounded-2xl bg-[#1a1f1a] border border-white/5">
               <Shield className="w-12 h-12 text-[#81ff00] mb-6" />
@@ -162,7 +162,7 @@ export default function ComparisonPage() {
               </div>
               <div className="p-8 rounded-2xl border border-[#81ff00]/30 bg-[#111611] relative overflow-hidden">
                 <div className="absolute top-0 right-0 bg-[#81ff00] text-black text-[10px] font-bold px-3 py-1 rounded-bl-lg uppercase">Best Value</div>
-                <h3 className="text-[#81ff00] font-bold mb-4 uppercase">AI Resume All-in-One</h3>
+                <h3 className="text-[#81ff00] font-bold mb-4 uppercase">AIResume All-in-One</h3>
                 <p className="text-4xl text-white font-bold mb-6">£149 / year</p>
                 <ul className="text-left space-y-3 text-gray-300 text-sm">
                   <li className="flex items-center gap-2"><Check className="w-4 h-4 text-[#81ff00]" /> Subscription: £149</li>

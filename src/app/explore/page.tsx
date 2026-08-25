@@ -3,7 +3,7 @@ import ExploreStudioClient from './page.client';
 
 export const metadata: Metadata = {
   title: 'Explore Templates & Snippets Studio | AI Resume Builder',
-  description: 'Interactive demo system for AI Resume Step 3 editor. Test 15+ ATS templates, modular section snippets, accent styles, and real-time layout rendering with live mock data.',
+  description: 'Interactive demo system for AIResume Step 3 editor. Test 15+ ATS templates, modular section snippets, accent styles, and real-time layout rendering with live mock data.',
   keywords: [
     'CV templates demo',
     'resume snippets',
@@ -14,16 +14,16 @@ export const metadata: Metadata = {
     'AI resume studio'
   ],
   openGraph: {
-    title: 'Interactive CV Templates & Snippets Studio | AI Resume',
+    title: 'Interactive CV Templates & Snippets Studio | AIResume',
     description: 'Experiment live with 15+ ATS templates, modular snippets, and typography styling.',
     url: 'https://buildairesume.com/explore',
-    siteName: 'AI Resume',
+    siteName: 'AIResume',
     images: [
       {
         url: '/images/templates-og.png',
         width: 1200,
         height: 630,
-        alt: 'AI Resume Templates & Snippets Studio',
+        alt: 'AIResume Templates & Snippets Studio',
       },
     ],
     locale: 'en_US',

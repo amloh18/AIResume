@@ -180,7 +180,7 @@ export async function GET(
 
     // Render items
     let itemsToRender = invoiceItems && invoiceItems.length > 0 ? invoiceItems : [{
-      description: `${invoice.planName || 'AI Resume Subscription'} (${invoice.billingCycle || 'one-time'})`,
+      description: `${invoice.planName || 'AIResume Subscription'} (${invoice.billingCycle || 'one-time'})`,
       quantity: 1,
       unitPrice: invoice.subtotal || invoice.amount,
       amount: invoice.amount
@@ -257,7 +257,7 @@ export async function GET(
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
     doc.setTextColor(148, 163, 184);
-    doc.text('Thank you for choosing AI Resume!', 105, 270, { align: 'center' });
+    doc.text('Thank you for choosing AIResume!', 105, 270, { align: 'center' });
     doc.text('© 2026 Morigrid Labs Ltd. All rights reserved.', 105, 275, { align: 'center' });
 
     const pdfBuffer = Buffer.from(doc.output('arraybuffer'));

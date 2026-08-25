@@ -19,7 +19,6 @@ const publicRoutes = [
   '/',
   '/sign-in',
   '/admin/login',
-  '/custom-signin',
   '/sign-up',
   '/auth/verify-email',
   '/auth/error',

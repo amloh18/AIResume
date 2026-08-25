@@ -243,7 +243,7 @@ export default function UserActivityModal({ userId, isOpen, onClose }: { userId:
               emails: [data.user.email],
               subject: subject,
               htmlContent: `<p>${htmlContent.replace(/\n/g, '<br>')}</p>`,
-              fromName: 'AI Resume Support',
+              fromName: 'AIResume Support',
               fromEmail: 'support@buildairesume.com'
             })
           });

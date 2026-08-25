@@ -398,7 +398,7 @@ const Footer = () => {
             className="text-white/60 text-small flex flex-col tablet:flex-row items-center gap-2"
             whileHover={{ scale: 1.02 }}
           >
-            <span>© 2026 <span className="text-lime-400">AI Resume</span> by <span className="text-white">Morigrid Labs</span>. All rights reserved.</span>
+            <span>© 2026 <span className="text-lime-400">AIResume</span> by <span className="text-white">Morigrid Labs</span>. All rights reserved.</span>
             <div className="flex items-center gap-2">
               <span className="text-white/40 hidden tablet:inline">|</span>
               <span className="text-white/60">Made with love</span>
