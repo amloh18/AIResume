@@ -54,8 +54,6 @@ const JobSearchProfileSchema = new Schema<IJobSearchProfileDocument>(
       type: Schema.Types.ObjectId,
       ref: 'User',
       required: true,
-      unique: true,
-      index: true,
     },
     
     // Target roles and titles
