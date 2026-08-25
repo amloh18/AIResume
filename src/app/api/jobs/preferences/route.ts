@@ -1,11 +1,22 @@
+/**
+ * [TRANSITIONAL MIGRATION COMPATIBILITY]
+ * 
+ * This endpoint is a compatibility wrapper for legacy callers.
+ * All preference mutations should use /api/job-search-profile directly.
+ * 
+ * This endpoint internally routes to JobSearchProfileService.
+ * Do NOT add independent write implementations here.
+ * 
+ * TODO: Remove this endpoint after all callers are migrated.
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest } from '@/lib/utils/auth-helpers-api';
 import { getConnection } from '@/lib/database';
-import User from '@/models/User';
+import { JobSearchProfileService } from '@/lib/services/jobSearchProfileService';
 import {
   DEFAULT_CV_TAILORING_MODE,
   parseCvTailoringMode,
-  type CvTailoringMode,
 } from '@/lib/cv-tailoring/tailoringMode';
 
 export interface GlobalAutoApplyPreferences {
@@ -28,29 +39,9 @@ export interface GlobalAutoApplyPreferences {
   applicationMode: 'find_only' | 'manual_review' | 'automatic';
 }
 
-const DEFAULT_GLOBAL_PREFERENCES: GlobalAutoApplyPreferences = {
-  enabled: false,
-  targetRoles: ['Full Stack Developer', 'Software Engineer', 'Frontend Developer'],
-  locations: ['Remote', 'London', 'Bangalore', 'New York'],
-  remoteOnly: false,
-  workplaceTypes: ['remote'],
-  minSalary: 12,
-  salaryCurrency: 'INR_LPA',
-  experienceYears: 3,
-  maxNoticePeriodDays: 30,
-  maxPerDay: 25,
-  useTailoredCV: true,
-  useCoverLetter: true,
-  autoAnswerQuestions: true,
-  enabledPortals: ['naukri', 'indeed', 'greenhouse', 'adzuna'],
-  searchIntensity: 'exploring',
-  expectedApplicationsPerMonth: 50,
-  applicationMode: 'manual_review',
-};
-
 /**
  * GET /api/jobs/preferences
- * Returns global auto-apply and matching criteria for the user.
+ * Returns user's job-search profile.
  */
 export async function GET(request: NextRequest) {
   try {
@@ -60,57 +51,24 @@ export async function GET(request: NextRequest) {
     }
 
     await getConnection();
-    const user: any = await User.findById(auth.userId).lean();
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+
+    const profile = await JobSearchProfileService.getProfile(auth.userId);
+    
+    if (!profile) {
+      return NextResponse.json({
+        success: true,
+        cvTailoringMode: DEFAULT_CV_TAILORING_MODE,
+        preferences: null,
+      });
     }
-
-    const saved = user.autoApplyPreferences || {};
-    const cvTailoringMode: CvTailoringMode = parseCvTailoringMode(user.settings?.cvTailoringMode);
-
-    const preferences: GlobalAutoApplyPreferences = {
-      enabled: saved.enabled ?? user.naukriIntegration?.preferences?.autoApplyEnabled ?? false,
-      targetRoles:
-        saved.targetRoles?.length > 0
-          ? saved.targetRoles
-          : user.naukriIntegration?.preferences?.targetTitles?.length > 0
-          ? user.naukriIntegration?.preferences?.targetTitles
-          : DEFAULT_GLOBAL_PREFERENCES.targetRoles,
-      locations:
-        saved.locations?.length > 0
-          ? saved.locations
-          : user.naukriIntegration?.preferences?.targetLocations?.length > 0
-          ? user.naukriIntegration?.preferences?.targetLocations
-          : DEFAULT_GLOBAL_PREFERENCES.locations,
-      remoteOnly: saved.remoteOnly ?? false,
-      workplaceTypes: saved.workplaceTypes ?? (saved.remoteOnly ? ['remote'] : ['remote', 'hybrid', 'onsite']),
-      minSalary: saved.minSalary ?? user.naukriIntegration?.preferences?.minCtcLakhs ?? 12,
-      salaryCurrency: saved.salaryCurrency ?? 'INR_LPA',
-      experienceYears: saved.experienceYears ?? user.naukriIntegration?.preferences?.experienceYears ?? 3,
-      maxNoticePeriodDays: saved.maxNoticePeriodDays ?? user.naukriIntegration?.preferences?.maxNoticePeriodDays ?? 30,
-      maxPerDay: saved.maxPerDay ?? user.naukriIntegration?.preferences?.dailyLimit ?? 25,
-      useTailoredCV: saved.useTailoredCV ?? true,
-      useCoverLetter: saved.useCoverLetter ?? true,
-      autoAnswerQuestions: saved.autoAnswerQuestions ?? true,
-      enabledPortals: saved.enabledPortals || ['naukri', 'indeed', 'greenhouse', 'adzuna'],
-      searchIntensity: saved.searchIntensity ?? 'exploring',
-      expectedApplicationsPerMonth: saved.expectedApplicationsPerMonth ?? 50,
-      applicationMode: saved.applicationMode ?? 'manual_review',
-    };
 
     return NextResponse.json({
       success: true,
-      cvTailoringMode,
-      preferences,
-      portalStatus: {
-        naukri: user.naukriIntegration?.sessionStatus === 'active',
-        indeed: user.indeedIntegration?.sessionStatus === 'active',
-        greenhouse: false,
-        adzuna: false,
-      },
+      cvTailoringMode: profile.cvTailoringMode || DEFAULT_CV_TAILORING_MODE,
+      preferences: profile,
     });
   } catch (error: any) {
-    console.error('Error fetching global job preferences:', error);
+    console.error('Error fetching job preferences:', error);
     return NextResponse.json(
       { error: error.message || 'Failed to fetch job preferences' },
       { status: 500 }
@@ -120,7 +78,7 @@ export async function GET(request: NextRequest) {
 
 /**
  * POST /api/jobs/preferences
- * Saves global auto-apply and matching criteria and syncs across connected portals.
+ * [TRANSITIONAL] Routes to JobSearchProfileService internally.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -133,94 +91,58 @@ export async function POST(request: NextRequest) {
     const { preferences, cvTailoringMode: requestedMode } = body;
 
     await getConnection();
-    const user = await User.findById(auth.userId);
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
 
+    // Build updates for JobSearchProfile
+    const updates: Record<string, any> = {};
+    
     if (requestedMode !== undefined) {
-      if (!user.settings) {
-        user.settings = {
-          theme: 'auto',
-          notifications: { email: true, push: true },
-          timezone: 'UTC',
-          languagePreference: 'en',
-        };
-      }
-      user.settings.cvTailoringMode = parseCvTailoringMode(requestedMode);
+      updates.cvTailoringMode = parseCvTailoringMode(requestedMode);
     }
 
-    if (!preferences) {
-      if (requestedMode === undefined) {
-        return NextResponse.json({ error: 'Preferences payload required' }, { status: 400 });
-      }
-      await user.save();
-      return NextResponse.json({
-        success: true,
-        message: 'CV tailoring mode saved. This applies to manual jobs, the extension, and job boards.',
-        cvTailoringMode: user.settings.cvTailoringMode || DEFAULT_CV_TAILORING_MODE,
-      });
+    if (preferences) {
+      // Map legacy preference fields to JobSearchProfile
+      if (preferences.targetRoles) updates.targetRoles = preferences.targetRoles;
+      if (preferences.locations) updates.locations = preferences.locations;
+      if (preferences.workplaceTypes) updates.workplaceTypes = preferences.workplaceTypes;
+      if (preferences.remoteOnly !== undefined) updates.remoteOnly = preferences.remoteOnly;
+      if (preferences.minSalary !== undefined) updates.minSalary = preferences.minSalary;
+      if (preferences.salaryCurrency) updates.salaryCurrency = preferences.salaryCurrency;
+      if (preferences.experienceYears !== undefined) updates.experienceYears = preferences.experienceYears;
+      if (preferences.maxNoticePeriodDays !== undefined) updates.maxNoticePeriodDays = preferences.maxNoticePeriodDays;
+      if (preferences.maxPerDay !== undefined) updates.maxPerDay = preferences.maxPerDay;
+      if (preferences.useTailoredCV !== undefined) updates.useTailoredCV = preferences.useTailoredCV;
+      if (preferences.useCoverLetter !== undefined) updates.useCoverLetter = preferences.useCoverLetter;
+      if (preferences.autoAnswerQuestions !== undefined) updates.autoAnswerQuestions = preferences.autoAnswerQuestions;
+      if (preferences.enabledPortals) updates.enabledPortals = preferences.enabledPortals;
+      if (preferences.searchIntensity) updates.searchIntensity = preferences.searchIntensity;
+      if (preferences.expectedApplicationsPerMonth !== undefined) updates.expectedApplicationsPerMonth = preferences.expectedApplicationsPerMonth;
+      if (preferences.applicationMode) updates.applicationMode = preferences.applicationMode;
+      if (preferences.enabled !== undefined) updates.autoApplyEnabled = preferences.enabled;
     }
 
-    const updatedGlobal: GlobalAutoApplyPreferences = {
-      enabled: Boolean(preferences.enabled),
-      targetRoles: preferences.targetRoles || [],
-      locations: preferences.locations || [],
-      remoteOnly: Boolean(preferences.remoteOnly),
-      workplaceTypes: preferences.workplaceTypes || (preferences.remoteOnly ? ['remote'] : ['remote', 'hybrid', 'onsite']),
-      minSalary: Number(preferences.minSalary || 0),
-      salaryCurrency: preferences.salaryCurrency || 'INR_LPA',
-      experienceYears: Number(preferences.experienceYears || 2),
-      maxNoticePeriodDays: Number(preferences.maxNoticePeriodDays || 30),
-      maxPerDay: Math.min(Math.max(Number(preferences.maxPerDay || 25), 1), 25),
-      useTailoredCV: Boolean(preferences.useTailoredCV ?? true),
-      useCoverLetter: Boolean(preferences.useCoverLetter ?? true),
-      autoAnswerQuestions: Boolean(preferences.autoAnswerQuestions ?? true),
-      enabledPortals: preferences.enabledPortals || ['naukri', 'indeed', 'greenhouse', 'adzuna', 'lever', 'ashby', 'workable'],
-      searchIntensity: preferences.searchIntensity || 'exploring',
-      expectedApplicationsPerMonth: Number(preferences.expectedApplicationsPerMonth || 50),
-      applicationMode: preferences.applicationMode || 'manual_review',
-    };
-
-    // Save on user document
-    (user as any).autoApplyPreferences = updatedGlobal;
-
-    // Sync to Naukri preferences
-    if (user.naukriIntegration) {
-      user.naukriIntegration.preferences = {
-        targetTitles: updatedGlobal.targetRoles,
-        targetLocations: updatedGlobal.locations,
-        minCtcLakhs: updatedGlobal.minSalary,
-        experienceYears: updatedGlobal.experienceYears,
-        maxNoticePeriodDays: updatedGlobal.maxNoticePeriodDays,
-        dailyLimit: updatedGlobal.maxPerDay,
-        autoApplyEnabled: updatedGlobal.enabled,
-      };
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json({ error: 'No updates provided' }, { status: 400 });
     }
 
-    // Sync to Indeed preferences
-    if (user.indeedIntegration) {
-      user.indeedIntegration.preferences = {
-        targetTitles: updatedGlobal.targetRoles,
-        targetLocations: updatedGlobal.locations,
-        minSalary: updatedGlobal.minSalary * 10000,
-        salaryCurrency: updatedGlobal.salaryCurrency.startsWith('INR') ? 'INR' : 'USD',
-        remoteOnly: updatedGlobal.remoteOnly,
-        dailyLimit: updatedGlobal.maxPerDay,
-        autoApplyEnabled: updatedGlobal.enabled,
-      };
+    // Validate the updates
+    const validationErrors = JobSearchProfileService.validateProfile(updates);
+    if (validationErrors.length > 0) {
+      return NextResponse.json(
+        { error: 'Validation failed', details: validationErrors },
+        { status: 400 }
+      );
     }
 
-    await user.save();
+    const profile = await JobSearchProfileService.patchProfile(auth.userId, updates);
 
     return NextResponse.json({
       success: true,
-      message: 'Global auto-apply preferences saved and synced across all portals!',
-      cvTailoringMode: user.settings?.cvTailoringMode || DEFAULT_CV_TAILORING_MODE,
-      preferences: updatedGlobal,
+      message: 'Preferences saved',
+      cvTailoringMode: profile.cvTailoringMode || DEFAULT_CV_TAILORING_MODE,
+      preferences: profile,
     });
   } catch (error: any) {
-    console.error('Error saving global job preferences:', error);
+    console.error('Error saving job preferences:', error);
     return NextResponse.json(
       { error: error.message || 'Failed to save job preferences' },
       { status: 500 }

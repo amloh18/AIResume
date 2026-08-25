@@ -683,25 +683,73 @@ const regionToCountry = (region: DiscoveryRegion): string => {
 };
 
 // In-memory TTL cache for discovery results — avoids re-fetching external APIs on every page load.
-// Keyed by serialized criteria; TTL 5 minutes.
+// CRITICAL: Cache is user-isolated to prevent cross-user data leakage.
+// Key format: discover:${userId}:${profileVersion}:${requestHash}
+// TTL 5 minutes.
 const discoveryCache = new Map<string, { data: DiscoveredJob[]; expiresAt: number }>();
 const DISCOVERY_CACHE_TTL_MS = 5 * 60 * 1000;
 
-function cacheKey(criteria: DiscoveryCriteria): string {
-  return JSON.stringify({
+/**
+ * Generate a user-isolated cache key for discovery results.
+ * Same query + different user = different cache identity.
+ * Same user + changed profile = different cache identity.
+ */
+function discoveryCacheKey(
+  userId: string | undefined,
+  profileVersion: number | undefined,
+  criteria: DiscoveryCriteria
+): string {
+  // Build request identity from all inputs affecting personalized results
+  const requestIdentity = {
+    userId: userId || 'anonymous',
+    profileVersion: profileVersion || 0,
     region: criteria.region || 'UK',
     keywords: (criteria.keywords || []).sort().join(','),
     remoteOnly: criteria.remoteOnly || false,
-  });
+    limit: criteria.limit || 60,
+    ingestLimit: criteria.ingestLimit || 60,
+  };
+  
+  // Stable serialization for consistent cache keys
+  const serialized = JSON.stringify(requestIdentity);
+  
+  // Simple hash for cache key (not cryptographic, but stable)
+  let hash = 0;
+  for (let i = 0; i < serialized.length; i++) {
+    const char = serialized.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  
+  return `discover:${userId || 'anon'}:${profileVersion || 0}:${Math.abs(hash).toString(16)}`;
+}
+
+/**
+ * Invalidate all discovery cache entries for a specific user.
+ * Called when user's job search profile changes.
+ */
+export function invalidateDiscoveryCache(userId: string): void {
+  const prefix = `discover:${userId}:`;
+  const keysToDelete = Array.from(discoveryCache.keys())
+    .filter(key => key.startsWith(prefix));
+  keysToDelete.forEach(key => discoveryCache.delete(key));
+  console.log(`[JobDiscovery] Invalidated ${keysToDelete.length} cache entries for user ${userId}`);
 }
 
 export class JobDiscoveryService {
   /**
    * Fetch jobs from free public sources and persist them into the global
    * `jobs` collection (deduped by externalId). Returns the stored documents.
+   * 
+   * CRITICAL: Uses user-isolated cache to prevent cross-user data leakage.
+   * Cache key includes userId and profileVersion for proper isolation.
    */
-  static async fetchAndStore(criteria: DiscoveryCriteria = {}): Promise<DiscoveredJob[]> {
-    const key = cacheKey(criteria);
+  static async fetchAndStore(
+    criteria: DiscoveryCriteria = {},
+    userId?: string,
+    profileVersion?: number
+  ): Promise<DiscoveredJob[]> {
+    const key = discoveryCacheKey(userId, profileVersion, criteria);
     const cached = discoveryCache.get(key);
     if (cached && cached.expiresAt > Date.now()) {
       return cached.data;
@@ -810,6 +858,7 @@ export class JobDiscoveryService {
     }));
 
     // Cache the result so subsequent page loads within TTL don't re-fetch external APIs
+    // Key includes userId and profileVersion for user isolation
     discoveryCache.set(key, { data: result, expiresAt: Date.now() + DISCOVERY_CACHE_TTL_MS });
 
     return result;
@@ -817,9 +866,11 @@ export class JobDiscoveryService {
 
   /**
    * Compute a match score for each discovered job for the given user.
-   * Uses stored job_preferences when available (persists job_matches and can
+   * Uses JobSearchProfile when available (persists job_matches and can
    * mark auto-apply eligibility); otherwise falls back to a lightweight
    * display heuristic so anonymous/onboarding users still see scores.
+   * 
+   * IMPORTANT: Now reads from canonical JobSearchProfile instead of legacy job_preferences.
    */
   static async scoreDiscoveredJobs(
     discovered: DiscoveredJob[],
@@ -836,9 +887,25 @@ export class JobDiscoveryService {
       try {
         user = await db.collection<User>('users').findOne({ _id: new ObjectId(userId) });
         if (user) {
-          preferences = await db
-            .collection<JobPreferences>('job_preferences')
-            .findOne({ userId: new ObjectId(userId) });
+          // CRITICAL: Read from JobSearchProfile instead of legacy job_preferences
+          const { JobSearchProfileService } = await import('./jobSearchProfileService');
+          const profile = await JobSearchProfileService.getProfile(userId);
+          
+          if (profile) {
+            // Convert JobSearchProfile to legacy format for backward compatibility
+            preferences = {
+              titles: profile.targetRoles,
+              locations: profile.locations,
+              country: 'UK',
+              remoteOnly: profile.remoteOnly,
+              salaryMin: profile.minSalary,
+            } as JobPreferences;
+          } else {
+            // Fallback to legacy job_preferences if profile doesn't exist
+            preferences = await db
+              .collection<JobPreferences>('job_preferences')
+              .findOne({ userId: new ObjectId(userId) });
+          }
         }
       } catch (error) {
         console.warn('[JobDiscovery] Could not load user preferences:', error);

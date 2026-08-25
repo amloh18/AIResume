@@ -80,7 +80,7 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
     '/onboarding-universal',
     '/privacy-policy',
     '/terms',
-    '/cookie-policy',
+    '/legal',
     '/force-logout',
     '/features',
     '/templates',

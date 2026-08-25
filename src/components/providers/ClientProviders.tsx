@@ -39,7 +39,7 @@ function ConditionalProviders({ children }: ClientProvidersProps) {
                 <CookieConsent />
                 <SessionCleanup />
                 <Toaster />
-                <HotToaster position="top-right" />
+                <HotToaster position="bottom-right" />
                 <AuthModal />
                 {children}
               </FeaturePromotionProvider>

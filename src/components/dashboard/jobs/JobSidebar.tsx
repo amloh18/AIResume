@@ -19,6 +19,7 @@ import JobInfoContent from '../JobInfoContent';
 import EditJobSidebar from './EditJobSidebar';
 import DocumentPreviewSidebar from './DocumentPreviewSidebar';
 import { CommunicationSidebar } from './CommunicationSidebar';
+import FormattedJobDescription from '@/components/jobs/FormattedJobDescription';
 import toast from 'react-hot-toast';
 import { useUserData } from '@/lib/hooks/useUserData';
 import { useJobInsights, useJobFallbacks, formatJobDate, formatJobSalary, formatJobUrl } from '@/hooks/useJobInsights';
@@ -2176,8 +2177,8 @@ ${userName}`
                     {/* Job Description */}
                     <div className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810]">
                       <h4 className="text-h3 font-semibold text-gray-900 dark:text-white mb-3">Job Description</h4>
-                      <div className="max-h-[350px] overflow-y-auto whitespace-pre-wrap text-small leading-relaxed text-gray-700 dark:text-gray-300 pr-2 border border-gray-100 dark:border-white/5 rounded-xl p-4 bg-gray-50/50 dark:bg-white/[0.02]">
-                        {job.jobDescription || fallbacks.defaultJobDescription}
+                      <div className="max-h-[350px] overflow-y-auto pr-2 border border-gray-100 dark:border-white/5 rounded-xl p-4 bg-gray-50/50 dark:bg-white/[0.02]">
+                        <FormattedJobDescription content={job.jobDescription || fallbacks.defaultJobDescription} />
                       </div>
                     </div>
 
@@ -3038,8 +3039,8 @@ ${userName}`
                       {/* Job Description */}
                       <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d]">
                         <h4 className="mb-4 text-body font-semibold text-gray-900 dark:text-white">Job Description</h4>
-                        <div className="max-h-[300px] overflow-y-auto whitespace-pre-wrap text-small leading-6 text-gray-700 dark:text-gray-300 pr-2">
-                          {job.jobDescription || fallbacks.defaultJobDescription}
+                        <div className="max-h-[300px] overflow-y-auto pr-2">
+                          <FormattedJobDescription content={job.jobDescription || fallbacks.defaultJobDescription} />
                         </div>
                       </div>
 

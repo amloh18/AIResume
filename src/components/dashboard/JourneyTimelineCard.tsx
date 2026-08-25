@@ -38,6 +38,7 @@ import { useSession } from 'next-auth/react';
 import toast from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import { useUserPlan } from '@/lib/hooks/useUserPlan';
+import FormattedJobDescription from '@/components/jobs/FormattedJobDescription';
 import MoveToAppliedModal from '@/components/modals/MoveToAppliedModal';
 // CelebrationModal removed - simplified UX
 import { JourneyAnalyticsService } from '@/lib/utils/journeyAnalytics';
@@ -3283,10 +3284,11 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                       {(job?.jobDescription || job?.description) ? (
                         <div className="relative">
                           <div className="text-small text-white/60 mb-1">Description:</div>
-                          <div className="relative max-h-16 overflow-hidden">
-                            <p className="text-small text-white/80 whitespace-pre-wrap leading-relaxed">
-                              {job.jobDescription || job.description}
-                            </p>
+                          <div className="relative max-h-20 overflow-hidden">
+                            <FormattedJobDescription
+                              content={job.jobDescription || job.description}
+                              className="text-small text-white/80 leading-relaxed"
+                            />
                             <div className="absolute bottom-0 left-0 right-0 h-4 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
                           </div>
                         </div>

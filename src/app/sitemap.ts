@@ -77,7 +77,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const legalPages = [
     { url: `${baseUrl}/privacy-policy`, priority: 0.3, changeFrequency: 'yearly' as const },
     { url: `${baseUrl}/terms`, priority: 0.3, changeFrequency: 'yearly' as const },
-    { url: `${baseUrl}/cookie-policy`, priority: 0.3, changeFrequency: 'yearly' as const },
+    { url: `${baseUrl}/legal`, priority: 0.3, changeFrequency: 'yearly' as const },
   ]
 
   // Comparison Pages

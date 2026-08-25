@@ -1,3 +1,19 @@
+/**
+ * [TRANSITIONAL MIGRATION COMPATIBILITY]
+ * 
+ * This service provides legacy sync to:
+ * - job_preferences collection (used by matching engine)
+ * - UserQuota.autoApplySettings (used by auto-apply processor)
+ * 
+ * The canonical source of truth is JobSearchProfile.
+ * This service exists ONLY for backward compatibility during migration.
+ * 
+ * Do NOT add new callers to this service.
+ * Do NOT extend this service with new features.
+ * 
+ * TODO: Remove after all users are migrated to JobSearchProfile.
+ */
+
 import { ObjectId } from 'mongodb';
 import { getConnection } from '@/lib/database';
 import User from '@/models/User';
@@ -189,10 +205,15 @@ export class UserJobPreferencesService {
 
   private static async invalidateCache(userId: string): Promise<void> {
     try {
+      // Invalidate recommendation cache
       const { cacheManager } = await import('@/lib/cache/cache-manager');
       if (cacheManager && typeof cacheManager.delete === 'function') {
         await cacheManager.delete(`recommendations:${userId}`);
       }
+      
+      // Invalidate discovery cache (user-isolated)
+      const { invalidateDiscoveryCache } = await import('./jobDiscoveryService');
+      invalidateDiscoveryCache(userId);
     } catch {
       // Cache module may not be available; non-critical
     }

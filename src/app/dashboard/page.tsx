@@ -42,7 +42,6 @@ function DashboardContent() {
   });
 
   const [notification, setNotification] = useState<string | null>(null);
-  const [demoLayoutType, setDemoLayoutType] = useState<'cv' | 'tracker' | 'auto_apply' | null>(null);
 
   const triggerNotification = (message: string) => {
     setNotification(message);
@@ -53,28 +52,6 @@ function DashboardContent() {
   // Only show fallback loader if we explicitly need to redirect due to pending onboarding activation
   if (onboardingData?.activation_status === 'pending' && onboardingData?.activation_route) {
     return <LoadingFallback />;
-  }
-
-  const userRole = (session?.user as any)?.role || 'user';
-  const isAdmin = userRole === 'admin' || userRole === 'superadmin';
-
-  // Determine layout type based on active plan (membership)
-  let layoutType: 'cv' | 'tracker' | 'auto_apply' = 'cv';
-  if (demoLayoutType) {
-    layoutType = demoLayoutType;
-  } else if (membership?.planKey) {
-    const planKeyLower = membership.planKey.toLowerCase();
-    if (planKeyLower.startsWith('smart') || planKeyLower.startsWith('pro')) {
-      layoutType = 'auto_apply';
-    } else if (planKeyLower.startsWith('focused')) {
-      layoutType = 'tracker';
-    } else if (planKeyLower.startsWith('starter')) {
-      layoutType = 'cv';
-    } else {
-      layoutType = onboardingData?.dashboard_layout_type || 'cv';
-    }
-  } else {
-    layoutType = onboardingData?.dashboard_layout_type || 'cv';
   }
 
   return (
@@ -93,34 +70,14 @@ function DashboardContent() {
           }
         `}</style>
 
-        {/* Admin Layout Switcher - Hidden until hover in corner */}
-        {isAdmin && (
-          <div className="fixed bottom-0 right-0 z-[60] group">
-            {/* Trigger Area - Small but accessible */}
-            <div className="absolute bottom-0 right-0 w-24 h-24 pointer-events-auto" />
-
-            <div className="relative mb-6 mr-6 flex gap-2 bg-white/90 dark:bg-black/90 p-2 rounded-2xl shadow-2xl border border-slate-200 dark:border-gray-800 opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-auto transform translate-y-4 group-hover:translate-y-0 translate-x-4 group-hover:translate-x-0">
-              {(['cv', 'tracker', 'auto_apply'] as const).map(t => (
-                <button
-                  key={t}
-                  onClick={() => { setDemoLayoutType(t); triggerNotification(`Admin: Switched to ${t.toUpperCase()} mode`); }}
-                  className={`px-3 h-10 rounded-xl font-black text-[10px] uppercase transition-all ${layoutType === t ? 'bg-[#83d60d] text-slate-900 shadow-lg' : 'bg-slate-100 dark:bg-gray-800 text-slate-400 hover:bg-slate-200'}`}
-                >
-                  {t.split('_')[0]}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Toast Notification Banner */}
+        {/* Toast Notification Banner - Bottom Right */}
         <AnimatePresence>
           {notification && (
             <motion.div
-              initial={{ opacity: 0, y: -20, scale: 0.9 }}
+              initial={{ opacity: 0, y: 20, scale: 0.9 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -20, scale: 0.9 }}
-              className="fixed top-6 right-6 z-50 bg-[#0f172a] text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center space-x-3 border border-slate-800"
+              exit={{ opacity: 0, y: 20, scale: 0.9 }}
+              className="fixed bottom-6 right-6 z-50 bg-[#0f172a] text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center space-x-3 border border-slate-800"
             >
               <div className="w-2 h-2 rounded-full bg-[#83d60d] animate-ping" />
               <span className="text-small font-bold uppercase tracking-wider">{notification}</span>

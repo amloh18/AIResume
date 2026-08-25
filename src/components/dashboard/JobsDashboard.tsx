@@ -182,16 +182,16 @@ export default function JobsDashboard() {
       })
       .catch(() => {});
 
-    fetch('/api/jobs/preferences')
+    fetch('/api/job-search-profile')
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (data?.preferences) {
-          setUserPreferences(data.preferences);
-          setAutoApplyEnabled(data.preferences.enabled === true);
+        if (data?.profile) {
+          setUserPreferences(data.profile);
+          setAutoApplyEnabled(data.profile.enabled === true);
         }
-        if (data?.cvTailoringMode || data?.preferences?.cvTailoringMode) {
+        if (data?.cvTailoringMode || data?.profile?.cvTailoringMode) {
           setCvTailoringMode(
-            parseCvTailoringMode(data.cvTailoringMode || data.preferences.cvTailoringMode)
+            parseCvTailoringMode(data.cvTailoringMode || data.profile.cvTailoringMode)
           );
         }
       })
@@ -689,10 +689,10 @@ export default function JobsDashboard() {
     const previous = cvTailoringMode;
     setCvTailoringMode(mode);
     try {
-      const res = await fetch('/api/jobs/preferences', {
-        method: 'POST',
+      const res = await fetch('/api/job-search-profile', {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cvTailoringMode: mode }),
+        body: JSON.stringify({ updates: { cvTailoringMode: mode } }),
       });
       if (!res.ok) {
         throw new Error('Failed to save tailoring mode');
@@ -707,10 +707,10 @@ export default function JobsDashboard() {
     const nextState = !autoApplyEnabled;
     setAutoApplyEnabled(nextState);
     try {
-      const res = await fetch('/api/jobs/preferences', {
-        method: 'POST',
+      const res = await fetch('/api/job-search-profile', {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ enabled: nextState }),
+        body: JSON.stringify({ updates: { enabled: nextState } }),
       });
       if (res.ok) {
         toast({

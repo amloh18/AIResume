@@ -241,6 +241,70 @@ const STAGE_TO_STEP: Record<OnboardingStage | string, number> = {
   'CAREER_ADVANTAGE': 11,
 };
 
+export const WELCOME_SALARY_CONFIG: Record<
+  string,
+  {
+    label: string;
+    symbol: string;
+    unit: string;
+    presets: { label: string; value: number }[];
+    defaultVal: number;
+  }
+> = {
+  INR_LPA: {
+    label: 'INR (₹)',
+    symbol: '₹',
+    unit: 'LPA',
+    presets: [
+      { label: '₹8 LPA', value: 8 },
+      { label: '₹12 LPA', value: 12 },
+      { label: '₹18 LPA', value: 18 },
+      { label: '₹25 LPA', value: 25 },
+      { label: '₹35 LPA', value: 35 },
+      { label: '₹50 LPA', value: 50 },
+    ],
+    defaultVal: 18,
+  },
+  GBP: {
+    label: 'GBP (£)',
+    symbol: '£',
+    unit: '/year',
+    presets: [
+      { label: '£45,000 /yr', value: 45000 },
+      { label: '£65,000 /yr', value: 65000 },
+      { label: '£85,000 /yr', value: 85000 },
+      { label: '£110,000 /yr', value: 110000 },
+      { label: '£140,000 /yr', value: 140000 },
+    ],
+    defaultVal: 65000,
+  },
+  USD: {
+    label: 'USD ($)',
+    symbol: '$',
+    unit: '/year',
+    presets: [
+      { label: '$60,000 /yr', value: 60000 },
+      { label: '$90,000 /yr', value: 90000 },
+      { label: '$120,000 /yr', value: 120000 },
+      { label: '$150,000 /yr', value: 150000 },
+      { label: '$200,000 /yr', value: 200000 },
+    ],
+    defaultVal: 90000,
+  },
+  EUR: {
+    label: 'EUR (€)',
+    symbol: '€',
+    unit: '/year',
+    presets: [
+      { label: '€50,000 /yr', value: 50000 },
+      { label: '€70,000 /yr', value: 70000 },
+      { label: '€90,000 /yr', value: 90000 },
+      { label: '€120,000 /yr', value: 120000 },
+    ],
+    defaultVal: 70000,
+  },
+};
+
 const STEP_TO_STAGE: Record<number, OnboardingStage> = {
   1: 'INTENT',
   2: 'PROFILE_SEED',
@@ -288,13 +352,21 @@ function WelcomePageContent() {
 
   // Canonical job-search preferences (persisted to autoApplyPreferences)
   const [workplaceTypes, setWorkplaceTypes] = useState<string[]>(['remote']);
-  const [salaryMin, setSalaryMin] = useState<number>(0);
+  const [salaryMin, setSalaryMin] = useState<number>(18);
   const [salaryCurrency, setSalaryCurrency] = useState<string>('INR_LPA');
   const [experienceYears, setExperienceYears] = useState<number>(2);
   const [maxNoticePeriodDays, setMaxNoticePeriodDays] = useState<number>(30);
   const [searchIntensity, setSearchIntensity] = useState<string>('');
   const [expectedApplicationsPerMonth, setExpectedApplicationsPerMonth] = useState<number>(50);
   const [applicationMode, setApplicationMode] = useState<string>('');
+
+  const handleSalaryCurrencyChange = (newCur: string) => {
+    setSalaryCurrency(newCur);
+    const cfg = WELCOME_SALARY_CONFIG[newCur];
+    if (cfg) {
+      setSalaryMin(cfg.defaultVal);
+    }
+  };
 
   // Parser Simulator State
   const [isParsing, setIsParsing] = useState(false);
@@ -336,6 +408,39 @@ function WelcomePageContent() {
     }
     return '';
   }, [parsedCVData, loadedProfileName, session]);
+
+  // Step 12 CEO Letter Typewriter Effect
+  const letterParagraphs = useMemo(() => [
+    `Dear ${candidateName || 'candidate'},`,
+    `Welcome to AIResume. We built this platform to take the tedious manual labor out of your job search so you can focus on landing roles you truly love.`,
+    `Your Profile is set up and will power your automated application tracking, tailored cover letters, and interview coaching.`
+  ], [candidateName]);
+
+  const fullLetterText = useMemo(() => letterParagraphs.join('\n\n'), [letterParagraphs]);
+  const [typedLetterLength, setTypedLetterLength] = useState<number>(0);
+  const [isTypingLetter, setIsTypingLetter] = useState<boolean>(true);
+
+  useEffect(() => {
+    if (currentStep === 12) {
+      setTypedLetterLength(0);
+      setIsTypingLetter(true);
+      let currentLen = 0;
+      const targetLen = fullLetterText.length;
+
+      const timer = setInterval(() => {
+        currentLen += 2;
+        if (currentLen >= targetLen) {
+          setTypedLetterLength(targetLen);
+          setIsTypingLetter(false);
+          clearInterval(timer);
+        } else {
+          setTypedLetterLength(currentLen);
+        }
+      }, 15);
+
+      return () => clearInterval(timer);
+    }
+  }, [currentStep, fullLetterText]);
 
   const candidateRole = useMemo(() => {
     if (parsedCVData?.basics?.label) return parsedCVData.basics.label;
@@ -512,32 +617,30 @@ function WelcomePageContent() {
         body: JSON.stringify(payload)
       });
 
-      // Also persist to canonical autoApplyPreferences for job-search steps
+      // Persist to canonical JobSearchProfile for job-search steps
       if (currentStep >= 5 && currentStep <= 12 && status === 'authenticated') {
-        const preferenceUpdates: Record<string, any> = {};
-        if (currentStep === 5) preferenceUpdates.targetRoles = targetRoles;
+        const profileUpdates: Record<string, any> = {};
+        if (currentStep === 5) profileUpdates.targetRoles = targetRoles;
         if (currentStep === 6) {
-          preferenceUpdates.workplaceTypes = workplaceTypes;
-          preferenceUpdates.locations = locations;
-          preferenceUpdates.remoteOnly = workplaceTypes.includes('remote') && workplaceTypes.length === 1;
+          profileUpdates.workplaceTypes = workplaceTypes;
+          profileUpdates.locations = locations;
         }
         if (currentStep === 7) {
-          preferenceUpdates.minSalary = salaryMin;
-          preferenceUpdates.salaryCurrency = salaryCurrency;
+          profileUpdates.salary = { min: salaryMin, currency: salaryCurrency };
         }
         if (currentStep === 8) {
-          preferenceUpdates.experienceYears = experienceYears;
-          preferenceUpdates.maxNoticePeriodDays = maxNoticePeriodDays;
+          profileUpdates.experience = experienceYears;
+          profileUpdates.maxNoticePeriodDays = maxNoticePeriodDays;
         }
-        if (currentStep === 9) preferenceUpdates.searchIntensity = searchIntensity;
-        if (currentStep === 10) preferenceUpdates.expectedApplicationsPerMonth = expectedApplicationsPerMonth;
-        if (currentStep === 12) preferenceUpdates.applicationMode = applicationMode;
+        if (currentStep === 9) profileUpdates.searchIntensity = searchIntensity;
+        if (currentStep === 10) profileUpdates.expectedApplicationsPerMonth = expectedApplicationsPerMonth;
+        if (currentStep === 12) profileUpdates.applicationMode = applicationMode;
 
-        if (Object.keys(preferenceUpdates).length > 0) {
-          await fetch('/api/jobs/preferences', {
+        if (Object.keys(profileUpdates).length > 0) {
+          await fetch('/api/job-search-profile', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ preferences: preferenceUpdates })
+            body: JSON.stringify({ profileData: profileUpdates })
           });
         }
       }
@@ -1917,7 +2020,7 @@ function WelcomePageContent() {
                 <div className="space-y-3 text-center">
                   <span className="onboarding-step-label text-black bg-[#80FF00] px-3 py-1 rounded-full font-bold">Salary Expectations</span>
                   <h1 className="onboarding-title">
-                    What's your target salary?
+                    What&apos;s your target salary?
                   </h1>
                   <p className="onboarding-copy text-gray-500 max-w-xl mx-auto">
                     This helps us match you with roles in your compensation range.
@@ -1925,32 +2028,84 @@ function WelcomePageContent() {
                 </div>
 
                 <div className="max-w-md mx-auto space-y-6 text-left">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">Minimum Salary</label>
-                      <input
-                        type="number"
-                        value={salaryMin || ''}
-                        onChange={e => setSalaryMin(Number(e.target.value))}
-                        placeholder="e.g. 50000"
-                        className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm outline-none focus:border-black"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">Currency</label>
-                      <select
-                        value={salaryCurrency}
-                        onChange={e => setSalaryCurrency(e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm outline-none focus:border-black text-gray-700 font-medium"
-                      >
-                        <option value="INR_LPA">INR (LPA)</option>
-                        <option value="USD">USD</option>
-                        <option value="GBP">GBP</option>
-                        <option value="EUR">EUR</option>
-                      </select>
+                  {/* 1. Currency Selection FIRST */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
+                      <DollarSign className="h-3.5 w-3.5" /> Currency
+                    </label>
+                    <div className="grid grid-cols-4 gap-2">
+                      {Object.entries(WELCOME_SALARY_CONFIG).map(([key, cfg]) => {
+                        const isCurSel = salaryCurrency === key;
+                        return (
+                          <button
+                            key={key}
+                            type="button"
+                            onClick={() => handleSalaryCurrencyChange(key)}
+                            className={`py-3 px-2 border-2 rounded-2xl text-center transition-all ${
+                              isCurSel
+                                ? 'border-black bg-slate-50 font-bold text-gray-900 shadow-xs'
+                                : 'border-gray-200 hover:border-gray-300 bg-white text-gray-600'
+                            }`}
+                          >
+                            <span className="text-xs font-bold block">{cfg.symbol} {key.split('_')[0]}</span>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
-                  <p className="text-[10px] text-gray-400 text-center">Leave as 0 if flexible or not applicable</p>
+
+                  {/* 2. Range-based Minimum Salary Presets */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                        Minimum Target Salary
+                      </label>
+                      <span className="text-xs font-bold text-lime-800 bg-lime-100 px-2.5 py-0.5 rounded-full">
+                        {salaryMin === 0
+                          ? 'Flexible / Any'
+                          : `${WELCOME_SALARY_CONFIG[salaryCurrency]?.symbol || ''}${salaryMin.toLocaleString()} ${WELCOME_SALARY_CONFIG[salaryCurrency]?.unit || ''}+`}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2.5">
+                      {(WELCOME_SALARY_CONFIG[salaryCurrency] || WELCOME_SALARY_CONFIG.INR_LPA).presets.map((preset) => {
+                        const isSelected = salaryMin === preset.value;
+                        return (
+                          <button
+                            key={preset.value}
+                            type="button"
+                            onClick={() => setSalaryMin(preset.value)}
+                            className={`py-3.5 px-3 border-2 rounded-2xl text-center transition-all ${
+                              isSelected
+                                ? 'border-black bg-slate-50 font-extrabold text-gray-900 shadow-xs'
+                                : 'border-gray-200 hover:border-gray-300 bg-white text-gray-700 font-medium'
+                            }`}
+                          >
+                            <span className="text-xs font-bold">{preset.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Flexible option */}
+                    <div className="pt-1">
+                      <button
+                        type="button"
+                        onClick={() => setSalaryMin(0)}
+                        className={`w-full py-2.5 px-4 border-2 rounded-2xl text-xs font-bold transition-all text-center ${
+                          salaryMin === 0
+                            ? 'border-black bg-slate-50 text-gray-900 shadow-xs'
+                            : 'border-dashed border-gray-300 hover:border-gray-400 bg-gray-50/50 text-gray-500'
+                        }`}
+                      >
+                        Flexible / Open to offers
+                      </button>
+                    </div>
+                  </div>
+
+                  <p className="text-[10px] text-gray-400 text-center">
+                    We&apos;ll prioritize roles meeting or exceeding your target threshold
+                  </p>
                 </div>
               </div>
             )}
@@ -1969,32 +2124,105 @@ function WelcomePageContent() {
                 </div>
 
                 <div className="max-w-md mx-auto space-y-6 text-left">
+                  {/* Years of Experience */}
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">Years of Experience</label>
-                    <input
-                      type="number"
-                      value={experienceYears || ''}
-                      onChange={e => setExperienceYears(Number(e.target.value))}
-                      placeholder="e.g. 3"
-                      min="0"
-                      max="50"
-                      className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm outline-none focus:border-black"
-                    />
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                        Years of Experience
+                      </label>
+                      <span className="text-xs font-bold text-lime-800 bg-lime-100 px-2.5 py-0.5 rounded-full">
+                        {experienceYears === 0 ? '0 years (Fresher)' : `${experienceYears} ${experienceYears === 1 ? 'year' : 'years'}`}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2">
+                      {[
+                        { label: '0–2 yrs', value: 1 },
+                        { label: '3–5 yrs', value: 3 },
+                        { label: '5–8 yrs', value: 5 },
+                        { label: '8+ yrs', value: 8 },
+                      ].map((tier) => {
+                        const isSel = experienceYears === tier.value;
+                        return (
+                          <button
+                            key={tier.label}
+                            type="button"
+                            onClick={() => setExperienceYears(tier.value)}
+                            className={`py-3 px-2 border-2 rounded-2xl text-center transition-all ${
+                              isSel
+                                ? 'border-black bg-slate-50 font-extrabold text-gray-900 shadow-xs'
+                                : 'border-gray-200 hover:border-gray-300 bg-white text-gray-700 font-medium'
+                            }`}
+                          >
+                            <span className="text-xs font-bold block">{tier.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">Max Notice Period (Days)</label>
-                    <input
-                      type="number"
-                      value={maxNoticePeriodDays || ''}
-                      onChange={e => setMaxNoticePeriodDays(Number(e.target.value))}
-                      placeholder="e.g. 30"
-                      min="0"
-                      max="365"
-                      className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm outline-none focus:border-black"
-                    />
-                    <p className="text-[10px] text-gray-400">How soon can you start?</p>
+                  {/* Max Notice Period (Days) - Step 7 Style */}
+                  <div className="space-y-3 pt-2 border-t border-gray-100">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                        Availability / Max Notice Period
+                      </label>
+                      <span className="text-xs font-bold text-lime-800 bg-lime-100 px-2.5 py-0.5 rounded-full">
+                        {maxNoticePeriodDays === 0 ? 'Immediately' : `${maxNoticePeriodDays} days`}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                      {[
+                        { label: 'Immediately', value: 0 },
+                        { label: '15 days', value: 15 },
+                        { label: '30 days', value: 30 },
+                        { label: '60 days', value: 60 },
+                      ].map((preset) => {
+                        const isSelected = maxNoticePeriodDays === preset.value;
+                        return (
+                          <button
+                            key={preset.value}
+                            type="button"
+                            onClick={() => setMaxNoticePeriodDays(preset.value)}
+                            className={`py-3.5 px-2 border-2 rounded-2xl text-center transition-all ${
+                              isSelected
+                                ? 'border-black bg-slate-50 font-extrabold text-gray-900 shadow-xs'
+                                : 'border-gray-200 hover:border-gray-300 bg-white text-gray-700 font-medium'
+                            }`}
+                          >
+                            <span className="text-xs font-bold block">{preset.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2.5 pt-0.5">
+                      {[
+                        { label: '90 days (3 months)', value: 90 },
+                        { label: '90+ days / Flexible', value: 120 },
+                      ].map((preset) => {
+                        const isSelected = maxNoticePeriodDays === preset.value;
+                        return (
+                          <button
+                            key={preset.value}
+                            type="button"
+                            onClick={() => setMaxNoticePeriodDays(preset.value)}
+                            className={`py-3 px-3 border-2 rounded-2xl text-center transition-all ${
+                              isSelected
+                                ? 'border-black bg-slate-50 font-extrabold text-gray-900 shadow-xs'
+                                : 'border-gray-200 hover:border-gray-300 bg-white text-gray-700 font-medium'
+                            }`}
+                          >
+                            <span className="text-xs font-bold block">{preset.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
+
+                  <p className="text-[10px] text-gray-400 text-center">
+                    We&apos;ll prioritize employers whose hiring timelines align with your availability
+                  </p>
                 </div>
               </div>
             )}
@@ -2095,7 +2323,7 @@ function WelcomePageContent() {
                 <div className="space-y-3 text-center">
                   <span className="onboarding-step-label text-black bg-[#80FF00] px-3 py-1 rounded-full font-bold">Application Mode</span>
                   <h1 className="onboarding-title">
-                    How much should BuildAIResume handle?
+                    How much should AIResume handle?
                   </h1>
                   <p className="onboarding-copy text-gray-500 max-w-xl mx-auto">
                     Choose your level of automation. You can change this anytime.
@@ -2105,8 +2333,8 @@ function WelcomePageContent() {
                 <div className="grid gap-4 max-w-lg mx-auto">
                   {[
                     { id: 'find_only', label: 'Find Only', desc: 'Get personalized job matches. You review and apply yourself.', icon: '🔍', color: 'border-indigo-200 hover:border-indigo-400' },
-                    { id: 'manual_review', label: 'Review Before Submit', desc: 'BuildAIResume prepares applications. You review and approve before submission.', icon: '👀', color: 'border-amber-200 hover:border-amber-400' },
-                    { id: 'automatic', label: 'Fully Automatic', desc: 'BuildAIResume finds, tailors, and submits applications automatically.', icon: '⚡', color: 'border-emerald-200 hover:border-emerald-400' }
+                    { id: 'manual_review', label: 'Review Before Submit', desc: 'AIResume prepares applications. You review and approve before submission.', icon: '👀', color: 'border-amber-200 hover:border-amber-400' },
+                    { id: 'automatic', label: 'Fully Automatic', desc: 'AIResume finds, tailors, and submits applications automatically.', icon: '⚡', color: 'border-emerald-200 hover:border-emerald-400' }
                   ].map(mode => (
                     <button
                       key={mode.id}
@@ -2147,25 +2375,33 @@ function WelcomePageContent() {
                   </h1>
                 </div>
 
-                <div className="relative bg-[#faf7f2] border border-amber-100 rounded-3xl p-6 md:p-8 shadow-[0_15px_30px_rgba(0,0,0,0.03)] text-left font-serif max-w-lg mx-auto z-10 overflow-hidden transform rotate-[-0.5deg]">
+                <div 
+                  onClick={() => {
+                    setTypedLetterLength(fullLetterText.length);
+                    setIsTypingLetter(false);
+                  }}
+                  className="relative bg-[#faf7f2] border border-amber-100 rounded-3xl p-6 md:p-8 shadow-[0_15px_30px_rgba(0,0,0,0.03)] text-left max-w-lg mx-auto z-10 overflow-hidden transform rotate-[-0.5deg] cursor-pointer select-text"
+                >
                   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&display=swap" rel="stylesheet" />
                   
                   <div className="absolute top-3 right-4 text-[10px] text-amber-800/40 uppercase tracking-widest font-sans font-black select-none">
-                    CEO's Office
+                    CEO&apos;s Office
                   </div>
 
-                  <div className="space-y-4 text-amber-950/90 text-lg leading-relaxed select-text" style={{ fontFamily: "'Caveat', cursive" }}>
-                    <p className="text-xl font-bold">Dear {candidateName || 'candidate'},</p>
-                    <p>
-                      Welcome to AIResume. We built this platform to take the tedious manual labor out of your job search so you can focus on landing roles you truly love.
-                    </p>
-                    <p>
-                      Your Profile is set up and will power your automated application tracking, tailored cover letters, and interview coaching.
-                    </p>
-                    <div className="pt-2 flex justify-between items-end">
-                      <div className="space-y-0.5">
-                        <p className="font-bold text-xl text-black">Amar Lohia</p>
-                        <p className="text-xs uppercase tracking-wider font-sans font-bold text-gray-400 select-none">CEO, AIResume</p>
+                  <div className="space-y-4 text-amber-950/90 text-xl leading-relaxed" style={{ fontFamily: "'Caveat', cursive" }}>
+                    {fullLetterText.slice(0, typedLetterLength).split('\n\n').map((para, idx) => (
+                      <p key={idx} className={idx === 0 ? "text-2xl font-bold" : ""}>
+                        {para}
+                        {isTypingLetter && idx === fullLetterText.slice(0, typedLetterLength).split('\n\n').length - 1 && (
+                          <span className="inline-block w-0.5 h-5 bg-amber-800 ml-1 animate-pulse" />
+                        )}
+                      </p>
+                    ))}
+
+                    <div className={`pt-3 flex justify-between items-end transition-opacity duration-500 ${typedLetterLength >= fullLetterText.length * 0.8 ? 'opacity-100' : 'opacity-0'}`}>
+                      <div className="space-y-0.5" style={{ fontFamily: "'Caveat', cursive" }}>
+                        <p className="font-bold text-2xl text-black">Amar Lohia</p>
+                        <p className="text-lg font-bold text-amber-900/80">CEO and Founder, AIResume</p>
                       </div>
                     </div>
                   </div>

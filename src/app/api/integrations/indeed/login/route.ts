@@ -42,16 +42,8 @@ export async function POST(request: NextRequest) {
 
     const encryptedCookieJar = encryptToken(userSessionToken || `auth_${Date.now()}`);
 
-    const updatedPreferences = {
-      targetTitles: preferences?.targetTitles ?? user.indeedIntegration?.preferences?.targetTitles ?? [],
-      targetLocations: preferences?.targetLocations ?? user.indeedIntegration?.preferences?.targetLocations ?? ['London', 'Remote', 'New York', 'Bangalore'],
-      minSalary: preferences?.minSalary ?? user.indeedIntegration?.preferences?.minSalary ?? 90000,
-      salaryCurrency: preferences?.salaryCurrency ?? user.indeedIntegration?.preferences?.salaryCurrency ?? 'USD',
-      remoteOnly: preferences?.remoteOnly ?? user.indeedIntegration?.preferences?.remoteOnly ?? false,
-      dailyLimit: preferences?.dailyLimit ?? user.indeedIntegration?.preferences?.dailyLimit ?? 25,
-      autoApplyEnabled: preferences?.autoApplyEnabled ?? user.indeedIntegration?.preferences?.autoApplyEnabled ?? true,
-    };
-
+    // Only update portal connection data, NOT general job-search preferences.
+    // General job-search preferences belong in JobSearchProfile.
     const currentStats = {
       totalFetched: Number(user.indeedIntegration?.stats?.totalFetched || 0),
       totalApplied: Number(user.indeedIntegration?.stats?.totalApplied || 0),
@@ -67,7 +59,6 @@ export async function POST(request: NextRequest) {
           'indeedIntegration.sessionStatus': 'active',
           'indeedIntegration.userEmail': connectedEmail,
           'indeedIntegration.encryptedCookieJar': encryptedCookieJar,
-          'indeedIntegration.preferences': updatedPreferences,
           'indeedIntegration.stats': currentStats,
         },
       },
@@ -79,7 +70,6 @@ export async function POST(request: NextRequest) {
       message: 'Indeed account linked successfully!',
       sessionStatus: 'active',
       userEmail: connectedEmail,
-      preferences: updatedPreferences,
       stats: currentStats,
     });
   } catch (error: any) {

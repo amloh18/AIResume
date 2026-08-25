@@ -11,6 +11,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useMembership } from '@/lib/hooks/useMembership';
 import { parseJobText, type ParsedJobFields } from '@/lib/services/jobTextParser';
+import FormattedJobDescription from '@/components/jobs/FormattedJobDescription';
 
 export type JobSidebarMode = 'create' | 'view' | 'edit' | 'parse';
 
@@ -627,8 +628,8 @@ export default function JobDetailsSidebar({
                         placeholder="Job description, requirements, responsibilities..."
                       />
                     ) : (
-                      <div className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed max-h-60 overflow-y-auto">
-                        {formData.jobDescription || <span className="text-gray-400">No description</span>}
+                      <div className="text-sm text-gray-700 dark:text-gray-300 max-h-60 overflow-y-auto pr-1">
+                        <FormattedJobDescription content={formData.jobDescription} fallback="No description" />
                       </div>
                     )}
                   </Section>

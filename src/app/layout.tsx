@@ -112,22 +112,23 @@ export const metadata: Metadata = {
       'msvalidate.01': ['C0E623844C2A0ACD1B0528453501DDAE'],
     },
   },
-   icons: {
+    icons: {
       icon: [
-        { url: '/images/favicon.png', sizes: 'any' },
-        { url: '/images/favicon.png', sizes: '32x32', type: 'image/png' },
-        { url: '/images/favicon.png', sizes: '16x16', type: 'image/png' },
-        { url: '/images/favicon.png', sizes: '128x128', type: 'image/png' },
+        { url: '/favicon.svg', type: 'image/svg+xml' },
+        { url: '/images/favicon.svg', type: 'image/svg+xml' },
+        { url: '/images/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+        { url: '/images/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
+        { url: '/images/favicon.png', sizes: 'any', type: 'image/png' },
       ],
-      shortcut: '/images/favicon.png',
+      shortcut: '/favicon.svg',
       apple: [
-        { url: '/images/favicon.png', sizes: '180x180', type: 'image/png' },
+        { url: '/images/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
       ],
       other: [
         {
           rel: 'mask-icon',
-          url: '/images/favicon.png',
-          color: '#81ff00',
+          url: '/images/favicon.svg',
+          color: '#013f2e',
         },
       ],
     },

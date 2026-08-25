@@ -15,21 +15,57 @@ import {
 } from '@/lib/services/smartSkillMatcher';
 
 export class JobMatchingService {
+  /**
+   * Compute match score for a user and job.
+   * 
+   * IMPORTANT: Now reads from canonical JobSearchProfile instead of legacy job_preferences.
+   * Falls back to legacy job_preferences if profile doesn't exist.
+   */
   static async computeScore(userId: string, jobId: string): Promise<JobMatch> {
     try {
       const { getDb } = await import('@/lib/db');
       const db = await getDb();
 
-      const [user, job, preferences] = await Promise.all([
+      const [user, job] = await Promise.all([
         db.collection<User>('users').findOne({ _id: new ObjectId(userId) }),
         db.collection<Job>('jobs').findOne({ _id: new ObjectId(jobId) }),
-        db.collection<JobPreferences>('job_preferences').findOne({
-          userId: new ObjectId(userId),
-        }),
       ]);
 
-      if (!user || !job || !preferences) {
-        throw new Error('User, job, or preferences not found');
+      if (!user || !job) {
+        throw new Error('User or job not found');
+      }
+
+      // CRITICAL: Read from JobSearchProfile instead of legacy job_preferences
+      let preferences: JobPreferences | null = null;
+      
+      try {
+        const { JobSearchProfileService } = await import('./jobSearchProfileService');
+        const profile = await JobSearchProfileService.getProfile(userId);
+        
+        if (profile) {
+          // Convert JobSearchProfile to legacy format for backward compatibility
+          preferences = {
+            titles: profile.targetRoles,
+            locations: profile.locations,
+            country: 'UK',
+            remoteOnly: profile.remoteOnly,
+            salaryMin: profile.minSalary,
+          } as JobPreferences;
+        } else {
+          // Fallback to legacy job_preferences if profile doesn't exist
+          preferences = await db.collection<JobPreferences>('job_preferences').findOne({
+            userId: new ObjectId(userId),
+          });
+        }
+      } catch (error) {
+        console.warn('[JobMatchingService] Could not load JobSearchProfile, falling back to legacy:', error);
+        preferences = await db.collection<JobPreferences>('job_preferences').findOne({
+          userId: new ObjectId(userId),
+        });
+      }
+
+      if (!preferences) {
+        throw new Error('Preferences not found');
       }
 
       // Load user's master CV for skill extraction
