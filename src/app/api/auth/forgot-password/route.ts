@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
               transition: transform 0.2s ease;
             }
             .button:hover {
-              transform: translateY(-2px);
+              transform: scale(1.015);
             }
             .footer {
               margin-top: 40px;

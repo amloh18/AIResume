@@ -117,7 +117,7 @@ const getBaseTemplate = (title: string, content: string, footerText?: string) =>
     }
     .button:hover { 
       background-color: rgb(40, 40, 40) !important;
-      transform: translateY(-2px);
+      transform: scale(1.015);
       box-shadow: 0 4px 12px rgba(129, 255, 0, 0.3);
     }
     .code-container { 
