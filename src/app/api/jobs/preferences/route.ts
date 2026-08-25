@@ -13,6 +13,7 @@ export interface GlobalAutoApplyPreferences {
   targetRoles: string[];
   locations: string[];
   remoteOnly: boolean;
+  workplaceTypes: ('remote' | 'hybrid' | 'onsite')[];
   minSalary: number;
   salaryCurrency: string;
   experienceYears: number;
@@ -22,6 +23,9 @@ export interface GlobalAutoApplyPreferences {
   useCoverLetter: boolean;
   autoAnswerQuestions: boolean;
   enabledPortals: ('naukri' | 'indeed' | 'greenhouse' | 'adzuna')[];
+  searchIntensity: 'browsing' | 'exploring' | 'active' | 'aggressive';
+  expectedApplicationsPerMonth: number;
+  applicationMode: 'find_only' | 'manual_review' | 'automatic';
 }
 
 const DEFAULT_GLOBAL_PREFERENCES: GlobalAutoApplyPreferences = {
@@ -29,6 +33,7 @@ const DEFAULT_GLOBAL_PREFERENCES: GlobalAutoApplyPreferences = {
   targetRoles: ['Full Stack Developer', 'Software Engineer', 'Frontend Developer'],
   locations: ['Remote', 'London', 'Bangalore', 'New York'],
   remoteOnly: false,
+  workplaceTypes: ['remote'],
   minSalary: 12,
   salaryCurrency: 'INR_LPA',
   experienceYears: 3,
@@ -38,6 +43,9 @@ const DEFAULT_GLOBAL_PREFERENCES: GlobalAutoApplyPreferences = {
   useCoverLetter: true,
   autoAnswerQuestions: true,
   enabledPortals: ['naukri', 'indeed', 'greenhouse', 'adzuna'],
+  searchIntensity: 'exploring',
+  expectedApplicationsPerMonth: 50,
+  applicationMode: 'manual_review',
 };
 
 /**
@@ -75,6 +83,7 @@ export async function GET(request: NextRequest) {
           ? user.naukriIntegration?.preferences?.targetLocations
           : DEFAULT_GLOBAL_PREFERENCES.locations,
       remoteOnly: saved.remoteOnly ?? false,
+      workplaceTypes: saved.workplaceTypes ?? (saved.remoteOnly ? ['remote'] : ['remote', 'hybrid', 'onsite']),
       minSalary: saved.minSalary ?? user.naukriIntegration?.preferences?.minCtcLakhs ?? 12,
       salaryCurrency: saved.salaryCurrency ?? 'INR_LPA',
       experienceYears: saved.experienceYears ?? user.naukriIntegration?.preferences?.experienceYears ?? 3,
@@ -84,6 +93,9 @@ export async function GET(request: NextRequest) {
       useCoverLetter: saved.useCoverLetter ?? true,
       autoAnswerQuestions: saved.autoAnswerQuestions ?? true,
       enabledPortals: saved.enabledPortals || ['naukri', 'indeed', 'greenhouse', 'adzuna'],
+      searchIntensity: saved.searchIntensity ?? 'exploring',
+      expectedApplicationsPerMonth: saved.expectedApplicationsPerMonth ?? 50,
+      applicationMode: saved.applicationMode ?? 'manual_review',
     };
 
     return NextResponse.json({
@@ -155,6 +167,7 @@ export async function POST(request: NextRequest) {
       targetRoles: preferences.targetRoles || [],
       locations: preferences.locations || [],
       remoteOnly: Boolean(preferences.remoteOnly),
+      workplaceTypes: preferences.workplaceTypes || (preferences.remoteOnly ? ['remote'] : ['remote', 'hybrid', 'onsite']),
       minSalary: Number(preferences.minSalary || 0),
       salaryCurrency: preferences.salaryCurrency || 'INR_LPA',
       experienceYears: Number(preferences.experienceYears || 2),
@@ -164,6 +177,9 @@ export async function POST(request: NextRequest) {
       useCoverLetter: Boolean(preferences.useCoverLetter ?? true),
       autoAnswerQuestions: Boolean(preferences.autoAnswerQuestions ?? true),
       enabledPortals: preferences.enabledPortals || ['naukri', 'indeed', 'greenhouse', 'adzuna', 'lever', 'ashby', 'workable'],
+      searchIntensity: preferences.searchIntensity || 'exploring',
+      expectedApplicationsPerMonth: Number(preferences.expectedApplicationsPerMonth || 50),
+      applicationMode: preferences.applicationMode || 'manual_review',
     };
 
     // Save on user document

@@ -14,10 +14,10 @@ import {
   DollarSign,
   Loader2,
   RefreshCw,
-  Link2,
   Trash2,
-  ChevronRight,
-  ChevronDown
+  ChevronDown,
+  Sparkles,
+  Check,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
@@ -291,10 +291,16 @@ export function AutoApplyPanel({ userId, region }: AutoApplyPanelProps) {
 
   if (loading) {
     return (
-      <div className="p-8 space-y-6 animate-pulse">
-        <div className="h-8 bg-gray-200 dark:bg-gray-800 rounded w-1/3" />
-        <div className="h-40 bg-gray-100 dark:bg-gray-900 rounded-2xl" />
-        <div className="h-40 bg-gray-100 dark:bg-gray-900 rounded-2xl" />
+      <div className="w-full max-w-[1600px] mx-auto p-4 space-y-6 animate-pulse">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="h-64 bg-gray-100 dark:bg-gray-900 rounded-3xl" />
+          <div className="h-64 bg-gray-100 dark:bg-gray-900 rounded-3xl" />
+        </div>
+        <div className="h-48 bg-gray-100 dark:bg-gray-900 rounded-3xl" />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="h-64 bg-gray-100 dark:bg-gray-900 rounded-3xl" />
+          <div className="h-64 bg-gray-100 dark:bg-gray-900 rounded-3xl" />
+        </div>
       </div>
     );
   }
@@ -364,7 +370,7 @@ export function AutoApplyPanel({ userId, region }: AutoApplyPanelProps) {
 
   const getExperienceLabel = (years: number) => {
     const tier = EXPERIENCE_TIERS.slice().reverse().find(t => years >= t.minYears);
-    return tier ? tier.label : 'Entry Level';
+    return tier ? tier.label : 'Entry Level (0–2 years)';
   };
 
   const getAvailabilityLabel = (days: number) => {
@@ -378,57 +384,85 @@ export function AutoApplyPanel({ userId, region }: AutoApplyPanelProps) {
   });
 
   return (
-    <div className="space-y-8 max-w-4xl pb-12">
-      {/* 1. Application Automation */}
-      <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-3xl p-6 sm:p-7 shadow-sm space-y-5">
-        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-6 pb-1">
-          <div className="space-y-2 flex-1">
-            <div className="flex items-center gap-2 flex-wrap">
-              <Zap className="w-6 h-6 text-lime-600 dark:text-[#80FF00]" />
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                Application Automation
-              </h2>
-              <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border flex items-center gap-1 ${
-                preferences.enabled
-                  ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
-                  : 'bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-white/10'
-              }`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${
-                  preferences.enabled ? 'bg-emerald-500' : 'bg-gray-400'
-                }`} />
-                Auto-Apply {preferences.enabled ? 'Active' : 'Paused'}
-              </span>
+    <div className="w-full max-w-[1600px] mx-auto space-y-6 pb-12">
+      {/* ========================================================================= */}
+      {/* ROW 1: Two Column Layout: Application Automation & Auto-Apply Profile    */}
+      {/* ========================================================================= */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+        {/* Column 1: Application Automation */}
+        <div className="bg-white dark:bg-[#141810] border border-gray-200/90 dark:border-white/10 rounded-3xl p-6 sm:p-7 shadow-sm flex flex-col justify-between space-y-5">
+          <div className="space-y-4">
+            {/* Header & Toggle */}
+            <div className="flex items-start justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Zap className="w-5 h-5 text-lime-600 dark:text-[#80FF00]" />
+                  <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+                    Application Automation
+                  </h2>
+                  <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border flex items-center gap-1.5 ${
+                    preferences.enabled
+                      ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+                      : 'bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-white/10'
+                  }`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${
+                      preferences.enabled ? 'bg-emerald-500' : 'bg-gray-400'
+                    }`} />
+                    Auto-Apply {preferences.enabled ? 'Active' : 'Paused'}
+                  </span>
+                </div>
+                
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 leading-relaxed pt-1">
+                  {preferences.enabled 
+                    ? 'Auto-Apply is active. BuildAIResume will automatically apply to matching jobs within your plan limit.'
+                    : 'Auto-Apply is paused. Job discovery and preparation continue, but applications won\'t be submitted automatically.'
+                  }
+                </p>
+              </div>
+
+              {/* Custom Pill Toggle Switch */}
+              <button
+                type="button"
+                onClick={() => setPreferences((p) => ({ ...p, enabled: !p.enabled }))}
+                aria-label="Toggle Auto-Apply"
+                className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors shrink-0 ${
+                  preferences.enabled
+                    ? 'bg-lime-500 dark:bg-[#80FF00]'
+                    : 'bg-gray-300 dark:bg-gray-700'
+                }`}
+              >
+                <div
+                  className={`w-6 h-6 bg-white dark:bg-black rounded-full shadow-md transition-transform absolute top-1 ${
+                    preferences.enabled ? 'translate-x-7' : 'translate-x-1'
+                  }`}
+                />
+              </button>
             </div>
-            
-            <p className="text-sm text-gray-600 dark:text-gray-400 max-w-2xl leading-relaxed">
-              {preferences.enabled 
-                ? 'Auto-Apply is active. BuildAIResume will automatically apply to matching jobs within your plan limit.'
-                : 'Auto-Apply is paused. Job discovery and preparation continue, but applications won\'t be submitted automatically.'
-              }
-            </p>
-            
+
+            {/* Resume action if paused */}
             {!preferences.enabled && (
               <button
                 type="button"
                 onClick={() => setPreferences((p) => ({ ...p, enabled: true }))}
-                className="text-sm font-bold text-lime-600 dark:text-[#80FF00] hover:underline"
+                className="text-xs font-bold text-lime-600 dark:text-[#80FF00] hover:underline block"
               >
-                Resume Auto-Apply
+                Resume Auto-Apply →
               </button>
             )}
 
-            <div className="pt-2">
+            {/* Collapsible Info Accordion */}
+            <div className="pt-1">
               <button 
                 type="button"
                 onClick={() => setWhatHappensOpen(!whatHappensOpen)}
-                className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+                className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
               >
-                What happens when Auto-Apply is active?
+                <span>What happens when Auto-Apply is active?</span>
                 <ChevronDown className={`w-3.5 h-3.5 transition-transform ${whatHappensOpen ? 'rotate-180' : ''}`} />
               </button>
               
               {whatHappensOpen && (
-                <ul className="mt-3 space-y-1.5 text-xs text-gray-600 dark:text-gray-400 ml-1 border-l-2 border-gray-100 dark:border-white/10 pl-3">
+                <ul className="mt-2.5 space-y-1.5 text-xs text-gray-600 dark:text-gray-400 border-l-2 border-lime-500/30 pl-3">
                   <li>• Find matching jobs from connected accounts</li>
                   <li>• Prepare a tailored CV for each role</li>
                   <li>• Prepare a tailored cover letter</li>
@@ -440,300 +474,324 @@ export function AutoApplyPanel({ userId, region }: AutoApplyPanelProps) {
             </div>
           </div>
 
-          <div className="flex flex-col items-end gap-2 shrink-0">
-            <button
-              type="button"
-              onClick={() => setPreferences((p) => ({ ...p, enabled: !p.enabled }))}
-              className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors ${
-                preferences.enabled
-                  ? 'bg-lime-500 dark:bg-[#80FF00]'
-                  : 'bg-gray-300 dark:bg-gray-700'
-              }`}
-            >
+          {/* Live Usage Progress Block */}
+          <div className="p-4 rounded-2xl bg-gray-50 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 space-y-2 mt-auto">
+            <div className="flex items-center justify-between text-xs sm:text-sm">
+              <span className="font-bold text-gray-900 dark:text-white">
+                {isStarter ? 'Applications this month' : 'Auto-Apply today'}
+              </span>
+              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-gray-200/60 dark:bg-white/10 text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                {entitlements?.planName || 'Starter'} · {entitlements?.billingInterval === 'yearly' ? 'Yearly' : 'Monthly'}
+              </span>
+            </div>
+
+            <div className="w-full bg-gray-200 dark:bg-white/10 rounded-full h-2 overflow-hidden">
               <div
-                className={`w-6 h-6 bg-white dark:bg-black rounded-full shadow-md transition-transform absolute top-1 ${
-                  preferences.enabled ? 'translate-x-7' : 'translate-x-1'
+                className={`h-2 rounded-full transition-all duration-500 ${
+                  percentUsed >= 100
+                    ? 'bg-red-500'
+                    : percentUsed >= 80
+                    ? 'bg-amber-500'
+                    : 'bg-[#80FF00]'
                 }`}
+                style={{ width: `${percentUsed}%` }}
               />
-            </button>
+            </div>
+
+            <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+              <span className="font-medium text-gray-700 dark:text-gray-300">
+                {usedCount} of {limitCount} used · {remainingCount} remaining
+              </span>
+              <span>Resets {resetDateDisplay}</span>
+            </div>
+            
+            <div className="pt-1 flex justify-end">
+              <Link
+                href="/dashboard/billing"
+                className="text-[11px] font-bold text-lime-600 dark:text-[#80FF00] hover:underline transition-colors"
+              >
+                Manage subscription →
+              </Link>
+            </div>
           </div>
         </div>
 
-        {/* Live Usage Progress Bar */}
-        <div className="p-4 rounded-2xl bg-gray-50 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 space-y-2 mt-4">
-          <div className="flex items-center justify-between text-sm">
-            <span className="font-bold text-gray-900 dark:text-white">
-              {isStarter ? 'Applications this month' : 'Auto-Apply today'}
-            </span>
-            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-gray-200/50 dark:bg-white/10 text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-              {entitlements?.planName || 'Starter'} · {entitlements?.billingInterval === 'yearly' ? 'Yearly' : 'Monthly'}
-            </span>
+        {/* Column 2: Your Auto-Apply Profile */}
+        <div className="bg-white dark:bg-[#141810] border border-gray-200/90 dark:border-white/10 rounded-3xl p-6 sm:p-7 shadow-sm flex flex-col justify-between space-y-5">
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-lime-600 dark:text-[#80FF00]" />
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                Your Auto-Apply Profile
+              </h3>
+            </div>
+            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+              This is the live criteria BuildAIResume uses to discover and submit matching roles.
+            </p>
+            
+            <div className="space-y-2.5 pt-2 text-xs sm:text-sm text-gray-700 dark:text-gray-300 font-medium">
+              {preferences.targetRoles.length > 0 && (
+                <div className="flex items-start gap-2.5">
+                  <CheckCircle2 className="w-4 h-4 text-lime-600 dark:text-[#80FF00] mt-0.5 shrink-0" />
+                  <div>
+                    <span className="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wider font-bold block">Target Roles</span>
+                    <span className="font-bold text-gray-900 dark:text-white">{preferences.targetRoles.join(', ')}</span>
+                  </div>
+                </div>
+              )}
+              
+              {preferences.locations.length > 0 && (
+                <div className="flex items-start gap-2.5">
+                  <CheckCircle2 className="w-4 h-4 text-lime-600 dark:text-[#80FF00] mt-0.5 shrink-0" />
+                  <div>
+                    <span className="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wider font-bold block">Locations & Workplace</span>
+                    <span>
+                      {[
+                        cityLocations.join(', '), 
+                        workplacePrefs.join(' / ')
+                      ].filter(Boolean).join(' · ')}
+                    </span>
+                  </div>
+                </div>
+              )}
+              
+              <div className="flex items-start gap-2.5">
+                <CheckCircle2 className="w-4 h-4 text-lime-600 dark:text-[#80FF00] mt-0.5 shrink-0" />
+                <div>
+                  <span className="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wider font-bold block">Target Minimum Salary</span>
+                  <span className="font-bold text-gray-900 dark:text-white">
+                    {currentCurrency.symbol}{preferences.minSalary?.toLocaleString()} {currentCurrency.unit}+
+                  </span>
+                </div>
+              </div>
+              
+              <div className="flex items-start gap-2.5">
+                <CheckCircle2 className="w-4 h-4 text-lime-600 dark:text-[#80FF00] mt-0.5 shrink-0" />
+                <div>
+                  <span className="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wider font-bold block">Seniority & Availability</span>
+                  <span>
+                    {getExperienceLabel(preferences.experienceYears)} · {getAvailabilityLabel(preferences.maxNoticePeriodDays)}
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div className="w-full bg-gray-200 dark:bg-white/10 rounded-full h-2.5 overflow-hidden">
-            <div
-              className={`h-2.5 rounded-full transition-all duration-500 ${
-                percentUsed >= 100
-                  ? 'bg-red-500'
-                  : percentUsed >= 80
-                  ? 'bg-amber-500'
-                  : 'bg-[#80FF00]'
-              }`}
-              style={{ width: `${percentUsed}%` }}
-            />
-          </div>
-
-          <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-            <span className="font-medium text-gray-700 dark:text-gray-300">
-              {usedCount} of {limitCount} used · {remainingCount} remaining
+          <div className="p-3.5 rounded-2xl bg-lime-50/50 dark:bg-lime-950/20 border border-lime-500/20 text-xs text-gray-700 dark:text-gray-300 flex items-center justify-between gap-2 mt-auto">
+            <span className="text-lime-900 dark:text-lime-200 font-medium">
+              Profile updates sync automatically across all matching algorithms.
             </span>
-            <span>Resets {resetDateDisplay}</span>
-          </div>
-          
-          <div className="pt-2 flex justify-end">
-             <Link
-              href="/dashboard/billing"
-              className="text-[11px] font-semibold text-gray-500 hover:text-lime-600 dark:hover:text-[#80FF00] transition-colors"
-            >
-              Manage subscription →
-            </Link>
+            <span className="text-[10px] font-bold text-lime-700 dark:text-[#80FF00] bg-lime-500/20 px-2 py-0.5 rounded-full shrink-0">
+              Live
+            </span>
           </div>
         </div>
       </div>
 
-      {/* 2. Connected Job Accounts */}
-      <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-3xl p-6 sm:p-7 shadow-sm space-y-5">
-        <div>
-          <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <Globe className="w-5 h-5 text-lime-600 dark:text-[#80FF00]" />
-            Connected Job Accounts
-          </h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Connect your job-search accounts to personalize discovery and enable supported application features. 
-          </p>
-          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-            BuildAIResume also searches across thousands of employers and job sources automatically.
-          </p>
+      {/* ========================================================================= */}
+      {/* ROW 2: Connected Job Accounts (Inline Grid)                              */}
+      {/* ========================================================================= */}
+      <div className="bg-white dark:bg-[#141810] border border-gray-200/90 dark:border-white/10 rounded-3xl p-6 sm:p-7 shadow-sm space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <Globe className="w-5 h-5 text-lime-600 dark:text-[#80FF00]" />
+              <span>Connected Job Accounts</span>
+            </h3>
+            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+              Connect your job-search accounts to personalize discovery and enable supported application features.
+            </p>
+          </div>
+          <span className="text-[11px] text-gray-400 dark:text-gray-500 shrink-0">
+            BuildAIResume also searches across employers automatically
+          </span>
         </div>
 
-        {allDisconnected && (
-          <div className="p-6 rounded-2xl bg-gray-50 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 text-center space-y-4">
-            <p className="text-sm font-medium text-gray-600 dark:text-gray-300">
-              Connect a job account to unlock personalized discovery and supported application features.
-            </p>
-            <div className="flex flex-wrap justify-center gap-3">
-              {PORTALS_LIST.map(p => (
-                <button
+        {/* Inline Grid for All Portals */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {PORTALS_LIST.map((p) => {
+            const connection = portalConnections.find((c) => c.id === p.id);
+            const isConnected = connection?.status === 'connected' && Boolean(connection?.account?.email);
+            const email = connection?.account?.email;
+            const isSyncing = syncingPortalId === p.id || syncingPortalId === connection?.connectionId;
+            const isDisconnecting = disconnectingPortalId === p.id || disconnectingPortalId === connection?.connectionId;
+            const IconComp = p.icon;
+
+            if (!isConnected) {
+              return (
+                <div
                   key={p.id}
-                  onClick={() => setSelectedConnectPortal(p.id)}
-                  className="px-4 py-2 rounded-xl text-xs font-bold bg-white dark:bg-[#1a230f] border border-gray-200 dark:border-white/10 hover:border-lime-500 dark:hover:border-[#80FF00] transition-colors flex items-center gap-2"
+                  className="p-4 sm:p-5 rounded-2xl border border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/[0.01] flex flex-col justify-between space-y-4"
                 >
-                  <p.icon className={`w-4 h-4 ${p.color}`} />
-                  Connect {p.name}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
+                  <div className="space-y-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2.5 rounded-xl ${p.bg} ${p.color} shrink-0`}>
+                          <IconComp className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-gray-900 dark:text-white text-sm flex items-center gap-1.5">
+                            <span>{p.name}</span>
+                            {p.id === 'linkedin' && (
+                              <span className="px-1.5 py-0.5 rounded text-[9px] bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-400 uppercase tracking-wider font-bold">
+                                Soon
+                              </span>
+                            )}
+                          </h4>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-gray-300 dark:bg-gray-600" />
+                            <span className="text-xs text-gray-500 dark:text-gray-400">Not connected</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
 
-        {!allDisconnected && (
-          <div className="space-y-4">
-            {PORTALS_LIST.map((p) => {
-              const connection = portalConnections.find((c) => c.id === p.id);
-              const isConnected = connection?.status === 'connected' && Boolean(connection?.account?.email);
-              const email = connection?.account?.email;
-              const isSyncing = syncingPortalId === p.id || syncingPortalId === connection?.connectionId;
-              const isDisconnecting = disconnectingPortalId === p.id || disconnectingPortalId === connection?.connectionId;
-              const IconComp = p.icon;
+                    <div className="space-y-1 text-[11px] text-gray-500 dark:text-gray-400 pt-1">
+                      <div className="flex items-center gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-lime-600 dark:text-lime-400 shrink-0" />
+                        <span>Personalized discovery feed</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        {p.capabilities.applicationAutomation ? (
+                          <>
+                            <CheckCircle2 className="w-3.5 h-3.5 text-lime-600 dark:text-lime-400 shrink-0" />
+                            <span>Automated application support</span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="w-3.5 h-3.5 inline-flex items-center justify-center text-gray-400 text-xs shrink-0">•</span>
+                            <span>Direct application sync</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
 
-              if (!isConnected) {
-                return (
-                  <div key={p.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl border border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/[0.01]">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedConnectPortal(p.id)}
+                    className="w-full py-2.5 px-4 rounded-xl text-xs font-bold bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 hover:border-lime-500 dark:hover:border-lime-400 hover:text-lime-700 dark:hover:text-lime-300 transition-colors shadow-2xs text-center"
+                  >
+                    Connect {p.name}
+                  </button>
+                </div>
+              );
+            }
+
+            return (
+              <div
+                key={p.id}
+                className="p-4 sm:p-5 rounded-2xl border border-lime-500/25 bg-lime-50/30 dark:bg-lime-900/10 flex flex-col justify-between space-y-4"
+              >
+                <div className="space-y-3">
+                  <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-3">
                       <div className={`p-2.5 rounded-xl ${p.bg} ${p.color} shrink-0`}>
                         <IconComp className="w-5 h-5" />
                       </div>
-                      <div>
-                        <h4 className="font-bold text-gray-900 dark:text-white text-sm flex items-center gap-2">
+                      <div className="min-w-0">
+                        <h4 className="font-bold text-gray-900 dark:text-white text-sm truncate">
                           {p.name}
-                          {p.id === 'linkedin' && <span className="px-1.5 py-0.5 rounded text-[9px] bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-400 uppercase tracking-wider font-bold">Coming Soon</span>}
                         </h4>
                         <div className="flex items-center gap-1.5 mt-0.5">
-                          <span className="w-1.5 h-1.5 rounded-full bg-gray-300 dark:bg-gray-600" />
-                          <span className="text-xs text-gray-500 dark:text-gray-400">Not connected</span>
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                          <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">Connected</span>
                         </div>
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedConnectPortal(p.id)}
-                      className="px-4 py-2 rounded-xl text-xs font-bold bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 hover:border-lime-500 transition-colors"
-                    >
-                      Connect account
-                    </button>
-                  </div>
-                );
-              }
-
-              return (
-                <div key={p.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl border border-lime-500/20 bg-lime-50/30 dark:bg-lime-900/10">
-                  <div className="flex items-start gap-3">
-                    <div className={`p-2.5 rounded-xl ${p.bg} ${p.color} shrink-0`}>
-                      <IconComp className="w-5 h-5" />
-                    </div>
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-bold text-gray-900 dark:text-white text-sm">{p.name}</h4>
-                        <span className="text-xs text-gray-500 dark:text-gray-400 block sm:hidden md:block">· {email}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-lime-500" />
-                        <span className="text-xs font-semibold text-lime-700 dark:text-lime-400">Connected</span>
-                      </div>
-                      
-                      <div className="pt-1 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-gray-600 dark:text-gray-400">
-                        <span className="flex items-center gap-1">
-                          <CheckCircle2 className="w-3 h-3 text-lime-600 dark:text-lime-400" /> Job discovery
-                        </span>
-                        {p.capabilities.applicationAutomation ? (
-                          <span className="flex items-center gap-1">
-                            <CheckCircle2 className="w-3 h-3 text-lime-600 dark:text-lime-400" /> Application support
-                          </span>
-                        ) : (
-                          <span className="flex items-center gap-1 text-gray-400 dark:text-gray-500">
-                            <X className="w-3 h-3" /> Application automation not currently available
-                          </span>
-                        )}
-                      </div>
-                      
-                      {connection?.updatedAt && (
-                        <div className="text-[10px] text-gray-400 pt-1">
-                          Last synced: {new Date(connection.updatedAt).toLocaleString()}
-                        </div>
-                      )}
-                    </div>
                   </div>
 
-                  <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-                    <button
-                      type="button"
-                      onClick={() => handleSyncPortal(connection?.connectionId || p.id, p.name)}
-                      disabled={isSyncing}
-                      className="px-3 py-1.5 rounded-xl text-xs font-bold bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10 text-gray-800 dark:text-gray-200 transition-colors flex items-center gap-1.5"
-                    >
-                      {isSyncing ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin text-lime-600" />
-                      ) : (
-                        <RefreshCw className="w-3.5 h-3.5 text-lime-600" />
-                      )}
-                      {isSyncing ? 'Syncing...' : 'Sync Now'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDisconnectPortal(connection?.connectionId || p.id, p.name)}
-                      disabled={isDisconnecting}
-                      className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl transition-colors"
-                      title="Disconnect Account"
-                    >
-                      {isDisconnecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                    </button>
+                  <div className="space-y-1 text-[11px] text-gray-600 dark:text-gray-400 pt-1">
+                    <div className="truncate font-medium text-gray-800 dark:text-gray-200">
+                      {email}
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-lime-600 dark:text-lime-400 shrink-0" />
+                      <span>{p.capabilities.applicationAutomation ? 'Discovery & Auto-Apply active' : 'Discovery active'}</span>
+                    </div>
+                    {connection?.updatedAt && (
+                      <div className="text-[10px] text-gray-400 pt-0.5">
+                        Synced {new Date(connection.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                    )}
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
 
-      {/* 3. Roles You're Targeting */}
-      <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-3xl p-6 sm:p-7 shadow-sm space-y-4">
-        <div className="flex items-center gap-2">
-          <Target className="w-5 h-5 text-lime-600 dark:text-[#80FF00]" />
-          <div>
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white">Roles You're Targeting</h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">These help us prioritize the right jobs.</p>
-          </div>
-        </div>
-
-        <div className="flex gap-2 pt-1 max-w-lg">
-          <input
-            type="text"
-            value={newRole}
-            onChange={(e) => setNewRole(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddRole())}
-            placeholder="Add a role..."
-            className="flex-1 px-4 py-2.5 text-sm rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#1a230f] text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-lime-500"
-          />
-          <button
-            type="button"
-            onClick={() => handleAddRole()}
-            className="px-5 py-2.5 bg-gray-900 hover:bg-black dark:bg-[#80FF00] dark:hover:brightness-95 dark:text-black text-white rounded-xl text-sm font-bold transition-colors"
-          >
-            Add
-          </button>
-        </div>
-
-        <div className="flex flex-wrap gap-2 pt-2">
-          {preferences.targetRoles.map((role) => (
-            <span
-              key={role}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-lime-50 dark:bg-lime-950/40 border border-lime-200 dark:border-lime-800/50 rounded-xl text-sm font-medium text-lime-900 dark:text-lime-200"
-            >
-              {role}
-              <button
-                type="button"
-                onClick={() => handleRemoveRole(role)}
-                className="hover:text-red-500 ml-1"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </span>
-          ))}
+                <div className="flex items-center gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => handleSyncPortal(connection?.connectionId || p.id, p.name)}
+                    disabled={isSyncing}
+                    className="flex-1 py-2 px-3 rounded-xl text-xs font-bold bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10 text-gray-800 dark:text-gray-200 transition-colors flex items-center justify-center gap-1.5 shadow-2xs"
+                  >
+                    {isSyncing ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-lime-600" />
+                    ) : (
+                      <RefreshCw className="w-3.5 h-3.5 text-lime-600" />
+                    )}
+                    <span>{isSyncing ? 'Syncing...' : 'Sync Now'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDisconnectPortal(connection?.connectionId || p.id, p.name)}
+                    disabled={isDisconnecting}
+                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl transition-colors shrink-0"
+                    title="Disconnect Account"
+                  >
+                    {isDisconnecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 
-      {/* 4. Where Do You Want to Work? */}
-      <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-3xl p-6 sm:p-7 shadow-sm space-y-6">
-        <div className="flex items-center gap-2">
-          <MapPin className="w-5 h-5 text-lime-600 dark:text-[#80FF00]" />
-          <div>
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white">Where Do You Want to Work?</h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">We'll prioritize jobs you can realistically work from.</p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-2">
-          {/* Locations */}
+      {/* ========================================================================= */}
+      {/* ROW 3: Two Column Layout: Roles & Locations/Workplace                    */}
+      {/* ========================================================================= */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+        {/* Column 1: Roles You're Targeting */}
+        <div className="bg-white dark:bg-[#141810] border border-gray-200/90 dark:border-white/10 rounded-3xl p-6 sm:p-7 shadow-sm space-y-4 flex flex-col justify-between">
           <div className="space-y-3">
-            <h4 className="text-sm font-bold text-gray-700 dark:text-gray-300">Locations</h4>
-            <div className="flex gap-2">
+            <div className="flex items-center gap-2">
+              <Target className="w-5 h-5 text-lime-600 dark:text-[#80FF00]" />
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">Roles You&apos;re Targeting</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">These help us prioritize the right jobs.</p>
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-1">
               <input
                 type="text"
-                value={newLocation}
-                onChange={(e) => setNewLocation(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddLocation())}
-                placeholder="e.g. Bangalore, London"
-                className="flex-1 px-4 py-2.5 text-sm rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#1a230f] text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-lime-500"
+                value={newRole}
+                onChange={(e) => setNewRole(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddRole())}
+                placeholder="Add a role (e.g. Data Analyst)..."
+                className="flex-1 px-4 py-2.5 text-xs sm:text-sm rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#1a230f] text-gray-900 dark:text-white outline-none focus:border-lime-500 shadow-2xs"
               />
               <button
                 type="button"
-                onClick={() => handleAddLocation()}
-                className="px-4 py-2.5 bg-gray-200 hover:bg-gray-300 dark:bg-white/10 dark:hover:bg-white/20 text-gray-800 dark:text-white rounded-xl text-sm font-bold transition-colors"
+                onClick={() => handleAddRole()}
+                className="px-5 py-2.5 bg-gray-900 hover:bg-black dark:bg-[#80FF00] dark:hover:brightness-95 dark:text-black text-white rounded-xl text-xs sm:text-sm font-bold transition-colors shadow-2xs shrink-0"
               >
                 Add
               </button>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {cityLocations.map((loc) => (
+
+            <div className="flex flex-wrap gap-2 pt-2">
+              {preferences.targetRoles.map((role) => (
                 <span
-                  key={loc}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300"
+                  key={role}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-lime-50 dark:bg-lime-950/40 border border-lime-200 dark:border-lime-800/50 rounded-xl text-xs sm:text-sm font-medium text-lime-900 dark:text-lime-200"
                 >
-                  {loc}
+                  <span>{role}</span>
                   <button
                     type="button"
-                    onClick={() => handleRemoveLocation(loc)}
-                    className="hover:text-red-500"
+                    onClick={() => handleRemoveRole(role)}
+                    aria-label={`Remove ${role}`}
+                    className="hover:text-red-500 ml-0.5"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
@@ -741,220 +799,237 @@ export function AutoApplyPanel({ userId, region }: AutoApplyPanelProps) {
               ))}
             </div>
           </div>
+        </div>
 
-          {/* Workplace */}
-          <div className="space-y-3">
-            <h4 className="text-sm font-bold text-gray-700 dark:text-gray-300">Workplace</h4>
-            <div className="flex flex-wrap gap-2">
-              {['Remote', 'Hybrid', 'On-site'].map(type => {
-                const isActive = preferences.locations.includes(type);
-                return (
-                  <button
-                    key={type}
-                    type="button"
-                    onClick={() => toggleWorkplace(type)}
-                    className={`px-4 py-2 rounded-xl text-sm font-bold transition-all border ${
-                      isActive 
-                        ? 'bg-lime-50 dark:bg-lime-900/20 border-lime-500 text-lime-700 dark:text-lime-400' 
-                        : 'bg-white dark:bg-[#1a230f] border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-300'
-                    }`}
+        {/* Column 2: Where Do You Want to Work? */}
+        <div className="bg-white dark:bg-[#141810] border border-gray-200/90 dark:border-white/10 rounded-3xl p-6 sm:p-7 shadow-sm space-y-4 flex flex-col justify-between">
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <MapPin className="w-5 h-5 text-lime-600 dark:text-[#80FF00]" />
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">Where Do You Want to Work?</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">We&apos;ll prioritize jobs you can realistically work from.</p>
+              </div>
+            </div>
+
+            {/* Workplace Setup Pills */}
+            <div className="space-y-1.5">
+              <span className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider block">Workplace Setup</span>
+              <div className="flex flex-wrap gap-2">
+                {['Remote', 'Hybrid', 'On-site'].map((type) => {
+                  const isActive = preferences.locations.includes(type);
+                  return (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => toggleWorkplace(type)}
+                      className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all border ${
+                        isActive 
+                          ? 'bg-lime-50 dark:bg-lime-900/20 border-lime-500 text-lime-700 dark:text-lime-400 shadow-2xs' 
+                          : 'bg-white dark:bg-[#1a230f] border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-300'
+                      }`}
+                    >
+                      {type}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* City Locations */}
+            <div className="space-y-2 pt-1">
+              <span className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider block">Target Cities / Regions</span>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newLocation}
+                  onChange={(e) => setNewLocation(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddLocation())}
+                  placeholder="e.g. Bangalore, London"
+                  className="flex-1 px-4 py-2 text-xs sm:text-sm rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#1a230f] text-gray-900 dark:text-white outline-none focus:border-lime-500 shadow-2xs"
+                />
+                <button
+                  type="button"
+                  onClick={() => handleAddLocation()}
+                  className="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-white/10 dark:hover:bg-white/20 text-gray-800 dark:text-white rounded-xl text-xs sm:text-sm font-bold transition-colors shadow-2xs shrink-0"
+                >
+                  Add
+                </button>
+              </div>
+
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {cityLocations.map((loc) => (
+                  <span
+                    key={loc}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl text-xs font-medium text-gray-700 dark:text-gray-300"
                   >
-                    {type}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 5. What Salary Are You Targeting? */}
-      <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-3xl p-6 sm:p-7 shadow-sm space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-          <div className="flex items-start gap-2">
-            <DollarSign className="w-5 h-5 text-lime-600 dark:text-[#80FF00] mt-0.5" />
-            <div>
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white">What Salary Are You Targeting?</h3>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">We'll filter out roles below your target.</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-1 bg-gray-100 dark:bg-white/5 p-1 rounded-xl shrink-0">
-            {Object.entries(CURRENCY_CONFIG).map(([key, item]) => {
-              const active = preferences.salaryCurrency === key;
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() =>
-                    setPreferences((p) => ({
-                      ...p,
-                      salaryCurrency: key,
-                      minSalary: item.defaultVal,
-                    }))
-                  }
-                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                    active
-                      ? 'bg-white dark:bg-[#1a230f] text-gray-900 dark:text-white shadow-sm'
-                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-800'
-                  }`}
-                >
-                  {item.symbol} {key.split('_')[0]}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="pt-2 pl-7 space-y-4">
-          <div className="text-3xl font-black text-gray-900 dark:text-white flex items-baseline gap-1.5">
-            <span>{currentCurrency.symbol}{preferences.minSalary?.toLocaleString()}</span>
-            <span className="text-sm font-bold text-gray-400">{currentCurrency.unit}</span>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            {currentCurrency.presets.map((val) => {
-              const isSelected = preferences.minSalary === val;
-              return (
-                <button
-                  key={val}
-                  type="button"
-                  onClick={() => setPreferences((p) => ({ ...p, minSalary: val }))}
-                  className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
-                    isSelected
-                      ? 'bg-lime-500 dark:bg-[#80FF00] text-white dark:text-black shadow-sm'
-                      : 'bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 hover:bg-gray-100'
-                  }`}
-                >
-                  {currentCurrency.symbol}{val.toLocaleString()} {currentCurrency.unit}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-
-      {/* 6. Experience Level */}
-      <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-3xl p-6 sm:p-7 shadow-sm space-y-4">
-        <div className="flex items-center gap-2">
-          <Briefcase className="w-5 h-5 text-lime-600 dark:text-[#80FF00]" />
-          <div>
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white">Experience Level</h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">We'll prioritize roles that fit your background.</p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-2">
-          {EXPERIENCE_TIERS.map((tier) => {
-            const isSelected = preferences.experienceYears === tier.minYears;
-            return (
-              <button
-                key={tier.label}
-                type="button"
-                onClick={() =>
-                  setPreferences((p) => ({ ...p, experienceYears: tier.minYears }))
-                }
-                className={`p-4 rounded-2xl border text-left transition-all ${
-                  isSelected
-                    ? 'border-lime-500 bg-lime-50/40 dark:bg-lime-900/20 text-gray-900 dark:text-white shadow-sm'
-                    : 'border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/[0.02] text-gray-600 dark:text-gray-400 hover:border-gray-300'
-                }`}
-              >
-                <div className="text-sm font-bold text-gray-900 dark:text-white mb-1">
-                  {tier.label}
-                </div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">
-                  {tier.range}
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-      
-      {/* 7. Availability */}
-      <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-3xl p-6 sm:p-7 shadow-sm space-y-4">
-        <div className="flex items-center gap-2">
-          <Clock className="w-5 h-5 text-lime-600 dark:text-[#80FF00]" />
-          <div>
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white">Availability</h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">We'll prioritize employers whose timelines match yours.</p>
-          </div>
-        </div>
-        
-        <p className="text-sm font-medium text-gray-700 dark:text-gray-300 pt-1">How soon can you start a new role?</p>
-
-        <div className="flex flex-wrap items-center gap-3">
-          {[0, 30, 60, 90].map((days) => {
-            const isSelected = preferences.maxNoticePeriodDays === days;
-            return (
-              <button
-                key={days}
-                type="button"
-                onClick={() => setPreferences((p) => ({ ...p, maxNoticePeriodDays: days }))}
-                className={`px-5 py-2.5 rounded-xl text-sm font-bold border transition-all ${
-                  isSelected
-                    ? 'bg-lime-500 dark:bg-[#80FF00] text-white dark:text-black border-transparent shadow-sm'
-                    : 'bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 hover:bg-gray-50'
-                }`}
-              >
-                {days === 0 ? 'Immediately' : `${days} days`}
-              </button>
-            )
-          })}
-        </div>
-      </div>
-
-      {/* Auto-Apply Profile Summary */}
-      <div className="bg-gray-50 dark:bg-white/[0.02] border border-gray-200 dark:border-white/10 rounded-3xl p-6 sm:p-7">
-        <div className="space-y-4">
-          <div>
-            <h3 className="text-base font-bold text-gray-900 dark:text-white">Your Auto-Apply Profile</h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">This is what BuildAIResume will use when Auto-Apply is active.</p>
-          </div>
-          
-          <div className="space-y-2 text-sm text-gray-700 dark:text-gray-300 font-medium">
-            {preferences.targetRoles.length > 0 && (
-              <div className="flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 text-lime-600 dark:text-[#80FF00] mt-0.5 shrink-0" />
-                <span>{preferences.targetRoles.join(', ')}</span>
+                    <span>{loc}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveLocation(loc)}
+                      aria-label={`Remove ${loc}`}
+                      className="hover:text-red-500 ml-0.5"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))}
               </div>
-            )}
-            
-            {preferences.locations.length > 0 && (
-              <div className="flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 text-lime-600 dark:text-[#80FF00] mt-0.5 shrink-0" />
-                <span>
-                  {[
-                    cityLocations.join(', '), 
-                    workplacePrefs.join(' / ')
-                  ].filter(Boolean).join(' · ')}
-                </span>
-              </div>
-            )}
-            
-            <div className="flex items-start gap-2">
-              <CheckCircle2 className="w-4 h-4 text-lime-600 dark:text-[#80FF00] mt-0.5 shrink-0" />
-              <span>{currentCurrency.symbol}{preferences.minSalary?.toLocaleString()} {currentCurrency.unit}+</span>
-            </div>
-            
-            <div className="flex items-start gap-2">
-              <CheckCircle2 className="w-4 h-4 text-lime-600 dark:text-[#80FF00] mt-0.5 shrink-0" />
-              <span>{getExperienceLabel(preferences.experienceYears)}</span>
-            </div>
-            
-            <div className="flex items-start gap-2">
-              <CheckCircle2 className="w-4 h-4 text-lime-600 dark:text-[#80FF00] mt-0.5 shrink-0" />
-              <span>{getAvailabilityLabel(preferences.maxNoticePeriodDays)}</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Save Button */}
+      {/* ========================================================================= */}
+      {/* ROW 4: Two Column Layout: Salary Targeting & Experience/Availability     */}
+      {/* ========================================================================= */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+        {/* Column 1: What Salary Are You Targeting? */}
+        <div className="bg-white dark:bg-[#141810] border border-gray-200/90 dark:border-white/10 rounded-3xl p-6 sm:p-7 shadow-sm space-y-4 flex flex-col justify-between">
+          <div className="space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <DollarSign className="w-5 h-5 text-lime-600 dark:text-[#80FF00]" />
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">Target Salary</h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">We&apos;ll filter out roles below your target.</p>
+                </div>
+              </div>
+
+              {/* Currency Switcher */}
+              <div className="flex items-center gap-1 bg-gray-100 dark:bg-white/5 p-1 rounded-xl shrink-0 self-start sm:self-auto">
+                {Object.entries(CURRENCY_CONFIG).map(([key, item]) => {
+                  const active = preferences.salaryCurrency === key;
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() =>
+                        setPreferences((p) => ({
+                          ...p,
+                          salaryCurrency: key,
+                          minSalary: item.defaultVal,
+                        }))
+                      }
+                      className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all ${
+                        active
+                          ? 'bg-white dark:bg-[#1a230f] text-gray-900 dark:text-white shadow-2xs'
+                          : 'text-gray-500 dark:text-gray-400 hover:text-gray-800'
+                      }`}
+                    >
+                      {item.symbol} {key.split('_')[0]}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Current Value Display */}
+            <div className="pt-2 space-y-3">
+              <div className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white flex items-baseline gap-1.5">
+                <span>{currentCurrency.symbol}{preferences.minSalary?.toLocaleString()}</span>
+                <span className="text-xs sm:text-sm font-bold text-gray-400">{currentCurrency.unit}+</span>
+              </div>
+
+              {/* Preset Quick Chips */}
+              <div className="flex flex-wrap items-center gap-2">
+                {currentCurrency.presets.map((val) => {
+                  const isSelected = preferences.minSalary === val;
+                  return (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => setPreferences((p) => ({ ...p, minSalary: val }))}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                        isSelected
+                          ? 'bg-lime-500 dark:bg-[#80FF00] text-white dark:text-black shadow-2xs'
+                          : 'bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 hover:bg-gray-100'
+                      }`}
+                    >
+                      {currentCurrency.symbol}{val.toLocaleString()} {currentCurrency.unit}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Column 2: Experience Level & Availability */}
+        <div className="bg-white dark:bg-[#141810] border border-gray-200/90 dark:border-white/10 rounded-3xl p-6 sm:p-7 shadow-sm space-y-4 flex flex-col justify-between">
+          <div className="space-y-4">
+            {/* Experience Tiers */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Briefcase className="w-4 h-4 text-lime-600 dark:text-[#80FF00]" />
+                <h4 className="text-sm font-bold text-gray-900 dark:text-white">Experience Level</h4>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {EXPERIENCE_TIERS.map((tier) => {
+                  const isSelected = preferences.experienceYears === tier.minYears;
+                  return (
+                    <button
+                      key={tier.label}
+                      type="button"
+                      onClick={() =>
+                        setPreferences((p) => ({ ...p, experienceYears: tier.minYears }))
+                      }
+                      className={`p-2.5 rounded-xl border text-left transition-all ${
+                        isSelected
+                          ? 'border-lime-500 bg-lime-50/40 dark:bg-lime-900/20 text-gray-900 dark:text-white shadow-2xs'
+                          : 'border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/[0.02] text-gray-600 dark:text-gray-400 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="text-xs font-bold text-gray-900 dark:text-white truncate">
+                        {tier.label}
+                      </div>
+                      <div className="text-[10px] text-gray-500 dark:text-gray-400">
+                        {tier.range}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Availability / Notice Period */}
+            <div className="space-y-2 pt-1 border-t border-gray-100 dark:border-white/5">
+              <div className="flex items-center gap-2 pt-1">
+                <Clock className="w-4 h-4 text-lime-600 dark:text-[#80FF00]" />
+                <h4 className="text-sm font-bold text-gray-900 dark:text-white">Availability</h4>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                {[0, 30, 60, 90].map((days) => {
+                  const isSelected = preferences.maxNoticePeriodDays === days;
+                  return (
+                    <button
+                      key={days}
+                      type="button"
+                      onClick={() => setPreferences((p) => ({ ...p, maxNoticePeriodDays: days }))}
+                      className={`px-3.5 py-1.5 rounded-xl text-xs font-bold border transition-all ${
+                        isSelected
+                          ? 'bg-lime-500 dark:bg-[#80FF00] text-white dark:text-black border-transparent shadow-2xs'
+                          : 'bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      {days === 0 ? 'Immediately' : `${days} days`}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* Save Action Bar                                                           */}
+      {/* ========================================================================= */}
       <div className="flex items-center justify-end gap-4 pt-2">
         {hasChanges && (
-          <span className="text-sm font-semibold text-amber-600 dark:text-amber-400">
+          <span className="text-xs sm:text-sm font-bold text-amber-600 dark:text-amber-400">
             Unsaved changes
           </span>
         )}
@@ -969,7 +1044,7 @@ export function AutoApplyPanel({ userId, region }: AutoApplyPanelProps) {
           }`}
         >
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-          Save Preferences
+          <span>Save Preferences</span>
         </button>
       </div>
 
