@@ -42,3 +42,18 @@ export { default as SupportNote, type ISupportNote } from './SupportNote';
 
 // Feedback model
 export { default as Feedback, type IFeedback } from './Feedback';
+
+// Portal Connection & Sync models
+export {
+  default as PortalConnection,
+  type IPortalConnection,
+  type PortalProvider,
+  type PortalConnectionStatus,
+  type PortalAuthMethod,
+} from './PortalConnection';
+export {
+  default as PortalJobSyncTask,
+  type IPortalJobSyncTask,
+  type SyncTaskTrigger,
+  type SyncTaskStatus,
+} from './PortalJobSyncTask';

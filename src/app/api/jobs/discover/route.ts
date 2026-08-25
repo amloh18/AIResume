@@ -551,50 +551,75 @@ export async function GET(request: NextRequest) {
 
     // Saved Only filter (from query param)
     const savedOnlyFilter = searchParams.get('savedOnly') === 'true';
-    if (savedOnlyFilter && userId) {
+    if (savedOnlyFilter) {
       try {
-        const { getDb } = await import('@/lib/db');
-        const db = await getDb();
-        const savedJobsDocs = await db
-          .collection('jobs')
-          .find({ userId: new ObjectId(userId) })
-          .toArray();
-        const jobApps = await db
-          .collection('jobapplications')
-          .find({ userId: new ObjectId(userId) })
-          .toArray();
-
-        // Build a set of all possible saved-job identifiers (same logic as frontend isJobSaved)
-        const savedUrls = new Set<string>();
-        const savedCompanyTitles = new Set<string>();
-
-        for (const j of savedJobsDocs) {
-          if (j.jobUrl) savedUrls.add(j.jobUrl);
-          if (j.sourceUrl) savedUrls.add(j.sourceUrl);
-          if (j.company && (j.jobTitle || j.title)) {
-            savedCompanyTitles.add(`${(j.company || '').toLowerCase()}-${((j.jobTitle || j.title) || '').toLowerCase()}`);
-          }
-        }
-        for (const a of jobApps) {
-          if (a.jobUrl) savedUrls.add(a.jobUrl);
-          if (a.sourceUrl) savedUrls.add(a.sourceUrl);
-          if (a.company && a.jobTitle) {
-            savedCompanyTitles.add(`${(a.company || '').toLowerCase()}-${(a.jobTitle || '').toLowerCase()}`);
-          }
-        }
-
-        if (savedUrls.size > 0 || savedCompanyTitles.size > 0) {
-          listings = listings.filter((job) => {
-            if (job.applyUrl && savedUrls.has(job.applyUrl)) return true;
-            const key = `${(job.company || '').toLowerCase()}-${(job.title || '').toLowerCase()}`;
-            return savedCompanyTitles.has(key);
-          });
-        } else {
-          // No saved jobs at all — return empty
+        if (!userId) {
           listings = [];
+        } else {
+          const { getDb } = await import('@/lib/db');
+          const db = await getDb();
+
+          let userQuery: any = { userId: String(userId) };
+          try {
+            if (ObjectId.isValid(userId)) {
+              userQuery = {
+                $or: [{ userId: new ObjectId(userId) }, { userId: String(userId) }],
+              };
+            }
+          } catch {
+            userQuery = { userId: String(userId) };
+          }
+
+          const [savedJobsDocs, jobApps] = await Promise.all([
+            db.collection('jobs').find(userQuery).toArray(),
+            db.collection('jobapplications').find(userQuery).toArray(),
+          ]);
+
+          const savedIds = new Set<string>();
+          const savedUrls = new Set<string>();
+          const savedCompanyTitles = new Set<string>();
+
+          for (const j of savedJobsDocs) {
+            if (j._id) savedIds.add(j._id.toString());
+            if (j.id) savedIds.add(String(j.id));
+            if (j.jobId) savedIds.add(String(j.jobId));
+            if (j.jobUrl) savedUrls.add(j.jobUrl.trim().toLowerCase());
+            if (j.sourceUrl) savedUrls.add(j.sourceUrl.trim().toLowerCase());
+            if (j.company && (j.jobTitle || j.title)) {
+              const comp = (j.company || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+              const tit = ((j.jobTitle || j.title) || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+              savedCompanyTitles.add(`${comp}___${tit}`);
+            }
+          }
+
+          for (const a of jobApps) {
+            if (a._id) savedIds.add(a._id.toString());
+            if (a.id) savedIds.add(String(a.id));
+            if (a.jobId) savedIds.add(String(a.jobId));
+            if (a.jobUrl) savedUrls.add(a.jobUrl.trim().toLowerCase());
+            if (a.sourceUrl) savedUrls.add(a.sourceUrl.trim().toLowerCase());
+            if (a.company && (a.jobTitle || a.title)) {
+              const comp = (a.company || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+              const tit = ((a.jobTitle || a.title) || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+              savedCompanyTitles.add(`${comp}___${tit}`);
+            }
+          }
+
+          if (savedIds.size > 0 || savedUrls.size > 0 || savedCompanyTitles.size > 0) {
+            listings = listings.filter((job) => {
+              if (savedIds.has(job._id) || (job.id && savedIds.has(job.id))) return true;
+              if (job.applyUrl && savedUrls.has(job.applyUrl.trim().toLowerCase())) return true;
+              const comp = (job.company || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+              const tit = (job.title || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+              return savedCompanyTitles.has(`${comp}___${tit}`);
+            });
+          } else {
+            listings = [];
+          }
         }
       } catch (err) {
         console.warn('Failed to filter saved jobs on server:', err);
+        listings = [];
       }
     }
 

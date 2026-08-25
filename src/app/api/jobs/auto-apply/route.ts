@@ -47,36 +47,41 @@ export async function POST(request: NextRequest) {
 
     await getConnection();
 
-    // Check job tracker limits
-    const { checkJobLimit } = await import('@/lib/utils/subscription-helpers');
-    const User = (await import('@/models/User')).default;
-    const user = await User.findById(auth.userId);
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
+    // Check centralized canonical entitlements
+    const { EntitlementService } = await import('@/lib/services/entitlement-service');
+    const entitlementCheck = await EntitlementService.checkAndConsume(auth.userId, 'auto_apply');
 
-    const limitCheck = await checkJobLimit(
-      auth.userId,
-      user.currentPlanKey || 'free',
-      user.subscription
-    );
+    if (!entitlementCheck.allowed) {
+      const isNotIncluded = !entitlementCheck.entitlements.autoApply.enabled;
+      const code = isNotIncluded ? 'AUTO_APPLY_NOT_INCLUDED' : 'AUTO_APPLY_LIMIT_REACHED';
+      const message =
+        entitlementCheck.errorReason ||
+        (isNotIncluded
+          ? "Auto-Apply isn't included in your Starter plan. Automatic submission is available on Focused."
+          : `Today's Auto-Apply limit is reached (${entitlementCheck.entitlements.autoApply.limit}/${entitlementCheck.entitlements.autoApply.limit}). Your limit resets tomorrow.`);
 
-    if (!limitCheck.allowed) {
       return NextResponse.json(
         {
-          error: limitCheck.message || 'Job limit exceeded. Please upgrade your plan.',
-          limitInfo: limitCheck,
+          code,
+          error: message,
+          message,
+          plan: entitlementCheck.entitlements.plan,
+          entitlements: entitlementCheck.entitlements,
+          recommendation: entitlementCheck.recommendation,
+          fallbackUrl: jobUrl || '',
         },
         { status: 403 }
       );
     }
 
     // Check per-source daily limits
+    const User = (await import('@/models/User')).default;
+    const user = await User.findById(auth.userId);
     const sourceName = source || resolvedAtsType;
     let sourceDailyLimit = 25;
-    if (sourceName === 'naukri' && (user as any).naukriIntegration?.preferences?.dailyLimit) {
+    if (sourceName === 'naukri' && (user as any)?.naukriIntegration?.preferences?.dailyLimit) {
       sourceDailyLimit = (user as any).naukriIntegration.preferences.dailyLimit;
-    } else if (sourceName === 'indeed' && (user as any).indeedIntegration?.preferences?.dailyLimit) {
+    } else if (sourceName === 'indeed' && (user as any)?.indeedIntegration?.preferences?.dailyLimit) {
       sourceDailyLimit = (user as any).indeedIntegration.preferences.dailyLimit;
     }
 

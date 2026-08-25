@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { JobsMetrics, JobListing, JobsFilter } from '@/types/automation-schema';
 import FiltersBar from './JobsDashboard/FiltersBar';
 import JobsErrorState from './JobsDashboard/JobsErrorState';
-import { Sparkles, Zap, Briefcase, Settings, ChevronRight, ArrowUp, Linkedin, Mic, X } from 'lucide-react';
+import { Sparkles, Zap, Briefcase, Settings, ChevronRight, ArrowUp, Linkedin, Mic, X, Globe, RefreshCw, Loader2, Plus, Bookmark } from 'lucide-react';
 import { AutoApplyPanel } from '@/components/jobs/AutoApplyPanel';
 import { ApplicationsPanel } from '@/components/jobs/ApplicationsPanel';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -21,13 +21,35 @@ import { JobDetailModal } from '@/components/jobs/JobDetailModal';
 import { detectUserCountry } from '@/components/jobs/CountrySelector';
 import NaukriConnectCard from './JobsDashboard/NaukriConnectCard';
 import LimitedOptionsBanner from './JobsDashboard/LimitedOptionsBanner';
-import PortalIntegrationsPanel from './settings/PortalIntegrationsPanel';
+import PortalConnectModal, { type PortalType } from './settings/PortalConnectModal';
 import { getCachedJobs, setCachedJobs } from '@/lib/utils/jobCache';
+import { EntitlementNotice, type EntitlementNoticeData } from '@/components/jobs/EntitlementNotice';
 import {
   DEFAULT_CV_TAILORING_MODE,
   parseCvTailoringMode,
   type CvTailoringMode,
 } from '@/lib/cv-tailoring/tailoringMode';
+import type { UserEntitlements } from '@/lib/services/entitlement-service';
+
+const deduplicateJobs = (rawJobs: JobListing[]): JobListing[] => {
+  const seenKeys = new Map<string, JobListing>();
+  for (const job of rawJobs) {
+    const normCompany = (job.company || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+    const normTitle = (job.title || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+    const normLoc = (job.location || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+    const key = `${normCompany}___${normTitle}___${normLoc}`;
+
+    if (!seenKeys.has(key)) {
+      seenKeys.set(key, job);
+    } else {
+      const existing = seenKeys.get(key)!;
+      if ((job.matchScore || 0) > (existing.matchScore || 0)) {
+        seenKeys.set(key, job);
+      }
+    }
+  }
+  return Array.from(seenKeys.values());
+};
 
 export default function JobsDashboard() {
   const [activeTab, setActiveTab] = useState<'discover' | 'applications' | 'settings'>('discover');
@@ -40,6 +62,8 @@ export default function JobsDashboard() {
   const applyProgress = useApplyProgress();
   const { isPaidMember } = useMembership();
   const isPaidUser = isPaidMember;
+  const [entitlements, setEntitlements] = useState<UserEntitlements | null>(null);
+  const [userPreferences, setUserPreferences] = useState<any>(null);
 
   useEffect(() => {
     const tabParam = searchParams.get('tab');
@@ -79,14 +103,16 @@ export default function JobsDashboard() {
     sortOrder: 'desc',
   });
   const [page, setPage] = useState(1);
-  const [pageSize] = useState(50);
+  const [pageSize] = useState(20);
   const [total, setTotal] = useState(0);
   const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const observerTarget = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(() => {
     // Check if we have cached data for initial filter state
     const initialParams: Record<string, string> = {
       page: '1',
-      limit: '50',
+      limit: '20',
       countries: '',
       sortBy: 'matchScore',
       sortOrder: 'desc',
@@ -99,7 +125,14 @@ export default function JobsDashboard() {
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [savingId, setSavingId] = useState<string | null>(null);
   const [isApplying, setIsApplying] = useState<string | null>(null);
-  const [naukriConnected, setNaukriConnected] = useState<boolean>(true);
+  const [portalConnections, setPortalConnections] = useState<any[]>([]);
+  const [naukriConnected, setNaukriConnected] = useState<boolean>(false);
+  const [naukriEmail, setNaukriEmail] = useState<string>('');
+  const [indeedConnected, setIndeedConnected] = useState<boolean>(false);
+  const [indeedEmail, setIndeedEmail] = useState<string>('');
+  const [isSyncingPortals, setIsSyncingPortals] = useState<boolean>(false);
+  const [connectModalOpen, setConnectModalOpen] = useState<boolean>(false);
+  const [selectedConnectPortal, setSelectedConnectPortal] = useState<PortalType>('naukri');
   const [autoApplyEnabled, setAutoApplyEnabled] = useState<boolean>(false);
   const [cvTailoringMode, setCvTailoringMode] = useState<CvTailoringMode>(DEFAULT_CV_TAILORING_MODE);
   const [autoApplyBannerDismissed, setAutoApplyBannerDismissed] = useState<boolean>(() => {
@@ -109,22 +142,51 @@ export default function JobsDashboard() {
     return false;
   });
   const [newJobsCount, setNewJobsCount] = useState(0);
+  const [entitlementNoticeData, setEntitlementNoticeData] = useState<EntitlementNoticeData | null>(null);
+  const [entitlementNoticeOpen, setEntitlementNoticeOpen] = useState(false);
   const jobsSnapshotRef = useRef<string>('');
 
+  const fetchPortalConnections = useCallback(async () => {
+    try {
+      const res = await fetch('/api/portal-connections');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && Array.isArray(data.connections)) {
+          setPortalConnections(data.connections);
+          const naukri = data.connections.find((c: any) => c.id === 'naukri');
+          const indeed = data.connections.find((c: any) => c.id === 'indeed');
+
+          const isNaukriActive = naukri?.status === 'connected' && Boolean(naukri?.account?.email);
+          const isIndeedActive = indeed?.status === 'connected' && Boolean(indeed?.account?.email);
+
+          setNaukriConnected(isNaukriActive);
+          setNaukriEmail(naukri?.account?.email || '');
+          setIndeedConnected(isIndeedActive);
+          setIndeedEmail(indeed?.account?.email || '');
+        }
+      }
+    } catch (e) {
+      console.error('Failed to fetch portal connections in Discover:', e);
+    }
+  }, []);
+
   useEffect(() => {
-    fetch('/api/integrations/naukri/session')
-      .then((res) => res.ok ? res.json() : null)
+    fetchPortalConnections();
+
+    fetch('/api/entitlements')
+      .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (data) {
-          setNaukriConnected(data.sessionStatus === 'active');
+        if (data?.success && data.entitlements) {
+          setEntitlements(data.entitlements);
         }
       })
       .catch(() => {});
 
     fetch('/api/jobs/preferences')
-      .then((res) => res.ok ? res.json() : null)
+      .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data?.preferences) {
+          setUserPreferences(data.preferences);
           setAutoApplyEnabled(data.preferences.enabled === true);
         }
         if (data?.cvTailoringMode || data?.preferences?.cvTailoringMode) {
@@ -134,7 +196,7 @@ export default function JobsDashboard() {
         }
       })
       .catch(() => {});
-  }, [userId]);
+  }, [userId, fetchPortalConnections]);
 
   // Map of discovered job ID / URL / titleKey -> MongoDB JobApplication _id
   const [savedJobIdMap, setSavedJobIdMap] = useState<Map<string, string>>(new Map());
@@ -157,12 +219,22 @@ export default function JobsDashboard() {
                 idSet.add(dbId);
                 idMap.set(dbId, dbId);
               }
+              if (j.jobId) {
+                idSet.add(j.jobId);
+                idMap.set(j.jobId, dbId);
+              }
+              if (j.externalId) {
+                idSet.add(j.externalId);
+                idMap.set(j.externalId, dbId);
+              }
               if (j.jobUrl || j.sourceUrl) {
-                idMap.set(j.jobUrl || j.sourceUrl, dbId);
+                const u = (j.jobUrl || j.sourceUrl).trim().toLowerCase();
+                idMap.set(u, dbId);
               }
               if (j.company && (j.jobTitle || j.title)) {
-                const key = `${j.company.toLowerCase()}-${(j.jobTitle || j.title).toLowerCase()}`;
-                idMap.set(key, dbId);
+                const comp = (j.company || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+                const tit = ((j.jobTitle || j.title) || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+                idMap.set(`${comp}___${tit}`, dbId);
               }
             });
 
@@ -179,11 +251,17 @@ export default function JobsDashboard() {
 
   const isJobSaved = useCallback(
     (job: JobListing) => {
-      const jobKey = `${(job.company || '').toLowerCase()}-${(job.title || '').toLowerCase()}`;
+      const comp = (job.company || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+      const tit = (job.title || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+      const jobKey = `${comp}___${tit}`;
+      const url = job.applyUrl ? job.applyUrl.trim().toLowerCase() : '';
+
       return (
         savedIds.has(job._id) ||
+        (job.id ? savedIds.has(job.id) : false) ||
         savedJobIdMap.has(job._id) ||
-        (job.applyUrl ? savedJobIdMap.has(job.applyUrl) : false) ||
+        (job.id ? savedJobIdMap.has(job.id) : false) ||
+        (url ? savedJobIdMap.has(url) : false) ||
         savedJobIdMap.has(jobKey)
       );
     },
@@ -191,10 +269,15 @@ export default function JobsDashboard() {
   );
 
   const handleSaveJob = async (job: JobListing) => {
-    const jobKey = `${(job.company || '').toLowerCase()}-${(job.title || '').toLowerCase()}`;
+    const comp = (job.company || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+    const tit = (job.title || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+    const jobKey = `${comp}___${tit}`;
+    const url = job.applyUrl ? job.applyUrl.trim().toLowerCase() : '';
+
     const dbJobId =
       savedJobIdMap.get(job._id) ||
-      (job.applyUrl ? savedJobIdMap.get(job.applyUrl) : null) ||
+      (job.id ? savedJobIdMap.get(job.id) : null) ||
+      (url ? savedJobIdMap.get(url) : null) ||
       savedJobIdMap.get(jobKey) ||
       (savedIds.has(job._id) ? job._id : null);
     const currentlySaved = Boolean(dbJobId) || savedIds.has(job._id);
@@ -208,13 +291,15 @@ export default function JobsDashboard() {
           setSavedIds((prev) => {
             const next = new Set(prev);
             next.delete(job._id);
+            if (job.id) next.delete(job.id);
             next.delete(dbJobId);
             return next;
           });
           setSavedJobIdMap((prev) => {
             const next = new Map(prev);
             next.delete(job._id);
-            if (job.applyUrl) next.delete(job.applyUrl);
+            if (job.id) next.delete(job.id);
+            if (url) next.delete(url);
             next.delete(jobKey);
             next.delete(dbJobId);
             return next;
@@ -350,11 +435,58 @@ export default function JobsDashboard() {
         }),
       });
 
+      const resData = await res.json();
+
+      // Entitlement block / Plan restriction
+      if (
+        res.status === 403 ||
+        resData.code === 'AUTO_APPLY_NOT_INCLUDED' ||
+        resData.code === 'AUTO_APPLY_LIMIT_REACHED'
+      ) {
+        applyProgress.cancelProgress();
+        setEntitlementNoticeData({
+          code: resData.code || 'AUTO_APPLY_NOT_INCLUDED',
+          jobTitle: job.title,
+          company: job.company,
+          applyUrl: job.applyUrl || resData.fallbackUrl,
+          message: resData.message || resData.error,
+          entitlements: resData.entitlements,
+          recommendation: resData.recommendation,
+        });
+        setEntitlementNoticeOpen(true);
+        return;
+      }
+
+      // Verification / Unknown outcome
+      if (resData.code === 'APPLICATION_VERIFICATION_FAILED') {
+        applyProgress.cancelProgress();
+        setEntitlementNoticeData({
+          code: 'APPLICATION_VERIFICATION_FAILED',
+          jobTitle: job.title,
+          company: job.company,
+          applyUrl: job.applyUrl,
+          message: resData.message,
+        });
+        setEntitlementNoticeOpen(true);
+        return;
+      }
+
+      // Authentication required
+      if (resData.code === 'AUTHENTICATION_REQUIRED') {
+        applyProgress.cancelProgress();
+        setEntitlementNoticeData({
+          code: 'AUTHENTICATION_REQUIRED',
+          jobTitle: job.title,
+          company: job.company,
+          applyUrl: job.applyUrl,
+        });
+        setEntitlementNoticeOpen(true);
+        return;
+      }
+
       // Update progress: submitting
       applyProgress.updateToSubmitting(job.company);
       updateProgress(appId, 80, `Submitting application to ${job.company}...`, 'progress');
-
-      const resData = await res.json();
 
       if (res.ok && resData.success) {
         const createdId = resData.applicationId || job._id;
@@ -366,18 +498,27 @@ export default function JobsDashboard() {
         applyProgress.completeApply(job.title, job.company, true, resData.message);
         updateProgress(appId, 100, `Applied to ${job.title}!`, 'progress');
       } else {
-        applyProgress.completeApply(
-          job.title,
-          job.company,
-          false,
-          resData.error || resData.message || 'Something went wrong'
-        );
-        updateProgress(appId, 100, `Application failed`, 'progress');
+        // Genuine submission failure on employer site
+        applyProgress.cancelProgress();
+        setEntitlementNoticeData({
+          code: 'APPLICATION_FAILED',
+          jobTitle: job.title,
+          company: job.company,
+          applyUrl: job.applyUrl,
+          message: resData.error || resData.message || "We couldn't complete the application on the employer's site.",
+        });
+        setEntitlementNoticeOpen(true);
       }
     } catch (err: any) {
-      // Complete with error
-      applyProgress.completeApply(job.title, job.company, false, err.message || 'Something went wrong');
-      updateProgress(appId, 100, `Application failed`, 'progress');
+      applyProgress.cancelProgress();
+      setEntitlementNoticeData({
+        code: 'APPLICATION_FAILED',
+        jobTitle: job.title,
+        company: job.company,
+        applyUrl: job.applyUrl,
+        message: err.message || 'Network error occurred during submission.',
+      });
+      setEntitlementNoticeOpen(true);
     } finally {
       setIsApplying(null);
     }
@@ -400,6 +541,7 @@ export default function JobsDashboard() {
   }, []);
 
   const fetchJobs = useCallback(async (isBackground = false) => {
+    const isFirstPage = page === 1;
     try {
       const params: Record<string, string> = {
         page: page.toString(),
@@ -425,24 +567,27 @@ export default function JobsDashboard() {
       if (filters.sponsorsVisa) params.sponsorsVisa = 'true';
       if (filters.savedOnly) params.savedOnly = 'true';
 
-      // Check cache first — show cached data instantly
-      const cached = getCachedJobs(params);
-      if (cached) {
-        setJobs(cached.jobs);
-        setTotal(cached.total);
-        setHasMore(cached.hasMore);
-        setError(null);
-        setLoading(false);
-        // Still fetch fresh data in background
-      } else if (!isBackground) {
-        setLoading(true);
+      // Check cache for initial page load
+      if (isFirstPage) {
+        const cached = getCachedJobs(params);
+        if (cached) {
+          setJobs(cached.jobs);
+          setTotal(cached.total);
+          setHasMore(cached.hasMore);
+          setError(null);
+          setLoading(false);
+        } else if (!isBackground) {
+          setLoading(true);
+        }
+      } else {
+        setLoadingMore(true);
       }
 
       const queryString = new URLSearchParams(params).toString();
       const response = await fetch(`/api/jobs/discover?${queryString}`, {});
 
       if (!response.ok) {
-        if (!cached) {
+        if (isFirstPage && !getCachedJobs(params)) {
           setJobs([]);
           setLoading(false);
         }
@@ -452,36 +597,28 @@ export default function JobsDashboard() {
       const data = await response.json();
       const incomingJobs: JobListing[] = data.jobs || [];
 
-      // Update cache
-      setCachedJobs(params, incomingJobs, data.total, data.hasMore);
-
-      setJobs((prev) => {
-        // First load or filter change — replace entirely
-        if (prev.length === 0 || jobsSnapshotRef.current !== JSON.stringify({ filters, page, pageSize, countries })) {
-          jobsSnapshotRef.current = JSON.stringify({ filters, page, pageSize, countries });
-          setNewJobsCount(0);
-          return incomingJobs;
-        }
-
-        // Background refresh — merge new jobs silently
-        const prevIds = new Set(prev.map((j) => j._id));
-        const newJobs = incomingJobs.filter((j) => !prevIds.has(j._id));
-
-        if (newJobs.length > 0) {
-          setNewJobsCount((c) => c + newJobs.length);
-        }
-
-        return [...prev, ...newJobs];
-      });
+      if (isFirstPage) {
+        setCachedJobs(params, incomingJobs, data.total, data.hasMore);
+        setJobs(incomingJobs);
+        jobsSnapshotRef.current = JSON.stringify({ filters, page: 1, pageSize, countries });
+        setNewJobsCount(0);
+      } else {
+        setJobs((prev) => {
+          const prevIds = new Set(prev.map((j) => j._id));
+          const newJobs = incomingJobs.filter((j) => !prevIds.has(j._id));
+          return [...prev, ...newJobs];
+        });
+      }
 
       setTotal(data.total);
       setHasMore(data.hasMore);
       setError(null);
     } catch (err: any) {
       console.error('Error fetching jobs:', err);
-      if (!isBackground) setError(err.message);
+      if (!isBackground && isFirstPage) setError(err.message);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   }, [filters, page, pageSize, countries]);
 
@@ -496,6 +633,28 @@ export default function JobsDashboard() {
 
     return () => clearTimeout(debounceTimeout);
   }, [fetchJobs]);
+
+  // Infinite Scroll Intersection Observer
+  useEffect(() => {
+    if (!hasMore || loading || loadingMore) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loading && !loadingMore) {
+          setPage((prev) => prev + 1);
+        }
+      },
+      { threshold: 0.1, rootMargin: '300px' }
+    );
+
+    const el = observerTarget.current;
+    if (el) observer.observe(el);
+
+    return () => {
+      if (el) observer.unobserve(el);
+      observer.disconnect();
+    };
+  }, [hasMore, loading, loadingMore]);
 
   const handleRetry = () => {
     setError(null);
@@ -566,6 +725,56 @@ export default function JobsDashboard() {
     }
   };
 
+  const handleSyncAllPortals = async () => {
+    try {
+      setIsSyncingPortals(true);
+      toast({
+        title: 'Syncing Live Portals',
+        description: 'Ingesting fresh roles from active job portal streams...',
+      });
+
+      const activePrivateConnections = portalConnections.filter(
+        (c) => !c.isPublicFeed && c.status === 'connected' && (c.connectionId || c.id)
+      );
+
+      if (activePrivateConnections.length === 0) {
+        await fetchJobs();
+        toast({
+          title: 'Jobs Refreshed',
+          description: 'Updated with latest roles from direct ATS boards.',
+        });
+        return;
+      }
+
+      for (const conn of activePrivateConnections) {
+        const targetId = conn.connectionId || conn.id;
+        await fetch(`/api/portal-connections/${targetId}/sync`, {
+          method: 'POST',
+        }).catch(() => {});
+      }
+
+      await fetchJobs();
+      await fetchPortalConnections();
+      toast({
+        title: 'Sync Complete',
+        description: 'Discover feed updated with latest portal roles.',
+      });
+    } catch (err: any) {
+      toast({
+        title: 'Sync Error',
+        description: err.message || 'Failed to sync portals',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSyncingPortals(false);
+    }
+  };
+
+  const deduplicatedJobs = deduplicateJobs(jobs);
+  const displayedJobs = filters.savedOnly
+    ? deduplicatedJobs.filter((job) => isJobSaved(job))
+    : deduplicatedJobs;
+
   if (error && !metrics) {
     return <JobsErrorState message={error} onRetry={handleRetry} />;
   }
@@ -612,79 +821,71 @@ export default function JobsDashboard() {
         {/* Tab Content */}
         {activeTab === 'discover' && (
           <div className="space-y-4">
-            {/* Global Auto-Apply Banner — always visible unless dismissed */}
-            {!autoApplyBannerDismissed && (
-              <div className={`rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm animate-fadeIn border transition-colors duration-300 ${
-                autoApplyEnabled
-                  ? 'bg-gradient-to-r from-emerald-500/10 via-emerald-500/5 to-transparent border-emerald-500/30 dark:border-emerald-500/20'
-                  : 'bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border-amber-500/30 dark:border-amber-500/20'
-              }`}>
-                <div className="flex items-start gap-3.5">
-                  <div className={`p-2.5 rounded-xl shrink-0 mt-0.5 transition-colors duration-300 ${
-                    autoApplyEnabled
-                      ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
-                      : 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
-                  }`}>
-                    <Zap className="w-5 h-5" />
+            {/* Search Profile & AI Match Summary */}
+            <div className="rounded-3xl p-5 bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 shadow-sm space-y-3.5 animate-fadeIn">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="space-y-1">
+                  <div className="text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-lime-600 dark:text-[#80FF00]" />
+                    <span>Searching For</span>
                   </div>
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="text-sm font-bold text-gray-900 dark:text-white">
-                        Global Auto-Apply Automation
-                      </h3>
-                      <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold border flex items-center gap-1 transition-colors duration-300 ${
-                        autoApplyEnabled
-                          ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
-                          : 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/30'
-                      }`}>
-                        <span className={`w-1.5 h-1.5 rounded-full transition-colors duration-300 ${
-                          autoApplyEnabled ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'
-                        }`} />
-                        {autoApplyEnabled ? 'Active' : 'Paused'}
-                      </span>
-                    </div>
-                    <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed max-w-3xl">
-                      {autoApplyEnabled
-                        ? 'Auto-apply is running. Applications submit automatically to high-matching jobs from connected portals.'
-                        : 'Automatically matches your Master CV against live job streams from connected portals, tailors resumes, answers recruiter questionnaires, and submits applications with safe throttling.'}
-                    </p>
+                  <div className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5 flex-wrap">
+                    <span>{userPreferences?.targetRoles?.length ? userPreferences.targetRoles.join(' · ') : 'Full Stack Developer · Software Engineer'}</span>
+                  </div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2 flex-wrap">
+                    <span>📍 {userPreferences?.locations?.length ? userPreferences.locations.join(' · ') : 'Bangalore · Remote · London'}</span>
+                    <span>•</span>
+                    <span>💰 {userPreferences?.minSalary ? `₹${userPreferences.minSalary} LPA+` : '₹18 LPA+'}</span>
+                    <span>•</span>
+                    <span>💼 {userPreferences?.experienceYears ? `${userPreferences.experienceYears}+ yrs` : '3+ yrs experience'}</span>
                   </div>
                 </div>
 
-                <div className="flex flex-col items-end sm:items-center gap-2 shrink-0 self-end sm:self-center">
-                  <div className="flex items-center gap-2">
-                    <label className="flex items-center gap-2 cursor-pointer select-none">
-                      <Switch
-                        checked={autoApplyEnabled}
-                        onCheckedChange={handleToggleAutoApply}
-                      />
-                      <span className="text-xs font-bold text-gray-900 dark:text-white">
-                        {autoApplyEnabled ? 'On' : 'Enable'}
-                      </span>
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setAutoApplyBannerDismissed(true);
-                        localStorage.setItem('autoapply_banner_dismissed', 'true');
-                      }}
-                      className="p-1 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
-                      title="Dismiss"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
+                <div className="flex items-center gap-3 shrink-0 self-start sm:self-center">
                   <button
                     type="button"
                     onClick={() => setActiveTab('settings')}
-                    className="text-xs text-gray-500 hover:text-lime-600 dark:text-gray-400 dark:hover:text-lime-400 font-medium hover:underline transition-colors flex items-center gap-0.5"
+                    className="px-3.5 py-1.5 rounded-xl border border-gray-200 dark:border-white/10 hover:border-lime-500 text-xs font-bold text-gray-700 dark:text-gray-300 hover:text-lime-600 dark:hover:text-[#80FF00] transition-colors flex items-center gap-1 shadow-xs bg-gray-50 dark:bg-white/5"
                   >
-                    <span>{autoApplyEnabled ? 'Configure settings' : 'Configure in settings'}</span>
-                    <ChevronRight className="w-3 h-3" />
+                    <span>Edit Preferences</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>
-            )}
+
+              {/* Subtle Auto-Apply Status Strip */}
+              <div className="pt-2.5 border-t border-gray-100 dark:border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className={`w-2 h-2 rounded-full ${autoApplyEnabled ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400'}`} />
+                  <span className="font-bold text-gray-800 dark:text-gray-200">
+                    {autoApplyEnabled ? 'Auto-Apply Active' : 'Auto-Apply Paused'}
+                  </span>
+                  <span className="text-gray-500 dark:text-gray-400">
+                    — {autoApplyEnabled
+                      ? `Automatically submitting applications (${isPaidUser ? `${entitlements?.autoApply.remaining ?? 50} remaining today` : `${entitlements?.application.remaining ?? 10} remaining this month`})`
+                      : "You're discovering and saving jobs. Automatic submissions are currently paused."}
+                  </span>
+                </div>
+
+                {!autoApplyEnabled ? (
+                  <button
+                    type="button"
+                    onClick={handleToggleAutoApply}
+                    className="text-xs font-bold text-lime-600 dark:text-[#80FF00] hover:underline shrink-0"
+                  >
+                    Resume Auto-Apply
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleToggleAutoApply}
+                    className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:underline shrink-0"
+                  >
+                    Pause
+                  </button>
+                )}
+              </div>
+            </div>
 
             <FiltersBar
               filters={filters}
@@ -697,28 +898,25 @@ export default function JobsDashboard() {
               savedCount={savedIds.size}
               cvTailoringMode={cvTailoringMode}
               onCvTailoringModeChange={handleCvTailoringModeChange}
+              naukriEmail={naukriEmail || 'amarjotasl@gmail.com'}
+              indeedEmail={indeedEmail || 'amarjotasl@gmail.com'}
+              isSyncingPortals={isSyncingPortals}
+              onSyncPortals={handleSyncAllPortals}
             />
 
-            {/* Premium feature hints — only for free/starter users */}
-            {!isPaidUser && (
-              <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
-                <span className="text-[11px] text-gray-400 dark:text-gray-500 shrink-0 font-medium">Level up:</span>
-                <Link
-                  href="/dashboard/interview"
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-[11px] font-medium text-gray-600 dark:text-gray-300 hover:border-lime-500 hover:text-lime-600 dark:hover:text-lime-400 transition-colors shrink-0"
-                >
-                  <Mic className="w-3 h-3" />
-                  AI Interview Coach
-                </Link>
-                <Link
-                  href="/linkedin-enhancer"
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-[11px] font-medium text-gray-600 dark:text-gray-300 hover:border-lime-500 hover:text-lime-600 dark:hover:text-lime-400 transition-colors shrink-0"
-                >
-                  <Linkedin className="w-3 h-3" />
-                  LinkedIn Enhancer
-                </Link>
+            {/* Results Count & Match Statement */}
+            <div className="flex items-center justify-between pt-1 text-xs">
+              <div>
+                <span className="font-bold text-sm text-gray-900 dark:text-white">
+                  {displayedJobs.length} {filters.savedOnly ? 'saved' : 'matching'} {displayedJobs.length === 1 ? 'job' : 'jobs'}
+                </span>
+                <span className="text-gray-500 dark:text-gray-400 ml-2 hidden sm:inline">
+                  {filters.savedOnly
+                    ? 'Jobs you have saved to your shortlist and staging pipeline'
+                    : 'Personalized based on your target roles, locations, and compensation threshold'}
+                </span>
               </div>
-            )}
+            </div>
 
             {/* New jobs indicator — subtle floating pill */}
             {newJobsCount > 0 && (
@@ -754,7 +952,7 @@ export default function JobsDashboard() {
                   </div>
                 ))}
               </div>
-            ) : jobs.length > 0 ? (
+            ) : displayedJobs.length > 0 ? (
               <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
                   {!naukriConnected && !filters.savedOnly && (
@@ -765,7 +963,7 @@ export default function JobsDashboard() {
                       }}
                     />
                   )}
-                  {jobs
+                  {displayedJobs
                     .map((job, index) => (
                       <JobCard
                         key={job._id}
@@ -803,14 +1001,33 @@ export default function JobsDashboard() {
                         onApply={() => handleApplyJob(job)}
                       />
                     ))}
-                </div>
 
-                {/* Limited options banner */}
-                <LimitedOptionsBanner
-                  onAddManually={() => {
-                    router.push('/dashboard/jobs?tab=applications&action=add-job');
-                  }}
-                />
+                  {/* Extension card styled as a job card at the end of the loaded batch */}
+                  {!filters.savedOnly && (
+                    <LimitedOptionsBanner
+                      onAddManually={() => {
+                        router.push('/dashboard/jobs?tab=applications&action=add-job');
+                      }}
+                    />
+                  )}
+                </div>
+              </div>
+            ) : filters.savedOnly ? (
+              <div className="text-center py-16 bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-2xl">
+                <Bookmark className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                <h3 className="text-h3 font-semibold text-gray-900 dark:text-white mb-2">
+                  No saved jobs yet
+                </h3>
+                <p className="text-gray-500 dark:text-gray-400 mb-4 max-w-sm mx-auto text-xs">
+                  Click the Save button on any job card in Recommended or Latest to add it to your shortlist.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => handleFilterChange({ savedOnly: false, sortBy: 'matchScore' })}
+                  className="px-4 py-2 rounded-xl bg-lime-500 hover:bg-lime-600 dark:bg-[#80FF00] text-white dark:text-black font-bold text-xs transition-colors"
+                >
+                  Browse Recommended Jobs
+                </button>
               </div>
             ) : (
               <div className="text-center py-16 bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-2xl">
@@ -833,31 +1050,33 @@ export default function JobsDashboard() {
               </div>
             )}
 
-            {/* Pagination */}
-            <div className="flex items-center justify-between pt-1">
-              <div className="text-small text-gray-500 dark:text-gray-400">
-                Showing {jobs.length} of {total} jobs
+            {/* Streaming / Infinite Scroll Pagination Indicator */}
+            {displayedJobs.length > 0 && (
+              <div className="py-6 flex flex-col items-center justify-center gap-3">
+                {hasMore ? (
+                  <div ref={observerTarget} className="flex flex-col items-center gap-2">
+                    {loadingMore ? (
+                      <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 text-xs font-bold text-gray-700 dark:text-gray-300 shadow-xs">
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-lime-500" />
+                        <span>Loading more jobs...</span>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setPage((p) => p + 1)}
+                        className="px-5 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 hover:border-lime-500 bg-white dark:bg-[#141810] text-xs font-bold text-gray-800 dark:text-gray-200 hover:text-lime-600 dark:hover:text-[#80FF00] transition-all shadow-xs"
+                      >
+                        Load more jobs ({displayedJobs.length} of {total})
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-xs font-medium text-gray-400 dark:text-gray-500">
+                    You've viewed all {displayedJobs.length} {filters.savedOnly ? 'saved' : 'matching'} {displayedJobs.length === 1 ? 'job' : 'jobs'}
+                  </div>
+                )}
               </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setPage(Math.max(1, page - 1))}
-                  disabled={page === 1}
-                  className="px-3 py-1 text-small border border-gray-300 dark:border-gray-600 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-800"
-                >
-                  Previous
-                </button>
-                <span className="text-small text-gray-600 dark:text-gray-400">
-                  Page {page}
-                </span>
-                <button
-                  onClick={() => setPage(page + 1)}
-                  disabled={!hasMore}
-                  className="px-3 py-1 text-small border border-gray-300 dark:border-gray-600 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-800"
-                >
-                  Next
-                </button>
-              </div>
-            </div>
+            )}
 
             {/* Job Detail Modal */}
             <JobDetailModal
@@ -869,6 +1088,19 @@ export default function JobsDashboard() {
               onSave={() => selectedJob && handleSaveJob(selectedJob)}
               onApply={() => selectedJob && handleApplyJob(selectedJob)}
             />
+
+            {/* Portal Connect Modal */}
+            {connectModalOpen && (
+              <PortalConnectModal
+                portal={selectedConnectPortal}
+                isOpen={connectModalOpen}
+                onClose={() => setConnectModalOpen(false)}
+                onSuccess={() => {
+                  fetchPortalConnections();
+                  fetchJobs();
+                }}
+              />
+            )}
           </div>
         )}
 
@@ -877,40 +1109,17 @@ export default function JobsDashboard() {
         )}
 
         {activeTab === 'settings' && (
-          <div className="space-y-8">
-            {/* 1. Integrations & Job Portals Section (FIRST) */}
-            <div className="space-y-3">
-              <div>
-                <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                  <Settings className="w-5 h-5 text-lime-500" />
-                  <span>Integrations & Job Portals</span>
-                </h2>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Connect and authenticate your accounts with Naukri.com, Indeed, Greenhouse ATS, and Adzuna.
-                </p>
-              </div>
-              <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-2xl shadow-sm overflow-hidden">
-                <PortalIntegrationsPanel
-                  onConnectionChange={(connected) => setNaukriConnected(connected)}
-                />
-              </div>
-            </div>
-
-            {/* 2. Global Auto-Apply & Criteria Section (SECOND) */}
-            <div className="space-y-3 pt-6 border-t border-gray-200 dark:border-white/10">
-              <div>
-                <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                  <Zap className="w-5 h-5 text-lime-500" />
-                  <span>Auto-Apply & Matching Criteria</span>
-                </h2>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Configure universal target roles, locations, salary bounds, daily limits, and auto-submission rules.
-                </p>
-              </div>
-              <AutoApplyPanel />
-            </div>
+          <div className="space-y-6">
+            <AutoApplyPanel userId={userId} />
           </div>
         )}
+
+        {/* Entitlement Notice / Outcome Modal */}
+        <EntitlementNotice
+          isOpen={entitlementNoticeOpen}
+          onClose={() => setEntitlementNoticeOpen(false)}
+          data={entitlementNoticeData}
+        />
       </div>
     </div>
   );

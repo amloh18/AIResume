@@ -40,7 +40,7 @@ export const SnippetGravitySidebar: React.FC<SnippetGravitySidebarProps> = ({ he
             key={snippet}
             type="button"
             onClick={() => onSelectSnippet(snippet)}
-            className="px-3 py-1.5 bg-white/5 hover:bg-[#80FF00]/20 border border-white/10 hover:border-[#80FF00]/50 rounded-full text-xs text-white/80 hover:text-[#80FF00] transition-all transform hover:-translate-y-0.5"
+            className="px-3 py-1.5 bg-white/5 hover:bg-[#80FF00]/20 border border-white/10 hover:border-[#80FF00]/50 rounded-full text-xs text-white/80 hover:text-[#80FF00] transition-all transform hover:scale-[1.01]"
             title={`Add "${snippet}" to description`}
           >
             + {snippet}

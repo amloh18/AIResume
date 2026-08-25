@@ -3,13 +3,18 @@
 import React from 'react';
 import type { JobListing } from '@/types/automation-schema';
 import CompanyLogo from '@/components/ui/CompanyLogo';
-import { timeAgo, renderRichText } from '@/lib/utils/format-utils';
+import { timeAgo } from '@/lib/utils/format-utils';
 import {
-  Briefcase,
+  MapPin,
+  CheckCircle2,
+  Sparkles,
+  Loader2,
+  Check,
   Bookmark,
+  Zap,
+  Briefcase,
   DollarSign,
-  ExternalLink,
-  Sparkles
+  X
 } from 'lucide-react';
 
 export interface JobCardProps {
@@ -23,14 +28,6 @@ export interface JobCardProps {
   colorIndex?: number;
 }
 
-const CARD_TINTS = [
-  'bg-[#fff9e6] dark:bg-[#1a1c14]',
-  'bg-[#fef3e7] dark:bg-[#1c1914]',
-  'bg-[#eef7fe] dark:bg-[#14191c]',
-  'bg-[#eafaf1] dark:bg-[#131b15]',
-  'bg-[#fdf4ff] dark:bg-[#19141c]',
-];
-
 const formatSalary = (job: JobListing): string => {
   if (!job.salaryMin && !job.salaryMax) return '';
   const cur = job.salaryCurrency ? ` ${job.salaryCurrency}` : '';
@@ -42,14 +39,12 @@ const formatSalary = (job: JobListing): string => {
 
 const extractSkills = (job: JobListing): string[] => {
   if (job.keywords && job.keywords.length > 0) {
-    return job.keywords.slice(0, 3);
+    return job.keywords.slice(0, 4);
   }
   const skills: string[] = [];
   if (job.remote) skills.push('Remote');
-  if (job.atsType && (job.atsType as string) !== 'unknown') skills.push(job.atsType);
-  if (job.source && (job.source as string) !== 'other') skills.push(job.source);
   if (skills.length === 0) skills.push('Full Time', 'Product', 'Engineering');
-  return skills.slice(0, 3);
+  return skills.slice(0, 4);
 };
 
 const extractExperience = (job: JobListing): number | null => {
@@ -59,7 +54,7 @@ const extractExperience = (job: JobListing): number | null => {
     const parsed = parseInt(match[1], 10);
     if (parsed > 0 && parsed < 25) return parsed;
   }
-  return 2;
+  return null;
 };
 
 export function JobCard({
@@ -70,147 +65,202 @@ export function JobCard({
   onSave,
   onApply,
   onPass,
-  colorIndex = 0,
 }: JobCardProps) {
-  const tint = CARD_TINTS[Math.abs(colorIndex) % CARD_TINTS.length];
   const skills = extractSkills(job);
   const expYears = extractExperience(job);
   const score = job.matchScore || 0;
-  const companyInitials = job.company
-    ? job.company.slice(0, 2).toUpperCase()
-    : 'CO';
+  const companyName = job.company || 'Confidential';
+  const salaryStr = formatSalary(job);
+
+  // Categorize match score into human-friendly confidence bands
+  let matchTier = {
+    label: 'Match',
+    badgeClass: 'text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-white/5 border-gray-200 dark:border-white/10',
+    dotClass: 'bg-gray-400',
+  };
+
+  if (score >= 90) {
+    matchTier = {
+      label: 'Excellent match',
+      badgeClass: 'text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 border-emerald-500/30',
+      dotClass: 'bg-emerald-500',
+    };
+  } else if (score >= 80) {
+    matchTier = {
+      label: 'Strong match',
+      badgeClass: 'text-lime-700 dark:text-[#80FF00] bg-lime-500/10 border-lime-500/30',
+      dotClass: 'bg-lime-500',
+    };
+  } else if (score >= 70) {
+    matchTier = {
+      label: 'Good match',
+      badgeClass: 'text-sky-700 dark:text-sky-300 bg-sky-500/10 border-sky-500/30',
+      dotClass: 'bg-sky-500',
+    };
+  } else if (score >= 60) {
+    matchTier = {
+      label: 'Possible match',
+      badgeClass: 'text-gray-700 dark:text-gray-300 bg-gray-500/10 border-gray-500/20',
+      dotClass: 'bg-gray-400',
+    };
+  }
+
+  // Application readiness
+  const isAutoApplyCapable = ['naukri', 'indeed'].includes((job.source || '').toLowerCase());
 
   return (
     <div
       onClick={onOpen}
-      className={`group flex flex-col justify-between rounded-2xl border border-gray-200/80 dark:border-white/10 p-4 sm:p-5 cursor-pointer transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 ${tint}`}
+      className="group relative flex flex-col justify-between rounded-2xl border border-gray-200 dark:border-white/10 p-5 cursor-pointer transition-all duration-200 bg-white dark:bg-[#141810] hover:border-lime-500/40 hover:shadow-xl hover:scale-[1.01]"
     >
-      {/* Top Row: Location + Experience Badge + Posted Ago on left, Circular Match Gauge on right */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="space-y-1 min-w-0">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-xs sm:text-sm font-medium text-gray-800 dark:text-gray-200 truncate max-w-[170px]">
-              {job.location || 'Remote'}
-            </span>
-            {expYears && (
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[11px] font-semibold rounded bg-gray-200/70 dark:bg-white/15 text-gray-800 dark:text-gray-200">
-                <Briefcase className="w-3 h-3" />
-                {expYears} yrs
-              </span>
-            )}
-            {formatSalary(job) && (
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[11px] font-semibold rounded bg-gray-200/70 dark:bg-white/15 text-gray-800 dark:text-gray-200">
-                <DollarSign className="w-3 h-3" />
-                {formatSalary(job)}
-              </span>
-            )}
-          </div>
-          <div className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400">
-            {timeAgo(job.postedDate)}
-          </div>
-        </div>
+      {/* Optional subtle pass/dismiss button */}
+      {onPass && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onPass();
+          }}
+          title="Don't show me this job again"
+          className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 p-1 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/5 transition-all z-10"
+        >
+          <X className="w-3.5 h-3.5" />
+        </button>
+      )}
 
-        {/* Circular Match Gauge */}
-        <div className={`w-11 h-11 rounded-full border-2 flex flex-col items-center justify-center shrink-0 bg-white/80 dark:bg-black/40 shadow-sm ${score > 0 ? 'border-emerald-600 dark:border-emerald-400' : 'border-gray-300 dark:border-gray-600'}`}>
-          {score > 0 ? (
-            <>
-              <span className="text-[11px] font-black text-gray-900 dark:text-white leading-tight">
-                {score}%
-              </span>
-              <span className="text-[7.5px] font-bold tracking-tighter text-gray-500 dark:text-gray-400 uppercase leading-none">
-                MATCH
-              </span>
-            </>
-          ) : (
-            <span className="text-[8px] font-bold text-gray-400 dark:text-gray-500 uppercase">
-              N/A
+      <div className="flex flex-col h-full gap-3.5">
+        {/* Top Header: Company + Match Quality Pill */}
+        <div className="flex items-center justify-between gap-2 pr-6">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <CompanyLogo
+              company={companyName}
+              size={24}
+              logoUrl={job.companyLogo}
+              jobId={job._id || job.id || ''}
+            />
+            <span className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white truncate">
+              {companyName}
             </span>
+          </div>
+
+          {score > 0 && (
+            <div className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border flex items-center gap-1.5 shrink-0 ${matchTier.badgeClass}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${matchTier.dotClass}`} />
+              <span>{score}% · {matchTier.label}</span>
+            </div>
           )}
         </div>
-      </div>
 
-      {/* Middle Section: Job Title + Skill Chips */}
-      <div className="my-4 space-y-2.5">
-        <h3 className="text-sm sm:text-base font-bold text-gray-900 dark:text-white leading-snug line-clamp-2 group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors">
-          {job.title}
-        </h3>
+        {/* Job Title */}
+        <div className="space-y-2">
+          <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white leading-snug line-clamp-2 group-hover:text-lime-600 dark:group-hover:text-[#80FF00] transition-colors">
+            {job.title}
+          </h3>
 
-        <div className="flex flex-wrap gap-1.5">
-          {skills.map((skill, idx) => (
-            <span
-              key={idx}
-              className="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-black/5 dark:bg-white/10 text-gray-700 dark:text-gray-300"
-            >
-              {skill}
-            </span>
-          ))}
+          {/* Location & Compensation */}
+          <div className="space-y-1 text-xs text-gray-600 dark:text-gray-400 font-medium">
+            <div className="flex items-center gap-1.5 truncate">
+              <MapPin className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+              <span className="truncate">{job.location || 'Remote'}</span>
+            </div>
+
+            {(salaryStr || expYears !== null) && (
+              <div className="flex items-center gap-1.5 truncate text-gray-900 dark:text-gray-300 font-semibold">
+                {salaryStr && <span>{salaryStr}</span>}
+                {salaryStr && expYears !== null && <span className="opacity-40">·</span>}
+                {expYears !== null && <span>{expYears}+ yrs experience</span>}
+              </div>
+            )}
+          </div>
+
+          {/* Skills tags */}
+          <div className="flex flex-wrap gap-1.5 pt-1">
+            {skills.map((skill, idx) => (
+              <span
+                key={idx}
+                className="px-2.5 py-0.5 rounded-lg text-[11px] font-medium bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300"
+              >
+                {skill}
+              </span>
+            ))}
+          </div>
+
+          {/* Freshness timestamp */}
+          <div className="text-[11px] text-gray-500 dark:text-gray-500 pt-0.5">
+            Posted {timeAgo(job.postedDate)}
+          </div>
         </div>
-      </div>
 
-      {/* Bottom Row: Company Logo + Name on left, Pass / Save Icon Only / Apply on right */}
-      <div className="pt-3 border-t border-black/5 dark:border-white/5 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <CompanyLogo
-            company={job.company}
-            size={22}
-            logoUrl={job.companyLogo}
-            jobId={job._id || job.id || ''}
-          />
-          <span className="text-xs sm:text-sm font-semibold text-gray-800 dark:text-gray-200 truncate">
-            {job.company || 'Confidential'}
-          </span>
-        </div>
-
-        <div className="flex items-center gap-1.5 shrink-0">
-          {onPass && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onPass();
-              }}
-              className="px-2.5 py-1.5 rounded-lg text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
-            >
-              Pass
-            </button>
-          )}
-
-          {/* Save Icon Only Button inline */}
-          <button
-            type="button"
-            title={isSaved ? 'Remove from saved' : 'Save job to shortlist'}
-            onClick={(e) => {
-              e.stopPropagation();
-              onSave();
-            }}
-            disabled={saving}
-            className={`p-1.5 rounded-lg flex items-center justify-center transition-all duration-200 border ${
-              isSaved
-                ? 'bg-amber-500/15 dark:bg-amber-400/20 text-amber-600 dark:text-amber-400 border-amber-500/30 hover:bg-amber-500/25 shadow-sm'
-                : 'bg-white/80 dark:bg-white/5 text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 border-gray-200/80 dark:border-white/10 hover:border-amber-500/30'
-            }`}
-          >
-            {saving ? (
-              <span className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+        {/* Bottom Section: Readiness & Action Journey */}
+        <div className="mt-auto pt-3 border-t border-gray-100 dark:border-white/5 space-y-2.5">
+          {/* Status info */}
+          <div className="flex items-center justify-between text-xs">
+            {isSaved ? (
+              <span className="inline-flex items-center gap-1.5 font-bold text-lime-600 dark:text-[#80FF00]">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                Saved in Staging
+              </span>
+            ) : isAutoApplyCapable ? (
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                <Check className="w-3 h-3" />
+                Auto-Apply available
+              </span>
             ) : (
-              <Bookmark
-                className={`w-3.5 h-3.5 transition-transform duration-200 hover:scale-110 ${
-                  isSaved ? 'fill-current' : ''
-                }`}
-              />
+              <span className="inline-flex items-center gap-1 text-[11px] text-gray-500 dark:text-gray-400">
+                <Sparkles className="w-3 h-3 text-lime-500" />
+                Tailored CV supported
+              </span>
             )}
-          </button>
+          </div>
 
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onApply();
-            }}
-            className="px-3.5 py-1.5 rounded-lg bg-[#0f172a] hover:bg-[#1e293b] text-white text-xs font-bold transition-all shadow-sm flex items-center gap-1"
-          >
-            <span>Apply</span>
-          </button>
+          {/* Primary Action Buttons */}
+          <div className="grid grid-cols-2 gap-2">
+            {isSaved ? (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onApply();
+                }}
+                className="col-span-2 px-4 py-2.5 rounded-xl bg-lime-500 hover:bg-lime-600 dark:bg-[#80FF00] dark:hover:brightness-95 text-white dark:text-black text-xs font-bold transition-all shadow-sm flex justify-center items-center gap-1.5"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Prepare Application</span>
+              </button>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSave();
+                  }}
+                  disabled={saving}
+                  className="px-3.5 py-2 rounded-xl border border-gray-200 dark:border-white/10 hover:border-lime-500 dark:hover:border-lime-500 text-gray-800 dark:text-gray-200 text-xs font-bold transition-all flex items-center justify-center gap-1.5 bg-white dark:bg-white/5 hover:bg-gray-50 dark:hover:bg-white/10 shadow-xs"
+                >
+                  {saving ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-lime-500" />
+                  ) : (
+                    <>
+                      <Bookmark className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />
+                      <span>Save</span>
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onApply();
+                  }}
+                  className="px-3.5 py-2 rounded-xl bg-gray-900 hover:bg-black dark:bg-[#80FF00] dark:hover:brightness-95 text-white dark:text-black text-xs font-bold transition-all shadow-sm flex justify-center items-center gap-1"
+                >
+                  <span>Apply</span>
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>

@@ -1,18 +1,22 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import type { JobsFilter, JobsMetrics, ATSType } from '@/types/automation-schema';
+import type { JobsFilter, JobsMetrics } from '@/types/automation-schema';
 import {
   Search,
   X,
-  ArrowUpDown,
   ChevronDown,
   Bookmark,
   Check,
-  Layers,
+  Sparkles,
+  SlidersHorizontal,
+  Clock,
+  Briefcase,
+  DollarSign,
+  Globe,
+  Zap,
 } from 'lucide-react';
 import { CountrySelector } from '@/components/jobs/CountrySelector';
-import { QuotaIndicator } from '@/components/jobs/QuotaIndicator';
 import CvTailoringModeToggle from '@/components/jobs/CvTailoringModeToggle';
 import type { CvTailoringMode } from '@/lib/cv-tailoring/tailoringMode';
 
@@ -27,45 +31,16 @@ interface FiltersBarProps {
   savedCount?: number;
   cvTailoringMode?: CvTailoringMode;
   onCvTailoringModeChange?: (mode: CvTailoringMode) => void;
+  naukriEmail?: string;
+  indeedEmail?: string;
+  isSyncingPortals?: boolean;
+  onSyncPortals?: () => void;
 }
 
-const sortOptions: { value: NonNullable<JobsFilter['sortBy']>; label: string }[] = [
-  { value: 'matchScore', label: 'Best match' },
-  { value: 'postedDate', label: 'Newest first' },
-  { value: 'salary', label: 'Highest salary' },
-  { value: 'company', label: 'Company A–Z' },
-];
-
-const ATS_OPTIONS: { id: ATSType; label: string; tag: string }[] = [
-  { id: 'greenhouse', label: 'Greenhouse ATS', tag: 'Direct' },
-  { id: 'lever', label: 'Lever ATS', tag: 'Direct' },
-  { id: 'workable', label: 'Workable', tag: 'Direct' },
-  { id: 'naukri', label: 'Naukri.com', tag: 'Portal' },
-  { id: 'indeed', label: 'Indeed', tag: 'Portal' },
-  { id: 'adzuna', label: 'Adzuna', tag: 'Index' },
-  { id: 'workday', label: 'Workday ATS', tag: 'Enterprise' },
-];
-
-const ROLE_OPTIONS = [
-  'Full Stack Developer',
-  'Software Engineer',
-  'Frontend Developer',
-  'Backend Developer',
-  'React Developer',
-  'DevOps / Cloud Engineer',
-  'Data / AI Engineer',
-  'Machine Learning Engineer',
-  'Mobile Developer (iOS/Android)',
-  'Product Manager',
-  'QA / Automation Engineer',
-  'UI/UX Designer',
-];
-
-const JOB_TYPE_OPTIONS = [
-  { id: 'fulltime', label: 'Full-time' },
-  { id: 'contract', label: 'Contract' },
-  { id: 'parttime', label: 'Part-time' },
-  { id: 'internship', label: 'Internship' },
+const WORKPLACE_OPTIONS = [
+  { id: 'remote', label: 'Remote' },
+  { id: 'hybrid', label: 'Hybrid' },
+  { id: 'onsite', label: 'On-site' },
 ];
 
 const EXPERIENCE_OPTIONS = [
@@ -73,15 +48,19 @@ const EXPERIENCE_OPTIONS = [
   { id: 'mid', label: 'Mid Level (3–5 yrs)' },
   { id: 'senior', label: 'Senior (5–8 yrs)' },
   { id: 'lead', label: 'Lead / Principal (8+ yrs)' },
-  { id: 'bachelor', label: "Bachelor's Degree" },
-  { id: 'master', label: "Master's / Ph.D." },
 ];
 
 const DATE_OPTIONS = [
   { id: 'all', label: 'All time' },
   { id: '24h', label: 'Past 24 hours' },
-  { id: '7d', label: 'Past week (7d)' },
-  { id: '30d', label: 'Past month (30d)' },
+  { id: '7d', label: 'Past 7 days' },
+  { id: '30d', label: 'Past month' },
+];
+
+const READINESS_OPTIONS = [
+  { id: 'all', label: 'All Application Methods' },
+  { id: 'auto', label: 'Auto-Apply supported' },
+  { id: 'tailored', label: 'Tailored application supported' },
 ];
 
 export default function FiltersBar({
@@ -97,6 +76,7 @@ export default function FiltersBar({
   onCvTailoringModeChange,
 }: FiltersBarProps) {
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+  const [moreFiltersOpen, setMoreFiltersOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown on click outside
@@ -114,24 +94,10 @@ export default function FiltersBar({
     setActiveDropdown((prev) => (prev === name ? null : name));
   };
 
-  const handleToggleAts = (atsId: ATSType) => {
-    const current = filters.atsTypes || [];
-    const updated = current.includes(atsId)
-      ? current.filter((a) => a !== atsId)
-      : [...current, atsId];
-    onChange({ atsTypes: updated.length ? updated : undefined });
-  };
-
-  const handleToggleRole = (role: string) => {
-    const current = filters.roles || [];
-    const updated = current.includes(role) ? current.filter((r) => r !== role) : [...current, role];
-    onChange({ roles: updated.length ? updated : undefined });
-  };
-
-  const handleToggleJobType = (type: string) => {
-    const current = filters.jobTypes || [];
+  const handleToggleWorkplace = (type: string) => {
+    const current = filters.workplaceType || [];
     const updated = current.includes(type) ? current.filter((t) => t !== type) : [...current, type];
-    onChange({ jobTypes: updated.length ? updated : undefined });
+    onChange({ workplaceType: updated.length ? updated : undefined });
   };
 
   const handleToggleExperience = (exp: string) => {
@@ -140,118 +106,232 @@ export default function FiltersBar({
     onChange({ experienceLevel: updated.length ? updated : undefined });
   };
 
-  const activeFilterCount =
-    (filters.remoteOnly ? 1 : 0) +
-    (filters.roles?.length ? 1 : 0) +
-    (filters.jobTypes?.length ? 1 : 0) +
-    (filters.experienceLevel?.length ? 1 : 0) +
-    (filters.sponsorsVisa ? 1 : 0) +
-    (filters.datePosted && filters.datePosted !== 'all' ? 1 : 0) +
-    (filters.savedOnly ? 1 : 0) +
-    (filters.atsTypes?.length ? 1 : 0) +
-    (filters.sortBy && filters.sortBy !== 'matchScore' ? 1 : 0);
+  // Active filter counting
+  const activeFilterCount = [
+    Boolean(filters.searchText),
+    Boolean(filters.workplaceType?.length),
+    Boolean(filters.experienceLevel?.length),
+    Boolean(filters.datePosted && filters.datePosted !== 'all'),
+    Boolean(filters.sponsorsVisa),
+    Boolean(filters.easyApplyOnly),
+  ].filter(Boolean).length;
+
+  const currentView = filters.savedOnly
+    ? 'saved'
+    : filters.matchScoreMin === 0
+    ? 'all'
+    : filters.sortBy === 'postedDate'
+    ? 'latest'
+    : 'recommended';
 
   return (
-    <div
-      ref={dropdownRef}
-      className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-2xl p-4 space-y-3.5 shadow-sm relative z-30"
-    >
-      {/* Top Search / Country / ATS Platform Dropdown / Quota Row */}
-      <div className="flex flex-wrap items-center gap-3 relative z-20">
-        <div className="flex-1 min-w-[220px] relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+    <div ref={dropdownRef} className="space-y-3">
+      {/* 1. Main Search & Primary Controls Bar */}
+      <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3">
+        {/* Search Input */}
+        <div className="relative flex-1">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
             type="text"
-            placeholder="Search by title, company, skill..."
             value={filters.searchText || ''}
-            onChange={(e) => onChange({ searchText: e.target.value })}
-            className="w-full pl-9 pr-4 py-2 bg-gray-50 dark:bg-[#1a230f] border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-lime-500 text-xs text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
+            onChange={(e) => onChange({ searchText: e.target.value || undefined })}
+            placeholder="Search jobs, companies, skills..."
+            className="w-full pl-10 pr-9 py-2.5 bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-2xl text-xs sm:text-sm text-gray-900 dark:text-white placeholder-gray-400 outline-none focus:border-lime-500 transition-colors shadow-xs"
           />
+          {filters.searchText && (
+            <button
+              type="button"
+              onClick={() => onChange({ searchText: undefined })}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
 
-        <CountrySelector value={countries} onChange={onCountriesChange} />
+        {/* View Segment Switcher (Recommended / All / Latest / Saved) */}
+        <div className="flex items-center bg-gray-100 dark:bg-white/5 p-1 rounded-2xl border border-gray-200/60 dark:border-white/5 shrink-0 self-start md:self-auto">
+          <button
+            type="button"
+            onClick={() =>
+              onChange({
+                savedOnly: false,
+                sortBy: 'matchScore',
+                sortOrder: 'desc',
+                matchScoreMin: undefined,
+              })
+            }
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+              currentView === 'recommended'
+                ? 'bg-white dark:bg-[#1a230f] text-gray-900 dark:text-white shadow-xs'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5 text-lime-600 dark:text-[#80FF00]" />
+            <span>Recommended</span>
+          </button>
 
-        {onCvTailoringModeChange && (
-          <CvTailoringModeToggle
-            value={cvTailoringMode}
-            onChange={onCvTailoringModeChange}
-          />
-        )}
+          <button
+            type="button"
+            onClick={() =>
+              onChange({
+                savedOnly: false,
+                sortBy: 'matchScore',
+                sortOrder: 'desc',
+                matchScoreMin: 0,
+              })
+            }
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+              currentView === 'all'
+                ? 'bg-white dark:bg-[#1a230f] text-gray-900 dark:text-white shadow-xs'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+            }`}
+          >
+            <Globe className="w-3.5 h-3.5 text-sky-500" />
+            <span>All</span>
+          </button>
 
-        {/* ATS Platform Multi-Select Dropdown next to search */}
+          <button
+            type="button"
+            onClick={() =>
+              onChange({
+                savedOnly: false,
+                sortBy: 'postedDate',
+                sortOrder: 'desc',
+                matchScoreMin: undefined,
+              })
+            }
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+              currentView === 'latest'
+                ? 'bg-white dark:bg-[#1a230f] text-gray-900 dark:text-white shadow-xs'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+            }`}
+          >
+            <Clock className="w-3.5 h-3.5 text-gray-400" />
+            <span>Latest</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onChange({ savedOnly: true })}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+              currentView === 'saved'
+                ? 'bg-white dark:bg-[#1a230f] text-gray-900 dark:text-white shadow-xs'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+            }`}
+          >
+            <Bookmark className="w-3.5 h-3.5 text-amber-500" />
+            <span>Saved</span>
+            {savedCount > 0 && (
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-amber-500/20 text-amber-700 dark:text-amber-300 font-black">
+                {savedCount}
+              </span>
+            )}
+          </button>
+        </div>
+
+        {/* Right side: Country & Tailoring Controls */}
+        <div className="flex items-center gap-2 shrink-0">
+          <CountrySelector value={countries} onChange={onCountriesChange} />
+          {onCvTailoringModeChange && (
+            <CvTailoringModeToggle value={cvTailoringMode} onChange={onCvTailoringModeChange} />
+          )}
+        </div>
+      </div>
+
+      {/* 2. Secondary Filter Chips Bar */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide text-xs">
+        {/* Workplace Type (Remote / Hybrid / On-site) */}
+        <div className="flex items-center gap-1 bg-white dark:bg-[#141810] p-1 rounded-full border border-gray-200 dark:border-white/10 shrink-0">
+          {WORKPLACE_OPTIONS.map((wp) => {
+            const active = (filters.workplaceType || []).includes(wp.id);
+            return (
+              <button
+                key={wp.id}
+                type="button"
+                onClick={() => handleToggleWorkplace(wp.id)}
+                className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${
+                  active
+                    ? 'bg-lime-500 text-white dark:text-black font-bold shadow-xs'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5'
+                }`}
+              >
+                {wp.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Application Readiness (Auto-Apply Supported) */}
+        <button
+          type="button"
+          onClick={() => onChange({ easyApplyOnly: !filters.easyApplyOnly })}
+          className={`rounded-full px-3.5 py-1.5 border text-xs transition-all flex items-center gap-1.5 shrink-0 ${
+            filters.easyApplyOnly
+              ? 'bg-emerald-600 dark:bg-[#80FF00] text-white dark:text-black border-transparent font-bold shadow-xs'
+              : 'border-gray-200 dark:border-white/10 bg-white dark:bg-[#141810] text-gray-700 dark:text-gray-300 hover:border-gray-300 font-medium'
+          }`}
+        >
+          <Zap className="w-3.5 h-3.5 text-lime-500 dark:text-current" />
+          <span>Auto-Apply supported</span>
+          {filters.easyApplyOnly && <Check className="w-3 h-3 ml-0.5" />}
+        </button>
+
+        {/* Visa Sponsorship */}
+        <button
+          type="button"
+          onClick={() => onChange({ sponsorsVisa: !filters.sponsorsVisa })}
+          className={`rounded-full px-3.5 py-1.5 border text-xs transition-all flex items-center gap-1.5 shrink-0 ${
+            filters.sponsorsVisa
+              ? 'bg-gray-900 dark:bg-white text-white dark:text-black border-transparent font-bold shadow-xs'
+              : 'border-gray-200 dark:border-white/10 bg-white dark:bg-[#141810] text-gray-700 dark:text-gray-300 hover:border-gray-300 font-medium'
+          }`}
+        >
+          <span>Visa Sponsorship</span>
+          {filters.sponsorsVisa && <Check className="w-3 h-3 ml-0.5" />}
+        </button>
+
+        {/* Experience Dropdown Chip */}
         <div className="relative">
           <button
             type="button"
-            onClick={() => toggleDropdown('ats')}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs transition-all shrink-0 border ${
-              filters.atsTypes?.length
-                ? 'bg-[#0f3822] dark:bg-[#133820] text-white border-[#1a4a2c] font-semibold shadow-sm'
-                : 'bg-gray-50 dark:bg-[#1a230f] border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-gray-400 font-medium'
+            onClick={() => toggleDropdown('exp')}
+            className={`rounded-full px-3.5 py-1.5 border text-xs transition-all flex items-center gap-1.5 shrink-0 ${
+              filters.experienceLevel?.length
+                ? 'bg-gray-900 dark:bg-white text-white dark:text-black border-transparent font-bold shadow-xs'
+                : 'border-gray-200 dark:border-white/10 bg-white dark:bg-[#141810] text-gray-700 dark:text-gray-300 hover:border-gray-300 font-medium'
             }`}
           >
-            <Layers className="w-3.5 h-3.5 text-lime-600" />
-            <span>
-              {filters.atsTypes?.length
-                ? `ATS (${filters.atsTypes.length})`
-                : 'ATS Platform'}
-            </span>
-            {filters.atsTypes?.length ? (
-              <span
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onChange({ atsTypes: undefined });
-                }}
-                className="p-0.5 rounded-full hover:bg-white/20 ml-0.5"
-              >
-                <X className="w-3 h-3" />
+            <span>Experience</span>
+            {filters.experienceLevel?.length ? (
+              <span className="w-4 h-4 rounded-full bg-white/20 text-white text-[10px] font-bold inline-flex items-center justify-center">
+                {filters.experienceLevel.length}
               </span>
             ) : (
-              <ChevronDown className="w-3 h-3 opacity-70" />
+              <ChevronDown className="w-3.5 h-3.5 opacity-60" />
             )}
           </button>
 
-          {/* ATS Platform Dropdown Menu */}
-          {activeDropdown === 'ats' && (
-            <div className="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-2xl shadow-2xl z-[100] p-2 animate-fadeIn space-y-1">
-              <div className="flex items-center justify-between px-2 py-1 text-[11px] font-semibold text-gray-400 border-b border-gray-100 dark:border-white/5 mb-1">
-                <span>Select ATS Platforms</span>
-                {filters.atsTypes?.length ? (
-                  <button
-                    type="button"
-                    onClick={() => onChange({ atsTypes: undefined })}
-                    className="text-red-500 hover:underline text-[10px]"
-                  >
-                    Clear All
-                  </button>
-                ) : null}
+          {activeDropdown === 'exp' && (
+            <div className="absolute left-0 top-full mt-2 w-56 bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-2xl shadow-xl z-50 p-2 animate-fadeIn space-y-1">
+              <div className="text-[11px] font-bold text-gray-400 px-2 py-1 border-b border-gray-100 dark:border-white/5">
+                Seniority & Experience
               </div>
-
-              {ATS_OPTIONS.map((ats) => {
-                const active = (filters.atsTypes || []).includes(ats.id);
+              {EXPERIENCE_OPTIONS.map((exp) => {
+                const active = (filters.experienceLevel || []).includes(exp.id);
                 return (
                   <button
-                    key={ats.id}
+                    key={exp.id}
                     type="button"
-                    onClick={() => handleToggleAts(ats.id)}
-                    className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between transition-colors ${
+                    onClick={() => handleToggleExperience(exp.id)}
+                    className={`w-full text-left px-2.5 py-1.5 rounded-xl text-xs flex items-center justify-between transition-colors ${
                       active
-                        ? 'bg-lime-500/10 text-lime-700 dark:text-lime-400 font-semibold'
+                        ? 'bg-lime-500/10 text-lime-700 dark:text-lime-400 font-bold'
                         : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5'
                     }`}
                   >
-                    <div className="flex items-center gap-2">
-                      <div
-                        className={`w-3.5 h-3.5 rounded border flex items-center justify-center ${
-                          active
-                            ? 'bg-lime-500 border-lime-500 text-white'
-                            : 'border-gray-300 dark:border-gray-600'
-                        }`}
-                      >
-                        {active && <Check className="w-2.5 h-2.5" />}
-                      </div>
-                      <span>{ats.label}</span>
-                    </div>
-                    <span className="text-[10px] text-gray-400 font-mono">{ats.tag}</span>
+                    <span>{exp.label}</span>
+                    {active && <Check className="w-3.5 h-3.5 text-lime-600" />}
                   </button>
                 );
               })}
@@ -259,392 +339,60 @@ export default function FiltersBar({
           )}
         </div>
 
-        <div className="hidden sm:block">
-          <QuotaIndicator userId={userId} />
-        </div>
-      </div>
-
-      {/* Quick Chips Filter Bar (All Floating Dropdowns) */}
-      <div className="relative z-30 flex flex-wrap items-center gap-2 pt-0.5 select-none">
-        {/* 1. Date Chip */}
+        {/* Date Posted Dropdown */}
         <div className="relative">
           <button
             type="button"
             onClick={() => toggleDropdown('date')}
-            className={`rounded-full px-3 py-1.5 border text-xs transition-all flex items-center gap-1.5 shrink-0 ${
+            className={`rounded-full px-3.5 py-1.5 border text-xs transition-all flex items-center gap-1.5 shrink-0 ${
               filters.datePosted && filters.datePosted !== 'all'
-                ? 'bg-[#0f3822] dark:bg-[#133820] text-white border-[#1a4a2c] font-semibold shadow-sm'
-                : 'border-gray-200 dark:border-white/10 bg-white dark:bg-[#141810] text-gray-700 dark:text-gray-300 hover:border-gray-400 font-medium'
+                ? 'bg-gray-900 dark:bg-white text-white dark:text-black border-transparent font-bold shadow-xs'
+                : 'border-gray-200 dark:border-white/10 bg-white dark:bg-[#141810] text-gray-700 dark:text-gray-300 hover:border-gray-300 font-medium'
             }`}
           >
-            <span>
-              {filters.datePosted && filters.datePosted !== 'all'
-                ? `Date: ${DATE_OPTIONS.find((d) => d.id === filters.datePosted)?.label || filters.datePosted}`
-                : 'Date'}
-            </span>
-            <ChevronDown className="w-3 h-3 opacity-70" />
+            <span>Date</span>
+            <ChevronDown className="w-3.5 h-3.5 opacity-60" />
           </button>
 
           {activeDropdown === 'date' && (
-            <div className="absolute left-0 top-full mt-2 w-44 bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-2xl shadow-2xl z-[100] p-1.5 animate-fadeIn space-y-0.5">
-              {DATE_OPTIONS.map((opt) => (
-                <button
-                  key={opt.id}
-                  type="button"
-                  onClick={() => {
-                    onChange({ datePosted: opt.id as any });
-                    setActiveDropdown(null);
-                  }}
-                  className={`w-full text-left px-3 py-1.5 rounded-lg text-xs flex items-center justify-between transition-colors ${
-                    (filters.datePosted || 'all') === opt.id
-                      ? 'bg-lime-500/10 text-lime-700 dark:text-lime-400 font-semibold'
-                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5'
-                  }`}
-                >
-                  <span>{opt.label}</span>
-                  {(filters.datePosted || 'all') === opt.id && (
-                    <Check className="w-3.5 h-3.5 text-lime-600" />
-                  )}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* 2. Best Match / Sort Chip */}
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => toggleDropdown('sort')}
-            className={`rounded-full px-3 py-1.5 border text-xs transition-all flex items-center gap-1.5 shrink-0 ${
-              filters.sortBy && filters.sortBy !== 'matchScore'
-                ? 'bg-[#0f3822] dark:bg-[#133820] text-white border-[#1a4a2c] font-semibold shadow-sm'
-                : 'border-gray-200 dark:border-white/10 bg-white dark:bg-[#141810] text-gray-700 dark:text-gray-300 hover:border-gray-400 font-medium'
-            }`}
-          >
-            <ArrowUpDown className="w-3 h-3 opacity-70" />
-            <span>
-              {sortOptions.find((s) => s.value === (filters.sortBy || 'matchScore'))?.label ||
-                'Best match'}
-            </span>
-            <ChevronDown className="w-3 h-3 opacity-70" />
-          </button>
-
-          {activeDropdown === 'sort' && (
-            <div className="absolute left-0 top-full mt-2 w-48 bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-2xl shadow-2xl z-[100] p-1.5 animate-fadeIn space-y-0.5">
-              {sortOptions.map((opt) => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => {
-                    const newSortOrder = opt.value === 'company' ? 'asc' : 'desc';
-                    onChange({
-                      sortBy: opt.value,
-                      sortOrder: newSortOrder,
-                    });
-                    setActiveDropdown(null);
-                  }}
-                  className={`w-full text-left px-3 py-1.5 rounded-lg text-xs flex items-center justify-between transition-colors ${
-                    (filters.sortBy || 'matchScore') === opt.value
-                      ? 'bg-lime-500/10 text-lime-700 dark:text-lime-400 font-semibold'
-                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5'
-                  }`}
-                >
-                  <span>{opt.label}</span>
-                  {(filters.sortBy || 'matchScore') === opt.value && (
-                    <Check className="w-3.5 h-3.5 text-lime-600" />
-                  )}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* 3. Remote Only Chip */}
-        <button
-          type="button"
-          onClick={() => onChange({ remoteOnly: !filters.remoteOnly })}
-          className={`rounded-full px-3 py-1.5 border text-xs transition-all flex items-center gap-1.5 shrink-0 ${
-            filters.remoteOnly
-              ? 'bg-[#0f3822] dark:bg-[#133820] text-white border-[#1a4a2c] font-semibold shadow-sm'
-              : 'border-gray-200 dark:border-white/10 bg-white dark:bg-[#141810] text-gray-700 dark:text-gray-300 hover:border-gray-400 font-medium'
-          }`}
-        >
-          <span
-            className={`w-2 h-2 rounded-full ${
-              filters.remoteOnly ? 'bg-lime-400 animate-pulse' : 'bg-gray-300 dark:bg-gray-600'
-            }`}
-          />
-          <span>Remote only</span>
-          {filters.remoteOnly && (
-            <span
-              onClick={(e) => {
-                e.stopPropagation();
-                onChange({ remoteOnly: false });
-              }}
-              className="p-0.5 rounded-full hover:bg-white/20 ml-0.5"
-            >
-              <X className="w-3 h-3" />
-            </span>
-          )}
-        </button>
-
-        {/* Divider */}
-        <div className="h-4 w-px bg-gray-200 dark:bg-white/10 shrink-0 mx-0.5" />
-
-        {/* 4. Degree / Experience Chip */}
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => toggleDropdown('experience')}
-            className={`rounded-full px-3 py-1.5 border text-xs transition-all flex items-center gap-1.5 shrink-0 ${
-              filters.experienceLevel?.length
-                ? 'bg-[#0f3822] dark:bg-[#133820] text-white border-[#1a4a2c] font-semibold shadow-sm'
-                : 'border-gray-200 dark:border-white/10 bg-white dark:bg-[#141810] text-gray-700 dark:text-gray-300 hover:border-gray-400 font-medium'
-            }`}
-          >
-            <span>Degree / Experience</span>
-            {filters.experienceLevel?.length ? (
-              <>
-                <span className="w-4 h-4 rounded-full bg-white/20 text-white text-[10px] font-bold inline-flex items-center justify-center">
-                  {filters.experienceLevel.length}
-                </span>
-                <span
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onChange({ experienceLevel: undefined });
-                  }}
-                  className="p-0.5 rounded-full hover:bg-white/20"
-                >
-                  <X className="w-3 h-3" />
-                </span>
-              </>
-            ) : (
-              <ChevronDown className="w-3 h-3 opacity-70" />
-            )}
-          </button>
-
-          {activeDropdown === 'experience' && (
-            <div className="absolute left-0 top-full mt-2 w-56 bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-2xl shadow-2xl z-[100] p-2 animate-fadeIn space-y-1">
-              <div className="flex items-center justify-between px-1 text-[11px] font-semibold text-gray-400">
-                <span>Experience & Education</span>
-                {filters.experienceLevel?.length ? (
+            <div className="absolute left-0 top-full mt-2 w-44 bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-2xl shadow-xl z-50 p-2 animate-fadeIn space-y-1">
+              <div className="text-[11px] font-bold text-gray-400 px-2 py-1 border-b border-gray-100 dark:border-white/5">
+                Posting Recency
+              </div>
+              {DATE_OPTIONS.map((d) => {
+                const active = (filters.datePosted || 'all') === d.id;
+                return (
                   <button
+                    key={d.id}
                     type="button"
-                    onClick={() => onChange({ experienceLevel: undefined })}
-                    className="text-red-500 hover:underline text-[10px]"
+                    onClick={() => {
+                      onChange({ datePosted: d.id as any });
+                      setActiveDropdown(null);
+                    }}
+                    className={`w-full text-left px-2.5 py-1.5 rounded-xl text-xs flex items-center justify-between transition-colors ${
+                      active
+                        ? 'bg-lime-500/10 text-lime-700 dark:text-lime-400 font-bold'
+                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5'
+                    }`}
                   >
-                    Clear
+                    <span>{d.label}</span>
+                    {active && <Check className="w-3.5 h-3.5 text-lime-600" />}
                   </button>
-                ) : null}
-              </div>
-              <div className="space-y-0.5 pt-0.5">
-                {EXPERIENCE_OPTIONS.map((exp) => {
-                  const active = (filters.experienceLevel || []).includes(exp.id);
-                  return (
-                    <button
-                      key={exp.id}
-                      type="button"
-                      onClick={() => handleToggleExperience(exp.id)}
-                      className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between transition-colors ${
-                        active
-                          ? 'bg-lime-500/10 text-lime-700 dark:text-lime-400 font-semibold'
-                          : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5'
-                      }`}
-                    >
-                      <span>{exp.label}</span>
-                      {active && <Check className="w-3.5 h-3.5 text-lime-600" />}
-                    </button>
-                  );
-                })}
-              </div>
+                );
+              })}
             </div>
           )}
         </div>
 
-        {/* 5. Sponsors Visa Chip */}
-        <button
-          type="button"
-          onClick={() => onChange({ sponsorsVisa: !filters.sponsorsVisa })}
-          className={`rounded-full px-3 py-1.5 border text-xs transition-all flex items-center gap-1.5 shrink-0 ${
-            filters.sponsorsVisa
-              ? 'bg-[#0f3822] dark:bg-[#133820] text-white border-[#1a4a2c] font-semibold shadow-sm'
-              : 'border-gray-200 dark:border-white/10 bg-white dark:bg-[#141810] text-gray-700 dark:text-gray-300 hover:border-gray-400 font-medium'
-          }`}
-        >
-          <span>Sponsors Visa</span>
-          {filters.sponsorsVisa && <Check className="w-3 h-3 text-lime-400" />}
-        </button>
-
-        {/* Divider */}
-        <div className="h-4 w-px bg-gray-200 dark:bg-white/10 shrink-0 mx-0.5" />
-
-        {/* 6. Role Chip (Direct Dropdown Options) */}
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => toggleDropdown('role')}
-            className={`rounded-full px-3 py-1.5 border text-xs transition-all flex items-center gap-1.5 shrink-0 ${
-              filters.roles?.length
-                ? 'bg-[#0f3822] dark:bg-[#133820] text-white border-[#1a4a2c] font-semibold shadow-sm'
-                : 'border-gray-200 dark:border-white/10 bg-white dark:bg-[#141810] text-gray-700 dark:text-gray-300 hover:border-gray-400 font-medium'
-            }`}
-          >
-            <span>Role</span>
-            {filters.roles?.length ? (
-              <>
-                <span className="w-4 h-4 rounded-full bg-white/20 text-white text-[10px] font-bold inline-flex items-center justify-center">
-                  {filters.roles.length}
-                </span>
-                <span
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onChange({ roles: undefined });
-                  }}
-                  className="p-0.5 rounded-full hover:bg-white/20"
-                >
-                  <X className="w-3 h-3" />
-                </span>
-              </>
-            ) : (
-              <ChevronDown className="w-3 h-3 opacity-70" />
-            )}
-          </button>
-
-          {activeDropdown === 'role' && (
-            <div className="absolute left-0 top-full mt-2 w-64 max-h-72 overflow-y-auto bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-2xl shadow-2xl z-[100] p-2 animate-fadeIn space-y-1 scrollbar-thin">
-              <div className="flex items-center justify-between px-1 text-[11px] font-semibold text-gray-400 border-b border-gray-100 dark:border-white/5 pb-1">
-                <span>Select Roles</span>
-                {filters.roles?.length ? (
-                  <button
-                    type="button"
-                    onClick={() => onChange({ roles: undefined })}
-                    className="text-red-500 hover:underline text-[10px]"
-                  >
-                    Clear All
-                  </button>
-                ) : null}
-              </div>
-              <div className="space-y-0.5 pt-0.5">
-                {ROLE_OPTIONS.map((role) => {
-                  const active = (filters.roles || []).includes(role);
-                  return (
-                    <button
-                      key={role}
-                      type="button"
-                      onClick={() => handleToggleRole(role)}
-                      className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between transition-colors ${
-                        active
-                          ? 'bg-lime-500/10 text-lime-700 dark:text-lime-400 font-semibold'
-                          : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5'
-                      }`}
-                    >
-                      <span className="truncate">{role}</span>
-                      {active && <Check className="w-3.5 h-3.5 text-lime-600 shrink-0 ml-1" />}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* 7. Job Type Chip */}
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => toggleDropdown('jobType')}
-            className={`rounded-full px-3 py-1.5 border text-xs transition-all flex items-center gap-1.5 shrink-0 ${
-              filters.jobTypes?.length
-                ? 'bg-[#0f3822] dark:bg-[#133820] text-white border-[#1a4a2c] font-semibold shadow-sm'
-                : 'border-gray-200 dark:border-white/10 bg-white dark:bg-[#141810] text-gray-700 dark:text-gray-300 hover:border-gray-400 font-medium'
-            }`}
-          >
-            <span>Job Type</span>
-            {filters.jobTypes?.length ? (
-              <>
-                <span className="w-4 h-4 rounded-full bg-white/20 text-white text-[10px] font-bold inline-flex items-center justify-center">
-                  {filters.jobTypes.length}
-                </span>
-                <span
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onChange({ jobTypes: undefined });
-                  }}
-                  className="p-0.5 rounded-full hover:bg-white/20"
-                >
-                  <X className="w-3 h-3" />
-                </span>
-              </>
-            ) : (
-              <ChevronDown className="w-3 h-3 opacity-70" />
-            )}
-          </button>
-
-          {activeDropdown === 'jobType' && (
-            <div className="absolute left-0 top-full mt-2 w-44 bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-2xl shadow-2xl z-[100] p-2 animate-fadeIn space-y-1">
-              <div className="flex items-center justify-between px-1 text-[11px] font-semibold text-gray-400 border-b border-gray-100 dark:border-white/5 pb-1">
-                <span>Select Job Types</span>
-                {filters.jobTypes?.length ? (
-                  <button
-                    type="button"
-                    onClick={() => onChange({ jobTypes: undefined })}
-                    className="text-red-500 hover:underline text-[10px]"
-                  >
-                    Clear
-                  </button>
-                ) : null}
-              </div>
-              <div className="space-y-0.5 pt-0.5">
-                {JOB_TYPE_OPTIONS.map((jt) => {
-                  const active = (filters.jobTypes || []).includes(jt.id);
-                  return (
-                    <button
-                      key={jt.id}
-                      type="button"
-                      onClick={() => handleToggleJobType(jt.id)}
-                      className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between transition-colors ${
-                        active
-                          ? 'bg-lime-500/10 text-lime-700 dark:text-lime-400 font-semibold'
-                          : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5'
-                      }`}
-                    >
-                      <span>{jt.label}</span>
-                      {active && <Check className="w-3.5 h-3.5 text-lime-600" />}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* 8. Saved Jobs Chip */}
-        <button
-          type="button"
-          onClick={() => onChange({ savedOnly: !filters.savedOnly })}
-          className={`rounded-full px-3 py-1.5 border text-xs transition-all flex items-center gap-1.5 shrink-0 ${
-            filters.savedOnly
-              ? 'bg-[#0f3822] dark:bg-[#133820] text-white border-[#1a4a2c] font-semibold shadow-sm'
-              : 'border-gray-200 dark:border-white/10 bg-white dark:bg-[#141810] text-gray-700 dark:text-gray-300 hover:border-gray-400 font-medium'
-          }`}
-        >
-          <Bookmark className="w-3 h-3 opacity-80" />
-          <span>Saved</span>
-          <span className="w-4 h-4 rounded-full bg-gray-200 dark:bg-white/10 text-gray-700 dark:text-gray-300 text-[10px] font-bold inline-flex items-center justify-center">
-            {savedCount}
-          </span>
-        </button>
-
-        {/* 9. Clear Action Link */}
+        {/* Clear Filters button */}
         {activeFilterCount > 0 && (
           <button
             type="button"
             onClick={onReset}
-            className="text-xs text-gray-400 hover:text-red-500 font-medium flex items-center gap-0.5 ml-auto shrink-0 transition-colors"
+            className="text-xs text-gray-400 hover:text-red-500 font-semibold flex items-center gap-1 ml-auto shrink-0 transition-colors px-2 py-1"
           >
-            <X className="w-3 h-3" />
-            <span>Clear</span>
+            <X className="w-3.5 h-3.5" />
+            <span>Reset</span>
           </button>
         )}
       </div>

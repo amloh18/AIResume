@@ -424,11 +424,13 @@
 .step-one-stat:hover {
   border-color: color-mix(in srgb, var(--accent-primary) 28%, var(--border-primary));
   box-shadow: 0 16px 34px color-mix(in srgb, var(--shadow-color) 62%, transparent);
-  transform: translateY(-2px);
+  transform: scale(1.01);
 }
 
 .step-one-stat {
   transition-property: transform, background-color, border-color, color, box-shadow;
+  transition-duration: 160ms;
+  transition-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .step-one-action:hover,
@@ -454,11 +456,11 @@
 .step-one-document-preview {
   border: 0;
   box-shadow: 0 12px 30px color-mix(in srgb, var(--shadow-color) 55%, transparent);
-  transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 320ms ease;
+  transition: transform 160ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 160ms ease;
 }
 
 .step-one-document-card:hover .step-one-document-preview {
-  transform: translateY(-2px);
+  transform: scale(1.008);
   box-shadow: 0 16px 36px color-mix(in srgb, var(--shadow-color) 58%, transparent);
 }
 
@@ -1027,7 +1029,7 @@ html:not(.dark) .cover-letter-editor-page {
 
 /* Smooth transitions */
 .transition-smooth {
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 160ms ease-out, box-shadow 160ms ease-out, border-color 160ms ease-out, background-color 160ms ease-out;
 }
 
 /* Loading spinner optimization */
@@ -1126,24 +1128,24 @@ html:not(.dark) .cover-letter-editor-page {
 /* Optimize modal animations */
 .modal-enter {
   opacity: 0;
-  transform: scale(0.9) translateY(-20px);
+  transform: scale(0.98);
 }
 
 .modal-enter-active {
   opacity: 1;
-  transform: scale(1) translateY(0);
-  transition: opacity 0.2s ease-out, transform 0.2s ease-out;
+  transform: scale(1);
+  transition: opacity 0.16s ease-out, transform 0.16s ease-out;
 }
 
 .modal-exit {
   opacity: 1;
-  transform: scale(1) translateY(0);
+  transform: scale(1);
 }
 
 .modal-exit-active {
   opacity: 0;
-  transform: scale(0.9) translateY(-20px);
-  transition: opacity 0.2s ease-in, transform 0.2s ease-in;
+  transform: scale(0.98);
+  transition: opacity 0.12s ease-in, transform 0.12s ease-in;
 }
 
 /* 3D Card Flip Styles */
@@ -1181,30 +1183,34 @@ html:not(.dark) .cover-letter-editor-page {
 
 /* Optimize button hover effects */
 .btn-hover {
-  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-  will-change: transform, box-shadow;
+  transition: transform 120ms ease-out, background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+  will-change: transform;
 }
 
 .btn-hover:hover {
-  transform: translateY(-1px);
+  transform: scale(1.015);
+}
+
+.btn-hover:active {
+  transform: scale(0.985);
 }
 
 .dark .btn-hover:hover {
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  box-shadow: none;
 }
 
 /* Optimize card animations */
 .card-hover {
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  will-change: transform, box-shadow;
+  transition: transform 160ms ease-out, box-shadow 160ms ease-out, border-color 160ms ease-out;
+  will-change: transform;
 }
 
 .card-hover:hover {
-  transform: translateY(-2px);
+  transform: scale(1.01);
 }
 
 .dark .card-hover:hover {
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  box-shadow: none;
 }
 
 /* Optimize form inputs */
@@ -1485,8 +1491,8 @@ nav {
 }
 
 .dashboard-card-optimized:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+  transform: scale(1.01);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 /* Optimize data tables */
@@ -2004,7 +2010,7 @@ nav {
   border-radius: 1rem;
   padding: 2rem;
   text-align: center;
-  transition: all 0.2s ease;
+  transition: border-color 160ms ease, background-color 160ms ease;
   will-change: border-color, background-color;
 }
 
@@ -2033,7 +2039,7 @@ nav {
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 0.5rem;
   color: white;
-  transition: all 0.2s ease;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
   will-change: border-color, box-shadow;
 }
 
@@ -2209,7 +2215,7 @@ img[src*="/images/"] {
 }
 
 .transition-all {
-  transition: all 0.2s ease-in-out;
+  transition: transform 160ms ease-out, box-shadow 160ms ease-out, border-color 160ms ease-out, background-color 160ms ease-out, color 160ms ease-out;
 }
 
 /* Custom animations */
@@ -2361,7 +2367,7 @@ img[src*="/images/"] {
 
 /* Studio panel transitions */
 .studio-panel-transition {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 160ms ease-out, box-shadow 160ms ease-out, border-color 160ms ease-out, background-color 160ms ease-out;
 }
 
 /* Studio solid effect */
@@ -2524,16 +2530,16 @@ img[src*="/images/"] {
 /* Hover effects for dashboard cards */
 .frosted-glass-card:hover,
 .glass-card-premium:hover {
-  transform: translateY(-1px);
+  transform: scale(1.008);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  transition: all 0.2s ease;
+  transition: transform 160ms ease-out, box-shadow 160ms ease-out;
 }
 
 .frosted-glass-widget:hover,
 .glass-widget-premium:hover {
-  transform: translateY(-1px);
+  transform: scale(1.008);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  transition: all 0.2s ease;
+  transition: transform 160ms ease-out, box-shadow 160ms ease-out;
 }
 
 .dark .frosted-glass-card:hover,
@@ -2853,7 +2859,7 @@ img[src*="/images/"] {
 .bento-box:hover {
   background: #2a2b2f;
   border-color: rgba(153, 255, 0, 0.3);
-  transform: translateY(-2px);
+  transform: scale(1.01);
 }
 
 /* --- Gradient Glow Border Effect --- */
@@ -3281,5 +3287,59 @@ mark[data-type="highlight"] {
   .panel-glass {
     @apply bg-white/70 dark:bg-[#141414]/70 backdrop-blur-glass border border-white/20 dark:border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.05)];
   }
+}
+
+/* ============================================================
+   REDUCED MOTION — respect user preferences
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .glass-float {
+    animation: none;
+  }
+
+  .frosted-glass-card:hover,
+  .frosted-glass-widget:hover,
+  .glass-card-premium:hover,
+  .glass-widget-premium:hover,
+  .step-one-stat:hover,
+  .btn-hover:hover,
+  .card-hover:hover,
+  .dashboard-card-optimized:hover {
+    transform: none;
+  }
+}
+
+/* ============================================================
+   MOBILE / TOUCH — only apply hover transforms on devices
+   that support hover (not touch)
+   ============================================================ */
+@media (hover: none) and (pointer: coarse) {
+  .btn-hover:hover,
+  .card-hover:hover,
+  .dashboard-card-optimized:hover,
+  .frosted-glass-card:hover,
+  .frosted-glass-widget:hover,
+  .glass-card-premium:hover,
+  .glass-widget-premium:hover,
+  .step-one-stat:hover {
+    transform: none;
+  }
+}
+
+/* ============================================================
+   FOCUS VISIBLE — ensure keyboard focus is always visible
+   ============================================================ */
+:focus-visible {
+  outline: 2px solid #81ff00;
+  outline-offset: 2px;
 }
 

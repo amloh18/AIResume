@@ -512,7 +512,7 @@ export default function FloatingFormEditor({
                     <div className="flex items-center gap-2">
                         <button
                             onClick={handleClose}
-                            className="p-2 rounded-none bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-all duration-200 hover:-translate-y-0.5"
+                            className="p-2 rounded-none bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-all duration-200 hover:scale-[1.015]"
                             aria-label="Cancel"
                             title="Cancel"
                         >
@@ -520,7 +520,7 @@ export default function FloatingFormEditor({
                         </button>
                         <button
                             onClick={handleClose}
-                            className="p-2 rounded-none bg-[#80FF00]/10 text-[#80FF00] hover:bg-[#80FF00]/20 transition-all duration-200 hover:-translate-y-0.5"
+                            className="p-2 rounded-none bg-[#80FF00]/10 text-[#80FF00] hover:bg-[#80FF00]/20 transition-all duration-200 hover:scale-[1.015]"
                             aria-label="Accept"
                             title="Accept"
                         >
