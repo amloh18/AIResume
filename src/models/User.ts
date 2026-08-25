@@ -184,6 +184,7 @@ export interface IUser extends Document {
     };
     timezone: string;
     languagePreference: string;
+    cvTailoringMode?: 'standard' | 'standout';
   };
 
   // Granular Notification Preferences
@@ -754,6 +755,11 @@ const userSchema = new Schema<IUser>({
       type: String,
       trim: true,
       default: 'en'
+    },
+    cvTailoringMode: {
+      type: String,
+      enum: ['standard', 'standout'],
+      default: 'standard'
     }
   },
   notificationPreferences: {

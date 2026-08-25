@@ -13,6 +13,8 @@ import {
 } from 'lucide-react';
 import { CountrySelector } from '@/components/jobs/CountrySelector';
 import { QuotaIndicator } from '@/components/jobs/QuotaIndicator';
+import CvTailoringModeToggle from '@/components/jobs/CvTailoringModeToggle';
+import type { CvTailoringMode } from '@/lib/cv-tailoring/tailoringMode';
 
 interface FiltersBarProps {
   filters: JobsFilter;
@@ -23,6 +25,8 @@ interface FiltersBarProps {
   onCountriesChange: (countries: string[]) => void;
   userId?: string;
   savedCount?: number;
+  cvTailoringMode?: CvTailoringMode;
+  onCvTailoringModeChange?: (mode: CvTailoringMode) => void;
 }
 
 const sortOptions: { value: NonNullable<JobsFilter['sortBy']>; label: string }[] = [
@@ -89,6 +93,8 @@ export default function FiltersBar({
   onCountriesChange,
   userId,
   savedCount = 0,
+  cvTailoringMode = 'standard',
+  onCvTailoringModeChange,
 }: FiltersBarProps) {
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -164,6 +170,13 @@ export default function FiltersBar({
         </div>
 
         <CountrySelector value={countries} onChange={onCountriesChange} />
+
+        {onCvTailoringModeChange && (
+          <CvTailoringModeToggle
+            value={cvTailoringMode}
+            onChange={onCvTailoringModeChange}
+          />
+        )}
 
         {/* ATS Platform Multi-Select Dropdown next to search */}
         <div className="relative">

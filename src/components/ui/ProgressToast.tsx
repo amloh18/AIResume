@@ -6,15 +6,18 @@ import { cn } from '@/lib/utils';
 
 export type ToastVariant = 'success' | 'warning' | 'error' | 'info' | 'progress';
 
+export interface ProgressToastAction {
+  label: string;
+  onClick: () => void;
+}
+
 export interface ProgressToastData {
   id: string;
   variant: ToastVariant;
   title: string;
   description?: string;
-  action?: {
-    label: string;
-    onClick: () => void;
-  };
+  action?: ProgressToastAction;
+  actions?: ProgressToastAction[];
   duration?: number; // auto-close in ms (default 5000)
   progress?: number; // 0-100 for progress variant
   showTimer?: boolean; // show auto-close timer bar
@@ -81,6 +84,7 @@ export function ProgressToast({
   title,
   description,
   action,
+  actions,
   duration = 5000,
   progress,
   showTimer = true,
@@ -91,6 +95,11 @@ export function ProgressToast({
   const [shouldDismiss, setShouldDismiss] = useState(false);
   const config = variantConfig[variant];
   const IconComponent = config.Icon;
+  const resolvedActions = actions?.length ? actions : action ? [action] : [];
+
+  useEffect(() => {
+    setTimeLeft(duration);
+  }, [duration, variant]);
 
   // Deferred dismissal — avoids calling parent setState inside child setState updater
   useEffect(() => {
@@ -154,10 +163,10 @@ export function ProgressToast({
         </div>
 
         {/* Text content */}
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-bold leading-tight">{title}</p>
+        <div className="flex-1 min-w-0 flex flex-col gap-1">
+          <p className="block text-sm font-semibold leading-snug text-gray-900 dark:text-white">{title}</p>
           {description && (
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 leading-relaxed">{description}</p>
+            <p className="block text-xs text-gray-500 dark:text-gray-400 leading-relaxed whitespace-pre-wrap">{description}</p>
           )}
         </div>
 
@@ -170,18 +179,20 @@ export function ProgressToast({
         </button>
       </div>
 
-      {/* Action button */}
-      {action && (
-        <div className="px-4 pb-3">
-          <button
-            onClick={() => {
-              action.onClick();
-              handleDismiss();
-            }}
-            className="rounded-lg border border-gray-200 bg-gray-100 px-4 py-1.5 text-xs font-semibold transition-colors hover:bg-gray-200 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10"
-          >
-            {action.label}
-          </button>
+      {resolvedActions.length > 0 && (
+        <div className="px-4 pb-3 flex flex-wrap gap-2">
+          {resolvedActions.map((item) => (
+            <button
+              key={item.label}
+              onClick={() => {
+                item.onClick();
+                handleDismiss();
+              }}
+              className="rounded-lg border border-gray-200 bg-gray-100 px-4 py-1.5 text-xs font-semibold transition-colors hover:bg-gray-200 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10"
+            >
+              {item.label}
+            </button>
+          ))}
         </div>
       )}
 

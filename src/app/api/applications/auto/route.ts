@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import { getConnection } from '@/lib/database';
 import { JobApplication, Notification } from '@/models';
 import { getAuthenticatedUser } from '@/lib/auth-helpers';
+import { sanitizeJobApplicationSource } from '@/lib/jobs/jobApplicationSource';
 
 export async function POST(request: NextRequest) {
   try {
@@ -67,14 +68,7 @@ export async function POST(request: NextRequest) {
       if (atsType) existingJobApp.atsType = atsType;
       savedJob = await existingJobApp.save();
     } else {
-      // Map source to valid schema enum
-      let cleanSource = 'other';
-      const validSources = ['extension', 'manual', 'import', 'linkedin', 'indeed', 'company-website', 'referral', 'other'];
-      if (validSources.includes(source)) {
-        cleanSource = source;
-      } else if (source === 'naukri' || source === 'adzuna' || source === 'greenhouse' || source === 'lever' || source === 'workable' || source === 'ashby') {
-        cleanSource = 'company-website';
-      }
+      const cleanSource = sanitizeJobApplicationSource(source);
 
       let parsedSalary: any = undefined;
       if (typeof salary === 'object' && salary !== null) {

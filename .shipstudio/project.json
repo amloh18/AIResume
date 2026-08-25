@@ -5,11 +5,11 @@
     "staging": null,
     "production": null
   },
-  "last_opened": 1787597184953,
+  "last_opened": 1787638612600,
   "terminal_state": {
     "tabs": [
       {
-        "agent_id": "codex",
+        "agent_id": "claude-code",
         "session_id": "4c712e22-5e49-46f0-9a08-b6e1c8a07d9c"
       }
     ],

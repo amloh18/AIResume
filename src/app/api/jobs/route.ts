@@ -10,6 +10,7 @@ import { formatExtensionError, formatExtensionSuccess, ExtensionErrorCode } from
 import { ErrorCode, createErrorNextResponse } from '@/lib/utils/error-codes';
 import { setCorsHeaders, handleCorsPreflight } from '@/lib/utils/cors-helpers';
 import { authenticateRequest } from '@/lib/utils/auth-helpers-api';
+import { sanitizeJobApplicationSource } from '@/lib/jobs/jobApplicationSource';
 import {
   createQueuedGenerationState,
   getJourneyGenerationEntitlement
@@ -205,14 +206,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Normalize source
-    const VALID_SOURCES = ['extension', 'manual', 'import', 'linkedin', 'indeed', 'company-website', 'referral', 'other'];
-    let normalizedSource: any = source;
-    if (normalizedSource === 'web' || normalizedSource === 'discover') {
-      normalizedSource = 'manual';
-    } else if (!VALID_SOURCES.includes(normalizedSource)) {
-      normalizedSource = 'manual';
-    }
-    source = normalizedSource;
+    source = sanitizeJobApplicationSource(source || bodySource);
 
     console.log(`🔍 Jobs API - Source determined: ${source} (from auth: ${auth.source}, method: ${auth.method}, body: ${bodySource})`);
 
@@ -397,7 +391,7 @@ export async function POST(request: NextRequest) {
             jobUrl: cleanedJobUrl,
             jobDescription: jobDescription || '',
             location: location || '',
-            source: normalizedSource,
+            source: source,
             status: jobStatus,
             priority: normalizedPriority,
             salary: cleanedSalary,
@@ -509,7 +503,7 @@ export async function POST(request: NextRequest) {
           jobUrl: cleanedJobUrl,
           jobDescription: jobDescription || '',
           location: location || '',
-          source: normalizedSource,
+          source: source,
           status: jobStatus,
           priority: normalizedPriority,
           salary: cleanedSalary,

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import CardNav from '@/components/landing/CardNav';
 import Footer from '@/components/landing/Footer';
 import AnnouncementBanner from '@/components/landing/AnnouncementBanner';
+import { heroTopPaddingClass } from '@/components/landing/announcementBannerConfig';
 import { navLinks } from '@/data/navigation';
 import CVBuilderProAdapter from '@/components/cv-builder-pro/CVBuilderProAdapter';
 import { TemplateLibraryGrid } from '@/components/cv-builder-pro/components/TemplateLibraryGrid';
@@ -414,7 +415,7 @@ export default function ExploreStudioClient() {
       />
 
       {/* Hero Header */}
-      <section className={`${bannerActive ? 'pt-40' : 'pt-32'} pb-6 px-4 sm:px-6 max-w-7xl mx-auto text-center transition-[padding] duration-300`}>
+      <section className={`${heroTopPaddingClass(bannerActive)} pb-6 px-4 sm:px-6 max-w-7xl mx-auto text-center transition-[padding] duration-300`}>
         {/* Auto / Manual Status Indicator Badge */}
         <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-[#81ff00]/10 border border-[#81ff00]/30 text-xs font-bold uppercase tracking-wider mb-3">
           {isAutoDemo ? (

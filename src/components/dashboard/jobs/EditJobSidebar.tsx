@@ -43,6 +43,7 @@ import {
   shouldSkipTrackerCreatedStageModalForToday,
   type TrackerCreatedStagePreview
 } from '@/lib/utils/tracker-created-stage-modal';
+import { sanitizeJobApplicationSource } from '@/lib/jobs/jobApplicationSource';
 
 interface Job {
   id?: string;
@@ -682,15 +683,8 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
         }
       }
 
-      // Validate source is a valid enum value
-      const validSources = ['extension', 'manual', 'import', 'linkedin', 'indeed', 'company-website', 'referral', 'other'];
-      if (jobData.source && !validSources.includes(jobData.source)) {
-        // Auto-fix: map invalid sources to valid ones
-        if (jobData.source === 'web') {
-          jobData.source = 'manual';
-        } else {
-          jobData.source = 'other';
-        }
+      if (jobData.source) {
+        jobData.source = sanitizeJobApplicationSource(jobData.source);
       }
 
       // Clean jobUrl - set to undefined if empty string

@@ -146,13 +146,16 @@ export default function TopJobMatchesSection() {
           window.dispatchEvent(new CustomEvent('jobUpdated', { detail: { jobId: createdId } }));
         }
 
-        // Complete with success
         applyProgress.completeApply(job.title, job.company, true, resData.message);
         updateProgress(appId, 100, `Applied to ${job.title}!`, 'progress');
       } else {
-        // Complete with queued status
-        applyProgress.completeApply(job.title, job.company, true, resData.message || 'Application has been queued');
-        updateProgress(appId, 100, `Application queued`, 'progress');
+        applyProgress.completeApply(
+          job.title,
+          job.company,
+          false,
+          resData.error || resData.message || 'Something went wrong. Please try again.'
+        );
+        updateProgress(appId, 100, `Application failed`, 'progress');
       }
     } catch {
       // Complete with error

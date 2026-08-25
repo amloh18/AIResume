@@ -2,7 +2,6 @@
 
 import { useCallback, useRef } from 'react';
 import { useProgressToast } from '@/components/ui/ProgressToaster';
-import { useMembership } from '@/lib/hooks/useMembership';
 
 /**
  * Hook for showing real-time progress toasts during the job apply flow.
@@ -12,8 +11,6 @@ import { useMembership } from '@/lib/hooks/useMembership';
 export function useApplyProgress() {
   const toast = useProgressToast();
   const activeToastId = useRef<string | null>(null);
-  const { isPaidMember } = useMembership();
-  const isPaidUser = isPaidMember;
 
   const startApplyProgress = useCallback(
     (jobTitle: string) => {
@@ -64,41 +61,65 @@ export function useApplyProgress() {
   const completeApply = useCallback(
     (jobTitle: string, company: string, success: boolean, message?: string) => {
       if (activeToastId.current) {
-        if (success) {
-          // For free/starter users, show a soft premium nudge after success
-          const action = !isPaidUser
-            ? {
+        const isTechnical = Boolean(
+          message && /validation failed|enum value|Internal Server Error|E11000/i.test(message)
+        );
+        const succeeded = success && !isTechnical;
+        const actions = succeeded
+          ? [
+              {
+                label: 'Check tracker',
+                onClick: () => {
+                  window.location.href = '/dashboard/jobs?tab=applications';
+                },
+              },
+              {
                 label: 'Prep for the interview',
                 onClick: () => {
                   window.location.href = '/dashboard/interview';
                 },
-              }
-            : undefined;
+              },
+            ]
+          : undefined;
 
+        if (succeeded) {
           toast.updateToast(activeToastId.current, {
             variant: 'success',
             title: 'Application Submitted',
-            description: success
-              ? (message || `Successfully applied to ${jobTitle} at ${company}`) +
-                (!isPaidUser ? ' — Nail the next step with AI Interview Coach.' : '')
-              : message || `Failed to apply to ${jobTitle}. Please try again.`,
+            description:
+              message && !isTechnical
+                ? message
+                : `Successfully applied to ${jobTitle} at ${company}`,
             progress: 100,
             showTimer: true,
-            duration: action ? 8000 : 5000,
-            action,
+            duration: 8000,
+            action: undefined,
+            actions,
           });
         } else {
           toast.updateToast(activeToastId.current, {
             variant: 'error',
             title: 'Application Failed',
-            description: message || `Failed to apply to ${jobTitle}. Please try again.`,
+            description: isTechnical
+              ? `Could not save this ${jobTitle} application. Please try again.`
+              : message || `Failed to apply to ${jobTitle}. Please try again.`,
             duration: 8000,
+            showTimer: true,
+            action: undefined,
+            actions: [
+              {
+                label: 'Check tracker',
+                onClick: () => {
+                  window.location.href = '/dashboard/jobs?tab=applications';
+                },
+              },
+            ],
           });
         }
         activeToastId.current = null;
       }
     },
-    [toast, isPaidUser]
+    [toast]
   );
 
   const cancelProgress = useCallback(() => {

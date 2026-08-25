@@ -469,14 +469,14 @@ export default function UpgradeSuggestionCard() {
               </div>
 
               {/* Headline — the whole pitch, no prose paragraph */}
-              <h3 className="mt-3 text-base font-semibold leading-snug text-white">
+              <p className="dashboard-promo-title mt-3 text-white">
                 {config.headline(suggestion)}
-              </h3>
+              </p>
 
               {/* Feature ticks — compact vertical list */}
               <ul className="mt-3 space-y-1.5">
                 {suggestion.features.map((feature) => (
-                  <li key={feature} className="flex items-center gap-2 text-xs font-medium text-white/80">
+                  <li key={feature} className="dashboard-promo-small flex items-center gap-2 font-medium text-white/80">
                     <CheckCircle2 size={14} className={`shrink-0 ${config.check}`} />
                     {feature}
                   </li>
@@ -487,14 +487,14 @@ export default function UpgradeSuggestionCard() {
               <div className="mt-4 flex items-center gap-2.5">
                 <button
                   onClick={handleUpgrade}
-                  className={`group inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold transition-all hover:brightness-110 hover:shadow-md ${config.ctaBtn}`}
+                  className={`group inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3.5 py-2 dashboard-promo-small font-semibold transition-all hover:brightness-110 hover:shadow-md ${config.ctaBtn}`}
                 >
                   {config.cta(suggestion)}
                   <ArrowRight size={14} className="transition-transform group-hover:translate-x-0.5" />
                 </button>
                 <button
                   onClick={handleCompare}
-                  className="inline-flex items-center gap-1 rounded-lg border border-white/15 px-3 py-2 text-xs font-medium text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+                  className="inline-flex items-center gap-1 rounded-lg border border-white/15 px-3 py-2 dashboard-promo-small font-medium text-white/70 transition-colors hover:bg-white/10 hover:text-white"
                 >
                   Compare plans
                 </button>

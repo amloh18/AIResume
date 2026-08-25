@@ -1,4 +1,9 @@
 import mongoose, { Document, Schema } from 'mongoose';
+import {
+  JOB_APPLICATION_SOURCES,
+  sanitizeJobApplicationSource,
+  type JobApplicationSource,
+} from '@/lib/jobs/jobApplicationSource';
 
 export interface IJobApplication extends Document {
   userId: mongoose.Types.ObjectId | string;
@@ -64,7 +69,7 @@ export interface IJobApplication extends Document {
     size: number;
   }>;
   tags: string[];
-  source?: 'extension' | 'manual' | 'import' | 'linkedin' | 'indeed' | 'company-website' | 'referral' | 'discovery' | 'other';
+  source?: JobApplicationSource;
   sourceUrl?: string;
   atsType?: 'greenhouse' | 'lever' | 'workable' | 'naukri' | 'indeed' | 'adzuna' | 'ashby' | 'workday' | 'unknown';
   atsScore?: number;
@@ -318,7 +323,7 @@ const jobApplicationSchema = new Schema<IJobApplication>({
   tags: [{ type: String, trim: true }],
   source: {
     type: String,
-    enum: ['extension', 'manual', 'import', 'linkedin', 'indeed', 'company-website', 'referral', 'discovery', 'other'],
+    enum: JOB_APPLICATION_SOURCES,
     default: 'manual'
   },
   sourceUrl: {
@@ -484,6 +489,26 @@ jobApplicationSchema.index({ userId: 1, company: 1 });
 jobApplicationSchema.index({ userId: 1, isArchived: 1 });
 jobApplicationSchema.index({ 'contacts.email': 1 });
 
+jobApplicationSchema.pre('validate', function (next) {
+  this.source = sanitizeJobApplicationSource(this.source);
+  next();
+});
 
+const ExistingJobApplication = mongoose.models.JobApplication as mongoose.Model<IJobApplication> | undefined;
+if (ExistingJobApplication) {
+  const sourcePath = ExistingJobApplication.schema.path('source') as { enumValues?: string[]; options?: { enum?: string[] } } | undefined;
+  if (sourcePath) {
+    sourcePath.enumValues = [...JOB_APPLICATION_SOURCES];
+    if (sourcePath.options) sourcePath.options.enum = [...JOB_APPLICATION_SOURCES];
+  }
+  const schemaWithFlag = ExistingJobApplication.schema as typeof ExistingJobApplication.schema & { __sourceSanitizeHook?: boolean };
+  if (!schemaWithFlag.__sourceSanitizeHook) {
+    schemaWithFlag.pre('validate', function (next) {
+      this.source = sanitizeJobApplicationSource(this.source);
+      next();
+    });
+    schemaWithFlag.__sourceSanitizeHook = true;
+  }
+}
 
-export default mongoose.models.JobApplication || mongoose.model<IJobApplication>('JobApplication', jobApplicationSchema, 'jobapplications'); 
+export default ExistingJobApplication || mongoose.model<IJobApplication>('JobApplication', jobApplicationSchema, 'jobapplications'); 

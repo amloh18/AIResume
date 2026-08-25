@@ -123,12 +123,12 @@ export default function FeaturePromotionCard({ promotion, onDismiss }: FeaturePr
                 <div className="w-8 h-8 rounded-lg bg-lime-500/15 dark:bg-lime-500/10 flex items-center justify-center shrink-0 text-lime-600 dark:text-lime-400">
                   <HeaderIcon className="w-4 h-4" />
                 </div>
-                <h3
+                <p
                   id="promotion-title"
-                  className="text-sm font-semibold text-gray-900 dark:text-white leading-snug"
+                  className="dashboard-promo-title text-gray-900 dark:text-white"
                 >
                   {promotion.title}
-                </h3>
+                </p>
               </div>
               <button
                 onClick={handleDismiss}
@@ -140,7 +140,7 @@ export default function FeaturePromotionCard({ promotion, onDismiss }: FeaturePr
             </div>
 
             {/* Body */}
-            <p className="text-[13px] leading-relaxed text-gray-600 dark:text-gray-300">
+            <p className="dashboard-promo-body text-gray-600 dark:text-gray-300">
               {promotion.description}
             </p>
 
@@ -158,7 +158,7 @@ export default function FeaturePromotionCard({ promotion, onDismiss }: FeaturePr
                     <div className="w-4 h-4 rounded-full bg-lime-500/10 flex items-center justify-center flex-shrink-0">
                       <CheckCircle2 className="w-3 h-3 text-lime-600 dark:text-lime-400" />
                     </div>
-                    <span className="text-[13px] font-medium text-gray-700 dark:text-gray-300">
+                    <span className="dashboard-promo-small text-gray-700 dark:text-gray-300">
                       {benefit}
                     </span>
                   </motion.div>
@@ -170,13 +170,13 @@ export default function FeaturePromotionCard({ promotion, onDismiss }: FeaturePr
             <div className="flex gap-2.5 mt-4">
               <button
                 onClick={handleDismiss}
-                className="flex-1 px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 text-[13px] font-medium hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
+                className="flex-1 px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 dashboard-promo-small font-medium hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
               >
                 Later
               </button>
               <button
                 onClick={handleCTAClick}
-                className="flex-1 px-3 py-2 rounded-lg bg-[#80FF00] text-slate-950 text-[13px] font-semibold hover:brightness-95 transition-all"
+                className="flex-1 px-3 py-2 rounded-lg bg-[#80FF00] text-slate-950 dashboard-promo-small font-semibold hover:brightness-95 transition-all"
               >
                 {promotion.ctaText}
               </button>
