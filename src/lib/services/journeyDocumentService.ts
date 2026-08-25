@@ -388,15 +388,18 @@ export async function createJourneyDocuments(
       let footer = '';
       let body = '';
 
+      const jobAny = job as any;
+      const jobObj = job && typeof (job as any).toObject === 'function' ? (job as any).toObject() : (job || {});
+
       try {
         // Generate header
         header = formatCoverLetterHeader(cvDataWithAnalysis, {
+          ...jobObj,
           title: currentJourney.jobTitle,
           company: currentJourney.company,
-          jobDescription: job.jobDescription || job.description || '',
-          location: job.location || '',
-          contactPerson: job.contactDetails?.name || 'Hiring Manager',
-          ...job.toObject()
+          jobDescription: jobAny?.jobDescription || jobAny?.description || '',
+          location: jobAny?.location || '',
+          contactPerson: jobAny?.contactDetails?.name || 'Hiring Manager',
         });
 
         // Generate footer
@@ -410,22 +413,23 @@ export async function createJourneyDocuments(
       if (shouldTailorDocuments) {
         try {
           console.log('🚀 Journey Document Service - Generating tailored cover letter body with AI...');
+          const jobDescText = jobAny?.jobDescription || jobAny?.description || '';
           const promptOverride = buildCoverLetterTailoringPrompt({
             mode: tailoringMode,
             jobTitle: currentJourney.jobTitle,
             company: currentJourney.company,
             experience: serializeExperienceForPrompt(cvDataWithAnalysis),
-            jobDescription: job.jobDescription || job.description || '',
-            atsKeywords: extractAtsKeywords(job.jobDescription || job.description || ''),
+            jobDescription: jobDescText,
+            atsKeywords: extractAtsKeywords(jobDescText),
           });
 
           const generatedCoverLetter = await aiCoverLetterService.generateModularCoverLetter({
             cvData: cvDataWithAnalysis,
             jobData: {
+              ...jobObj,
               title: currentJourney.jobTitle,
               company: currentJourney.company,
-              jobDescription: job.jobDescription || job.description || '',
-              ...job.toObject()
+              jobDescription: jobDescText,
             },
             recipientName: 'Hiring Manager',
             companyName: currentJourney.company,

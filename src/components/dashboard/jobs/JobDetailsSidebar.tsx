@@ -90,7 +90,7 @@ export default function JobDetailsSidebar({
   onDelete,
   onModeChange,
   existingJobs = [],
-  width = '520px',
+  width,
 }: JobDetailsSidebarProps) {
   const { toast } = useToast();
   const { canAccess } = useMembership();
@@ -283,8 +283,8 @@ export default function JobDetailsSidebar({
             animate={{ x: 0 }}
             exit={{ x: 'calc(100% + 12px)' }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            className="fixed right-3 top-3 bottom-3 bg-white dark:bg-[#141810] shadow-2xl z-[9999] flex flex-col rounded-2xl overflow-hidden"
-            style={{ width }}
+            className="fixed top-0 right-0 bottom-0 left-0 md:left-auto md:top-3 md:right-3 md:bottom-3 w-full md:w-[calc(70vw-24px)] md:max-w-[70vw] bg-white dark:bg-[#141810] shadow-2xl z-[9999] flex flex-col rounded-none md:rounded-2xl overflow-hidden"
+            style={{ width: width || undefined }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}

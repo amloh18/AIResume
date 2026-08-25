@@ -59,15 +59,18 @@ interface JobApplication {
 interface JobsListViewProps {
   jobs: JobApplication[];
   loading: boolean;
-  selectedJobs: Set<string>;
-  setSelectedJobs: (jobs: Set<string> | ((prev: Set<string>) => Set<string>)) => void;
-  setShowBulkActions: (show: boolean) => void;
+  selectedJobs?: Set<string>;
+  setSelectedJobs?: (jobs: Set<string> | ((prev: Set<string>) => Set<string>)) => void;
+  setShowBulkActions?: (show: boolean) => void;
   onJobClick: (job: JobApplication) => void;
   onEditJob?: (job: JobApplication) => void;
   onDeleteJob?: (job: JobApplication) => void;
   getJobJourneys: (jobId: string) => CVJourney[];
   getJourneyProgress: (journey: CVJourney) => number;
   getJourneyStatusText: (jobJourneys: CVJourney[], jobStatus?: string) => string;
+  borderless?: boolean;
+  hideSelection?: boolean;
+  hideActions?: boolean;
 }
 
 function getSourceBadge(source?: string) {
@@ -226,15 +229,19 @@ function formatSalary(salary?: any): string {
 const JobsListView: React.FC<JobsListViewProps> = ({
   jobs,
   loading,
-  selectedJobs,
+  selectedJobs = new Set(),
   setSelectedJobs,
   setShowBulkActions,
   onJobClick,
   getJobJourneys,
   getJourneyProgress,
   getJourneyStatusText,
+  borderless = false,
+  hideSelection = false,
+  hideActions = false,
 }) => {
   const handleSelectJob = (jobId: string) => {
+    if (!setSelectedJobs) return;
     setSelectedJobs(prev => {
       const newSet = new Set(prev);
       if (newSet.has(jobId)) {
@@ -242,52 +249,59 @@ const JobsListView: React.FC<JobsListViewProps> = ({
       } else {
         newSet.add(jobId);
       }
-      setShowBulkActions(newSet.size > 0);
+      setShowBulkActions?.(newSet.size > 0);
       return newSet;
     });
   };
 
   const handleSelectAll = () => {
+    if (!setSelectedJobs) return;
     if (selectedJobs.size === jobs.length && jobs.length > 0) {
       setSelectedJobs(new Set());
-      setShowBulkActions(false);
+      setShowBulkActions?.(false);
     } else {
       setSelectedJobs(new Set(jobs.map(job => job.id || job._id)));
-      setShowBulkActions(true);
+      setShowBulkActions?.(true);
     }
   };
 
+  const visibleColCount = 7 - (hideSelection ? 1 : 0) - (hideActions ? 1 : 0) + 2;
+
   return (
-    <div className="bg-white dark:bg-[#141810] rounded-2xl overflow-hidden border border-gray-200 dark:border-white/10 shadow-sm">
+    <div className={`w-full overflow-hidden ${borderless ? '' : 'bg-white dark:bg-[#141810] rounded-2xl border border-gray-200 dark:border-white/10 shadow-sm'}`}>
       <div className="overflow-x-auto">
         <table className="w-full text-left text-xs">
           <thead className="bg-gray-50/80 dark:bg-white/[0.02] border-b border-gray-200 dark:border-white/10 text-gray-500 dark:text-gray-400 font-semibold uppercase tracking-wider text-[11px]">
             <tr>
-              <th className="py-3.5 px-4 w-10 text-center">
-                <input
-                  type="checkbox"
-                  checked={selectedJobs.size === jobs.length && jobs.length > 0}
-                  onChange={handleSelectAll}
-                  className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
-                />
-              </th>
+              {!hideSelection && (
+                <th className="py-3.5 px-4 w-10 text-center">
+                  <input
+                    type="checkbox"
+                    checked={selectedJobs.size === jobs.length && jobs.length > 0}
+                    onChange={handleSelectAll}
+                    className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
+                  />
+                </th>
+              )}
               <th className="py-3.5 px-5">Job Role & Title</th>
               <th className="py-3.5 px-4">Company</th>
               <th className="py-3.5 px-4">Location</th>
-              <th className="py-3.5 px-4">Portal / ATS</th>
+              <th className="py-3.5 px-4">Portal</th>
               <th className="py-3.5 px-4">Match Score</th>
               <th className="py-3.5 px-4">Date Applied</th>
               <th className="py-3.5 px-4">Status</th>
-              <th className="py-3.5 px-5 text-right">Actions</th>
+              {!hideActions && <th className="py-3.5 px-5 text-right">Actions</th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100 dark:divide-white/5 font-medium">
             {loading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <tr key={i} className="border-b border-gray-200 dark:border-white/10">
-                  <td className="py-4 px-4 text-center">
-                    <div className="h-4 w-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mx-auto" />
-                  </td>
+                  {!hideSelection && (
+                    <td className="py-4 px-4 text-center">
+                      <div className="h-4 w-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mx-auto" />
+                    </td>
+                  )}
                   <td className="py-4 px-5">
                     <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-44 animate-pulse" />
                   </td>
@@ -309,14 +323,16 @@ const JobsListView: React.FC<JobsListViewProps> = ({
                   <td className="py-4 px-4">
                     <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded-full w-20 animate-pulse" />
                   </td>
-                  <td className="py-4 px-5 text-right">
-                    <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-16 ml-auto animate-pulse" />
-                  </td>
+                  {!hideActions && (
+                    <td className="py-4 px-5 text-right">
+                      <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-16 ml-auto animate-pulse" />
+                    </td>
+                  )}
                 </tr>
               ))
             ) : jobs.length === 0 ? (
               <tr>
-                <td colSpan={9} className="py-16 px-4 text-center">
+                <td colSpan={visibleColCount} className="py-16 px-4 text-center">
                   <div className="w-12 h-12 rounded-2xl bg-gray-100 dark:bg-white/5 flex items-center justify-center mx-auto mb-3 text-gray-400">
                     <Briefcase className="w-6 h-6" />
                   </div>
@@ -353,14 +369,16 @@ const JobsListView: React.FC<JobsListViewProps> = ({
                     onClick={() => onJobClick(job)}
                   >
                     {/* Checkbox */}
-                    <td className="py-3.5 px-4 text-center" onClick={(e) => e.stopPropagation()}>
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => handleSelectJob(jobId)}
-                        className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
-                      />
-                    </td>
+                    {!hideSelection && (
+                      <td className="py-3.5 px-4 text-center" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => handleSelectJob(jobId)}
+                          className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
+                        />
+                      </td>
+                    )}
 
                     {/* Job Role & Title */}
                     <td className="py-3.5 px-5">
@@ -378,7 +396,7 @@ const JobsListView: React.FC<JobsListViewProps> = ({
                     <td className="py-3.5 px-4 text-gray-700 dark:text-gray-300">
                       <div className="flex items-center gap-2">
                         <CompanyLogo company={job.company} size={22} logoUrl={job.companyLogo} jobId={jobId} />
-                        <span className="font-medium text-xs truncate max-w-[140px]">
+                        <span className="font-medium text-xs truncate max-w-[110px] sm:max-w-[140px]">
                           {job.company || 'Unknown Company'}
                         </span>
                       </div>
@@ -388,7 +406,9 @@ const JobsListView: React.FC<JobsListViewProps> = ({
                     <td className="py-3.5 px-4 text-gray-600 dark:text-gray-400">
                       <div className="flex items-center gap-1.5 text-xs">
                         <MapPin className="w-3 h-3 text-gray-400 shrink-0" />
-                        <span className="truncate max-w-[130px]">{job.location || 'Remote'}</span>
+                        <span className="truncate max-w-[70px] sm:max-w-[100px] md:max-w-[130px]" title={job.location || 'Remote'}>
+                          {job.location || 'Remote'}
+                        </span>
                       </div>
                     </td>
 
@@ -424,26 +444,27 @@ const JobsListView: React.FC<JobsListViewProps> = ({
                     </td>
 
                     {/* Actions */}
-                    <td className="py-3.5 px-5 text-right" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-end gap-1.5">
-                        {/* CV & CL indicators */}
-                        {jobJourneys && jobJourneys.length > 0 && (() => {
-                          const primaryJourney = jobJourneys[0];
-                          const hasCV = Boolean(primaryJourney.cvId);
-                          const hasCoverLetter = Boolean(primaryJourney.coverLetterId);
-                          return (
-                            <div className="flex items-center gap-1.5 mr-1 text-[11px] font-semibold">
-                              <span className={`inline-flex items-center gap-0.5 ${hasCV ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400'}`} title={hasCV ? 'CV Generated' : 'No CV'}>
-                                <CheckCircle className="w-3.5 h-3.5" />
-                                <span>CV</span>
-                              </span>
-                              <span className={`inline-flex items-center gap-0.5 ${hasCoverLetter ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400'}`} title={hasCoverLetter ? 'Cover Letter Generated' : 'No Cover Letter'}>
-                                <CheckCircle className="w-3.5 h-3.5" />
-                                <span>CL</span>
-                              </span>
-                            </div>
-                          );
-                        })()}
+                    {!hideActions && (
+                      <td className="py-3.5 px-5 text-right" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-1.5">
+                          {/* CV & CL indicators */}
+                          {jobJourneys && jobJourneys.length > 0 && (() => {
+                            const primaryJourney = jobJourneys[0];
+                            const hasCV = Boolean(primaryJourney.cvId);
+                            const hasCoverLetter = Boolean(primaryJourney.coverLetterId);
+                            return (
+                              <div className="flex items-center gap-1.5 mr-1 text-[11px] font-semibold">
+                                <span className={`inline-flex items-center gap-0.5 ${hasCV ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400'}`} title={hasCV ? 'CV Generated' : 'No CV'}>
+                                  <CheckCircle className="w-3.5 h-3.5" />
+                                  <span>CV</span>
+                                </span>
+                                <span className={`inline-flex items-center gap-0.5 ${hasCoverLetter ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400'}`} title={hasCoverLetter ? 'Cover Letter Generated' : 'No Cover Letter'}>
+                                  <CheckCircle className="w-3.5 h-3.5" />
+                                  <span>CL</span>
+                                </span>
+                              </div>
+                            );
+                          })()}
 
                         {/* External Link */}
                         {(job.jobUrl || job.applyUrl || job.sourceUrl) && (
@@ -489,6 +510,7 @@ const JobsListView: React.FC<JobsListViewProps> = ({
                         </button>
                       </div>
                     </td>
+                    )}
                   </motion.tr>
                 );
               })

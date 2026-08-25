@@ -87,32 +87,33 @@ export async function GET(
       return undefined;
     };
 
+    const jobAny = job as any;
     // Transform the job data to match the expected format - include ALL fields from database
     const transformedJob = {
-      id: job._id,
-      _id: job._id, // Include both id and _id for compatibility
-      title: job.jobTitle,
+      _id: job._id.toString(),
+      id: job._id.toString(),
+      title: job.jobTitle, // Ensure title is always present for frontend compatibility
       jobTitle: job.jobTitle, // Include both title and jobTitle for compatibility
       company: job.company,
-      companyLogo: job.companyLogo,
+      companyLogo: jobAny.companyLogo,
       location: job.location,
       jobUrl: job.jobUrl,
       jobDescription: job.jobDescription,
       description: job.jobDescription, // For compatibility
-      requirements: job.requirements || [],
-      responsibilities: job.responsibilities || [],
+      requirements: jobAny.requirements || [],
+      responsibilities: jobAny.responsibilities || [],
       salary: job.salary,
-      type: job.type || 'full-time',
-      remote: job.remote || false,
-      postedDate: dateToISO(job.postedDate),
-      applicationDeadline: dateToISO(job.applicationDeadline),
+      type: jobAny.type || 'full-time',
+      remote: jobAny.remote || false,
+      postedDate: dateToISO(jobAny.postedDate),
+      applicationDeadline: dateToISO(jobAny.applicationDeadline || job.deadline),
       deadline: dateToISO(job.deadline),
       applicationDate: dateToISO(job.applicationDate),
       appliedAt: job.appliedAt instanceof Date ? job.appliedAt.toISOString() : (job.appliedAt || undefined),
       status: job.status,
       priority: job.priority,
       notes: job.notes,
-      sponsorship: job.sponsorship,
+      sponsorship: jobAny.sponsorship,
       tags: job.tags || [],
       contactDetails: job.contactDetails ? {
         name: job.contactDetails.name || '',
@@ -130,20 +131,20 @@ export async function GET(
       })),
       attachments: job.attachments || [],
       source: job.source,
-      sourceUrl: job.sourceUrl,
-      atsScore: job.atsScore,
-      matchScore: job.matchScore,
-      trustScore: job.trustScore,
-      trustSnapshot: (job as any).trustSnapshot,
-      transparencySnapshot: (job as any).transparencySnapshot,
-      interviewCoach: job.interviewCoach,
-      extractedJd: job.extractedJd,
-      atsAnalysis: job.atsAnalysis,
-      statusHistory: (job.statusHistory || []).map((sh: any) => ({
+      sourceUrl: jobAny.sourceUrl,
+      atsScore: jobAny.atsScore,
+      matchScore: jobAny.matchScore,
+      trustScore: jobAny.trustScore,
+      trustSnapshot: jobAny.trustSnapshot,
+      transparencySnapshot: jobAny.transparencySnapshot,
+      interviewCoach: jobAny.interviewCoach,
+      extractedJd: jobAny.extractedJd,
+      atsAnalysis: jobAny.atsAnalysis,
+      statusHistory: (jobAny.statusHistory || []).map((sh: any) => ({
         ...sh,
         changedAt: sh.changedAt instanceof Date ? sh.changedAt.toISOString() : sh.changedAt
       })),
-      isArchived: job.isArchived || false,
+      isArchived: jobAny.isArchived || false,
       // cvId removed - relationships now managed through CVJourney
       userId: job.userId,
       createdAt: job.createdAt instanceof Date ? job.createdAt.toISOString() : job.createdAt,
@@ -230,35 +231,38 @@ export async function PUT(
     console.log('🔍 Job Update API - Request body keys:', Object.keys(body));
 
     // Get the current job to check for status changes - also verify it belongs to the user
-    // Get the current job - Find by ID first, then verify user ownership manually
-    // This avoids schema type (ObjectId vs String) mismatches with Mixed type userId
+    // Find by ID first, then verify user ownership manually
     let currentJob: any = null;
     if (mongoose.Types.ObjectId.isValid(resolvedParams.id)) {
       const jobId = new mongoose.Types.ObjectId(resolvedParams.id);
       currentJob = await JobApplication.findOne({ _id: jobId });
-
-      // Ownership check
-      if (currentJob) {
-        // Handle both ObjectId and String formats for userId comparison
-        const jobUserIdStr = currentJob.userId.toString();
-        const requestUserIdStr = userId.toString();
-
-        if (jobUserIdStr !== requestUserIdStr) {
-          console.log(`❌ Job Update API - Ownership mismatch. Job: ${jobUserIdStr}, Request: ${requestUserIdStr}`);
-          currentJob = null; // Treat as not found/unauthorized
-        } else {
-          console.log(`✅ Job Update API - Ownership verified via string comparison`);
-        }
-      }
-    } else {
-      console.log('❌ Job Update API - Invalid job ID format:', resolvedParams.id);
-      return NextResponse.json({ error: 'Invalid job ID format' }, { status: 400 });
+    }
+    if (!currentJob) {
+      currentJob = await JobApplication.findOne({
+        $or: [
+          { _id: resolvedParams.id },
+          { id: resolvedParams.id },
+          { jobId: resolvedParams.id }
+        ]
+      });
     }
 
-    console.log('🔍 Job Update API - Current job found:', !!currentJob);
     if (!currentJob) {
-      console.log('❌ Job Update API - Job not found or does not belong to user (checked ID: ' + resolvedParams.id + ')');
-      return NextResponse.json({ error: 'Job not found' }, { status: 404 });
+      console.log('❌ Job Update API - Job not found (checked ID: ' + resolvedParams.id + ')');
+      return NextResponse.json({ success: false, error: 'Job not found' }, { status: 404 });
+    }
+
+    // Ownership check
+    if (currentJob.userId && userId) {
+      const jobUserIdStr = currentJob.userId.toString();
+      const requestUserIdStr = userId.toString();
+
+      if (jobUserIdStr !== requestUserIdStr) {
+        console.log(`❌ Job Update API - Ownership mismatch. Job: ${jobUserIdStr}, Request: ${requestUserIdStr}`);
+        return NextResponse.json({ success: false, error: 'Job not found' }, { status: 404 });
+      } else {
+        console.log(`✅ Job Update API - Ownership verified via string comparison`);
+      }
     }
 
     // Track status changes
@@ -1137,26 +1141,35 @@ export async function DELETE(
     console.log('🔍 Job DELETE API - Job ID type:', typeof jobId);
     console.log('🔍 Job DELETE API - User ID type:', typeof userId);
 
-    // Convert jobId and userId to ObjectId for proper querying
-    const normalizedJobId = mongoose.Types.ObjectId.isValid(jobId)
-      ? new mongoose.Types.ObjectId(jobId)
-      : jobId;
-    const normalizedUserId = mongoose.Types.ObjectId.isValid(userId)
-      ? new mongoose.Types.ObjectId(userId)
-      : userId;
-
-    console.log('🔍 Job DELETE API - Normalized Job ID:', normalizedJobId.toString());
-    console.log('🔍 Job DELETE API - Normalized User ID:', normalizedUserId.toString());
-
-    // First, find the job to ensure it exists and user owns it
-    const job = await JobApplication.findOne({
-      _id: normalizedJobId,
-      userId: normalizedUserId
-    });
+    // Find the job first with flexible ID support
+    let job: any = null;
+    if (mongoose.Types.ObjectId.isValid(jobId)) {
+      job = await JobApplication.findOne({ _id: new mongoose.Types.ObjectId(jobId) });
+    }
+    if (!job) {
+      job = await JobApplication.findOne({
+        $or: [
+          { _id: jobId },
+          { id: jobId },
+          { jobId: jobId }
+        ]
+      });
+    }
 
     if (!job) {
-      console.log('❌ Job DELETE API - Job not found');
-      return NextResponse.json({ error: 'Job not found' }, { status: 404 });
+      console.log('❌ Job DELETE API - Job not found:', jobId);
+      return NextResponse.json({ success: false, error: 'Job not found' }, { status: 404 });
+    }
+
+    // Ownership check (tolerant to ObjectId and String formats)
+    if (job.userId && userId) {
+      const jobUserIdStr = job.userId.toString();
+      const requestUserIdStr = userId.toString();
+
+      if (jobUserIdStr !== requestUserIdStr) {
+        console.log(`❌ Job DELETE API - Ownership mismatch. Job: ${jobUserIdStr}, Request: ${requestUserIdStr}`);
+        return NextResponse.json({ success: false, error: 'Unauthorized to delete this job' }, { status: 403 });
+      }
     }
 
     // Import models for cascade deletion
@@ -1164,12 +1177,11 @@ export async function DELETE(
 
     // Step 1: Find all journeys associated with this job
     console.log('🔍 Job DELETE API - Finding associated journeys for job:', jobId);
-    // Try both string and ObjectId formats for jobId matching
     const journeys = await ApplicationJourney.find({
       $or: [
         { jobId: jobId.toString() },
-        { jobId: normalizedJobId },
-        { jobId: normalizedJobId.toString() }
+        { jobId: job._id },
+        { jobId: job._id.toString() }
       ]
     });
 
@@ -1183,43 +1195,30 @@ export async function DELETE(
       if (journey.coverLetterId) {
         try {
           console.log('🔍 Job DELETE API - Deleting cover letter:', journey.coverLetterId);
-          const coverLetterResult = await CoverLetter.findByIdAndDelete(journey.coverLetterId);
-          if (coverLetterResult) {
-            console.log('✅ Job DELETE API - Cover letter deleted successfully');
-          } else {
-            console.log('⚠️ Job DELETE API - Cover letter not found (already deleted)');
-          }
+          await CoverLetter.findByIdAndDelete(journey.coverLetterId);
+          console.log('✅ Job DELETE API - Cover letter deleted successfully');
         } catch (error) {
           console.error('❌ Job DELETE API - Error deleting cover letter:', error);
-          // Continue with deletion even if cover letter deletion fails
         }
       }
 
-      // Delete CV if it exists (check CV object reference only)
+      // Delete CV if it exists
       if (journey.cvId) {
         try {
           console.log('🔍 Job DELETE API - Checking CV for deletion:', journey.cvId);
           const cv = await CV.findById(journey.cvId);
 
           if (cv) {
-            // Verify CV belongs to the user before deletion (check CV object reference only)
-            const cvUserId = cv.userId.toString();
-            const normalizedUserIdStr = normalizedUserId.toString();
-            if (cvUserId === userId || cvUserId === normalizedUserIdStr) {
+            const cvUserId = cv.userId ? cv.userId.toString() : '';
+            const requestUserIdStr = userId ? userId.toString() : '';
+            if (cvUserId === requestUserIdStr) {
               console.log('🔍 Job DELETE API - Deleting CV:', journey.cvId);
-              const cvResult = await CV.findByIdAndDelete(journey.cvId);
-              if (cvResult) {
-                console.log('✅ Job DELETE API - CV deleted successfully');
-              }
-            } else {
-              console.warn('⚠️ Job DELETE API - CV does not belong to user, skipping deletion');
+              await CV.findByIdAndDelete(journey.cvId);
+              console.log('✅ Job DELETE API - CV deleted successfully');
             }
-          } else {
-            console.log('⚠️ Job DELETE API - CV not found (already deleted)');
           }
         } catch (error) {
           console.error('❌ Job DELETE API - Error deleting CV:', error);
-          // Continue with deletion even if CV deletion fails
         }
       }
 
@@ -1230,7 +1229,6 @@ export async function DELETE(
         console.log('✅ Job DELETE API - Journey deleted successfully');
       } catch (error) {
         console.error('❌ Job DELETE API - Error deleting journey:', error);
-        // Continue with job deletion even if journey deletion fails
       }
     }
 
@@ -1239,17 +1237,17 @@ export async function DELETE(
     try {
       console.log('🔍 Job DELETE API - Finding notifications for job:', jobId);
       const notificationsResult = await Notification.deleteMany({
-        userId: new mongoose.Types.ObjectId(userId),
         $or: [
           { 'actionData.jobId': jobId.toString() },
-          { 'metadata.jobId': jobId.toString() }
+          { 'metadata.jobId': jobId.toString() },
+          { 'actionData.jobId': job._id.toString() },
+          { 'metadata.jobId': job._id.toString() }
         ]
       });
       deletedNotificationsCount = notificationsResult.deletedCount;
       console.log(`✅ Job DELETE API - Deleted ${deletedNotificationsCount} notification(s)`);
     } catch (error) {
       console.error('❌ Job DELETE API - Error deleting notifications:', error);
-      // Continue with deletion even if notification deletion fails
     }
 
     // Step 4: Delete temporary CV drafts that reference this job
@@ -1257,27 +1255,20 @@ export async function DELETE(
     try {
       console.log('🔍 Job DELETE API - Finding temporary CV drafts for job:', jobId);
       const draftsResult = await TemporaryCVDraft.deleteMany({
-        jobId: new mongoose.Types.ObjectId(jobId),
-        userId: new mongoose.Types.ObjectId(userId)
+        $or: [
+          { jobId: jobId.toString() },
+          { jobId: job._id.toString() }
+        ]
       });
       deletedDraftsCount = draftsResult.deletedCount;
       console.log(`✅ Job DELETE API - Deleted ${deletedDraftsCount} temporary CV draft(s)`);
     } catch (error) {
       console.error('❌ Job DELETE API - Error deleting temporary CV drafts:', error);
-      // Continue with deletion even if draft deletion fails
     }
 
     // Step 5: Finally, delete the job itself
-    console.log('🔍 Job DELETE API - Deleting job:', jobId);
-    const deletedJob = await JobApplication.findOneAndDelete({
-      _id: normalizedJobId,
-      userId: normalizedUserId
-    });
-
-    if (!deletedJob) {
-      console.log('❌ Job DELETE API - Job deletion failed (may have been deleted already)');
-      return NextResponse.json({ error: 'Job deletion failed' }, { status: 500 });
-    }
+    console.log('🔍 Job DELETE API - Deleting job:', job._id);
+    await JobApplication.findByIdAndDelete(job._id);
 
     console.log('✅ Job DELETE API - Job and all associated data deleted successfully');
 
@@ -1301,3 +1292,6 @@ export async function DELETE(
     );
   }
 }
+
+export const PATCH = PUT;
+

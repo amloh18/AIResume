@@ -45,12 +45,13 @@ export async function GET(request: NextRequest) {
       maxSalary = 95000;
     }
 
-    if (jobs.length > 0) {
-      const salaries = jobs.map((j: any) => (j.salary.min + (j.salary.max || j.salary.min)) / 2);
+    const validSalaries = jobs.filter((j: any) => j.salary?.min !== undefined);
+    if (validSalaries.length > 0) {
+      const salaries = validSalaries.map((j: any) => (j.salary.min + (j.salary.max || j.salary.min)) / 2);
       averageSalary = salaries.reduce((a, b) => a + b, 0) / salaries.length;
       minSalary = Math.min(...salaries);
       maxSalary = Math.max(...salaries);
-      currency = jobs[0].salary.currency || 'USD';
+      currency = validSalaries[0]?.salary?.currency || currency;
     }
 
     return NextResponse.json({

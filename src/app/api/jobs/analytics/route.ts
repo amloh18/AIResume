@@ -127,10 +127,7 @@ export async function GET(request: NextRequest) {
     const now = new Date();
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     
-    const appliedJobs = jobs.filter(job => 
-      job.status === 'applied' && 
-      job.status !== 'saved' // Exclude saved
-    );
+    const appliedJobs = jobs.filter(job => job.status === 'applied');
     
     const ghostJobs = appliedJobs.filter(job => {
       const updatedAt = new Date(job.updatedAt);

@@ -42,7 +42,7 @@ export function selectPromotion(options: PromotionManagerOptions): PromotionConf
 
   // Filter promotions by context
   const contextMatches = PROMOTION_TYPES.filter((promotion) => {
-    return promotion.contexts.some((ctx) => contexts.includes(ctx));
+    return promotion.contexts.some((ctx) => (contexts as any[]).includes(ctx));
   });
 
   if (contextMatches.length === 0) {
@@ -174,7 +174,7 @@ export function getAvailablePromotions(options: PromotionManagerOptions): Promot
   } = options;
 
   const contextMatches = PROMOTION_TYPES.filter((promotion) => {
-    return promotion.contexts.some((ctx) => contexts.includes(ctx));
+    return promotion.contexts.some((ctx) => (contexts as any[]).includes(ctx));
   });
 
   return contextMatches.filter((promotion) => !isDismissed(promotion.id));
