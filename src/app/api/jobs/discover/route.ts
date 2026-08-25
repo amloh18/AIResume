@@ -563,15 +563,35 @@ export async function GET(request: NextRequest) {
           .collection('jobapplications')
           .find({ userId: new ObjectId(userId) })
           .toArray();
-        const savedExternalIds = new Set([
-          ...savedJobsDocs.map((d: any) => d._id?.toString()),
-          ...savedJobsDocs.map((d: any) => d.externalId),
-          ...jobApps.map((d: any) => d._id?.toString()),
-          ...jobApps.map((d: any) => d.jobId),
-        ].filter(Boolean));
 
-        if (savedExternalIds.size > 0) {
-          listings = listings.filter((job) => savedExternalIds.has(job._id) || savedExternalIds.has((job as any).externalId));
+        // Build a set of all possible saved-job identifiers (same logic as frontend isJobSaved)
+        const savedUrls = new Set<string>();
+        const savedCompanyTitles = new Set<string>();
+
+        for (const j of savedJobsDocs) {
+          if (j.jobUrl) savedUrls.add(j.jobUrl);
+          if (j.sourceUrl) savedUrls.add(j.sourceUrl);
+          if (j.company && (j.jobTitle || j.title)) {
+            savedCompanyTitles.add(`${(j.company || '').toLowerCase()}-${((j.jobTitle || j.title) || '').toLowerCase()}`);
+          }
+        }
+        for (const a of jobApps) {
+          if (a.jobUrl) savedUrls.add(a.jobUrl);
+          if (a.sourceUrl) savedUrls.add(a.sourceUrl);
+          if (a.company && a.jobTitle) {
+            savedCompanyTitles.add(`${(a.company || '').toLowerCase()}-${(a.jobTitle || '').toLowerCase()}`);
+          }
+        }
+
+        if (savedUrls.size > 0 || savedCompanyTitles.size > 0) {
+          listings = listings.filter((job) => {
+            if (job.applyUrl && savedUrls.has(job.applyUrl)) return true;
+            const key = `${(job.company || '').toLowerCase()}-${(job.title || '').toLowerCase()}`;
+            return savedCompanyTitles.has(key);
+          });
+        } else {
+          // No saved jobs at all — return empty
+          listings = [];
         }
       } catch (err) {
         console.warn('Failed to filter saved jobs on server:', err);
