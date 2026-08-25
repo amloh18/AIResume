@@ -3,6 +3,7 @@ import { authenticateRequest } from '@/lib/utils/auth-helpers-api';
 import { getConnection } from '@/lib/database';
 import { UnifiedApplyService, ApplyJobContext } from '@/lib/services/unifiedApplyService';
 import type { ATSType } from '@/types/automation-schema';
+import { sanitizeJobApplicationSource } from '@/lib/jobs/jobApplicationSource';
 
 /**
  * POST /api/jobs/auto-apply
@@ -98,9 +99,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Build application context — sanitize source to valid enum values
-    const validSources = ['extension', 'manual', 'import', 'linkedin', 'indeed', 'company-website', 'referral', 'discovery', 'other'];
-    const sanitizedSource = source && validSources.includes(source) ? source : (resolvedAtsType || 'other');
+    const sanitizedSource = sanitizeJobApplicationSource(source || resolvedAtsType);
 
     const context: ApplyJobContext = {
       jobId: jobId || `job_${Date.now()}`,
@@ -127,7 +126,7 @@ export async function POST(request: NextRequest) {
       screeningAnswers: result.screeningAnswers,
       nextStep: result.nextStep,
       error: result.error,
-    });
+    }, { status: result.success ? 200 : 422 });
   } catch (error: any) {
     console.error('Error in unified auto-apply:', error);
     return NextResponse.json(

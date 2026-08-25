@@ -5,6 +5,7 @@ import UserSettings from '@/models/UserSettings';
 import { createErrorResponse } from '@/lib/db-utils';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { parseCvTailoringMode } from '@/lib/cv-tailoring/tailoringMode';
 
 export async function GET(request: NextRequest) {
   try {
@@ -70,7 +71,8 @@ export async function GET(request: NextRequest) {
         theme: user.settings.theme,
         notifications: user.settings.notifications,
         timezone: user.settings.timezone,
-        languagePreference: user.settings.languagePreference,
+        languagePreference: user.settings?.languagePreference,
+        cvTailoringMode: parseCvTailoringMode(user.settings?.cvTailoringMode),
         
         // Detailed settings from UserSettings table
         security: userSettings.security,
@@ -141,7 +143,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Update basic settings in User table
-    if (settings?.theme !== undefined || settings?.notifications || settings?.timezone !== undefined || settings?.languagePreference !== undefined) {
+    if (settings?.theme !== undefined || settings?.notifications || settings?.timezone !== undefined || settings?.languagePreference !== undefined || settings?.cvTailoringMode !== undefined) {
       const basicSettingsUpdates: any = {};
       
       if (settings.theme !== undefined) {
@@ -160,6 +162,9 @@ export async function PUT(request: NextRequest) {
       }
       if (settings.languagePreference !== undefined) {
         basicSettingsUpdates['settings.languagePreference'] = settings.languagePreference;
+      }
+      if (settings.cvTailoringMode !== undefined) {
+        basicSettingsUpdates['settings.cvTailoringMode'] = parseCvTailoringMode(settings.cvTailoringMode);
       }
 
       if (Object.keys(basicSettingsUpdates).length > 0) {

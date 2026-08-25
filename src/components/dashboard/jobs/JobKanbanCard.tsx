@@ -455,8 +455,8 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
           <Clock size={12} />
           <span>Applied {getDaysAgo(job.applicationDate)}</span>
         </div>
-        <div className="text-small text-gray-400 font-medium">
-          {job.source || "Manual"}
+        <div className="text-small text-gray-400 font-medium capitalize">
+          {(job.source || "manual").replace(/-/g, " ")}
         </div>
       </div>
 

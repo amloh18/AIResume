@@ -5,6 +5,7 @@ import { motion, useAnimation, AnimatePresence } from 'framer-motion';
 import { ArrowRight, Star, X, Volume2, VolumeX } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { heroTopPaddingClass } from '@/components/landing/announcementBannerConfig';
 
 const JOB_SITES = [
   { name: 'LinkedIn', domain: 'linkedin.com' },
@@ -46,7 +47,7 @@ const Hero = ({ withBanner = false }: { withBanner?: boolean }) => {
       <div className="relative z-20 w-full max-w-7xl mx-auto px-4 tablet:px-6 desktop:px-8 flex flex-col items-center h-full">
         
         {/* Top: Celebrating Line */}
-        <div className={`${withBanner ? 'pt-40' : 'pt-32'} tablet:pt-28 desktop:pt-32 w-full flex flex-col items-center transition-[padding] duration-300`}>
+        <div className={`${heroTopPaddingClass(withBanner)} w-full flex flex-col items-center transition-[padding] duration-300`}>
           <motion.div 
             className="mb-6 desktop:mb-8 flex items-center gap-3 px-4 py-2 rounded-full bg-white/5 border border-white/10 backdrop-blur-md shadow-2xl"
             initial={{ opacity: 0, y: -20 }}

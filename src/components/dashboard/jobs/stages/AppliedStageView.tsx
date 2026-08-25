@@ -190,7 +190,7 @@ const AppliedStageView: React.FC<AppliedStageViewProps> = ({
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-1.5 text-small text-gray-500 dark:text-gray-400">
                       <Globe size={14} />
-                      <span>{job.source || 'Manual'}</span>
+                      <span className="capitalize">{(job.source || 'manual').replace(/-/g, ' ')}</span>
                     </div>
                   </td>
 

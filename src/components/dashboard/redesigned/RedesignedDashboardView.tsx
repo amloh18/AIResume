@@ -900,8 +900,8 @@ interface ContinueJobCardProps {
 function ContinueJobCard({ job, cvs, onOpenSidebar }: ContinueJobCardProps) {
   const router = useRouter();
   const linkedCv = useMemo(() => findLinkedCvForJob(job, cvs), [job, cvs]);
-  const linkedCvId = linkedCv ? cvId(linkedCv) : '';
-  const hasLinkedCv = !!linkedCv;
+  const linkedCvId = linkedCv ? cvId(linkedCv) : String(job?.linkedCvId || job?.linkedCv?._id || job?.cvId || job?.journey?.cvId || '');
+  const hasLinkedCv = !!linkedCv || !!linkedCvId;
   const atsScore = Math.round(job?.atsScore || job?.matchScore || cvAtsScore(linkedCv) || (linkedCv?.atsScore) || 0);
 
   const dynamicStep = useMemo(() => {

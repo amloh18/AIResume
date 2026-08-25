@@ -421,6 +421,7 @@ export function ApplicationsPanel({ userId: propUserId, metrics }: ApplicationsP
       if (res.ok) {
         toast.success('Job deleted successfully');
         setJobs(prev => prev.filter(j => (j.id || j._id) !== jobId));
+        window.dispatchEvent(new CustomEvent('jobDeleted', { detail: { jobId } }));
         loadData(true);
       } else {
         toast.error('Failed to delete job');
@@ -442,7 +443,7 @@ export function ApplicationsPanel({ userId: propUserId, metrics }: ApplicationsP
     savePreferences({ mode });
   };
 
-  const handleJobStatusUpdate = async (jobId: string, newStatus: string) => {
+  const handleJobStatusUpdate = async (jobId: string, newStatus: string, silent = false) => {
     try {
       setIsUpdatingJobStatus(prev => new Set(prev).add(jobId));
       const res = await authenticatedFetch(`/api/jobs/${jobId}`, {
@@ -452,13 +453,14 @@ export function ApplicationsPanel({ userId: propUserId, metrics }: ApplicationsP
       });
       if (res.ok) {
         setJobs(prev => prev.map(j => (j.id === jobId || j._id === jobId) ? { ...j, status: newStatus as any } : j));
-        toast.success(`Job moved to ${newStatus}`);
+        window.dispatchEvent(new CustomEvent('jobUpdated', { detail: { jobId, status: newStatus } }));
+        if (!silent) toast.success(`Job moved to ${newStatus}`);
       } else {
-        toast.error('Failed to update status');
+        if (!silent) toast.error('Failed to update status');
       }
     } catch (err) {
       console.error('Error updating status:', err);
-      toast.error('Error updating status');
+      if (!silent) toast.error('Error updating status');
     } finally {
       setIsUpdatingJobStatus(prev => {
         const next = new Set(prev);
@@ -489,7 +491,7 @@ export function ApplicationsPanel({ userId: propUserId, metrics }: ApplicationsP
     const job = jobs.find(j => j.id === jobId || j._id === jobId);
     if (!job || job.status === targetStatus) return;
 
-    if (job.status === 'draft' && targetStatus === 'created') {
+    if ((job.status === 'draft' || job.status === 'saved') && targetStatus === 'created') {
       setPendingCreatedStageJob(job);
       return;
     }
@@ -503,8 +505,44 @@ export function ApplicationsPanel({ userId: propUserId, metrics }: ApplicationsP
     setZoomedStage(zoomedStage === status ? null : status);
   };
 
-  const handleCreateJourney = (jobId: string) => {
-    router.push(`/editor?jobId=${jobId}`);
+  const handleCreateJourney = async (jobOrId: JobApplication | string) => {
+    const job = typeof jobOrId === 'string'
+      ? jobs.find(j => (j.id || j._id) === jobOrId) || null
+      : jobOrId;
+    const jobId = typeof jobOrId === 'string' ? jobOrId : (jobOrId.id || jobOrId._id);
+    if (!job) return;
+
+    try {
+      toast.loading('Creating journey & generating documents…', { id: `journey-${jobId}` });
+
+      // 1. Move job to 'created' status first (API rejects 'saved' jobs)
+      await handleJobStatusUpdate(jobId, 'created', true);
+
+      // 2. Create the journey via API (triggers async CV/CL generation)
+      const res = await authenticatedFetch('/api/application-journey', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jobId,
+          jobTitle: job.jobTitle || job.title,
+          company: job.company,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Failed to create journey');
+      }
+
+      // 3. Refresh data to pick up the new journey
+      await loadData(true);
+      window.dispatchEvent(new CustomEvent('jobUpdated', { detail: { jobId, journeyCreated: true } }));
+
+      toast.success('Journey created — documents generating in background', { id: `journey-${jobId}` });
+    } catch (err: any) {
+      console.error('Error creating journey:', err);
+      toast.error(err.message || 'Failed to create journey', { id: `journey-${jobId}` });
+    }
   };
 
   const handleImproveATS = (jobId: string) => {
@@ -831,7 +869,7 @@ export function ApplicationsPanel({ userId: propUserId, metrics }: ApplicationsP
           getJourneyStatusText={getJourneyStatusText}
         />
       ) : (
-        <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-2xl p-4 shadow-sm min-h-[500px]">
+        <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-2xl p-4 shadow-sm" style={{ minHeight: 'calc(100vh - 320px)' }}>
           <JobsKanbanView
             jobs={filteredJobs}
             jobsByStatus={jobsByStatus}
@@ -939,7 +977,7 @@ export function ApplicationsPanel({ userId: propUserId, metrics }: ApplicationsP
           if (!pendingCreatedStageJob) return;
           const jobToCreate = pendingCreatedStageJob;
           setPendingCreatedStageJob(null);
-          await handleJobStatusUpdate(jobToCreate.id || jobToCreate._id, 'created');
+          await handleCreateJourney(jobToCreate);
         }}
         jobTitle={pendingCreatedStageJob?.jobTitle || pendingCreatedStageJob?.title}
         company={pendingCreatedStageJob?.company}

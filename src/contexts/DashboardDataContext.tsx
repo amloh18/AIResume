@@ -714,6 +714,21 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
     refreshAll();
   }, [authLoading, user?.id, refreshAll]);
 
+  // Listen for job change events from other components (tracker, discover, etc.)
+  useEffect(() => {
+    const handleJobChanged = () => {
+      console.log('🔄 DashboardData - Received job change event, refreshing jobs');
+      refreshJobs();
+    };
+
+    window.addEventListener('jobUpdated', handleJobChanged as EventListener);
+    window.addEventListener('jobDeleted', handleJobChanged as EventListener);
+    return () => {
+      window.removeEventListener('jobUpdated', handleJobChanged as EventListener);
+      window.removeEventListener('jobDeleted', handleJobChanged as EventListener);
+    };
+  }, [refreshJobs]);
+
   // Calculate legacy loading state (for backward compatibility)
   const loading = criticalLoading || Object.values(secondaryLoading).some(v => v);
 

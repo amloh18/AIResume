@@ -12,12 +12,12 @@
 }
 
 .card-nav-container.with-banner {
-  top: 3.4em;
+  top: calc(2em + var(--announcement-banner-height, 2.75rem));
 }
 
 @media (max-width: 640px) {
   .card-nav-container.with-banner {
-    top: 3.8em;
+    top: calc(1.2em + var(--announcement-banner-height, 2.75rem));
   }
 }
 

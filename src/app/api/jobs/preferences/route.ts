@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest } from '@/lib/utils/auth-helpers-api';
 import { getConnection } from '@/lib/database';
 import User from '@/models/User';
+import {
+  DEFAULT_CV_TAILORING_MODE,
+  parseCvTailoringMode,
+  type CvTailoringMode,
+} from '@/lib/cv-tailoring/tailoringMode';
 
 export interface GlobalAutoApplyPreferences {
   enabled: boolean;
@@ -53,6 +58,7 @@ export async function GET(request: NextRequest) {
     }
 
     const saved = user.autoApplyPreferences || {};
+    const cvTailoringMode: CvTailoringMode = parseCvTailoringMode(user.settings?.cvTailoringMode);
 
     const preferences: GlobalAutoApplyPreferences = {
       enabled: saved.enabled ?? user.naukriIntegration?.preferences?.autoApplyEnabled ?? false,
@@ -82,6 +88,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      cvTailoringMode,
       preferences,
       portalStatus: {
         naukri: user.naukriIntegration?.sessionStatus === 'active',
@@ -111,16 +118,36 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { preferences } = body;
-
-    if (!preferences) {
-      return NextResponse.json({ error: 'Preferences payload required' }, { status: 400 });
-    }
+    const { preferences, cvTailoringMode: requestedMode } = body;
 
     await getConnection();
     const user = await User.findById(auth.userId);
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    if (requestedMode !== undefined) {
+      if (!user.settings) {
+        user.settings = {
+          theme: 'auto',
+          notifications: { email: true, push: true },
+          timezone: 'UTC',
+          languagePreference: 'en',
+        };
+      }
+      user.settings.cvTailoringMode = parseCvTailoringMode(requestedMode);
+    }
+
+    if (!preferences) {
+      if (requestedMode === undefined) {
+        return NextResponse.json({ error: 'Preferences payload required' }, { status: 400 });
+      }
+      await user.save();
+      return NextResponse.json({
+        success: true,
+        message: 'CV tailoring mode saved. This applies to manual jobs, the extension, and job boards.',
+        cvTailoringMode: user.settings.cvTailoringMode || DEFAULT_CV_TAILORING_MODE,
+      });
     }
 
     const updatedGlobal: GlobalAutoApplyPreferences = {
@@ -173,6 +200,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: 'Global auto-apply preferences saved and synced across all portals!',
+      cvTailoringMode: user.settings?.cvTailoringMode || DEFAULT_CV_TAILORING_MODE,
       preferences: updatedGlobal,
     });
   } catch (error: any) {

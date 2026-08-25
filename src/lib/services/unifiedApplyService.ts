@@ -6,6 +6,7 @@ import CV from '@/models/CV';
 import JobApplication from '@/models/JobApplication';
 import { decryptToken } from '@/lib/auth/token-encryption';
 import type { ApplicationStep, ATSType } from '@/types/automation-schema';
+import { sanitizeJobApplicationSource } from '@/lib/jobs/jobApplicationSource';
 
 export interface ApplyJobContext {
   jobId: string;
@@ -284,11 +285,8 @@ export class UnifiedApplyService {
       notes: `Submitted via ${context.atsType} Auto-Apply`,
     });
 
-    // Sanitize source to valid enum values
-    const validSources = ['extension', 'manual', 'import', 'linkedin', 'indeed', 'company-website', 'referral', 'discovery', 'other'];
-    const sanitizedSource = validSources.includes(context.source) ? context.source : 'other';
-
-    return JobApplication.create({
+    const sanitizedSource = sanitizeJobApplicationSource(context.source);
+    const payload = {
       userId,
       jobTitle: context.title,
       company: context.company,
@@ -298,7 +296,7 @@ export class UnifiedApplyService {
       source: sanitizedSource,
       atsType: context.atsType,
       status: status === 'completed' ? 'applied' : 'saved',
-      priority: 'high',
+      priority: 'high' as const,
       salary: context.salary || undefined,
       applicationDate: new Date(),
       tags: [`${context.atsType}-auto-applied`],
@@ -309,7 +307,17 @@ export class UnifiedApplyService {
         appliedAt: new Date(),
         ...metadata,
       },
-    });
+    };
+
+    try {
+      return await JobApplication.create(payload);
+    } catch (error: any) {
+      const message = String(error?.message || '');
+      if (message.includes('is not a valid enum value for path `source`')) {
+        return JobApplication.create({ ...payload, source: 'other' });
+      }
+      throw error;
+    }
   }
 
   // ==========================================

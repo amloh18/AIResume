@@ -455,7 +455,7 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
         </div>
       ) : (
         // All stages - horizontal scrollable with proper width
-        <div className="flex flex-row gap-4 h-full pb-4 overflow-x-auto scrollbar-hide">
+        <div className="flex flex-row gap-4 h-full min-h-[600px] pb-4 overflow-x-auto scrollbar-hide">
           {stages.map((stage) => {
             const stageJobs =
               jobsByStatus[stage.status as keyof typeof jobsByStatus];
@@ -493,16 +493,24 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
 
                 {/* Drop Zone */}
                 <div
-                  className={`w-full rounded-xl border transition-all duration-300 flex-1 overflow-y-auto scrollbar-hide min-h-0 ${
+                  className={`w-full rounded-xl border-2 transition-all duration-300 flex-1 overflow-y-auto scrollbar-hide min-h-0 relative ${
                     draggedJob
                       ? isDraggableStage(stage.status)
-                        ? `border-blue-300 dark:border-[rgb(60,75,60)] bg-blue-50 dark:bg-[rgb(60,75,60)]/20`
-                        : "border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/30 opacity-50"
-                      : "border-[var(--border-primary)]/60"
+                        ? 'border-dashed border-lime-400 dark:border-lime-500/50 bg-lime-50/50 dark:bg-lime-900/10'
+                        : 'border-dashed border-gray-300 dark:border-gray-600 bg-gray-50/50 dark:bg-gray-800/20 opacity-50'
+                      : 'border-[var(--border-primary)]/60 border-solid'
                   }`}
                   onDragOver={onDragOver}
                   onDrop={(e) => onDrop(e, stage.status)}
                 >
+                  {/* Drop indicator overlay when dragging */}
+                  {draggedJob && isDraggableStage(stage.status) && (
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+                      <div className="px-3 py-1.5 rounded-lg bg-lime-100 dark:bg-lime-900/30 border border-lime-300 dark:border-lime-500/30 text-lime-700 dark:text-lime-300 text-xs font-semibold opacity-60">
+                        Drop here
+                      </div>
+                    </div>
+                  )}
                   {/* Job Cards */}
                   <div
                     className={

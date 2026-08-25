@@ -23,6 +23,11 @@ import NaukriConnectCard from './JobsDashboard/NaukriConnectCard';
 import LimitedOptionsBanner from './JobsDashboard/LimitedOptionsBanner';
 import PortalIntegrationsPanel from './settings/PortalIntegrationsPanel';
 import { getCachedJobs, setCachedJobs } from '@/lib/utils/jobCache';
+import {
+  DEFAULT_CV_TAILORING_MODE,
+  parseCvTailoringMode,
+  type CvTailoringMode,
+} from '@/lib/cv-tailoring/tailoringMode';
 
 export default function JobsDashboard() {
   const [activeTab, setActiveTab] = useState<'discover' | 'applications' | 'settings'>('discover');
@@ -96,6 +101,7 @@ export default function JobsDashboard() {
   const [isApplying, setIsApplying] = useState<string | null>(null);
   const [naukriConnected, setNaukriConnected] = useState<boolean>(true);
   const [autoApplyEnabled, setAutoApplyEnabled] = useState<boolean>(false);
+  const [cvTailoringMode, setCvTailoringMode] = useState<CvTailoringMode>(DEFAULT_CV_TAILORING_MODE);
   const [autoApplyBannerDismissed, setAutoApplyBannerDismissed] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('autoapply_banner_dismissed') === 'true';
@@ -120,6 +126,11 @@ export default function JobsDashboard() {
       .then((data) => {
         if (data?.preferences) {
           setAutoApplyEnabled(data.preferences.enabled === true);
+        }
+        if (data?.cvTailoringMode || data?.preferences?.cvTailoringMode) {
+          setCvTailoringMode(
+            parseCvTailoringMode(data.cvTailoringMode || data.preferences.cvTailoringMode)
+          );
         }
       })
       .catch(() => {});
@@ -233,7 +244,7 @@ export default function JobsDashboard() {
                   }
                 : undefined,
             matchScore: job.matchScore,
-            source: 'manual',
+            source: job.source || 'manual',
             atsType: job.atsType || 'unknown',
             jobDescription: job.description || '',
             tags: job.keywords || [],
@@ -352,13 +363,16 @@ export default function JobsDashboard() {
           window.dispatchEvent(new CustomEvent('jobUpdated', { detail: { jobId: createdId } }));
         }
 
-        // Complete with success
         applyProgress.completeApply(job.title, job.company, true, resData.message);
         updateProgress(appId, 100, `Applied to ${job.title}!`, 'progress');
       } else {
-        // Complete with queued status
-        applyProgress.completeApply(job.title, job.company, true, resData.message || 'Application has been queued for processing');
-        updateProgress(appId, 100, `Application queued`, 'progress');
+        applyProgress.completeApply(
+          job.title,
+          job.company,
+          false,
+          resData.error || resData.message || 'Something went wrong'
+        );
+        updateProgress(appId, 100, `Application failed`, 'progress');
       }
     } catch (err: any) {
       // Complete with error
@@ -512,6 +526,24 @@ export default function JobsDashboard() {
     setPage(1);
   };
 
+  const handleCvTailoringModeChange = async (mode: CvTailoringMode) => {
+    const previous = cvTailoringMode;
+    setCvTailoringMode(mode);
+    try {
+      const res = await fetch('/api/jobs/preferences', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cvTailoringMode: mode }),
+      });
+      if (!res.ok) {
+        throw new Error('Failed to save tailoring mode');
+      }
+    } catch (err) {
+      console.error('Failed to save CV tailoring mode:', err);
+      setCvTailoringMode(previous);
+    }
+  };
+
   const handleToggleAutoApply = async () => {
     const nextState = !autoApplyEnabled;
     setAutoApplyEnabled(nextState);
@@ -663,6 +695,8 @@ export default function JobsDashboard() {
               onCountriesChange={handleCountriesChange}
               userId={userId}
               savedCount={savedIds.size}
+              cvTailoringMode={cvTailoringMode}
+              onCvTailoringModeChange={handleCvTailoringModeChange}
             />
 
             {/* Premium feature hints — only for free/starter users */}

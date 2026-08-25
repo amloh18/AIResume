@@ -121,9 +121,37 @@ function getSourceBadge(source?: string) {
       </span>
     );
   }
+  if (s.includes('ashby')) {
+    return (
+      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 border border-violet-200 dark:border-violet-800">
+        Ashby
+      </span>
+    );
+  }
+  if (s.includes('workable') || s.includes('workday')) {
+    return (
+      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300 border border-orange-200 dark:border-orange-800">
+        {s.includes('workday') ? 'Workday' : 'Workable'}
+      </span>
+    );
+  }
+  if (s.includes('extension')) {
+    return (
+      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+        Extension
+      </span>
+    );
+  }
+  if (s.includes('discover')) {
+    return (
+      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-lime-50 text-lime-800 dark:bg-lime-900/30 dark:text-lime-300 border border-lime-200 dark:border-lime-800">
+        Discover
+      </span>
+    );
+  }
   return (
-    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-gray-100 text-gray-700 dark:bg-white/10 dark:text-gray-300 border border-gray-200 dark:border-white/10">
-      Direct ATS
+    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-gray-100 text-gray-700 dark:bg-white/10 dark:text-gray-300 border border-gray-200 dark:border-white/10 capitalize">
+      {source.replace(/-/g, ' ')}
     </span>
   );
 }
