@@ -122,6 +122,16 @@ export async function PATCH(request: NextRequest) {
     if (onboardingData.tracker_interest) updateFields['onboarding.tracker_interest'] = onboardingData.tracker_interest;
     if (onboardingData.autoapply_interest) updateFields['onboarding.autoapply_interest'] = onboardingData.autoapply_interest;
     
+    // Canonical job-search preferences
+    if (onboardingData.workplace_types !== undefined) updateFields['onboarding.workplace_types'] = onboardingData.workplace_types;
+    if (onboardingData.salary_min !== undefined) updateFields['onboarding.salary_min'] = onboardingData.salary_min;
+    if (onboardingData.salary_currency) updateFields['onboarding.salary_currency'] = onboardingData.salary_currency;
+    if (onboardingData.experience_years !== undefined) updateFields['onboarding.experience_years'] = onboardingData.experience_years;
+    if (onboardingData.max_notice_period_days !== undefined) updateFields['onboarding.max_notice_period_days'] = onboardingData.max_notice_period_days;
+    if (onboardingData.search_intensity) updateFields['onboarding.search_intensity'] = onboardingData.search_intensity;
+    if (onboardingData.expected_applications_per_month !== undefined) updateFields['onboarding.expected_applications_per_month'] = onboardingData.expected_applications_per_month;
+    if (onboardingData.application_mode) updateFields['onboarding.application_mode'] = onboardingData.application_mode;
+    
     if (onboardingData.candidate_name) {
       updateFields['onboarding.candidate_name'] = onboardingData.candidate_name;
       const nameParts = onboardingData.candidate_name.trim().split(' ');

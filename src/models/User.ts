@@ -233,6 +233,36 @@ export interface IUser extends Document {
     autoapply_interest?: string;
     candidate_name?: string;
     candidate_role?: string;
+
+    // Canonical job-search preferences (synced to autoApplyPreferences)
+    workplace_types?: string[];
+    salary_min?: number;
+    salary_currency?: string;
+    experience_years?: number;
+    max_notice_period_days?: number;
+    search_intensity?: string;
+    expected_applications_per_month?: number;
+    application_mode?: string;
+  };
+
+  autoApplyPreferences?: {
+    enabled: boolean;
+    targetRoles: string[];
+    locations: string[];
+    remoteOnly: boolean;
+    workplaceTypes: ('remote' | 'hybrid' | 'onsite')[];
+    minSalary: number;
+    salaryCurrency: string;
+    experienceYears: number;
+    maxNoticePeriodDays: number;
+    maxPerDay: number;
+    useTailoredCV: boolean;
+    useCoverLetter: boolean;
+    autoAnswerQuestions: boolean;
+    enabledPortals: ('naukri' | 'indeed' | 'greenhouse' | 'adzuna')[];
+    searchIntensity: 'browsing' | 'exploring' | 'active' | 'aggressive';
+    expectedApplicationsPerMonth: number;
+    applicationMode: 'find_only' | 'manual_review' | 'automatic';
   };
 
   naukriIntegration?: {
@@ -814,7 +844,39 @@ const userSchema = new Schema<IUser>({
     tracker_interest: { type: String },
     autoapply_interest: { type: String },
     candidate_name: { type: String },
-    candidate_role: { type: String }
+    candidate_role: { type: String },
+
+    // Canonical job-search preferences (synced to autoApplyPreferences)
+    workplace_types: { type: [String], default: [] },
+    salary_min: { type: Number },
+    salary_currency: { type: String },
+    experience_years: { type: Number },
+    max_notice_period_days: { type: Number },
+    search_intensity: { type: String },
+    expected_applications_per_month: { type: Number },
+    application_mode: { type: String }
+  },
+  autoApplyPreferences: {
+    type: Schema.Types.Mixed,
+    default: () => ({
+      enabled: false,
+      targetRoles: [],
+      locations: [],
+      remoteOnly: false,
+      workplaceTypes: ['remote'],
+      minSalary: 0,
+      salaryCurrency: 'INR_LPA',
+      experienceYears: 2,
+      maxNoticePeriodDays: 30,
+      maxPerDay: 25,
+      useTailoredCV: true,
+      useCoverLetter: true,
+      autoAnswerQuestions: true,
+      enabledPortals: ['naukri', 'indeed', 'greenhouse', 'adzuna'],
+      searchIntensity: 'exploring',
+      expectedApplicationsPerMonth: 50,
+      applicationMode: 'manual_review',
+    })
   },
   naukriIntegration: {
     enabled: { type: Boolean, default: false },

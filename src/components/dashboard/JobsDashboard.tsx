@@ -821,72 +821,6 @@ export default function JobsDashboard() {
         {/* Tab Content */}
         {activeTab === 'discover' && (
           <div className="space-y-4">
-            {/* Search Profile & AI Match Summary */}
-            <div className="rounded-3xl p-5 bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 shadow-sm space-y-3.5 animate-fadeIn">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="space-y-1">
-                  <div className="text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-lime-600 dark:text-[#80FF00]" />
-                    <span>Searching For</span>
-                  </div>
-                  <div className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5 flex-wrap">
-                    <span>{userPreferences?.targetRoles?.length ? userPreferences.targetRoles.join(' · ') : 'Full Stack Developer · Software Engineer'}</span>
-                  </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2 flex-wrap">
-                    <span>📍 {userPreferences?.locations?.length ? userPreferences.locations.join(' · ') : 'Bangalore · Remote · London'}</span>
-                    <span>•</span>
-                    <span>💰 {userPreferences?.minSalary ? `₹${userPreferences.minSalary} LPA+` : '₹18 LPA+'}</span>
-                    <span>•</span>
-                    <span>💼 {userPreferences?.experienceYears ? `${userPreferences.experienceYears}+ yrs` : '3+ yrs experience'}</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3 shrink-0 self-start sm:self-center">
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('settings')}
-                    className="px-3.5 py-1.5 rounded-xl border border-gray-200 dark:border-white/10 hover:border-lime-500 text-xs font-bold text-gray-700 dark:text-gray-300 hover:text-lime-600 dark:hover:text-[#80FF00] transition-colors flex items-center gap-1 shadow-xs bg-gray-50 dark:bg-white/5"
-                  >
-                    <span>Edit Preferences</span>
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Subtle Auto-Apply Status Strip */}
-              <div className="pt-2.5 border-t border-gray-100 dark:border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className={`w-2 h-2 rounded-full ${autoApplyEnabled ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400'}`} />
-                  <span className="font-bold text-gray-800 dark:text-gray-200">
-                    {autoApplyEnabled ? 'Auto-Apply Active' : 'Auto-Apply Paused'}
-                  </span>
-                  <span className="text-gray-500 dark:text-gray-400">
-                    — {autoApplyEnabled
-                      ? `Automatically submitting applications (${isPaidUser ? `${entitlements?.autoApply.remaining ?? 50} remaining today` : `${entitlements?.application.remaining ?? 10} remaining this month`})`
-                      : "You're discovering and saving jobs. Automatic submissions are currently paused."}
-                  </span>
-                </div>
-
-                {!autoApplyEnabled ? (
-                  <button
-                    type="button"
-                    onClick={handleToggleAutoApply}
-                    className="text-xs font-bold text-lime-600 dark:text-[#80FF00] hover:underline shrink-0"
-                  >
-                    Resume Auto-Apply
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={handleToggleAutoApply}
-                    className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:underline shrink-0"
-                  >
-                    Pause
-                  </button>
-                )}
-              </div>
-            </div>
-
             <FiltersBar
               filters={filters}
               onChange={handleFilterChange}
@@ -898,10 +832,13 @@ export default function JobsDashboard() {
               savedCount={savedIds.size}
               cvTailoringMode={cvTailoringMode}
               onCvTailoringModeChange={handleCvTailoringModeChange}
-              naukriEmail={naukriEmail || 'amarjotasl@gmail.com'}
-              indeedEmail={indeedEmail || 'amarjotasl@gmail.com'}
-              isSyncingPortals={isSyncingPortals}
-              onSyncPortals={handleSyncAllPortals}
+              userPreferences={userPreferences}
+              autoApplyEnabled={autoApplyEnabled}
+              onToggleAutoApply={handleToggleAutoApply}
+              onOpenSettings={() => setActiveTab('settings')}
+              entitlements={entitlements}
+              isPaidUser={isPaidUser}
+              portalConnections={portalConnections}
             />
 
             {/* Results Count & Match Statement */}

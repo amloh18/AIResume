@@ -57,9 +57,10 @@ interface CountrySelectorProps {
   value: string[]; // e.g. ['India'] or ['United Kingdom', 'India']
   onChange: (countries: string[]) => void;
   disabled?: boolean;
+  align?: 'left' | 'right';
 }
 
-export function CountrySelector({ value, onChange, disabled }: CountrySelectorProps) {
+export function CountrySelector({ value, onChange, disabled, align = 'right' }: CountrySelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -118,10 +119,10 @@ export function CountrySelector({ value, onChange, disabled }: CountrySelectorPr
         type="button"
         disabled={disabled}
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all border shrink-0 ${
+        className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all border shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-lime-500 ${
           isOpen
-            ? 'bg-lime-500/15 text-lime-800 dark:text-lime-300 border-lime-500 shadow-sm'
-            : 'bg-gray-50 dark:bg-[#1a230f] border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white hover:border-gray-400'
+            ? 'bg-gray-100 dark:bg-white/10 text-gray-900 dark:text-white border-gray-300 dark:border-white/20 shadow-2xs'
+            : 'bg-white dark:bg-[#141810] border-gray-200/90 dark:border-white/10 text-gray-800 dark:text-gray-200 hover:border-gray-300 dark:hover:border-white/20'
         } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
       >
         <div className="flex items-center gap-1">
@@ -153,7 +154,11 @@ export function CountrySelector({ value, onChange, disabled }: CountrySelectorPr
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute left-0 top-full mt-2 w-80 bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-2xl shadow-2xl z-[100] p-2.5 animate-fadeIn space-y-2">
+        <div
+          className={`absolute ${
+            align === 'left' ? 'left-0' : 'right-0'
+          } top-full mt-2 w-80 max-w-[calc(100vw-2rem)] bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-2xl shadow-2xl z-[100] p-2.5 animate-fadeIn space-y-2`}
+        >
           {/* Search Bar */}
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
