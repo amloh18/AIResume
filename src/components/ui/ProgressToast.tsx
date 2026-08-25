@@ -88,8 +88,16 @@ export function ProgressToast({
 }: ProgressToastProps) {
   const [timeLeft, setTimeLeft] = useState(duration);
   const [isPaused, setIsPaused] = useState(false);
+  const [shouldDismiss, setShouldDismiss] = useState(false);
   const config = variantConfig[variant];
   const IconComponent = config.Icon;
+
+  // Deferred dismissal — avoids calling parent setState inside child setState updater
+  useEffect(() => {
+    if (shouldDismiss) {
+      onDismiss(id);
+    }
+  }, [shouldDismiss, id, onDismiss]);
 
   useEffect(() => {
     if (!showTimer || isPaused || variant === 'progress') return;
@@ -98,7 +106,7 @@ export function ProgressToast({
       setTimeLeft((prev) => {
         if (prev <= 100) {
           clearInterval(interval);
-          onDismiss(id);
+          setShouldDismiss(true);
           return 0;
         }
         return prev - 100;
@@ -106,7 +114,7 @@ export function ProgressToast({
     }, 100);
 
     return () => clearInterval(interval);
-  }, [showTimer, isPaused, variant, id, onDismiss]);
+  }, [showTimer, isPaused, variant]);
 
   const handleDismiss = useCallback(() => {
     onDismiss(id);
