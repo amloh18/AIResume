@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { JobsMetrics, JobListing, JobsFilter } from '@/types/automation-schema';
 import FiltersBar from './JobsDashboard/FiltersBar';
 import JobsErrorState from './JobsDashboard/JobsErrorState';
-import { Sparkles, Zap, Briefcase, Settings, ChevronRight, ArrowUp, Linkedin, Mic } from 'lucide-react';
+import { Sparkles, Zap, Briefcase, Settings, ChevronRight, ArrowUp, Linkedin, Mic, X } from 'lucide-react';
 import { AutoApplyPanel } from '@/components/jobs/AutoApplyPanel';
 import { ApplicationsPanel } from '@/components/jobs/ApplicationsPanel';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -96,6 +96,12 @@ export default function JobsDashboard() {
   const [isApplying, setIsApplying] = useState<string | null>(null);
   const [naukriConnected, setNaukriConnected] = useState<boolean>(true);
   const [autoApplyEnabled, setAutoApplyEnabled] = useState<boolean>(false);
+  const [autoApplyBannerDismissed, setAutoApplyBannerDismissed] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('autoapply_banner_dismissed') === 'true';
+    }
+    return false;
+  });
   const [newJobsCount, setNewJobsCount] = useState(0);
   const jobsSnapshotRef = useRef<string>('');
 
@@ -574,11 +580,19 @@ export default function JobsDashboard() {
         {/* Tab Content */}
         {activeTab === 'discover' && (
           <div className="space-y-4">
-            {/* Global Auto-Apply Automation Paused Banner */}
-            {!autoApplyEnabled && (
-              <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/30 dark:border-amber-500/20 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm animate-fadeIn">
+            {/* Global Auto-Apply Banner — always visible unless dismissed */}
+            {!autoApplyBannerDismissed && (
+              <div className={`rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm animate-fadeIn border transition-colors duration-300 ${
+                autoApplyEnabled
+                  ? 'bg-gradient-to-r from-emerald-500/10 via-emerald-500/5 to-transparent border-emerald-500/30 dark:border-emerald-500/20'
+                  : 'bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border-amber-500/30 dark:border-amber-500/20'
+              }`}>
                 <div className="flex items-start gap-3.5">
-                  <div className="p-2.5 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5">
+                  <div className={`p-2.5 rounded-xl shrink-0 mt-0.5 transition-colors duration-300 ${
+                    autoApplyEnabled
+                      ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                      : 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                  }`}>
                     <Zap className="w-5 h-5" />
                   </div>
                   <div className="space-y-1">
@@ -586,33 +600,54 @@ export default function JobsDashboard() {
                       <h3 className="text-sm font-bold text-gray-900 dark:text-white">
                         Global Auto-Apply Automation
                       </h3>
-                      <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30 flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-                        Paused
+                      <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold border flex items-center gap-1 transition-colors duration-300 ${
+                        autoApplyEnabled
+                          ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+                          : 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/30'
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full transition-colors duration-300 ${
+                          autoApplyEnabled ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'
+                        }`} />
+                        {autoApplyEnabled ? 'Active' : 'Paused'}
                       </span>
                     </div>
                     <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed max-w-3xl">
-                      Automatically matches your Master CV against live job streams from connected portals, tailors resumes, answers recruiter questionnaires, and submits applications with safe throttling.
+                      {autoApplyEnabled
+                        ? 'Auto-apply is running. Applications submit automatically to high-matching jobs from connected portals.'
+                        : 'Automatically matches your Master CV against live job streams from connected portals, tailors resumes, answers recruiter questionnaires, and submits applications with safe throttling.'}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex flex-col items-end sm:items-center gap-1.5 shrink-0 self-end sm:self-center">
-                  <label className="flex items-center gap-2 cursor-pointer select-none">
-                    <Switch
-                      checked={autoApplyEnabled}
-                      onCheckedChange={handleToggleAutoApply}
-                    />
-                    <span className="text-xs font-bold text-gray-900 dark:text-white">
-                      Enable
-                    </span>
-                  </label>
+                <div className="flex flex-col items-end sm:items-center gap-2 shrink-0 self-end sm:self-center">
+                  <div className="flex items-center gap-2">
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <Switch
+                        checked={autoApplyEnabled}
+                        onCheckedChange={handleToggleAutoApply}
+                      />
+                      <span className="text-xs font-bold text-gray-900 dark:text-white">
+                        {autoApplyEnabled ? 'On' : 'Enable'}
+                      </span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAutoApplyBannerDismissed(true);
+                        localStorage.setItem('autoapply_banner_dismissed', 'true');
+                      }}
+                      className="p-1 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
+                      title="Dismiss"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
                   <button
                     type="button"
                     onClick={() => setActiveTab('settings')}
                     className="text-xs text-gray-500 hover:text-lime-600 dark:text-gray-400 dark:hover:text-lime-400 font-medium hover:underline transition-colors flex items-center gap-0.5"
                   >
-                    <span>Configure in settings</span>
+                    <span>{autoApplyEnabled ? 'Configure settings' : 'Configure in settings'}</span>
                     <ChevronRight className="w-3 h-3" />
                   </button>
                 </div>
