@@ -161,6 +161,7 @@ const [preferences, setPreferences] = useState<AutoApplyPreferences>({
           const loadedPrefs = {
             ...preferences,
             ...json.profile,
+            enabled: json.profile.autoApplyEnabled ?? json.profile.enabled ?? false,
             salaryCurrency: json.profile.salaryCurrency || 'INR_LPA',
           };
           setPreferences(loadedPrefs);
@@ -226,18 +227,40 @@ const [preferences, setPreferences] = useState<AutoApplyPreferences>({
   const handleSave = async () => {
     try {
       setSaving(true);
+      // Map AutoApplyPreferences to JobSearchProfile schema fields
+      const profileData = {
+        targetRoles: preferences.targetRoles,
+        locations: preferences.locations,
+        remoteOnly: preferences.remoteOnly,
+        minSalary: preferences.minSalary,
+        salaryCurrency: preferences.salaryCurrency,
+        experienceYears: preferences.experienceYears,
+        maxNoticePeriodDays: preferences.maxNoticePeriodDays,
+        searchIntensity: preferences.searchIntensity,
+        expectedApplicationsPerMonth: preferences.expectedApplicationsPerMonth,
+        applicationMode: preferences.applicationMode,
+        maxPerDay: preferences.maxPerDay,
+        useTailoredCV: preferences.useTailoredCV,
+        useCoverLetter: preferences.useCoverLetter,
+        autoAnswerQuestions: preferences.autoAnswerQuestions,
+        enabledPortals: preferences.enabledPortals,
+        autoApplyEnabled: preferences.enabled,
+      };
       const res = await fetch('/api/job-search-profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ profileData: preferences }),
+        body: JSON.stringify({ profileData }),
       });
 
-      if (!res.ok) throw new Error('Failed to save preferences');
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || errorData.message || 'Failed to save preferences');
+      }
       toast.success('Preferences saved');
       setSavedPreferences(JSON.stringify(preferences));
       await fetchEntitlements();
     } catch (error: any) {
-      toast.error('Could not save settings');
+      toast.error(error.message || 'Could not save settings');
     } finally {
       setSaving(false);
     }
