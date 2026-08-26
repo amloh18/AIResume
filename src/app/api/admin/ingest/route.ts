@@ -561,3 +561,38 @@ export const GET = withAdminAuth(async (request: NextRequest) => {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 });
+
+export const PATCH = withAdminAuth(async (request: NextRequest) => {
+  try {
+    await getConnection();
+    const db = mongoose.connection.db;
+    if (!db) return NextResponse.json({ error: 'DB not connected' }, { status: 500 });
+    
+    const body = await request.json().catch(() => ({}));
+    const { action, runId, source } = body;
+    
+    const runsColl = db.collection('ingestionRuns');
+    
+    // Cancel a running ingestion
+    if (action === 'cancel') {
+      const filter: any = { status: 'running' };
+      if (runId) filter.runId = runId;
+      else if (source) filter.source = source;
+      else return NextResponse.json({ error: 'runId or source required' }, { status: 400 });
+      
+      const result = await runsColl.updateMany(
+        filter,
+        { $set: { status: 'cancelled', finishedAt: new Date(), cancelledBy: 'admin' } }
+      );
+      
+      return NextResponse.json({
+        success: true,
+        cancelled: result.modifiedCount,
+      });
+    }
+    
+    return NextResponse.json({ error: 'Unsupported action' }, { status: 400 });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+});

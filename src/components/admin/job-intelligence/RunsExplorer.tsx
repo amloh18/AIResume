@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { FileText, CheckCircle, XCircle, Clock, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
+import { FileText, CheckCircle, XCircle, Clock, RefreshCw, ChevronLeft, ChevronRight, Square } from 'lucide-react';
 
 interface RunRecord {
   _id: string;
@@ -28,8 +28,9 @@ export default function RunsExplorer() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [cancelling, setCancelling] = useState<string | null>(null);
 
-  const fetchRuns = async (p = 1) => {
+  const fetchRuns = useCallback(async (p = 1) => {
     setLoading(true);
     try {
       const res = await fetch(`/api/admin/job-intelligence?view=runs&page=${p}&limit=15`);
@@ -43,11 +44,40 @@ export default function RunsExplorer() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchRuns(page);
-  }, [page]);
+  }, [page, fetchRuns]);
+
+  // Auto-refresh when there are running jobs
+  const hasRunning = runs.some((r) => r.status === 'running');
+  useEffect(() => {
+    if (!hasRunning) return;
+    const interval = setInterval(() => fetchRuns(page), 5000);
+    return () => clearInterval(interval);
+  }, [hasRunning, page, fetchRuns]);
+
+  const handleCancel = async (runId: string, source: string) => {
+    setCancelling(runId);
+    try {
+      const res = await fetch('/api/admin/ingest', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'cancel', source }),
+      });
+      if (res.ok) {
+        // Update local state immediately
+        setRuns((prev) =>
+          prev.map((r) =>
+            r.runId === runId ? { ...r, status: 'cancelled' as const, finishedAt: new Date().toISOString() } : r
+          )
+        );
+      }
+    } finally {
+      setCancelling(null);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -85,12 +115,13 @@ export default function RunsExplorer() {
                 <th className="py-3.5 px-4">Updated</th>
                 <th className="py-3.5 px-4">Duplicates</th>
                 <th className="py-3.5 px-4">Errors</th>
+                <th className="py-3.5 px-4">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5 font-mono">
               {runs.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-8 text-center text-white/40 font-sans">
+                  <td colSpan={10} className="py-8 text-center text-white/40 font-sans">
                     {loading ? 'Loading ingestion logs...' : 'No ingestion runs recorded yet.'}
                   </td>
                 </tr>
@@ -115,6 +146,8 @@ export default function RunsExplorer() {
                             ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
                             : run.status === 'failed'
                             ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                            : run.status === 'cancelled'
+                            ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
                             : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
                         }`}
                       >
@@ -122,6 +155,8 @@ export default function RunsExplorer() {
                           <CheckCircle className="w-3 h-3" />
                         ) : run.status === 'failed' ? (
                           <XCircle className="w-3 h-3" />
+                        ) : run.status === 'cancelled' ? (
+                          <Square className="w-3 h-3" />
                         ) : (
                           <Clock className="w-3 h-3 animate-spin" />
                         )}
@@ -145,6 +180,18 @@ export default function RunsExplorer() {
                     </td>
                     <td className="py-3.5 px-4 text-rose-400">
                       {run.metrics?.errors || 0}
+                    </td>
+                    <td className="py-3.5 px-4">
+                      {run.status === 'running' && (
+                        <button
+                          onClick={() => handleCancel(run.runId, run.source)}
+                          disabled={cancelling === run.runId}
+                          className="px-3 py-1 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 font-bold text-xs transition-all disabled:opacity-40 flex items-center gap-1"
+                        >
+                          <Square className="w-3 h-3" />
+                          {cancelling === run.runId ? 'Stopping...' : 'Stop'}
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))
