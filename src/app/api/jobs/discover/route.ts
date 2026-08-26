@@ -81,7 +81,48 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const discovered = await JobDiscoveryService.fetchAndStore(criteria, userId, profileVersion);
+    let discovered = await JobDiscoveryService.fetchAndStore(criteria, userId, profileVersion);
+
+    // Fallback: if live API fetch returned nothing, query the already-ingested jobs collection
+    if (discovered.length === 0) {
+      try {
+        const { getDb } = await import('@/lib/db');
+        const db = await getDb();
+        const ingestColl = db.collection('jobs');
+        const ingestedJobs = await ingestColl
+          .find({ status: { $in: ['active', 'new'] } })
+          .sort({ postedAt: -1 })
+          .limit(Math.max(60, limit * 3))
+          .toArray();
+
+        if (ingestedJobs.length > 0) {
+          discovered = ingestedJobs.map((job: any) => ({
+            _id: job._id,
+            externalId: job.canonicalId || job._id.toString(),
+            title: job.title || '',
+            company: job.company?.name || '',
+            location: job.location
+              ? `${job.location.city || ''}, ${job.location.country || ''}`.trim().replace(/^,\s*/, '')
+              : '',
+            country: job.location?.country || '',
+            remote: job.location?.remote || false,
+            salaryMin: job.salary?.min,
+            salaryMax: job.salary?.max,
+            salaryCurrency: job.salary?.currency,
+            description: job.descriptionText || job.description || '',
+            applyUrl: job.source?.applicationUrl || job.source?.sourceUrl || '',
+            source: (job.source?.primary || 'discovery') as any,
+            atsType: (job.source?.primary || 'greenhouse') as any,
+            keywords: job.skills || [],
+            createdAt: job.createdAt || new Date(),
+            postedDate: job.postedAt,
+            status: job.status,
+          }));
+        }
+      } catch (fallbackErr) {
+        console.warn('[API] Ingested jobs fallback failed:', fallbackErr);
+      }
+    }
 
     if (discovered.length === 0) {
       return NextResponse.json({
@@ -696,7 +737,12 @@ export async function GET(request: NextRequest) {
       page,
       pageSize: limit,
       hasMore: start + limit < total,
-    } as PaginatedJobsResponse);
+      diagnostics: {
+        candidatesFetched: discovered.length,
+        candidatesScored: scores.size,
+        candidatesAfterMatchFilter: listings.length,
+      },
+    } as PaginatedJobsResponse & { diagnostics: any });
   } catch (error: any) {
     console.error('[API] GET /api/jobs/discover error:', error);
     return NextResponse.json(
