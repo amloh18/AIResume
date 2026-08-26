@@ -12,9 +12,12 @@ import { cleanupGuestUsers } from '@/lib/services/guestCleanupService';
  * 
  * The endpoint runs daily at 8 AM and executes tasks based on the current date:
  * - Daily Summary: Runs every day at 8 AM
- * - Guest User Cleanup: Runs every day at 8 AM (deletes abandoned anonymous users)
+ * - Guest User Cleanup: Runs every day at 8 AM (deletes anonymous users older than 30 days with no CVs/drafts)
  * - UK Registry Update: Runs every Monday at 8 AM (consolidated from 2 AM)
  * - US Registry Update: Runs on the 1st of each month at 8 AM (consolidated from 3 AM)
+ * 
+ * Note: Anonymous users are immediately deleted when a real account is created/linked
+ * via UserService.mergeAnonymousUser(). This cron handles stale abandoned sessions.
  * 
  * Security: Protected by CRON_SECRET environment variable
  * 
