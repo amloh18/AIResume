@@ -298,19 +298,19 @@ export default function UnifiedAuthForm({
         <motion.button
           type="submit"
           disabled={isLoading}
-          className="w-full bg-[#013f2e] hover:bg-[#02523c] text-gray-900 dark:text-black font-semibold py-3 px-6 rounded-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          className="w-full bg-[#013f2e] hover:bg-[#02523c] text-white font-bold py-3 px-6 rounded-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg"
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
         >
           {isLoading ? (
             <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              {submitText}...
+              <Loader2 className="w-4 h-4 animate-spin text-white" />
+              <span className="text-white">{submitText}...</span>
             </>
           ) : (
             <>
-              {submitText}
-              <ArrowRight className="w-4 h-4" />
+              <span className="text-white">{submitText}</span>
+              <ArrowRight className="w-4 h-4 text-white" />
             </>
           )}
         </motion.button>

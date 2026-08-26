@@ -88,14 +88,14 @@ export default function Features() {
         </motion.div>
 
         {/* 3-Column Bento Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
 
           {/* ================= COLUMN 1 (LEFT) ================= */}
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-6 h-full">
             
             {/* Tile 1: ATS Resume Engine & Code Inspector (Tall) */}
             <motion.div 
-              className="group relative rounded-3xl bg-[#111317]/80 border border-white/[0.08] hover:border-white/20 p-7 flex flex-col justify-between overflow-hidden shadow-2xl transition-all duration-300 hover:shadow-[0_0_30px_rgba(1,63,46,0.2)]"
+              className="group relative rounded-3xl bg-[#111317]/80 border border-white/[0.08] hover:border-white/20 p-7 flex flex-col justify-between overflow-hidden shadow-2xl transition-all duration-300 hover:shadow-[0_0_30px_rgba(1,63,46,0.2)] flex-1"
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -157,7 +157,7 @@ export default function Features() {
 
             {/* Tile 2: LinkedIn Profile Enhancer (Molecular Connected Nodes) */}
             <motion.div 
-              className="group relative rounded-3xl bg-[#111317]/80 border border-white/[0.08] hover:border-white/20 p-7 flex flex-col justify-between overflow-hidden shadow-2xl transition-all duration-300 hover:shadow-[0_0_30px_rgba(1,63,46,0.2)]"
+              className="group relative rounded-3xl bg-[#111317]/80 border border-white/[0.08] hover:border-white/20 p-7 flex flex-col justify-between overflow-hidden shadow-2xl transition-all duration-300 hover:shadow-[0_0_30px_rgba(1,63,46,0.2)] flex-1"
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -179,7 +179,7 @@ export default function Features() {
               </div>
 
               {/* Glowing Connected Nodes Visual */}
-              <div className="relative h-44 rounded-2xl bg-[#090a0d] border border-white/[0.06] flex items-center justify-center overflow-hidden">
+              <div className="relative mt-auto h-44 rounded-2xl bg-[#090a0d] border border-white/[0.06] flex items-center justify-center overflow-hidden">
                 <div className="absolute w-32 h-32 bg-blue-600/15 rounded-full blur-2xl" />
                 
                 <div className="relative flex items-center justify-center w-full px-6">
@@ -221,11 +221,11 @@ export default function Features() {
           </div>
 
           {/* ================= COLUMN 2 (CENTER) ================= */}
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-6 h-full justify-between">
 
             {/* Tile 3: Global Visa & Jobs Search (Glowing Search Bar) */}
             <motion.div 
-              className="group relative rounded-3xl bg-[#111317]/80 border border-white/[0.08] hover:border-white/20 p-7 flex flex-col justify-between overflow-hidden shadow-2xl transition-all duration-300 hover:shadow-[0_0_30px_rgba(1,63,46,0.2)]"
+              className="group relative rounded-3xl bg-[#111317]/80 border border-white/[0.08] hover:border-white/20 p-7 flex flex-col justify-between overflow-hidden shadow-2xl transition-all duration-300 hover:shadow-[0_0_30px_rgba(1,63,46,0.2)] flex-1"
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -276,7 +276,7 @@ export default function Features() {
 
             {/* Tile 4: Center Spotlight Glass Banner ("Everything in One Place") */}
             <motion.div 
-              className="relative rounded-3xl overflow-hidden p-8 flex flex-col items-center justify-center text-center shadow-2xl border border-white/10 bg-gradient-to-br from-[#121a24] via-[#0d1318] to-[#09110d] group transition-all duration-300"
+              className="relative rounded-3xl overflow-hidden p-8 flex flex-col items-center justify-center text-center shadow-2xl border border-white/10 bg-gradient-to-br from-[#121a24] via-[#0d1318] to-[#09110d] group transition-all duration-300 flex-shrink-0"
               initial={{ opacity: 0, scale: 0.95 }}
               whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true }}
@@ -302,7 +302,7 @@ export default function Features() {
 
             {/* Tile 5: Career Audit & Scorecards (Tokens & Swatches) */}
             <motion.div 
-              className="group relative rounded-3xl bg-[#111317]/80 border border-white/[0.08] hover:border-white/20 p-7 flex flex-col justify-between overflow-hidden shadow-2xl transition-all duration-300 hover:shadow-[0_0_30px_rgba(1,63,46,0.2)]"
+              className="group relative rounded-3xl bg-[#111317]/80 border border-white/[0.08] hover:border-white/20 p-7 flex flex-col justify-between overflow-hidden shadow-2xl transition-all duration-300 hover:shadow-[0_0_30px_rgba(1,63,46,0.2)] flex-1"
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -323,7 +323,7 @@ export default function Features() {
                 </Link>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              <div className="mt-auto grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                 <div className="p-3 rounded-xl bg-[#090a0d] border border-white/[0.06] flex flex-col items-center justify-center text-center group-hover:border-emerald-500/30 transition-colors">
                   <span className="text-sm font-black text-emerald-400">98%</span>
                   <span className="text-[10px] text-gray-400 mt-0.5">ATS Match</span>
@@ -346,11 +346,11 @@ export default function Features() {
           </div>
 
           {/* ================= COLUMN 3 (RIGHT) ================= */}
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-6 h-full justify-between">
 
             {/* Tile 6: Universal Ecosystem & Extension (Concentric Orbiting Hub) */}
             <motion.div 
-              className="group relative rounded-3xl bg-[#111317]/80 border border-white/[0.08] hover:border-white/20 p-7 flex flex-col justify-between overflow-hidden shadow-2xl transition-all duration-300 hover:shadow-[0_0_30px_rgba(1,63,46,0.2)]"
+              className="group relative rounded-3xl bg-[#111317]/80 border border-white/[0.08] hover:border-white/20 p-7 flex flex-col justify-between overflow-hidden shadow-2xl transition-all duration-300 hover:shadow-[0_0_30px_rgba(1,63,46,0.2)] flex-1"
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -408,7 +408,7 @@ export default function Features() {
 
             {/* Tile 7: AI Resume Studio & Editor (Workspace Canvas Preview) */}
             <motion.div 
-              className="group relative rounded-3xl bg-[#111317]/80 border border-white/[0.08] hover:border-white/20 p-7 flex flex-col justify-between overflow-hidden shadow-2xl transition-all duration-300 hover:shadow-[0_0_30px_rgba(1,63,46,0.2)]"
+              className="group relative rounded-3xl bg-[#111317]/80 border border-white/[0.08] hover:border-white/20 p-7 flex flex-col justify-between overflow-hidden shadow-2xl transition-all duration-300 hover:shadow-[0_0_30px_rgba(1,63,46,0.2)] flex-1"
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -429,7 +429,7 @@ export default function Features() {
                 </Link>
               </div>
 
-              <div className="relative rounded-2xl bg-[#090a0d] border border-white/[0.06] p-3.5 flex flex-col gap-2 overflow-hidden shadow-inner">
+              <div className="relative mt-auto rounded-2xl bg-[#090a0d] border border-white/[0.06] p-3.5 flex flex-col gap-2 overflow-hidden shadow-inner">
                 <div className="flex items-center justify-between pb-2 border-b border-white/5 text-[10px] text-gray-400">
                   <span className="flex items-center gap-1 font-medium text-white">
                     <Layers className="w-3 h-3 text-emerald-400" /> Sections &amp; Layers

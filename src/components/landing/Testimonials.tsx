@@ -124,7 +124,20 @@ export const TestimonialSnippet = ({ index: initialIndex }: { index: number }) =
   }, [currIndex]);
 
   return (
-    <div className="w-full py-16 relative overflow-hidden flex justify-center bg-transparent">
+    <div className="w-full py-16 relative overflow-hidden flex justify-center bg-[#0a0a0c]">
+      {/* Background Ambient Glows (Matching Everyday Superpowers) */}
+      <div 
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: `
+            radial-gradient(ellipse 60% 40% at 20% 15%, rgba(1, 63, 46, 0.25) 0%, transparent 65%),
+            radial-gradient(ellipse 60% 50% at 80% 50%, rgba(20, 184, 166, 0.08) 0%, transparent 65%),
+            radial-gradient(ellipse 70% 50% at 50% 85%, rgba(1, 63, 46, 0.2) 0%, transparent 65%),
+            linear-gradient(180deg, #0e1013 0%, #0a0a0c 50%, #060708 100%)
+          `
+        }}
+      />
+
       {/* Subtle quote icons for context without breaking the flow */}
       <Quote 
         size={120} 
@@ -141,24 +154,24 @@ export const TestimonialSnippet = ({ index: initialIndex }: { index: number }) =
         <div className="flex-shrink-0 flex flex-col items-center gap-3">
            <div className="flex -space-x-3">
               {[...Array(3)].map((_, i) => (
-                <div key={i} className="w-12 h-12 rounded-full border-2 border-[#141810] bg-gray-800 overflow-hidden shadow-xl ring-1 ring-white/10">
+                <div key={i} className="w-12 h-12 rounded-full border-2 border-[#0a0a0c] bg-gray-800 overflow-hidden shadow-xl ring-1 ring-white/10">
                   <img src={`https://i.pravatar.cc/100?u=snippet${currIndex}-${i}`} alt="user" className="w-full h-full object-cover opacity-80" />
                 </div>
               ))}
            </div>
            <div className="flex items-center gap-1">
              {[...Array(5)].map((_, i) => (
-               <Star key={i} size={10} className="text-[#81ff00] fill-current opacity-90" />
+               <Star key={i} size={10} className="text-[#36D39B] fill-current opacity-90" />
              ))}
            </div>
         </div>
 
         <div className="flex-1 flex flex-col justify-center min-h-[120px]">
           <p className="text-body sm:text-h3 font-medium italic leading-relaxed tracking-tight text-white/90">
-            "{typedMessage}"<span className={`inline-block ml-0.5 w-1 h-4 bg-[#81ff00] ${isTyping ? 'animate-pulse' : ''}`} style={{ verticalAlign: 'middle' }} />
+            "{typedMessage}"<span className={`inline-block ml-0.5 w-1 h-4 bg-[#36D39B] ${isTyping ? 'animate-pulse' : ''}`} style={{ verticalAlign: 'middle' }} />
           </p>
           <div className="flex items-center gap-2 mt-4 leading-none">
-            <p className="text-small tablet:text-small font-black text-lime-400 uppercase tracking-widest">
+            <p className="text-small tablet:text-small font-black text-[#36D39B] uppercase tracking-widest">
               Verified Experience
             </p>
             <span className="text-white/10 text-small">|</span>
@@ -193,7 +206,20 @@ const Testimonials = () => {
   });
 
   return (
-    <section id="testimonials" className="relative pt-32 pb-24 bg-[#141810] overflow-hidden">
+    <section id="testimonials" className="relative pt-32 pb-24 bg-[#0a0a0c] overflow-hidden">
+      {/* Background Ambient Glows (Matching Everyday Superpowers) */}
+      <div 
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: `
+            radial-gradient(ellipse 60% 40% at 20% 15%, rgba(1, 63, 46, 0.25) 0%, transparent 65%),
+            radial-gradient(ellipse 60% 50% at 80% 50%, rgba(20, 184, 166, 0.08) 0%, transparent 65%),
+            radial-gradient(ellipse 70% 50% at 50% 85%, rgba(1, 63, 46, 0.2) 0%, transparent 65%),
+            linear-gradient(180deg, #0e1013 0%, #0a0a0c 50%, #060708 100%)
+          `
+        }}
+      />
+
       <div className="relative z-10 max-w-7xl mx-auto px-4 tablet:px-6 desktop:px-8">
         {/* Section Header */}
         <div className="text-left mb-16">
@@ -239,12 +265,12 @@ const Testimonials = () => {
             {[...DEFAULT_TESTIMONIALS, ...DEFAULT_TESTIMONIALS].map((testimonial, idx) => (
               <div
                 key={`${testimonial._id}-${idx}`}
-                className="inline-block w-[350px] tablet:w-[400px] desktop:w-[450px] min-h-[320px] bg-white/5 backdrop-blur-sm border border-white/10 rounded-3xl p-8 whitespace-normal flex-shrink-0 flex flex-col justify-between"
+                className="inline-block w-[350px] tablet:w-[400px] desktop:w-[450px] min-h-[320px] bg-[#111317]/80 backdrop-blur-md border border-white/[0.08] hover:border-white/20 rounded-3xl p-8 whitespace-normal flex-shrink-0 flex flex-col justify-between transition-colors shadow-2xl"
               >
                 <div>
                   <div className="flex items-center gap-1 mb-6">
                     {[...Array(testimonial.starRating)].map((_, i) => (
-                      <Star key={i} size={16} className="text-[#81ff00] fill-current" />
+                      <Star key={i} size={16} className="text-[#36D39B] fill-current" />
                     ))}
                   </div>
                   <p className="text-white/90 text-body tablet:text-h3 leading-relaxed mb-8 italic font-medium">

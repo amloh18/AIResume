@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import { Subscription, Invoice } from '@/models';
+import { withAdminAuth } from '@/lib/middleware/admin-auth';
 
-export async function GET(request: NextRequest) {
+export const GET = withAdminAuth(async (request: NextRequest) => {
   try {
     await getConnection();
 
@@ -96,27 +97,20 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     console.error('Error fetching payment stats:', error);
     
-    // Return mock data on error
-    const baseRevenue = 25000;
-    const baseTransactions = 250;
-    
+    // Return empty stats on error rather than fabricated data
     return NextResponse.json({
         stripe: {
-            totalRevenue: baseRevenue,
-            totalTransactions: baseTransactions,
-            averageOrderValue: baseRevenue / baseTransactions,
-            currencyBreakdown: {
-                'EUR': baseRevenue * 0.4,
-                'USD': baseRevenue * 0.25,
-                'GBP': baseRevenue * 0.1
-            }
+            totalRevenue: 0,
+            totalTransactions: 0,
+            averageOrderValue: 0,
+            currencyBreakdown: {}
         },
         total: {
-            revenue: baseRevenue,
-            transactions: baseTransactions,
-            averageOrderValue: baseRevenue / baseTransactions
+            revenue: 0,
+            transactions: 0,
+            averageOrderValue: 0
         }
     });
   }
-}
+});
 

@@ -1033,7 +1033,7 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
               Forgot Password?{' '}
               <button
                 onClick={() => switchMode('reset')}
-                className="text-[#013f2e] hover:text-[#013f2e]/80 transition-colors duration-200 font-medium"
+                className="text-[#36D39B] hover:text-[#4DDCB0] transition-colors duration-200 font-semibold underline underline-offset-2"
               >
                 Reset Password
               </button>
@@ -1051,17 +1051,17 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
               Remember your password?{' '}
               <button
                 onClick={() => switchMode('signin')}
-                className="text-[#013f2e] hover:text-[#013f2e]/80 transition-colors duration-200 font-medium"
+                className="text-[#36D39B] hover:text-[#4DDCB0] transition-colors duration-200 font-semibold underline underline-offset-2"
               >
                 Sign In
               </button>
             </p>
             {layoutVariant === 'default' && (
-              <p className="text-gray-500 text-small text-center">
+              <p className="text-gray-400 text-small text-center">
                 {"Don't have an account?"}{' '}
                 <button
                   onClick={() => switchMode('signup')}
-                  className="text-[#013f2e] hover:text-[#013f2e]/80 transition-colors duration-200 font-medium"
+                  className="text-[#36D39B] hover:text-[#4DDCB0] transition-colors duration-200 font-semibold underline underline-offset-2"
                 >
                   Sign up here
                 </button>
@@ -1073,21 +1073,21 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
       case 'magic-link':
         return (
           <div className="space-y-3">
-            <p className="text-gray-500 text-small text-center">
+            <p className="text-gray-400 text-small text-center">
               Prefer password?{' '}
               <button
                 onClick={() => switchMode('signin')}
-                className="text-[#013f2e] hover:text-[#013f2e]/80 transition-colors duration-200 font-medium"
+                className="text-[#36D39B] hover:text-[#4DDCB0] transition-colors duration-200 font-semibold underline underline-offset-2"
               >
                 Sign in with password
               </button>
             </p>
             {layoutVariant === 'default' && (
-              <p className="text-gray-500 text-small text-center">
+              <p className="text-gray-400 text-small text-center">
                 {"Don't have an account?"}{' '}
                 <button
                   onClick={() => switchMode('signup')}
-                  className="text-[#013f2e] hover:text-[#013f2e]/80 transition-colors duration-200 font-medium"
+                  className="text-[#36D39B] hover:text-[#4DDCB0] transition-colors duration-200 font-semibold underline underline-offset-2"
                 >
                   Sign up here
                 </button>
@@ -1209,20 +1209,22 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
             <motion.button
               type="button"
               onClick={() => switchMode('signin')}
-              className={`relative px-8 py-3 text-body font-medium rounded-sm transition-all duration-300 z-10 ${mode === 'signin'
-                ? 'text-black dark:text-black'
-                : 'text-gray-500 hover:text-gray-800 dark:text-white/70 dark:hover:text-white'
-                }`}
+              className={`relative px-8 py-3 text-body font-bold rounded-sm transition-all duration-300 z-10 ${
+                mode === 'signin'
+                  ? 'text-white'
+                  : 'text-gray-500 hover:text-gray-800 dark:text-white/60 dark:hover:text-white'
+              }`}
             >
               Sign In
             </motion.button>
             <motion.button
               type="button"
               onClick={() => switchMode('signup')}
-              className={`relative px-8 py-3 text-body font-medium rounded-sm transition-all duration-300 z-10 ${mode === 'signup'
-                ? 'text-black dark:text-black'
-                : 'text-gray-500 hover:text-gray-800 dark:text-white/70 dark:hover:text-white'
-                }`}
+              className={`relative px-8 py-3 text-body font-bold rounded-sm transition-all duration-300 z-10 ${
+                mode === 'signup'
+                  ? 'text-white'
+                  : 'text-gray-500 hover:text-gray-800 dark:text-white/60 dark:hover:text-white'
+              }`}
             >
               Sign Up
             </motion.button>
@@ -1288,12 +1290,12 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
                 type="button"
                 onClick={() => handleSendCode(email, 'passwordless-login')}
                 disabled={isLoading || checkingEmail}
-                className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-[#013f2e] to-[#013f2e]/80 hover:from-[#013f2e]/90 hover:to-[#013f2e]/70 text-gray-900 dark:text-black font-semibold py-3 px-6 rounded-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-[#013f2e] to-[#013f2e]/90 hover:from-[#025c43] hover:to-[#013f2e] text-white font-bold py-3 px-6 rounded-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
               >
                 {isLoading || checkingEmail ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 className="w-4 h-4 animate-spin text-white" />
                 ) : (
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12,6A6,6 0 0,0 6,12A6,6 0 0,0 12,18A6,6 0 0,0 18,12A6,6 0 0,0 12,6M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8Z" />
                   </svg>
                 )}

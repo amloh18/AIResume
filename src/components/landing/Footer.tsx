@@ -77,10 +77,15 @@ const Footer = () => {
   };
 
   return (
-    <footer className="relative bg-[#141810] overflow-hidden">
-      {/* Background Effects - Subtle dark glow */}
+    <footer className="relative bg-[#060709] border-t border-white/[0.06] overflow-hidden">
+      {/* Background Effects - Subtle dark ambient glow */}
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-[500px] h-[500px] bg-[#81ff00]/3 rounded-full blur-[150px]"></div>
+        <div 
+          className="absolute inset-0"
+          style={{
+            background: 'radial-gradient(ellipse 60% 50% at 50% 100%, rgba(1, 63, 46, 0.18) 0%, transparent 70%)'
+          }}
+        />
       </div>
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 tablet:px-6 desktop:px-8 py-20">
@@ -109,24 +114,19 @@ const Footer = () => {
                 transition={{ duration: 0.3 }}
               >
                 <motion.div
-                  className="w-8 h-8 tablet:w-10 tablet:h-10 bg-gradient-to-r from-lime-400 to-lime-500 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0"
+                  className="w-8 h-8 tablet:w-10 tablet:h-10 bg-[#0c1a14] border border-emerald-500/25 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0"
                   whileHover={{
                     scale: 1.1,
-                    rotateY: 15,
-                    boxShadow: "0 20px 40px -12px rgba(132, 204, 22, 0.5)"
-                  }}
-                  style={{
-                    transformStyle: 'preserve-3d',
-                    perspective: '1000px'
+                    boxShadow: "0 10px 25px -5px rgba(1, 63, 46, 0.5)"
                   }}
                 >
-                  <Mail className="w-3.5 h-3.5 tablet:w-[18px] tablet:h-[18px] text-black" />
+                  <Mail className="w-3.5 h-3.5 tablet:w-[18px] tablet:h-[18px] text-[#36D39B]" />
                 </motion.div>
                 <div>
                   <p className="text-white/60 text-small tablet:text-small">Email</p>
                   <a
                     href="mailto:support@buildairesume.com"
-                    className="text-white hover:text-lime-400 transition-colors duration-300 font-medium text-small tablet:text-small break-all"
+                    className="text-white hover:text-[#36D39B] transition-colors duration-300 font-medium text-small tablet:text-small break-all"
                   >
                     support@buildairesume.com
                   </a>
@@ -157,7 +157,7 @@ const Footer = () => {
                   <p className="text-white/60 text-small tablet:text-small">Phone</p>
                   <a
                     href="tel:+447879768984"
-                    className="text-white hover:text-lime-400 transition-colors duration-300 font-medium text-small tablet:text-small"
+                    className="text-white hover:text-[#36D39B] transition-colors duration-300 font-medium text-small tablet:text-small"
                   >
                     +44 7879768984
                   </a>
@@ -171,18 +171,13 @@ const Footer = () => {
                 transition={{ duration: 0.3 }}
               >
                 <motion.div
-                  className="w-8 h-8 tablet:w-10 tablet:h-10 bg-gradient-to-r from-purple-400 to-purple-500 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0"
+                  className="w-8 h-8 tablet:w-10 tablet:h-10 bg-[#0c1a14] border border-emerald-500/25 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0"
                   whileHover={{
                     scale: 1.1,
-                    rotateY: 15,
-                    boxShadow: "0 20px 40px -12px rgba(168, 85, 247, 0.5)"
-                  }}
-                  style={{
-                    transformStyle: 'preserve-3d',
-                    perspective: '1000px'
+                    boxShadow: "0 10px 25px -5px rgba(1, 63, 46, 0.5)"
                   }}
                 >
-                  <MapPin className="w-3.5 h-3.5 tablet:w-[18px] tablet:h-[18px] text-white" />
+                  <MapPin className="w-3.5 h-3.5 tablet:w-[18px] tablet:h-[18px] text-[#36D39B]" />
                 </motion.div>
                 <div>
                   <p className="text-white/60 text-small tablet:text-small">Address</p>
@@ -217,7 +212,7 @@ const Footer = () => {
                       e.preventDefault();
                       scrollToSection(link.href);
                     }}
-                    className="text-white/60 hover:text-lime-400 transition-colors duration-300 text-small font-medium group flex items-center gap-2"
+                    className="text-white/60 hover:text-[#36D39B] transition-colors duration-300 text-small font-medium group flex items-center gap-2"
                     whileHover={{ x: -5 }}
                   >
                     <span>{link.name}</span>
@@ -389,7 +384,7 @@ const Footer = () => {
             className="text-white/60 text-small flex flex-col tablet:flex-row items-center gap-2"
             whileHover={{ scale: 1.02 }}
           >
-            <span>© 2026 <span className="text-lime-400">AIResume</span> by <span className="text-white">Morigrid Labs</span>. All rights reserved.</span>
+            <span>© 2026 <span className="text-[#36D39B] font-bold">AIResume</span> by <span className="text-white">Morigrid Labs</span>. All rights reserved.</span>
             <div className="flex items-center gap-2">
               <span className="text-white/40 hidden tablet:inline">|</span>
               <span className="text-white/60">Made with love</span>
@@ -405,7 +400,7 @@ const Footer = () => {
           <div className="flex space-x-8">
             <motion.a
               href="/legal#privacy"
-              className="text-white/60 hover:text-lime-400 text-small transition-colors duration-300 font-medium"
+              className="text-white/60 hover:text-[#36D39B] text-small transition-colors duration-300 font-medium"
               whileHover={{ y: -2 }}
               whileTap={{ scale: 0.95 }}
             >
@@ -413,7 +408,7 @@ const Footer = () => {
             </motion.a>
             <motion.a
               href="/legal#terms"
-              className="text-white/60 hover:text-lime-400 text-small transition-colors duration-300 font-medium"
+              className="text-white/60 hover:text-[#36D39B] text-small transition-colors duration-300 font-medium"
               whileHover={{ y: -2 }}
               whileTap={{ scale: 0.95 }}
             >
@@ -421,7 +416,7 @@ const Footer = () => {
             </motion.a>
             <motion.a
               href="/legal#cookies"
-              className="text-white/60 hover:text-lime-400 text-small transition-colors duration-300 font-medium"
+              className="text-white/60 hover:text-[#36D39B] text-small transition-colors duration-300 font-medium"
               whileHover={{ y: -2 }}
               whileTap={{ scale: 0.95 }}
             >
@@ -429,7 +424,7 @@ const Footer = () => {
             </motion.a>
             <motion.a
               href="/legal#support"
-              className="text-white/60 hover:text-lime-400 text-small transition-colors duration-300 font-medium"
+              className="text-white/60 hover:text-[#36D39B] text-small transition-colors duration-300 font-medium"
               whileHover={{ y: -2 }}
               whileTap={{ scale: 0.95 }}
             >

@@ -11,7 +11,6 @@ import { navLinks } from '@/data/navigation';
 
 // Lazy load non-critical sections
 const Features = dynamic(() => import('@/components/landing/Features'), { ssr: true });
-const FeatureReel = dynamic(() => import('@/components/landing/FeatureReel').then(mod => mod.FeatureReel), { ssr: true });
 const ChromeExtension = dynamic(() => import('@/components/landing/ChromeExtension'), { ssr: true });
 const Testimonials = dynamic(() => import('@/components/landing/Testimonials'), { ssr: true });
 const CompetitorComparison = dynamic(() => import('@/components/landing/CompetitorComparison'), { ssr: true });
@@ -68,7 +67,7 @@ export default function LandingPageContent() {
   };
 
   return (
-    <div className="min-h-screen bg-[#141810] relative overflow-hidden">
+    <div className="min-h-screen bg-[#0a0a0c] relative overflow-hidden">
       <AnnouncementBanner onDismiss={() => setBannerActive(false)} />
       <CardNav
         logo="AIResume"
@@ -88,8 +87,6 @@ export default function LandingPageContent() {
         <HowItWorks />
         <TestimonialSnippet index={1} />
         <Features />
-        <TestimonialSnippet index={2} />
-        <FeatureReel />
         <ChromeExtension />
         <Testimonials />
 

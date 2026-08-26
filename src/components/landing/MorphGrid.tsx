@@ -223,7 +223,7 @@ export const MorphSignalDeck: React.FC<{ className?: string }> = ({ className = 
   }, [signals.length]);
 
   return (
-    <div className={`rounded-3xl bg-gradient-to-br from-[#0c1813] via-[#09120e] to-[#050b08] border border-emerald-500/20 p-6 sm:p-8 shadow-2xl overflow-hidden relative ${className}`}>
+    <div className={`rounded-3xl bg-[#111317]/80 border border-white/[0.08] hover:border-white/20 p-6 sm:p-8 shadow-2xl backdrop-blur-md overflow-hidden relative transition-all duration-300 hover:shadow-[0_0_30px_rgba(1,63,46,0.2)] ${className}`}>
       {/* Radial ambient glow */}
       <div className="absolute top-0 right-0 w-64 h-64 bg-[#36D39B]/10 rounded-full blur-3xl pointer-events-none" />
 

@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import Template from '@/models/Template';
+import { requireAdmin } from '@/lib/middleware/admin-auth';
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    await requireAdmin(request);
     const { id } = await params;
     await getConnection();
 
@@ -31,6 +33,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    await requireAdmin(request);
     const { id } = await params;
     await getConnection();
 
@@ -62,6 +65,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    await requireAdmin(request);
     const { id } = await params;
     await getConnection();
 

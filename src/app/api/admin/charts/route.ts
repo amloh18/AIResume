@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import { User, CV, JobApplication, ActivityLog } from '@/models';
+import { withAdminAuth } from '@/lib/middleware/admin-auth';
 
-export async function GET(request: NextRequest) {
+export const GET = withAdminAuth(async (request: NextRequest) => {
   try {
     await getConnection();
 
@@ -96,4 +97,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
