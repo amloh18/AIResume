@@ -2550,7 +2550,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                           </p>
                           <motion.button
                             onClick={() => router.push('/editor')}
-                            className="w-full px-2 py-1 bg-lime-500 hover:bg-lime-600 text-black text-small font-medium rounded transition-colors flex items-center gap-1 justify-center"
+                            className="w-full px-2 py-1.5 bg-[#013f2e] hover:bg-[#025c43] text-white text-small font-bold rounded transition-colors flex items-center gap-1 justify-center shadow-sm"
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                           >
@@ -2657,7 +2657,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                       </p>
                       <motion.button
                         onClick={() => router.push('/editor')}
-                        className="w-full px-2 py-1 bg-lime-500 hover:bg-lime-600 text-black text-small font-medium rounded transition-colors flex items-center gap-1 justify-center"
+                        className="w-full px-2 py-1.5 bg-[#013f2e] hover:bg-[#025c43] text-white text-small font-bold rounded transition-colors flex items-center gap-1 justify-center shadow-sm"
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                       >
@@ -3075,7 +3075,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
 
                             <motion.button
                               onClick={() => setDownloadModalOpen(true)}
-                              className="w-full px-2 py-1 bg-lime-600 hover:bg-lime-700 text-white text-small font-medium rounded transition-colors flex items-center gap-1 justify-center min-w-0"
+                              className="w-full px-2 py-1 bg-[#013f2e] hover:bg-[#025c43] text-white text-small font-bold rounded transition-colors flex items-center gap-1 justify-center min-w-0 shadow-sm"
                               whileHover={{ scale: 1.02 }}
                               whileTap={{ scale: 0.98 }}
                             >

@@ -300,7 +300,7 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
                   e.stopPropagation();
                   onAction?.("generate_docs", job, e);
                 }}
-                className="w-full py-1.5 bg-lime-500 text-[#141810] text-small font-bold rounded-lg hover:bg-lime-400 transition-colors"
+                className="w-full py-1.5 bg-[#013f2e] text-white text-small font-bold rounded-lg hover:bg-[#025c43] transition-colors shadow-sm"
               >
                 Generate Docs
               </button>
@@ -425,7 +425,7 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
                       e.stopPropagation();
                       onAction?.("inject_data", job, e);
                     }}
-                    className="py-1.5 bg-lime-500/10 text-lime-600 dark:text-lime-400 border border-lime-500/20 rounded-lg text-small font-medium hover:bg-lime-500/20 transition-colors"
+                    className="py-1.5 bg-[#36D39B]/15 text-[#013f2e] dark:text-[#36D39B] border border-[#36D39B]/30 rounded-lg text-small font-medium hover:bg-[#36D39B]/25 transition-colors"
                   >
                     Improve ATS
                   </button>
@@ -482,7 +482,7 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
                     e.stopPropagation();
                     onAction?.("move_interview", job, e);
                   }}
-                  className="py-1.5 bg-lime-500 text-[#141810] rounded-lg text-small font-bold hover:bg-lime-400 transition-colors"
+                  className="py-1.5 bg-[#013f2e] text-white rounded-lg text-small font-bold hover:bg-[#025c43] transition-colors shadow-sm"
                 >
                   Move Stage
                 </button>
@@ -497,7 +497,7 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
                 </button>
                 <button
                   onClick={handlePracticeClick}
-                  className="col-span-2 mt-2 py-1.5 bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 rounded-lg text-small font-medium hover:text-lime-500 dark:hover:text-[#013f2e] transition-colors flex items-center justify-center gap-2"
+                  className="col-span-2 mt-2 py-1.5 bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 rounded-lg text-small font-medium hover:text-[#013f2e] dark:hover:text-[#36D39B] transition-colors flex items-center justify-center gap-2"
                 >
                   <GraduationCap size={12} />
                   Practice
@@ -569,14 +569,14 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
                       e.stopPropagation();
                       onAction?.("add_feedback", job, e);
                     }}
-                    className="py-1.5 bg-lime-500 text-[#141810] rounded-lg text-small font-bold hover:bg-lime-400 transition-colors"
+                    className="py-1.5 bg-[#013f2e] text-white rounded-lg text-small font-bold hover:bg-[#025c43] transition-colors shadow-sm"
                   >
                     Add Feedback
                   </button>
                 </div>
                 <button
                   onClick={handlePracticeClick}
-                  className="w-full mt-2 py-1.5 bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 rounded-lg text-small font-medium hover:text-lime-500 dark:hover:text-[#013f2e] transition-colors flex items-center justify-center gap-2"
+                  className="w-full mt-2 py-1.5 bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 rounded-lg text-small font-medium hover:text-[#013f2e] dark:hover:text-[#36D39B] transition-colors flex items-center justify-center gap-2"
                 >
                   <GraduationCap size={12} />
                   Practice

@@ -401,13 +401,13 @@ export default function JobDetailsSidebar({
                       value={parseText}
                       onChange={(e) => setParseText(e.target.value)}
                       placeholder="Paste job title, description, requirements, or the full posting..."
-                      className="w-full h-48 px-3 py-2.5 bg-gray-50 dark:bg-[#1a230f] border border-gray-200 dark:border-white/10 rounded-xl text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-lime-500 resize-none"
+                      className="w-full h-48 px-3 py-2.5 bg-gray-50 dark:bg-[#1a230f] border border-gray-200 dark:border-white/10 rounded-xl text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#013f2e] dark:focus:ring-[#36D39B] resize-none"
                     />
                   </div>
                   <button
                     onClick={handleParse}
                     disabled={isParsing || !parseText.trim()}
-                    className="w-full py-2.5 bg-lime-500 hover:bg-lime-400 disabled:opacity-50 text-black font-semibold rounded-xl transition-colors flex items-center justify-center gap-2"
+                    className="w-full py-2.5 bg-[#013f2e] hover:bg-[#025c43] disabled:opacity-50 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2 shadow-sm"
                   >
                     {isParsing ? (
                       <>
@@ -818,7 +818,7 @@ export default function JobDetailsSidebar({
                     <button
                       onClick={handleSave}
                       disabled={isSaving || !formData.jobTitle.trim()}
-                      className="flex-1 py-2.5 bg-lime-500 hover:bg-lime-400 disabled:opacity-50 text-black font-semibold rounded-xl transition-colors flex items-center justify-center gap-2"
+                      className="flex-1 py-2.5 bg-[#013f2e] hover:bg-[#025c43] disabled:opacity-50 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2 shadow-sm"
                     >
                       {isSaving ? (
                         <>
@@ -840,7 +840,7 @@ export default function JobDetailsSidebar({
                         onModeChange?.('create');
                       }}
                       disabled={!parsedResult}
-                      className="flex-1 py-2.5 bg-lime-500 hover:bg-lime-400 disabled:opacity-50 text-black font-semibold rounded-xl transition-colors"
+                      className="flex-1 py-2.5 bg-[#013f2e] hover:bg-[#025c43] disabled:opacity-50 text-white font-bold rounded-xl transition-colors shadow-sm"
                     >
                       Continue to Form
                     </button>

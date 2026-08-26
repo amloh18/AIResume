@@ -114,7 +114,7 @@ export async function GET(request: NextRequest) {
         postedDate: job.postedDate || (job as any).postedAt,
         userId: userId || '',
         country: job.country,
-        description: job.description,
+        description: (job.description || '').slice(0, 800),
         keywords: job.keywords,
       };
     });

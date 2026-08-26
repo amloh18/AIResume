@@ -37,24 +37,24 @@ export async function GET(request: NextRequest) {
 
     const results: any = {};
 
-    // Process renewals
-    if (action === 'all' || action === 'renewals') {
-      results.renewals = await processRenewals();
-    }
-
-    // Process dunning
-    if (action === 'all' || action === 'dunning') {
-      results.dunning = await processDunning();
-    }
-
-    // Retry failed payments
-    if (action === 'all' || action === 'retry') {
-      results.retry = await retryFailedPayments();
-    }
-
-    // Send dunning emails
-    if (action === 'all' || action === 'emails') {
-      results.emails = await sendDunningEmails();
+    // Run all billing operations in parallel (they are independent)
+    if (action === 'all') {
+      const [renewals, dunning, retry, emails] = await Promise.allSettled([
+        processRenewals(),
+        processDunning(),
+        retryFailedPayments(),
+        sendDunningEmails(),
+      ]);
+      results.renewals = renewals.status === 'fulfilled' ? renewals.value : { error: renewals.reason?.message };
+      results.dunning = dunning.status === 'fulfilled' ? dunning.value : { error: dunning.reason?.message };
+      results.retry = retry.status === 'fulfilled' ? retry.value : { error: retry.reason?.message };
+      results.emails = emails.status === 'fulfilled' ? emails.value : { error: emails.reason?.message };
+    } else {
+      // Individual actions
+      if (action === 'renewals') results.renewals = await processRenewals();
+      if (action === 'dunning') results.dunning = await processDunning();
+      if (action === 'retry') results.retry = await retryFailedPayments();
+      if (action === 'emails') results.emails = await sendDunningEmails();
     }
 
     return NextResponse.json({

@@ -927,28 +927,68 @@ export class JobDiscoveryService {
     }
 
     if (preferences) {
-      const { JobMatchingService } = await import('./jobMatchingService');
+      // Batch: load CV once, then compute all scores in-memory (no per-job DB calls)
+      const { extractUserSkills, extractJobSkills, computeSmartMatch } = await import('./smartSkillMatcher');
+      const { MATCH_SCORE_WEIGHTS } = await import('@/types/automation-schema');
 
-      await Promise.all(
-        discovered.map(async (job) => {
-          try {
-            const match: JobMatch = await JobMatchingService.computeScore(
-              userId as string,
-              job._id.toString()
-            );
-            scores.set(job.externalId, {
-              score: match.score,
-              breakdown: match.breakdown,
-            });
-          } catch {
-            const fallback = heuristicScore(job, preferences);
-            scores.set(job.externalId, {
-              score: fallback.score,
-              breakdown: fallback.breakdown,
-            });
+      let userSkills: string[] = [];
+      try {
+        const primaryCvId = (user as any)?.primary_cv_id || (user as any)?.settings?.primaryCvId;
+        if (primaryCvId) {
+          const CV = (await import('@/models/CV')).default;
+          const cv = await CV.findById(primaryCvId).lean() as any;
+          if (cv?.cvData) {
+            userSkills = extractUserSkills(cv.cvData);
           }
-        })
-      );
+        }
+        if (userSkills.length === 0 && preferences.titles?.length) {
+          userSkills = preferences.titles.map((t) => t.toLowerCase());
+        }
+      } catch {}
+
+      const userTitles = preferences.titles || [];
+      const userLocations = preferences.locations || [];
+      const userRemoteOnly = preferences.remoteOnly || false;
+
+      for (const job of discovered) {
+        try {
+          const jobSkills = extractJobSkills({
+            description: job.description || '',
+            keywords: job.keywords || [],
+            title: job.title,
+          });
+
+          const smartResult = computeSmartMatch(
+            userSkills,
+            jobSkills,
+            userTitles,
+            job.title,
+            job.location || '',
+            userLocations,
+            job.remote || false,
+            userRemoteOnly,
+            job.postedDate || job.createdAt
+          );
+
+          const score = Math.round(
+            smartResult.breakdown.skills * MATCH_SCORE_WEIGHTS.SKILLS +
+            smartResult.breakdown.title * MATCH_SCORE_WEIGHTS.TITLE +
+            smartResult.breakdown.location * MATCH_SCORE_WEIGHTS.LOCATION +
+            smartResult.breakdown.recency * MATCH_SCORE_WEIGHTS.RECENCY
+          );
+
+          scores.set(job.externalId, {
+            score: Math.min(98, Math.max(10, score)),
+            breakdown: smartResult.breakdown,
+          });
+        } catch {
+          const fallback = heuristicScore(job, preferences);
+          scores.set(job.externalId, {
+            score: fallback.score,
+            breakdown: fallback.breakdown,
+          });
+        }
+      }
     } else {
       for (const job of discovered) {
         const fallback = heuristicScore(job, preferences);

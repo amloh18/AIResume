@@ -165,7 +165,7 @@ const CardNav = ({
 
   return (
     <>
-      <div className={`card-nav-container ${className} ${withBanner ? 'with-banner' : ''} ${isAnySubmenuOpen ? 'submenu-open' : ''} ${!isVisible && !isMobileMenuOpen ? 'nav-hidden' : ''}`}>
+      <div className={`card-nav-container ${className} ${withBanner ? 'with-banner' : ''} ${isAnySubmenuOpen ? 'submenu-open' : ''} ${hoveredLink ? `submenu-${hoveredLink.toLowerCase().replace(/\s+/g, '-')}` : ''} ${!isVisible && !isMobileMenuOpen ? 'nav-hidden' : ''}`}>
       <nav ref={navRef} className="card-nav">
         <div className="card-nav-content">
            <button 

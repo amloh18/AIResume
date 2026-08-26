@@ -205,7 +205,7 @@ export default function JobsDashboard() {
   useEffect(() => {
     async function loadSavedJobIds() {
       try {
-        const res = await fetch('/api/jobs?limit=100');
+        const res = await fetch('/api/jobs?limit=200&lite=true');
         if (res.ok) {
           const data = await res.json();
           const items = data.jobs || data.data || [];
@@ -746,12 +746,14 @@ export default function JobsDashboard() {
         return;
       }
 
-      for (const conn of activePrivateConnections) {
-        const targetId = conn.connectionId || conn.id;
-        await fetch(`/api/portal-connections/${targetId}/sync`, {
-          method: 'POST',
-        }).catch(() => {});
-      }
+      await Promise.all(
+        activePrivateConnections.map((conn) => {
+          const targetId = conn.connectionId || conn.id;
+          return fetch(`/api/portal-connections/${targetId}/sync`, {
+            method: 'POST',
+          }).catch(() => {});
+        })
+      );
 
       await fetchJobs();
       await fetchPortalConnections();
@@ -961,7 +963,7 @@ export default function JobsDashboard() {
                 <button
                   type="button"
                   onClick={() => handleFilterChange({ savedOnly: false, sortBy: 'matchScore' })}
-                  className="px-4 py-2 rounded-xl bg-lime-500 hover:bg-lime-600 dark:bg-[#013f2e] text-white dark:text-black font-bold text-xs transition-colors"
+                  className="px-4 py-2 rounded-xl bg-[#013f2e] hover:bg-[#025c43] text-white font-bold text-xs transition-colors shadow-sm"
                 >
                   Browse Recommended Jobs
                 </button>
@@ -978,7 +980,7 @@ export default function JobsDashboard() {
                 {!isPaidUser && (
                   <Link
                     href="/linkedin-enhancer"
-                    className="inline-flex items-center gap-1.5 text-xs font-medium text-lime-600 dark:text-lime-400 hover:underline"
+                    className="inline-flex items-center gap-1.5 text-xs font-medium text-[#013f2e] dark:text-[#36D39B] hover:underline"
                   >
                     <Linkedin className="w-3.5 h-3.5" />
                     Optimize your LinkedIn to attract recruiters
@@ -994,14 +996,14 @@ export default function JobsDashboard() {
                   <div ref={observerTarget} className="flex flex-col items-center gap-2">
                     {loadingMore ? (
                       <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 text-xs font-bold text-gray-700 dark:text-gray-300 shadow-xs">
-                        <Loader2 className="w-3.5 h-3.5 animate-spin text-lime-500" />
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-[#013f2e] dark:text-[#36D39B]" />
                         <span>Loading more jobs...</span>
                       </div>
                     ) : (
                       <button
                         type="button"
                         onClick={() => setPage((p) => p + 1)}
-                        className="px-5 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 hover:border-lime-500 bg-white dark:bg-[#141810] text-xs font-bold text-gray-800 dark:text-gray-200 hover:text-lime-600 dark:hover:text-[#013f2e] transition-all shadow-xs"
+                        className="px-5 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 hover:border-[#013f2e]/50 dark:hover:border-[#36D39B]/50 bg-white dark:bg-[#141810] text-xs font-bold text-gray-800 dark:text-gray-200 hover:text-[#013f2e] dark:hover:text-[#36D39B] transition-all shadow-xs"
                       >
                         Load more jobs ({displayedJobs.length} of {total})
                       </button>

@@ -21,6 +21,9 @@ import ClientErrorBoundary from './ClientErrorBoundary';
 import FeaturePromotionProvider from '@/components/promotions/FeaturePromotionProvider';
 import AuthModal from '@/components/auth/AuthModal';
 import ReactQueryProvider from './ReactQueryProvider';
+import ToastSuppressionGate from './ToastSuppressionGate';
+import { usePathname } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 
 interface ClientProvidersProps {
   children: ReactNode;
@@ -40,6 +43,7 @@ function ConditionalProviders({ children }: ClientProvidersProps) {
                 <SessionCleanup />
                 <Toaster />
                 <HotToaster position="bottom-right" />
+                <ToastSuppressionGate />
                 <AuthModal />
                 {children}
               </FeaturePromotionProvider>

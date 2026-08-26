@@ -305,7 +305,7 @@ export const NaukriIntegrationPanel: React.FC<NaukriIntegrationPanelProps> = ({ 
                   Naukri.com Integration
                 </h3>
                 {isConnected ? (
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-lime-500/15 text-lime-700 dark:text-lime-400 border border-lime-500/30">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#36D39B]/15 text-[#013f2e] dark:text-[#36D39B] border border-[#36D39B]/30">
                     <CheckCircle2 className="w-3.5 h-3.5" />
                     Connected & Active
                   </span>
@@ -416,12 +416,12 @@ export const NaukriIntegrationPanel: React.FC<NaukriIntegrationPanelProps> = ({ 
                 onChange={(e) => setNewTitle(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTitle())}
                 placeholder="e.g. React Developer, Backend Lead"
-                className="flex-1 px-3.5 py-2 text-xs rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#141810] text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-lime-500"
+                className="flex-1 px-3.5 py-2 text-xs rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#141810] text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-[#013f2e]"
               />
               <button
                 type="button"
                 onClick={handleAddTitle}
-                className="px-3 py-2 bg-lime-500 text-white rounded-xl hover:bg-lime-600 transition-colors shrink-0"
+                className="px-3 py-2 bg-[#013f2e] text-white rounded-xl hover:bg-[#025c43] transition-colors shrink-0"
               >
                 <Plus className="w-4 h-4" />
               </button>
@@ -460,8 +460,8 @@ export const NaukriIntegrationPanel: React.FC<NaukriIntegrationPanelProps> = ({ 
                     onClick={() => handleToggleLocation(loc)}
                     className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
                       active
-                        ? 'bg-lime-500 text-white shadow-sm'
-                        : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:border-lime-500'
+                        ? 'bg-[#013f2e] text-white shadow-sm'
+                        : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:border-[#013f2e]'
                     }`}
                   >
                     {loc}
@@ -476,7 +476,7 @@ export const NaukriIntegrationPanel: React.FC<NaukriIntegrationPanelProps> = ({ 
             <div>
               <div className="flex justify-between text-small font-semibold text-gray-900 dark:text-white mb-1.5">
                 <span>Minimum Target CTC (LPA)</span>
-                <span className="text-lime-600 dark:text-lime-400">₹ {preferences.minCtcLakhs} Lakhs</span>
+                <span className="text-[#013f2e] dark:text-[#36D39B] font-bold">₹ {preferences.minCtcLakhs} Lakhs</span>
               </div>
               <input
                 type="range"
@@ -487,7 +487,7 @@ export const NaukriIntegrationPanel: React.FC<NaukriIntegrationPanelProps> = ({ 
                 onChange={(e) =>
                   setPreferences({ ...preferences, minCtcLakhs: parseInt(e.target.value, 10) })
                 }
-                className="w-full accent-lime-500"
+                className="w-full accent-[#013f2e] dark:accent-[#36D39B]"
               />
             </div>
 
@@ -505,7 +505,7 @@ export const NaukriIntegrationPanel: React.FC<NaukriIntegrationPanelProps> = ({ 
                 onChange={(e) =>
                   setPreferences({ ...preferences, experienceYears: parseInt(e.target.value, 10) })
                 }
-                className="w-full accent-lime-500"
+                className="w-full accent-[#013f2e] dark:accent-[#36D39B]"
               />
             </div>
           </div>
@@ -515,7 +515,7 @@ export const NaukriIntegrationPanel: React.FC<NaukriIntegrationPanelProps> = ({ 
             <div>
               <div className="flex justify-between text-small font-semibold text-gray-900 dark:text-white mb-1.5">
                 <span>Daily Auto-Apply Limit</span>
-                <span className="text-lime-600 dark:text-lime-400">{preferences.dailyLimit} apps / day</span>
+                <span className="text-[#013f2e] dark:text-[#36D39B] font-bold">{preferences.dailyLimit} apps / day</span>
               </div>
               <input
                 type="range"
@@ -526,7 +526,7 @@ export const NaukriIntegrationPanel: React.FC<NaukriIntegrationPanelProps> = ({ 
                 onChange={(e) =>
                   setPreferences({ ...preferences, dailyLimit: parseInt(e.target.value, 10) })
                 }
-                className="w-full accent-lime-500"
+                className="w-full accent-[#013f2e] dark:accent-[#36D39B]"
               />
               <p className="text-[11px] text-gray-400 mt-1">
                 Safe throttling prevents platform flags (recommended: 20–30/day).
@@ -551,7 +551,7 @@ export const NaukriIntegrationPanel: React.FC<NaukriIntegrationPanelProps> = ({ 
                   })
                 }
                 className={`w-12 h-6 rounded-full transition-colors ${
-                  preferences.autoApplyEnabled ? 'bg-lime-500' : 'bg-gray-300 dark:bg-gray-700'
+                  preferences.autoApplyEnabled ? 'bg-[#013f2e] dark:bg-[#36D39B]' : 'bg-gray-300 dark:bg-gray-700'
                 }`}
               >
                 <div
@@ -570,7 +570,7 @@ export const NaukriIntegrationPanel: React.FC<NaukriIntegrationPanelProps> = ({ 
             type="button"
             onClick={handleSavePreferences}
             disabled={saving}
-            className="px-6 py-2.5 bg-lime-500 hover:bg-lime-600 text-white font-semibold text-small rounded-xl transition-all shadow-md shadow-lime-500/20 flex items-center gap-2"
+            className="px-6 py-2.5 bg-[#013f2e] hover:bg-[#025c43] text-white font-bold text-small rounded-xl transition-all shadow-md flex items-center gap-2"
           >
             {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : null}
             Save Integration Settings

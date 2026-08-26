@@ -4,6 +4,14 @@ import authOptions from '@/lib/auth-config';
 import { getConnection } from '@/lib/database';
 import mongoose from 'mongoose';
 import AdminAuditLog from '@/models/AdminAuditLog';
+import {
+  VALID_SOURCES,
+  SOURCE_REGISTRY,
+  checkSourceConfig,
+  createRun,
+  executeSourceRun,
+  completeRun,
+} from '@/lib/ingestion/engine';
 
 export const dynamic = 'force-dynamic';
 
@@ -75,7 +83,7 @@ export async function GET(req: NextRequest) {
           newToday,
           updatedToday,
           activeSources: sourcesList.filter((s) => s.enabled !== false).length,
-          totalSources: Math.max(sourcesList.length, 8),
+          totalSources: Math.max(sourcesList.length, Object.keys(SOURCE_REGISTRY).length),
           ingestionSuccessRate: successRate,
           avgIngestionLatencyMs: avgDurationMs,
           duplicateRate,
@@ -118,11 +126,10 @@ export async function GET(req: NextRequest) {
       const skip = (page - 1) * limit;
 
       const filter: any = {};
-      // Handle both old (string) and new (object) status field
       if (statusFilter && statusFilter !== 'all') {
         filter.$or = [
           { status: statusFilter },
-          { status: { $exists: false } }, // Include old jobs without status field
+          { status: { $exists: false } },
         ];
       }
       if (query) {
@@ -131,11 +138,11 @@ export async function GET(req: NextRequest) {
           $or: [
             { title: { $regex: query, $options: 'i' } },
             { 'company.name': { $regex: query, $options: 'i' } },
-            { company: { $regex: query, $options: 'i' } }, // Old schema
+            { company: { $regex: query, $options: 'i' } },
             { 'location.city': { $regex: query, $options: 'i' } },
-            { location: { $regex: query, $options: 'i' } }, // Old schema
+            { location: { $regex: query, $options: 'i' } },
             { skills: { $regex: query, $options: 'i' } },
-            { keywords: { $regex: query, $options: 'i' } }, // Old schema
+            { keywords: { $regex: query, $options: 'i' } },
           ],
         });
       }
@@ -145,18 +152,14 @@ export async function GET(req: NextRequest) {
         jobsColl.countDocuments(filter),
       ]);
 
-      // Normalize jobs for consistent response
       const normalizedJobs = jobs.map((job: any) => ({
         ...job,
-        // Ensure source.primary exists for old schema
-        source: typeof job.source === 'string' 
+        source: typeof job.source === 'string'
           ? { primary: job.source, sourceUrl: job.applyUrl || '' }
           : job.source,
-        // Ensure company.name exists for old schema
         company: typeof job.company === 'string'
           ? { name: job.company }
           : job.company,
-        // Ensure location exists
         location: typeof job.location === 'string'
           ? { city: job.location, country: job.country || '' }
           : job.location,
@@ -239,11 +242,8 @@ export async function POST(req: NextRequest) {
 
     const sourcesColl = db.collection('jobSources');
 
-    // 1. Trigger manual run via in-process ingestion
+    // 1. Trigger manual run — job-intelligence OWNS run creation
     if (action === 'trigger_run') {
-      // Valid sources that have fetchers implemented
-      const VALID_SOURCES = ['greenhouse', 'lever', 'ashby', 'remotive', 'remoteok'];
-      
       if (!VALID_SOURCES.includes(sourceName)) {
         return NextResponse.json({
           success: false,
@@ -251,32 +251,25 @@ export async function POST(req: NextRequest) {
         }, { status: 400 });
       }
 
-      // Run ingestion directly in this process (no external microservice needed)
-      const { default: mongoose } = await import('mongoose');
-      const db = mongoose.connection.db;
-      const runsColl = db!.collection('ingestionRuns');
-      const now = new Date();
-      const runId = `run-${sourceName}-${now.getTime()}`;
+      // Create the run record — this is the ONE place runs are created for UI triggers
+      const { runId } = await createRun(db, sourceName);
 
-      // Create run record
-      await runsColl.insertOne({
-        runId,
-        source: sourceName,
-        status: 'running',
-        startedAt: now,
-        metrics: { fetched: 0, parsed: 0, inserted: 0, updated: 0, duplicates: 0, errors: 0 },
-        createdAt: now,
-      });
-
-      // Trigger ingestion in background (non-blocking)
-      const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
-      fetch(`${baseUrl}/api/admin/ingest`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ source: sourceName }),
-      }).catch((err) => {
-        console.error(`Ingestion trigger failed for ${sourceName}:`, err);
-      });
+      // Execute ingestion in background (fire and forget)
+      const controller = new AbortController();
+      executeSourceRun(db, sourceName, runId, controller.signal)
+        .then(async (result) => {
+          const status = result.status === 'completed' ? 'completed' : 'failed';
+          await completeRun(db, runId, status, result, { [sourceName]: result });
+        })
+        .catch(async (err) => {
+          console.error(`[INGEST:ERROR] ${sourceName} failed:`, err);
+          const failedResult = {
+            status: 'failed' as const,
+            fetched: 0, normalized: 0, inserted: 0, updated: 0, duplicates: 0, errors: 1,
+            error: err.message,
+          };
+          await completeRun(db, runId, 'failed', failedResult, { [sourceName]: failedResult });
+        });
 
       await AdminAuditLog.create({
         adminEmail: user.email || 'admin@buildairesume.com',
@@ -297,12 +290,19 @@ export async function POST(req: NextRequest) {
 
     // 2. Update Source Configuration
     if (action === 'update_source') {
+      if (!sourceName) {
+        return NextResponse.json({ success: false, error: 'sourceName is required' }, { status: 400 });
+      }
+
       const previous = await sourcesColl.findOne({ name: sourceName });
 
       await sourcesColl.updateOne(
         { name: sourceName },
         {
           $set: {
+            name: sourceName,
+            displayName: SOURCE_REGISTRY[sourceName]?.name || sourceName,
+            type: SOURCE_REGISTRY[sourceName]?.type || 'api',
             ...sourceConfig,
             updatedAt: new Date(),
           },

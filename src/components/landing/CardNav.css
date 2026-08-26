@@ -5,10 +5,14 @@
   transform: translateX(-50%);
   width: 95%;
   max-width: 1023px;
-  z-index: 99999; /* Highest z-index to overlay video players, modal portals, and animations */
+  z-index: 999999; /* Highest z-index to overlay hero cards, badges, and video players */
   isolation: isolate; /* Form an independent stacking context so z-index always wins */
   box-sizing: border-box;
   transition: top 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease;
+}
+
+.card-nav-container.submenu-open {
+  z-index: 9999999 !important;
 }
 
 .card-nav-container.with-banner {
@@ -39,7 +43,7 @@
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
   position: relative;
   transition: height 0.3s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.3s ease;
-  z-index: 10;
+  z-index: 100;
 }
 
 
@@ -141,16 +145,29 @@
   transform: translateY(-1px);
 }
 
-/* Mega Menu Styles — fully solid, zero transparency */
+/* Mega Menu Styles — matching default frosted glass blur */
 .card-nav-container.submenu-open .card-nav {
   overflow: visible;
   border-radius: 35px;
-  height: 480px;
-  background-color: rgba(14, 18, 11, 0.85);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-color: rgba(255, 255, 255, 0.18);
+  height: 420px;
+  background-color: rgba(14, 18, 11, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 2px solid rgba(255, 255, 255, 0.12);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.85);
+}
+
+/* Products Mega Menu has 7 items (4 rows) + featured card */
+.card-nav-container.submenu-open.submenu-products .card-nav {
+  height: 520px;
+}
+
+.card-nav-container.submenu-open.submenu-extension .card-nav {
+  height: 400px;
+}
+
+.card-nav-container.submenu-open.submenu-resources .card-nav {
+  height: 400px;
 }
 
 /* Mega Menu integrated inside the main nav bar flow */
@@ -168,15 +185,16 @@
   border: none;
   border-radius: 0 0 35px 35px;
   box-shadow: none;
-  padding: 1.5rem 2rem;
+  padding: 1.25rem 1.75rem 1.5rem;
   display: flex;
-  gap: 1.5rem;
+  gap: 1.25rem;
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
   transition: opacity 0.25s ease, visibility 0.25s ease;
   z-index: 100;
   margin-top: 0;
+  box-sizing: border-box;
 }
 
 .nav-link-wrapper.hovered .submenu-dropdown {
@@ -193,23 +211,24 @@
 .submenu-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 0.75rem;
+  gap: 0.6rem;
 }
 
 .submenu-link {
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid rgba(255, 255, 255, 0.04);
-  border-radius: 20px;
+  border-radius: 18px;
   color: rgba(255, 255, 255, 0.8);
-  padding: 1.25rem;
+  padding: 0.85rem 1rem;
   text-align: left;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
-  gap: 1.25rem;
+  gap: 1rem;
   cursor: pointer;
   text-decoration: none;
   width: 100%;
+  box-sizing: border-box;
 }
 
 .submenu-link:hover {
@@ -220,13 +239,13 @@
 }
 
 .submenu-link:hover .submenu-link-title {
-  color: rgb(129, 255, 0);
+  color: #36D39B;
 }
 
 .submenu-link-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 14px;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -235,27 +254,29 @@
 }
 
 .submenu-link:hover .submenu-link-icon {
-  transform: scale(1.1) rotate(-5deg);
+  transform: scale(1.08) rotate(-3deg);
 }
 
 .submenu-link-content {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.2rem;
+  min-width: 0;
 }
 
 .submenu-link-title {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 700;
   color: #fff;
   transition: color 0.3s ease;
   letter-spacing: -0.01em;
+  line-height: 1.2;
 }
 
 .submenu-link-desc {
-  font-size: 13px;
+  font-size: 11.5px;
   color: rgba(255, 255, 255, 0.45);
-  line-height: 1.5;
+  line-height: 1.35;
   white-space: normal;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -265,7 +286,7 @@
 
 /* Featured Section */
 .submenu-featured {
-  width: 290px; /* Slimmed down width to fit perfectly inside the mega menu */
+  width: 270px;
   flex-shrink: 0;
 }
 
@@ -273,7 +294,7 @@
   height: 100%;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 24px;
+  border-radius: 20px;
   overflow: hidden;
   display: flex;
   flex-direction: column;

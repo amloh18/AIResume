@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { FileText, Building, MapPin, TrendingUp, Sparkles, DollarSign, MoreHorizontal, Award, Globe, Calendar } from 'lucide-react';
+import { FileText, Building, MapPin, TrendingUp, Sparkles, DollarSign, MoreHorizontal, Award, Globe, Calendar, Loader2 } from 'lucide-react';
 import CompanyLogo from '@/components/ui/CompanyLogo';
 import { getCurrencySymbol } from '@/lib/config/job-constants';
 
@@ -40,13 +40,19 @@ const DraftStageView: React.FC<DraftStageViewProps> = ({
   onCreateJourney
 }) => {
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
+  const [generatingId, setGeneratingId] = useState<string | null>(null);
 
   const handleCreateJourney = async (job: JobApplication, e: React.MouseEvent) => {
     e.stopPropagation();
+    const jobId = job.id || job._id;
+    if (generatingId === jobId) return; // Prevent double-click
+    setGeneratingId(jobId);
     try {
       await onCreateJourney(job);
     } catch (error) {
       console.error('Error creating journey:', error);
+    } finally {
+      setGeneratingId(null);
     }
   };
 
@@ -189,10 +195,15 @@ const DraftStageView: React.FC<DraftStageViewProps> = ({
                   <td className="px-6 py-4 whitespace-nowrap text-right" onClick={(e) => e.stopPropagation()}>
                     <button
                       onClick={(e) => handleCreateJourney(job, e)}
-                      className="px-3 py-1.5 bg-lime-500 text-[#141810] text-small font-bold rounded-lg hover:bg-lime-400 transition-colors inline-flex items-center gap-1.5"
+                      disabled={generatingId === (job.id || job._id)}
+                      className="px-3 py-1.5 bg-[#013f2e] text-white text-small font-bold rounded-lg hover:bg-[#025c43] transition-colors inline-flex items-center gap-1.5 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <Sparkles size={14} />
-                      Generate Docs
+                      {generatingId === (job.id || job._id) ? (
+                        <Loader2 size={14} className="animate-spin" />
+                      ) : (
+                        <Sparkles size={14} />
+                      )}
+                      {generatingId === (job.id || job._id) ? 'Generating...' : 'Generate Docs'}
                     </button>
                   </td>
                 </motion.tr>

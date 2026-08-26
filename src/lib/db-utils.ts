@@ -111,7 +111,8 @@ export async function paginateQuery<T>(
 export function createSearchFilter(searchTerm: string, fields: string[]) {
   if (!searchTerm) return {};
   
-  const searchRegex = new RegExp(searchTerm, 'i');
+  const escaped = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const searchRegex = new RegExp(escaped, 'i');
   const searchConditions = fields.map(field => ({
     [field]: searchRegex
   }));

@@ -346,7 +346,7 @@ const CVManagementSection: React.FC<{
         </div>
 
         <div className="flex-1 flex flex-col items-center justify-center text-center space-y-4 py-8">
-          <div className="w-20 h-20 bg-gradient-to-br from-lime-400 to-lime-600 rounded-2xl flex items-center justify-center mb-4">
+          <div className="w-20 h-20 bg-gradient-to-br from-emerald-600 to-[#013f2e] rounded-2xl flex items-center justify-center mb-4 shadow-md">
             <FileText className="w-10 h-10 text-white" />
           </div>
 
@@ -362,7 +362,7 @@ const CVManagementSection: React.FC<{
           <div className="space-y-3 mt-6 w-full max-w-sm">
             <motion.button
               onClick={handleCreateMasterCV}
-              className="w-full px-6 py-3 bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-black rounded-lg font-semibold transition-all duration-200 flex items-center justify-center gap-2"
+              className="w-full px-6 py-3 bg-[#013f2e] hover:bg-[#025c43] text-white rounded-lg font-bold transition-all duration-200 flex items-center justify-center gap-2 shadow-md"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
@@ -1151,7 +1151,7 @@ export const IntelligenceDashboard: React.FC<{
               </div>
             </div>
           </div>
-          <Link href="/dashboard/jobs?tab=applications" className="w-full flex items-center justify-center gap-2 p-2.5 bg-lime-500/10 text-lime-600 dark:text-lime-400 hover:bg-lime-500/20 transition-colors rounded-lg text-small font-medium mt-auto">
+          <Link href="/dashboard/jobs?tab=applications" className="w-full flex items-center justify-center gap-2 p-2.5 bg-[#013f2e] hover:bg-[#025c43] text-white transition-colors rounded-lg text-small font-bold mt-auto shadow-sm">
             <Briefcase size={16} /> Track New Application
           </Link>
         </div>

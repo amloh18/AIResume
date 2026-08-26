@@ -58,12 +58,12 @@ const CreateMasterCVCard: React.FC<CreateMasterCVCardProps> = ({ userId, onClose
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-white/10">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-r from-lime-500 to-green-600 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 bg-gradient-to-r from-emerald-600 to-[#013f2e] rounded-xl flex items-center justify-center shadow-sm">
               <Plus className="w-6 h-6 text-white" />
             </div>
             <div>
               <h2 className="text-h3 font-bold text-white">Create Master CV</h2>
-              <p className="text-lime-400 font-medium text-small">Your Career Foundation</p>
+              <p className="text-[#36D39B] font-medium text-small">Your Career Foundation</p>
             </div>
           </div>
           <button
@@ -90,7 +90,7 @@ const CreateMasterCVCard: React.FC<CreateMasterCVCardProps> = ({ userId, onClose
                 transition={{ delay: index * 0.1 }}
                 className="flex items-center gap-3"
               >
-                <CheckCircle className="w-5 h-5 text-lime-400 flex-shrink-0" />
+                <CheckCircle className="w-5 h-5 text-[#36D39B] flex-shrink-0" />
                 <span className="text-white/70 text-small">{feature}</span>
               </motion.div>
             ))}
@@ -107,7 +107,7 @@ const CreateMasterCVCard: React.FC<CreateMasterCVCardProps> = ({ userId, onClose
           </button>
           <motion.button
             onClick={handleCreateMasterCV}
-            className="flex items-center gap-2 px-6 py-3 bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-black rounded-lg font-semibold transition-all duration-200"
+            className="flex items-center gap-2 px-6 py-3 bg-[#013f2e] hover:bg-[#025c43] text-white rounded-lg font-bold transition-all duration-200 shadow-md"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >

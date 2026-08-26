@@ -164,6 +164,7 @@ export async function GET(req: NextRequest) {
 
     const limitParam = searchParams.get('limit');
     const statusFilter = searchParams.get('status');
+    const liteMode = searchParams.get('lite') === 'true';
 
     const trackerQuery: Record<string, any> = {
       $or: [{ userId: userObjId }, { userId: String(userId) }],
@@ -171,6 +172,17 @@ export async function GET(req: NextRequest) {
 
     if (statusFilter && statusFilter !== 'all') {
       trackerQuery.status = statusFilter;
+    }
+
+    // Lite mode: return only IDs for bookmark detection (much faster)
+    if (liteMode) {
+      const limitVal = limitParam ? parseInt(limitParam, 10) : 200;
+      const apps = await JobApplication.find(trackerQuery)
+        .select({ _id: 1, jobId: 1, externalId: 1, jobUrl: 1, sourceUrl: 1, company: 1, jobTitle: 1, title: 1 })
+        .sort({ updatedAt: -1 })
+        .limit(isNaN(limitVal) ? 200 : limitVal)
+        .lean();
+      return NextResponse.json({ success: true, jobs: apps });
     }
 
     let query = JobApplication.find(trackerQuery).sort({ updatedAt: -1, createdAt: -1 });

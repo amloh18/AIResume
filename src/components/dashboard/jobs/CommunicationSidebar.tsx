@@ -6,7 +6,7 @@ import {
   X, Mail, RefreshCw, AlertTriangle, Send, Sparkles, Check, CheckSquare, 
   Paperclip, Users, FileText, BarChart2, Plus, Calendar, HelpCircle, 
   ChevronRight, ChevronDown, CheckCircle, Trash2, ArrowRight, ExternalLink,
-  MoreVertical, Smile, ThumbsUp
+  MoreVertical, Smile, ThumbsUp, Loader2
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import EmailConnectModal from './EmailConnectModal';
@@ -930,14 +930,38 @@ export const CommunicationSidebar: React.FC<CommunicationSidebarProps> = ({
 
                       {showAiDropdown && (
                         <div className="absolute right-0 bottom-8 z-[1010] w-[200px] bg-white dark:bg-[#181f15] border border-gray-200 dark:border-white/10 rounded-xl shadow-xl p-1.5 flex flex-col gap-0.5 text-small text-gray-700 dark:text-gray-300 font-medium">
-                          <button onClick={() => handleAiAssistDraft('initial_outreach')} className="p-2 text-left hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg">Draft Cold Outreach</button>
-                          <button onClick={() => handleAiAssistDraft('thank_you')} className="p-2 text-left hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg">Post-Interview Thank You</button>
-                          <button onClick={() => handleAiAssistDraft('follow_up')} className="p-2 text-left hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg">Follow Up (No Response)</button>
-                          <button onClick={() => handleAiAssistDraft('reschedule')} className="p-2 text-left hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg">Request Reschedule</button>
-                          <button onClick={() => handleAiAssistDraft('extension')} className="p-2 text-left hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg">Request Extension</button>
-                          <button onClick={() => handleAiAssistDraft('negotiation')} className="p-2 text-left hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg">Negotiate Salary Package</button>
-                          <button onClick={() => handleAiAssistDraft('acceptance')} className="p-2 text-left hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg">Formal Acceptance</button>
-                          <button onClick={() => handleAiAssistDraft('decline')} className="p-2 text-left hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg">Politely Decline Offer</button>
+                          <button onClick={() => handleAiAssistDraft('initial_outreach')} disabled={isGeneratingAi} className="p-2 text-left hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                            {isGeneratingAi && <Loader2 size={12} className="animate-spin" />}
+                            Draft Cold Outreach
+                          </button>
+                          <button onClick={() => handleAiAssistDraft('thank_you')} disabled={isGeneratingAi} className="p-2 text-left hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                            {isGeneratingAi && <Loader2 size={12} className="animate-spin" />}
+                            Post-Interview Thank You
+                          </button>
+                          <button onClick={() => handleAiAssistDraft('follow_up')} disabled={isGeneratingAi} className="p-2 text-left hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                            {isGeneratingAi && <Loader2 size={12} className="animate-spin" />}
+                            Follow Up (No Response)
+                          </button>
+                          <button onClick={() => handleAiAssistDraft('reschedule')} disabled={isGeneratingAi} className="p-2 text-left hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                            {isGeneratingAi && <Loader2 size={12} className="animate-spin" />}
+                            Request Reschedule
+                          </button>
+                          <button onClick={() => handleAiAssistDraft('extension')} disabled={isGeneratingAi} className="p-2 text-left hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                            {isGeneratingAi && <Loader2 size={12} className="animate-spin" />}
+                            Request Extension
+                          </button>
+                          <button onClick={() => handleAiAssistDraft('negotiation')} disabled={isGeneratingAi} className="p-2 text-left hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                            {isGeneratingAi && <Loader2 size={12} className="animate-spin" />}
+                            Negotiate Salary Package
+                          </button>
+                          <button onClick={() => handleAiAssistDraft('acceptance')} disabled={isGeneratingAi} className="p-2 text-left hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                            {isGeneratingAi && <Loader2 size={12} className="animate-spin" />}
+                            Formal Acceptance
+                          </button>
+                          <button onClick={() => handleAiAssistDraft('decline')} disabled={isGeneratingAi} className="p-2 text-left hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                            {isGeneratingAi && <Loader2 size={12} className="animate-spin" />}
+                            Politely Decline Offer
+                          </button>
                           <button onClick={() => setShowCustomPromptInput(true)} className="p-2 text-left text-emerald-600 dark:text-emerald-400 font-bold hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg animate-pulse">Custom Prompt draft...</button>
                         </div>
                       )}

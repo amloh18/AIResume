@@ -19,7 +19,7 @@ export default function JobsErrorState({ message, onRetry }: JobsErrorStateProps
       </p>
       <button
         onClick={onRetry}
-        className="flex items-center gap-2 px-6 py-3 bg-lime-500 hover:bg-lime-600 text-white rounded-lg transition-colors duration-200"
+        className="flex items-center gap-2 px-6 py-3 bg-[#013f2e] hover:bg-[#025c43] text-white font-bold rounded-xl transition-colors duration-200 shadow-md"
       >
         <RefreshCw className="w-4 h-4" />
         Retry

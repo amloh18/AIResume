@@ -62,10 +62,11 @@ export default function TopJobMatchesSection() {
 
   // Load saved job IDs for this user
   useEffect(() => {
+    if (!userId) return;
+    const controller = new AbortController();
     async function loadSaved() {
-      if (!userId) return;
       try {
-        const res = await fetch('/api/jobs?limit=50');
+        const res = await fetch('/api/jobs?limit=100&lite=true', { signal: controller.signal });
         if (res.ok) {
           const data = await res.json();
           const items = data.jobs || data.data || [];
@@ -79,18 +80,21 @@ export default function TopJobMatchesSection() {
             setSavedIds(set);
           }
         }
-      } catch (err) {
-        console.warn('Failed to load saved jobs in TopMatches:', err);
+      } catch (err: any) {
+        if (err?.name !== 'AbortError') {
+          console.warn('Failed to load saved jobs in TopMatches:', err);
+        }
       }
     }
     loadSaved();
+    return () => controller.abort();
   }, [userId]);
 
-  const fetchTopMatches = useCallback(async () => {
+  const fetchTopMatches = useCallback(async (signal?: AbortSignal) => {
     try {
       setLoading(true);
       setError(null);
-      const res = await fetch('/api/jobs/discover?limit=10&sortBy=matchScore');
+      const res = await fetch('/api/jobs/discover?limit=10&sortBy=matchScore', { signal });
       if (!res.ok) {
         throw new Error('Failed to fetch job matches');
       }
@@ -153,17 +157,31 @@ export default function TopJobMatchesSection() {
   }, [appliedIds]);
 
   useEffect(() => {
-    fetchTopMatches();
+    const controller = new AbortController();
+    fetchTopMatches(controller.signal);
+    return () => controller.abort();
   }, [fetchTopMatches]);
 
-  const handlePass = (id: string, e?: React.MouseEvent) => {
+  const handlePass = async (id: string, e?: React.MouseEvent) => {
     e?.stopPropagation?.();
+    // Optimistic UI: remove immediately, revert on failure
+    const previousJobs = jobs;
     setJobs((prev) => prev.filter((j) => j._id !== id));
-    fetch('/api/jobs/pass', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ jobId: id }),
-    }).catch(() => {});
+    try {
+      const res = await fetch('/api/jobs/pass', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jobId: id }),
+      });
+      if (!res.ok) {
+        // Revert optimistic update on failure
+        setJobs(previousJobs);
+        toast({ title: 'Failed to dismiss job', variant: 'destructive' });
+      }
+    } catch {
+      setJobs(previousJobs);
+      toast({ title: 'Failed to dismiss job', variant: 'destructive' });
+    }
     toast({
       title: 'Job Dismissed',
       description: 'We will suggest different matching roles.',
@@ -387,7 +405,7 @@ export default function TopJobMatchesSection() {
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={fetchTopMatches}
+              onClick={() => fetchTopMatches()}
               className="px-4 py-2 rounded-xl bg-[#0f172a] hover:bg-[#1e293b] dark:bg-[#013f2e] text-white dark:text-black text-xs font-bold transition-all shadow-sm flex items-center gap-1.5"
             >
               <RefreshCw className="w-3 h-3" />
@@ -434,7 +452,7 @@ export default function TopJobMatchesSection() {
       {/* Cards Grid or Empty State UI */}
       {jobs.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-gray-200 dark:border-white/10 bg-white dark:bg-[#141810] p-8 text-center flex flex-col items-center justify-center">
-          <div className="w-12 h-12 rounded-2xl bg-lime-500/10 flex items-center justify-center mb-3 text-lime-700 dark:text-[#013f2e]">
+          <div className="w-12 h-12 rounded-2xl bg-[#36D39B]/15 flex items-center justify-center mb-3 text-[#013f2e] dark:text-[#36D39B]">
             <Sparkles className="w-6 h-6" />
           </div>
           <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-1">
@@ -446,7 +464,7 @@ export default function TopJobMatchesSection() {
           <button
             type="button"
             onClick={() => router.push('/dashboard/jobs?tab=discover')}
-            className="px-4 py-2 rounded-xl bg-[#0f172a] dark:bg-[#013f2e] hover:bg-[#1e293b] text-white dark:text-black text-xs font-bold transition-all shadow-xs flex items-center gap-1.5"
+            className="px-4 py-2 rounded-xl bg-[#013f2e] hover:bg-[#025c43] text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5"
           >
             <Briefcase className="w-3.5 h-3.5" />
             <span>Browse All Jobs</span>
@@ -463,7 +481,7 @@ export default function TopJobMatchesSection() {
               <div
                 key={job._id}
                 onClick={() => handleOpenDetail(job)}
-                className="group relative rounded-2xl border border-gray-200/80 dark:border-white/10 bg-white dark:bg-[#141810] p-4 transition-all hover:shadow-lg hover:border-lime-500/50 cursor-pointer flex flex-col justify-between"
+                className="group relative rounded-2xl border border-gray-200/80 dark:border-white/10 bg-white dark:bg-[#141810] p-4 transition-all hover:shadow-lg hover:border-[#013f2e]/40 dark:hover:border-[#36D39B]/40 cursor-pointer flex flex-col justify-between"
               >
                 {/* Dismiss Button (top right hover) */}
                 <button
@@ -483,7 +501,7 @@ export default function TopJobMatchesSection() {
                         job.matchScore >= 90
                           ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30'
                           : job.matchScore >= 80
-                          ? 'bg-lime-500/15 text-lime-800 dark:text-[#013f2e] border border-lime-500/30'
+                          ? 'bg-[#36D39B]/15 text-[#013f2e] dark:text-[#36D39B] border border-[#36D39B]/30'
                           : 'bg-blue-500/15 text-blue-700 dark:text-blue-400 border border-blue-500/30'
                       }`}
                     >
@@ -498,7 +516,7 @@ export default function TopJobMatchesSection() {
 
                   {/* Title & Company */}
                   <div className="space-y-1 mb-2">
-                    <h3 className="text-xs font-bold text-gray-900 dark:text-white leading-snug line-clamp-2 group-hover:text-lime-600 dark:group-hover:text-[#013f2e] transition-colors">
+                    <h3 className="text-xs font-bold text-gray-900 dark:text-white leading-snug line-clamp-2 group-hover:text-[#013f2e] dark:group-hover:text-[#36D39B] transition-colors">
                       {job.title}
                     </h3>
 
@@ -553,7 +571,7 @@ export default function TopJobMatchesSection() {
                     className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 shadow-xs ${
                       isApplied
                         ? 'bg-emerald-600 text-white cursor-default'
-                        : 'bg-[#0f172a] hover:bg-[#1e293b] dark:bg-[#013f2e] dark:hover:brightness-95 text-white dark:text-black'
+                        : 'bg-[#013f2e] hover:bg-[#025c43] text-white'
                     }`}
                   >
                     {isApplied ? (

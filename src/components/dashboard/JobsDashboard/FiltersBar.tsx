@@ -334,7 +334,7 @@ export default function FiltersBar({
               {autoApplyStatus.ctaAction === 'billing' ? (
                 <Link
                   href="/dashboard/billing"
-                  className="font-bold text-lime-600 dark:text-[#013f2e] hover:underline text-xs shrink-0"
+                  className="font-bold text-[#013f2e] dark:text-[#36D39B] hover:underline text-xs shrink-0"
                 >
                   {autoApplyStatus.ctaText}
                 </Link>
@@ -342,7 +342,7 @@ export default function FiltersBar({
                 <button
                   type="button"
                   onClick={handleCtaClick}
-                  className="font-bold text-lime-600 dark:text-[#013f2e] hover:underline text-xs shrink-0"
+                  className="font-bold text-[#013f2e] dark:text-[#36D39B] hover:underline text-xs shrink-0"
                 >
                   {autoApplyStatus.ctaText}
                 </button>
@@ -353,7 +353,7 @@ export default function FiltersBar({
             <button
               type="button"
               onClick={onOpenSettings}
-              className="px-3.5 py-2 rounded-2xl border border-gray-200 dark:border-white/10 hover:border-lime-500/50 bg-white dark:bg-[#141810] text-xs font-bold text-gray-700 dark:text-gray-300 hover:text-lime-600 dark:hover:text-[#013f2e] transition-colors flex items-center gap-1.5 shadow-2xs shrink-0"
+              className="px-3.5 py-2 rounded-2xl border border-gray-200 dark:border-white/10 hover:border-[#013f2e]/50 dark:hover:border-[#36D39B]/50 bg-white dark:bg-[#141810] text-xs font-bold text-gray-700 dark:text-gray-300 hover:text-[#013f2e] dark:hover:text-[#36D39B] transition-colors flex items-center gap-1.5 shadow-2xs shrink-0"
             >
               <span>Edit Preferences</span>
               <ChevronRight className="w-3.5 h-3.5 text-gray-400" />
@@ -373,7 +373,7 @@ export default function FiltersBar({
               value={filters.searchText || ''}
               onChange={(e) => onChange({ searchText: e.target.value || undefined })}
               placeholder="Search jobs, companies, skills..."
-              className="w-full h-11 pl-10 pr-9 bg-gray-50/80 dark:bg-white/[0.03] border border-gray-200/90 dark:border-white/10 rounded-2xl text-xs sm:text-sm text-gray-900 dark:text-white placeholder-gray-400 outline-none focus:border-lime-500 focus:bg-white dark:focus:bg-[#141810] transition-all shadow-2xs"
+              className="w-full h-11 pl-10 pr-9 bg-gray-50/80 dark:bg-white/[0.03] border border-gray-200/90 dark:border-white/10 rounded-2xl text-xs sm:text-sm text-gray-900 dark:text-white placeholder-gray-400 outline-none focus:border-[#013f2e] dark:focus:border-[#36D39B] focus:bg-white dark:focus:bg-[#141810] transition-all shadow-2xs"
             />
             {filters.searchText && (
               <button
@@ -405,7 +405,7 @@ export default function FiltersBar({
                   : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white font-medium'
               }`}
             >
-              <Sparkles className="w-3.5 h-3.5 text-lime-600 dark:text-[#013f2e]" />
+              <Sparkles className="w-3.5 h-3.5 text-[#013f2e] dark:text-[#36D39B]" />
               <span>Recommended</span>
             </button>
 
@@ -493,7 +493,7 @@ export default function FiltersBar({
                     onClick={() => handleToggleWorkplace(wp.id)}
                     className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${
                       active
-                        ? 'bg-lime-500 text-black font-bold shadow-2xs'
+                        ? 'bg-[#013f2e] dark:bg-[#36D39B] text-white dark:text-black font-bold shadow-2xs'
                         : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
                     }`}
                   >
@@ -516,8 +516,8 @@ export default function FiltersBar({
               <Zap
                 className={`w-3.5 h-3.5 ${
                   filters.easyApplyOnly
-                    ? 'text-lime-400 dark:text-black fill-current'
-                    : 'text-lime-600 dark:text-[#013f2e]'
+                    ? 'text-[#36D39B] dark:text-black fill-current'
+                    : 'text-[#013f2e] dark:text-[#36D39B]'
                 }`}
               />
               <span>Auto-Apply supported</span>
@@ -574,12 +574,12 @@ export default function FiltersBar({
                         onClick={() => handleToggleExperience(exp.id)}
                         className={`w-full text-left px-2.5 py-1.5 rounded-xl text-xs flex items-center justify-between transition-colors ${
                           active
-                            ? 'bg-lime-500/10 text-lime-700 dark:text-lime-400 font-bold'
+                            ? 'bg-[#36D39B]/15 text-[#013f2e] dark:text-[#36D39B] font-bold'
                             : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5'
                         }`}
                       >
                         <span>{exp.label}</span>
-                        {active && <Check className="w-3.5 h-3.5 text-lime-600" />}
+                        {active && <Check className="w-3.5 h-3.5 text-[#013f2e] dark:text-[#36D39B]" />}
                       </button>
                     );
                   })}
@@ -619,12 +619,12 @@ export default function FiltersBar({
                         }}
                         className={`w-full text-left px-2.5 py-1.5 rounded-xl text-xs flex items-center justify-between transition-colors ${
                           active
-                            ? 'bg-lime-500/10 text-lime-700 dark:text-lime-400 font-bold'
+                            ? 'bg-[#36D39B]/15 text-[#013f2e] dark:text-[#36D39B] font-bold'
                             : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5'
                         }`}
                       >
                         <span>{d.label}</span>
-                        {active && <Check className="w-3.5 h-3.5 text-lime-600" />}
+                        {active && <Check className="w-3.5 h-3.5 text-[#013f2e] dark:text-[#36D39B]" />}
                       </button>
                     );
                   })}

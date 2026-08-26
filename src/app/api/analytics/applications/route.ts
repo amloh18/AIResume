@@ -43,20 +43,20 @@ export async function GET(request: NextRequest) {
       userIdQuery 
     });
 
-    // Fetch jobs for the user within the date range (using JobApplication model)
-    const allJobs = await JobApplication.find({
-      userId: userIdQuery,
-      createdAt: { $gte: startDate }
-    });
-
-    // Fetch CV journeys for the user
+    // Fetch jobs and journeys in parallel (no data dependency)
     const userIdObjectId = mongoose.Types.ObjectId.isValid(authResult.userId) 
       ? new mongoose.Types.ObjectId(authResult.userId)
       : null;
     
-    const journeys = userIdObjectId 
-      ? await ApplicationJourney.find({ userId: userIdObjectId })
-      : await ApplicationJourney.find({ userId: authResult.userId });
+    const [allJobs, journeys] = await Promise.all([
+      JobApplication.find({
+        userId: userIdQuery,
+        createdAt: { $gte: startDate }
+      }),
+      userIdObjectId 
+        ? ApplicationJourney.find({ userId: userIdObjectId })
+        : ApplicationJourney.find({ userId: authResult.userId }),
+    ]);
 
     // Calculate application stats
     const totalApplications = allJobs.length;

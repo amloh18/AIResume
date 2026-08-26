@@ -225,9 +225,9 @@ export class AdminTemplateService {
         category,
         isActive: true,
         $or: [
-          { name: { $regex: searchTerm, $options: 'i' } },
-          { description: { $regex: searchTerm, $options: 'i' } },
-          { categories: { $in: [new RegExp(searchTerm, 'i')] } }
+          { name: { $regex: searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' } },
+          { description: { $regex: searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' } },
+          { categories: { $in: [new RegExp(searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i')] } }
         ]
       })
       .sort({ name: 1 })

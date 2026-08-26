@@ -1260,7 +1260,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
                               type="button"
                               onClick={() => handleFormChange('deadline', dateStr)}
                               className={`px-3 py-1.5 text-small font-medium rounded-lg transition-all ${isSelected
-                                ? 'bg-lime-500 dark:bg-[#013f2e] text-white dark:text-black'
+                                ? 'bg-[#013f2e] text-white font-bold shadow-sm'
                                 : 'bg-gray-100 dark:bg-[#232f1c] text-gray-700 dark:text-white/70 hover:bg-gray-200 dark:hover:bg-white/10 border border-gray-300 dark:border-white/20'
                                 }`}
                               whileHover={{ scale: 1.05 }}
@@ -1279,7 +1279,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
                             type="date"
                             value={formData.deadline || ''}
                             onChange={(e) => handleFormChange('deadline', e.target.value)}
-                            className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 rounded-md text-gray-900 dark:text-white text-small focus:border-lime-500 dark:focus:border-lime-400/50 focus:outline-none"
+                            className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 rounded-md text-gray-900 dark:text-white text-small focus:border-[#013f2e] dark:focus:border-[#36D39B] focus:outline-none"
                             placeholder="Select date"
                           />
                           <Calendar size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-white/50 pointer-events-none" />
@@ -1293,7 +1293,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
                                 key={priority}
                                 onClick={() => handleFormChange('priority', priority)}
                                 className={`px-3 py-2 text-small font-medium transition-all ${formData.priority === priority
-                                  ? 'bg-lime-500 dark:bg-[#013f2e] text-white dark:text-black rounded-lg'
+                                  ? 'bg-[#013f2e] text-white font-bold rounded-lg shadow-sm'
                                   : 'text-gray-700 dark:text-white/70 hover:text-gray-900 dark:hover:text-white rounded-lg'
                                   }`}
                               >
@@ -1414,7 +1414,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
                               key={sponsorship}
                               onClick={() => handleFormChange('sponsorship', sponsorship)}
                               className={`flex-1 px-3 py-2 text-small font-medium transition-all ${formData.sponsorship === sponsorship
-                                ? 'bg-lime-500 dark:bg-[#013f2e] text-white dark:text-black rounded-xl'
+                                ? 'bg-[#013f2e] text-white font-bold rounded-xl shadow-sm'
                                 : 'text-gray-700 dark:text-white/70 hover:text-gray-900 dark:hover:text-white rounded-lg'
                                 }`}
                             >
@@ -1516,7 +1516,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
               <motion.button
                 onClick={() => handleSaveJob(false)}
                 disabled={isSaving}
-                className="px-6 py-2.5 bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-black font-semibold rounded-lg transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-6 py-2.5 bg-[#013f2e] hover:bg-[#025c43] text-white font-bold rounded-lg transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >

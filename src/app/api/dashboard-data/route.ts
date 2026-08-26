@@ -53,7 +53,9 @@ export async function GET(request: NextRequest) {
       user,
       cvs,
       jobs,
-      journeys
+      journeys,
+      cvCount,
+      jobCount
     ] = await Promise.all([
       // Fetch user data with settings and usage limits
       UserModel.findById(userObjectId)
@@ -91,7 +93,11 @@ export async function GET(request: NextRequest) {
             .sort({ updatedAt: -1 })
             .limit(50)
             .lean()
-        : Promise.resolve([])
+        : Promise.resolve([]),
+
+      // Count queries (parallelized with the above)
+      includeCVs ? CV.countDocuments({ userId: userObjectId }) : Promise.resolve(0),
+      includeJobs ? JobApplication.countDocuments({ userId: userObjectId }) : Promise.resolve(0),
     ]);
 
     if (!user) {
@@ -102,10 +108,6 @@ export async function GET(request: NextRequest) {
     }
 
     const { currentPlanKey, subscription, isExpired } = subscriptionService.getEffectivePlan(user);
-
-    // Calculate usage limits and counts
-    const cvCount = includeCVs ? await CV.countDocuments({ userId: userObjectId }) : 0;
-    const jobCount = includeJobs ? await JobApplication.countDocuments({ userId: userObjectId }) : 0;
 
     // Construct response
     const responseData = {

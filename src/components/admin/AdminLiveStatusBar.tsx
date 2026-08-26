@@ -49,7 +49,9 @@ export default function AdminLiveStatusBar() {
 
   useEffect(() => {
     fetchLiveHealth();
-    const interval = setInterval(fetchLiveHealth, 25000);
+    const interval = setInterval(() => {
+      if (!document.hidden) fetchLiveHealth();
+    }, 25000);
     return () => clearInterval(interval);
   }, []);
 
