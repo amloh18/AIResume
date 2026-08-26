@@ -212,21 +212,34 @@ export async function POST(req: NextRequest) {
 
     const sourcesColl = db.collection('jobSources');
 
-    // 1. Trigger manual run via ingestion microservice or DB signal
+    // 1. Trigger manual run via in-process ingestion
     if (action === 'trigger_run') {
-      const ingestionServiceUrl = process.env.INGESTION_SERVICE_URL || 'http://localhost:4001';
-      let triggeredViaHttp = false;
+      // Run ingestion directly in this process (no external microservice needed)
+      const { default: mongoose } = await import('mongoose');
+      const db = mongoose.connection.db;
+      const runsColl = db!.collection('ingestionRuns');
+      const now = new Date();
+      const runId = `run-${sourceName}-${now.getTime()}`;
 
-      try {
-        const res = await fetch(`${ingestionServiceUrl}/api/ingest/${sourceName}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          signal: AbortSignal.timeout(3000),
-        });
-        triggeredViaHttp = res.ok;
-      } catch {
-        // Fallback if standalone microservice is on separate port
-      }
+      // Create run record
+      await runsColl.insertOne({
+        runId,
+        source: sourceName,
+        status: 'running',
+        startedAt: now,
+        metrics: { fetched: 0, parsed: 0, inserted: 0, updated: 0, duplicates: 0, errors: 0 },
+        createdAt: now,
+      });
+
+      // Trigger ingestion in background (non-blocking)
+      const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+      fetch(`${baseUrl}/api/admin/ingest`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ source: sourceName }),
+      }).catch((err) => {
+        console.error(`Ingestion trigger failed for ${sourceName}:`, err);
+      });
 
       await AdminAuditLog.create({
         adminEmail: user.email || 'admin@buildairesume.com',
@@ -235,13 +248,13 @@ export async function POST(req: NextRequest) {
         category: 'job_intelligence',
         targetResource: 'jobSource',
         resourceId: sourceName,
-        metadata: { triggeredViaHttp },
+        metadata: { runId, triggeredInProcess: true },
       });
 
       return NextResponse.json({
         success: true,
-        message: `Ingestion run requested for ${sourceName}`,
-        triggeredViaHttp,
+        message: `Ingestion run triggered for ${sourceName}`,
+        runId,
       });
     }
 

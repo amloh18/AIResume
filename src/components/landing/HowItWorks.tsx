@@ -133,19 +133,21 @@ const HowItWorks = () => {
                 transition={{ duration: 0.6, delay: 0.2 }}
               >
                 {features.map((feature, index) => (
-                  <div
+                  <motion.div
                     key={index}
                     onClick={() => handleStepClick(index)}
-                    className={`relative pl-4 border-l-2 cursor-pointer transition-all duration-300 min-h-[80px] flex flex-col justify-center ${index === activeStep
-                      ? 'border-gray-700 opacity-100' // Base track for active (progress bar overlays it)
-                      : 'border-gray-700 opacity-60 hover:opacity-80'
-                      }`}
+                    className={`relative pl-4 border-l-2 cursor-pointer transition-all duration-300 min-h-[80px] flex flex-col justify-center ${
+                      index === activeStep
+                        ? 'border-gray-700 opacity-100'
+                        : 'border-gray-700 opacity-50 hover:opacity-80'
+                    }`}
                   >
                     {/* Active Step Progress Bar */}
                     {index === activeStep && (
                       <motion.div
-                        className="absolute left-[-2px] top-0 w-[2px] bg-[#81ff00]"
-                        style={{ height: `${100 - progress}%` }} // Grows from 0 to 100% as progress drops from 100 to 0
+                        layoutId="active-step-bar"
+                        className="absolute left-[-2px] top-0 w-[2px] bg-[#36D39B] shadow-[0_0_10px_rgba(54,211,155,0.8)]"
+                        style={{ height: `${100 - progress}%` }}
                         transition={{ duration: 0.05, ease: "linear" }}
                       />
                     )}
@@ -156,7 +158,7 @@ const HowItWorks = () => {
                     <p className="text-gray-400 text-small leading-relaxed">
                       {feature.description}
                     </p>
-                  </div>
+                  </motion.div>
                 ))}
               </motion.div>
 
@@ -173,7 +175,7 @@ const HowItWorks = () => {
                   >
                     {/* Progress bar on the border for mobile */}
                     <motion.div
-                      className="absolute left-[-2px] top-0 w-[2px] bg-[#81ff00]"
+                      className="absolute left-[-2px] top-0 w-[2px] bg-[#36D39B]"
                       style={{ height: `${100 - progress}%` }}
                       transition={{ duration: 0.05, ease: "linear" }}
                     />
@@ -193,8 +195,9 @@ const HowItWorks = () => {
                     <button
                       key={index}
                       onClick={() => handleStepClick(index)}
-                      className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${index === activeStep ? 'bg-[#81ff00]' : 'bg-gray-800'
-                        }`}
+                      className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${
+                        index === activeStep ? 'bg-[#36D39B]' : 'bg-gray-800'
+                      }`}
                       aria-label={`Go to step ${index + 1}`}
                     />
                   ))}
@@ -212,7 +215,7 @@ const HowItWorks = () => {
             transition={{ duration: 0.8, delay: 0.3 }}
           >
             {/* Glowing effect behind image */}
-            <div className="absolute -inset-4 bg-gradient-to-r from-[#81ff00]/20 via-[#6dd600]/20 to-[#5cc000]/20 rounded-3xl blur-2xl opacity-50" />
+            <div className="absolute -inset-4 bg-gradient-to-r from-[#36D39B]/20 via-[#4DDCB0]/15 to-[#86E8D1]/10 rounded-3xl blur-2xl opacity-60" />
 
             {/* Image container with 1:1 aspect ratio */}
             <div className="relative rounded-2xl overflow-hidden border border-white/10 shadow-2xl bg-white backdrop-blur-sm aspect-square min-h-[280px] tablet:min-h-[400px] flex items-center justify-center p-6 tablet:p-10">

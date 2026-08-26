@@ -11,6 +11,7 @@ import { navLinks } from '@/data/navigation';
 
 // Lazy load non-critical sections
 const Features = dynamic(() => import('@/components/landing/Features'), { ssr: true });
+const FeatureReel = dynamic(() => import('@/components/landing/FeatureReel').then(mod => mod.FeatureReel), { ssr: true });
 const ChromeExtension = dynamic(() => import('@/components/landing/ChromeExtension'), { ssr: true });
 const Testimonials = dynamic(() => import('@/components/landing/Testimonials'), { ssr: true });
 const CompetitorComparison = dynamic(() => import('@/components/landing/CompetitorComparison'), { ssr: true });
@@ -84,11 +85,11 @@ export default function LandingPageContent() {
 
       <div className="relative">
         <Hero withBanner={bannerActive} />
-        <TestimonialSnippet index={0} />
         <HowItWorks />
         <TestimonialSnippet index={1} />
         <Features />
         <TestimonialSnippet index={2} />
+        <FeatureReel />
         <ChromeExtension />
         <Testimonials />
 

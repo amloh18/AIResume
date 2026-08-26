@@ -141,10 +141,35 @@ const Hero = ({ withBanner = false }: { withBanner?: boolean }) => {
             className="relative w-[140%] sm:w-full max-w-6xl flex flex-col items-center justify-center cursor-pointer overflow-visible shrink-0"
             initial={{ opacity: 0, y: 60 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.6, ease: "easeOut" }}
+            transition={{ type: 'spring', stiffness: 260, damping: 24, delay: 0.5 }}
             onClick={() => setIsPopupOpen(true)}
           >
-            <div className="relative w-full aspect-video group rounded-2xl overflow-hidden shadow-2xl border border-white/10 bg-black">
+            {/* Floating Live Signal Chips (Video-inspired) */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8, x: -30 }}
+              animate={{ opacity: 1, scale: 1, x: 0 }}
+              transition={{ type: 'spring', stiffness: 350, damping: 22, delay: 0.9 }}
+              className="absolute -top-4 -left-2 sm:-left-6 z-30 hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#061811]/90 border border-emerald-400/30 shadow-[0_8px_25px_rgba(1,63,46,0.5)] backdrop-blur-md"
+            >
+              <div className="w-4 h-4 rounded-full bg-emerald-400 text-black flex items-center justify-center text-[9px] font-extrabold">
+                ✓
+              </div>
+              <span className="text-xs font-bold text-white tracking-tight">ATS Parsed: 98%</span>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8, x: 30 }}
+              animate={{ opacity: 1, scale: 1, x: 0 }}
+              transition={{ type: 'spring', stiffness: 350, damping: 22, delay: 1.1 }}
+              className="absolute -bottom-4 -right-2 sm:-right-6 z-30 hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#061811]/90 border border-emerald-400/30 shadow-[0_8px_25px_rgba(1,63,46,0.5)] backdrop-blur-md"
+            >
+              <div className="w-4 h-4 rounded-full bg-emerald-400 text-black flex items-center justify-center text-[9px] font-extrabold">
+                ✓
+              </div>
+              <span className="text-xs font-bold text-white tracking-tight">14/14 Keywords Matched</span>
+            </motion.div>
+
+            <div className="relative w-full aspect-video group rounded-2xl overflow-hidden shadow-2xl border border-white/10 bg-black transition-transform duration-500 hover:scale-[1.01]">
               <div className="absolute -inset-1 bg-gradient-to-r from-purple-500/20 to-lime-500/20 rounded-2xl blur-2xl opacity-50 group-hover:opacity-75 transition duration-1000 group-hover:duration-200"></div>
               
               {/* Expand Button Overlay */}
