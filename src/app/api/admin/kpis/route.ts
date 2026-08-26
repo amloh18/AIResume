@@ -3,8 +3,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import { User, CV, JobApplication, CoverLetter, Subscription, Invoice } from '@/models';
 import ActivityLog from '@/models/ActivityLog';
+import { withAdminAuth } from '@/lib/middleware/admin-auth';
 
-export async function GET(request: NextRequest) {
+export const GET = withAdminAuth(async (request: NextRequest) => {
   try {
     await getConnection();
 
@@ -160,12 +161,26 @@ export async function GET(request: NextRequest) {
       revenue = 0; // Removed mock
     }
 
-    // Calculate system stats (mocked for now but could be wired to actual metrics)
-    const systemHealth = {
-      speed: 18 + Math.floor(Math.random() * 10),
-      status: 100,
-      load: 35 + Math.floor(Math.random() * 15)
-    };
+    // Calculate real system health metrics
+    let systemHealth = { speed: 0, status: 100, load: 0 };
+    try {
+      // Measure DB response time as proxy for system speed
+      const dbStart = Date.now();
+      await getConnection();
+      const dbLatency = Date.now() - dbStart;
+      
+      // Use memory usage as proxy for system load
+      const memUsage = process.memoryUsage();
+      const loadPercent = Math.round((memUsage.heapUsed / memUsage.heapTotal) * 100);
+      
+      systemHealth = {
+        speed: Math.min(100, Math.max(0, 100 - Math.round(dbLatency / 10))), // Invert: lower latency = higher speed
+        status: 100,
+        load: loadPercent
+      };
+    } catch (error) {
+      systemHealth = { speed: 0, status: 0, load: 0 };
+    }
 
     const kpiData = {
       totalUsers,
@@ -190,4 +205,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

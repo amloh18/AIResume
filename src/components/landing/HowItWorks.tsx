@@ -72,8 +72,21 @@ const HowItWorks = () => {
   return (
     <section
       id="how-it-works"
-      className="relative pt-32 pb-20 bg-[#141810] overflow-visible"
+      className="relative pt-32 pb-20 bg-[#0a0a0c] overflow-visible"
     >
+      {/* Background Ambient Glows (Matching Everyday Superpowers) */}
+      <div 
+        className="absolute inset-0 pointer-events-none overflow-hidden"
+        style={{
+          background: `
+            radial-gradient(ellipse 60% 40% at 20% 15%, rgba(1, 63, 46, 0.25) 0%, transparent 65%),
+            radial-gradient(ellipse 60% 50% at 80% 50%, rgba(20, 184, 166, 0.08) 0%, transparent 65%),
+            radial-gradient(ellipse 70% 50% at 50% 85%, rgba(1, 63, 46, 0.2) 0%, transparent 65%),
+            linear-gradient(180deg, #0e1013 0%, #0a0a0c 50%, #060708 100%)
+          `
+        }}
+      />
+
       <div className="relative z-10 max-w-7xl mx-auto px-4 tablet:px-6 desktop:px-8">
         {/* Full Width Header */}
         <div className="mb-12 tablet:mb-16">

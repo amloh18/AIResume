@@ -9,6 +9,7 @@ import {
   getPasswordResetTemplate,
   EmailTemplateData
 } from '@/lib/email-templates';
+import { requireAdmin } from '@/lib/middleware/admin-auth';
 
 export interface EmailTemplate {
   id: string;
@@ -135,6 +136,7 @@ const predefinedTemplates: EmailTemplate[] = [
 
 export async function GET(request: NextRequest) {
   try {
+    await requireAdmin(request);
     const { searchParams } = new URL(request.url);
     const category = searchParams.get('category');
     const type = searchParams.get('type');
@@ -181,6 +183,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    await requireAdmin(request);
     const body = await request.json();
     const { templateId, variables } = body;
 

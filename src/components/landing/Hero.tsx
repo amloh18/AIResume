@@ -106,32 +106,35 @@ const Hero = ({ withBanner = false }: { withBanner?: boolean }) => {
           </motion.p>
 
           <motion.div
-            className="flex flex-col tablet:flex-row items-center justify-center gap-4 w-full tablet:w-auto mb-12 desktop:mb-16"
+            className="flex flex-col desktop:flex-row items-center justify-center gap-3 desktop:gap-4 w-full desktop:w-auto mb-12 desktop:mb-16 max-w-lg desktop:max-w-none mx-auto"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.4, ease: "easeOut" }}
           >
             <button
               onClick={() => router.push('/welcome')}
-              className="group w-full tablet:w-auto inline-flex items-center justify-center gap-3 bg-[#013f2e] hover:bg-[#025c43] text-white px-6 py-3 tablet:px-8 tablet:py-3.5 rounded-full font-bold text-small tablet:text-small shadow-lg transition-colors duration-200 hover:scale-105 uppercase tracking-wide"
+              className="group w-full desktop:w-auto inline-flex items-center justify-center gap-3 bg-[#013f2e] hover:bg-[#025c43] text-white px-6 py-3.5 desktop:px-8 desktop:py-3.5 rounded-full font-bold text-xs desktop:text-sm shadow-lg transition-all duration-200 hover:scale-105 uppercase tracking-wide cursor-pointer"
             >
               Build My Resume
-              <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
+              <ArrowRight className="w-4 h-4 desktop:w-5 desktop:h-5 transition-transform group-hover:translate-x-1" />
             </button>
             
-            <button
-              onClick={() => router.push('/explore')}
-              className="w-full tablet:w-auto inline-flex items-center justify-center gap-3 bg-white/5 hover:bg-white/10 text-white px-6 py-3 tablet:px-8 tablet:py-3.5 rounded-full font-bold text-small tablet:text-small backdrop-blur-md border border-white/10 transition-all hover:scale-105 uppercase tracking-wide cursor-pointer"
-            >
-              Explore Templates
-            </button>
+            {/* Inline CTAs on Mobile and Tablet */}
+            <div className="grid grid-cols-2 gap-2.5 sm:gap-3 w-full desktop:w-auto desktop:flex desktop:items-center desktop:gap-4">
+              <button
+                onClick={() => router.push('/explore')}
+                className="w-full desktop:w-auto inline-flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 text-white px-3 sm:px-5 desktop:px-7 py-3 desktop:py-3.5 rounded-full font-bold text-[11px] sm:text-xs desktop:text-xs backdrop-blur-md border border-white/10 transition-all hover:scale-105 uppercase tracking-wide cursor-pointer whitespace-nowrap text-center"
+              >
+                Explore Templates
+              </button>
 
-            <button
-              onClick={() => window.open('https://chromewebstore.google.com/detail/fphkljfgefkfemmlfbpnjdojnfeadaii?utm_source=item-share-cb', '_blank')}
-              className="w-full tablet:w-auto inline-flex items-center justify-center gap-3 bg-white/5 hover:bg-white/10 text-white px-6 py-3 tablet:px-8 tablet:py-3.5 rounded-full font-bold text-small tablet:text-small backdrop-blur-md border border-white/10 transition-all hover:scale-105 uppercase tracking-wide"
-            >
-              Download Extension
-            </button>
+              <button
+                onClick={() => window.open('https://chromewebstore.google.com/detail/fphkljfgefkfemmlfbpnjdojnfeadaii?utm_source=item-share-cb', '_blank')}
+                className="w-full desktop:w-auto inline-flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 text-white px-3 sm:px-5 desktop:px-7 py-3 desktop:py-3.5 rounded-full font-bold text-[11px] sm:text-xs desktop:text-xs backdrop-blur-md border border-white/10 transition-all hover:scale-105 uppercase tracking-wide cursor-pointer whitespace-nowrap text-center"
+              >
+                Download Extension
+              </button>
+            </div>
           </motion.div>
         </div>
 
@@ -144,19 +147,7 @@ const Hero = ({ withBanner = false }: { withBanner?: boolean }) => {
             transition={{ type: 'spring', stiffness: 260, damping: 24, delay: 0.5 }}
             onClick={() => setIsPopupOpen(true)}
           >
-            {/* Floating Live Signal Chips (Video-inspired) */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8, x: -30 }}
-              animate={{ opacity: 1, scale: 1, x: 0 }}
-              transition={{ type: 'spring', stiffness: 350, damping: 22, delay: 0.9 }}
-              className="absolute -top-4 -left-2 sm:-left-6 z-30 hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#061811]/90 border border-emerald-400/30 shadow-[0_8px_25px_rgba(1,63,46,0.5)] backdrop-blur-md"
-            >
-              <div className="w-4 h-4 rounded-full bg-emerald-400 text-black flex items-center justify-center text-[9px] font-extrabold">
-                ✓
-              </div>
-              <span className="text-xs font-bold text-white tracking-tight">ATS Parsed: 98%</span>
-            </motion.div>
-
+            {/* Floating Live Signal Chip (Video-inspired) */}
             <motion.div
               initial={{ opacity: 0, scale: 0.8, x: 30 }}
               animate={{ opacity: 1, scale: 1, x: 0 }}

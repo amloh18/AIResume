@@ -1,15 +1,12 @@
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthenticatedUser } from '@/lib/auth-helpers';
+import { requireAdmin } from '@/lib/middleware/admin-auth';
 import { sendEmail } from '@/lib/email-service';
 
 export async function POST(request: NextRequest) {
     try {
-        // 1. Auth Check
-        const authUser = await getAuthenticatedUser();
-        if (!authUser) {
-            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-        }
+        // 1. Auth Check - Admin only
+        await requireAdmin(request);
 
         const body = await request.json();
         const { emails, subject, htmlContent, fromName, fromEmail } = body;
