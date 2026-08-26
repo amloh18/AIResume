@@ -160,7 +160,7 @@ export function JobDetailModal({
         source: job.source || 'Discover',
         jobUrl: job.applyUrl,
         jobDescription: job.description,
-        status: 'draft',
+        status: 'saved',
         notes: jobNotes,
         tags: jobTags,
         salary:
@@ -291,7 +291,7 @@ export function JobDetailModal({
                   </span>
                 )}
                 {job.remote && (
-                  <span className="inline-flex items-center rounded-full bg-[#80FF00]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-lime-600 dark:text-lime-400 ring-1 ring-lime-500/20">
+                  <span className="inline-flex items-center rounded-full bg-[#013f2e]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-lime-600 dark:text-lime-400 ring-1 ring-lime-500/20">
                     Remote
                   </span>
                 )}
@@ -320,7 +320,7 @@ export function JobDetailModal({
                     type="button"
                     onClick={handleSaveNotes}
                     disabled={isSavingNotes}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-[#80FF00] px-3.5 py-1.5 text-xs font-black text-black shadow-sm transition hover:brightness-95 disabled:opacity-60"
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-[#013f2e] px-3.5 py-1.5 text-xs font-black text-black shadow-sm transition hover:brightness-95 disabled:opacity-60"
                   >
                     {isSavingNotes ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                     Save Notes

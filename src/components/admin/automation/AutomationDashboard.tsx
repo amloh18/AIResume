@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Sparkles, LayoutDashboard, Activity, ShieldAlert, Settings, RefreshCw } from 'lucide-react';
+import { Sparkles, LayoutDashboard, ShieldAlert } from 'lucide-react';
 import AutomationOverview from './AutomationOverview';
 import FailedApplicationsQueue from './FailedApplicationsQueue';
 
@@ -15,10 +15,8 @@ export default function AutomationDashboard({
   onSubTabChange,
 }: AutomationDashboardProps) {
   const subTabs = [
-    { id: 'overview', label: 'Queue & Fleet Health', icon: LayoutDashboard },
+    { id: 'overview', label: 'Queue & Health', icon: LayoutDashboard },
     { id: 'review', label: 'Review Queue & Triage', icon: ShieldAlert },
-    { id: 'runs', label: 'Flight Recorder Logs', icon: Activity },
-    { id: 'controls', label: 'Global Safety Controls', icon: Settings },
   ];
 
   const currentTab = activeSubTab || 'overview';
@@ -64,9 +62,8 @@ export default function AutomationDashboard({
       </div>
 
       {/* Render View */}
-      {(currentTab === 'overview' || currentTab === 'controls') && <AutomationOverview />}
+      {currentTab === 'overview' && <AutomationOverview />}
       {currentTab === 'review' && <FailedApplicationsQueue />}
-      {currentTab === 'runs' && <AutomationOverview />}
     </div>
   );
 }

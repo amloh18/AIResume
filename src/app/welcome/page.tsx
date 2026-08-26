@@ -1298,7 +1298,7 @@ function WelcomePageContent() {
           {currentStep === 1 && (
               <div className="space-y-8">
                 <div className="space-y-3 text-center">
-                  <span className="onboarding-step-label text-black bg-[#80FF00] px-3 py-1 rounded-full font-bold">Goal Alignment</span>
+                  <span className="onboarding-step-label text-black bg-[#013f2e] px-3 py-1 rounded-full font-bold">Goal Alignment</span>
                   <h1 className="onboarding-title">
                     What are you trying to accomplish?
                   </h1>
@@ -1320,7 +1320,7 @@ function WelcomePageContent() {
                     }`}
                   >
                     <div className="flex items-start gap-4">
-                      <div className={`p-3.5 rounded-2xl shrink-0 ${intent === 'cv' ? 'bg-black text-[#80FF00]' : 'bg-gray-100 text-gray-700'}`}>
+                      <div className={`p-3.5 rounded-2xl shrink-0 ${intent === 'cv' ? 'bg-black text-[#013f2e]' : 'bg-gray-100 text-gray-700'}`}>
                         <FileText className="h-7 w-7" />
                       </div>
                       <div className="space-y-1.5 flex-1 min-w-0">
@@ -1329,7 +1329,7 @@ function WelcomePageContent() {
                             CV Studio
                           </span>
                           <div className={`w-5 h-5 rounded-full flex items-center justify-center transition-all ${
-                            intent === 'cv' ? 'bg-black text-[#80FF00] shadow-sm' : 'border-2 border-gray-300'
+                            intent === 'cv' ? 'bg-black text-[#013f2e] shadow-sm' : 'border-2 border-gray-300'
                           }`}>
                             {intent === 'cv' && <Check className="h-3 w-3 stroke-[3]" />}
                           </div>
@@ -1354,7 +1354,7 @@ function WelcomePageContent() {
                     }`}
                   >
                     <div className="flex items-start gap-4">
-                      <div className={`p-3.5 rounded-2xl shrink-0 ${intent === 'job_search' ? 'bg-black text-[#80FF00]' : 'bg-gray-100 text-gray-700'}`}>
+                      <div className={`p-3.5 rounded-2xl shrink-0 ${intent === 'job_search' ? 'bg-black text-[#013f2e]' : 'bg-gray-100 text-gray-700'}`}>
                         <Zap className="h-7 w-7" />
                       </div>
                       <div className="space-y-1.5 flex-1 min-w-0">
@@ -1363,7 +1363,7 @@ function WelcomePageContent() {
                             Full Ecosystem
                           </span>
                           <div className={`w-5 h-5 rounded-full flex items-center justify-center transition-all ${
-                            intent === 'job_search' ? 'bg-black text-[#80FF00] shadow-sm' : 'border-2 border-gray-300'
+                            intent === 'job_search' ? 'bg-black text-[#013f2e] shadow-sm' : 'border-2 border-gray-300'
                           }`}>
                             {intent === 'job_search' && <Check className="h-3 w-3 stroke-[3]" />}
                           </div>
@@ -1383,7 +1383,7 @@ function WelcomePageContent() {
             {currentStep === 2 && (
               <div className="space-y-8">
                 <div className="space-y-3 text-center">
-                  <span className="onboarding-step-label text-black bg-[#80FF00] px-3 py-1 rounded-full font-bold">Career Profile</span>
+                  <span className="onboarding-step-label text-black bg-[#013f2e] px-3 py-1 rounded-full font-bold">Career Profile</span>
                   <h1 className="onboarding-title">
                     {candidateName ? `${candidateName}, let's build your profile` : `Let's build your career profile`}
                   </h1>
@@ -1466,11 +1466,11 @@ function WelcomePageContent() {
                               }`}
                             >
                               {method.soon && (
-                                <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-black text-[#80FF00] text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest shadow-sm z-10">
+                                <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-black text-[#013f2e] text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest shadow-sm z-10">
                                   Coming Soon
                                 </div>
                               )}
-                              <div className={`p-3 rounded-xl ${isSelected ? 'bg-black text-[#80FF00]' : 'bg-gray-150'}`}>
+                              <div className={`p-3 rounded-xl ${isSelected ? 'bg-black text-[#013f2e]' : 'bg-gray-150'}`}>
                                 <Icon className="h-5 w-5" />
                               </div>
                               <div>
@@ -1528,7 +1528,7 @@ function WelcomePageContent() {
                         </div>
                         <div className="w-full bg-gray-100 h-3 rounded-full overflow-hidden p-0.5 border border-gray-200/50">
                           <div 
-                            className="bg-gradient-to-r from-[#80FF00] to-emerald-400 h-full rounded-full transition-all duration-300 shadow-[0_0_8px_rgba(128,255,0,0.5)]" 
+                            className="bg-gradient-to-r from-[#013f2e] to-emerald-400 h-full rounded-full transition-all duration-300 shadow-[0_0_8px_rgba(1, 63, 46,0.5)]" 
                             style={{ width: `${parseProgress}%` }} 
                           />
                         </div>
@@ -1548,11 +1548,11 @@ function WelcomePageContent() {
                             <div key={stepIdx} className={`flex items-center gap-3 ${isCompleted ? 'text-gray-900 font-bold' : isActive ? 'text-gray-900 font-extrabold' : 'text-gray-400'}`}>
                               <div className="flex-shrink-0">
                                 {isCompleted ? (
-                                  <div className="w-5 h-5 rounded-full bg-[#80FF00] flex items-center justify-center text-black shadow-sm">
+                                  <div className="w-5 h-5 rounded-full bg-[#013f2e] flex items-center justify-center text-black shadow-sm">
                                     <Check size={11} strokeWidth={4} />
                                   </div>
                                 ) : isActive ? (
-                                  <div className="w-5 h-5 rounded-full border-2 border-[#80FF00] flex items-center justify-center bg-[#80FF00]/10">
+                                  <div className="w-5 h-5 rounded-full border-2 border-[#013f2e] flex items-center justify-center bg-[#013f2e]/10">
                                     <div className="w-2 h-2 rounded-full bg-black" />
                                   </div>
                                 ) : (
@@ -1575,7 +1575,7 @@ function WelcomePageContent() {
                       <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} className="bg-white rounded-3xl p-8 max-w-2xl w-full shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <div className="p-2 bg-black rounded-lg text-[#80FF00]">
+                            <div className="p-2 bg-black rounded-lg text-[#013f2e]">
                               <FileJson size={24} />
                             </div>
                             <div>
@@ -1622,7 +1622,7 @@ function WelcomePageContent() {
             {currentStep === 3 && (
               <div className="space-y-6 max-w-3xl mx-auto text-gray-900">
                 <div className="space-y-2 text-center">
-                  <span className="onboarding-step-label text-black bg-[#80FF00] px-3 py-1 rounded-full font-bold">Analysis &amp; Insights</span>
+                  <span className="onboarding-step-label text-black bg-[#013f2e] px-3 py-1 rounded-full font-bold">Analysis &amp; Insights</span>
                   <h1 className="onboarding-title">
                     {candidateName ? `What AIResume discovered about your career, ${candidateName}` : 'What AIResume discovered about your background'}
                   </h1>
@@ -1638,7 +1638,7 @@ function WelcomePageContent() {
                       <circle cx="50" cy="50" r="42" fill="none" stroke="#F3F4F6" strokeWidth="8" />
                       <circle
                         cx="50" cy="50" r="42" fill="none"
-                        stroke={activeSnapshot.healthIndex >= 80 ? '#80FF00' : '#F59E0B'}
+                        stroke={activeSnapshot.healthIndex >= 80 ? '#013f2e' : '#F59E0B'}
                         strokeWidth="8"
                         strokeDasharray={`${2 * Math.PI * 42}`}
                         strokeDashoffset={`${2 * Math.PI * 42 * (1 - (activeSnapshot.healthIndex || 0) / 100)}`}
@@ -1805,10 +1805,10 @@ function WelcomePageContent() {
                   <div className="border-2 border-black bg-slate-50/70 rounded-3xl p-6 sm:p-7 flex flex-col justify-between transition-all relative shadow-md ring-2 ring-black/5">
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <div className="p-3 bg-black text-[#80FF00] rounded-2xl w-fit">
+                        <div className="p-3 bg-black text-[#013f2e] rounded-2xl w-fit">
                           <Zap className="h-6 w-6" />
                         </div>
-                        <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-black text-[#80FF00]">
+                        <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-black text-[#013f2e]">
                           Recommended
                         </span>
                       </div>
@@ -1820,7 +1820,7 @@ function WelcomePageContent() {
 
                     <Button 
                       onClick={() => setCurrentStep(5)}
-                      className="w-full mt-6 py-5 bg-black text-[#80FF00] hover:bg-slate-900 rounded-xl font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-md"
+                      className="w-full mt-6 py-5 bg-black text-[#013f2e] hover:bg-slate-900 rounded-xl font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-md"
                     >
                       Accelerate Job Search <ArrowRight className="w-4 h-4" />
                     </Button>
@@ -1833,7 +1833,7 @@ function WelcomePageContent() {
             {currentStep === 5 && (
               <div className="space-y-8">
                 <div className="space-y-3 text-center">
-                  <span className="onboarding-step-label text-black bg-[#80FF00] px-3 py-1 rounded-full font-bold">Target Roles</span>
+                  <span className="onboarding-step-label text-black bg-[#013f2e] px-3 py-1 rounded-full font-bold">Target Roles</span>
                   <h1 className="onboarding-title">
                     {candidateName ? `${candidateName}, what roles are you targeting?` : 'What roles are you targeting?'}
                   </h1>
@@ -1871,7 +1871,7 @@ function WelcomePageContent() {
                             <div className="min-w-0 flex-1">
                               <span className="text-xs font-bold block truncate">{p.name}</span>
                             </div>
-                            {isSelected && <Check className="h-3 w-3 text-[#80FF00] shrink-0" />}
+                            {isSelected && <Check className="h-3 w-3 text-[#013f2e] shrink-0" />}
                           </button>
                         );
                       })}
@@ -1899,7 +1899,7 @@ function WelcomePageContent() {
                               }}
                               className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 ${
                                 isSel 
-                                  ? 'bg-black text-[#80FF00] border-black shadow-sm' 
+                                  ? 'bg-black text-[#013f2e] border-black shadow-sm' 
                                   : 'bg-white hover:bg-gray-100 border-gray-200 text-gray-700'
                               }`}
                             >
@@ -1939,7 +1939,7 @@ function WelcomePageContent() {
                               }
                               setCustomRoleInput('');
                             }}
-                            className="px-3 py-1.5 bg-black text-[#80FF00] rounded-xl text-xs font-bold"
+                            className="px-3 py-1.5 bg-black text-[#013f2e] rounded-xl text-xs font-bold"
                           >
                             Add
                           </button>
@@ -1955,7 +1955,7 @@ function WelcomePageContent() {
             {currentStep === 6 && (
               <div className="space-y-8">
                 <div className="space-y-3 text-center">
-                  <span className="onboarding-step-label text-black bg-[#80FF00] px-3 py-1 rounded-full font-bold">Workplace + Location</span>
+                  <span className="onboarding-step-label text-black bg-[#013f2e] px-3 py-1 rounded-full font-bold">Workplace + Location</span>
                   <h1 className="onboarding-title">
                     {candidateName ? `${candidateName}, where do you want to work?` : 'Where do you want to work?'}
                   </h1>
@@ -2018,7 +2018,7 @@ function WelcomePageContent() {
             {currentStep === 7 && (
               <div className="space-y-8">
                 <div className="space-y-3 text-center">
-                  <span className="onboarding-step-label text-black bg-[#80FF00] px-3 py-1 rounded-full font-bold">Salary Expectations</span>
+                  <span className="onboarding-step-label text-black bg-[#013f2e] px-3 py-1 rounded-full font-bold">Salary Expectations</span>
                   <h1 className="onboarding-title">
                     What&apos;s your target salary?
                   </h1>
@@ -2114,7 +2114,7 @@ function WelcomePageContent() {
             {currentStep === 8 && (
               <div className="space-y-8">
                 <div className="space-y-3 text-center">
-                  <span className="onboarding-step-label text-black bg-[#80FF00] px-3 py-1 rounded-full font-bold">Experience + Availability</span>
+                  <span className="onboarding-step-label text-black bg-[#013f2e] px-3 py-1 rounded-full font-bold">Experience + Availability</span>
                   <h1 className="onboarding-title">
                     Tell us about your experience
                   </h1>
@@ -2231,7 +2231,7 @@ function WelcomePageContent() {
             {currentStep === 9 && (
               <div className="space-y-8">
                 <div className="space-y-3 text-center">
-                  <span className="onboarding-step-label text-black bg-[#80FF00] px-3 py-1 rounded-full font-bold">Search Intensity</span>
+                  <span className="onboarding-step-label text-black bg-[#013f2e] px-3 py-1 rounded-full font-bold">Search Intensity</span>
                   <h1 className="onboarding-title">
                     {candidateName ? `${candidateName}, how actively are you searching?` : 'How actively are you looking?'}
                   </h1>
@@ -2259,7 +2259,7 @@ function WelcomePageContent() {
                         <p className="text-xs text-gray-500 mt-0.5">{option.desc}</p>
                       </div>
                       <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ml-3 transition-all ${
-                        searchIntensity === option.id ? 'bg-black text-[#80FF00] shadow-sm' : 'border-2 border-gray-300'
+                        searchIntensity === option.id ? 'bg-black text-[#013f2e] shadow-sm' : 'border-2 border-gray-300'
                       }`}>
                         {searchIntensity === option.id && <Check className="h-3 w-3 stroke-[3]" />}
                       </div>
@@ -2273,7 +2273,7 @@ function WelcomePageContent() {
             {currentStep === 10 && (
               <div className="space-y-8">
                 <div className="space-y-3 text-center">
-                  <span className="onboarding-step-label text-black bg-[#80FF00] px-3 py-1 rounded-full font-bold">Application Volume</span>
+                  <span className="onboarding-step-label text-black bg-[#013f2e] px-3 py-1 rounded-full font-bold">Application Volume</span>
                   <h1 className="onboarding-title">
                     How many applications per month?
                   </h1>
@@ -2321,7 +2321,7 @@ function WelcomePageContent() {
             {currentStep === 11 && (
               <div className="space-y-8">
                 <div className="space-y-3 text-center">
-                  <span className="onboarding-step-label text-black bg-[#80FF00] px-3 py-1 rounded-full font-bold">Application Mode</span>
+                  <span className="onboarding-step-label text-black bg-[#013f2e] px-3 py-1 rounded-full font-bold">Application Mode</span>
                   <h1 className="onboarding-title">
                     How much should AIResume handle?
                   </h1>
@@ -2352,7 +2352,7 @@ function WelcomePageContent() {
                           <p className="text-xs text-gray-500 mt-1">{mode.desc}</p>
                         </div>
                         <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 transition-all ${
-                          applicationMode === mode.id ? 'bg-black text-[#80FF00] shadow-sm' : 'border-2 border-gray-300'
+                          applicationMode === mode.id ? 'bg-black text-[#013f2e] shadow-sm' : 'border-2 border-gray-300'
                         }`}>
                           {applicationMode === mode.id && <Check className="h-3 w-3 stroke-[3]" />}
                         </div>
@@ -2410,7 +2410,7 @@ function WelcomePageContent() {
                 <div className="w-full max-w-lg mx-auto pt-2 z-10 relative">
                   <Button
                     onClick={() => completeOnboarding('/dashboard')}
-                    className="w-full py-6 rounded-2xl font-extrabold text-base flex items-center justify-center gap-2 transition-all bg-black text-[#80FF00] hover:bg-slate-900 shadow-md"
+                    className="w-full py-6 rounded-2xl font-extrabold text-base flex items-center justify-center gap-2 transition-all bg-black text-[#013f2e] hover:bg-slate-900 shadow-md"
                   >
                     Launch My Workspace <ChevronRight className="h-5 w-5 stroke-[2.5]" />
                   </Button>
@@ -2450,7 +2450,7 @@ function WelcomePageContent() {
               disabled={!isStepValid}
               className={`${
                 currentStep === 3 
-                  ? 'bg-[#80FF00] hover:bg-[#70e600] text-black font-extrabold shadow-md' 
+                  ? 'bg-[#013f2e] hover:bg-[#02523c] text-black font-extrabold shadow-md' 
                   : 'bg-black text-white hover:bg-slate-900 font-bold'
               } flex items-center gap-1.5 rounded-xl px-5 py-2.5 shadow-sm disabled:opacity-35 transition-all`}
             >

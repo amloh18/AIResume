@@ -682,32 +682,58 @@ export async function findMatchingJobsForAutoApply(
 ): Promise<IApplicationQueue[]> {
   await initializeModels();
   
-  // CRITICAL: Read from JobSearchProfile instead of legacy autoApplySettings
+  // Read from JobSearchProfile or legacy autoApplySettings based on feature flag
   let targetRoles: string[] = [];
   let locations: string[] = [];
   let remoteOnly = false;
   let minSalary = 0;
   let excludeCompanies: string[] = [];
   
-  try {
-    const { JobSearchProfileService } = await import('./jobSearchProfileService');
-    const profile = await JobSearchProfileService.getProfile(userId);
-    
-    if (profile) {
-      targetRoles = profile.targetRoles || [];
-      locations = profile.locations || [];
-      remoteOnly = profile.remoteOnly;
-      minSalary = profile.minSalary || 0;
+  const { isFeatureFlagEnabledForUser, FEATURE_FLAGS } = await import('@/lib/feature-flags');
+  const useNewStore = isFeatureFlagEnabledForUser(FEATURE_FLAGS.USE_JOB_SEARCH_PROFILE, userId);
+  
+  if (useNewStore) {
+    try {
+      const { JobSearchProfileService } = await import('./jobSearchProfileService');
+      const { trackNewStoreRead, trackLegacyFallbackRead } = await import('@/lib/migration/migrationTelemetry');
+      const profile = await JobSearchProfileService.getProfile(userId);
       
-      // Get auto-apply config
-      const { AutoApplyConfigurationService } = await import('./autoApplyConfigurationService');
-      const config = await AutoApplyConfigurationService.getConfig(userId);
-      
-      if (!config || !config.enabled) {
-        return [];
+      if (profile) {
+        targetRoles = profile.targetRoles || [];
+        locations = profile.locations || [];
+        remoteOnly = profile.remoteOnly;
+        minSalary = profile.minSalary || 0;
+        
+        const { AutoApplyConfigurationService } = await import('./autoApplyConfigurationService');
+        const config = await AutoApplyConfigurationService.getConfig(userId);
+        
+        if (!config || !config.enabled) {
+          return [];
+        }
+        trackNewStoreRead('AutoApplyProcessor', userId);
+      } else {
+        const quota = await UserQuota.findOne({ userId });
+        if (!quota || !quota.autoApplyEnabled) {
+          return [];
+        }
+        
+        const settings = quota.autoApplySettings;
+        targetRoles = settings.targetRoles || [];
+        locations = settings.locations || [];
+        remoteOnly = settings.remoteOnly || false;
+        minSalary = settings.minSalary || 0;
+        excludeCompanies = settings.excludeCompanies || [];
+        trackLegacyFallbackRead({
+          service: 'AutoApplyProcessor',
+          userId,
+          legacySource: 'user_quota_auto_apply_settings',
+          reason: 'profile_not_found',
+        });
       }
-    } else {
-      // Fallback to legacy UserQuota.autoApplySettings
+    } catch (error) {
+      console.warn('[AutoApply] Could not load JobSearchProfile, falling back to legacy:', error);
+      const { trackLegacyFallbackRead } = await import('@/lib/migration/migrationTelemetry');
+      
       const quota = await UserQuota.findOne({ userId });
       if (!quota || !quota.autoApplyEnabled) {
         return [];
@@ -719,11 +745,16 @@ export async function findMatchingJobsForAutoApply(
       remoteOnly = settings.remoteOnly || false;
       minSalary = settings.minSalary || 0;
       excludeCompanies = settings.excludeCompanies || [];
+      trackLegacyFallbackRead({
+        service: 'AutoApplyProcessor',
+        userId,
+        legacySource: 'user_quota_auto_apply_settings',
+        reason: 'profile_error',
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
-  } catch (error) {
-    console.warn('[AutoApply] Could not load JobSearchProfile, falling back to legacy:', error);
-    
-    // Fallback to legacy UserQuota.autoApplySettings
+  } else {
+    // Feature flag disabled — read directly from legacy
     const quota = await UserQuota.findOne({ userId });
     if (!quota || !quota.autoApplyEnabled) {
       return [];

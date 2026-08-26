@@ -318,25 +318,16 @@ const Footer = () => {
               <motion.button
                 type="submit"
                 disabled={isSubscribing}
-                className="w-full group relative bg-gradient-to-r from-lime-400 to-lime-500 text-black px-3 py-2 rounded-xl font-semibold hover:shadow-2xl hover:shadow-lime-400/25 transition-all duration-300 overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full group relative bg-[#013f2e] hover:bg-[#025c43] text-white px-3 py-2 rounded-xl font-bold shadow-lg transition-colors duration-200 overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed"
                 whileHover={{
-                  scale: isSubscribing ? 1 : 1.05,
-                  rotateY: isSubscribing ? 0 : 5,
-                  boxShadow: isSubscribing ? "none" : "0 20px 40px -12px rgba(132, 204, 22, 0.4)"
+                  scale: isSubscribing ? 1 : 1.02,
+                  boxShadow: isSubscribing ? "none" : "0 10px 25px -5px rgba(1, 63, 46, 0.5)"
                 }}
-                whileTap={{ scale: isSubscribing ? 1 : 0.95 }}
-                style={{
-                  transformStyle: 'preserve-3d',
-                  perspective: '1000px'
-                }}
+                whileTap={{ scale: isSubscribing ? 1 : 0.98 }}
               >
                 <motion.div
-                  className="absolute inset-0 bg-gradient-to-r from-lime-300 to-lime-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                  style={{ filter: 'blur(20px)' }}
-                />
-                <motion.div
                   className="relative flex items-center justify-center gap-2"
-                  whileHover={{ x: isSubscribing ? 0 : 5 }}
+                  whileHover={{ x: isSubscribing ? 0 : 3 }}
                 >
                   {isSubscribing ? (
                     <motion.div

@@ -167,7 +167,7 @@ const FAQ = () => {
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
           >
-            <svg width="48" height="24" viewBox="0 0 48 24" fill="none" className="text-[#81ff00]">
+            <svg width="48" height="24" viewBox="0 0 48 24" fill="none" className="text-[#36D39B]">
               <path
                 d="M2 12C6 6 10 18 14 12C18 6 22 18 26 12C30 6 34 18 38 12C42 6 46 12 46 12"
                 stroke="currentColor"
@@ -176,12 +176,12 @@ const FAQ = () => {
               />
             </svg>
           </motion.div>
-          <h2 className="!text-[2rem] tablet:!text-[2.5rem] desktop:!text-[3rem] font-extrabold text-white text-left tracking-tighter !leading-[1.05] mb-6">
-            Frequently Asked Questions
+          <h2 className="tablet:!text-[2.5rem] desktop:!text-[3rem] font-extrabold text-[#F5F7F7] text-left tracking-tighter mb-6 text-4xl! tracking-normal!">
+            Frequently Asked <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#36D39B] via-[#4DDCB0] to-[#86E8D1]">Questions</span>
           </h2>
           <p className="text-small tablet:text-small desktop:text-h3 text-white/70 max-w-3xl leading-relaxed font-light text-left">
             Everything you need to know about our plans, features, and policies. Can't find what you're looking for?
-            <span className="text-lime-400 font-medium"> Contact our support team</span>.
+            <span className="text-[#36D39B] font-medium"> Contact our support team</span>.
           </p>
         </motion.div>
 

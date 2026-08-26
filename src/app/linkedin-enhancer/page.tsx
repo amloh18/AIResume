@@ -98,7 +98,7 @@ function LinkedInGate() {
                     </p>
                     <button
                         onClick={handleUpgrade}
-                        className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-[#99FF00] hover:bg-[#88e600] active:scale-95 text-black font-extrabold text-sm transition-all duration-200 shadow-[0_4px_20px_rgba(153,255,0,0.3)] hover:shadow-[0_4px_25px_rgba(153,255,0,0.5)]"
+                        className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-[#013f2e] hover:bg-[#025c43] active:scale-95 text-white font-bold text-sm transition-colors duration-200 shadow-lg"
                     >
                         Upgrade to Focused
                         <ChevronRight className="w-4 h-4 stroke-[3]" />

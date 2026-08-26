@@ -33,6 +33,7 @@ export async function GET(req: NextRequest) {
 
     const now = new Date();
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const last7d = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
     // 1. Overview KPIs
     if (view === 'overview') {
@@ -44,6 +45,8 @@ export async function GET(req: NextRequest) {
         updatedToday,
         recentRuns,
         sourcesList,
+        totalJobs,
+        duplicateEvents,
       ] = await Promise.all([
         jobsColl.countDocuments({ status: 'active' }),
         jobsColl.countDocuments({ status: 'stale' }),
@@ -52,6 +55,8 @@ export async function GET(req: NextRequest) {
         jobsColl.countDocuments({ updatedAt: { $gte: startOfToday } }),
         runsColl.find().sort({ startedAt: -1 }).limit(10).toArray(),
         sourcesColl.find().toArray(),
+        jobsColl.countDocuments(),
+        eventsColl.countDocuments({ type: 'duplicate', createdAt: { $gte: last7d } }),
       ]);
 
       const successfulRuns = recentRuns.filter((r) => r.status === 'completed').length;
@@ -60,6 +65,7 @@ export async function GET(req: NextRequest) {
         recentRuns.length > 0
           ? Math.round(recentRuns.reduce((acc, r) => acc + (r.durationMs || 0), 0) / recentRuns.length)
           : 0;
+      const duplicateRate = totalJobs > 0 ? Math.round((duplicateEvents / totalJobs) * 1000) / 10 : 0;
 
       return NextResponse.json({
         kpis: {
@@ -72,7 +78,7 @@ export async function GET(req: NextRequest) {
           totalSources: Math.max(sourcesList.length, 8),
           ingestionSuccessRate: successRate,
           avgIngestionLatencyMs: avgDurationMs,
-          duplicateRate: 14.2,
+          duplicateRate,
           failedRunsCount: recentRuns.filter((r) => r.status === 'failed').length,
         },
         recentRuns,

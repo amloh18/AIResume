@@ -402,7 +402,7 @@ const [preferences, setPreferences] = useState<AutoApplyPreferences>({
             <div className="flex items-start justify-between gap-4">
               <div className="space-y-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <Zap className="w-5 h-5 text-lime-600 dark:text-[#80FF00]" />
+                  <Zap className="w-5 h-5 text-lime-600 dark:text-[#013f2e]" />
                   <h2 className="text-lg font-bold text-gray-900 dark:text-white">
                     Application Automation
                   </h2>
@@ -433,7 +433,7 @@ const [preferences, setPreferences] = useState<AutoApplyPreferences>({
                 aria-label="Toggle Auto-Apply"
                 className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors shrink-0 ${
                   preferences.enabled
-                    ? 'bg-lime-500 dark:bg-[#80FF00]'
+                    ? 'bg-lime-500 dark:bg-[#013f2e]'
                     : 'bg-gray-300 dark:bg-gray-700'
                 }`}
               >
@@ -450,7 +450,7 @@ const [preferences, setPreferences] = useState<AutoApplyPreferences>({
               <button
                 type="button"
                 onClick={() => setPreferences((p) => ({ ...p, enabled: true }))}
-                className="text-xs font-bold text-lime-600 dark:text-[#80FF00] hover:underline block"
+                className="text-xs font-bold text-lime-600 dark:text-[#013f2e] hover:underline block"
               >
                 Resume Auto-Apply →
               </button>
@@ -498,7 +498,7 @@ const [preferences, setPreferences] = useState<AutoApplyPreferences>({
                     ? 'bg-red-500'
                     : percentUsed >= 80
                     ? 'bg-amber-500'
-                    : 'bg-[#80FF00]'
+                    : 'bg-[#013f2e]'
                 }`}
                 style={{ width: `${percentUsed}%` }}
               />
@@ -514,7 +514,7 @@ const [preferences, setPreferences] = useState<AutoApplyPreferences>({
             <div className="pt-1 flex justify-end">
               <Link
                 href="/dashboard/billing"
-                className="text-[11px] font-bold text-lime-600 dark:text-[#80FF00] hover:underline transition-colors"
+                className="text-[11px] font-bold text-lime-600 dark:text-[#013f2e] hover:underline transition-colors"
               >
                 Manage subscription →
               </Link>
@@ -526,7 +526,7 @@ const [preferences, setPreferences] = useState<AutoApplyPreferences>({
         <div className="bg-white dark:bg-[#141810] border border-gray-200/90 dark:border-white/10 rounded-3xl p-6 sm:p-7 shadow-sm flex flex-col justify-between space-y-5">
           <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-lime-600 dark:text-[#80FF00]" />
+              <Sparkles className="w-5 h-5 text-lime-600 dark:text-[#013f2e]" />
               <h3 className="text-lg font-bold text-gray-900 dark:text-white">
                 Your Auto-Apply Profile
               </h3>
@@ -538,7 +538,7 @@ const [preferences, setPreferences] = useState<AutoApplyPreferences>({
             <div className="space-y-2.5 pt-2 text-xs sm:text-sm text-gray-700 dark:text-gray-300 font-medium">
               {preferences.targetRoles.length > 0 && (
                 <div className="flex items-start gap-2.5">
-                  <CheckCircle2 className="w-4 h-4 text-lime-600 dark:text-[#80FF00] mt-0.5 shrink-0" />
+                  <CheckCircle2 className="w-4 h-4 text-lime-600 dark:text-[#013f2e] mt-0.5 shrink-0" />
                   <div>
                     <span className="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wider font-bold block">Target Roles</span>
                     <span className="font-bold text-gray-900 dark:text-white">{preferences.targetRoles.join(', ')}</span>
@@ -548,7 +548,7 @@ const [preferences, setPreferences] = useState<AutoApplyPreferences>({
               
               {preferences.locations.length > 0 && (
                 <div className="flex items-start gap-2.5">
-                  <CheckCircle2 className="w-4 h-4 text-lime-600 dark:text-[#80FF00] mt-0.5 shrink-0" />
+                  <CheckCircle2 className="w-4 h-4 text-lime-600 dark:text-[#013f2e] mt-0.5 shrink-0" />
                   <div>
                     <span className="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wider font-bold block">Locations & Workplace</span>
                     <span>
@@ -562,7 +562,7 @@ const [preferences, setPreferences] = useState<AutoApplyPreferences>({
               )}
               
               <div className="flex items-start gap-2.5">
-                <CheckCircle2 className="w-4 h-4 text-lime-600 dark:text-[#80FF00] mt-0.5 shrink-0" />
+                <CheckCircle2 className="w-4 h-4 text-lime-600 dark:text-[#013f2e] mt-0.5 shrink-0" />
                 <div>
                   <span className="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wider font-bold block">Target Minimum Salary</span>
                   <span className="font-bold text-gray-900 dark:text-white">
@@ -572,7 +572,7 @@ const [preferences, setPreferences] = useState<AutoApplyPreferences>({
               </div>
               
               <div className="flex items-start gap-2.5">
-                <CheckCircle2 className="w-4 h-4 text-lime-600 dark:text-[#80FF00] mt-0.5 shrink-0" />
+                <CheckCircle2 className="w-4 h-4 text-lime-600 dark:text-[#013f2e] mt-0.5 shrink-0" />
                 <div>
                   <span className="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wider font-bold block">Seniority & Availability</span>
                   <span>
@@ -587,7 +587,7 @@ const [preferences, setPreferences] = useState<AutoApplyPreferences>({
             <span className="text-lime-900 dark:text-lime-200 font-medium">
               Profile updates sync automatically across all matching algorithms.
             </span>
-            <span className="text-[10px] font-bold text-lime-700 dark:text-[#80FF00] bg-lime-500/20 px-2 py-0.5 rounded-full shrink-0">
+            <span className="text-[10px] font-bold text-lime-700 dark:text-[#013f2e] bg-lime-500/20 px-2 py-0.5 rounded-full shrink-0">
               Live
             </span>
           </div>
@@ -601,7 +601,7 @@ const [preferences, setPreferences] = useState<AutoApplyPreferences>({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
             <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              <Globe className="w-5 h-5 text-lime-600 dark:text-[#80FF00]" />
+              <Globe className="w-5 h-5 text-lime-600 dark:text-[#013f2e]" />
               <span>Connected Job Accounts</span>
             </h3>
             <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5">
@@ -761,7 +761,7 @@ const [preferences, setPreferences] = useState<AutoApplyPreferences>({
         <div className="bg-white dark:bg-[#141810] border border-gray-200/90 dark:border-white/10 rounded-3xl p-6 sm:p-7 shadow-sm space-y-4 flex flex-col justify-between">
           <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <Target className="w-5 h-5 text-lime-600 dark:text-[#80FF00]" />
+              <Target className="w-5 h-5 text-lime-600 dark:text-[#013f2e]" />
               <div>
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white">Roles You&apos;re Targeting</h3>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">These help us prioritize the right jobs.</p>
@@ -780,7 +780,7 @@ const [preferences, setPreferences] = useState<AutoApplyPreferences>({
               <button
                 type="button"
                 onClick={() => handleAddRole()}
-                className="px-5 py-2.5 bg-gray-900 hover:bg-black dark:bg-[#80FF00] dark:hover:brightness-95 dark:text-black text-white rounded-xl text-xs sm:text-sm font-bold transition-colors shadow-2xs shrink-0"
+                className="px-5 py-2.5 bg-gray-900 hover:bg-black dark:bg-[#013f2e] dark:hover:brightness-95 dark:text-black text-white rounded-xl text-xs sm:text-sm font-bold transition-colors shadow-2xs shrink-0"
               >
                 Add
               </button>
@@ -811,7 +811,7 @@ const [preferences, setPreferences] = useState<AutoApplyPreferences>({
         <div className="bg-white dark:bg-[#141810] border border-gray-200/90 dark:border-white/10 rounded-3xl p-6 sm:p-7 shadow-sm space-y-4 flex flex-col justify-between">
           <div className="space-y-4">
             <div className="flex items-center gap-2">
-              <MapPin className="w-5 h-5 text-lime-600 dark:text-[#80FF00]" />
+              <MapPin className="w-5 h-5 text-lime-600 dark:text-[#013f2e]" />
               <div>
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white">Where Do You Want to Work?</h3>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">We&apos;ll prioritize jobs you can realistically work from.</p>
@@ -895,7 +895,7 @@ const [preferences, setPreferences] = useState<AutoApplyPreferences>({
           <div className="space-y-3">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-2">
-                <DollarSign className="w-5 h-5 text-lime-600 dark:text-[#80FF00]" />
+                <DollarSign className="w-5 h-5 text-lime-600 dark:text-[#013f2e]" />
                 <div>
                   <h3 className="text-lg font-bold text-gray-900 dark:text-white">Target Salary</h3>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">We&apos;ll filter out roles below your target.</p>
@@ -948,7 +948,7 @@ const [preferences, setPreferences] = useState<AutoApplyPreferences>({
                       onClick={() => setPreferences((p) => ({ ...p, minSalary: val }))}
                       className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
                         isSelected
-                          ? 'bg-lime-500 dark:bg-[#80FF00] text-white dark:text-black shadow-2xs'
+                          ? 'bg-lime-500 dark:bg-[#013f2e] text-white dark:text-black shadow-2xs'
                           : 'bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 hover:bg-gray-100'
                       }`}
                     >
@@ -967,7 +967,7 @@ const [preferences, setPreferences] = useState<AutoApplyPreferences>({
             {/* Experience Tiers */}
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <Briefcase className="w-4 h-4 text-lime-600 dark:text-[#80FF00]" />
+                <Briefcase className="w-4 h-4 text-lime-600 dark:text-[#013f2e]" />
                 <h4 className="text-sm font-bold text-gray-900 dark:text-white">Experience Level</h4>
               </div>
 
@@ -1002,7 +1002,7 @@ const [preferences, setPreferences] = useState<AutoApplyPreferences>({
             {/* Availability / Notice Period */}
             <div className="space-y-2 pt-1 border-t border-gray-100 dark:border-white/5">
               <div className="flex items-center gap-2 pt-1">
-                <Clock className="w-4 h-4 text-lime-600 dark:text-[#80FF00]" />
+                <Clock className="w-4 h-4 text-lime-600 dark:text-[#013f2e]" />
                 <h4 className="text-sm font-bold text-gray-900 dark:text-white">Availability</h4>
               </div>
 
@@ -1016,7 +1016,7 @@ const [preferences, setPreferences] = useState<AutoApplyPreferences>({
                       onClick={() => setPreferences((p) => ({ ...p, maxNoticePeriodDays: days }))}
                       className={`px-3.5 py-1.5 rounded-xl text-xs font-bold border transition-all ${
                         isSelected
-                          ? 'bg-lime-500 dark:bg-[#80FF00] text-white dark:text-black border-transparent shadow-2xs'
+                          ? 'bg-lime-500 dark:bg-[#013f2e] text-white dark:text-black border-transparent shadow-2xs'
                           : 'bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 hover:bg-gray-50'
                       }`}
                     >
@@ -1045,7 +1045,7 @@ const [preferences, setPreferences] = useState<AutoApplyPreferences>({
           disabled={saving || !hasChanges}
           className={`px-8 py-3.5 font-black rounded-2xl text-sm flex items-center gap-2 shadow-md transition-all ${
             hasChanges 
-              ? 'bg-lime-500 hover:bg-lime-600 dark:bg-[#80FF00] dark:hover:brightness-95 text-white dark:text-black cursor-pointer' 
+              ? 'bg-lime-500 hover:bg-lime-600 dark:bg-[#013f2e] dark:hover:brightness-95 text-white dark:text-black cursor-pointer' 
               : 'bg-gray-200 dark:bg-gray-800 text-gray-500 dark:text-gray-500 cursor-not-allowed opacity-80'
           }`}
         >

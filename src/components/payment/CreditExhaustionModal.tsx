@@ -66,7 +66,7 @@ const CreditExhaustionModal: React.FC<CreditExhaustionModalProps> = ({
           </div>
           <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
             <div
-              className="bg-[#80FF00] h-1.5 rounded-full transition-all"
+              className="bg-[#013f2e] h-1.5 rounded-full transition-all"
               style={{ width: `${pct}%` }}
             />
           </div>

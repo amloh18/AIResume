@@ -175,8 +175,8 @@ export default async function RootLayout({
           <div className="fixed inset-0 z-[10000] flex flex-col items-center justify-center bg-[#f3f2ee] dark:bg-[#141810] overflow-hidden">
             <div className="relative w-24 h-24 flex items-center justify-center">
               {/* Concentric Rotating Rings */}
-              <div className="absolute inset-0 border-[3px] border-transparent border-t-[#81ff00] rounded-full animate-spin" style={{ animationDuration: '1.5s' }} />
-              <div className="absolute inset-2 border-[2px] border-transparent border-b-[#81ff00]/50 rounded-full animate-spin" style={{ animationDirection: 'reverse', animationDuration: '2s' }} />
+              <div className="absolute inset-0 border-[3px] border-transparent border-t-[#013f2e] rounded-full animate-spin" style={{ animationDuration: '1.5s' }} />
+              <div className="absolute inset-2 border-[2px] border-transparent border-b-[#013f2e]/50 rounded-full animate-spin" style={{ animationDirection: 'reverse', animationDuration: '2s' }} />
               
               {/* Center Logo SVG Fill (No text) */}
               <div className="relative z-10 w-12 h-12 flex items-center justify-center">

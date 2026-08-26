@@ -284,8 +284,8 @@
   --text-tertiary: #9ca3af;
   --border-primary: #e5e7eb;
   --border-secondary: #d1d5db;
-  --accent-primary: #84cc16;
-  --accent-hover: #65a30d;
+  --accent-primary: #013f2e;
+  --accent-hover: #02523c;
   --shadow-color: rgba(0, 0, 0, 0.1);
 
   /* Light theme frosted glass elements */
@@ -310,7 +310,7 @@
   --card-foreground: 222.2 84% 4.9%;
   --popover: 0 0% 100%;
   --popover-foreground: 222.2 84% 4.9%;
-  --primary: 152 57% 23%;
+  --primary: 164 97% 13%;
   --primary-foreground: 0 0% 100%;
   --secondary: 210 40% 96.1%;
   --secondary-foreground: 222.2 47.4% 11.2%;
@@ -322,7 +322,7 @@
   --destructive-foreground: 0 0% 98%;
   --border: 214.3 31.8% 91.4%;
   --input: 214.3 31.8% 91.4%;
-  --ring: 152 57% 23%;
+  --ring: 164 97% 13%;
   --radius: 0.75rem;
 }
 
@@ -336,8 +336,8 @@
   --text-tertiary: #757575;
   --border-primary: #2a2b2f;
   --border-secondary: #3a3b3f;
-  --accent-primary: #99FF00;
-  --accent-hover: #88e600;
+  --accent-primary: #013f2e;
+  --accent-hover: #02523c;
   --shadow-color: rgba(0, 0, 0, 0.5);
 
   /* Additional dark theme colors for better contrast */
@@ -362,8 +362,8 @@
   --card-foreground: 0 0% 98%;
   --popover: 82 30% 11%;
   --popover-foreground: 0 0% 98%;
-  --primary: 84 100% 50%;
-  --primary-foreground: 84 100% 10%;
+  --primary: 164 97% 13%;
+  --primary-foreground: 0 0% 100%;
   --secondary: 82 22% 16%;
   --secondary-foreground: 0 0% 98%;
   --muted: 82 22% 16%;
@@ -374,7 +374,7 @@
   --destructive-foreground: 0 0% 98%;
   --border: 82 22% 18%;
   --input: 82 22% 18%;
-  --ring: 84 100% 50%;
+  --ring: 164 97% 13%;
   --radius: 0.75rem;
 }
 
@@ -984,15 +984,15 @@ html:not(.dark) .cover-letter-editor-page {
 
 /* Dashboard accent colors - Dark theme only */
 .dark .dashboard-page .text-lime-400 {
-  color: #99FF00 !important;
+  color: #013f2e !important;
 }
 
 .dark .dashboard-page .bg-lime-400 {
-  background-color: #99FF00 !important;
+  background-color: #013f2e !important;
 }
 
 .dark .dashboard-page .border-lime-400 {
-  border-color: #99FF00 !important;
+  border-color: #013f2e !important;
 }
 
 /* Optimize animations */
@@ -1066,7 +1066,7 @@ html:not(.dark) .cover-letter-editor-page {
 .slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  background: #99FF00;
+  background: #013f2e;
   height: 20px;
   width: 20px;
   border-radius: 50%;
@@ -1077,7 +1077,7 @@ html:not(.dark) .cover-letter-editor-page {
 }
 
 .slider::-webkit-slider-thumb:hover {
-  background: #88e600;
+  background: #02523c;
   transform: scale(1.1);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
@@ -1090,7 +1090,7 @@ html:not(.dark) .cover-letter-editor-page {
 }
 
 .slider::-moz-range-thumb {
-  background: #99FF00;
+  background: #013f2e;
   height: 20px;
   width: 20px;
   border-radius: 50%;
@@ -1101,7 +1101,7 @@ html:not(.dark) .cover-letter-editor-page {
 }
 
 .slider::-moz-range-thumb:hover {
-  background: #88e600;
+  background: #02523c;
   transform: scale(1.1);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
@@ -1112,7 +1112,7 @@ html:not(.dark) .cover-letter-editor-page {
 }
 
 .dark .slider::-webkit-slider-thumb {
-  background: #99FF00;
+  background: #013f2e;
   border-color: #18191C;
 }
 
@@ -1121,7 +1121,7 @@ html:not(.dark) .cover-letter-editor-page {
 }
 
 .dark .slider::-moz-range-thumb {
-  background: #99FF00;
+  background: #013f2e;
   border-color: #18191C;
 }
 
@@ -1221,8 +1221,8 @@ html:not(.dark) .cover-letter-editor-page {
 
 .form-input:focus {
   outline: none;
-  border-color: #99FF00;
-  box-shadow: 0 0 0 3px rgba(153, 255, 0, 0.1);
+  border-color: #013f2e;
+  box-shadow: 0 0 0 3px rgba(1, 63, 46, 0.1);
 }
 
 /* Optimize loading states */
@@ -1288,7 +1288,7 @@ img {
 
 /* Optimize focus states */
 .focus-optimized:focus {
-  outline: 2px solid #99FF00;
+  outline: 2px solid #013f2e;
   outline-offset: 2px;
 }
 
@@ -1346,7 +1346,7 @@ img {
 
 /* Optimize neon glow effects */
 .neon-glow {
-  filter: drop-shadow(0 0 10px rgba(153, 255, 0, 0.8));
+  filter: drop-shadow(0 0 10px rgba(1, 63, 46, 0.8));
   will-change: filter;
 }
 
@@ -1545,7 +1545,7 @@ nav {
 
 .progress-bar-optimized {
   height: 100%;
-  background: linear-gradient(90deg, #99FF00, #88e600);
+  background: linear-gradient(90deg, #013f2e, #02523c);
   border-radius: 0.25rem;
   transition: width 0.3s ease;
   will-change: width;
@@ -2015,14 +2015,14 @@ nav {
 }
 
 .upload-optimized:hover {
-  border-color: #99FF00;
-  background: rgba(153, 255, 0, 0.1);
+  border-color: #013f2e;
+  background: rgba(1, 63, 46, 0.1);
 }
 
 /* Optimize drag and drop */
 .drag-over {
-  border-color: #99FF00;
-  background: rgba(153, 255, 0, 0.1);
+  border-color: #013f2e;
+  background: rgba(1, 63, 46, 0.1);
   transform: scale(1.02);
 }
 
@@ -2045,8 +2045,8 @@ nav {
 
 .search-input-optimized:focus {
   outline: none;
-  border-color: #99FF00;
-  box-shadow: 0 0 0 3px rgba(153, 255, 0, 0.1);
+  border-color: #013f2e;
+  box-shadow: 0 0 0 3px rgba(1, 63, 46, 0.1);
 }
 
 /* Optimize notifications */
@@ -2330,7 +2330,7 @@ img[src*="/images/"] {
 .slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  background: #99FF00;
+  background: #013f2e;
   height: 16px;
   width: 16px;
   border-radius: 50%;
@@ -2339,7 +2339,7 @@ img[src*="/images/"] {
 }
 
 .slider::-webkit-slider-thumb:hover {
-  background: #88e600;
+  background: #02523c;
   transform: scale(1.1);
 }
 
@@ -2351,7 +2351,7 @@ img[src*="/images/"] {
 }
 
 .slider::-moz-range-thumb {
-  background: #99FF00;
+  background: #013f2e;
   height: 16px;
   width: 16px;
   border-radius: 50%;
@@ -2361,7 +2361,7 @@ img[src*="/images/"] {
 }
 
 .slider::-moz-range-thumb:hover {
-  background: #88e600;
+  background: #02523c;
   transform: scale(1.1);
 }
 
@@ -2858,7 +2858,7 @@ img[src*="/images/"] {
 
 .bento-box:hover {
   background: #2a2b2f;
-  border-color: rgba(153, 255, 0, 0.3);
+  border-color: rgba(1, 63, 46, 0.3);
   transform: scale(1.01);
 }
 
@@ -2873,7 +2873,7 @@ img[src*="/images/"] {
   border-radius: inherit;
   padding: 2px;
   /* Controls the thickness of the border */
-  background: linear-gradient(145deg, rgba(153, 255, 0, 0.6), rgba(59, 130, 246, 0.3), rgba(153, 255, 0, 0) 60%);
+  background: linear-gradient(145deg, rgba(1, 63, 46, 0.6), rgba(59, 130, 246, 0.3), rgba(1, 63, 46, 0) 60%);
   -webkit-mask:
     linear-gradient(#fff 0 0) content-box,
     linear-gradient(#fff 0 0);
@@ -3173,8 +3173,8 @@ img[src*="/images/"] {
 }
 
 .dark .beta-badge {
-  background: rgba(153, 255, 0, 0.2);
-  color: #99FF00;
+  background: rgba(1, 63, 46, 0.2);
+  color: #013f2e;
 }
 
 /* Jobs dashboard specific scrollbar styling */
@@ -3339,7 +3339,7 @@ mark[data-type="highlight"] {
    FOCUS VISIBLE — ensure keyboard focus is always visible
    ============================================================ */
 :focus-visible {
-  outline: 2px solid #81ff00;
+  outline: 2px solid #013f2e;
   outline-offset: 2px;
 }
 

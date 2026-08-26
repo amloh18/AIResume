@@ -93,7 +93,7 @@ export default function SocialAuthButtons({
           type="button"
           onClick={onMagicLinkAuth}
           disabled={isLoading}
-          className="w-full flex items-center justify-center gap-3 bg-[#80FF00]/10 hover:bg-[#80FF00]/20 border border-[#80FF00]/20 hover:border-[#80FF00]/40 text-gray-900 dark:text-white py-3 px-6 rounded-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-small font-bold"
+          className="w-full flex items-center justify-center gap-3 bg-[#013f2e]/10 hover:bg-[#013f2e]/20 border border-[#013f2e]/20 hover:border-[#013f2e]/40 text-gray-900 dark:text-white py-3 px-6 rounded-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-small font-bold"
           whileHover={{ scale: 1.01 }}
           whileTap={{ scale: 0.99 }}
         >

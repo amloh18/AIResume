@@ -33,7 +33,7 @@ const ScorecardPanel = ({ atsResult, isLoading }: { atsResult: any; isLoading: b
     return (
       <div className="p-4 h-full flex items-center justify-center">
         <div className="text-center">
-          <div className="w-8 h-8 border-2 border-[#80FF00] border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+          <div className="w-8 h-8 border-2 border-[#013f2e] border-t-transparent rounded-full animate-spin mx-auto mb-2" />
           <p className="text-xs text-gray-400">Analyzing...</p>
         </div>
       </div>
@@ -65,7 +65,7 @@ const ScorecardPanel = ({ atsResult, isLoading }: { atsResult: any; isLoading: b
         <div className="text-xs text-gray-400 mt-1">ATS Score</div>
         {profileLevel && (
           <div className="mt-2">
-            <span className="px-2 py-1 bg-[#80FF00]/20 text-[#80FF00] rounded text-xs font-medium">
+            <span className="px-2 py-1 bg-[#013f2e]/20 text-[#013f2e] rounded text-xs font-medium">
               {profileLevel.title}
             </span>
             <p className="text-[10px] text-gray-500 mt-1">{profileLevel.yearsExperience} years experience</p>
@@ -244,7 +244,7 @@ const StrategistPanel = ({ atsResult, cvData, jobData, onAddKeyword }: { atsResu
       {/* Suggestions */}
       {suggestions && suggestions.length > 0 && (
         <div className="space-y-2 pt-2 border-t border-white/10">
-          <h3 className="text-xs font-semibold text-[#80FF00] uppercase flex items-center gap-1.5">
+          <h3 className="text-xs font-semibold text-[#013f2e] uppercase flex items-center gap-1.5">
             <Zap className="w-3.5 h-3.5" />
             Suggestions
           </h3>
@@ -252,7 +252,7 @@ const StrategistPanel = ({ atsResult, cvData, jobData, onAddKeyword }: { atsResu
             {suggestions.slice(0, 5).map((suggestion: string, idx: number) => (
               <div
                 key={idx}
-                className="p-2 bg-[#80FF00]/10 border border-[#80FF00]/20 rounded-lg text-xs text-gray-300"
+                className="p-2 bg-[#013f2e]/10 border border-[#013f2e]/20 rounded-lg text-xs text-gray-300"
               >
                 {suggestion}
               </div>
@@ -551,7 +551,7 @@ function ATSDeepDiveContent({ isOpen, onClose, userId }: ATSDeepDiveModalProps) 
           {/* Header - HUD Overlay */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-[#1a230f]">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 bg-gradient-to-r from-[#80FF00] to-[#60CC00] rounded-full flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 bg-gradient-to-r from-[#013f2e] to-[#60CC00] rounded-full flex items-center justify-center flex-shrink-0">
                 <Target className="w-5 h-5 text-black" />
               </div>
               <div className="min-w-0">
@@ -580,7 +580,7 @@ function ATSDeepDiveContent({ isOpen, onClose, userId }: ATSDeepDiveModalProps) 
                   <button
                     onClick={() => toggleLayer('timeline')}
                     className={`p-1.5 rounded transition-colors ${deepDiveState.activeLayers.has('timeline')
-                      ? 'bg-[#80FF00]/20 text-[#80FF00]'
+                      ? 'bg-[#013f2e]/20 text-[#013f2e]'
                       : 'bg-white/5 text-white/60 hover:bg-white/10'
                       }`}
                   >
@@ -591,7 +591,7 @@ function ATSDeepDiveContent({ isOpen, onClose, userId }: ATSDeepDiveModalProps) 
                   <button
                     onClick={() => toggleLayer('reading-path')}
                     className={`p-1.5 rounded transition-colors ${deepDiveState.activeLayers.has('reading-path')
-                      ? 'bg-[#80FF00]/20 text-[#80FF00]'
+                      ? 'bg-[#013f2e]/20 text-[#013f2e]'
                       : 'bg-white/5 text-white/60 hover:bg-white/10'
                       }`}
                   >
@@ -602,7 +602,7 @@ function ATSDeepDiveContent({ isOpen, onClose, userId }: ATSDeepDiveModalProps) 
                   <button
                     onClick={() => toggleLayer('heatmap')}
                     className={`p-1.5 rounded transition-colors ${deepDiveState.activeLayers.has('heatmap')
-                      ? 'bg-[#80FF00]/20 text-[#80FF00]'
+                      ? 'bg-[#013f2e]/20 text-[#013f2e]'
                       : 'bg-white/5 text-white/60 hover:bg-white/10'
                       }`}
                   >

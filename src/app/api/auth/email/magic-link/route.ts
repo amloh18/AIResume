@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
             .button:hover {
               background-color: rgb(40, 40, 40);
               transform: scale(1.015);
-              box-shadow: 0 4px 12px rgba(129, 255, 0, 0.3);
+              box-shadow: 0 4px 12px rgba(1, 63, 46, 0.3);
             }
             .footer {
               margin-top: 40px;

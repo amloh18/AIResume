@@ -80,7 +80,7 @@ export default function Step4CoverLetter({ onComplete }: Step4CoverLetterProps) 
     fontSize: 15,
     lineHeight: 1.6,
     pageMargin: 6,
-    accentColor: '#80FF00',
+    accentColor: '#013f2e',
     fontFamily: 'font-sans'
   });
 
@@ -329,7 +329,7 @@ export default function Step4CoverLetter({ onComplete }: Step4CoverLetterProps) 
               
               <button 
                 onClick={() => setZoom(100)}
-                className={`min-w-[42px] px-1.5 py-1 text-[9px] font-black rounded-md transition-all border ${zoom === 100 ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-600' : 'bg-transparent border-gray-500/20 hover:border-[#80FF00]/50 text-gray-500 dark:text-gray-400'}`}
+                className={`min-w-[42px] px-1.5 py-1 text-[9px] font-black rounded-md transition-all border ${zoom === 100 ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-600' : 'bg-transparent border-gray-500/20 hover:border-[#013f2e]/50 text-gray-500 dark:text-gray-400'}`}
               >
                 {zoom}%
               </button>
@@ -415,7 +415,7 @@ export default function Step4CoverLetter({ onComplete }: Step4CoverLetterProps) 
                           style={{ 
                             width: '250%', 
                             transform: 'scale(0.4)',
-                            '--cv-accent': design.accentColor || '#80FF00',
+                            '--cv-accent': design.accentColor || '#013f2e',
                             '--cv-font': design.fontFamily === 'font-serif' ? 'Merriweather' : 'Inter'
                           } as React.CSSProperties}
                         >

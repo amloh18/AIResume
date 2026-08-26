@@ -311,7 +311,7 @@ export default function CvReportSidebar({ cv, isOpen, onClose }: CvReportSidebar
               <div className="border-t border-[var(--border-primary)] px-5 py-3.5 flex-shrink-0">
                 <button
                   onClick={fixInEditor}
-                  className="group inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-[#80FF00] px-4 py-2.5 text-sm font-semibold text-slate-950 transition-all hover:brightness-110 hover:shadow-md hover:shadow-lime-400/20"
+                  className="group inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-[#013f2e] px-4 py-2.5 text-sm font-semibold text-slate-950 transition-all hover:brightness-110 hover:shadow-md hover:shadow-lime-400/20"
                 >
                   Fix in editor
                   <ArrowRight size={15} className="transition-transform group-hover:translate-x-0.5" />

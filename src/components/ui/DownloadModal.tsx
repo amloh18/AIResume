@@ -147,7 +147,7 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
       >
         {/* Header - Neon Green Card */}
         <div className="mx-5 mt-5 mb-6">
-          <div className="bg-[#80FF00] rounded-2xl p-5 flex items-center gap-4">
+          <div className="bg-[#013f2e] rounded-2xl p-5 flex items-center gap-4">
             <div className="w-12 h-12 bg-black/10 rounded-xl flex items-center justify-center shrink-0">
               <FileText className="w-6 h-6 text-black" strokeWidth={2} />
             </div>
@@ -189,7 +189,7 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
                 }`}
             >
               <FileText
-                className={`w-8 h-8 transition-colors duration-300 ${journeyInfo.hasCV ? 'text-[#80FF00] group-hover:drop-shadow-[0_0_8px_rgba(128,255,0,0.5)]' : 'text-gray-700'}`}
+                className={`w-8 h-8 transition-colors duration-300 ${journeyInfo.hasCV ? 'text-[#013f2e] group-hover:drop-shadow-[0_0_8px_rgba(1, 63, 46,0.5)]' : 'text-gray-700'}`}
                 strokeWidth={1.5}
               />
               <div className="text-center space-y-1">
@@ -198,7 +198,7 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
               </div>
               {downloadingItem === 'cv-pdf' && (
                 <div className="absolute inset-0 bg-[#0D0D0D]/80 backdrop-blur-sm rounded-3xl flex items-center justify-center">
-                  <div className="w-5 h-5 border-2 border-[#80FF00] border-t-transparent rounded-full animate-spin" />
+                  <div className="w-5 h-5 border-2 border-[#013f2e] border-t-transparent rounded-full animate-spin" />
                 </div>
               )}
             </button>
@@ -214,7 +214,7 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
                   }`}
               >
                 <DownloadIcon
-                  className={`w-8 h-8 transition-colors duration-300 ${journeyInfo.hasCoverLetter ? 'text-[#80FF00] group-hover:drop-shadow-[0_0_8px_rgba(128,255,0,0.5)]' : 'text-gray-700'}`}
+                  className={`w-8 h-8 transition-colors duration-300 ${journeyInfo.hasCoverLetter ? 'text-[#013f2e] group-hover:drop-shadow-[0_0_8px_rgba(1, 63, 46,0.5)]' : 'text-gray-700'}`}
                   strokeWidth={1.5}
                 />
                 <div className="text-center space-y-1">
@@ -223,7 +223,7 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
                 </div>
                 {downloadingItem === 'cl-pdf' && (
                   <div className="absolute inset-0 bg-[#0D0D0D]/80 backdrop-blur-sm rounded-3xl flex items-center justify-center">
-                    <div className="w-5 h-5 border-2 border-[#80FF00] border-t-transparent rounded-full animate-spin" />
+                    <div className="w-5 h-5 border-2 border-[#013f2e] border-t-transparent rounded-full animate-spin" />
                   </div>
                 )}
               </button>
@@ -244,7 +244,7 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
                 <Crown className="w-8 h-8 text-amber-500 group-hover:drop-shadow-[0_0_8px_rgba(245,158,11,0.5)] transition-all" strokeWidth={1.5} />
               ) : (
                 <FileText
-                  className={`w-8 h-8 transition-colors duration-300 ${journeyInfo.hasCV ? 'text-[#80FF00] group-hover:drop-shadow-[0_0_8px_rgba(128,255,0,0.5)]' : 'text-gray-700'}`}
+                  className={`w-8 h-8 transition-colors duration-300 ${journeyInfo.hasCV ? 'text-[#013f2e] group-hover:drop-shadow-[0_0_8px_rgba(1, 63, 46,0.5)]' : 'text-gray-700'}`}
                   strokeWidth={1.5}
                 />
               )}
@@ -257,7 +257,7 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
               )}
               {downloadingItem === 'cv-docx' && (
                 <div className="absolute inset-0 bg-[#0D0D0D]/80 backdrop-blur-sm rounded-3xl flex items-center justify-center">
-                  <div className="w-5 h-5 border-2 border-[#80FF00] border-t-transparent rounded-full animate-spin" />
+                  <div className="w-5 h-5 border-2 border-[#013f2e] border-t-transparent rounded-full animate-spin" />
                 </div>
               )}
             </button>
@@ -278,7 +278,7 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
                   <Crown className="w-8 h-8 text-amber-500 group-hover:drop-shadow-[0_0_8px_rgba(245,158,11,0.5)] transition-all" strokeWidth={1.5} />
                 ) : (
                   <DownloadIcon
-                    className={`w-8 h-8 transition-colors duration-300 ${journeyInfo.hasCoverLetter ? 'text-[#80FF00] group-hover:drop-shadow-[0_0_8px_rgba(128,255,0,0.5)]' : 'text-gray-700'}`}
+                    className={`w-8 h-8 transition-colors duration-300 ${journeyInfo.hasCoverLetter ? 'text-[#013f2e] group-hover:drop-shadow-[0_0_8px_rgba(1, 63, 46,0.5)]' : 'text-gray-700'}`}
                     strokeWidth={1.5}
                   />
                 )}
@@ -291,7 +291,7 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
                 )}
                 {downloadingItem === 'cl-docx' && (
                   <div className="absolute inset-0 bg-[#0D0D0D]/80 backdrop-blur-sm rounded-3xl flex items-center justify-center">
-                    <div className="w-5 h-5 border-2 border-[#80FF00] border-t-transparent rounded-full animate-spin" />
+                    <div className="w-5 h-5 border-2 border-[#013f2e] border-t-transparent rounded-full animate-spin" />
                   </div>
                 )}
               </button>
@@ -306,7 +306,7 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
                 disabled={(!journeyInfo.hasCV && !journeyInfo.hasCoverLetter) || isDownloading}
                 className={`relative w-full flex items-center justify-center gap-3 px-5 py-4 rounded-2xl font-semibold text-small transition-all ${(!journeyInfo.hasCV && !journeyInfo.hasCoverLetter)
                   ? 'opacity-40 cursor-not-allowed bg-[#222] text-gray-600'
-                  : 'bg-[#80FF00] text-black hover:bg-[#99FF33] shadow-lg shadow-[#80FF00]/20 hover:shadow-xl hover:shadow-[#80FF00]/30 active:scale-[0.98]'
+                  : 'bg-[#013f2e] text-black hover:bg-[#02523c] shadow-lg shadow-[#013f2e]/20 hover:shadow-xl hover:shadow-[#013f2e]/30 active:scale-[0.98]'
                   }`}
               >
                 <Package className="w-5 h-5" />

@@ -35,30 +35,54 @@ export class JobMatchingService {
         throw new Error('User or job not found');
       }
 
-      // CRITICAL: Read from JobSearchProfile instead of legacy job_preferences
+      // Read from JobSearchProfile or legacy job_preferences based on feature flag
       let preferences: JobPreferences | null = null;
       
-      try {
-        const { JobSearchProfileService } = await import('./jobSearchProfileService');
-        const profile = await JobSearchProfileService.getProfile(userId);
-        
-        if (profile) {
-          // Convert JobSearchProfile to legacy format for backward compatibility
-          preferences = {
-            titles: profile.targetRoles,
-            locations: profile.locations,
-            country: 'UK',
-            remoteOnly: profile.remoteOnly,
-            salaryMin: profile.minSalary,
-          } as JobPreferences;
-        } else {
-          // Fallback to legacy job_preferences if profile doesn't exist
+      const { isFeatureFlagEnabledForUser, FEATURE_FLAGS } = await import('@/lib/feature-flags');
+      const useNewStore = isFeatureFlagEnabledForUser(FEATURE_FLAGS.USE_JOB_SEARCH_PROFILE, userId);
+      
+      if (useNewStore) {
+        try {
+          const { JobSearchProfileService } = await import('./jobSearchProfileService');
+          const { trackNewStoreRead, trackLegacyFallbackRead } = await import('@/lib/migration/migrationTelemetry');
+          const profile = await JobSearchProfileService.getProfile(userId);
+          
+          if (profile) {
+            preferences = {
+              titles: profile.targetRoles,
+              locations: profile.locations,
+              country: 'UK',
+              remoteOnly: profile.remoteOnly,
+              salaryMin: profile.minSalary,
+            } as JobPreferences;
+            trackNewStoreRead('JobMatchingService', userId);
+          } else {
+            preferences = await db.collection<JobPreferences>('job_preferences').findOne({
+              userId: new ObjectId(userId),
+            });
+            trackLegacyFallbackRead({
+              service: 'JobMatchingService',
+              userId,
+              legacySource: 'job_preferences',
+              reason: 'profile_not_found',
+            });
+          }
+        } catch (error) {
+          console.warn('[JobMatchingService] Could not load JobSearchProfile, falling back to legacy:', error);
+          const { trackLegacyFallbackRead } = await import('@/lib/migration/migrationTelemetry');
           preferences = await db.collection<JobPreferences>('job_preferences').findOne({
             userId: new ObjectId(userId),
           });
+          trackLegacyFallbackRead({
+            service: 'JobMatchingService',
+            userId,
+            legacySource: 'job_preferences',
+            reason: 'profile_error',
+            error: error instanceof Error ? error.message : String(error),
+          });
         }
-      } catch (error) {
-        console.warn('[JobMatchingService] Could not load JobSearchProfile, falling back to legacy:', error);
+      } else {
+        // Feature flag disabled — read directly from legacy
         preferences = await db.collection<JobPreferences>('job_preferences').findOne({
           userId: new ObjectId(userId),
         });

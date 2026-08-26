@@ -304,7 +304,7 @@ const WYSIWYGEditor: React.FC<WYSIWYGEditorProps> = ({
           hasAnnotation 
             ? 'bg-red-500/20 border-red-500/40' 
             : isFocused 
-              ? textColor === 'black' ? 'border-emerald-500 bg-emerald-500/5' : 'border-[#80FF00] bg-white/15' 
+              ? textColor === 'black' ? 'border-emerald-500 bg-emerald-500/5' : 'border-[#013f2e] bg-white/15' 
               : textColor === 'black' ? 'border-transparent bg-transparent' : 'border-white/20 bg-white/10'
         }`}
       >

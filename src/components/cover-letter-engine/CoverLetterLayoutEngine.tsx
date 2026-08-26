@@ -187,7 +187,7 @@ export default function CoverLetterLayoutEngine({
     fontSize: 15,
     lineHeight: 1.6,
     pageMargin: 6,
-    accentColor: '#80FF00',
+    accentColor: '#013f2e',
     fontFamily: templateType === 'classic' ? 'font-serif' : 'font-sans'
   };
 

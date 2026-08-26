@@ -1,193 +1,73 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import Image from 'next/image';
-import { ArrowRight } from 'lucide-react';
+import { motion } from 'framer-motion';
+import Link from 'next/link';
+import { 
+  ArrowRight, 
+  Search, 
+  Sparkles, 
+  CheckCircle2, 
+  Mic, 
+  Sliders, 
+  Bot,
+  Layers
+} from 'lucide-react';
 
-const MultiImageFeature = ({ images, title, showFrame = true }: { images: string[], title: string, showFrame?: boolean }) => {
-  const [currentIndex, setCurrentIndex] = useState(0);
+export default function Features() {
+  const [typedText, setTypedText] = useState('');
+  const fullText = 'Visa Sponsored • Senior Full-Stack';
 
+  // Typing animation for search bar tile
   useEffect(() => {
-    if (images.length <= 1) return;
-    const timer = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % images.length);
-    }, 4000);
-    return () => clearInterval(timer);
-  }, [images.length]);
+    let index = 0;
+    let isDeleting = false;
+    const interval = setInterval(() => {
+      if (!isDeleting) {
+        setTypedText(fullText.slice(0, index + 1));
+        index++;
+        if (index === fullText.length) {
+          setTimeout(() => { isDeleting = true; }, 1800);
+        }
+      } else {
+        setTypedText(fullText.slice(0, index - 1));
+        index--;
+        if (index === 0) {
+          isDeleting = false;
+        }
+      }
+    }, 90);
+    return () => clearInterval(interval);
+  }, []);
 
-  const imageContent = (
-    <AnimatePresence mode="popLayout">
-      <motion.div
-        key={currentIndex}
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 1.05 }}
-        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-        className="absolute inset-0"
-      >
-        <Image
-          src={images[currentIndex]}
-          alt={`${title} - view ${currentIndex + 1}`}
-          fill
-          className={`group-hover:scale-105 transition-transform duration-500 ${showFrame ? 'object-cover object-top' : 'object-contain object-center'}`}
-          quality={80}
-        />
-      </motion.div>
-    </AnimatePresence>
-  );
-
-  const virtualMouse = images.length > 1 ? (
-    <motion.div
-      key={`mouse-${currentIndex}`}
-      className="absolute z-20 pointer-events-none flex items-center justify-center"
-      initial={{ x: '100%', y: '100%', opacity: 0 }}
-      animate={{ 
-        x: ['100%', '50%', '50%', '100%'], 
-        y: ['100%', '50%', '50%', '100%'],
-        opacity: [0, 1, 1, 0]
-      }}
-      transition={{ 
-        duration: 4, 
-        times: [0, 0.6, 0.8, 1],
-        ease: "easeInOut" 
-      }}
-      style={{ width: '24px', height: '24px', left: '0', top: '0' }}
-    >
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="white" stroke="black" strokeWidth="1" xmlns="http://www.w3.org/2000/svg" className="drop-shadow-lg">
-        <path d="M5.5 3.21V20.8c0 .45.54.67.85.35l4.86-4.86a.5.5 0 01.35-.15h6.42c.41 0 .63-.5.35-.78L5.85 2.86a.5.5 0 00-.85.35z"/>
-      </svg>
-      
-      <motion.div 
-        className="absolute inset-0 rounded-full border-2 border-lime-400 bg-lime-400/30"
-        initial={{ scale: 0, opacity: 0 }}
-        animate={{ 
-          scale: [0, 2.5, 3], 
-          opacity: [0, 1, 0] 
-        }}
-        transition={{ 
-          duration: 0.6, 
-          delay: 2.4,
-          ease: "easeOut" 
+  return (
+    <section id="features" className="relative pt-28 pb-32 bg-[#0a0a0c] overflow-hidden">
+      {/* Background Ambient Glows */}
+      <div 
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: `
+            radial-gradient(ellipse 60% 40% at 20% 15%, rgba(1, 63, 46, 0.25) 0%, transparent 65%),
+            radial-gradient(ellipse 60% 50% at 80% 50%, rgba(20, 184, 166, 0.08) 0%, transparent 65%),
+            radial-gradient(ellipse 70% 50% at 50% 85%, rgba(1, 63, 46, 0.2) 0%, transparent 65%),
+            linear-gradient(180deg, #0e1013 0%, #0a0a0c 50%, #060708 100%)
+          `
         }}
       />
-    </motion.div>
-  ) : null;
 
-  if (!showFrame) {
-    return (
-      <div className="relative w-full h-full overflow-hidden rounded-2xl group flex items-center justify-center p-6 bg-transparent">
-        <div className="relative w-full h-full">
-          {imageContent}
-          {virtualMouse}
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="relative w-full h-full overflow-hidden rounded-2xl group bg-white p-3 tablet:p-6 flex items-center justify-center">
-      <div className="relative w-full h-full rounded-xl flex flex-col overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.15)] border border-gray-200">
-        {/* Mac Browser Header */}
-        <div className="h-6 tablet:h-8 bg-[#2d2d2d] flex items-center px-3 tablet:px-4 space-x-1.5 tablet:space-x-2 flex-shrink-0 z-20">
-          <div className="w-2 h-2 tablet:w-2.5 tablet:h-2.5 rounded-full bg-[#ff5f56] shadow-[inset_0_0_4px_rgba(0,0,0,0.1)]" />
-          <div className="w-2 h-2 tablet:w-2.5 tablet:h-2.5 rounded-full bg-[#ffbd2e] shadow-[inset_0_0_4px_rgba(0,0,0,0.1)]" />
-          <div className="w-2 h-2 tablet:w-2.5 tablet:h-2.5 rounded-full bg-[#27c93f] shadow-[inset_0_0_4px_rgba(0,0,0,0.1)]" />
-        </div>
-
-        {/* Browser Content */}
-        <div className="relative flex-1 overflow-hidden bg-white">
-          {imageContent}
-          {virtualMouse}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const Features = () => {
-  // All features organized for 2-column layout (7 total features)
-  const allFeatures = [
-    {
-      id: 'smart-extension',
-      title: 'Smart Extension',
-      description: 'Save hours of manual data entry. One click to track any job and autofill your profile across 100+ platforms.',
-      cta: 'Download Extension',
-      ctaLink: 'https://chromewebstore.google.com/detail/fphkljfgefkfemmlfbpnjdojnfeadaii',
-      images: ['/images/extension.webp'],
-      showFrame: false,
-    },
-    {
-      id: 'linkedin-enhancer',
-      title: 'LinkedIn Profile Enhancer',
-      description: 'Get 5x more recruiter interest. AI-driven profile optimization that turns your LinkedIn into a high-performance lead magnet.',
-      cta: 'Enhance Profile',
-      ctaLink: '/linkedin-enhancer',
-      images: ['/images/linkedin_enhancer.webp', '/images/linkedin_enhancer_dashbaord.webp'],
-      showFrame: true,
-    },
-    {
-      id: 'ats-optimized',
-      title: 'ATS-Optimized Docs',
-      description: 'Land on the hiring manager\'s desk. Automatically bypass ATS filters with resumes tailored specifically for every job description.',
-      cta: 'Create CV',
-      ctaLink: '/studio',
-      images: ['/images/ats_optimization.webp'],
-      showFrame: false,
-    },
-    {
-      id: 'skills-gap',
-      title: 'Skills Gap Analysis',
-      description: 'Become the perfect candidate. AI analyzes your target job to show exactly which skills you\'re missing and how to get them.',
-      cta: 'Analyze Skills',
-      ctaLink: '/ai-career-report',
-      images: ['/images/skill_gap_analysis.webp'],
-      showFrame: false,
-    },
-    {
-      id: 'career-insights',
-      title: 'Deep Career Insights',
-      description: 'Fix resume red flags instantly. Professional-grade audits that reveal exactly why you aren\'t getting callbacks.',
-      cta: 'Get Report',
-      ctaLink: '/ai-career-report',
-      images: ['/images/career_insights.webp'],
-      showFrame: false,
-    },
-    {
-      id: 'global-opportunities',
-      title: 'Global Opportunities',
-      description: 'Relocate with confidence. Filter for verified visa-sponsored roles in the UK and USA from our curated database.',
-      cta: 'Explore Jobs',
-      ctaLink: '/dashboard/jobs',
-      images: ['/images/global_opportunities.webp'],
-      showFrame: false,
-    },
-    {
-      id: 'interview-coach',
-      title: 'AI Interview Coach',
-      description: 'Ace every interview. Practice with real-time AI feedback to build unshakable confidence and master difficult questions.',
-      cta: 'Start Practice',
-      ctaLink: '/interview-coach',
-      images: ['/images/interviewcoach_dashbaord.webp', '/images/interviewcoach_questionanalysis.webp', '/images/interviwcoach.webp'],
-      showFrame: true,
-    },
-  ];
-
-  return (
-    <section id="features" className="relative pt-32 pb-20 bg-[#141810] overflow-hidden">
       <div className="relative z-10 max-w-7xl mx-auto px-4 tablet:px-6 desktop:px-8">
-
-        {/* Header */}
-        <div className="mb-16">
-          {/* Decorative squiggle */}
-          <motion.div
-            className="mb-6"
-            initial={{ opacity: 0, x: -20 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
-          >
-            <svg width="48" height="24" viewBox="0 0 48 24" fill="none" className="text-[#99FF00]">
+        
+        {/* Global Heading System: Left-Indented, Bold Modern Editorial Scale */}
+        <motion.div 
+          className="mb-16 lg:mb-20 pl-0 text-left flex flex-col items-start"
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+        >
+          {/* Decorative Squiggle */}
+          <div className="mb-6 flex justify-start">
+            <svg width="48" height="24" viewBox="0 0 48 24" fill="none" className="text-[#36D39B]">
               <path
                 d="M2 12C8 4 12 20 18 12C24 4 28 20 34 12C40 4 46 12 46 12"
                 stroke="currentColor"
@@ -195,120 +75,396 @@ const Features = () => {
                 strokeLinecap="round"
               />
             </svg>
-          </motion.div>
+          </div>
 
-          <motion.h2
-            className="!text-[2rem] tablet:!text-[2.5rem] desktop:!text-[3rem] font-extrabold text-white mb-3 tracking-tighter !leading-[1.05] max-w-5xl"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6, delay: 0.1 }}
-          >
-            Everyday <span className="text-transparent bg-clip-text bg-gradient-to-r from-lime-400 to-lime-500">superpowers</span>.
-          </motion.h2>
-          <motion.p
-            className="text-h3 text-gray-400 max-w-2xl leading-relaxed text-left"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6, delay: 0.15 }}
-          >
+          <h2 className="tablet:!text-[2.5rem] desktop:!text-[3rem] font-extrabold text-[#F5F7F7] tracking-tighter max-w-5xl mb-6 text-left text-4xl! tracking-normal!">
+            Everyday <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#36D39B] via-[#4DDCB0] to-[#86E8D1]">superpowers</span>.
+          </h2>
+
+          <p className="text-lg sm:text-xl lg:text-2xl text-gray-300 font-normal max-w-3xl leading-relaxed text-left">
             Light enough for daily applications but powerful enough for landing your dream job.
-          </motion.p>
-        </div>
+          </p>
+        </motion.div>
 
-        {/* Group 1: LinkedIn + AI Coach (Row 1 - Large 2-col) */}
-        <div className="grid grid-cols-1 desktop:grid-cols-2 gap-6 mb-6">
-          {allFeatures
-            .filter(f => ['linkedin-enhancer', 'interview-coach'].includes(f.id))
-            .map((feature, index) => (
-              <motion.div
-                key={feature.id}
-                className="group relative rounded-2xl overflow-hidden"
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: 0.1 + (index * 0.1) }}
-              >
-                <div className="p-6 tablet:p-8 min-h-[140px] flex flex-col justify-start">
-                  <h3 className="text-h3 font-bold text-white mb-2">{feature.title}</h3>
-                  <p className="text-gray-400 text-small leading-relaxed max-w-sm">
-                    {feature.description}
-                  </p>
+        {/* 3-Column Bento Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+          {/* ================= COLUMN 1 (LEFT) ================= */}
+          <div className="flex flex-col gap-6">
+            
+            {/* Tile 1: ATS Resume Engine & Code Inspector (Tall) */}
+            <motion.div 
+              className="group relative rounded-3xl bg-[#111317]/80 border border-white/[0.08] hover:border-white/20 p-7 flex flex-col justify-between overflow-hidden shadow-2xl transition-all duration-300 hover:shadow-[0_0_30px_rgba(1,63,46,0.2)]"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+            >
+              <div>
+                <h3 className="text-xl font-bold text-white mb-2 tracking-tight group-hover:text-emerald-400 transition-colors">
+                  ATS-Optimized Parsing
+                </h3>
+                <p className="text-sm text-gray-400 leading-relaxed mb-4">
+                  Engineered to parse flawlessly through Taleo, Workday, and Greenhouse with clean structured hierarchy.
+                </p>
+                <Link 
+                  href="/studio"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-300 group-hover:text-emerald-400 transition-colors mb-6"
+                >
+                  Explore Studio <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                </Link>
+              </div>
+
+              {/* Code Visual Container with Animated Scanning Laser */}
+              <div className="relative mt-2 rounded-2xl bg-[#090a0d] border border-white/[0.06] p-4 font-mono text-xs overflow-hidden shadow-inner">
+                {/* Active scan beam */}
+                <motion.div 
+                  className="absolute inset-x-0 h-10 bg-gradient-to-b from-transparent via-emerald-500/20 to-transparent pointer-events-none z-10"
+                  animate={{ y: [0, 180, 0] }}
+                  transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+                />
+                
+                <div className="flex items-center space-x-1.5 mb-3 opacity-60">
+                  <div className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/80" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-green-500/80" />
+                  <span className="ml-2 text-[10px] text-gray-500">resume.ats.json</span>
                 </div>
 
-                <div className={`relative ${feature.showFrame === false ? 'aspect-square' : 'aspect-[16/10]'} overflow-hidden rounded-2xl mx-4 mb-4`}>
-                  <MultiImageFeature images={feature.images} title={feature.title} showFrame={feature.showFrame} />
-                  {feature.showFrame !== false && (
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#141810]/60 to-transparent pointer-events-none rounded-2xl z-10" />
-                  )}
-                </div>
-              </motion.div>
-            ))}
-        </div>
-
-        {/* Group 2: Remaining Large Features (Career Insights, Global Opps) */}
-        <div className="grid grid-cols-1 desktop:grid-cols-2 gap-6 mb-6">
-          {allFeatures
-            .filter(f => ['career-insights', 'global-opportunities'].includes(f.id))
-            .map((feature, index) => (
-              <motion.div
-                key={feature.id}
-                className="group relative rounded-2xl overflow-hidden"
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: 0.2 + (index * 0.1) }}
-              >
-                <div className="p-6 tablet:p-8 min-h-[140px] flex flex-col justify-start">
-                  <h3 className="text-h3 font-bold text-white mb-2">{feature.title}</h3>
-                  <p className="text-gray-400 text-small leading-relaxed max-w-sm">
-                    {feature.description}
-                  </p>
+                <div className="space-y-1.5 text-[11px] leading-relaxed select-none">
+                  <div className="text-gray-500">&#47;&#47; ATS Validation: 100% Passed</div>
+                  <div><span className="text-[#36D39B]">&quot;candidate&quot;</span>: &#123;</div>
+                  <div className="pl-4"><span className="text-teal-300">&quot;headline&quot;</span>: <span className="text-amber-300">&quot;Senior Full-Stack Engineer&quot;</span>,</div>
+                  <div className="pl-4"><span className="text-teal-300">&quot;match_score&quot;</span>: <span className="text-[#36D39B]">98.4</span>,</div>
+                  <div className="pl-4"><span className="text-teal-300">&quot;keywords&quot;</span>: [</div>
+                  <div className="pl-8 text-gray-400">&quot;React&quot;, &quot;Next.js&quot;, &quot;Distributed Systems&quot;, &quot;Go&quot;</div>
+                  <div className="pl-4">]</div>
+                  <div>&#125;</div>
                 </div>
 
-                <div className={`relative ${feature.showFrame === false ? 'aspect-square' : 'aspect-[16/10]'} overflow-hidden rounded-2xl mx-4 mb-4`}>
-                  <MultiImageFeature images={feature.images} title={feature.title} showFrame={feature.showFrame} />
-                  {feature.showFrame !== false && (
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#141810]/60 to-transparent pointer-events-none rounded-2xl z-10" />
-                  )}
+                {/* Score pill */}
+                <div className="mt-3 pt-3 border-t border-white/5 flex items-center justify-between text-[11px]">
+                  <span className="text-gray-400 flex items-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> ATS Verified
+                  </span>
+                  <span className="text-emerald-400 font-bold bg-emerald-950/60 border border-emerald-800/40 px-2 py-0.5 rounded-full">
+                    A+ Rating
+                  </span>
                 </div>
-              </motion.div>
-            ))}
-        </div>
+              </div>
+            </motion.div>
 
-        {/* Group 3: Small Features (Row 3 - Smart Extension, ATS, Skills Gap) */}
-        <div className="grid grid-cols-1 tablet:grid-cols-2 desktop:grid-cols-3 gap-6">
-          {allFeatures
-            .filter(f => ['smart-extension', 'ats-optimized', 'skills-gap'].includes(f.id))
-            .map((feature, index) => (
-              <motion.div
-                key={feature.id}
-                className="group relative rounded-2xl overflow-hidden"
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: 0.3 + (index * 0.1) }}
-              >
-                <div className="p-5 tablet:p-6 min-h-[120px] flex flex-col justify-start">
-                  <h3 className="text-h3 font-bold text-white mb-2">{feature.title}</h3>
-                  <p className="text-gray-400 text-small leading-relaxed">
-                    {feature.description}
-                  </p>
+            {/* Tile 2: LinkedIn Profile Enhancer (Molecular Connected Nodes) */}
+            <motion.div 
+              className="group relative rounded-3xl bg-[#111317]/80 border border-white/[0.08] hover:border-white/20 p-7 flex flex-col justify-between overflow-hidden shadow-2xl transition-all duration-300 hover:shadow-[0_0_30px_rgba(1,63,46,0.2)]"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+            >
+              <div>
+                <h3 className="text-xl font-bold text-white mb-2 tracking-tight group-hover:text-emerald-400 transition-colors">
+                  LinkedIn Enhancer
+                </h3>
+                <p className="text-sm text-gray-400 leading-relaxed mb-4">
+                  Transform profile bullet points into punchy narratives that 5x recruiter inbound interest.
+                </p>
+                <Link 
+                  href="/linkedin-enhancer"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-300 group-hover:text-emerald-400 transition-colors mb-6"
+                >
+                  Enhance Profile <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                </Link>
+              </div>
+
+              {/* Glowing Connected Nodes Visual */}
+              <div className="relative h-44 rounded-2xl bg-[#090a0d] border border-white/[0.06] flex items-center justify-center overflow-hidden">
+                <div className="absolute w-32 h-32 bg-blue-600/15 rounded-full blur-2xl" />
+                
+                <div className="relative flex items-center justify-center w-full px-6">
+                  {/* Left Node */}
+                  <motion.div 
+                    className="w-12 h-12 rounded-full bg-[#121824] border border-blue-500/30 flex items-center justify-center shadow-lg text-blue-400 font-black text-sm z-10"
+                    animate={{ scale: [1, 1.06, 1] }}
+                    transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                  >
+                    in
+                  </motion.div>
+
+                  {/* Connecting Gradient Line */}
+                  <div className="flex-1 h-1.5 bg-gradient-to-r from-blue-500/40 via-emerald-400 to-teal-400/40 relative mx-2 rounded-full overflow-hidden">
+                    <motion.div 
+                      className="absolute inset-y-0 w-8 bg-white rounded-full blur-[2px]"
+                      animate={{ x: [-20, 140, -20] }}
+                      transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+                    />
+                  </div>
+
+                  {/* Right Glowing Hub */}
+                  <motion.div 
+                    className="w-14 h-14 rounded-full bg-gradient-to-tr from-emerald-600 via-teal-500 to-emerald-400 flex flex-col items-center justify-center shadow-[0_0_25px_rgba(20,184,166,0.5)] z-10 text-white font-extrabold"
+                    animate={{ scale: [1, 1.08, 1] }}
+                    transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
+                  >
+                    <span className="text-xs">5x</span>
+                    <span className="text-[8px] font-medium tracking-tighter uppercase opacity-90">Reach</span>
+                  </motion.div>
                 </div>
 
-                <div className={`relative ${feature.showFrame === false ? 'aspect-square' : 'aspect-[16/9]'} overflow-hidden bg-gray-800/50 rounded-2xl mx-4 mb-4`}>
-                  <MultiImageFeature images={feature.images} title={feature.title} showFrame={feature.showFrame} />
-                  {feature.showFrame !== false && (
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#141810]/40 to-transparent pointer-events-none rounded-2xl z-10" />
-                  )}
+                <div className="absolute bottom-2 left-4 text-[10px] bg-white/5 border border-white/10 px-2 py-0.5 rounded-full text-gray-300">
+                  SEO Keywords: Active
                 </div>
-              </motion.div>
-            ))}
+              </div>
+            </motion.div>
+
+          </div>
+
+          {/* ================= COLUMN 2 (CENTER) ================= */}
+          <div className="flex flex-col gap-6">
+
+            {/* Tile 3: Global Visa & Jobs Search (Glowing Search Bar) */}
+            <motion.div 
+              className="group relative rounded-3xl bg-[#111317]/80 border border-white/[0.08] hover:border-white/20 p-7 flex flex-col justify-between overflow-hidden shadow-2xl transition-all duration-300 hover:shadow-[0_0_30px_rgba(1,63,46,0.2)]"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+            >
+              <div>
+                <h3 className="text-xl font-bold text-white mb-2 tracking-tight group-hover:text-emerald-400 transition-colors">
+                  Visa & Global Jobs
+                </h3>
+                <p className="text-sm text-gray-400 leading-relaxed mb-4">
+                  Access verified visa-sponsored roles across the UK, USA, and Europe from government sponsor lists.
+                </p>
+                <Link 
+                  href="/dashboard/jobs"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-300 group-hover:text-emerald-400 transition-colors mb-6"
+                >
+                  Explore Jobs <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                </Link>
+              </div>
+
+              {/* Glowing Search Bar UI */}
+              <div className="relative rounded-2xl bg-[#090a0d] border border-white/[0.06] p-5 flex flex-col justify-center">
+                <div className="relative flex items-center bg-[#13161c] border border-emerald-500/30 rounded-full px-4 py-3 shadow-[0_0_20px_rgba(16,185,129,0.15)]">
+                  <Search className="w-4 h-4 text-emerald-400 shrink-0 mr-3" />
+                  <span className="text-xs text-white font-medium flex-1 truncate">
+                    {typedText}
+                    <span className="inline-block w-1.5 h-3.5 bg-emerald-400 ml-0.5 animate-pulse" />
+                  </span>
+                  <div className="flex items-center gap-2 text-gray-400 ml-2">
+                    <Mic className="w-3.5 h-3.5 hover:text-white transition-colors cursor-pointer" />
+                    <Sliders className="w-3.5 h-3.5 hover:text-white transition-colors cursor-pointer" />
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-1.5 mt-3 justify-center">
+                  <span className="text-[10px] bg-emerald-950/60 border border-emerald-800/40 text-emerald-400 px-2.5 py-0.5 rounded-full font-medium">
+                    ✓ UK Tier 2
+                  </span>
+                  <span className="text-[10px] bg-white/5 border border-white/10 text-gray-300 px-2.5 py-0.5 rounded-full font-medium">
+                    ✓ US H-1B
+                  </span>
+                  <span className="text-[10px] bg-white/5 border border-white/10 text-gray-300 px-2.5 py-0.5 rounded-full font-medium">
+                    ✓ Relocation
+                  </span>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Tile 4: Center Spotlight Glass Banner ("Everything in One Place") */}
+            <motion.div 
+              className="relative rounded-3xl overflow-hidden p-8 flex flex-col items-center justify-center text-center shadow-2xl border border-white/10 bg-gradient-to-br from-[#121a24] via-[#0d1318] to-[#09110d] group transition-all duration-300"
+              initial={{ opacity: 0, scale: 0.95 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+            >
+              <motion.div 
+                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.05] to-transparent pointer-events-none"
+                animate={{ x: ['-100%', '100%'] }}
+                transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
+              />
+
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold mb-4">
+                <Sparkles className="w-3.5 h-3.5" /> All-In-One Platform
+              </div>
+
+              <h4 className="text-2xl tablet:text-3xl font-extrabold text-[#F5F7F7] tracking-tight mb-2">
+                Everything in One Place
+              </h4>
+              <p className="text-xs tablet:text-sm text-gray-400 max-w-xs leading-relaxed">
+                From AI resume drafting and LinkedIn audits to global applications and interview simulation.
+              </p>
+            </motion.div>
+
+            {/* Tile 5: Career Audit & Scorecards (Tokens & Swatches) */}
+            <motion.div 
+              className="group relative rounded-3xl bg-[#111317]/80 border border-white/[0.08] hover:border-white/20 p-7 flex flex-col justify-between overflow-hidden shadow-2xl transition-all duration-300 hover:shadow-[0_0_30px_rgba(1,63,46,0.2)]"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.25 }}
+            >
+              <div>
+                <h3 className="text-xl font-bold text-white mb-2 tracking-tight group-hover:text-emerald-400 transition-colors">
+                  Diagnostic Audits
+                </h3>
+                <p className="text-sm text-gray-400 leading-relaxed mb-4">
+                  Fix resume bottlenecks with deep structural scoring across impact, conciseness, and metrics.
+                </p>
+                <Link 
+                  href="/ai-career-report"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-300 group-hover:text-emerald-400 transition-colors mb-6"
+                >
+                  Get Audit <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                </Link>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                <div className="p-3 rounded-xl bg-[#090a0d] border border-white/[0.06] flex flex-col items-center justify-center text-center group-hover:border-emerald-500/30 transition-colors">
+                  <span className="text-sm font-black text-emerald-400">98%</span>
+                  <span className="text-[10px] text-gray-400 mt-0.5">ATS Match</span>
+                </div>
+                <div className="p-3 rounded-xl bg-[#090a0d] border border-white/[0.06] flex flex-col items-center justify-center text-center group-hover:border-teal-500/30 transition-colors">
+                  <span className="text-sm font-black text-teal-300">STAR</span>
+                  <span className="text-[10px] text-gray-400 mt-0.5">Method</span>
+                </div>
+                <div className="p-3 rounded-xl bg-[#090a0d] border border-white/[0.06] flex flex-col items-center justify-center text-center group-hover:border-blue-500/30 transition-colors">
+                  <span className="text-sm font-black text-blue-400">0</span>
+                  <span className="text-[10px] text-gray-400 mt-0.5">Red Flags</span>
+                </div>
+                <div className="p-3 rounded-xl bg-[#090a0d] border border-white/[0.06] flex flex-col items-center justify-center text-center group-hover:border-amber-500/30 transition-colors">
+                  <span className="text-sm font-black text-amber-400">Top 5%</span>
+                  <span className="text-[10px] text-gray-400 mt-0.5">Ranking</span>
+                </div>
+              </div>
+            </motion.div>
+
+          </div>
+
+          {/* ================= COLUMN 3 (RIGHT) ================= */}
+          <div className="flex flex-col gap-6">
+
+            {/* Tile 6: Universal Ecosystem & Extension (Concentric Orbiting Hub) */}
+            <motion.div 
+              className="group relative rounded-3xl bg-[#111317]/80 border border-white/[0.08] hover:border-white/20 p-7 flex flex-col justify-between overflow-hidden shadow-2xl transition-all duration-300 hover:shadow-[0_0_30px_rgba(1,63,46,0.2)]"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.15 }}
+            >
+              <div>
+                <h3 className="text-xl font-bold text-white mb-2 tracking-tight group-hover:text-emerald-400 transition-colors">
+                  Universal Integrations
+                </h3>
+                <p className="text-sm text-gray-400 leading-relaxed mb-4">
+                  Connect seamlessly with LinkedIn, Indeed, Greenhouse, Ashby, and 100+ platforms in 1-click.
+                </p>
+                <a 
+                  href="https://chromewebstore.google.com/detail/fphkljfgefkfemmlfbpnjdojnfeadaii"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-300 group-hover:text-emerald-400 transition-colors mb-6"
+                >
+                  Download Extension <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                </a>
+              </div>
+
+              <div className="relative h-48 rounded-2xl bg-[#090a0d] border border-white/[0.06] flex items-center justify-center overflow-hidden">
+                <div className="relative z-20 w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center shadow-[0_0_25px_rgba(20,184,166,0.6)]">
+                  <Bot className="w-6 h-6 text-white" />
+                </div>
+
+                <motion.div 
+                  className="absolute w-28 h-28 rounded-full border border-white/[0.1] border-dashed"
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 18, repeat: Infinity, ease: "linear" }}
+                >
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-6 h-6 rounded-full bg-[#131722] border border-blue-500/40 flex items-center justify-center text-[9px] font-bold text-blue-400 shadow">
+                    in
+                  </div>
+                  <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-6 h-6 rounded-full bg-[#131722] border border-indigo-500/40 flex items-center justify-center text-[9px] font-bold text-indigo-400 shadow">
+                    GH
+                  </div>
+                </motion.div>
+
+                <motion.div 
+                  className="absolute w-40 h-40 rounded-full border border-white/[0.06]"
+                  animate={{ rotate: -360 }}
+                  transition={{ duration: 28, repeat: Infinity, ease: "linear" }}
+                >
+                  <div className="absolute top-1/2 -left-3 -translate-y-1/2 w-6 h-6 rounded-full bg-[#131722] border border-emerald-500/40 flex items-center justify-center text-[8px] font-bold text-emerald-400 shadow">
+                    Ash
+                  </div>
+                  <div className="absolute top-1/2 -right-3 -translate-y-1/2 w-6 h-6 rounded-full bg-[#131722] border border-amber-500/40 flex items-center justify-center text-[8px] font-bold text-amber-400 shadow">
+                    Ind
+                  </div>
+                </motion.div>
+              </div>
+            </motion.div>
+
+            {/* Tile 7: AI Resume Studio & Editor (Workspace Canvas Preview) */}
+            <motion.div 
+              className="group relative rounded-3xl bg-[#111317]/80 border border-white/[0.08] hover:border-white/20 p-7 flex flex-col justify-between overflow-hidden shadow-2xl transition-all duration-300 hover:shadow-[0_0_30px_rgba(1,63,46,0.2)]"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+            >
+              <div>
+                <h3 className="text-xl font-bold text-white mb-2 tracking-tight group-hover:text-emerald-400 transition-colors">
+                  AI Resume Studio
+                </h3>
+                <p className="text-sm text-gray-400 leading-relaxed mb-4">
+                  Real-time interactive canvas with smart section reordering, modular typography, and instant PDF exports.
+                </p>
+                <Link 
+                  href="/studio"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-300 group-hover:text-emerald-400 transition-colors mb-6"
+                >
+                  Open Studio <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                </Link>
+              </div>
+
+              <div className="relative rounded-2xl bg-[#090a0d] border border-white/[0.06] p-3.5 flex flex-col gap-2 overflow-hidden shadow-inner">
+                <div className="flex items-center justify-between pb-2 border-b border-white/5 text-[10px] text-gray-400">
+                  <span className="flex items-center gap-1 font-medium text-white">
+                    <Layers className="w-3 h-3 text-emerald-400" /> Sections &amp; Layers
+                  </span>
+                  <span className="text-[9px] bg-emerald-950/60 border border-emerald-800/40 text-emerald-400 px-1.5 py-0.5 rounded">
+                    Auto-Save
+                  </span>
+                </div>
+
+                <div className="space-y-1.5 text-[11px]">
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-[#13161c] border border-white/5 text-gray-300">
+                    <span className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> Professional Summary
+                    </span>
+                    <span className="text-[10px] text-gray-500 font-mono">140 words</span>
+                  </div>
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-[#13161c] border border-white/5 text-gray-300">
+                    <span className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-teal-400" /> Work Experience
+                    </span>
+                    <span className="text-[10px] text-emerald-400 font-semibold">4 Roles</span>
+                  </div>
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-[#13161c] border border-white/5 text-gray-300">
+                    <span className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-blue-400" /> Skills &amp; Competencies
+                    </span>
+                    <span className="text-[10px] text-gray-500 font-mono">18 Tags</span>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+
+          </div>
+
         </div>
       </div>
     </section>
   );
-};
-
-export default Features;
+}

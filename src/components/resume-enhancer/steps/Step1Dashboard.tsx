@@ -258,11 +258,11 @@ const CVPairThumbnail: React.FC<CVPairThumbnailProps> = ({
             </h4>
             <div className="flex items-center justify-between gap-2 mt-1">
               <p className="text-[9px] sm:text-[10px] text-white/60 font-medium flex items-center gap-1">
-                <span className="w-1 h-1 bg-[#80FF00] rounded-full shadow-[0_0_6px_rgba(128,255,0,0.6)]" />
+                <span className="w-1 h-1 bg-[#013f2e] rounded-full shadow-[0_0_6px_rgba(1, 63, 46,0.6)]" />
                 {getRelativeTime(cv.updatedAt || cv.createdAt)}
               </p>
               {getScoreForCV(cv) !== undefined && (
-                <span className="text-[9px] sm:text-[10px] font-semibold text-[#80FF00] flex items-center gap-0.5 shrink-0">
+                <span className="text-[9px] sm:text-[10px] font-semibold text-[#013f2e] flex items-center gap-0.5 shrink-0">
                   {getScoreForCV(cv)}% ATS
                 </span>
               )}
@@ -308,7 +308,7 @@ const CVPairThumbnail: React.FC<CVPairThumbnailProps> = ({
                 {firstCL.title || 'Untitled Cover Letter'}
               </h4>
               <p className="text-[9px] sm:text-[10px] text-white/60 font-medium flex items-center gap-1 mt-1">
-                <span className="w-1 h-1 bg-[#80FF00] rounded-full shadow-[0_0_6px_rgba(128,255,0,0.6)]" />
+                <span className="w-1 h-1 bg-[#013f2e] rounded-full shadow-[0_0_6px_rgba(1, 63, 46,0.6)]" />
                 {getRelativeTime(firstCL.updatedAt || firstCL.createdAt)}
               </p>
             </div>
@@ -1158,7 +1158,7 @@ export default function Step1Dashboard({
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-lime-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                   <div className="relative flex flex-col items-center space-y-3 sm:space-y-4">
-                    <div className="w-12 h-12 sm:w-14 sm:h-14 bg-lime-500/10 border border-lime-500/30 text-lime-550 dark:bg-[#80FF00]/10 dark:border-[#80FF00]/20 dark:text-[#80FF00] rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-all duration-500">
+                    <div className="w-12 h-12 sm:w-14 sm:h-14 bg-lime-500/10 border border-lime-500/30 text-lime-550 dark:bg-[#013f2e]/10 dark:border-[#013f2e]/20 dark:text-[#013f2e] rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-all duration-500">
                       {isCreatingBlank ? <Loader2 className="w-6 h-6 sm:w-7 sm:h-7 animate-spin" /> : <Plus className="w-6 h-6 sm:w-7 sm:h-7 stroke-[2.5]" />}
                     </div>
                     <div>
@@ -1179,7 +1179,7 @@ export default function Step1Dashboard({
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-lime-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                   <div className="relative flex flex-col items-center space-y-3 sm:space-y-4">
-                    <div className="w-12 h-12 sm:w-14 sm:h-14 bg-lime-500/10 border border-lime-500/30 text-lime-550 dark:bg-[#80FF00]/10 dark:border-[#80FF00]/20 dark:text-[#80FF00] rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-all duration-500">
+                    <div className="w-12 h-12 sm:w-14 sm:h-14 bg-lime-500/10 border border-lime-500/30 text-lime-550 dark:bg-[#013f2e]/10 dark:border-[#013f2e]/20 dark:text-[#013f2e] rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-all duration-500">
                       {isDuplicating ? <Loader2 className="w-6 h-6 sm:w-7 sm:h-7 animate-spin" /> : <Copy className="w-6 h-6 sm:w-7 sm:h-7 stroke-[2.5]" />}
                     </div>
                     <div>
@@ -1233,7 +1233,7 @@ export default function Step1Dashboard({
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-lime-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                   <div className="relative flex flex-col items-center space-y-3 sm:space-y-4">
-                    <div className="w-12 h-12 sm:w-14 sm:h-14 bg-lime-500/10 border border-lime-500/30 text-lime-550 dark:bg-[#80FF00]/10 dark:border-[#80FF00]/20 dark:text-[#80FF00] rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-all duration-500">
+                    <div className="w-12 h-12 sm:w-14 sm:h-14 bg-lime-500/10 border border-lime-500/30 text-lime-550 dark:bg-[#013f2e]/10 dark:border-[#013f2e]/20 dark:text-[#013f2e] rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-all duration-500">
                       <Sparkles className="w-6 h-6 sm:w-7 sm:h-7 stroke-[2.5]" />
                     </div>
                     <div>
@@ -1254,7 +1254,7 @@ export default function Step1Dashboard({
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-lime-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                   <div className="relative flex flex-col items-center space-y-3 sm:space-y-4">
-                    <div className="w-12 h-12 sm:w-14 sm:h-14 bg-lime-500/10 border border-lime-500/30 text-lime-550 dark:bg-[#80FF00]/10 dark:border-[#80FF00]/20 dark:text-[#80FF00] rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-all duration-500">
+                    <div className="w-12 h-12 sm:w-14 sm:h-14 bg-lime-500/10 border border-lime-500/30 text-lime-550 dark:bg-[#013f2e]/10 dark:border-[#013f2e]/20 dark:text-[#013f2e] rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-all duration-500">
                       <Edit3 className="w-6 h-6 sm:w-7 sm:h-7 stroke-[2.5]" />
                     </div>
                     <div>
@@ -1310,7 +1310,7 @@ export default function Step1Dashboard({
                         onClick={() => setViewLayout('grid')}
                         className={`flex items-center gap-1 px-4 h-full rounded-full text-xs font-bold transition-all ${
                           viewLayout === 'grid'
-                            ? 'bg-lime-500 text-black dark:bg-[#0d100a] dark:text-[#80FF00] dark:border dark:border-[#80FF00]/25 shadow-md'
+                            ? 'bg-lime-500 text-black dark:bg-[#0d100a] dark:text-[#013f2e] dark:border dark:border-[#013f2e]/25 shadow-md'
                             : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
                         }`}
                       >
@@ -1321,7 +1321,7 @@ export default function Step1Dashboard({
                         onClick={() => setViewLayout('compact')}
                         className={`flex items-center gap-1 px-4 h-full rounded-full text-xs font-bold transition-all ${
                           viewLayout === 'compact'
-                            ? 'bg-lime-500 text-black dark:bg-[#0d100a] dark:text-[#80FF00] dark:border dark:border-[#80FF00]/25 shadow-md'
+                            ? 'bg-lime-500 text-black dark:bg-[#0d100a] dark:text-[#013f2e] dark:border dark:border-[#013f2e]/25 shadow-md'
                             : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
                         }`}
                       >
@@ -1332,7 +1332,7 @@ export default function Step1Dashboard({
                         onClick={() => setViewLayout('list')}
                         className={`flex items-center gap-1 px-4 h-full rounded-full text-xs font-bold transition-all ${
                           viewLayout === 'list'
-                            ? 'bg-lime-500 text-black dark:bg-[#0d100a] dark:text-[#80FF00] dark:border dark:border-[#80FF00]/25 shadow-md'
+                            ? 'bg-lime-500 text-black dark:bg-[#0d100a] dark:text-[#013f2e] dark:border dark:border-[#013f2e]/25 shadow-md'
                             : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
                         }`}
                       >
@@ -1498,7 +1498,7 @@ export default function Step1Dashboard({
                              {cl.title || 'Untitled Cover Letter'}
                            </h4>
                            <p className="text-[9px] sm:text-[10px] text-white/60 font-medium flex items-center gap-1 mt-1">
-                             <span className="w-1 h-1 bg-[#80FF00] rounded-full shadow-[0_0_6px_rgba(128,255,0,0.6)]" />
+                             <span className="w-1 h-1 bg-[#013f2e] rounded-full shadow-[0_0_6px_rgba(1, 63, 46,0.6)]" />
                              {getRelativeTime(cl.updatedAt || cl.createdAt)}
                            </p>
                          </div>
@@ -1599,7 +1599,7 @@ export default function Step1Dashboard({
                                 <tr className="border-b border-gray-250 dark:border-white/5 hover:bg-gray-50/50 dark:hover:bg-white/[0.02] transition-colors">
                                   <td className="px-6 py-4">
                                     <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider ${
-                                      cv.cvType === 'master' ? 'bg-purple-600 text-white' : cv.cvType === 'journey' ? 'bg-lime-500 text-black dark:bg-[#80FF00]/10 dark:text-[#80FF00]' : 'bg-blue-600 text-white'
+                                      cv.cvType === 'master' ? 'bg-purple-600 text-white' : cv.cvType === 'journey' ? 'bg-lime-500 text-black dark:bg-[#013f2e]/10 dark:text-[#013f2e]' : 'bg-blue-600 text-white'
                                     }`}>
                                       {cv.cvType === 'master' ? 'Primary' : cv.cvType === 'journey' ? 'Job Based' : 'Custom'}
                                     </span>
@@ -1623,7 +1623,7 @@ export default function Step1Dashboard({
                                   </td>
                                   <td className="px-6 py-4">
                                     {getScoreForCV(cv) !== undefined ? (
-                                      <span className="text-xs font-black text-lime-600 dark:text-[#80FF00] bg-lime-500/10 dark:bg-[#80FF00]/10 px-2.5 py-0.5 rounded-full">
+                                      <span className="text-xs font-black text-lime-600 dark:text-[#013f2e] bg-lime-500/10 dark:bg-[#013f2e]/10 px-2.5 py-0.5 rounded-full">
                                         {getScoreForCV(cv)}%
                                       </span>
                                     ) : (
@@ -1634,14 +1634,14 @@ export default function Step1Dashboard({
                                     <div className="flex items-center justify-end gap-1.5">
                                       <button
                                         onClick={() => handleEditExistingCV(cv)}
-                                        className="p-2 bg-gray-100 hover:bg-lime-500 hover:text-black dark:bg-[#1a230f]/60 dark:hover:bg-[#80FF00] dark:hover:text-black text-gray-700 dark:text-gray-300 rounded-lg transition-all"
+                                        className="p-2 bg-gray-100 hover:bg-lime-500 hover:text-black dark:bg-[#1a230f]/60 dark:hover:bg-[#013f2e] dark:hover:text-black text-gray-700 dark:text-gray-300 rounded-lg transition-all"
                                         title="Edit"
                                       >
                                         <Edit2 className="w-4 h-4" />
                                       </button>
                                       <button
                                         onClick={(e) => handleDuplicateCV(cv.id || cv._id || '', cv.title, e)}
-                                        className="p-2 bg-gray-100 hover:bg-lime-500 hover:text-black dark:bg-[#1a230f]/60 dark:hover:bg-[#80FF00] dark:hover:text-black text-gray-700 dark:text-gray-300 rounded-lg transition-all"
+                                        className="p-2 bg-gray-100 hover:bg-lime-500 hover:text-black dark:bg-[#1a230f]/60 dark:hover:bg-[#013f2e] dark:hover:text-black text-gray-700 dark:text-gray-300 rounded-lg transition-all"
                                         title="Duplicate"
                                       >
                                         <Copy className="w-4 h-4" />
@@ -1687,14 +1687,14 @@ export default function Step1Dashboard({
                                       <div className="flex items-center justify-end gap-1.5">
                                         <button
                                           onClick={() => router.push(`/editor?mode=edit-cover-letter&coverLetterId=${cl.id || cl._id}`)}
-                                          className="p-1.5 bg-gray-100 hover:bg-lime-500 hover:text-black dark:bg-[#1a230f]/60 dark:hover:bg-[#80FF00] dark:hover:text-black text-gray-700 dark:text-gray-300 rounded-lg transition-all"
+                                          className="p-1.5 bg-gray-100 hover:bg-lime-500 hover:text-black dark:bg-[#1a230f]/60 dark:hover:bg-[#013f2e] dark:hover:text-black text-gray-700 dark:text-gray-300 rounded-lg transition-all"
                                           title="Edit Cover Letter"
                                         >
                                           <Edit2 className="w-3.5 h-3.5" />
                                         </button>
                                         <button
                                           onClick={(e) => handleDeleteCoverLetter(cl.id || cl._id || '', e)}
-                                          className="p-1.5 bg-gray-100 hover:bg-red-500 hover:text-white dark:bg-[#1a230f]/60 dark:hover:bg-[#80FF00] dark:hover:text-black text-red-500 dark:text-red-400 rounded-lg transition-all"
+                                          className="p-1.5 bg-gray-100 hover:bg-red-500 hover:text-white dark:bg-[#1a230f]/60 dark:hover:bg-[#013f2e] dark:hover:text-black text-red-500 dark:text-red-400 rounded-lg transition-all"
                                           title="Delete Cover Letter"
                                         >
                                           <Trash2 className="w-3.5 h-3.5" />
@@ -1732,14 +1732,14 @@ export default function Step1Dashboard({
                                 <div className="flex items-center justify-end gap-1.5">
                                   <button
                                     onClick={() => router.push(`/editor?mode=edit-cover-letter&coverLetterId=${cl.id || cl._id}`)}
-                                    className="p-2 bg-gray-100 hover:bg-lime-500 hover:text-black dark:bg-[#1a230f]/60 dark:hover:bg-[#80FF00] dark:hover:text-black text-gray-700 dark:text-gray-300 rounded-lg transition-all"
+                                    className="p-2 bg-gray-100 hover:bg-lime-500 hover:text-black dark:bg-[#1a230f]/60 dark:hover:bg-[#013f2e] dark:hover:text-black text-gray-700 dark:text-gray-300 rounded-lg transition-all"
                                     title="Edit Cover Letter"
                                   >
                                     <Edit2 className="w-4 h-4" />
                                   </button>
                                   <button
                                     onClick={(e) => handleDeleteCoverLetter(cl.id || cl._id || '', e)}
-                                    className="p-2 bg-gray-150 hover:bg-red-500 hover:text-white dark:bg-[#1a230f]/60 dark:hover:bg-[#80FF00] dark:hover:text-black text-gray-700 dark:text-gray-300 rounded-lg transition-all"
+                                    className="p-2 bg-gray-150 hover:bg-red-500 hover:text-white dark:bg-[#1a230f]/60 dark:hover:bg-[#013f2e] dark:hover:text-black text-gray-700 dark:text-gray-300 rounded-lg transition-all"
                                     title="Delete Cover Letter"
                                   >
                                     <Trash2 className="w-4 h-4" />
@@ -1788,8 +1788,8 @@ export default function Step1Dashboard({
             >
             {uploadStatus === 'idle' && (
               <div className="text-center">
-                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-[#80FF00]/15 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
-                  <FileText className="w-8 h-8 sm:w-10 sm:h-10 text-[#80FF00]" />
+                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-[#013f2e]/15 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
+                  <FileText className="w-8 h-8 sm:w-10 sm:h-10 text-[#013f2e]" />
                 </div>
                 <h3 className="text-xl sm:text-2xl font-bold text-[color:var(--text-primary)] mb-2 sm:mb-4">
                   Upload Your Resume
@@ -1805,7 +1805,7 @@ export default function Step1Dashboard({
                     className="hidden"
                     disabled={isUploading}
                   />
-                  <span className="inline-block px-6 sm:px-8 py-2.5 sm:py-3 bg-lime-500 dark:bg-[#80FF00] hover:bg-lime-600 dark:hover:bg-[#70e600] text-black rounded-xl font-bold transition-all shadow-lg hover:shadow-xl hover:scale-105 text-sm sm:text-base">
+                  <span className="inline-block px-6 sm:px-8 py-2.5 sm:py-3 bg-lime-500 dark:bg-[#013f2e] hover:bg-lime-600 dark:hover:bg-[#02523c] text-black rounded-xl font-bold transition-all shadow-lg hover:shadow-xl hover:scale-105 text-sm sm:text-base">
                     Choose File
                   </span>
                 </label>
@@ -1854,8 +1854,8 @@ export default function Step1Dashboard({
 
             {(uploadStatus === 'uploading' || uploadStatus === 'parsing') && (
               <div className="text-center">
-                <div className="w-20 h-20 bg-[#80FF00]/15 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse">
-                  <FileText className="w-10 h-10 text-[#80FF00]" />
+                <div className="w-20 h-20 bg-[#013f2e]/15 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse">
+                  <FileText className="w-10 h-10 text-[#013f2e]" />
                 </div>
                 <h3 className="text-2xl font-bold text-[color:var(--text-primary)] mb-6">
                   {uploadStatus === 'uploading' ? 'Uploading...' : 'Parsing Your Resume...'}
@@ -1873,16 +1873,16 @@ export default function Step1Dashboard({
                           <li
                             key={index}
                             className={`flex items-center gap-3 text-sm transition-colors ${isCompleted
-                              ? 'text-[#80FF00]'
+                              ? 'text-[#013f2e]'
                               : isCurrent
-                                ? 'text-[#80FF00] font-medium'
+                                ? 'text-[#013f2e] font-medium'
                                 : 'text-[color:var(--text-tertiary)]'
                               }`}
                           >
                             {isCompleted ? (
-                              <CheckCircle2 className="w-5 h-5 text-[#80FF00] flex-shrink-0" />
+                              <CheckCircle2 className="w-5 h-5 text-[#013f2e] flex-shrink-0" />
                             ) : isCurrent ? (
-                              <Loader2 className="w-5 h-5 text-[#80FF00] flex-shrink-0 animate-spin" />
+                              <Loader2 className="w-5 h-5 text-[#013f2e] flex-shrink-0 animate-spin" />
                             ) : (
                               <div className="w-5 h-5 rounded-full border-2 border-[color:var(--text-tertiary)] flex-shrink-0" />
                             )}
@@ -1896,7 +1896,7 @@ export default function Step1Dashboard({
 
                 <div className="w-full bg-black/10 dark:bg-white/10 rounded-full h-2 mb-4 overflow-hidden">
                   <div
-                    className="bg-[#80FF00] h-2 rounded-full transition-all duration-300"
+                    className="bg-[#013f2e] h-2 rounded-full transition-all duration-300"
                     style={{ width: `${uploadProgress}%` }}
                   />
                 </div>
@@ -1908,8 +1908,8 @@ export default function Step1Dashboard({
 
             {uploadStatus === 'success' && (
               <div className="text-center">
-                <div className="w-20 h-20 bg-[#80FF00]/15 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <FileText className="w-10 h-10 text-[#80FF00]" />
+                <div className="w-20 h-20 bg-[#013f2e]/15 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <FileText className="w-10 h-10 text-[#013f2e]" />
                 </div>
                 <h3 className="text-2xl font-bold text-[color:var(--text-primary)] mb-4">
                   Successfully Parsed!
@@ -1937,7 +1937,7 @@ export default function Step1Dashboard({
                     setErrorMessage('');
                     setUploadProgress(0);
                   }}
-                  className="px-6 py-2 bg-lime-500 dark:bg-[#80FF00] hover:bg-lime-600 dark:hover:bg-[#70e600] text-black rounded-lg font-medium transition-colors"
+                  className="px-6 py-2 bg-lime-500 dark:bg-[#013f2e] hover:bg-lime-600 dark:hover:bg-[#02523c] text-black rounded-lg font-medium transition-colors"
                 >
                   Try Again
                 </button>

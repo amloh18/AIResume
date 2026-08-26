@@ -97,7 +97,7 @@ export default function CustomSignInForm() {
                     onChange={handleChange}
                     required
                     placeholder="user@buildairesume.com"
-                    className="flex h-10 w-full rounded-none px-3 py-2 text-small file:border-0 file:bg-transparent file:text-small file:font-medium placeholder:text-muted-foreground outline-none focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 mt-1 bg-gray-700 border border-[#80FF00]/50 text-white placeholder-gray-400 focus:border-2 focus:border-[#80FF00] transition-all duration-200"
+                    className="flex h-10 w-full rounded-none px-3 py-2 text-small file:border-0 file:bg-transparent file:text-small file:font-medium placeholder:text-muted-foreground outline-none focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 mt-1 bg-gray-700 border border-[#013f2e]/50 text-white placeholder-gray-400 focus:border-2 focus:border-[#013f2e] transition-all duration-200"
                   />
                 </div>
                 
@@ -113,7 +113,7 @@ export default function CustomSignInForm() {
                     onChange={handleChange}
                     required
                     placeholder="Enter your password"
-                    className="flex h-10 w-full rounded-none px-3 py-2 text-small file:border-0 file:bg-transparent file:text-small file:font-medium placeholder:text-muted-foreground outline-none focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 mt-1 bg-gray-700 border border-[#80FF00]/50 text-white placeholder-gray-400 focus:border-2 focus:border-[#80FF00] transition-all duration-200"
+                    className="flex h-10 w-full rounded-none px-3 py-2 text-small file:border-0 file:bg-transparent file:text-small file:font-medium placeholder:text-muted-foreground outline-none focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 mt-1 bg-gray-700 border border-[#013f2e]/50 text-white placeholder-gray-400 focus:border-2 focus:border-[#013f2e] transition-all duration-200"
                   />
                 </div>
               </div>

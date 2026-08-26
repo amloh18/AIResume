@@ -205,7 +205,7 @@ const Testimonials = () => {
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
           >
-            <svg width="48" height="24" viewBox="0 0 48 24" fill="none" className="text-[#81ff00]">
+            <svg width="48" height="24" viewBox="0 0 48 24" fill="none" className="text-[#36D39B]">
               <path
                 d="M2 12C6 6 10 18 14 12C18 6 22 18 26 12C30 6 34 18 38 12C42 6 46 12 46 12"
                 stroke="currentColor"
@@ -214,8 +214,8 @@ const Testimonials = () => {
               />
             </svg>
           </motion.div>
-          <h2 className="!text-[2rem] tablet:!text-[2.5rem] desktop:!text-[3rem] font-extrabold text-white mb-4 tracking-tighter !leading-[1.05] text-left">
-            <span className="text-lime-400">15,000+</span> professionals celebrating new jobs
+          <h2 className="!text-[2rem] tablet:!text-[2.5rem] desktop:!text-[3rem] font-extrabold text-[#F5F7F7] mb-4 tracking-tighter !leading-[1.05] text-left">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#36D39B] via-[#4DDCB0] to-[#86E8D1]">15,000+</span> professionals celebrating new jobs
           </h2>
           <p className="text-white/60 text-small tablet:text-body max-w-2xl text-left">
             Join thousands of successful job seekers who have landed their dream positions using AIResume.

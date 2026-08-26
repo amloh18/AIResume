@@ -273,7 +273,7 @@ export const PortalConnectModal: React.FC<PortalConnectModalProps> = ({
         {/* STEP: Done */}
         {step === 'done' && (
           <div className="p-8 flex flex-col items-center text-center">
-            <div className="w-16 h-16 rounded-2xl bg-lime-100 dark:bg-lime-900/30 flex items-center justify-center mb-4 text-emerald-600 dark:text-[#80FF00]">
+            <div className="w-16 h-16 rounded-2xl bg-lime-100 dark:bg-lime-900/30 flex items-center justify-center mb-4 text-emerald-600 dark:text-[#013f2e]">
               <CheckCircle2 className="w-8 h-8" />
             </div>
             <h3 className="font-bold text-gray-900 dark:text-white text-xl">Connected!</h3>
@@ -286,7 +286,7 @@ export const PortalConnectModal: React.FC<PortalConnectModalProps> = ({
         {/* STEP: Connecting */}
         {step === 'connecting' && (
           <div className="p-8 flex flex-col items-center text-center">
-            <div className="w-16 h-16 rounded-2xl bg-gray-100 dark:bg-white/5 flex items-center justify-center mb-4 text-lime-600 dark:text-[#80FF00]">
+            <div className="w-16 h-16 rounded-2xl bg-gray-100 dark:bg-white/5 flex items-center justify-center mb-4 text-lime-600 dark:text-[#013f2e]">
               <Loader2 className="w-8 h-8 animate-spin" />
             </div>
             <h3 className="font-bold text-gray-900 dark:text-white text-xl">Connecting {config.name}...</h3>
@@ -318,7 +318,7 @@ export const PortalConnectModal: React.FC<PortalConnectModalProps> = ({
             <form onSubmit={handleEmailSubmit} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5 flex items-center gap-1.5">
-                  <Mail className="w-3.5 h-3.5 text-lime-600 dark:text-[#80FF00]" />
+                  <Mail className="w-3.5 h-3.5 text-lime-600 dark:text-[#013f2e]" />
                   Enter your {config.name} Account Email
                 </label>
                 <input
@@ -336,7 +336,7 @@ export const PortalConnectModal: React.FC<PortalConnectModalProps> = ({
               </div>
 
               <div className="flex items-center gap-2 text-[11px] text-gray-500 dark:text-gray-400 p-2.5 rounded-xl bg-lime-50/50 dark:bg-lime-950/20 border border-lime-200/50 dark:border-lime-900/30">
-                <Shield className="w-4 h-4 text-emerald-600 dark:text-[#80FF00] shrink-0" />
+                <Shield className="w-4 h-4 text-emerald-600 dark:text-[#013f2e] shrink-0" />
                 <span>
                   Protected by AES-256-GCM encryption. Never shares your BuildAIResume JWT.
                 </span>
@@ -352,7 +352,7 @@ export const PortalConnectModal: React.FC<PortalConnectModalProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 text-xs font-black bg-[#80FF00] hover:brightness-95 text-black rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5"
+                  className="flex-1 py-2.5 text-xs font-black bg-[#013f2e] hover:brightness-95 text-black rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5"
                 >
                   Continue
                   <ArrowRight className="w-3.5 h-3.5" />
@@ -398,7 +398,7 @@ export const PortalConnectModal: React.FC<PortalConnectModalProps> = ({
             <button
               type="button"
               onClick={() => setStep('preferences')}
-              className="w-full py-2.5 text-xs font-black bg-[#80FF00] hover:brightness-95 text-black rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5"
+              className="w-full py-2.5 text-xs font-black bg-[#013f2e] hover:brightness-95 text-black rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5"
             >
               Set Discovery Preferences
               <ArrowRight className="w-3.5 h-3.5" />
@@ -475,7 +475,7 @@ export const PortalConnectModal: React.FC<PortalConnectModalProps> = ({
               <div className="pt-2">
                 <button
                   type="submit"
-                  className="w-full py-2.5 text-xs font-black bg-[#80FF00] hover:brightness-95 text-black rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5"
+                  className="w-full py-2.5 text-xs font-black bg-[#013f2e] hover:brightness-95 text-black rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5"
                 >
                   Set Preferences
                   <ArrowRight className="w-3.5 h-3.5" />
@@ -539,7 +539,7 @@ export const PortalConnectModal: React.FC<PortalConnectModalProps> = ({
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full py-2.5 text-xs font-black bg-[#80FF00] hover:brightness-95 text-black rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5"
+                  className="w-full py-2.5 text-xs font-black bg-[#013f2e] hover:brightness-95 text-black rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5"
                 >
                   {isSubmitting ? (
                     <Loader2 className="w-4 h-4 animate-spin" />

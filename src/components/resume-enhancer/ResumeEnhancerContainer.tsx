@@ -3150,7 +3150,7 @@ export default function ResumeEnhancerContainer({
 
           const activePill = (
             <div className="flex items-center bg-[#f1f9ec] dark:bg-[#1a2312] border border-[#dcedd9] dark:border-[#2a3c1d] rounded-2xl px-4 py-1.5 shadow-sm transition-all duration-300">
-              <div className="w-8 h-8 rounded-full bg-lime-600 dark:bg-[#72e000] flex items-center justify-center text-white dark:text-black flex-shrink-0">
+              <div className="w-8 h-8 rounded-full bg-lime-600 dark:bg-[#02523c] flex items-center justify-center text-white dark:text-black flex-shrink-0">
                 <IconComponent className="w-4 h-4 stroke-[2.5]" />
               </div>
               <div className="flex flex-col ml-3 text-left">
@@ -3175,11 +3175,11 @@ export default function ResumeEnhancerContainer({
             >
               {/* Circle */}
               {step.isCompleted ? (
-                <div className="w-6 h-6 rounded-full bg-lime-500 dark:bg-[#80FF00] flex items-center justify-center text-black flex-shrink-0 shadow-sm shadow-lime-500/20 transition-transform group-hover:scale-105">
+                <div className="w-6 h-6 rounded-full bg-lime-500 dark:bg-[#013f2e] flex items-center justify-center text-black flex-shrink-0 shadow-sm shadow-lime-500/20 transition-transform group-hover:scale-105">
                   <Check className="w-3.5 h-3.5 stroke-[3] text-black" />
                 </div>
               ) : (
-                <div className="w-7 h-7 rounded-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 flex items-center justify-center text-gray-400 dark:text-gray-500 flex-shrink-0 transition-colors group-hover:border-lime-500 dark:group-hover:border-[#80FF00] group-hover:text-lime-600 dark:group-hover:text-lime-400">
+                <div className="w-7 h-7 rounded-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 flex items-center justify-center text-gray-400 dark:text-gray-500 flex-shrink-0 transition-colors group-hover:border-lime-500 dark:group-hover:border-[#013f2e] group-hover:text-lime-600 dark:group-hover:text-lime-400">
                   <IconComponent className="w-3.5 h-3.5 stroke-[2]" />
                 </div>
               )}
@@ -3571,7 +3571,7 @@ export default function ResumeEnhancerContainer({
                     <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
                       saveStatus === 'error' ? 'bg-red-500' :
                       saveStatus === 'saving' ? 'bg-amber-500 animate-pulse' :
-                      'bg-lime-500 dark:bg-[#80FF00]'
+                      'bg-lime-500 dark:bg-[#013f2e]'
                     }`} />
                     <span className="text-[10px] text-gray-500 dark:text-gray-400 truncate">
                       {saveStatus === 'saving' ? 'Saving...' :
@@ -3638,7 +3638,7 @@ export default function ResumeEnhancerContainer({
                 <motion.button
                   onClick={() => handleSmartSave(true)}
                   disabled={saveStatus === 'saving'}
-                  className="hidden md:inline-flex lg:hidden p-1.5 sm:px-4 sm:py-1.5 bg-lime-500 dark:bg-[#80FF00] hover:bg-lime-600 dark:hover:bg-[#70e600] disabled:bg-gray-300 dark:disabled:bg-[var(--bg-tertiary)] disabled:cursor-not-allowed text-black disabled:text-gray-500 dark:disabled:text-[color:var(--text-tertiary)] rounded-full text-xs font-semibold transition-colors flex items-center space-x-1.5 shadow-md hover:shadow-lg overflow-hidden min-w-[36px] sm:min-w-[85px] justify-center"
+                  className="hidden md:inline-flex lg:hidden p-1.5 sm:px-4 sm:py-1.5 bg-lime-500 dark:bg-[#013f2e] hover:bg-lime-600 dark:hover:bg-[#02523c] disabled:bg-gray-300 dark:disabled:bg-[var(--bg-tertiary)] disabled:cursor-not-allowed text-black disabled:text-gray-500 dark:disabled:text-[color:var(--text-tertiary)] rounded-full text-xs font-semibold transition-colors flex items-center space-x-1.5 shadow-md hover:shadow-lg overflow-hidden min-w-[36px] sm:min-w-[85px] justify-center"
                   title="Save"
                   whileHover={{ scale: saveStatus === 'saving' ? 1 : 1.05 }}
                   whileTap={{ scale: 0.95 }}
@@ -3763,7 +3763,7 @@ export default function ResumeEnhancerContainer({
             <button
               onClick={handleOnboardingExit}
               disabled={saveStatus === 'saving'}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#80FF00] hover:bg-[#70e600] text-black font-extrabold text-xs rounded-full shadow-sm hover:shadow transition-all active:scale-95"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#013f2e] hover:bg-[#02523c] text-black font-extrabold text-xs rounded-full shadow-sm hover:shadow transition-all active:scale-95"
               title="Save & Continue to Onboarding"
             >
               <Check className="w-3.5 h-3.5 stroke-[3]" />

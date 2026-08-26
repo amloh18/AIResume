@@ -1617,7 +1617,7 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
                         value={passwordForm.currentPassword}
                         onChange={(e) => handlePasswordInputChange('currentPassword', e.target.value)}
                         placeholder="Enter your current password"
-                        className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+                        className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#013f2e] focus:bg-white/15 transition-colors"
                       />
                       <button
                         type="button"
@@ -1640,7 +1640,7 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
                         value={passwordForm.newPassword}
                         onChange={(e) => handlePasswordInputChange('newPassword', e.target.value)}
                         placeholder="Enter your new password"
-                        className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+                        className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#013f2e] focus:bg-white/15 transition-colors"
                       />
                       <button
                         type="button"
@@ -1666,7 +1666,7 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
                         value={passwordForm.confirmPassword}
                         onChange={(e) => handlePasswordInputChange('confirmPassword', e.target.value)}
                         placeholder="Confirm your new password"
-                        className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+                        className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#013f2e] focus:bg-white/15 transition-colors"
                       />
                       <button
                         type="button"
@@ -1707,7 +1707,7 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
                     <button
                       type="submit"
                       disabled={passwordLoading || passwordForm.newPassword.length < 8 || passwordForm.newPassword !== passwordForm.confirmPassword}
-                      className="flex-1 px-4 py-2.5 rounded-lg font-medium bg-[#80FF00]/10 text-[#80FF00] hover:bg-[#80FF00]/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                      className="flex-1 px-4 py-2.5 rounded-lg font-medium bg-[#013f2e]/10 text-[#013f2e] hover:bg-[#013f2e]/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
                     >
                       {passwordLoading ? (
                         <>

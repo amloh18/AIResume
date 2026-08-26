@@ -34,14 +34,20 @@ const Hero = ({ withBanner = false }: { withBanner?: boolean }) => {
   return (
     <section
       id="hero"
-      className="relative h-screen min-h-[800px] desktop:min-h-[900px] w-full overflow-hidden flex flex-col items-center bg-[#141810]"
+      className="relative h-screen min-h-[800px] desktop:min-h-[900px] w-full overflow-hidden flex flex-col items-center bg-[#0a0a0c]"
     >
-      {/* Background Glow Effects */}
-      <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] bg-gradient-to-b from-purple-600/20 via-pink-500/10 to-transparent rounded-full blur-[120px]" />
-        <div className="absolute top-1/3 -left-40 w-[400px] h-[400px] bg-orange-500/10 rounded-full blur-[100px]" />
-        <div className="absolute top-1/4 -right-40 w-[400px] h-[400px] bg-blue-500/10 rounded-full blur-[100px]" />
-      </div>
+      {/* Background Ambient Glows */}
+      <div 
+        className="absolute inset-0 pointer-events-none overflow-hidden"
+        style={{
+          background: `
+            radial-gradient(ellipse 60% 40% at 20% 15%, rgba(1, 63, 46, 0.25) 0%, transparent 65%),
+            radial-gradient(ellipse 60% 50% at 80% 50%, rgba(20, 184, 166, 0.08) 0%, transparent 65%),
+            radial-gradient(ellipse 70% 50% at 50% 85%, rgba(1, 63, 46, 0.2) 0%, transparent 65%),
+            linear-gradient(180deg, #0e1013 0%, #0a0a0c 50%, #060708 100%)
+          `
+        }}
+      />
 
       {/* Content Wrapper */}
       <div className="relative z-20 w-full max-w-7xl mx-auto px-4 tablet:px-6 desktop:px-8 flex flex-col items-center h-full">
@@ -63,14 +69,14 @@ const Hero = ({ withBanner = false }: { withBanner?: boolean }) => {
             </div>
             <div className="flex items-center gap-2 leading-none">
               <p className="text-small tablet:text-small font-semibold text-white/90">
-                <span className="text-[#81ff00]">15,000+</span> professionals celebrating new jobs
+                <span className="text-[#36D39B]">15,000+</span> professionals celebrating new jobs
               </p>
             </div>
           </motion.div>
 
           {/* Headline & CTAs */}
           <motion.p
-            className="mb-4 text-xs tablet:text-sm font-semibold uppercase tracking-[0.25em] text-[#81ff00] text-center"
+            className="mb-4 text-xs tablet:text-sm font-semibold uppercase tracking-[0.25em] text-[#36D39B] text-center"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.15 }}
@@ -79,36 +85,14 @@ const Hero = ({ withBanner = false }: { withBanner?: boolean }) => {
           </motion.p>
 
           <motion.h1
-            className="!text-[1.8rem] sm:!text-[2.2rem] tablet:!text-[2.8rem] desktop:!text-[3.2rem] font-extrabold text-white mb-10 tracking-tighter leading-[1.1] sm:leading-none w-full text-center px-2"
+            className="tablet:!text-[2.5rem] desktop:!text-[3rem] font-extrabold text-[#F5F7F7] mb-8 sm:mb-10 tracking-tighter leading-[1.1] sm:leading-[1.1] text-4xl! tracking-normal! w-full text-center px-2"
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, ease: "easeOut" }}
           >
-            <span className="relative inline-block w-full sm:w-auto">
-              <span className="relative z-10 block py-3 px-4 sm:px-8 whitespace-normal sm:whitespace-nowrap">
-                Build a Better Resume <br className="hidden sm:block" />
-                With AI
-              </span>
-              
-              {/* Realistic Single Brush Shape */}
-              <svg 
-                className="absolute inset-0 w-full h-full z-0 pointer-events-none" 
-                viewBox="0 0 100 100" 
-                preserveAspectRatio="none"
-              >
-                <defs>
-                  <filter id="highlighter-brush">
-                    <feTurbulence type="fractalNoise" baseFrequency="0.08" numOctaves="4" result="noise" />
-                    <feDisplacementMap in="SourceGraphic" in2="noise" scale="6" />
-                  </filter>
-                </defs>
-                <path 
-                  d="M2,12 C20,10 40,15 60,12 C80,10 98,14 98,12 L97,88 C80,85 60,90 40,88 C20,85 3,89 2,88 Z" 
-                  fill="#81ff00" 
-                  fillOpacity="0.55"
-                  filter="url(#highlighter-brush)"
-                />
-              </svg>
+            Build a Better Resume <br className="hidden sm:block" />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#36D39B] via-[#4DDCB0] to-[#86E8D1]">
+              With AI
             </span>
           </motion.h1>
 
@@ -129,7 +113,7 @@ const Hero = ({ withBanner = false }: { withBanner?: boolean }) => {
           >
             <button
               onClick={() => router.push('/welcome')}
-              className="group w-full tablet:w-auto inline-flex items-center justify-center gap-3 bg-[#81ff00] hover:bg-[#6dd600] text-black px-6 py-3 tablet:px-8 tablet:py-3.5 rounded-full font-bold text-small tablet:text-small shadow-[0_0_20px_rgba(129,255,0,0.3)] transition-all hover:scale-105 uppercase tracking-wide"
+              className="group w-full tablet:w-auto inline-flex items-center justify-center gap-3 bg-[#013f2e] hover:bg-[#025c43] text-white px-6 py-3 tablet:px-8 tablet:py-3.5 rounded-full font-bold text-small tablet:text-small shadow-lg transition-colors duration-200 hover:scale-105 uppercase tracking-wide"
             >
               Build My Resume
               <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />

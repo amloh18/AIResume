@@ -214,7 +214,7 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
           >
-            <svg width="48" height="24" viewBox="0 0 48 24" fill="none" className="text-[#81ff00]">
+            <svg width="48" height="24" viewBox="0 0 48 24" fill="none" className="text-[#36D39B]">
               <path
                 d="M2 12C6 6 10 18 14 12C18 6 22 18 26 12C30 6 34 18 38 12C42 6 46 12 46 12"
                 stroke="currentColor"
@@ -223,9 +223,9 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
               />
             </svg>
           </motion.div>
-          <h2 className="!text-[2rem] tablet:!text-[2.5rem] desktop:!text-[3rem] font-extrabold text-gray-900 dark:text-white mb-6 text-left tracking-tighter !leading-[1.05]">
+          <h2 className="tablet:!text-[2.5rem] desktop:!text-[3rem] font-extrabold text-[#F5F7F7] mb-6 text-left tracking-tighter text-4xl! tracking-normal!">
             Simple,{' '}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-lime-500 to-lime-600 dark:from-lime-400 dark:to-lime-500">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#36D39B] via-[#4DDCB0] to-[#86E8D1]">
               Transparent Pricing
             </span>
           </h2>
@@ -525,7 +525,7 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
                                className={`w-full py-2 px-3 text-small font-bold rounded-lg transition-all duration-300 ${
                                  plan.key === 'starter_monthly'
                                    ? 'bg-gray-200 hover:bg-gray-300 dark:bg-white/10 dark:hover:bg-white/20 text-gray-900 dark:text-white'
-                                   : 'bg-[#81ff00] hover:bg-lime-400 text-black shadow-md hover:shadow-lime-400/20'
+                                   : 'bg-[#013f2e] hover:bg-[#025c43] text-white shadow-md'
                                }`}
                                whileHover={{ scale: 1.03 }}
                                whileTap={{ scale: 0.97 }}
@@ -630,7 +630,7 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
                             className={`w-full py-1.5 px-2 text-[10px] font-bold rounded-md transition-all duration-300 ${
                               leftPlan.key === 'starter_monthly'
                                 ? 'bg-gray-200 hover:bg-gray-300 dark:bg-white/10 dark:hover:bg-white/20 text-gray-900 dark:text-white'
-                                : 'bg-[#81ff00] hover:bg-lime-400 text-black shadow-sm hover:shadow-lime-400/20'
+                                : 'bg-[#013f2e] hover:bg-[#025c43] text-white shadow-sm'
                             }`}
                             whileHover={{ scale: 1.03 }}
                             whileTap={{ scale: 0.97 }}
@@ -643,7 +643,7 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
                         {selectedProPlan && (
                           <motion.button
                             onClick={() => handlePlanSelect(selectedProPlan)}
-                            className="w-full py-1.5 px-2 text-[10px] font-bold rounded-md bg-[#81ff00] hover:bg-lime-400 text-black shadow-sm hover:shadow-lime-400/20"
+                            className="w-full py-1.5 px-2 text-[10px] font-bold rounded-md bg-[#013f2e] hover:bg-[#025c43] text-white shadow-sm"
                             whileHover={{ scale: 1.03 }}
                             whileTap={{ scale: 0.97 }}
                           >

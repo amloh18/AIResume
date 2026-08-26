@@ -165,30 +165,30 @@ class DailySummaryEmailService {
       <!-- Daily Activity Cards -->
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 30px;">
         <div style="background-color: #313a28; padding: 15px; border-radius: 12px; text-align: center; border: 1px solid rgba(255, 255, 255, 0.08);">
-          <div style="font-size: 24px; font-weight: 800; color: #99FF00; margin-bottom: 5px;">${summary.jobsAdded}</div>
+          <div style="font-size: 24px; font-weight: 800; color: #013f2e; margin-bottom: 5px;">${summary.jobsAdded}</div>
           <div style="font-size: 12px; color: #757575; text-transform: uppercase; letter-spacing: 0.5px;">Jobs Added</div>
         </div>
         <div style="background-color: #313a28; padding: 15px; border-radius: 12px; text-align: center; border: 1px solid rgba(255, 255, 255, 0.08);">
-          <div style="font-size: 24px; font-weight: 800; color: #99FF00; margin-bottom: 5px;">${summary.jobsApplied}</div>
+          <div style="font-size: 24px; font-weight: 800; color: #013f2e; margin-bottom: 5px;">${summary.jobsApplied}</div>
           <div style="font-size: 12px; color: #757575; text-transform: uppercase; letter-spacing: 0.5px;">Applied</div>
         </div>
         <div style="background-color: #313a28; padding: 15px; border-radius: 12px; text-align: center; border: 1px solid rgba(255, 255, 255, 0.08);">
-          <div style="font-size: 24px; font-weight: 800; color: #99FF00; margin-bottom: 5px;">${summary.interviewsScheduled}</div>
+          <div style="font-size: 24px; font-weight: 800; color: #013f2e; margin-bottom: 5px;">${summary.interviewsScheduled}</div>
           <div style="font-size: 12px; color: #757575; text-transform: uppercase; letter-spacing: 0.5px;">Interviews</div>
         </div>
         <div style="background-color: #313a28; padding: 15px; border-radius: 12px; text-align: center; border: 1px solid rgba(255, 255, 255, 0.08);">
-          <div style="font-size: 24px; font-weight: 800; color: #99FF00; margin-bottom: 5px;">${summary.documentsReady}</div>
+          <div style="font-size: 24px; font-weight: 800; color: #013f2e; margin-bottom: 5px;">${summary.documentsReady}</div>
           <div style="font-size: 12px; color: #757575; text-transform: uppercase; letter-spacing: 0.5px;">Docs Ready</div>
         </div>
       </div>
       
       <!-- Upgrade Section (Only for Free Plan) -->
       ${isFreePlan ? `
-      <div style="background: linear-gradient(135deg, rgba(153, 255, 0, 0.1) 0%, rgba(153, 255, 0, 0.05) 100%); border: 1px solid rgba(153, 255, 0, 0.3); border-radius: 12px; padding: 20px; text-align: center; margin-bottom: 30px;">
+      <div style="background: linear-gradient(135deg, rgba(1, 63, 46, 0.1) 0%, rgba(1, 63, 46, 0.05) 100%); border: 1px solid rgba(1, 63, 46, 0.3); border-radius: 12px; padding: 20px; text-align: center; margin-bottom: 30px;">
         <h3 style="color: #ffffff; margin: 0 0 10px 0; font-size: 18px;">Unlock Your Full Potential 🚀</h3>
         <p style="color: #e5e5e5; font-size: 14px; margin: 0 0 20px 0;">Get unlimited AI tailoring, advanced analytics, and priority support with AIResume Pro.</p>
         <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://buildairesume.com'}/dashboard/settings?tab=billing" 
-           style="display: inline-block; background: linear-gradient(to right, #99FF00, #88e600); color: #000000; padding: 10px 24px; text-decoration: none; border-radius: 9999px; font-weight: 700; font-size: 14px;">
+           style="display: inline-block; background: linear-gradient(to right, #013f2e, #02523c); color: #000000; padding: 10px 24px; text-decoration: none; border-radius: 9999px; font-weight: 700; font-size: 14px;">
           Upgrade to Pro
         </a>
       </div>

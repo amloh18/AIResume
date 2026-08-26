@@ -712,7 +712,7 @@ export const CommunicationSidebar: React.FC<CommunicationSidebarProps> = ({
                         setModalInitialTab('email');
                         setIsEmailConnectModalOpen(true);
                       }}
-                      className="w-full bg-[#80FF00] hover:brightness-95 text-black font-semibold py-2.5 rounded-xl text-small flex items-center justify-center gap-1.5 transition duration-150 shadow-sm"
+                      className="w-full bg-[#013f2e] hover:brightness-95 text-black font-semibold py-2.5 rounded-xl text-small flex items-center justify-center gap-1.5 transition duration-150 shadow-sm"
                     >
                       <Plus className="h-3.5 w-3.5" />
                       Connect Automated Integration
@@ -961,7 +961,7 @@ export const CommunicationSidebar: React.FC<CommunicationSidebarProps> = ({
                       </button>
                       <button 
                         onClick={() => setShowCustomPromptInput(true)} 
-                        className="text-gray-400 hover:text-[#80FF00] p-1 hover:scale-110 transition-transform"
+                        className="text-gray-400 hover:text-[#013f2e] p-1 hover:scale-110 transition-transform"
                       >
                         <Sparkles size={16} />
                       </button>
@@ -976,7 +976,7 @@ export const CommunicationSidebar: React.FC<CommunicationSidebarProps> = ({
                     <button 
                       onClick={handleSendReply}
                       disabled={isSending || !replyText.trim()}
-                      className="h-11 w-11 shrink-0 bg-[#80FF00] hover:brightness-95 text-black rounded-2xl flex items-center justify-center transition hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="h-11 w-11 shrink-0 bg-[#013f2e] hover:brightness-95 text-black rounded-2xl flex items-center justify-center transition hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isSending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                     </button>

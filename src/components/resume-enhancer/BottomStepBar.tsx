@@ -83,9 +83,9 @@ export default function BottomStepBar({ steps, onNavigate }: BottomStepBarProps)
                   className="flex items-center justify-center p-0.5 transition-transform hover:scale-125 active:scale-90"
                 >
                   {step.isCompleted ? (
-                    <span className="w-2 h-2 rounded-full bg-lime-500 dark:bg-[#80FF00] block shadow-[0_0_5px_rgba(128,255,0,0.5)]" />
+                    <span className="w-2 h-2 rounded-full bg-lime-500 dark:bg-[#013f2e] block shadow-[0_0_5px_rgba(1, 63, 46,0.5)]" />
                   ) : step.isActive ? (
-                    <span className="w-2.5 h-2.5 rounded-full bg-lime-500 dark:bg-[#80FF00] block ring-2 ring-lime-300 dark:ring-[#80FF00]/40 shadow-[0_0_8px_rgba(128,255,0,0.6)]" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-lime-500 dark:bg-[#013f2e] block ring-2 ring-lime-300 dark:ring-[#013f2e]/40 shadow-[0_0_8px_rgba(1, 63, 46,0.6)]" />
                   ) : (
                     <span className="w-2 h-2 rounded-full bg-gray-300 dark:bg-white/20 block" />
                   )}
@@ -124,13 +124,13 @@ export default function BottomStepBar({ steps, onNavigate }: BottomStepBarProps)
                         }`}
                       >
                         {step.isCompleted ? (
-                          <span className="w-4 h-4 rounded-full bg-lime-500 dark:bg-[#80FF00] flex items-center justify-center flex-shrink-0">
+                          <span className="w-4 h-4 rounded-full bg-lime-500 dark:bg-[#013f2e] flex items-center justify-center flex-shrink-0">
                             <Check className="w-2.5 h-2.5 stroke-[3] text-black" />
                           </span>
                         ) : (
                           <span className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 ${
                             step.isActive
-                              ? 'bg-lime-600 dark:bg-[#72e000] text-white dark:text-black'
+                              ? 'bg-lime-600 dark:bg-[#02523c] text-white dark:text-black'
                               : 'bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500'
                           }`}>
                             <Icon className="w-2.5 h-2.5 stroke-[2.5]" />
@@ -158,7 +158,7 @@ export default function BottomStepBar({ steps, onNavigate }: BottomStepBarProps)
               <button
                 onClick={goForward}
                 disabled={!canGoForward}
-                className="w-7 h-7 rounded-full flex items-center justify-center bg-lime-500 dark:bg-[#80FF00] hover:bg-lime-600 dark:hover:bg-[#70e600] text-black disabled:bg-gray-100 dark:disabled:bg-white/5 disabled:text-gray-400 dark:disabled:text-gray-500 disabled:cursor-not-allowed transition-all active:scale-90 flex-shrink-0 shadow-sm"
+                className="w-7 h-7 rounded-full flex items-center justify-center bg-lime-500 dark:bg-[#013f2e] hover:bg-lime-600 dark:hover:bg-[#02523c] text-black disabled:bg-gray-100 dark:disabled:bg-white/5 disabled:text-gray-400 dark:disabled:text-gray-500 disabled:cursor-not-allowed transition-all active:scale-90 flex-shrink-0 shadow-sm"
                 aria-label="Next step"
               >
                 <ChevronRight className="w-4 h-4" />

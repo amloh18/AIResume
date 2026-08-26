@@ -334,7 +334,7 @@ export default function FiltersBar({
               {autoApplyStatus.ctaAction === 'billing' ? (
                 <Link
                   href="/dashboard/billing"
-                  className="font-bold text-lime-600 dark:text-[#80FF00] hover:underline text-xs shrink-0"
+                  className="font-bold text-lime-600 dark:text-[#013f2e] hover:underline text-xs shrink-0"
                 >
                   {autoApplyStatus.ctaText}
                 </Link>
@@ -342,7 +342,7 @@ export default function FiltersBar({
                 <button
                   type="button"
                   onClick={handleCtaClick}
-                  className="font-bold text-lime-600 dark:text-[#80FF00] hover:underline text-xs shrink-0"
+                  className="font-bold text-lime-600 dark:text-[#013f2e] hover:underline text-xs shrink-0"
                 >
                   {autoApplyStatus.ctaText}
                 </button>
@@ -353,7 +353,7 @@ export default function FiltersBar({
             <button
               type="button"
               onClick={onOpenSettings}
-              className="px-3.5 py-2 rounded-2xl border border-gray-200 dark:border-white/10 hover:border-lime-500/50 bg-white dark:bg-[#141810] text-xs font-bold text-gray-700 dark:text-gray-300 hover:text-lime-600 dark:hover:text-[#80FF00] transition-colors flex items-center gap-1.5 shadow-2xs shrink-0"
+              className="px-3.5 py-2 rounded-2xl border border-gray-200 dark:border-white/10 hover:border-lime-500/50 bg-white dark:bg-[#141810] text-xs font-bold text-gray-700 dark:text-gray-300 hover:text-lime-600 dark:hover:text-[#013f2e] transition-colors flex items-center gap-1.5 shadow-2xs shrink-0"
             >
               <span>Edit Preferences</span>
               <ChevronRight className="w-3.5 h-3.5 text-gray-400" />
@@ -405,7 +405,7 @@ export default function FiltersBar({
                   : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white font-medium'
               }`}
             >
-              <Sparkles className="w-3.5 h-3.5 text-lime-600 dark:text-[#80FF00]" />
+              <Sparkles className="w-3.5 h-3.5 text-lime-600 dark:text-[#013f2e]" />
               <span>Recommended</span>
             </button>
 
@@ -517,7 +517,7 @@ export default function FiltersBar({
                 className={`w-3.5 h-3.5 ${
                   filters.easyApplyOnly
                     ? 'text-lime-400 dark:text-black fill-current'
-                    : 'text-lime-600 dark:text-[#80FF00]'
+                    : 'text-lime-600 dark:text-[#013f2e]'
                 }`}
               />
               <span>Auto-Apply supported</span>

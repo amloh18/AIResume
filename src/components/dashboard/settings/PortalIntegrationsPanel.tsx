@@ -245,7 +245,7 @@ export const PortalIntegrationsPanel: React.FC<PortalIntegrationsPanelProps> = (
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h3 className="text-h3 font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <Globe className="w-5 h-5 text-lime-600 dark:text-[#80FF00]" />
+            <Globe className="w-5 h-5 text-lime-600 dark:text-[#013f2e]" />
             Connected Job Portals
           </h3>
           <p className="mt-1 text-small text-gray-500 dark:text-gray-400">
@@ -256,7 +256,7 @@ export const PortalIntegrationsPanel: React.FC<PortalIntegrationsPanelProps> = (
         <button
           type="button"
           onClick={() => setSelectedPortal('naukri')}
-          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-[#80FF00] hover:brightness-95 text-black shadow-sm shrink-0 self-start sm:self-auto"
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-[#013f2e] hover:brightness-95 text-black shadow-sm shrink-0 self-start sm:self-auto"
         >
           <Plus className="w-4 h-4" />
           Connect Portal
@@ -382,7 +382,7 @@ export const PortalIntegrationsPanel: React.FC<PortalIntegrationsPanelProps> = (
               {/* Action Footer */}
               <div className="pt-3 border-t border-gray-200/70 dark:border-white/10 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-1.5 text-[11px] text-gray-500 dark:text-gray-400">
-                  <Shield className="w-3.5 h-3.5 text-lime-600 dark:text-[#80FF00]" />
+                  <Shield className="w-3.5 h-3.5 text-lime-600 dark:text-[#013f2e]" />
                   <span>
                     {portal.isPublicFeed
                       ? 'Direct ATS Feed'

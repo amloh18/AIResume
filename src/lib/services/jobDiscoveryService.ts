@@ -887,21 +887,35 @@ export class JobDiscoveryService {
       try {
         user = await db.collection<User>('users').findOne({ _id: new ObjectId(userId) });
         if (user) {
-          // CRITICAL: Read from JobSearchProfile instead of legacy job_preferences
-          const { JobSearchProfileService } = await import('./jobSearchProfileService');
-          const profile = await JobSearchProfileService.getProfile(userId);
+          const { isFeatureFlagEnabledForUser, FEATURE_FLAGS } = await import('@/lib/feature-flags');
+          const useNewStore = isFeatureFlagEnabledForUser(FEATURE_FLAGS.USE_JOB_SEARCH_PROFILE, userId);
           
-          if (profile) {
-            // Convert JobSearchProfile to legacy format for backward compatibility
-            preferences = {
-              titles: profile.targetRoles,
-              locations: profile.locations,
-              country: 'UK',
-              remoteOnly: profile.remoteOnly,
-              salaryMin: profile.minSalary,
-            } as JobPreferences;
+          if (useNewStore) {
+            const { JobSearchProfileService } = await import('./jobSearchProfileService');
+            const { trackNewStoreRead, trackLegacyFallbackRead } = await import('@/lib/migration/migrationTelemetry');
+            const profile = await JobSearchProfileService.getProfile(userId);
+            
+            if (profile) {
+              preferences = {
+                titles: profile.targetRoles,
+                locations: profile.locations,
+                country: 'UK',
+                remoteOnly: profile.remoteOnly,
+                salaryMin: profile.minSalary,
+              } as JobPreferences;
+              trackNewStoreRead('JobDiscoveryService', userId);
+            } else {
+              preferences = await db
+                .collection<JobPreferences>('job_preferences')
+                .findOne({ userId: new ObjectId(userId) });
+              trackLegacyFallbackRead({
+                service: 'JobDiscoveryService',
+                userId,
+                legacySource: 'job_preferences',
+                reason: 'profile_not_found',
+              });
+            }
           } else {
-            // Fallback to legacy job_preferences if profile doesn't exist
             preferences = await db
               .collection<JobPreferences>('job_preferences')
               .findOne({ userId: new ObjectId(userId) });

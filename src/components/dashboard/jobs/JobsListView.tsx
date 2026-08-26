@@ -233,6 +233,8 @@ const JobsListView: React.FC<JobsListViewProps> = ({
   setSelectedJobs,
   setShowBulkActions,
   onJobClick,
+  onEditJob,
+  onDeleteJob,
   getJobJourneys,
   getJourneyProgress,
   getJourneyStatusText,

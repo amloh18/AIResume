@@ -1946,7 +1946,7 @@ ${userName}`
                         {journeyCardData.stats.map((stat) => (
                           <div key={stat.label} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/60 dark:bg-white/5 border border-gray-200/50 dark:border-white/5 text-[11px] font-semibold text-gray-800 dark:text-gray-200">
                             <span className="opacity-60">{stat.label}:</span>
-                            <span className="font-extrabold text-[#80FF00] dark:text-[#99FF00]">{stat.value}</span>
+                            <span className="font-extrabold text-[#013f2e] dark:text-[#013f2e]">{stat.value}</span>
                           </div>
                         ))}
                       </div>
@@ -1991,7 +1991,7 @@ ${userName}`
                         <motion.button
                           onClick={() => void runSidebarAction(journeyCardData.primaryActionId)}
                           disabled={isMovingToCreated || isCreatingJourney}
-                          className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#80FF00] px-4 py-2.5 text-small font-black text-black shadow-sm transition hover:brightness-95 dark:bg-[#99FF00] disabled:opacity-60"
+                          className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#013f2e] px-4 py-2.5 text-small font-black text-black shadow-sm transition hover:brightness-95 dark:bg-[#013f2e] disabled:opacity-60"
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
                         >
@@ -2035,7 +2035,7 @@ ${userName}`
                       {/* Journey Status Nudge */}
                       {primaryJourney ? (
                         <div className="flex items-center gap-1.5 text-small text-gray-500">
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#80FF00] animate-pulse shrink-0" />
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#013f2e] animate-pulse shrink-0" />
                           <span>Status: <strong className="capitalize text-gray-700 dark:text-gray-300">{primaryJourney.status?.replace(/_/g, ' ') || 'In progress'}</strong></span>
                         </div>
                       ) : (
@@ -2073,12 +2073,12 @@ ${userName}`
                             : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-white/40 dark:hover:bg-white/5'
                         }`}
                       >
-                        <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-[#80FF00] dark:text-[#99FF00]' : ''}`} />
+                        <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-[#013f2e] dark:text-[#013f2e]' : ''}`} />
                         <span>{tab.label}</span>
                         {tab.badge && (
                           <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
                             isActive 
-                              ? 'bg-[#80FF00]/20 text-emerald-800 dark:text-[#99FF00]' 
+                              ? 'bg-[#013f2e]/20 text-emerald-800 dark:text-[#013f2e]' 
                               : 'bg-gray-200 dark:bg-white/10 text-gray-600 dark:text-gray-400'
                           }`}>
                             {tab.badge}
@@ -2164,7 +2164,7 @@ ${userName}`
                               href={job.jobUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-[#80FF00] hover:underline break-all"
+                              className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-[#013f2e] hover:underline break-all"
                             >
                               <ExternalLink className="w-3.5 h-3.5 shrink-0" />
                               {job.jobUrl}
@@ -2246,7 +2246,7 @@ ${userName}`
                       <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-[#131810]">
                         <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Match Score</span>
                         <div className="mt-2 flex items-baseline gap-2">
-                          <span className="text-2xl font-black text-emerald-600 dark:text-[#80FF00]">{insightsLoading ? '...' : `${keywordMatchScore}%`}</span>
+                          <span className="text-2xl font-black text-emerald-600 dark:text-[#013f2e]">{insightsLoading ? '...' : `${keywordMatchScore}%`}</span>
                           <span className="text-xs text-gray-500">ATS Alignment</span>
                         </div>
                       </div>
@@ -2355,7 +2355,7 @@ ${userName}`
                         <button
                           type="button"
                           onClick={() => handleOpenEmail(0)}
-                          className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#80FF00] px-4 py-2.5 text-xs font-black text-black shadow-sm transition hover:brightness-95"
+                          className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#013f2e] px-4 py-2.5 text-xs font-black text-black shadow-sm transition hover:brightness-95"
                         >
                           <Send className="w-3.5 h-3.5" />
                           {hasRecruiterEmail ? 'Open Recruiter Email Draft' : 'Open Manual Outreach Draft'}
@@ -2377,7 +2377,7 @@ ${userName}`
                           <button
                             type="button"
                             onClick={() => handleCopyToClipboard(getEmailSubject(job), 'subject')}
-                            className="text-[11px] font-bold text-emerald-600 dark:text-[#80FF00] hover:underline"
+                            className="text-[11px] font-bold text-emerald-600 dark:text-[#013f2e] hover:underline"
                           >
                             Copy Subject
                           </button>
@@ -2412,7 +2412,7 @@ ${userName}`
                       <button
                         type="button"
                         onClick={() => setShowCommsSidebar(true)}
-                        className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-[#80FF00] hover:underline"
+                        className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-[#013f2e] hover:underline"
                       >
                         Open Communication Threads Drawer <ArrowRight className="w-3.5 h-3.5" />
                       </button>
@@ -2434,7 +2434,7 @@ ${userName}`
                           type="button"
                           onClick={handleSaveNotes}
                           disabled={isSavingNotes}
-                          className="inline-flex items-center gap-1.5 rounded-xl bg-[#80FF00] px-4 py-2 text-xs font-black text-black shadow-sm transition hover:brightness-95 disabled:opacity-60"
+                          className="inline-flex items-center gap-1.5 rounded-xl bg-[#013f2e] px-4 py-2 text-xs font-black text-black shadow-sm transition hover:brightness-95 disabled:opacity-60"
                         >
                           {isSavingNotes ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                           Save Notes
@@ -2536,7 +2536,7 @@ ${userName}`
                       <div className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810]">
                         <div className="flex items-center justify-between mb-4 border-b border-gray-100 dark:border-white/5 pb-3">
                           <div className="flex items-center gap-2.5">
-                            <div className="p-2 rounded-xl bg-lime-50 dark:bg-[#80FF00]/10 text-emerald-600 dark:text-[#80FF00]">
+                            <div className="p-2 rounded-xl bg-lime-50 dark:bg-[#013f2e]/10 text-emerald-600 dark:text-[#013f2e]">
                               <FileText className="w-5 h-5" />
                             </div>
                             <div>
@@ -2595,7 +2595,7 @@ ${userName}`
                               type="button"
                               onClick={() => void handleTailorAndApply()}
                               disabled={isCreatingJourney}
-                              className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#80FF00] hover:brightness-95 text-black rounded-xl text-xs font-black shadow-sm"
+                              className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#013f2e] hover:brightness-95 text-black rounded-xl text-xs font-black shadow-sm"
                             >
                               <Sparkles className="w-3.5 h-3.5" />
                               Generate Tailored CV
@@ -2682,7 +2682,7 @@ ${userName}`
                             </div>
                             <div className="p-3 rounded-xl bg-gray-50 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5">
                               <span className="text-gray-500 dark:text-gray-400 block text-[11px]">Submission Record</span>
-                              <span className="font-bold text-emerald-600 dark:text-[#80FF00]">✓ Verified Applied</span>
+                              <span className="font-bold text-emerald-600 dark:text-[#013f2e]">✓ Verified Applied</span>
                             </div>
                           </div>
                         </div>
@@ -2897,7 +2897,7 @@ ${userName}`
                             <div className="min-w-0">
                               <p className="text-small uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Job URL</p>
                               {job.jobUrl ? (
-                                <a href={job.jobUrl} target="_blank" rel="noopener noreferrer" className="truncate text-small font-medium text-emerald-600 hover:underline dark:text-[#80FF00]">
+                                <a href={job.jobUrl} target="_blank" rel="noopener noreferrer" className="truncate text-small font-medium text-emerald-600 hover:underline dark:text-[#013f2e]">
                                   {job.jobUrl}
                                 </a>
                               ) : (
@@ -3009,7 +3009,7 @@ ${userName}`
                               <h5 className="text-small font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Tools & Platforms</h5>
                               <div className="flex flex-wrap gap-1.5">
                                 {job.extractedJd.skills.tools_and_platforms.map((item: any, i: number) => (
-                                  <span key={i} className="px-2.5 py-1 text-small font-medium bg-lime-100 text-lime-800 dark:bg-[#80FF00]/10 dark:text-[#80FF00] rounded-full border border-lime-200/20">
+                                  <span key={i} className="px-2.5 py-1 text-small font-medium bg-lime-100 text-lime-800 dark:bg-[#013f2e]/10 dark:text-[#013f2e] rounded-full border border-lime-200/20">
                                     {item.tool}
                                   </span>
                                 ))}
@@ -3358,7 +3358,7 @@ ${userName}`
             >
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 bg-lime-100 dark:bg-lime-500/20 rounded-lg">
-                  <Mail size={20} className="text-lime-600 dark:text-[#80FF00]" />
+                  <Mail size={20} className="text-lime-600 dark:text-[#013f2e]" />
                 </div>
                 <h3 className="text-h3 font-semibold text-gray-900 dark:text-white">
                   Email Sent?
@@ -3380,7 +3380,7 @@ ${userName}`
                 </motion.button>
                 <motion.button
                   onClick={() => handleEmailSentConfirmation(true)}
-                  className="px-4 py-2 bg-lime-600 dark:bg-[#80FF00] hover:bg-lime-700 dark:hover:bg-[#70e600] text-white rounded-lg font-medium transition-colors"
+                  className="px-4 py-2 bg-lime-600 dark:bg-[#013f2e] hover:bg-lime-700 dark:hover:bg-[#02523c] text-white rounded-lg font-medium transition-colors"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >

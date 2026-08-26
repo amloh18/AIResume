@@ -20,9 +20,9 @@ const THEME = {
   card: '#20291d', // Card background
   text: '#ffffff',
   textMuted: 'rgba(255, 255, 255, 0.6)',
-  accent: '#81ff00', // Neon Lime (from landing page)
-  accentSoft: 'rgba(129, 255, 0, 0.1)',
-  border: 'rgba(129, 255, 0, 0.1)',
+  accent: '#013f2e', // Neon Lime (from landing page)
+  accentSoft: 'rgba(1, 63, 46, 0.1)',
+  border: 'rgba(1, 63, 46, 0.1)',
   fontPrimary: "'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif"
 };
 

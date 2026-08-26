@@ -82,8 +82,8 @@ export default function TableOfContentsClient({ sections, slug }: TableOfContent
                 href={`#${section.id}`}
                 className={`block pl-4 text-small transition-all duration-200 border-l-2 -ml-px py-0.5 ${
                   isActive
-                    ? 'text-[#81ff00] border-[#81ff00] font-medium'
-                    : 'text-gray-400 border-transparent hover:text-[#81ff00]/80 hover:border-[#81ff00]/30'
+                    ? 'text-[#013f2e] border-[#013f2e] font-medium'
+                    : 'text-gray-400 border-transparent hover:text-[#013f2e]/80 hover:border-[#013f2e]/30'
                 }`}
               >
                 {section.title}
@@ -101,8 +101,8 @@ export default function TableOfContentsClient({ sections, slug }: TableOfContent
           onClick={handleShare}
           className={`flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-[#1a1f1a] text-small font-semibold rounded-lg border border-white/5 transition-all duration-300 ${
             copied
-              ? 'text-[#81ff00] border-[#81ff00]/40 bg-[#81ff00]/10'
-              : 'text-gray-300 hover:text-white hover:bg-[#2a2f2a] hover:border-[#81ff00]/20'
+              ? 'text-[#013f2e] border-[#013f2e]/40 bg-[#013f2e]/10'
+              : 'text-gray-300 hover:text-white hover:bg-[#2a2f2a] hover:border-[#013f2e]/20'
           }`}
         >
           {copied ? (

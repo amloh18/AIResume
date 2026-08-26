@@ -106,7 +106,7 @@ export default function UnifiedAuthLayout({
       {/* Left Side - 50% - Bright Color Panel */}
       <div className="hidden lg:flex basis-1/2 shrink-0 grow-0 relative overflow-hidden">
         {/* Vibrant Gradient Background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-[#80FF00] via-[#6DD400] to-[#5AB300]" />
+        <div className="absolute inset-0 bg-gradient-to-br from-[#013f2e] via-[#6DD400] to-[#5AB300]" />
 
         {/* Animated Background Pattern */}
         <div className="absolute inset-0 opacity-10">

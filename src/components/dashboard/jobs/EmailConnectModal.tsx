@@ -242,7 +242,7 @@ export const EmailConnectModal: React.FC<EmailConnectModalProps> = ({
               onClick={() => { setActiveTab('email'); resetModalState(); }}
               className={`flex-1 py-2 text-small font-bold rounded-xl transition duration-150 flex items-center justify-center gap-1.5 ${
                 activeTab === 'email' 
-                  ? 'bg-[#80FF00] text-black shadow-md' 
+                  ? 'bg-[#013f2e] text-black shadow-md' 
                   : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white'
               }`}
             >
@@ -253,7 +253,7 @@ export const EmailConnectModal: React.FC<EmailConnectModalProps> = ({
               onClick={() => { setActiveTab('calendar'); resetModalState(); }}
               className={`flex-1 py-2 text-small font-bold rounded-xl transition duration-150 flex items-center justify-center gap-1.5 ${
                 activeTab === 'calendar' 
-                  ? 'bg-[#80FF00] text-black shadow-md' 
+                  ? 'bg-[#013f2e] text-black shadow-md' 
                   : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white'
               }`}
             >
@@ -351,7 +351,7 @@ export const EmailConnectModal: React.FC<EmailConnectModalProps> = ({
                       onClick={() => { setEmailProvider(provider); setError(''); }}
                       className={`py-3 px-2 rounded-2xl border text-small font-bold flex flex-col items-center gap-2 transition duration-200 ${
                         isActive 
-                          ? 'bg-[#80FF00]/10 border-[#80FF00]/50 text-gray-900 dark:text-white font-black' 
+                          ? 'bg-[#013f2e]/10 border-[#013f2e]/50 text-gray-900 dark:text-white font-black' 
                           : 'bg-gray-50 dark:bg-white/5 border-gray-200 dark:border-white/5 text-gray-500 dark:text-gray-400 hover:text-gray-950 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10'
                       }`}
                     >
@@ -504,7 +504,7 @@ export const EmailConnectModal: React.FC<EmailConnectModalProps> = ({
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full py-3 bg-[#80FF00] hover:bg-[#99FF33] text-black text-small font-bold rounded-2xl transition flex items-center justify-center gap-2 shadow-lg shadow-[#80FF00]/15 mt-2"
+                    className="w-full py-3 bg-[#013f2e] hover:bg-[#02523c] text-black text-small font-bold rounded-2xl transition flex items-center justify-center gap-2 shadow-lg shadow-[#013f2e]/15 mt-2"
                   >
                     {loading ? (
                       <RefreshCw className="h-4 w-4 animate-spin" />
