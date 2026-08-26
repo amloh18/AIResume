@@ -64,7 +64,7 @@ export default function UserActivityModal({ userId, isOpen, onClose }: { userId:
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<UserActivityData | null>(null);
-  const [selectedPlan, setSelectedPlan] = useState('smart_quarterly');
+  const [selectedPlan, setSelectedPlan] = useState('focused_monthly');
   const [granting, setGranting] = useState(false);
 
   // Custom Dialog Modal State
@@ -243,8 +243,8 @@ export default function UserActivityModal({ userId, isOpen, onClose }: { userId:
               emails: [data.user.email],
               subject: subject,
               htmlContent: `<p>${htmlContent.replace(/\n/g, '<br>')}</p>`,
-              fromName: 'CVCircle Support',
-              fromEmail: 'support@cvcircle.io'
+              fromName: 'AIResume Support',
+              fromEmail: 'support@buildairesume.com'
             })
           });
           const result = await res.json();
@@ -309,9 +309,17 @@ export default function UserActivityModal({ userId, isOpen, onClose }: { userId:
               {/* User Profile Header */}
               <div className="flex flex-col md:flex-row items-start justify-between gap-6 mb-10">
                 <div className="flex items-center gap-4 md:gap-6 w-full md:w-auto">
-                  <div className={`w-16 h-16 md:w-20 md:h-20 rounded-2xl md:rounded-3xl bg-emerald-700 flex items-center justify-center text-2xl md:text-3xl font-black text-white shadow-xl shadow-emerald-900/20 shrink-0`}>
-                    {data.user.firstName[0]}{data.user.lastName[0]}
-                  </div>
+                  {data.user.avatar ? (
+                    <img 
+                      src={data.user.avatar} 
+                      alt={`${data.user.firstName} ${data.user.lastName}`}
+                      className="w-16 h-16 md:w-20 md:h-20 rounded-2xl md:rounded-3xl object-cover border-2 border-emerald-500/30 shadow-xl shadow-emerald-900/20 shrink-0"
+                    />
+                  ) : (
+                    <div className={`w-16 h-16 md:w-20 md:h-20 rounded-2xl md:rounded-3xl bg-emerald-700 flex items-center justify-center text-2xl md:text-3xl font-black text-white shadow-xl shadow-emerald-900/20 shrink-0`}>
+                      {data.user.firstName[0]}{data.user.lastName[0]}
+                    </div>
+                  )}
                   <div className="space-y-1 md:space-y-1.5 min-w-0">
                     <div className="flex flex-wrap items-center gap-2 md:gap-3">
                       <h1 className={`text-xl md:text-3xl font-black ${ADMIN_THEME.text.primary} truncate`}>{data.user.firstName} {data.user.lastName}</h1>
@@ -572,8 +580,6 @@ export default function UserActivityModal({ userId, isOpen, onClose }: { userId:
                       <option value="starter_yearly">Starter Yearly</option>
                       <option value="focused_monthly">Focused Monthly</option>
                       <option value="focused_yearly">Focused Yearly</option>
-                      <option value="smart_quarterly">Smart Quarterly</option>
-                      <option value="smart_yearly">Smart Yearly</option>
                     </select>
                     <button 
                       onClick={handleGrantPlan}

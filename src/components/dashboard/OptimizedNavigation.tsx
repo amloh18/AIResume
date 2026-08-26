@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import Logo from '@/components/ui/Logo';
 import {
-  BarChart3, Target, FileText,
+  Home, BarChart3, Target, FileText, Kanban,
   Bell, Sun, Moon, Menu, X, Shield, Settings, LogOut, User, ChevronDown, ChevronRight, ChevronLeft, Clock, Zap, AlertCircle, Briefcase, ExternalLink, Star, PenTool, Wand2, Mic, Linkedin, Lock, PanelLeft
 } from 'lucide-react';
 import { useTheme } from '@/lib/contexts/ThemeContext';
@@ -249,10 +249,20 @@ const OptimizedNavigation: React.FC = () => {
 
   // Update active section based on current path
   useEffect(() => {
-    if (pathname === '/dashboard' || pathname.startsWith('/dashboard?')) {
+    if (pathname === '/dashboard' || pathname === '/dashboard/') {
       setActiveSection('analytics');
     } else if (pathname.includes('/jobs')) {
       setActiveSection('jobs-dashboard');
+    } else if (pathname.includes('/tracker')) {
+      setActiveSection('tracker');
+    } else if (pathname.includes('/interview')) {
+      setActiveSection('interview-coach');
+    } else if (pathname.includes('/linkedin-enhancer')) {
+      setActiveSection('linkedin-enhancer');
+    } else if (pathname.includes('/editor') && typeof window !== 'undefined' && window.location.search.includes('tab=cover-letters')) {
+      setActiveSection('cover-letter-generator');
+    } else if (pathname.includes('/editor')) {
+      setActiveSection('cv-builder-pro');
     } else if (pathname.includes('/settings')) {
       setActiveSection('settings');
     }
@@ -273,7 +283,7 @@ const OptimizedNavigation: React.FC = () => {
       'analytics': '/dashboard',
       'jobs': '/dashboard/jobs',
       'jobs-dashboard': '/dashboard/jobs',
-      'tracker': '/dashboard/tracker',
+      'tracker': '/dashboard/jobs?tab=applications',
       'settings': '/dashboard/settings',
       'cv-builder-pro': '/editor',
       'cover-letter-generator': '/editor?tab=cover-letters',
@@ -327,15 +337,15 @@ const OptimizedNavigation: React.FC = () => {
   const sections = [
     {
       id: 'analytics',
-      name: 'Analytics',
-      icon: BarChart3,
+      name: 'Home',
+      icon: Home,
       description: 'Tracker, Documents & Analytics',
       route: '/dashboard'
     },
     {
       id: 'jobs-dashboard',
       name: 'Jobs',
-      icon: Zap,
+      icon: Briefcase,
       description: 'Job matching & automation (Beta)',
       route: '/dashboard/jobs',
       badge: 'BETA'
@@ -351,17 +361,17 @@ const OptimizedNavigation: React.FC = () => {
       route: '/editor',
       color: 'text-gray-600 dark:text-gray-400',
       bg: 'bg-gray-50 dark:bg-gray-800/30',
-      activeBg: 'bg-[#1a230f] border-[rgb(129,255,0)]/40',
+      activeBg: 'bg-[#013f2e]/10 border-[#013f2e]/30 dark:bg-[#1a230f] dark:border-[#36D39B]/40',
     },
     {
       id: 'tracker',
       name: 'Tracker',
-      icon: Briefcase,
+      icon: Kanban,
       description: 'Job application tracker',
-      route: '/dashboard/tracker',
+      route: '/dashboard/jobs?tab=applications',
       color: 'text-gray-600 dark:text-gray-400',
       bg: 'bg-gray-50 dark:bg-gray-800/30',
-      activeBg: 'bg-[#1a230f] border-[rgb(129,255,0)]/40',
+      activeBg: 'bg-[#013f2e]/10 border-[#013f2e]/30 dark:bg-[#1a230f] dark:border-[#36D39B]/40',
     },
     {
       id: 'cover-letter-generator',
@@ -371,7 +381,7 @@ const OptimizedNavigation: React.FC = () => {
       route: '/editor?tab=cover-letters',
       color: 'text-gray-600 dark:text-gray-400',
       bg: 'bg-gray-50 dark:bg-gray-800/30',
-      activeBg: 'bg-[#1a230f] border-[rgb(129,255,0)]/40',
+      activeBg: 'bg-[#013f2e]/10 border-[#013f2e]/30 dark:bg-[#1a230f] dark:border-[#36D39B]/40',
     },
     {
       id: 'interview-coach',
@@ -381,7 +391,7 @@ const OptimizedNavigation: React.FC = () => {
       route: '/dashboard/interview',
       color: 'text-gray-600 dark:text-gray-400',
       bg: 'bg-gray-50 dark:bg-gray-800/30',
-      activeBg: 'bg-[#1a230f] border-[rgb(129,255,0)]/40',
+      activeBg: 'bg-[#013f2e]/10 border-[#013f2e]/30 dark:bg-[#1a230f] dark:border-[#36D39B]/40',
     },
     {
       id: 'linkedin-enhancer',
@@ -391,7 +401,7 @@ const OptimizedNavigation: React.FC = () => {
       route: '/linkedin-enhancer',
       color: 'text-gray-600 dark:text-gray-400',
       bg: 'bg-gray-50 dark:bg-gray-800/30',
-      activeBg: 'bg-[#1a230f] border-[rgb(129,255,0)]/40',
+      activeBg: 'bg-[#013f2e]/10 border-[#013f2e]/30 dark:bg-[#1a230f] dark:border-[#36D39B]/40',
       badge: 'NEW',
     },
     {
@@ -403,52 +413,52 @@ const OptimizedNavigation: React.FC = () => {
       external: true,
       color: 'text-gray-600 dark:text-gray-400',
       bg: 'bg-gray-50 dark:bg-gray-800/30',
-      activeBg: 'bg-[#1a230f] border-[rgb(129,255,0)]/40',
+      activeBg: 'bg-[#013f2e]/10 border-[#013f2e]/30 dark:bg-[#1a230f] dark:border-[#36D39B]/40',
     },
   ];
 
   return (
-    <div className={`flex flex-col h-full m-0 bg-transparent rounded-none shadow-none overflow-visible pointer-events-auto relative`}>
-      {/* Desktop Toggle Button - Positioned exactly on the right border */}
-      <button
-        onClick={toggleDesktopSidebar}
-        className="hidden lg:flex absolute -right-[13px] top-6 bg-white dark:bg-[#141810] border border-gray-200 dark:border-gray-700 rounded-full p-1 z-[130] hover:bg-gray-50 dark:hover:bg-gray-800 shadow-sm transition-transform hover:scale-110"
-        aria-label={isDesktopExpanded ? "Collapse sidebar" : "Expand sidebar"}
-      >
-        <PanelLeft className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${isDesktopExpanded ? '' : 'rotate-180'}`} />
-      </button>
-
-       {/* Header */}
-       <div className={`flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 lg:border-b-0 ${isDesktopExpanded ? 'lg:p-6 lg:justify-start' : 'lg:p-4 lg:justify-center'} relative`}>
-         <motion.button
-           onClick={handleLogoClick}
-           className="flex items-center gap-3 hover:opacity-90 transition-opacity"
-           whileHover={{ scale: 1.05 }}
-           whileTap={{ scale: 0.95 }}
-           aria-label="Home Dashboard"
-         >
+    <div className="flex flex-col h-full m-0 bg-transparent rounded-none shadow-none overflow-visible pointer-events-auto relative">
+      {/* Header aligned with h-14 global topbar */}
+      <div className={`flex items-center justify-between h-14 px-4 border-b border-gray-200 dark:border-white/10 lg:border-b-0 ${isDesktopExpanded ? 'lg:px-5 lg:justify-start' : 'lg:px-0 lg:justify-center'} relative flex-shrink-0`}>
+        <motion.button
+          onClick={handleLogoClick}
+          className="flex items-center gap-3 hover:opacity-90 transition-opacity"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          aria-label="Home Dashboard"
+        >
           {/* Logo Icon & Text */}
-           <div className="flex items-center">
-             <div className={`flex items-center ${!isDesktopExpanded ? 'lg:hidden' : ''}`}>
-               <Logo size="md" />
-             </div>
-             <div className={`hidden ${!isDesktopExpanded ? 'lg:flex' : ''}`}>
-               <Logo size="md" />
-             </div>
-           </div>
-         </motion.button>
+          <div className="flex items-center justify-center">
+            <div className={`flex items-center ${!isDesktopExpanded ? 'lg:hidden' : ''}`}>
+              <Logo size="md" />
+            </div>
+            <div className={`hidden ${!isDesktopExpanded ? 'lg:flex lg:items-center lg:justify-center' : ''}`}>
+              <Logo size="xs" />
+            </div>
+          </div>
+        </motion.button>
 
-         {/* Close Button - Only visible on mobile */}
-         <motion.button
-           onClick={() => setIsOpen(false)}
-           className="lg:hidden text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors p-2 -mr-2"
-           whileHover={{ scale: 1.1 }}
-           whileTap={{ scale: 0.9 }}
-           aria-label="Close menu"
-         >
-           <X className="w-6 h-6" />
-         </motion.button>
-       </div>
+        {/* Close Button - Only visible on mobile */}
+        <motion.button
+          onClick={() => setIsOpen(false)}
+          className="lg:hidden text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors p-2 -mr-2"
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          aria-label="Close menu"
+        >
+          <X className="w-6 h-6" />
+        </motion.button>
+
+        {/* Desktop Toggle Button - Perfectly vertically centered at header height (h-14) on the sidebar border */}
+        <button
+          onClick={toggleDesktopSidebar}
+          className="hidden lg:flex absolute -right-[13px] top-1/2 -translate-y-1/2 bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/15 rounded-full p-1 z-[130] hover:bg-gray-50 dark:hover:bg-white/10 shadow-xs transition-all hover:scale-110 cursor-pointer"
+          aria-label={isDesktopExpanded ? "Collapse sidebar" : "Expand sidebar"}
+        >
+          <PanelLeft className={`w-3.5 h-3.5 text-gray-500 dark:text-gray-400 transition-transform duration-200 ${isDesktopExpanded ? '' : 'rotate-180'}`} />
+        </button>
+      </div>
 
       {/* Navigation */}
       <nav className={`flex-1 p-6 space-y-2 overflow-y-auto scrollbar-hide ${isDesktopExpanded ? 'lg:p-4 lg:space-y-1' : 'lg:p-2 lg:space-y-1'}`}>
@@ -485,14 +495,14 @@ const OptimizedNavigation: React.FC = () => {
               key={section.id}
               {...componentProps}
               className={`w-full flex items-center gap-4 px-5 py-4 rounded-xl transition-all duration-200 text-left outline-none focus:outline-none focus:ring-0 focus:shadow-none hover:shadow-none !shadow-none ${isDesktopExpanded ? 'lg:px-4 lg:py-3 lg:justify-start' : 'lg:px-3 lg:py-3 lg:justify-center'} ${isActive
-                ? 'bg-[#1a230f] dark:bg-[#1a230f] border border-[rgb(129,255,0)] text-[rgb(129,255,0)]'
+                ? 'bg-[#013f2e]/10 dark:bg-[#1a230f] border border-[#013f2e]/30 dark:border-[#36D39B] text-[#013f2e] dark:text-[#36D39B]'
                 : 'text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700/50'
                 }`}
               style={{ outline: 'none', boxShadow: 'none' }}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
-              <Icon className={`w-6 h-6 lg:w-5 lg:h-5 flex-shrink-0 ${isActive ? 'text-[rgb(129,255,0)]' : ''}`} />
+              <Icon className={`w-6 h-6 lg:w-5 lg:h-5 flex-shrink-0 ${isActive ? 'text-[#013f2e] dark:text-[#36D39B]' : ''}`} />
               <div className={`flex-1 min-w-0 ${!isDesktopExpanded ? 'lg:hidden' : ''}`}>
                 <div className="text-small font-semibold truncate flex items-baseline gap-1">
                   {section.name}
@@ -500,7 +510,7 @@ const OptimizedNavigation: React.FC = () => {
                   {isExternal && <ExternalLink className="w-3 h-3 opacity-60" />}
                 </div>
                 <div className={`text-small truncate mt-0.5 ${isActive
-                  ? 'text-[rgb(129,255,0)]/70'
+                  ? 'text-[#013f2e]/80 dark:text-[#36D39B]/70'
                   : 'text-gray-500 dark:text-gray-400'
                   }`}>
                   {section.description}
@@ -511,152 +521,113 @@ const OptimizedNavigation: React.FC = () => {
         })}
 
 
-        {/* Tools Section — Square Tiles */}
-        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800">
+        {/* Tools Section */}
+        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800 space-y-2 lg:space-y-1">
           {/* Section Label — only when expanded */}
-          <div className={`px-3 mb-3 ${!isDesktopExpanded ? 'hidden lg:hidden' : 'lg:block'}`}>
+          <div className={`px-3 mb-2 ${!isDesktopExpanded ? 'hidden lg:hidden' : 'lg:block'}`}>
             <h3 className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.18em]">
               Tools
             </h3>
           </div>
 
-          {/* Tile Grid: 2-col expanded, 1-col collapsed */}
-          <div className={`grid gap-2 px-1 ${isDesktopExpanded ? 'lg:grid-cols-2' : 'lg:grid-cols-1'} grid-cols-2`}>
-            {toolSections.map((section) => {
-              const Icon = section.icon;
-              const isActive = activeSection === section.id;
-              const isExternal = (section as any).external === true;
+          {toolSections.map((section) => {
+            const Icon = section.icon;
+            const isActive = activeSection === section.id;
+            const isExternal = (section as any).external === true;
 
-              const Component = isExternal ? motion.a : motion.button;
-              const componentProps = isExternal
-                ? {
-                    href: section.route,
-                    target: '_blank',
-                    rel: 'noopener noreferrer',
-                    onClick: () => { if (isMobileMenuOpen) setIsOpen(false); }
+            const Component = isExternal ? motion.a : motion.button;
+            const componentProps = isExternal
+              ? {
+                  href: section.route,
+                  target: '_blank',
+                  rel: 'noopener noreferrer',
+                  onClick: () => {
+                    if (isMobileMenuOpen) {
+                      setIsOpen(false);
+                    }
                   }
-                : {
-                    onClick: () => {
-                      if (section.route.startsWith('/')) {
-                        setActiveSection(section.id);
-                        if (isMobileMenuOpen) setIsOpen(false);
-                        router.push(section.route);
-                      }
-                    },
-                    onMouseEnter: () => {
-                      if (section.route.startsWith('/')) {
-                        router.prefetch(section.route);
-                      }
+                }
+              : {
+                  onClick: () => handleNavigation(section.id),
+                  onMouseEnter: () => {
+                    if (!isExternal && section.route.startsWith('/')) {
+                      router.prefetch(section.route);
+                      preloadOnHover(section.id);
                     }
-                  };
+                  }
+                };
 
-              const colorClass = (section as any).color || 'text-gray-600 dark:text-gray-400';
-              const bgClass = (section as any).bg || 'bg-gray-50 dark:bg-gray-900/30';
-
-              return (
-                <Component
-                  key={section.id}
-                  {...componentProps}
-                  title={section.name}
-                  className={`relative group flex flex-col items-center justify-center rounded-2xl border transition-all duration-200 cursor-pointer outline-none focus:outline-none focus:ring-0 !shadow-none
-                    ${isDesktopExpanded
-                      ? 'p-3 gap-2 aspect-square'
-                      : 'lg:p-3 lg:gap-1 lg:aspect-square p-3 gap-2 aspect-square'
-                    }
-                    ${isActive
-                      ? `${(section as any).activeBg || 'bg-emerald-500/15 border-emerald-500/40'}`
-                      : 'bg-white dark:bg-[#1a2015] border-gray-100 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-sm'
-                    }`}
-                  style={{ outline: 'none', boxShadow: 'none' }}
-                  whileHover={{ scale: 1.04, y: -1 }}
-                  whileTap={{ scale: 0.97 }}
-                >
-                  {/* Badge */}
-                  {(section as any).badge && (
-                    <span className="absolute -top-1.5 -right-1.5 px-1.5 py-0.5 text-[8px] font-black bg-lime-400 text-black rounded-full z-10">
-                      {(section as any).badge}
-                    </span>
-                  )}
-
-                  {/* Icon container */}
-                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-all duration-200 ${isActive ? 'scale-110' : ''} ${bgClass}`}>
-                    <Icon className={`w-5 h-5 ${isActive ? 'text-[rgb(129,255,0)] dark:text-[rgb(129,255,0)]' : 'text-gray-500 dark:text-gray-400'}`} />
+            return (
+              <Component
+                key={section.id}
+                {...componentProps}
+                className={`w-full flex items-center gap-4 px-5 py-4 rounded-xl transition-all duration-200 text-left outline-none focus:outline-none focus:ring-0 focus:shadow-none hover:shadow-none !shadow-none ${
+                  isDesktopExpanded ? 'lg:px-4 lg:py-3 lg:justify-start' : 'lg:px-3 lg:py-3 lg:justify-center'
+                } ${
+                  isActive
+                    ? 'bg-[#013f2e]/10 dark:bg-[#1a230f] border border-[#013f2e]/30 dark:border-[#36D39B] text-[#013f2e] dark:text-[#36D39B]'
+                    : 'text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                }`}
+                style={{ outline: 'none', boxShadow: 'none' }}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <Icon className={`w-6 h-6 lg:w-5 lg:h-5 flex-shrink-0 ${isActive ? 'text-[#013f2e] dark:text-[#36D39B]' : ''}`} />
+                <div className={`flex-1 min-w-0 ${!isDesktopExpanded ? 'lg:hidden' : ''}`}>
+                  <div className="text-small font-semibold truncate flex items-baseline gap-1">
+                    <span>{section.name}</span>
+                    {section.badge && (
+                      <span className="px-1.5 py-0.5 text-[9px] font-black bg-[#36D39B] text-black rounded-full leading-none ml-1">
+                        {section.badge}
+                      </span>
+                    )}
+                    {isExternal && <ExternalLink className="w-3 h-3 opacity-60 ml-1" />}
                   </div>
-
-                  {/* Label — shown in expanded mode */}
-                  <span className={`text-[10px] font-bold leading-tight text-center truncate w-full
-                    ${isActive ? 'text-[rgb(129,255,0)] dark:text-[rgb(129,255,0)]' : 'text-gray-600 dark:text-gray-400'}
-                    ${isDesktopExpanded ? '' : 'lg:hidden'}
-                  `}>
-                    {section.name}
-                    {isExternal && <ExternalLink className="w-2.5 h-2.5 inline ml-0.5 opacity-60" />}
-                  </span>
-                </Component>
-              );
-            })}
-          </div>
+                  <div
+                    className={`text-small truncate mt-0.5 ${
+                      isActive
+                        ? 'text-[#013f2e]/80 dark:text-[#36D39B]/70'
+                        : 'text-gray-500 dark:text-gray-400'
+                    }`}
+                  >
+                    {section.description}
+                  </div>
+                </div>
+              </Component>
+            );
+          })}
         </div>
       </nav>
 
-      {/* HR Dashboard Button - Show for B2B users and Admins */}
-      {(userData?.b2b?.tenantId || userData?.isB2b || isAdmin) && (
+      {/* Admin Dashboard Button - Show for Admins */}
+      {isAdmin && (
         <div className={`px-6 pb-2 ${isDesktopExpanded ? 'lg:px-4' : 'lg:px-2'}`}>
           <div className={isDesktopExpanded ? "grid grid-cols-2 gap-2" : "flex flex-col items-center gap-2"}>
-            {(userData?.b2b?.tenantId || userData?.isB2b) && (
-              <motion.button
-                onClick={() => {
-                  if (isMobileMenuOpen) {
-                    setIsOpen(false);
-                  }
-                  router.push('/b2b/dashboard');
-                }}
-                className={isDesktopExpanded
-                  ? "w-full h-full min-h-[88px] flex flex-col items-start justify-between gap-3 rounded-xl border border-[rgb(129,255,0)]/15 transition-all duration-200 text-left p-4 bg-[rgb(129,255,0)]/10 text-[#4C9900] dark:text-[rgb(129,255,0)] hover:bg-[rgb(129,255,0)]/20"
-                  : "w-9 h-9 flex items-center justify-center rounded-xl border border-[rgb(129,255,0)]/15 bg-[rgb(129,255,0)]/10 text-[#4C9900] dark:text-[rgb(129,255,0)] hover:bg-[rgb(129,255,0)]/20"
+            <motion.button
+              onClick={() => {
+                if (isMobileMenuOpen) {
+                  setIsOpen(false);
                 }
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                title="HR Dashboard"
-              >
-                <Briefcase className="w-5 h-5 flex-shrink-0" />
-                {isDesktopExpanded && (
-                  <div className="min-w-0 w-full text-left">
-                    <div className="text-small font-medium truncate">HR Dashboard</div>
-                    <div className="text-[11px] opacity-80 truncate mt-0.5">
-                      Business Portal
-                    </div>
+                router.push('/admin/dashboard');
+              }}
+              className={isDesktopExpanded
+                ? "w-full h-full min-h-[88px] flex flex-col items-start justify-between gap-3 rounded-xl border border-purple-500/15 transition-all duration-200 text-left p-4 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 hover:bg-purple-200 dark:hover:bg-purple-900/50"
+                : "w-9 h-9 flex items-center justify-center rounded-xl border border-purple-500/15 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 hover:bg-purple-200 dark:hover:bg-purple-900/50"
+              }
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              title="Admin Dashboard"
+            >
+              <Shield className="w-5 h-5 flex-shrink-0" />
+              {isDesktopExpanded && (
+                <div className="min-w-0 w-full text-left">
+                  <div className="text-small font-medium truncate">Admin Dashboard</div>
+                  <div className="text-[11px] text-purple-600 dark:text-purple-300 truncate mt-0.5">
+                    System controls
                   </div>
-                )}
-              </motion.button>
-            )}
-
-            {isAdmin && (
-              <motion.button
-                onClick={() => {
-                  if (isMobileMenuOpen) {
-                    setIsOpen(false);
-                  }
-                  router.push('/admin/dashboard');
-                }}
-                className={isDesktopExpanded
-                  ? "w-full h-full min-h-[88px] flex flex-col items-start justify-between gap-3 rounded-xl border border-purple-500/15 transition-all duration-200 text-left p-4 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 hover:bg-purple-200 dark:hover:bg-purple-900/50"
-                  : "w-9 h-9 flex items-center justify-center rounded-xl border border-purple-500/15 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 hover:bg-purple-200 dark:hover:bg-purple-900/50"
-                }
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                title="Admin Dashboard"
-              >
-                <Shield className="w-5 h-5 flex-shrink-0" />
-                {isDesktopExpanded && (
-                  <div className="min-w-0 w-full text-left">
-                    <div className="text-small font-medium truncate">Admin Dashboard</div>
-                    <div className="text-[11px] text-purple-600 dark:text-purple-300 truncate mt-0.5">
-                      System controls
-                    </div>
-                  </div>
-                )}
-              </motion.button>
-            )}
+                </div>
+              )}
+            </motion.button>
           </div>
         </div>
       )}
@@ -701,7 +672,7 @@ const OptimizedNavigation: React.FC = () => {
 
             // Calculate time remaining for annual pass (updates with currentTime state)
             const getTimeRemaining = () => {
-              if (currentPlan !== 'pro_yearly' && currentPlan !== 'pro_lifetime') return null;
+              if (currentPlan !== 'focused_yearly' && currentPlan !== 'focused_yearly') return null;
 
               const accessExpiresAt = userData?.subscription?.accessExpiresAt;
               if (!accessExpiresAt) return null;
@@ -718,7 +689,7 @@ const OptimizedNavigation: React.FC = () => {
             };
 
             const timeRemaining = getTimeRemaining();
-            const isAnnual = currentPlan === 'pro_yearly' || currentPlan === 'pro_lifetime';
+            const isAnnual = currentPlan === 'focused_yearly' || currentPlan === 'focused_yearly';
             const isExpired = isAnnual && timeRemaining && timeRemaining.hours === 0 && timeRemaining.minutes === 0;
 
             // Urgency indicators
@@ -801,7 +772,7 @@ const OptimizedNavigation: React.FC = () => {
                   <div className="space-y-2">
                     <motion.button
                       onClick={() => {
-                        setPreselectedPlanKey('pro_yearly');
+                        setPreselectedPlanKey('focused_yearly');
                         setShowSubscriptionModal(true);
                       }}
                       className="w-full bg-white/20 hover:bg-white/30 text-white text-small font-semibold py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5"
@@ -814,7 +785,7 @@ const OptimizedNavigation: React.FC = () => {
 
                     <motion.button
                       onClick={() => {
-                        setPreselectedPlanKey('pro_monthly');
+                        setPreselectedPlanKey('focused_monthly');
                         setShowSubscriptionModal(true);
                       }}
                       className="w-full bg-white/20 hover:bg-white/30 text-white text-small font-semibold py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5"
@@ -843,7 +814,7 @@ const OptimizedNavigation: React.FC = () => {
             }
 
             // Yearly plan card
-            if (currentPlan === 'pro_yearly') {
+            if (currentPlan === 'focused_yearly') {
               return (
                 <motion.div
                   className={`hidden ${isDesktopExpanded ? 'lg:block' : ''} bg-gradient-to-r ${isUrgent ? 'from-red-500 to-red-600' : 'from-purple-500 to-purple-600'} rounded-2xl p-3 text-white border-2 ${isUrgent ? 'border-red-300' : 'border-white/20'}`}
@@ -922,7 +893,7 @@ const OptimizedNavigation: React.FC = () => {
             }
 
             // Monthly plan card (with upsell)
-            if (currentPlan === 'pro_monthly') {
+            if (currentPlan === 'focused_monthly') {
               return (
                 <div className={`hidden ${isDesktopExpanded ? 'lg:block' : ''} rounded-2xl p-3 bg-gradient-to-br from-blue-500 to-blue-600 text-white border-2 border-white/20`}>
                   <div className="flex items-center justify-between mb-2">
@@ -967,7 +938,7 @@ const OptimizedNavigation: React.FC = () => {
             }
 
             // Quarterly plan card (no upsell)
-            if (currentPlan === 'pro_quarterly') {
+            if (currentPlan === 'focused_quarterly') {
               return (
                 <div className={`hidden ${isDesktopExpanded ? 'lg:block' : ''} rounded-2xl p-3 bg-gradient-to-br from-green-500 to-green-600 text-white border-2 border-white/20`}>
                   <div className="flex items-center justify-between mb-2">
@@ -1002,7 +973,7 @@ const OptimizedNavigation: React.FC = () => {
             }
 
             // Yearly plan card (no upsell, best value badge)
-            if (currentPlan === 'pro_lifetime') {
+            if (currentPlan === 'focused_yearly') {
               return (
                 <div className={`hidden ${isDesktopExpanded ? 'lg:block' : ''} rounded-2xl p-3 bg-gradient-to-br from-amber-500 to-amber-600 text-white border-2 border-amber-300/50 relative overflow-hidden`}>
                   {/* Best Value Badge */}
@@ -1275,8 +1246,6 @@ const OptimizedNavigation: React.FC = () => {
                     </div>
                   </motion.button>
 
-                  {/* B2B Dashboard (Removed from here, now in bottom section) */}
-                  
                   {/* Theme - Icon button for xl, toggle for expanded desktop */}
                   {/* xl: Icon button only */}
                   <motion.button

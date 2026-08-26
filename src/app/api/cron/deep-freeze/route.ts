@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
         { 'subscription.accessExpiresAt': { $lte: yesterday } }
       ],
       'subscription.status': { $in: ['cancelled', 'expired'] },
-      currentPlanKey: { $in: ['pro_monthly', 'pro_quarterly', 'pro_yearly', 'pro_lifetime'] }
+      currentPlanKey: { $in: ['focused_monthly', 'focused_quarterly', 'focused_yearly', 'focused_yearly'] }
     }).select('_id currentPlanKey');
     
     const results = [];

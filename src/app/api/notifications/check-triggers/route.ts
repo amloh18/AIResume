@@ -19,65 +19,47 @@ export async function POST(request: NextRequest) {
         const staleJobs = await JobApplication.find({
             userId,
             updatedAt: { $lt: thirtyDaysAgo },
-            status: { $nin: ['rejected', 'withdrawn', 'offer', 'accepted', 'draft'] }, // Only active jobs
+            status: { $nin: ['rejected', 'withdrawn', 'offer', 'accepted', 'saved'] }, // Only active jobs
             isArchived: false,
         }).limit(3); // Limit to 3 to avoid spam
 
-        for (const job of staleJobs) {
-            // Check if we already notified recently (e.g., in last 30 days)
-            const existingNotif = await Notification.findOne({
+        // Batch-fetch all existing notifications for stale jobs (avoid N+1)
+        if (staleJobs.length > 0) {
+            const staleJobIds = staleJobs.map(j => j._id.toString());
+            const existingStaleNotifs = await Notification.find({
                 userId,
                 type: 'job_stale_alert',
-                'metadata.jobId': job._id.toString(),
+                'metadata.jobId': { $in: staleJobIds },
                 createdAt: { $gt: thirtyDaysAgo },
-            });
+            }).lean();
+            const notifiedJobIds = new Set(existingStaleNotifs.map(n => n.metadata?.jobId));
 
-            if (!existingNotif) {
-                const daysSinceUpdate = Math.floor((now.getTime() - new Date(job.updatedAt).getTime()) / (1000 * 60 * 60 * 24));
-                await notificationService.notifyStaleJob(
-                    userId,
-                    job.jobTitle,
-                    job._id.toString(),
-                    daysSinceUpdate
-                );
+            for (const job of staleJobs) {
+                if (!notifiedJobIds.has(job._id.toString())) {
+                    const daysSinceUpdate = Math.floor((now.getTime() - new Date(job.updatedAt).getTime()) / (1000 * 60 * 60 * 24));
+                    await notificationService.notifyStaleJob(
+                        userId,
+                        job.jobTitle,
+                        job._id.toString(),
+                        daysSinceUpdate
+                    );
+                }
             }
         }
 
-        // 2. Check for Extension Engagement
-        // Check if user has ever used the extension (look for 'extension-saved' tag)
-        const hasUsedExtension = await JobApplication.findOne({
-            userId,
-            tags: 'extension-saved',
-        });
+        // 2. Check for Extension Engagement + Feature Discovery (parallel)
+        const [hasUsedExtension, extensionNotif, featureNotif, recentDiscovery] = await Promise.all([
+            JobApplication.findOne({ userId, tags: 'extension-saved' }),
+            Notification.findOne({ userId, type: 'extension_download' }),
+            Notification.findOne({ userId, type: 'feature_discovery', 'actionData.feature': 'ATS Resume Scan' }),
+            Notification.findOne({ userId, type: 'feature_discovery', createdAt: { $gt: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) } }),
+        ]);
 
-        if (!hasUsedExtension) {
-            // Check if we already sent the prompt
-            const extensionNotif = await Notification.findOne({
-                userId,
-                type: 'extension_download',
-            });
-
-            if (!extensionNotif) {
-                await notificationService.notifyExtensionDownload(userId);
-            }
+        if (!hasUsedExtension && !extensionNotif) {
+            await notificationService.notifyExtensionDownload(userId);
         }
 
-        // 3. Feature Discovery (Mock implementation - pick one random feature)
-        // could iterate through features list
         const feature = { name: "ATS Resume Scan", desc: "Optimize your resume for specific job descriptions." };
-        const featureNotif = await Notification.findOne({
-            userId,
-            type: 'feature_discovery',
-            'actionData.feature': feature.name
-        });
-
-        // Simple logic: Send one if no other feature discovery sent in last 7 days
-        const recentDiscovery = await Notification.findOne({
-            userId,
-            type: 'feature_discovery',
-            createdAt: { $gt: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) }
-        });
-
         if (!featureNotif && !recentDiscovery) {
             await notificationService.notifyFeatureDiscovery(userId, feature.name, feature.desc);
         }

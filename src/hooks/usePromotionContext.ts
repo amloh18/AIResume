@@ -19,7 +19,6 @@ interface PromotionContextData {
   isFreeUser: boolean;
   isPaidUser: boolean;
   isAdmin: boolean;
-  isB2B: boolean;
   creditPercentage: number;
   creditsExhausted: boolean;
 }
@@ -42,14 +41,12 @@ export function usePromotionContext(): PromotionContextData {
     let isFreeUser = false;
     let isPaidUser = false;
     let isAdmin = false;
-    let isB2B = false;
     let creditPercentage = 100;
     let creditsExhausted = false;
 
     // Check user roles and special statuses
     if (user) {
       isAdmin = user.role === 'admin' || user.role === 'superadmin';
-      isB2B = !!user.b2b?.tenantId;
     }
 
     // Extract IDs from URL params
@@ -74,7 +71,7 @@ export function usePromotionContext(): PromotionContextData {
         } else if (documentType === 'cl') {
           contexts.push('cover-letter-editing');
         }
-      } else if (pathname.includes('/dashboard/canvas') || pathname.includes('/editor')) {
+      } else if (pathname.includes('/editor')) {
         contexts.push('cv-viewing');
       } else if (pathname.includes('/dashboard/tracker') || pathname.includes('/jobs')) {
         contexts.push('job-tracking');
@@ -84,7 +81,7 @@ export function usePromotionContext(): PromotionContextData {
     }
 
     // Check user subscription status
-    const paidPlans = ['pro_monthly', 'pro_quarterly', 'pro_yearly', 'pro_lifetime'];
+    const paidPlans = ['focused_monthly', 'focused_quarterly', 'focused_yearly', 'focused_yearly'];
     if (user?.currentPlanKey) {
       isFreeUser = user.currentPlanKey === 'free';
       isPaidUser = paidPlans.includes(user.currentPlanKey);
@@ -100,7 +97,7 @@ export function usePromotionContext(): PromotionContextData {
       const userPlan = credits.planKey || user?.currentPlanKey;
 
       // Only check credit levels for free users or users with limited credits
-      // Paid plans (pro_monthly, pro_quarterly, pro_lifetime) have unlimited credits (limit === -1)
+      // Paid plans (focused_monthly, focused_yearly) have unlimited credits (limit === -1)
       if (jobLimit !== -1 && jobCredits !== undefined && userPlan === 'free') {
         creditPercentage = (jobCredits / jobLimit) * 100;
         
@@ -140,7 +137,6 @@ export function usePromotionContext(): PromotionContextData {
       isFreeUser,
       isPaidUser,
       isAdmin,
-      isB2B,
       creditPercentage,
       creditsExhausted,
     };

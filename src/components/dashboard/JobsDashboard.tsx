@@ -1,32 +1,101 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { JobsMetrics, JobListing, JobsFilter } from '@/types/automation-schema';
-import MetricsGrid from './JobsDashboard/MetricsGrid';
-import ChartsRow from './JobsDashboard/ChartsRow';
 import FiltersBar from './JobsDashboard/FiltersBar';
-import JobsTable from './JobsDashboard/JobsTable';
-import JobsLoadingState from './JobsDashboard/JobsLoadingState';
 import JobsErrorState from './JobsDashboard/JobsErrorState';
-import { QuotaIndicator } from '@/components/jobs/QuotaIndicator';
-import { RegionSelector } from '@/components/jobs/RegionSelector';
-import { Sparkles, Zap, Briefcase, Settings, MapPin, DollarSign, BarChart3, History } from 'lucide-react';
+import { Sparkles, Zap, Briefcase, Settings, ChevronRight, ArrowUp, Linkedin, Mic, X, Globe, RefreshCw, Loader2, Plus, Bookmark } from 'lucide-react';
 import { AutoApplyPanel } from '@/components/jobs/AutoApplyPanel';
 import { ApplicationsPanel } from '@/components/jobs/ApplicationsPanel';
-import { motion } from 'framer-motion';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { useSession } from 'next-auth/react';
+import { useToast } from '@/hooks/use-toast';
+import { useNotifications } from '@/contexts/NotificationContext';
+import { useApplyProgress } from '@/hooks/useApplyProgress';
+import { useMembership } from '@/lib/hooks/useMembership';
+import { ToastAction } from '@/components/ui/toast';
+import { Switch } from '@/components/ui/switch';
+import { JobCard } from '@/components/jobs/JobCard';
+import { JobDetailModal } from '@/components/jobs/JobDetailModal';
+import { detectUserCountry } from '@/components/jobs/CountrySelector';
+import NaukriConnectCard from './JobsDashboard/NaukriConnectCard';
+import LimitedOptionsBanner from './JobsDashboard/LimitedOptionsBanner';
+import PortalConnectModal, { type PortalType } from './settings/PortalConnectModal';
+import { getCachedJobs, setCachedJobs } from '@/lib/utils/jobCache';
+import { EntitlementNotice, type EntitlementNoticeData } from '@/components/jobs/EntitlementNotice';
+import {
+  DEFAULT_CV_TAILORING_MODE,
+  parseCvTailoringMode,
+  type CvTailoringMode,
+} from '@/lib/cv-tailoring/tailoringMode';
+import type { UserEntitlements } from '@/lib/services/entitlement-service';
+
+const deduplicateJobs = (rawJobs: JobListing[]): JobListing[] => {
+  const seenKeys = new Map<string, JobListing>();
+  for (const job of rawJobs) {
+    const normCompany = (job.company || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+    const normTitle = (job.title || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+    const normLoc = (job.location || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+    const key = `${normCompany}___${normTitle}___${normLoc}`;
+
+    if (!seenKeys.has(key)) {
+      seenKeys.set(key, job);
+    } else {
+      const existing = seenKeys.get(key)!;
+      if ((job.matchScore || 0) > (existing.matchScore || 0)) {
+        seenKeys.set(key, job);
+      }
+    }
+  }
+  return Array.from(seenKeys.values());
+};
 
 export default function JobsDashboard() {
-  const [activeTab, setActiveTab] = useState<'discover' | 'metrics' | 'autoapply' | 'applications' | 'settings'>('discover');
+  const [activeTab, setActiveTab] = useState<'discover' | 'applications' | 'settings'>('discover');
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const { data: session } = useSession();
+  const userId = session?.user?.id;
+  const { toast } = useToast();
+  const { updateProgress } = useNotifications();
+  const applyProgress = useApplyProgress();
+  const { isPaidMember } = useMembership();
+  const isPaidUser = isPaidMember;
+  const [entitlements, setEntitlements] = useState<UserEntitlements | null>(null);
+  const [userPreferences, setUserPreferences] = useState<any>(null);
 
   useEffect(() => {
     const tabParam = searchParams.get('tab');
-    if (tabParam && ['discover', 'metrics', 'autoapply', 'applications', 'settings'].includes(tabParam)) {
+    const jobIdParam = searchParams.get('jobId') || searchParams.get('job');
+    const newJobParam = searchParams.get('newJob') || searchParams.get('action') === 'add-job';
+    const filterParam = searchParams.get('filter') || searchParams.get('stage');
+
+    if (jobIdParam || newJobParam || filterParam) {
+      setActiveTab('applications');
+    } else if (tabParam && ['discover', 'applications', 'settings'].includes(tabParam)) {
       setActiveTab(tabParam as any);
     }
   }, [searchParams]);
-  const [region, setRegion] = useState<'UK' | 'India'>('UK');
+
+  const [countries, setCountries] = useState<string[]>([]);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('morigrid_selected_countries');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setCountries(parsed);
+          return;
+        }
+      }
+    } catch {}
+    const detected = detectUserCountry();
+    if (detected && detected.name) {
+      setCountries([detected.name]);
+    }
+  }, []);
   const [metrics, setMetrics] = useState<JobsMetrics | null>(null);
   const [jobs, setJobs] = useState<JobListing[]>([]);
   const [filters, setFilters] = useState<JobsFilter>({
@@ -34,27 +103,435 @@ export default function JobsDashboard() {
     sortOrder: 'desc',
   });
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(50);
+  const [pageSize] = useState(20);
   const [total, setTotal] = useState(0);
   const [hasMore, setHasMore] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const observerTarget = useRef<HTMLDivElement>(null);
+  const [loading, setLoading] = useState(() => {
+    // Check if we have cached data for initial filter state
+    const initialParams: Record<string, string> = {
+      page: '1',
+      limit: '20',
+      countries: '',
+      sortBy: 'matchScore',
+      sortOrder: 'desc',
+    };
+    return !getCachedJobs(initialParams);
+  });
   const [error, setError] = useState<string | null>(null);
   const [selectedJob, setSelectedJob] = useState<JobListing | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+  const [savingId, setSavingId] = useState<string | null>(null);
+  const [isApplying, setIsApplying] = useState<string | null>(null);
+  const [portalConnections, setPortalConnections] = useState<any[]>([]);
+  const [naukriConnected, setNaukriConnected] = useState<boolean>(false);
+  const [naukriEmail, setNaukriEmail] = useState<string>('');
+  const [indeedConnected, setIndeedConnected] = useState<boolean>(false);
+  const [indeedEmail, setIndeedEmail] = useState<string>('');
+  const [isSyncingPortals, setIsSyncingPortals] = useState<boolean>(false);
+  const [connectModalOpen, setConnectModalOpen] = useState<boolean>(false);
+  const [selectedConnectPortal, setSelectedConnectPortal] = useState<PortalType>('naukri');
+  const [autoApplyEnabled, setAutoApplyEnabled] = useState<boolean>(false);
+  const [cvTailoringMode, setCvTailoringMode] = useState<CvTailoringMode>(DEFAULT_CV_TAILORING_MODE);
+  const [autoApplyBannerDismissed, setAutoApplyBannerDismissed] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('autoapply_banner_dismissed') === 'true';
+    }
+    return false;
+  });
+  const [newJobsCount, setNewJobsCount] = useState(0);
+  const [entitlementNoticeData, setEntitlementNoticeData] = useState<EntitlementNoticeData | null>(null);
+  const [entitlementNoticeOpen, setEntitlementNoticeOpen] = useState(false);
+  const jobsSnapshotRef = useRef<string>('');
+
+  const fetchPortalConnections = useCallback(async () => {
+    try {
+      const res = await fetch('/api/portal-connections');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && Array.isArray(data.connections)) {
+          setPortalConnections(data.connections);
+          const naukri = data.connections.find((c: any) => c.id === 'naukri');
+          const indeed = data.connections.find((c: any) => c.id === 'indeed');
+
+          const isNaukriActive = naukri?.status === 'connected' && Boolean(naukri?.account?.email);
+          const isIndeedActive = indeed?.status === 'connected' && Boolean(indeed?.account?.email);
+
+          setNaukriConnected(isNaukriActive);
+          setNaukriEmail(naukri?.account?.email || '');
+          setIndeedConnected(isIndeedActive);
+          setIndeedEmail(indeed?.account?.email || '');
+        }
+      }
+    } catch (e) {
+      console.error('Failed to fetch portal connections in Discover:', e);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchPortalConnections();
+
+    fetch('/api/entitlements')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.success && data.entitlements) {
+          setEntitlements(data.entitlements);
+        }
+      })
+      .catch(() => {});
+
+    fetch('/api/job-search-profile')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.profile) {
+          setUserPreferences(data.profile);
+          setAutoApplyEnabled(data.profile.enabled === true);
+        }
+        if (data?.cvTailoringMode || data?.profile?.cvTailoringMode) {
+          setCvTailoringMode(
+            parseCvTailoringMode(data.cvTailoringMode || data.profile.cvTailoringMode)
+          );
+        }
+      })
+      .catch(() => {});
+  }, [userId, fetchPortalConnections]);
+
+  // Map of discovered job ID / URL / titleKey -> MongoDB JobApplication _id
+  const [savedJobIdMap, setSavedJobIdMap] = useState<Map<string, string>>(new Map());
+
+  // Fetch saved job IDs on mount and userId change
+  useEffect(() => {
+    async function loadSavedJobIds() {
+      try {
+        const res = await fetch('/api/jobs?limit=200&lite=true');
+        if (res.ok) {
+          const data = await res.json();
+          const items = data.jobs || data.data || [];
+          if (Array.isArray(items)) {
+            const idSet = new Set<string>();
+            const idMap = new Map<string, string>();
+
+            items.forEach((j: any) => {
+              const dbId = j._id || j.id;
+              if (dbId) {
+                idSet.add(dbId);
+                idMap.set(dbId, dbId);
+              }
+              if (j.jobId) {
+                idSet.add(j.jobId);
+                idMap.set(j.jobId, dbId);
+              }
+              if (j.externalId) {
+                idSet.add(j.externalId);
+                idMap.set(j.externalId, dbId);
+              }
+              if (j.jobUrl || j.sourceUrl) {
+                const u = (j.jobUrl || j.sourceUrl).trim().toLowerCase();
+                idMap.set(u, dbId);
+              }
+              if (j.company && (j.jobTitle || j.title)) {
+                const comp = (j.company || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+                const tit = ((j.jobTitle || j.title) || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+                idMap.set(`${comp}___${tit}`, dbId);
+              }
+            });
+
+            setSavedIds(idSet);
+            setSavedJobIdMap(idMap);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load saved job IDs:', err);
+      }
+    }
+    loadSavedJobIds();
+  }, [userId]);
+
+  const isJobSaved = useCallback(
+    (job: JobListing) => {
+      const comp = (job.company || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+      const tit = (job.title || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+      const jobKey = `${comp}___${tit}`;
+      const url = job.applyUrl ? job.applyUrl.trim().toLowerCase() : '';
+
+      return (
+        savedIds.has(job._id) ||
+        (job.id ? savedIds.has(job.id) : false) ||
+        savedJobIdMap.has(job._id) ||
+        (job.id ? savedJobIdMap.has(job.id) : false) ||
+        (url ? savedJobIdMap.has(url) : false) ||
+        savedJobIdMap.has(jobKey)
+      );
+    },
+    [savedIds, savedJobIdMap]
+  );
+
+  const handleSaveJob = async (job: JobListing) => {
+    const comp = (job.company || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+    const tit = (job.title || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+    const jobKey = `${comp}___${tit}`;
+    const url = job.applyUrl ? job.applyUrl.trim().toLowerCase() : '';
+
+    const dbJobId =
+      savedJobIdMap.get(job._id) ||
+      (job.id ? savedJobIdMap.get(job.id) : null) ||
+      (url ? savedJobIdMap.get(url) : null) ||
+      savedJobIdMap.get(jobKey) ||
+      (savedIds.has(job._id) ? job._id : null);
+    const currentlySaved = Boolean(dbJobId) || savedIds.has(job._id);
+
+    setSavingId(job._id);
+
+    try {
+      if (currentlySaved && dbJobId) {
+        const res = await fetch(`/api/jobs/${dbJobId}`, { method: 'DELETE' });
+        if (res.ok || res.status === 404) {
+          setSavedIds((prev) => {
+            const next = new Set(prev);
+            next.delete(job._id);
+            if (job.id) next.delete(job.id);
+            next.delete(dbJobId);
+            return next;
+          });
+          setSavedJobIdMap((prev) => {
+            const next = new Map(prev);
+            next.delete(job._id);
+            if (job.id) next.delete(job.id);
+            if (url) next.delete(url);
+            next.delete(jobKey);
+            next.delete(dbJobId);
+            return next;
+          });
+          toast({ title: 'Removed from saved jobs' });
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData?.error || 'Failed to remove saved job');
+        }
+      } else {
+        const res = await fetch('/api/jobs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            jobTitle: job.title,
+            company: job.company,
+            location: job.location,
+            jobUrl: job.applyUrl,
+            status: 'saved',
+            salary:
+              job.salaryMin || job.salaryMax
+                ? {
+                    min: job.salaryMin,
+                    max: job.salaryMax,
+                    currency: job.salaryCurrency || 'USD',
+                    period: 'yearly',
+                  }
+                : undefined,
+            matchScore: job.matchScore,
+            source: job.source || 'manual',
+            atsType: job.atsType || 'unknown',
+            jobDescription: job.description || '',
+            tags: job.keywords || [],
+          }),
+        });
+
+        if (res.ok) {
+          const resData = await res.json();
+          const createdDbId =
+            resData?.data?.id ||
+            resData?.data?._id ||
+            resData?.job?.id ||
+            resData?.job?._id ||
+            resData?.jobId ||
+            job._id;
+
+          setSavedIds((prev) => {
+            const next = new Set(prev);
+            next.add(job._id);
+            if (createdDbId) next.add(createdDbId);
+            return next;
+          });
+
+          setSavedJobIdMap((prev) => {
+            const next = new Map(prev);
+            next.set(job._id, createdDbId);
+            if (job.applyUrl) next.set(job.applyUrl, createdDbId);
+            next.set(jobKey, createdDbId);
+            return next;
+          });
+
+          toast({
+            title: 'Job saved successfully',
+            description: 'Added to your applications shortlist',
+          });
+        } else {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data?.error || data?.message || 'Failed to save job');
+        }
+      }
+    } catch (err: any) {
+      toast({
+        title: 'Error updating saved job',
+        description: err.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setSavingId(null);
+    }
+  };
+
+  const handleApplyJob = async (job: JobListing) => {
+    // Check if Naukri job and not connected
+    if (job.source === 'naukri' && !naukriConnected) {
+      toast({
+        title: 'Connect Naukri Account',
+        description: 'Please link your Naukri account in Settings to apply automatically.',
+        variant: 'destructive',
+        action: (
+          <ToastAction
+            altText="Go to Settings"
+            onClick={() => setActiveTab('settings')}
+          >
+            Settings
+          </ToastAction>
+        ),
+      });
+      return;
+    }
+
+    const appId = `apply-${job._id}`;
+    setIsApplying(appId);
+
+    // Start progress toast
+    applyProgress.startApplyProgress(job.title);
+    updateProgress(appId, 15, `Matching CV for ${job.title}...`, 'progress');
+
+    try {
+      // Update progress: tailoring
+      applyProgress.updateToTailoring(job.title, job.company);
+      updateProgress(appId, 45, `Tailoring application for ${job.company}...`, 'progress');
+
+      const res = await fetch('/api/jobs/auto-apply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jobId: job._id,
+          title: job.title,
+          company: job.company,
+          location: job.location,
+          source: job.source,
+          jobUrl: job.applyUrl,
+          description: job.description,
+          atsType: job.atsType || 'unknown',
+          salary: job.salaryMin || job.salaryMax ? {
+            min: job.salaryMin,
+            max: job.salaryMax,
+            currency: job.salaryCurrency || '$',
+            period: 'yearly',
+          } : undefined,
+          matchScore: job.matchScore,
+          screeningQuestions: [],
+        }),
+      });
+
+      const resData = await res.json();
+
+      // Entitlement block / Plan restriction
+      if (
+        res.status === 403 ||
+        resData.code === 'AUTO_APPLY_NOT_INCLUDED' ||
+        resData.code === 'AUTO_APPLY_LIMIT_REACHED'
+      ) {
+        applyProgress.cancelProgress();
+        setEntitlementNoticeData({
+          code: resData.code || 'AUTO_APPLY_NOT_INCLUDED',
+          jobTitle: job.title,
+          company: job.company,
+          applyUrl: job.applyUrl || resData.fallbackUrl,
+          message: resData.message || resData.error,
+          entitlements: resData.entitlements,
+          recommendation: resData.recommendation,
+        });
+        setEntitlementNoticeOpen(true);
+        return;
+      }
+
+      // Verification / Unknown outcome
+      if (resData.code === 'APPLICATION_VERIFICATION_FAILED') {
+        applyProgress.cancelProgress();
+        setEntitlementNoticeData({
+          code: 'APPLICATION_VERIFICATION_FAILED',
+          jobTitle: job.title,
+          company: job.company,
+          applyUrl: job.applyUrl,
+          message: resData.message,
+        });
+        setEntitlementNoticeOpen(true);
+        return;
+      }
+
+      // Authentication required
+      if (resData.code === 'AUTHENTICATION_REQUIRED') {
+        applyProgress.cancelProgress();
+        setEntitlementNoticeData({
+          code: 'AUTHENTICATION_REQUIRED',
+          jobTitle: job.title,
+          company: job.company,
+          applyUrl: job.applyUrl,
+        });
+        setEntitlementNoticeOpen(true);
+        return;
+      }
+
+      // Update progress: submitting
+      applyProgress.updateToSubmitting(job.company);
+      updateProgress(appId, 80, `Submitting application to ${job.company}...`, 'progress');
+
+      if (res.ok && resData.success) {
+        const createdId = resData.applicationId || job._id;
+
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('jobUpdated', { detail: { jobId: createdId } }));
+        }
+
+        applyProgress.completeApply(job.title, job.company, true, resData.message);
+        updateProgress(appId, 100, `Applied to ${job.title}!`, 'progress');
+      } else {
+        // Genuine submission failure on employer site
+        applyProgress.cancelProgress();
+        setEntitlementNoticeData({
+          code: 'APPLICATION_FAILED',
+          jobTitle: job.title,
+          company: job.company,
+          applyUrl: job.applyUrl,
+          message: resData.error || resData.message || "We couldn't complete the application on the employer's site.",
+        });
+        setEntitlementNoticeOpen(true);
+      }
+    } catch (err: any) {
+      applyProgress.cancelProgress();
+      setEntitlementNoticeData({
+        code: 'APPLICATION_FAILED',
+        jobTitle: job.title,
+        company: job.company,
+        applyUrl: job.applyUrl,
+        message: err.message || 'Network error occurred during submission.',
+      });
+      setEntitlementNoticeOpen(true);
+    } finally {
+      setIsApplying(null);
+    }
+  };
 
   const fetchMetrics = useCallback(async () => {
     try {
-      const response = await fetch('/api/jobs/metrics', {
-        headers: {
-          'x-user-id': 'temp-user-id',
-        },
-      });
-
+      const response = await fetch('/api/jobs/metrics', {});
       if (!response.ok) {
         console.warn('Failed to fetch metrics, using default values');
         setMetrics(null);
         return;
       }
-
       const data = await response.json();
       setMetrics(data);
     } catch (err: any) {
@@ -63,57 +540,87 @@ export default function JobsDashboard() {
     }
   }, []);
 
-  const fetchJobs = useCallback(async () => {
+  const fetchJobs = useCallback(async (isBackground = false) => {
+    const isFirstPage = page === 1;
     try {
-      setLoading(true);
-      const params = new URLSearchParams({
+      const params: Record<string, string> = {
         page: page.toString(),
         limit: pageSize.toString(),
-      });
+        countries: countries.join(','),
+        sortBy: filters.sortBy || 'matchScore',
+        sortOrder: filters.sortOrder || 'desc',
+      };
 
-      if (filters.searchText) params.set('searchText', filters.searchText);
-      if (filters.matchScoreMin !== undefined)
-        params.set('matchScoreMin', filters.matchScoreMin.toString());
-      if (filters.matchScoreMax !== undefined)
-        params.set('matchScoreMax', filters.matchScoreMax.toString());
-      if (filters.companies?.length)
-        params.set('companies', filters.companies.join(','));
-      if (filters.locations?.length)
-        params.set('locations', filters.locations.join(','));
-      if (filters.sources?.length)
-        params.set('sources', filters.sources.join(','));
-      if (filters.atsTypes?.length)
-        params.set('atsTypes', filters.atsTypes.join(','));
-      if (filters.appliedStatus?.length)
-        params.set('appliedStatus', filters.appliedStatus.join(','));
-      if (filters.sortBy) params.set('sortBy', filters.sortBy);
-      if (filters.sortOrder) params.set('sortOrder', filters.sortOrder);
+      if (filters.searchText) params.keywords = filters.searchText;
+      if (filters.remoteOnly) params.remoteOnly = 'true';
+      if (filters.matchScoreMin !== undefined) params.matchScoreMin = filters.matchScoreMin.toString();
+      if (filters.matchScoreMax !== undefined) params.matchScoreMax = filters.matchScoreMax.toString();
+      if (filters.companies?.length) params.companies = filters.companies.join(',');
+      if (filters.locations?.length) params.locations = filters.locations.join(',');
+      if (filters.sources?.length) params.sources = filters.sources.join(',');
+      if (filters.atsTypes?.length) params.atsTypes = filters.atsTypes.join(',');
+      if (filters.workplaceType?.length) params.workplaceType = filters.workplaceType.join(',');
+      if (filters.roles?.length) params.roles = filters.roles.join(',');
+      if (filters.jobTypes?.length) params.jobTypes = filters.jobTypes.join(',');
+      if (filters.experienceLevel?.length) params.experienceLevel = filters.experienceLevel.join(',');
+      if (filters.datePosted && filters.datePosted !== 'all') params.datePosted = filters.datePosted;
+      if (filters.sponsorsVisa) params.sponsorsVisa = 'true';
+      if (filters.savedOnly) params.savedOnly = 'true';
 
-      const response = await fetch(`/api/jobs/list?${params}`, {
-        headers: {
-          'x-user-id': 'temp-user-id',
-        },
-      });
+      // Check cache for initial page load
+      if (isFirstPage) {
+        const cached = getCachedJobs(params);
+        if (cached) {
+          setJobs(cached.jobs);
+          setTotal(cached.total);
+          setHasMore(cached.hasMore);
+          setError(null);
+          setLoading(false);
+        } else if (!isBackground) {
+          setLoading(true);
+        }
+      } else {
+        setLoadingMore(true);
+      }
+
+      const queryString = new URLSearchParams(params).toString();
+      const response = await fetch(`/api/jobs/discover?${queryString}`, {});
 
       if (!response.ok) {
-        console.warn('Failed to fetch jobs, using default values');
-        setJobs([]);
-        setLoading(false);
+        if (isFirstPage && !getCachedJobs(params)) {
+          setJobs([]);
+          setLoading(false);
+        }
         return;
       }
 
       const data = await response.json();
-      setJobs(data.jobs);
+      const incomingJobs: JobListing[] = data.jobs || [];
+
+      if (isFirstPage) {
+        setCachedJobs(params, incomingJobs, data.total, data.hasMore);
+        setJobs(incomingJobs);
+        jobsSnapshotRef.current = JSON.stringify({ filters, page: 1, pageSize, countries });
+        setNewJobsCount(0);
+      } else {
+        setJobs((prev) => {
+          const prevIds = new Set(prev.map((j) => j._id));
+          const newJobs = incomingJobs.filter((j) => !prevIds.has(j._id));
+          return [...prev, ...newJobs];
+        });
+      }
+
       setTotal(data.total);
       setHasMore(data.hasMore);
       setError(null);
     } catch (err: any) {
       console.error('Error fetching jobs:', err);
-      setError(err.message);
+      if (!isBackground && isFirstPage) setError(err.message);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
-  }, [filters, page, pageSize]);
+  }, [filters, page, pageSize, countries]);
 
   useEffect(() => {
     fetchMetrics();
@@ -127,10 +634,42 @@ export default function JobsDashboard() {
     return () => clearTimeout(debounceTimeout);
   }, [fetchJobs]);
 
+  // Infinite Scroll Intersection Observer
+  useEffect(() => {
+    if (!hasMore || loading || loadingMore) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loading && !loadingMore) {
+          setPage((prev) => prev + 1);
+        }
+      },
+      { threshold: 0.1, rootMargin: '300px' }
+    );
+
+    const el = observerTarget.current;
+    if (el) observer.observe(el);
+
+    return () => {
+      if (el) observer.unobserve(el);
+      observer.disconnect();
+    };
+  }, [hasMore, loading, loadingMore]);
+
   const handleRetry = () => {
     setError(null);
     fetchMetrics();
     fetchJobs();
+  };
+
+  const handleCountriesChange = (newCountries: string[]) => {
+    setCountries(newCountries);
+    setPage(1);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('morigrid_selected_countries', JSON.stringify(newCountries));
+      } catch {}
+    }
   };
 
   const handleFilterChange = (newFilters: Partial<JobsFilter>) => {
@@ -146,43 +685,107 @@ export default function JobsDashboard() {
     setPage(1);
   };
 
+  const handleCvTailoringModeChange = async (mode: CvTailoringMode) => {
+    const previous = cvTailoringMode;
+    setCvTailoringMode(mode);
+    try {
+      const res = await fetch('/api/job-search-profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ updates: { cvTailoringMode: mode } }),
+      });
+      if (!res.ok) {
+        throw new Error('Failed to save tailoring mode');
+      }
+    } catch (err) {
+      console.error('Failed to save CV tailoring mode:', err);
+      setCvTailoringMode(previous);
+    }
+  };
+
+  const handleToggleAutoApply = async () => {
+    const nextState = !autoApplyEnabled;
+    setAutoApplyEnabled(nextState);
+    try {
+      const res = await fetch('/api/job-search-profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ updates: { enabled: nextState } }),
+      });
+      if (res.ok) {
+        toast({
+          title: nextState ? 'Auto-Apply Automation Enabled' : 'Auto-Apply Automation Paused',
+          description: nextState
+            ? 'Applications will automatically submit to high-matching jobs.'
+            : 'Automation has been paused.',
+        });
+      }
+    } catch (err) {
+      console.error('Failed to toggle auto-apply:', err);
+    }
+  };
+
+  const handleSyncAllPortals = async () => {
+    try {
+      setIsSyncingPortals(true);
+      toast({
+        title: 'Syncing Live Portals',
+        description: 'Ingesting fresh roles from active job portal streams...',
+      });
+
+      const activePrivateConnections = portalConnections.filter(
+        (c) => !c.isPublicFeed && c.status === 'connected' && (c.connectionId || c.id)
+      );
+
+      if (activePrivateConnections.length === 0) {
+        await fetchJobs();
+        toast({
+          title: 'Jobs Refreshed',
+          description: 'Updated with latest roles from direct ATS boards.',
+        });
+        return;
+      }
+
+      await Promise.all(
+        activePrivateConnections.map((conn) => {
+          const targetId = conn.connectionId || conn.id;
+          return fetch(`/api/portal-connections/${targetId}/sync`, {
+            method: 'POST',
+          }).catch(() => {});
+        })
+      );
+
+      await fetchJobs();
+      await fetchPortalConnections();
+      toast({
+        title: 'Sync Complete',
+        description: 'Discover feed updated with latest portal roles.',
+      });
+    } catch (err: any) {
+      toast({
+        title: 'Sync Error',
+        description: err.message || 'Failed to sync portals',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSyncingPortals(false);
+    }
+  };
+
+  const deduplicatedJobs = deduplicateJobs(jobs);
+  const displayedJobs = filters.savedOnly
+    ? deduplicatedJobs.filter((job) => isJobSaved(job))
+    : deduplicatedJobs;
+
   if (error && !metrics) {
     return <JobsErrorState message={error} onRetry={handleRetry} />;
   }
 
   return (
-    <div className="relative">
-      {/* Blurred "Coming Soon" Overlay */}
-      <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none">
-        <div className="absolute inset-0 backdrop-blur-[6px] bg-white/20 dark:bg-black/20" />
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          className="relative bg-white dark:bg-[#141810] p-8 md:p-12 rounded-[2.5rem] shadow-2xl border border-gray-200 dark:border-[#80FF00]/20 max-w-lg w-full text-center pointer-events-auto mx-4"
-        >
-          <div className="w-16 h-16 bg-[#80FF00]/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
-            <Zap className="w-8 h-8 text-[#80FF00]" />
-          </div>
-          <h2 className="text-h2 md:text-h1 font-black text-gray-900 dark:text-white uppercase tracking-tighter italic mb-3">
-            Jobs Hub Coming Soon
-          </h2>
-          <p className="text-gray-600 dark:text-gray-400 text-body md:text-h3 font-medium leading-relaxed mb-8">
-            Automated job applications for power users. We're building the ultimate automation engine to land your dream role while you sleep.
-          </p>
-          <div className="flex flex-col gap-3">
-            <div className="px-4 py-3 bg-[#80FF00]/10 border border-[#80FF00]/20 rounded-xl text-[#80FF00] text-small font-black uppercase tracking-widest italic animate-pulse">
-              Exclusive for Pro Users
-            </div>
-            <p className="text-[10px] text-gray-500 dark:text-gray-500 font-bold uppercase tracking-widest">
-              Available Summer 2026
-            </p>
-          </div>
-        </motion.div>
-      </div>
-
-      <div className="space-y-6 opacity-40 grayscale-[0.5] pointer-events-none select-none overflow-hidden max-h-[85vh]">
-        {/* Header */}
-        <div className="flex items-center justify-between">
+    <div className="w-full bg-transparent">
+      <div className="w-full max-w-[1850px] mx-auto space-y-6">
+        {/* Header + Tabs */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-200 dark:border-white/10 pb-4">
           <div>
             <h1 className="text-h1 font-bold text-gray-900 dark:text-white">
               Jobs Hub
@@ -194,26 +797,17 @@ export default function JobsDashboard() {
               </span>
             </p>
           </div>
-          <div className="flex items-center gap-4">
-            <RegionSelector value={region} onChange={setRegion} />
-            <QuotaIndicator />
-          </div>
-        </div>
 
-        {/* Tab Navigation */}
-        <div className="border-b border-gray-200 dark:border-gray-700">
-          <nav className="-mb-px flex gap-8">
+          <nav className="flex items-end gap-6">
             {[
               { id: 'discover', label: 'Discover', icon: Sparkles },
-              { id: 'metrics', label: 'Metrics', icon: BarChart3 },
-              { id: 'autoapply', label: 'Auto-Apply', icon: Zap },
               { id: 'applications', label: 'Applications', icon: Briefcase },
               { id: 'settings', label: 'Settings', icon: Settings },
             ].map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                className={`flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-small transition-all duration-200 outline-none hover:bg-transparent focus:ring-0 focus-visible:ring-0 focus:outline-none focus-visible:outline-none !shadow-none !outline-none hover:!shadow-none focus:!shadow-none group ${activeTab === tab.id
+                className={`flex items-center gap-2 py-2 border-b-2 font-medium text-small transition-all duration-200 outline-none hover:bg-transparent focus:ring-0 focus-visible:ring-0 focus:outline-none focus-visible:outline-none !shadow-none !outline-none hover:!shadow-none focus:!shadow-none group ${activeTab === tab.id
                   ? 'border-lime-500 text-lime-600 dark:text-lime-400'
                   : 'border-transparent text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200'
                   }`}
@@ -228,231 +822,243 @@ export default function JobsDashboard() {
 
         {/* Tab Content */}
         {activeTab === 'discover' && (
-          <div className="flex gap-6">
-            {/* Left Side - Job List */}
-            <div className="w-1/2 space-y-4">
-              <FiltersBar
-                filters={filters}
-                onChange={handleFilterChange}
-                onReset={handleResetFilters}
-                metrics={metrics}
-              />
-              <div className="space-y-3 max-h-[calc(100vh-350px)] overflow-y-auto pr-2">
-                {loading ? (
-                  <div className="space-y-3">
-                    {[...Array(5)].map((_, i) => (
-                      <div key={i} className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-xl p-4 animate-pulse">
-                        <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-2"></div>
-                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
-                      </div>
-                    ))}
-                  </div>
-                ) : jobs.length > 0 ? (
-                  jobs.map((job) => (
-                    <div
-                      key={(job as any)._id || (job as any).id || Math.random().toString()}
-                      onClick={() => setSelectedJob(job)}
-                      className={`bg-white dark:bg-[#141810] border rounded-xl p-4 cursor-pointer transition-all hover:shadow-md ${selectedJob && ((selectedJob as any)._id === (job as any)._id || selectedJob === job)
-                        ? 'border-lime-500 ring-1 ring-lime-500'
-                        : 'border-gray-200 dark:border-white/10 hover:border-lime-400'
-                        }`}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-gray-900 dark:text-white truncate">
-                            {job.title}
-                          </h3>
-                          <p className="text-small text-gray-600 dark:text-gray-400 mt-1">
-                            {job.company}
-                          </p>
-                          <div className="flex items-center gap-2 text-small text-gray-500 dark:text-gray-500 mt-2">
-                            <span className="flex items-center gap-1">
-                              <MapPin className="w-3 h-3" />
-                              {job.location}
-                            </span>
-                          </div>
-                        </div>
-                        {job.matchScore && (
-                          <div className={`ml-3 flex-shrink-0 px-2 py-1 rounded-full text-small font-bold ${job.matchScore >= 80 ? 'bg-lime-100 text-lime-700 dark:bg-lime-900/30 dark:text-lime-300' :
-                            job.matchScore >= 60 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300' :
-                              'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
-                            }`}>
-                            {job.matchScore}%
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
-                        <span className="text-small text-gray-400 capitalize">{job.source}</span>
-                        <button className="text-small text-lime-600 dark:text-lime-400 font-medium hover:underline">
-                          Apply
-                        </button>
+          <div className="space-y-4">
+            <FiltersBar
+              filters={filters}
+              onChange={handleFilterChange}
+              onReset={handleResetFilters}
+              metrics={metrics}
+              countries={countries}
+              onCountriesChange={handleCountriesChange}
+              userId={userId}
+              savedCount={savedIds.size}
+              cvTailoringMode={cvTailoringMode}
+              onCvTailoringModeChange={handleCvTailoringModeChange}
+              userPreferences={userPreferences}
+              autoApplyEnabled={autoApplyEnabled}
+              onToggleAutoApply={handleToggleAutoApply}
+              onOpenSettings={() => setActiveTab('settings')}
+              entitlements={entitlements}
+              isPaidUser={isPaidUser}
+              portalConnections={portalConnections}
+            />
+
+            {/* Results Count & Match Statement */}
+            <div className="flex items-center justify-between pt-1 text-xs">
+              <div>
+                <span className="font-bold text-sm text-gray-900 dark:text-white">
+                  {displayedJobs.length} {filters.savedOnly ? 'saved' : 'matching'} {displayedJobs.length === 1 ? 'job' : 'jobs'}
+                </span>
+                <span className="text-gray-500 dark:text-gray-400 ml-2 hidden sm:inline">
+                  {filters.savedOnly
+                    ? 'Jobs you have saved to your shortlist and staging pipeline'
+                    : 'Personalized based on your target roles, locations, and compensation threshold'}
+                </span>
+              </div>
+            </div>
+
+            {/* New jobs indicator — subtle floating pill */}
+            {newJobsCount > 0 && (
+              <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-slideUp">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNewJobsCount(0);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-[#0f172a] dark:bg-[#013f2e] text-white dark:text-black text-sm font-semibold rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all"
+                >
+                  <ArrowUp className="w-4 h-4" />
+                  {newJobsCount} new job{newJobsCount !== 1 ? 's' : ''}
+                </button>
+              </div>
+            )}
+
+            {/* Job Grid */}
+            {loading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
+                {[...Array(8)].map((_, i) => (
+                  <div key={i} className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-2xl p-4 animate-pulse">
+                    <div className="flex items-center gap-3">
+                      <div className="h-11 w-11 rounded-xl bg-gray-200 dark:bg-gray-700" />
+                      <div className="flex-1 space-y-2">
+                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4" />
+                        <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2" />
                       </div>
                     </div>
-                  ))
+                    <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-2/3 mt-4" />
+                    <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded mt-5" />
+                  </div>
+                ))}
+              </div>
+            ) : displayedJobs.length > 0 ? (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
+                  {!naukriConnected && !filters.savedOnly && (
+                    <NaukriConnectCard
+                      onConnected={() => {
+                        setNaukriConnected(true);
+                        fetchJobs();
+                      }}
+                    />
+                  )}
+                  {displayedJobs
+                    .map((job, index) => (
+                      <JobCard
+                        key={job._id}
+                        job={job}
+                        colorIndex={index}
+                        isSaved={isJobSaved(job)}
+                        saving={savingId === job._id}
+                        onOpen={() => {
+                          setSelectedJob(job);
+                          setModalOpen(true);
+                        }}
+                        onSave={() => handleSaveJob(job)}
+                        onPass={() => {
+                          const previousJobs = jobs;
+                          setJobs((prev) => prev.filter((j) => j._id !== job._id));
+                          fetch('/api/jobs/pass', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ jobId: job._id }),
+                          }).then((res) => {
+                            if (!res.ok) throw new Error('Failed to pass');
+                            toast({
+                              title: 'Job Passed',
+                              description: `Dismissed ${job.title}`,
+                            });
+                          }).catch(() => {
+                            setJobs(previousJobs);
+                            toast({
+                              title: 'Error',
+                              description: 'Failed to dismiss job. Please try again.',
+                              variant: 'destructive',
+                            });
+                          });
+                        }}
+                        onApply={() => handleApplyJob(job)}
+                      />
+                    ))}
+
+                  {/* Extension card styled as a job card at the end of the loaded batch */}
+                  {!filters.savedOnly && (
+                    <LimitedOptionsBanner
+                      onAddManually={() => {
+                        router.push('/dashboard/jobs?tab=applications&action=add-job');
+                      }}
+                    />
+                  )}
+                </div>
+              </div>
+            ) : filters.savedOnly ? (
+              <div className="text-center py-16 bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-2xl">
+                <Bookmark className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                <h3 className="text-h3 font-semibold text-gray-900 dark:text-white mb-2">
+                  No saved jobs yet
+                </h3>
+                <p className="text-gray-500 dark:text-gray-400 mb-4 max-w-sm mx-auto text-xs">
+                  Click the Save button on any job card in Recommended or Latest to add it to your shortlist.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => handleFilterChange({ savedOnly: false, sortBy: 'matchScore' })}
+                  className="px-4 py-2 rounded-xl bg-[#013f2e] hover:bg-[#025c43] text-white font-bold text-xs transition-colors shadow-sm"
+                >
+                  Browse Recommended Jobs
+                </button>
+              </div>
+            ) : (
+              <div className="text-center py-16 bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-2xl">
+                <Briefcase className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                <h3 className="text-h3 font-semibold text-gray-900 dark:text-white mb-2">
+                  No jobs found
+                </h3>
+                <p className="text-gray-500 dark:text-gray-400 mb-4">
+                  Try adjusting your search criteria or switching region
+                </p>
+                {!isPaidUser && (
+                  <Link
+                    href="/linkedin-enhancer"
+                    className="inline-flex items-center gap-1.5 text-xs font-medium text-[#013f2e] dark:text-[#36D39B] hover:underline"
+                  >
+                    <Linkedin className="w-3.5 h-3.5" />
+                    Optimize your LinkedIn to attract recruiters
+                  </Link>
+                )}
+              </div>
+            )}
+
+            {/* Streaming / Infinite Scroll Pagination Indicator */}
+            {displayedJobs.length > 0 && (
+              <div className="py-6 flex flex-col items-center justify-center gap-3">
+                {hasMore ? (
+                  <div ref={observerTarget} className="flex flex-col items-center gap-2">
+                    {loadingMore ? (
+                      <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 text-xs font-bold text-gray-700 dark:text-gray-300 shadow-xs">
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-[#013f2e] dark:text-[#36D39B]" />
+                        <span>Loading more jobs...</span>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setPage((p) => p + 1)}
+                        className="px-5 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 hover:border-[#013f2e]/50 dark:hover:border-[#36D39B]/50 bg-white dark:bg-[#141810] text-xs font-bold text-gray-800 dark:text-gray-200 hover:text-[#013f2e] dark:hover:text-[#36D39B] transition-all shadow-xs"
+                      >
+                        Load more jobs ({displayedJobs.length} of {total})
+                      </button>
+                    )}
+                  </div>
                 ) : (
-                  <div className="text-center py-12 bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-xl">
-                    <Briefcase className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-                    <h3 className="text-h3 font-semibold text-gray-900 dark:text-white mb-2">
-                      No jobs found
-                    </h3>
-                    <p className="text-gray-500 dark:text-gray-400">
-                      Try adjusting your search criteria
-                    </p>
+                  <div className="text-xs font-medium text-gray-400 dark:text-gray-500">
+                    You've viewed all {displayedJobs.length} {filters.savedOnly ? 'saved' : 'matching'} {displayedJobs.length === 1 ? 'job' : 'jobs'}
                   </div>
                 )}
               </div>
+            )}
 
-              {/* Pagination */}
-              <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
-                <div className="text-small text-gray-500 dark:text-gray-400">
-                  Showing {jobs.length} of {total} jobs
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setPage(Math.max(1, page - 1))}
-                    disabled={page === 1}
-                    className="px-3 py-1 text-small border border-gray-300 dark:border-gray-600 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-800"
-                  >
-                    Previous
-                  </button>
-                  <span className="text-small text-gray-600 dark:text-gray-400">
-                    Page {page}
-                  </span>
-                  <button
-                    onClick={() => setPage(page + 1)}
-                    disabled={!hasMore}
-                    className="px-3 py-1 text-small border border-gray-300 dark:border-gray-600 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-800"
-                  >
-                    Next
-                  </button>
-                </div>
-              </div>
-            </div>
+            {/* Job Detail Modal */}
+            <JobDetailModal
+              job={selectedJob}
+              open={modalOpen}
+              onOpenChange={setModalOpen}
+              isSaved={selectedJob ? isJobSaved(selectedJob) : false}
+              saving={selectedJob ? savingId === selectedJob._id : false}
+              onSave={() => selectedJob && handleSaveJob(selectedJob)}
+              onApply={() => selectedJob && handleApplyJob(selectedJob)}
+            />
 
-            {/* Right Side - Job Preview */}
-            <div className="w-1/2">
-              {selectedJob ? (
-                <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-xl p-6 sticky top-6">
-                  <div className="flex items-start justify-between mb-4">
-                    <div>
-                      <h2 className="text-h3 font-bold text-gray-900 dark:text-white">
-                        {selectedJob.title}
-                      </h2>
-                      <p className="text-h3 text-gray-600 dark:text-gray-400 mt-1">
-                        {selectedJob.company}
-                      </p>
-                    </div>
-                    {selectedJob.matchScore && (
-                      <div className={`px-3 py-2 rounded-full text-h3 font-bold ${selectedJob.matchScore >= 80 ? 'bg-lime-100 text-lime-700 dark:bg-lime-900/30 dark:text-lime-300' :
-                        selectedJob.matchScore >= 60 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300' :
-                          'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
-                        }`}>
-                        {selectedJob.matchScore}% Match
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="space-y-3 mb-6">
-                    <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                      <MapPin className="w-4 h-4" />
-                      {selectedJob.location}
-                    </div>
-                    <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400 capitalize">
-                      <Briefcase className="w-4 h-4" />
-                      {selectedJob.source}
-                    </div>
-                  </div>
-
-                  <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mb-4">
-                    <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Description</h3>
-                    <p className="text-gray-600 dark:text-gray-400 text-small">
-                      {selectedJob.description || 'No description available. Click to view full details on the job posting.'}
-                    </p>
-                  </div>
-
-                  <div className="flex gap-3">
-                    <button className="flex-1 bg-lime-500 hover:bg-lime-600 text-black font-medium py-2 px-4 rounded-lg transition-colors">
-                      Apply Now
-                    </button>
-                    <button className="flex-1 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-900 dark:text-white font-medium py-2 px-4 rounded-lg transition-colors">
-                      Save Job
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-xl p-6 text-center h-full flex items-center justify-center min-h-[400px]">
-                  <div>
-                    <Sparkles className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-                    <h3 className="text-h3 font-semibold text-gray-900 dark:text-white mb-2">
-                      Select a job to preview
-                    </h3>
-                    <p className="text-gray-500 dark:text-gray-400">
-                      Click on any job from the list to see details
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
+            {/* Portal Connect Modal */}
+            {connectModalOpen && (
+              <PortalConnectModal
+                portal={selectedConnectPortal}
+                isOpen={connectModalOpen}
+                onClose={() => setConnectModalOpen(false)}
+                onSuccess={() => {
+                  fetchPortalConnections();
+                  fetchJobs();
+                }}
+              />
+            )}
           </div>
-        )}
-
-        {activeTab === 'metrics' && (
-          <div className="space-y-6">
-            {/* Metrics Grid */}
-            <MetricsGrid metrics={metrics} loading={!metrics} />
-
-            {/* Charts Row */}
-            {metrics && <ChartsRow metrics={metrics} loading={!metrics} />}
-          </div>
-        )}
-
-        {activeTab === 'autoapply' && (
-          <AutoApplyPanel region={region} />
         )}
 
         {activeTab === 'applications' && (
-          <ApplicationsPanel />
+          <ApplicationsPanel metrics={metrics} userId={userId} />
         )}
 
         {activeTab === 'settings' && (
-          <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-xl p-6">
-            <h2 className="text-h3 font-semibold text-gray-900 dark:text-white mb-4">
-              Auto-Apply Settings
-            </h2>
-            <div className="space-y-4 max-w-xl">
-              <div>
-                <label className="block text-small font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Maximum Applications per Hour
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  max="50"
-                  defaultValue="25"
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-[#1a230f] text-gray-900 dark:text-white"
-                />
-                <p className="mt-1 text-small text-gray-500 dark:text-gray-400">
-                  Maximum 50 applications per hour (system limit)
-                </p>
-              </div>
-              <div>
-                <label className="block text-small font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Maximum Applications per Day
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  max="100"
-                  defaultValue="50"
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-[#1a230f] text-gray-900 dark:text-white"
-                />
-                <p className="mt-1 text-small text-gray-500 dark:text-gray-400">
-                  Maximum 100 applications per day (system limit)
-                </p>
-              </div>
-            </div>
+          <div className="space-y-6">
+            <AutoApplyPanel userId={userId} />
           </div>
         )}
+
+        {/* Entitlement Notice / Outcome Modal */}
+        <EntitlementNotice
+          isOpen={entitlementNoticeOpen}
+          onClose={() => setEntitlementNoticeOpen(false)}
+          data={entitlementNoticeData}
+        />
       </div>
     </div>
   );

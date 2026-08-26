@@ -30,7 +30,7 @@ class EmailNotificationService {
     const actionButton = notification.interactive && notification.actionType
       ? `
         <div style="margin-top: 24px;">
-          <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://app.cvcircle.io'}${notification.actionData?.url || '/dashboard'}" 
+          <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://app.buildairesume.com'}${notification.actionData?.url || '/dashboard'}" 
              style="display: inline-block; padding: 12px 24px; background-color: #4F46E5; color: white; text-decoration: none; border-radius: 6px; font-weight: 500;">
             ${this.getActionButtonText(notification.actionType)}
           </a>
@@ -63,8 +63,8 @@ class EmailNotificationService {
             </p>
             ${actionButton}
             <p style="color: #9ca3af; font-size: 14px; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
-              © ${new Date().getFullYear()} CVCircle. All rights reserved.<br>
-              <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://app.cvcircle.io'}/dashboard/settings?tab=notifications" style="color: #4F46E5; text-decoration: none;">Manage notification preferences</a>
+              © ${new Date().getFullYear()} AIResume. All rights reserved.<br>
+              <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://app.buildairesume.com'}/dashboard/settings?tab=notifications" style="color: #4F46E5; text-decoration: none;">Manage notification preferences</a>
             </p>
           </div>
         </body>
@@ -77,7 +77,7 @@ class EmailNotificationService {
    */
   private getTextTemplate(notification: INotification, firstName: string): string {
     const actionText = notification.interactive && notification.actionType
-      ? `\n\n${this.getActionButtonText(notification.actionType)}: ${process.env.NEXT_PUBLIC_APP_URL || 'https://app.cvcircle.io'}${notification.actionData?.url || '/dashboard'}`
+      ? `\n\n${this.getActionButtonText(notification.actionType)}: ${process.env.NEXT_PUBLIC_APP_URL || 'https://app.buildairesume.com'}${notification.actionData?.url || '/dashboard'}`
       : '';
 
     return `
@@ -88,8 +88,8 @@ Hello ${firstName},
 ${notification.message}
 ${actionText}
 
-© ${new Date().getFullYear()} CVCircle. All rights reserved.
-Manage notification preferences: ${process.env.NEXT_PUBLIC_APP_URL || 'https://app.cvcircle.io'}/dashboard/settings?tab=notifications
+© ${new Date().getFullYear()} AIResume. All rights reserved.
+Manage notification preferences: ${process.env.NEXT_PUBLIC_APP_URL || 'https://app.buildairesume.com'}/dashboard/settings?tab=notifications
     `.trim();
   }
 

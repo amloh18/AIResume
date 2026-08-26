@@ -3,6 +3,13 @@ import { callAIWithFallback, hasAIApiKeys } from '@/lib/utils/ai-api-helper';
 import { CV_TAILOR_AGENT_PROMPT } from '@/lib/prompts/promptTemplates';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { getUserCvTailoringMode } from '@/lib/cv-tailoring/getUserCvTailoringMode';
+import {
+    CV_TAILORING_MODE_LABELS,
+    extractAtsKeywords,
+    parseCvTailoringMode,
+    applyDeterministicAtsPass,
+} from '@/lib/cv-tailoring/tailoringMode';
 
 export const dynamic = 'force-dynamic';
 
@@ -67,11 +74,15 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401, headers });
         }
 
-        // Determine primary role & seniority for target mapping
         const primaryRole = OPTIMISATION_TARGET?.primaryRole || TARGET_ROLE || 'N/A';
         const seniority = OPTIMISATION_TARGET?.seniority || 'professional';
+        const savedMode = await getUserCvTailoringMode(session.user.id);
+        const mode = parseCvTailoringMode(body.TAILORING_MODE || savedMode);
+        const jdText =
+            (typeof JD_DATA === 'string' ? JD_DATA : JD_DATA?.description || JD_DATA?.jobDescription || '') || '';
+        const atsKeywords = extractAtsKeywords(jdText);
+        const modeMeta = CV_TAILORING_MODE_LABELS[mode];
 
-        // Build prompt
         let prompt = CV_TAILOR_AGENT_PROMPT
             .replace('{{CV_DATA}}', typeof CV_DATA === 'string' ? CV_DATA : JSON.stringify(CV_DATA, null, 2))
             .replace('{{CV_TYPE}}', CV_TYPE)
@@ -81,6 +92,18 @@ export async function POST(request: NextRequest) {
             .replace('{{TARGET_ROLE}}', TARGET_ROLE || 'N/A')
             .replace('{{PRIMARY_ROLE}}', primaryRole)
             .replace('{{INFERRED_OR_TARGET_SENIORITY}}', seniority);
+
+        prompt += `
+
+---
+USER TAILORING MODE: ${modeMeta.full} (${mode})
+${modeMeta.description}
+Priority ATS keywords from the job description (use exact tokens when evidenced): ${atsKeywords.join(', ') || 'none extracted'}
+ATS: Mirror JD wording, put the target title in the summary, keep standard ATS-safe structure, never invent employers/dates/metrics.
+${mode === 'standout'
+    ? 'STANDOUT: Retitle roles to JD language when the work matches; fill transferable gaps; lead with strongest JD-relevant proof.'
+    : 'NORMAL: Stay close to the Master CV. Add missing skills only when already evidenced. Do not inflate seniority or invent tools.'}
+`;
 
         const aiResponse = await callAIWithFallback({
             prompt,
@@ -108,6 +131,17 @@ export async function POST(request: NextRequest) {
         jsonString = jsonString.replace(/,(\s*[}\]])/g, '$1'); // trailing comma fix
 
         const responseObj = JSON.parse(jsonString);
+        const tailoredPayload = responseObj.cvData || responseObj.CV_DATA || responseObj.tailoredCvData;
+        if (tailoredPayload) {
+            const polished = applyDeterministicAtsPass(tailoredPayload, {
+                mode,
+                jobTitle: String(primaryRole),
+                atsKeywords,
+            });
+            if (responseObj.cvData) responseObj.cvData = polished;
+            else if (responseObj.CV_DATA) responseObj.CV_DATA = polished;
+            else responseObj.tailoredCvData = polished;
+        }
 
         return NextResponse.json({
             success: true,

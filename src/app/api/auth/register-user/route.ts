@@ -185,7 +185,7 @@ export async function POST(request: NextRequest) {
       try {
         const { cookies } = await import('next/headers');
         const cookieStore = await cookies();
-        effectiveAnonToken = cookieStore.get('cvcircle_anonymous_token')?.value;
+        effectiveAnonToken = cookieStore.get('buildairesume_anonymous_token')?.value;
       } catch (err) {
         console.warn('Could not read anonymous token from cookies');
       }

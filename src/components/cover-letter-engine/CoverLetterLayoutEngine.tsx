@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
+import { getPageDimensions } from '@/lib/templates/page-dimensions';
 import { 
   ClassicHeader, 
   ModernHeader, 
@@ -76,7 +77,6 @@ const CanvasSectionWrapper: React.FC<CanvasSectionWrapperProps> = ({
 interface CoverLetterLayoutEngineProps {
   headerProps: HeaderSnippetProps;
   bodyContent: string;
-  footerContent?: string;
   templateType?: 'classic' | 'modern' | 'minimal' | 'typographic' | 'column-split' | 'accent-banner' | 'creative-edge' | 'executive-slate';
   isEditing?: boolean;
   onBodyChange?: (content: string) => void;
@@ -87,6 +87,10 @@ interface CoverLetterLayoutEngineProps {
   onToggleMoriChat?: () => void;
   onChangeHeaderStyle?: () => void;
   zoom?: number;
+  sessionUndoStack?: unknown[];
+  sessionRedoStack?: unknown[];
+  onSessionUndo?: () => void;
+  onSessionRedo?: () => void;
 }
 
 const splitHtmlIntoBlocks = (html: string): string[] => {
@@ -141,7 +145,6 @@ const splitHtmlIntoBlocks = (html: string): string[] => {
 export default function CoverLetterLayoutEngine({
   headerProps,
   bodyContent,
-  footerContent,
   templateType = 'modern',
   isEditing = false,
   onBodyChange,
@@ -151,7 +154,11 @@ export default function CoverLetterLayoutEngine({
   showMoriChat,
   onToggleMoriChat,
   onChangeHeaderStyle,
-  zoom = 100
+  zoom = 100,
+  sessionUndoStack,
+  sessionRedoStack,
+  onSessionUndo,
+  onSessionRedo
 }: CoverLetterLayoutEngineProps) {
 
   const HeaderComponent = useMemo(() => {
@@ -180,7 +187,7 @@ export default function CoverLetterLayoutEngine({
     fontSize: 15,
     lineHeight: 1.6,
     pageMargin: 6,
-    accentColor: '#80FF00',
+    accentColor: '#013f2e',
     fontFamily: templateType === 'classic' ? 'font-serif' : 'font-sans'
   };
 
@@ -192,8 +199,8 @@ export default function CoverLetterLayoutEngine({
     return splitHtmlIntoBlocks(bodyContent);
   }, [bodyContent]);
 
-  const width = pageFormat === 'letter' ? '8.5in' : '210mm';
-  const minHeight = pageFormat === 'letter' ? '11in' : '297mm';
+  const width = pageFormat === 'letter' ? getPageDimensions('Letter').widthCss : getPageDimensions('A4').widthCss;
+  const minHeight = pageFormat === 'letter' ? getPageDimensions('Letter').heightCss : getPageDimensions('A4').heightCss;
 
   const [pageAssignments, setPageAssignments] = useState<Record<string, number>>({});
   const pageAssignmentsRef = useRef(pageAssignments);
@@ -206,8 +213,15 @@ export default function CoverLetterLayoutEngine({
 
     const measureAndPaginate = () => {
       const scale = zoom / 100;
-      const H = pageFormat === 'letter' ? 1056 : 1122.5;
-      const usableHeight = H - 160; // Estimated usable page height minus margins
+      const pageDims = getPageDimensions(pageFormat === 'letter' ? 'Letter' : 'A4');
+      const H = pageDims.heightPx;
+      // Usable height = page minus the ACTUAL top/bottom margins. The page content
+      // wrapper uses `${activeDesign.pageMargin}cqw` padding (cqw = % of page width),
+      // so the real margin in px is (pageMargin / 100) * widthPx — not the old
+      // hardcoded 160px estimate, which under-filled pages and caused premature
+      // page breaks / blank trailing pages.
+      const marginPx = (activeDesign.pageMargin / 100) * pageDims.widthPx;
+      const usableHeight = H - 2 * marginPx;
 
       const unitHeights: Record<string, number> = {};
 
@@ -222,11 +236,6 @@ export default function CoverLetterLayoutEngine({
           unitHeights[pId] = el.getBoundingClientRect().height / scale;
         }
       });
-
-      const footerEl = docElement.querySelector('[data-unit-id="footer"]');
-      if (footerEl) {
-        unitHeights['footer'] = footerEl.getBoundingClientRect().height / scale;
-      }
 
       const newAssignments: Record<string, number> = {};
       let currentPage = 0;
@@ -256,14 +265,6 @@ export default function CoverLetterLayoutEngine({
         newAssignments[pId] = currentPage;
         currentHeight += pH + 16;
       }
-
-      // 3. Footer
-      const footerH = unitHeights['footer'] || 80;
-      if (currentHeight + footerH > usableHeight && currentHeight > 0) {
-        currentPage++;
-        currentHeight = 0;
-      }
-      newAssignments['footer'] = currentPage;
 
       const assignmentsStr = JSON.stringify(newAssignments);
       if (recentAssignmentsRef.current.includes(assignmentsStr)) {
@@ -321,23 +322,6 @@ export default function CoverLetterLayoutEngine({
             word-break: normal !important;
             hyphens: none !important;
           }
-          .cl-header-name {
-            display: inline-block !important;
-            max-width: 100% !important;
-            overflow: hidden !important;
-            text-overflow: ellipsis !important;
-            white-space: nowrap !important;
-            word-break: normal !important;
-            overflow-wrap: normal !important;
-          }
-          @supports (font-size: clamp(1rem, 5vw, 3rem)) {
-            .cl-header-name {
-              font-size: clamp(1.2rem, 4vw, 3.5rem) !important;
-              white-space: normal !important;
-              word-break: normal !important;
-              overflow-wrap: normal !important;
-            }
-          }
         `}
       </style>
       {activePages.map(pageIdx => {
@@ -356,7 +340,12 @@ export default function CoverLetterLayoutEngine({
               boxSizing: 'border-box',
               overflowWrap: 'break-word',
               whiteSpace: 'normal',
-              wordBreak: 'normal'
+              wordBreak: 'normal',
+              // Clip content at the physical page edge (like the CV canvas and
+              // the DOM-capture PDF export) so long paragraphs cannot spill
+              // past the page box into the next page's gap. Editing keeps
+              // overflow visible so typing is not visually cut mid-document.
+              overflow: isEditing ? 'visible' : 'hidden',
             } as React.CSSProperties}
           >
             <div 
@@ -423,6 +412,10 @@ export default function CoverLetterLayoutEngine({
                       textColor="black"
                       autoExpand
                       noPadding={true}
+                      sessionUndoStack={sessionUndoStack}
+                      sessionRedoStack={sessionRedoStack}
+                      onSessionUndo={onSessionUndo}
+                      onSessionRedo={onSessionRedo}
                     />
                   </CanvasSectionWrapper>
                 ) : (
@@ -435,7 +428,7 @@ export default function CoverLetterLayoutEngine({
                           key={idx} 
                           data-paragraph-id={`p_${idx}`}
                           className="prose prose-sm max-w-none text-black text-justify leading-relaxed"
-                          style={{ fontSize: 'inherit', lineHeight: 'inherit' }}
+                          style={{ fontSize: 'inherit', lineHeight: 'inherit', overflowWrap: 'anywhere', wordBreak: 'normal' }}
                           dangerouslySetInnerHTML={{ __html: block }}
                         />
                       );

@@ -38,7 +38,7 @@ export default function DashboardWidget({
       {/* Header */}
       <div className="px-6 pt-6 pb-2 flex items-center justify-between">
         <div>
-          <h3 className="dashboard-widget-title text-[13px] font-semibold text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
+          <h3 className="dashboard-widget-title text-sm font-semibold text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
             {type === 'hero' && <Sparkles size={16} className="text-[#83d60d]" />}
             {title}
           </h3>

@@ -7,12 +7,10 @@ export type UserPlanKey =
   | 'starter_yearly'
   | 'focused_monthly'
   | 'focused_yearly'
-  | 'smart_quarterly'
-  | 'smart_yearly'
-  | 'pro_monthly'
-  | 'pro_quarterly'
-  | 'pro_yearly'
-  | 'pro_lifetime';
+  | 'focused_monthly'
+  | 'focused_quarterly'
+  | 'focused_yearly'
+  | 'focused_yearly';
 
 export type UserLifecycleState =
   | 'NEW'
@@ -30,12 +28,10 @@ const USER_PLAN_KEYS: UserPlanKey[] = [
   'starter_yearly',
   'focused_monthly',
   'focused_yearly',
-  'smart_quarterly',
-  'smart_yearly',
-  'pro_monthly',
-  'pro_quarterly',
-  'pro_yearly',
-  'pro_lifetime'
+  'focused_monthly',
+  'focused_quarterly',
+  'focused_yearly',
+  'focused_yearly'
 ];
 
 export interface IUser extends Document {
@@ -188,6 +184,7 @@ export interface IUser extends Document {
     };
     timezone: string;
     languagePreference: string;
+    cvTailoringMode?: 'standard' | 'standout';
   };
 
   // Granular Notification Preferences
@@ -207,16 +204,11 @@ export interface IUser extends Document {
     lastPracticeDate: Date;
   };
 
-  // B2B Support
-  b2b?: {
-    tenantId: mongoose.Types.ObjectId;
-    role: 'admin' | 'recruiter' | 'member';
-    setupComplete?: boolean;
-  };
-
   onboarding?: {
     primary_goal?: 'cv' | 'tracker' | 'auto_apply';
     confidence_score?: number;
+    initial_score?: number;
+    transformed_score?: number;
     recommended_plan?: string;
     activation_status?: 'pending' | 'completed';
     activation_route?: string;
@@ -227,6 +219,96 @@ export interface IUser extends Document {
     completed_stages?: string[];
     onboarding_version?: number;
     primary_cv_id?: string | mongoose.Types.ObjectId;
+
+    // Career Preferences & Profiling
+    career_pathway?: string;
+    target_roles?: string[];
+    locations?: string[];
+    experience_level?: string;
+    salary_range?: string;
+    visa_required?: boolean;
+    search_status?: string;
+    monthly_volume?: string;
+    tracker_interest?: string;
+    autoapply_interest?: string;
+    candidate_name?: string;
+    candidate_role?: string;
+
+    // Canonical job-search preferences (synced to autoApplyPreferences)
+    workplace_types?: string[];
+    salary_min?: number;
+    salary_currency?: string;
+    experience_years?: number;
+    max_notice_period_days?: number;
+    search_intensity?: string;
+    expected_applications_per_month?: number;
+    application_mode?: string;
+  };
+
+  autoApplyPreferences?: {
+    enabled: boolean;
+    targetRoles: string[];
+    locations: string[];
+    remoteOnly: boolean;
+    workplaceTypes: ('remote' | 'hybrid' | 'onsite')[];
+    minSalary: number;
+    salaryCurrency: string;
+    experienceYears: number;
+    maxNoticePeriodDays: number;
+    maxPerDay: number;
+    useTailoredCV: boolean;
+    useCoverLetter: boolean;
+    autoAnswerQuestions: boolean;
+    enabledPortals: ('naukri' | 'indeed' | 'greenhouse' | 'adzuna')[];
+    searchIntensity: 'browsing' | 'exploring' | 'active' | 'aggressive';
+    expectedApplicationsPerMonth: number;
+    applicationMode: 'find_only' | 'manual_review' | 'automatic';
+  };
+
+  naukriIntegration?: {
+    enabled: boolean;
+    connectedAt?: Date;
+    lastSyncedAt?: Date;
+    sessionStatus: 'active' | 'expired' | 'disconnected';
+    userEmail?: string;
+    encryptedCookieJar?: string;
+    preferences: {
+      targetTitles: string[];
+      targetLocations: string[];
+      minCtcLakhs?: number;
+      experienceYears?: number;
+      maxNoticePeriodDays?: number;
+      dailyLimit: number;
+      autoApplyEnabled: boolean;
+    };
+    stats: {
+      totalFetched: number;
+      totalApplied: number;
+      lastAppliedAt?: Date;
+    };
+  };
+
+  indeedIntegration?: {
+    enabled: boolean;
+    connectedAt?: Date;
+    lastSyncedAt?: Date;
+    sessionStatus: 'active' | 'expired' | 'disconnected';
+    userEmail?: string;
+    encryptedCookieJar?: string;
+    preferences: {
+      targetTitles: string[];
+      targetLocations: string[];
+      minSalary?: number;
+      salaryCurrency?: string;
+      remoteOnly: boolean;
+      dailyLimit: number;
+      autoApplyEnabled: boolean;
+    };
+    stats: {
+      totalFetched: number;
+      totalApplied: number;
+      lastAppliedAt?: Date;
+    };
   };
 
   createdAt: Date;
@@ -719,6 +801,11 @@ const userSchema = new Schema<IUser>({
       type: String,
       trim: true,
       default: 'en'
+    },
+    cvTailoringMode: {
+      type: String,
+      enum: ['standard', 'standout'],
+      default: 'standard'
     }
   },
   notificationPreferences: {
@@ -729,23 +816,11 @@ const userSchema = new Schema<IUser>({
     currentStreak: { type: Number, default: 0 },
     lastPracticeDate: { type: Date }
   },
-  b2b: {
-    tenantId: {
-      type: Schema.Types.ObjectId,
-      ref: 'Tenant'
-    },
-    role: {
-      type: String,
-      enum: ['admin', 'recruiter', 'member']
-    },
-    setupComplete: {
-      type: Boolean,
-      default: false
-    }
-  },
   onboarding: {
     primary_goal: { type: String, enum: ['cv', 'tracker', 'auto_apply'] },
     confidence_score: { type: Number },
+    initial_score: { type: Number },
+    transformed_score: { type: Number },
     recommended_plan: { type: String },
     activation_status: { type: String, enum: ['pending', 'completed'], default: 'pending' },
     activation_route: { type: String },
@@ -755,7 +830,115 @@ const userSchema = new Schema<IUser>({
     current_stage: { type: String },
     completed_stages: { type: [String], default: [] },
     onboarding_version: { type: Number, default: 1 },
-    primary_cv_id: { type: Schema.Types.ObjectId, ref: 'CV' }
+    primary_cv_id: { type: Schema.Types.ObjectId, ref: 'CV' },
+
+    // Career Preferences & Profiling
+    career_pathway: { type: String },
+    target_roles: { type: [String], default: [] },
+    locations: { type: [String], default: [] },
+    experience_level: { type: String },
+    salary_range: { type: String },
+    visa_required: { type: Boolean },
+    search_status: { type: String },
+    monthly_volume: { type: String },
+    tracker_interest: { type: String },
+    autoapply_interest: { type: String },
+    candidate_name: { type: String },
+    candidate_role: { type: String },
+
+    // Canonical job-search preferences (synced to autoApplyPreferences)
+    workplace_types: { type: [String], default: [] },
+    salary_min: { type: Number },
+    salary_currency: { type: String },
+    experience_years: { type: Number },
+    max_notice_period_days: { type: Number },
+    search_intensity: { type: String },
+    expected_applications_per_month: { type: Number },
+    application_mode: { type: String }
+  },
+  autoApplyPreferences: {
+    type: Schema.Types.Mixed,
+    default: () => ({
+      enabled: false,
+      targetRoles: [],
+      locations: [],
+      remoteOnly: false,
+      workplaceTypes: ['remote'],
+      minSalary: 0,
+      salaryCurrency: 'INR_LPA',
+      experienceYears: 2,
+      maxNoticePeriodDays: 30,
+      maxPerDay: 25,
+      useTailoredCV: true,
+      useCoverLetter: true,
+      autoAnswerQuestions: true,
+      enabledPortals: ['naukri', 'indeed', 'greenhouse', 'adzuna'],
+      searchIntensity: 'exploring',
+      expectedApplicationsPerMonth: 50,
+      applicationMode: 'manual_review',
+    })
+  },
+  naukriIntegration: {
+    enabled: { type: Boolean, default: false },
+    connectedAt: { type: Date },
+    lastSyncedAt: { type: Date },
+    sessionStatus: {
+      type: String,
+      enum: ['active', 'expired', 'disconnected'],
+      default: 'disconnected'
+    },
+    userEmail: { type: String, trim: true },
+    encryptedCookieJar: { type: String },
+    preferences: {
+      type: Schema.Types.Mixed,
+      default: () => ({
+        targetTitles: [],
+        targetLocations: ['Bangalore', 'Remote', 'Mumbai', 'Hyderabad', 'Pune'],
+        minCtcLakhs: 0,
+        experienceYears: 2,
+        maxNoticePeriodDays: 30,
+        dailyLimit: 25,
+        autoApplyEnabled: false,
+      })
+    },
+    stats: {
+      type: Schema.Types.Mixed,
+      default: () => ({
+        totalFetched: 0,
+        totalApplied: 0,
+      })
+    }
+  },
+  indeedIntegration: {
+    enabled: { type: Boolean, default: false },
+    connectedAt: { type: Date },
+    lastSyncedAt: { type: Date },
+    sessionStatus: {
+      type: String,
+      enum: ['active', 'expired', 'disconnected'],
+      default: 'disconnected'
+    },
+    userEmail: { type: String, trim: true },
+    encryptedCookieJar: { type: String },
+    preferences: {
+      type: Schema.Types.Mixed,
+      default: () => ({
+        targetTitles: [],
+        targetLocations: ['London', 'Remote', 'New York', 'Bangalore'],
+        minSalary: 0,
+        salaryCurrency: 'USD',
+        remoteOnly: false,
+        dailyLimit: 25,
+        autoApplyEnabled: false,
+      })
+    },
+    stats: {
+      type: Schema.Types.Mixed,
+      default: () => ({
+        totalFetched: 0,
+        totalApplied: 0,
+      })
+    }
   }
 }, {
   timestamps: true,

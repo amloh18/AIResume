@@ -8,12 +8,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   // Check if user is authenticated and is an admin
   const authResult = await getAuthenticatedUser();
   const isAdmin = authResult?.user?.role === 'admin' || authResult?.user?.role === 'superadmin';
-  const isB2B = !!(authResult?.user as any)?.b2b?.tenantId;
 
   return (
     <AdminThemeEnforcer>
       <div className={`min-h-screen ${ADMIN_THEME.page.background} ${ADMIN_THEME.text.primary}`}>
-        <AdminLayoutClient isAdmin={isAdmin} isB2B={isB2B}>
+        <AdminLayoutClient isAdmin={isAdmin}>
           {children}
         </AdminLayoutClient>
       </div>

@@ -19,7 +19,7 @@ export interface Job {
   remote: boolean;
   postedDate: string;
   applicationDeadline?: string;
-  status: 'active' | 'closed' | 'draft';
+  status: 'active' | 'closed' | 'saved';
   userId: string;
   createdAt: string;
   updatedAt: string;

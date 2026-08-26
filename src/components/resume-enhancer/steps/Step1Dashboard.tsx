@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import Logo from '@/components/ui/Logo';
 import { Upload, FileText, Files, Gauge, Edit3, CheckCircle2, Loader2, Briefcase, Sparkles, AlertTriangle, FolderOpen, Edit2, Copy, Plus, Grid, List, LayoutGrid, Trash2, SlidersHorizontal, ChevronDown, ChevronRight, CornerDownRight } from 'lucide-react';
-import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
 import { CVJourneyLookupService } from '@/lib/services/cvJourneyLookupService';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
 import { UnifiedCVDataStructure, DEFAULT_UNIFIED_CV_DATA } from '@/types/unified-cv-schema';
@@ -13,6 +12,7 @@ import { sanitizeErrorMessage } from '@/lib/api/error-handler';
 import JDInputPanel from '@/components/resume-enhancer/JDInputPanel';
 import { useUnifiedAuth } from '@/lib/hooks/useUnifiedAuth';
 import { authenticatedFetchWithUserId } from '@/lib/utils/apiUtils';
+import { getCvScoreForDisplay } from '@/lib/utils/cv-scoring';
 import CVPreviewThumbnail from '@/components/dashboard/CVPreviewThumbnail';
 import CoverLetterPreview from '@/components/cv-preview/CoverLetterPreview';
 import { getAllTemplates } from '@/lib/templates/template-utils';
@@ -25,10 +25,12 @@ let cachedExistingCVs: ExistingCV[] | null = null;
 let cachedExistingCoverLetters: any[] | null = null;
 let cachedDraftCV: any | null = null;
 let lastFetchTime = 0;
+let cacheUserId: string | null = null;
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 export const invalidateStep1Cache = () => { 
   lastFetchTime = 0; 
+  cacheUserId = null;
   cachedDraftCV = null;
   cachedExistingCVs = null;
   cachedExistingCoverLetters = null;
@@ -256,11 +258,11 @@ const CVPairThumbnail: React.FC<CVPairThumbnailProps> = ({
             </h4>
             <div className="flex items-center justify-between gap-2 mt-1">
               <p className="text-[9px] sm:text-[10px] text-white/60 font-medium flex items-center gap-1">
-                <span className="w-1 h-1 bg-[#80FF00] rounded-full shadow-[0_0_6px_rgba(128,255,0,0.6)]" />
+                <span className="w-1 h-1 bg-[#013f2e] rounded-full shadow-[0_0_6px_rgba(1, 63, 46,0.6)]" />
                 {getRelativeTime(cv.updatedAt || cv.createdAt)}
               </p>
               {getScoreForCV(cv) !== undefined && (
-                <span className="text-[9px] sm:text-[10px] font-semibold text-[#80FF00] flex items-center gap-0.5 shrink-0">
+                <span className="text-[9px] sm:text-[10px] font-semibold text-[#013f2e] flex items-center gap-0.5 shrink-0">
                   {getScoreForCV(cv)}% ATS
                 </span>
               )}
@@ -306,7 +308,7 @@ const CVPairThumbnail: React.FC<CVPairThumbnailProps> = ({
                 {firstCL.title || 'Untitled Cover Letter'}
               </h4>
               <p className="text-[9px] sm:text-[10px] text-white/60 font-medium flex items-center gap-1 mt-1">
-                <span className="w-1 h-1 bg-[#80FF00] rounded-full shadow-[0_0_6px_rgba(128,255,0,0.6)]" />
+                <span className="w-1 h-1 bg-[#013f2e] rounded-full shadow-[0_0_6px_rgba(1, 63, 46,0.6)]" />
                 {getRelativeTime(firstCL.updatedAt || firstCL.createdAt)}
               </p>
             </div>
@@ -343,7 +345,6 @@ export default function Step1Dashboard({
 }: Step1DashboardProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { isDesktopExpanded } = useMobileSidebar();
   const { state, dispatch, setFresherMode, detectFresherMode, determineCVType, setJdText, goToStep, setTemplateOverlayOpen } = useResumeEnhancer();
   const { user } = useUnifiedAuth();
   const [parseMethod, setParseMethod] = useState<'upload' | 'manual' | 'job' | 'linkedin' | null>(null);
@@ -364,7 +365,6 @@ export default function Step1Dashboard({
   const [forcedCvType, setForcedCvType] = useState<'master' | 'journey' | 'standalone' | null>(null);
   const [isCreatingBlank, setIsCreatingBlank] = useState(false);
   const [viewLayout, setViewLayout] = useState<'grid' | 'list' | 'compact'>('grid');
-  const [isDocumentsPanelExpanded, setIsDocumentsPanelExpanded] = useState(false);
   const [cvJourneysMap, setCvJourneysMap] = useState<Map<string, any>>(new Map());
 
   useEffect(() => {
@@ -485,17 +485,26 @@ export default function Step1Dashboard({
     }
   };
 
-  const getScoreForCV = (cv: any): number | undefined => {
-    return cv.metadata?.surgeonAnalysis?.scoreReport?.overall_score
-      ?? cv.scoreReport?.overall_score
-      ?? (typeof cv.atsScore === 'number' ? cv.atsScore : undefined)
-      ?? cv.metadata?.atsScore;
-  };
+  const getScoreForCV = getCvScoreForDisplay;
   const cvsWithAts = existingCVs.filter(cv => getScoreForCV(cv) !== undefined);
   const averageATSScore = cvsWithAts.length > 0 
     ? Math.round(cvsWithAts.reduce((sum, cv) => sum + (getScoreForCV(cv) ?? 0), 0) / cvsWithAts.length) 
     : 0;
   const topSectionRef = React.useRef<HTMLDivElement>(null);
+  const pendingTimersRef = React.useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  React.useEffect(() => {
+    return () => {
+      pendingTimersRef.current.forEach(t => clearTimeout(t));
+      pendingTimersRef.current = [];
+    };
+  }, []);
+
+  const scheduleTimer = (fn: () => void, ms: number) => {
+    const timer = setTimeout(fn, ms);
+    pendingTimersRef.current.push(timer);
+    return timer;
+  };
   
 
   
@@ -525,7 +534,8 @@ export default function Step1Dashboard({
 
   // Fetch existing CVs on mount
   const fetchExistingCVs = useCallback(async () => {
-    if (cachedExistingCVs && Date.now() - lastFetchTime < CACHE_TTL) {
+    const cacheScope = user?.id ?? 'guest';
+    if (cacheUserId === cacheScope && cachedExistingCVs && Date.now() - lastFetchTime < CACHE_TTL) {
       setExistingCVs(cachedExistingCVs);
       return;
     }
@@ -536,6 +546,7 @@ export default function Step1Dashboard({
         const data = await response.json();
         const cvs = data.cvs || data.data?.cvs || [];
         cachedExistingCVs = cvs;
+        cacheUserId = cacheScope;
         lastFetchTime = Date.now();
         setExistingCVs(cvs);
         const cvIds = cvs.map((c: any) => String(c.id || c._id));
@@ -553,7 +564,8 @@ export default function Step1Dashboard({
   }, [user?.id]);
 
   const fetchDraftCV = useCallback(async () => {
-    if (cachedDraftCV && Date.now() - lastFetchTime < CACHE_TTL) {
+    const cacheScope = user?.id ?? 'guest';
+    if (cacheUserId === cacheScope && cachedDraftCV && Date.now() - lastFetchTime < CACHE_TTL) {
       setDraftCV(cachedDraftCV);
       return;
     }
@@ -563,6 +575,7 @@ export default function Step1Dashboard({
         const data = await response.json();
         if (data.success && data.data) {
           cachedDraftCV = data.data;
+          cacheUserId = cacheScope;
           setDraftCV(data.data);
         } else {
           cachedDraftCV = null;
@@ -572,11 +585,12 @@ export default function Step1Dashboard({
     } catch (error) {
       console.error('Failed to load draft CV:', error);
     }
-  }, []);
+  }, [user?.id]);
 
   const fetchExistingCoverLetters = useCallback(async () => {
     if (!user?.id) return;
-    if (cachedExistingCoverLetters && Date.now() - lastFetchTime < CACHE_TTL) {
+    const cacheScope = user.id;
+    if (cacheUserId === cacheScope && cachedExistingCoverLetters && Date.now() - lastFetchTime < CACHE_TTL) {
       setExistingCoverLetters(cachedExistingCoverLetters);
       return;
     }
@@ -587,6 +601,7 @@ export default function Step1Dashboard({
         const data = await response.json();
         const cls = data.coverLetters || data.data?.coverLetters || [];
         cachedExistingCoverLetters = cls;
+        cacheUserId = cacheScope;
         setExistingCoverLetters(cls);
       }
     } catch (error) {
@@ -836,7 +851,7 @@ export default function Step1Dashboard({
       setUploadStatus('success');
 
       // Wait a moment to show success, then complete with fresher detection
-      setTimeout(() => {
+      scheduleTimer(() => {
         completeParsing(result);
       }, 1000);
 
@@ -875,7 +890,7 @@ export default function Step1Dashboard({
       setIsCreatingBlank(true);
       try {
         const payload = {
-          title: cvType === 'master' ? 'Master CV' : 'Standalone CV',
+          title: cvType === 'master' ? 'Primary Profile' : 'Standalone CV',
           cvData: freshCvData,
           cvType: cvType,
           status: 'draft',
@@ -894,7 +909,7 @@ export default function Step1Dashboard({
         const result = await response.json().catch(() => ({}));
         
         if (response.status === 409 && result.requiresMasterCV) {
-          toast.error(result.error || 'Please create your Master CV first.');
+          toast.error(result.error || 'Please create your Profile first.');
           return;
         }
 
@@ -958,7 +973,7 @@ export default function Step1Dashboard({
         setUploadProgress(80);
         
         // Wait a moment to show progress
-        setTimeout(() => {
+        scheduleTimer(() => {
           setUploadProgress(100);
           setUploadStatus('success');
           setIsLinkedInImporting(false);
@@ -1031,14 +1046,20 @@ export default function Step1Dashboard({
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: 20 }}
-          ref={scrollContainerRef}
-          className="step-one-shell flex flex-col h-full overflow-y-auto custom-scrollbar bg-[var(--bg-primary)] scroll-smooth"
-          onScroll={handleScroll}
+          className="step-one-shell dashboard-workspace flex flex-col h-full overflow-hidden pl-3 lg:pl-0 pb-3"
         >
+          {/* Off-white rounded content card — matches the dashboard workspace */}
+          <div className="dashboard-content-card rounded-2xl border border-[var(--border-primary)] shadow-sm h-full min-h-0 flex flex-col overflow-hidden mr-3">
+            <div
+              ref={scrollContainerRef}
+              className="flex-1 min-h-0 overflow-y-auto custom-scrollbar scroll-smooth"
+              onScroll={handleScroll}
+            >
+              <div className="min-h-full flex flex-col">
 
 
         {/* Top Section */}
-        <div ref={topSectionRef} className="step-one-hero relative z-10 w-full flex flex-col min-h-[30vh] pt-6 sm:pt-8 pb-4 sm:pb-6">
+        <div ref={topSectionRef} className="step-one-hero relative z-10 w-full flex flex-col shrink-0 min-h-[30vh] pt-6 sm:pt-8 pb-4 sm:pb-6">
           <div className="w-full max-w-7xl mx-auto px-4 sm:px-8">
             <div
               className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 sm:gap-6 mb-5 sm:mb-7 origin-bottom w-full px-1 lg:relative"
@@ -1122,7 +1143,7 @@ export default function Step1Dashboard({
 
 {/* Action Cards Grid - horizontal scroll on mobile, grid on sm+ */}
             <div
-              className="relative z-20 flex sm:grid gap-3 sm:gap-4 origin-top sm:grid-cols-2 lg:grid-cols-3 w-full overflow-x-auto sm:overflow-x-visible pb-4 sm:pb-20 snap-x snap-mandatory sm:snap-none scroll-pl-4 -mx-4 px-4 sm:mx-0 sm:px-0"
+              className="relative z-20 flex sm:grid gap-3 sm:gap-4 origin-top sm:grid-cols-2 lg:grid-cols-3 w-full overflow-x-auto sm:overflow-x-visible pb-4 sm:pb-8 snap-x snap-mandatory sm:snap-none scroll-pl-4 -mx-4 px-4 sm:mx-0 sm:px-0"
               style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
             {activeTab === 'cvs' ? (
@@ -1137,7 +1158,7 @@ export default function Step1Dashboard({
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-lime-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                   <div className="relative flex flex-col items-center space-y-3 sm:space-y-4">
-                    <div className="w-12 h-12 sm:w-14 sm:h-14 bg-lime-500/10 border border-lime-500/30 text-lime-550 dark:bg-[#80FF00]/10 dark:border-[#80FF00]/20 dark:text-[#80FF00] rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-all duration-500">
+                    <div className="w-12 h-12 sm:w-14 sm:h-14 bg-lime-500/10 border border-lime-500/30 text-lime-550 dark:bg-[#013f2e]/10 dark:border-[#013f2e]/20 dark:text-[#013f2e] rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-all duration-500">
                       {isCreatingBlank ? <Loader2 className="w-6 h-6 sm:w-7 sm:h-7 animate-spin" /> : <Plus className="w-6 h-6 sm:w-7 sm:h-7 stroke-[2.5]" />}
                     </div>
                     <div>
@@ -1158,19 +1179,19 @@ export default function Step1Dashboard({
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-lime-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                   <div className="relative flex flex-col items-center space-y-3 sm:space-y-4">
-                    <div className="w-12 h-12 sm:w-14 sm:h-14 bg-lime-500/10 border border-lime-500/30 text-lime-550 dark:bg-[#80FF00]/10 dark:border-[#80FF00]/20 dark:text-[#80FF00] rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-all duration-500">
+                    <div className="w-12 h-12 sm:w-14 sm:h-14 bg-lime-500/10 border border-lime-500/30 text-lime-550 dark:bg-[#013f2e]/10 dark:border-[#013f2e]/20 dark:text-[#013f2e] rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-all duration-500">
                       {isDuplicating ? <Loader2 className="w-6 h-6 sm:w-7 sm:h-7 animate-spin" /> : <Copy className="w-6 h-6 sm:w-7 sm:h-7 stroke-[2.5]" />}
                     </div>
                     <div>
-                      <h3 className="text-lg sm:text-xl font-black text-gray-900 dark:text-white mb-1 tracking-tight">Duplicate Primary CV</h3>
+                      <h3 className="text-lg sm:text-xl font-black text-gray-900 dark:text-white mb-1 tracking-tight">Duplicate Profile</h3>
                       <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 font-medium leading-relaxed">
                         Create a copy of your <br className="hidden xs:block" />
-                        master CV.
+                        profile.
                       </p>
                     </div>
                     {!userHasMasterCV && (
                       <span className="text-[9px] sm:text-[10px] font-black px-3 sm:px-4 py-1 sm:py-1.5 bg-red-100 dark:bg-red-500/10 text-red-500 rounded-full">
-                        Requires Master CV
+                        Requires Profile
                       </span>
                     )}
                   </div>
@@ -1212,7 +1233,7 @@ export default function Step1Dashboard({
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-lime-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                   <div className="relative flex flex-col items-center space-y-3 sm:space-y-4">
-                    <div className="w-12 h-12 sm:w-14 sm:h-14 bg-lime-500/10 border border-lime-500/30 text-lime-550 dark:bg-[#80FF00]/10 dark:border-[#80FF00]/20 dark:text-[#80FF00] rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-all duration-500">
+                    <div className="w-12 h-12 sm:w-14 sm:h-14 bg-lime-500/10 border border-lime-500/30 text-lime-550 dark:bg-[#013f2e]/10 dark:border-[#013f2e]/20 dark:text-[#013f2e] rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-all duration-500">
                       <Sparkles className="w-6 h-6 sm:w-7 sm:h-7 stroke-[2.5]" />
                     </div>
                     <div>
@@ -1233,7 +1254,7 @@ export default function Step1Dashboard({
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-lime-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                   <div className="relative flex flex-col items-center space-y-3 sm:space-y-4">
-                    <div className="w-12 h-12 sm:w-14 sm:h-14 bg-lime-500/10 border border-lime-500/30 text-lime-550 dark:bg-[#80FF00]/10 dark:border-[#80FF00]/20 dark:text-[#80FF00] rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-all duration-500">
+                    <div className="w-12 h-12 sm:w-14 sm:h-14 bg-lime-500/10 border border-lime-500/30 text-lime-550 dark:bg-[#013f2e]/10 dark:border-[#013f2e]/20 dark:text-[#013f2e] rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-all duration-500">
                       <Edit3 className="w-6 h-6 sm:w-7 sm:h-7 stroke-[2.5]" />
                     </div>
                     <div>
@@ -1255,39 +1276,10 @@ export default function Step1Dashboard({
           </div>
         </div>
 
-        {/* Continue Editing Section (Floats on bottom, pullable drawer sheet layout) */}
+        {/* Your Documents — merged into the page flow (was a slide-up panel) */}
         {!isGuestMode && (
-          <motion.div 
-            layout
-            initial={{ y: '30vh' }}
-            animate={{ 
-              y: isDocumentsPanelExpanded ? 0 : 'calc(100% - 450px)',
-            }}
-            transition={{ type: 'spring', damping: 28, stiffness: 220 }}
-            className={`fixed bottom-0 left-0 right-0 mx-auto w-[96vw] h-[85vh] z-[90] flex flex-col bg-[var(--bg-primary)] border-t border-x border-[color:var(--border-primary)] shadow-[0_-20px_50px_rgba(0,0,0,0.18)] rounded-t-[32px] overflow-hidden no-print transition-all duration-300 ${
-              isDesktopExpanded ? 'lg:left-[280px] lg:w-[calc(100vw-320px)]' : 'lg:left-[84px] lg:w-[calc(100vw-120px)]'
-            }`}
-          >
-            {/* Drawer Pull Grab Handle Bar */}
-            <div 
-              onClick={() => setIsDocumentsPanelExpanded(!isDocumentsPanelExpanded)}
-              className="w-full py-4 shrink-0 flex flex-col items-center cursor-pointer hover:bg-gray-500/5 transition-colors border-b border-[color:var(--border-primary)] select-none bg-[var(--bg-primary)]"
-            >
-              <div className="w-14 h-1.5 bg-gray-300 dark:bg-gray-700 rounded-full transition-all duration-300 group-hover:bg-emerald-500" />
-              <div className="flex items-center gap-1.5 mt-2.5">
-                <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-widest text-[#80FF00] flex items-center gap-1">
-                  Your Documents
-                </span>
-                <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">
-                  • {isDocumentsPanelExpanded ? 'Click to Minimize' : 'Pull Up to View All Resumes & Cover Letters'}
-                </span>
-              </div>
-            </div>
-
-            {/* Scrollable Container inside sheet */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-6 sm:p-12 pb-32">
-              <div className="w-full max-w-7xl mx-auto">
-                <div className="step-one-documents-header flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-5 pb-5 border-b border-[color:var(--border-primary)] pt-5">
+          <div className="w-full max-w-7xl mx-auto px-4 sm:px-8 pb-12">
+                <div className="step-one-documents-header flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-5 pb-5 border-b border-[color:var(--border-primary)] pt-0">
                   <div>
                     <h3 className="mt-1 text-xs sm:text-sm text-[color:var(--text-secondary)]">Your Documents</h3>
                     <p className="text-xl sm:text-2xl font-black text-[color:var(--text-primary)] tracking-tight text-left">All your resumes and cover letters in one place.</p>
@@ -1318,7 +1310,7 @@ export default function Step1Dashboard({
                         onClick={() => setViewLayout('grid')}
                         className={`flex items-center gap-1 px-4 h-full rounded-full text-xs font-bold transition-all ${
                           viewLayout === 'grid'
-                            ? 'bg-lime-500 text-black dark:bg-[#0d100a] dark:text-[#80FF00] dark:border dark:border-[#80FF00]/25 shadow-md'
+                            ? 'bg-lime-500 text-black dark:bg-[#0d100a] dark:text-[#013f2e] dark:border dark:border-[#013f2e]/25 shadow-md'
                             : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
                         }`}
                       >
@@ -1329,7 +1321,7 @@ export default function Step1Dashboard({
                         onClick={() => setViewLayout('compact')}
                         className={`flex items-center gap-1 px-4 h-full rounded-full text-xs font-bold transition-all ${
                           viewLayout === 'compact'
-                            ? 'bg-lime-500 text-black dark:bg-[#0d100a] dark:text-[#80FF00] dark:border dark:border-[#80FF00]/25 shadow-md'
+                            ? 'bg-lime-500 text-black dark:bg-[#0d100a] dark:text-[#013f2e] dark:border dark:border-[#013f2e]/25 shadow-md'
                             : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
                         }`}
                       >
@@ -1340,7 +1332,7 @@ export default function Step1Dashboard({
                         onClick={() => setViewLayout('list')}
                         className={`flex items-center gap-1 px-4 h-full rounded-full text-xs font-bold transition-all ${
                           viewLayout === 'list'
-                            ? 'bg-lime-500 text-black dark:bg-[#0d100a] dark:text-[#80FF00] dark:border dark:border-[#80FF00]/25 shadow-md'
+                            ? 'bg-lime-500 text-black dark:bg-[#0d100a] dark:text-[#013f2e] dark:border dark:border-[#013f2e]/25 shadow-md'
                             : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
                         }`}
                       >
@@ -1506,7 +1498,7 @@ export default function Step1Dashboard({
                              {cl.title || 'Untitled Cover Letter'}
                            </h4>
                            <p className="text-[9px] sm:text-[10px] text-white/60 font-medium flex items-center gap-1 mt-1">
-                             <span className="w-1 h-1 bg-[#80FF00] rounded-full shadow-[0_0_6px_rgba(128,255,0,0.6)]" />
+                             <span className="w-1 h-1 bg-[#013f2e] rounded-full shadow-[0_0_6px_rgba(1, 63, 46,0.6)]" />
                              {getRelativeTime(cl.updatedAt || cl.createdAt)}
                            </p>
                          </div>
@@ -1607,7 +1599,7 @@ export default function Step1Dashboard({
                                 <tr className="border-b border-gray-250 dark:border-white/5 hover:bg-gray-50/50 dark:hover:bg-white/[0.02] transition-colors">
                                   <td className="px-6 py-4">
                                     <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider ${
-                                      cv.cvType === 'master' ? 'bg-purple-600 text-white' : cv.cvType === 'journey' ? 'bg-lime-500 text-black dark:bg-[#80FF00]/10 dark:text-[#80FF00]' : 'bg-blue-600 text-white'
+                                      cv.cvType === 'master' ? 'bg-purple-600 text-white' : cv.cvType === 'journey' ? 'bg-lime-500 text-black dark:bg-[#013f2e]/10 dark:text-[#013f2e]' : 'bg-blue-600 text-white'
                                     }`}>
                                       {cv.cvType === 'master' ? 'Primary' : cv.cvType === 'journey' ? 'Job Based' : 'Custom'}
                                     </span>
@@ -1630,9 +1622,9 @@ export default function Step1Dashboard({
                                     Edited {getRelativeTime(cv.updatedAt || cv.createdAt)}
                                   </td>
                                   <td className="px-6 py-4">
-                                    {(typeof cv.atsScore === 'number' || (cv as any).metadata?.atsScore !== undefined) ? (
-                                      <span className="text-xs font-black text-lime-600 dark:text-[#80FF00] bg-lime-500/10 dark:bg-[#80FF00]/10 px-2.5 py-0.5 rounded-full">
-                                        {cv.atsScore ?? (cv as any).metadata?.atsScore}%
+                                    {getScoreForCV(cv) !== undefined ? (
+                                      <span className="text-xs font-black text-lime-600 dark:text-[#013f2e] bg-lime-500/10 dark:bg-[#013f2e]/10 px-2.5 py-0.5 rounded-full">
+                                        {getScoreForCV(cv)}%
                                       </span>
                                     ) : (
                                       <span className="text-xs text-gray-400">—</span>
@@ -1642,14 +1634,14 @@ export default function Step1Dashboard({
                                     <div className="flex items-center justify-end gap-1.5">
                                       <button
                                         onClick={() => handleEditExistingCV(cv)}
-                                        className="p-2 bg-gray-100 hover:bg-lime-500 hover:text-black dark:bg-[#1a230f]/60 dark:hover:bg-[#80FF00] dark:hover:text-black text-gray-700 dark:text-gray-300 rounded-lg transition-all"
+                                        className="p-2 bg-gray-100 hover:bg-lime-500 hover:text-black dark:bg-[#1a230f]/60 dark:hover:bg-[#013f2e] dark:hover:text-black text-gray-700 dark:text-gray-300 rounded-lg transition-all"
                                         title="Edit"
                                       >
                                         <Edit2 className="w-4 h-4" />
                                       </button>
                                       <button
                                         onClick={(e) => handleDuplicateCV(cv.id || cv._id || '', cv.title, e)}
-                                        className="p-2 bg-gray-100 hover:bg-lime-500 hover:text-black dark:bg-[#1a230f]/60 dark:hover:bg-[#80FF00] dark:hover:text-black text-gray-700 dark:text-gray-300 rounded-lg transition-all"
+                                        className="p-2 bg-gray-100 hover:bg-lime-500 hover:text-black dark:bg-[#1a230f]/60 dark:hover:bg-[#013f2e] dark:hover:text-black text-gray-700 dark:text-gray-300 rounded-lg transition-all"
                                         title="Duplicate"
                                       >
                                         <Copy className="w-4 h-4" />
@@ -1695,14 +1687,14 @@ export default function Step1Dashboard({
                                       <div className="flex items-center justify-end gap-1.5">
                                         <button
                                           onClick={() => router.push(`/editor?mode=edit-cover-letter&coverLetterId=${cl.id || cl._id}`)}
-                                          className="p-1.5 bg-gray-100 hover:bg-lime-500 hover:text-black dark:bg-[#1a230f]/60 dark:hover:bg-[#80FF00] dark:hover:text-black text-gray-700 dark:text-gray-300 rounded-lg transition-all"
+                                          className="p-1.5 bg-gray-100 hover:bg-lime-500 hover:text-black dark:bg-[#1a230f]/60 dark:hover:bg-[#013f2e] dark:hover:text-black text-gray-700 dark:text-gray-300 rounded-lg transition-all"
                                           title="Edit Cover Letter"
                                         >
                                           <Edit2 className="w-3.5 h-3.5" />
                                         </button>
                                         <button
                                           onClick={(e) => handleDeleteCoverLetter(cl.id || cl._id || '', e)}
-                                          className="p-1.5 bg-gray-100 hover:bg-red-500 hover:text-white dark:bg-[#1a230f]/60 dark:hover:bg-[#80FF00] dark:hover:text-black text-red-500 dark:text-red-400 rounded-lg transition-all"
+                                          className="p-1.5 bg-gray-100 hover:bg-red-500 hover:text-white dark:bg-[#1a230f]/60 dark:hover:bg-[#013f2e] dark:hover:text-black text-red-500 dark:text-red-400 rounded-lg transition-all"
                                           title="Delete Cover Letter"
                                         >
                                           <Trash2 className="w-3.5 h-3.5" />
@@ -1740,14 +1732,14 @@ export default function Step1Dashboard({
                                 <div className="flex items-center justify-end gap-1.5">
                                   <button
                                     onClick={() => router.push(`/editor?mode=edit-cover-letter&coverLetterId=${cl.id || cl._id}`)}
-                                    className="p-2 bg-gray-100 hover:bg-lime-500 hover:text-black dark:bg-[#1a230f]/60 dark:hover:bg-[#80FF00] dark:hover:text-black text-gray-700 dark:text-gray-300 rounded-lg transition-all"
+                                    className="p-2 bg-gray-100 hover:bg-lime-500 hover:text-black dark:bg-[#1a230f]/60 dark:hover:bg-[#013f2e] dark:hover:text-black text-gray-700 dark:text-gray-300 rounded-lg transition-all"
                                     title="Edit Cover Letter"
                                   >
                                     <Edit2 className="w-4 h-4" />
                                   </button>
                                   <button
                                     onClick={(e) => handleDeleteCoverLetter(cl.id || cl._id || '', e)}
-                                    className="p-2 bg-gray-150 hover:bg-red-500 hover:text-white dark:bg-[#1a230f]/60 dark:hover:bg-[#80FF00] dark:hover:text-black text-gray-700 dark:text-gray-300 rounded-lg transition-all"
+                                    className="p-2 bg-gray-150 hover:bg-red-500 hover:text-white dark:bg-[#1a230f]/60 dark:hover:bg-[#013f2e] dark:hover:text-black text-gray-700 dark:text-gray-300 rounded-lg transition-all"
                                     title="Delete Cover Letter"
                                   >
                                     <Trash2 className="w-4 h-4" />
@@ -1773,9 +1765,10 @@ export default function Step1Dashboard({
               )}
 
             </div>
+          )}
           </div>
-        </motion.div>
-        )}
+          </div>
+        </div>
         </motion.div>
       )}
 
@@ -1795,8 +1788,8 @@ export default function Step1Dashboard({
             >
             {uploadStatus === 'idle' && (
               <div className="text-center">
-                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-[#80FF00]/15 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
-                  <FileText className="w-8 h-8 sm:w-10 sm:h-10 text-[#80FF00]" />
+                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-[#013f2e]/15 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
+                  <FileText className="w-8 h-8 sm:w-10 sm:h-10 text-[#013f2e]" />
                 </div>
                 <h3 className="text-xl sm:text-2xl font-bold text-[color:var(--text-primary)] mb-2 sm:mb-4">
                   Upload Your Resume
@@ -1812,7 +1805,7 @@ export default function Step1Dashboard({
                     className="hidden"
                     disabled={isUploading}
                   />
-                  <span className="inline-block px-6 sm:px-8 py-2.5 sm:py-3 bg-lime-500 dark:bg-[#80FF00] hover:bg-lime-600 dark:hover:bg-[#70e600] text-black rounded-xl font-bold transition-all shadow-lg hover:shadow-xl hover:scale-105 text-sm sm:text-base">
+                  <span className="inline-block px-6 sm:px-8 py-2.5 sm:py-3 bg-lime-500 dark:bg-[#013f2e] hover:bg-lime-600 dark:hover:bg-[#02523c] text-black rounded-xl font-bold transition-all shadow-lg hover:shadow-xl hover:scale-105 text-sm sm:text-base">
                     Choose File
                   </span>
                 </label>
@@ -1861,8 +1854,8 @@ export default function Step1Dashboard({
 
             {(uploadStatus === 'uploading' || uploadStatus === 'parsing') && (
               <div className="text-center">
-                <div className="w-20 h-20 bg-[#80FF00]/15 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse">
-                  <FileText className="w-10 h-10 text-[#80FF00]" />
+                <div className="w-20 h-20 bg-[#013f2e]/15 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse">
+                  <FileText className="w-10 h-10 text-[#013f2e]" />
                 </div>
                 <h3 className="text-2xl font-bold text-[color:var(--text-primary)] mb-6">
                   {uploadStatus === 'uploading' ? 'Uploading...' : 'Parsing Your Resume...'}
@@ -1880,16 +1873,16 @@ export default function Step1Dashboard({
                           <li
                             key={index}
                             className={`flex items-center gap-3 text-sm transition-colors ${isCompleted
-                              ? 'text-[#80FF00]'
+                              ? 'text-[#013f2e]'
                               : isCurrent
-                                ? 'text-[#80FF00] font-medium'
+                                ? 'text-[#013f2e] font-medium'
                                 : 'text-[color:var(--text-tertiary)]'
                               }`}
                           >
                             {isCompleted ? (
-                              <CheckCircle2 className="w-5 h-5 text-[#80FF00] flex-shrink-0" />
+                              <CheckCircle2 className="w-5 h-5 text-[#013f2e] flex-shrink-0" />
                             ) : isCurrent ? (
-                              <Loader2 className="w-5 h-5 text-[#80FF00] flex-shrink-0 animate-spin" />
+                              <Loader2 className="w-5 h-5 text-[#013f2e] flex-shrink-0 animate-spin" />
                             ) : (
                               <div className="w-5 h-5 rounded-full border-2 border-[color:var(--text-tertiary)] flex-shrink-0" />
                             )}
@@ -1903,7 +1896,7 @@ export default function Step1Dashboard({
 
                 <div className="w-full bg-black/10 dark:bg-white/10 rounded-full h-2 mb-4 overflow-hidden">
                   <div
-                    className="bg-[#80FF00] h-2 rounded-full transition-all duration-300"
+                    className="bg-[#013f2e] h-2 rounded-full transition-all duration-300"
                     style={{ width: `${uploadProgress}%` }}
                   />
                 </div>
@@ -1915,8 +1908,8 @@ export default function Step1Dashboard({
 
             {uploadStatus === 'success' && (
               <div className="text-center">
-                <div className="w-20 h-20 bg-[#80FF00]/15 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <FileText className="w-10 h-10 text-[#80FF00]" />
+                <div className="w-20 h-20 bg-[#013f2e]/15 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <FileText className="w-10 h-10 text-[#013f2e]" />
                 </div>
                 <h3 className="text-2xl font-bold text-[color:var(--text-primary)] mb-4">
                   Successfully Parsed!
@@ -1944,7 +1937,7 @@ export default function Step1Dashboard({
                     setErrorMessage('');
                     setUploadProgress(0);
                   }}
-                  className="px-6 py-2 bg-lime-500 dark:bg-[#80FF00] hover:bg-lime-600 dark:hover:bg-[#70e600] text-black rounded-lg font-medium transition-colors"
+                  className="px-6 py-2 bg-lime-500 dark:bg-[#013f2e] hover:bg-lime-600 dark:hover:bg-[#02523c] text-black rounded-lg font-medium transition-colors"
                 >
                   Try Again
                 </button>

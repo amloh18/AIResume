@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import DraftDetailModal from './DraftDetailModal';
 import { DRAFT_STATUSES, DEFAULT_PAGE_SIZE } from '@/lib/config/adminConstants';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useDebounce } from '@/hooks/useDebounce';
 
 interface Draft {
   id: string;
@@ -70,6 +71,11 @@ const DraftManagement: React.FC = () => {
     if (mounted) fetchDrafts();
   }, [page, filterStatus, mounted]);
 
+  const debouncedSearch = useDebounce(searchTerm, 300);
+  useEffect(() => {
+    if (mounted) { setPage(1); fetchDrafts(); }
+  }, [debouncedSearch, mounted]);
+
   const handleViewDetails = (draft: Draft) => {
     setSelectedDraft(draft);
     setIsDetailModalOpen(true);
@@ -79,8 +85,14 @@ const DraftManagement: React.FC = () => {
     if (!confirm('Delete this draft permanently?')) return;
     try {
       const response = await fetch(`/api/admin/drafts/${draftId}`, { method: 'DELETE' });
-      if (response.ok) setDrafts(drafts.filter(d => d.id !== draftId));
-    } catch (err) {}
+      if (response.ok) {
+        setDrafts(drafts.filter(d => d.id !== draftId));
+      } else {
+        console.error('Failed to delete draft');
+      }
+    } catch (err) {
+      console.error('Delete error:', err);
+    }
   };
 
   const container = {

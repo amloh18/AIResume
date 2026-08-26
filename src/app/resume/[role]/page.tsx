@@ -288,13 +288,13 @@ export async function generateMetadata({ params }: { params: Promise<{ role: str
   
   if (!data) {
     return {
-      title: 'Resume Builder - Create Professional Resumes | CVCircle',
+      title: 'Resume Builder - Create Professional Resumes',
       description: 'Create professional, ATS-optimized resumes with our AI-powered builder.',
     }
   }
   
   return {
-    title: `${data.name} Resume - ${data.name} Resume Examples & Templates | CVCircle`,
+    title: `${data.name} Resume - ${data.name} Resume Examples & Templates`,
     description: `Create a professional ${data.name} resume with our AI-powered builder. Get ${data.name} resume examples, skills list, and expert tips. Free to start.`,
     keywords: [
       `${data.name} resume`,
@@ -309,9 +309,9 @@ export async function generateMetadata({ params }: { params: Promise<{ role: str
       canonical: `/resume/${role}`,
     },
     openGraph: {
-      title: `${data.name} Resume - Create with AI | CVCircle`,
+      title: `${data.name} Resume - Create with AI`,
       description: `Build your ${data.name} resume in minutes with our AI-powered builder.`,
-      url: `https://cvcircle.io/resume/${role}`,
+      url: `https://buildairesume.com/resume/${role}`,
       type: 'website',
     },
   }

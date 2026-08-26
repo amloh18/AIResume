@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import PromotionalOffer from '@/models/PromotionalOffer';
+import { requireAdmin } from '@/lib/middleware/admin-auth';
 
 export async function GET(request: NextRequest) {
   try {
+    await requireAdmin(request);
     await getConnection();
 
     const { searchParams } = new URL(request.url);
@@ -35,6 +37,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    await requireAdmin(request);
     await getConnection();
 
     const body = await request.json();
@@ -63,6 +66,7 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
+    await requireAdmin(request);
     await getConnection();
 
     const { offerId, ...updateData } = await request.json();
@@ -103,6 +107,7 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    await requireAdmin(request);
     await getConnection();
 
     const { searchParams } = new URL(request.url);

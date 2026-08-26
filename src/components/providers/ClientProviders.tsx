@@ -12,6 +12,7 @@ import { CreditExhaustionProvider } from '@/contexts/CreditExhaustionContext';
 import CookieConsent from '@/components/CookieConsent';
 import { ConsoleLoggerProvider } from '@/contexts/ConsoleLoggerProvider';
 import { NotificationProvider } from '@/contexts/NotificationContext';
+import { ProgressToastProvider } from '@/components/ui/ProgressToaster';
 import SessionCleanup from '@/components/SessionCleanup';
 import { setupEventErrorHandling } from '@/lib/utils/errorHandler';
 import { Toaster } from '@/components/ui/toaster';
@@ -20,6 +21,9 @@ import ClientErrorBoundary from './ClientErrorBoundary';
 import FeaturePromotionProvider from '@/components/promotions/FeaturePromotionProvider';
 import AuthModal from '@/components/auth/AuthModal';
 import ReactQueryProvider from './ReactQueryProvider';
+import ToastSuppressionGate from './ToastSuppressionGate';
+import { usePathname } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 
 interface ClientProvidersProps {
   children: ReactNode;
@@ -29,21 +33,24 @@ interface ClientProvidersProps {
 function ConditionalProviders({ children }: ClientProvidersProps) {
   return (
     <ThemeProvider>
-      <PaymentModalProvider>
-        <CreditExhaustionProvider>
-          <ConsoleLoggerProvider>
-            <FeaturePromotionProvider>
-              <PerformanceMonitor />
-              <CookieConsent />
-              <SessionCleanup />
-              <Toaster />
-              <HotToaster />
-              <AuthModal />
-              {children}
-            </FeaturePromotionProvider>
-          </ConsoleLoggerProvider>
-        </CreditExhaustionProvider>
-      </PaymentModalProvider>
+      <ProgressToastProvider>
+        <PaymentModalProvider>
+          <CreditExhaustionProvider>
+            <ConsoleLoggerProvider>
+              <FeaturePromotionProvider>
+                <PerformanceMonitor />
+                <CookieConsent />
+                <SessionCleanup />
+                <Toaster />
+                <HotToaster position="bottom-right" />
+                <ToastSuppressionGate />
+                <AuthModal />
+                {children}
+              </FeaturePromotionProvider>
+            </ConsoleLoggerProvider>
+          </CreditExhaustionProvider>
+        </PaymentModalProvider>
+      </ProgressToastProvider>
     </ThemeProvider>
   );
 }

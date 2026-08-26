@@ -3,11 +3,6 @@ import type { NextConfig } from "next";
 // Force rebuild'
 
 const nextConfig: NextConfig = {
-  typescript: {
-    // Allow production builds to succeed on Vercel despite TS errors.
-    // We lint and type-check locally via `npm run type-check`.
-    ignoreBuildErrors: true,
-  },
   // Disable Fast Refresh notifications
   devIndicators: {
     position: 'bottom-right',
@@ -16,9 +11,6 @@ const nextConfig: NextConfig = {
   webpack: (config, { dev, isServer }) => {
     // Import webpack once
     const webpack = require('webpack');
-
-    // Load environment variables at build time
-    require('dotenv').config({ path: '.env.local' });
 
     // CRITICAL: Ensure Next.js internal loaders are preserved
     // Don't modify module.rules that might affect Next.js internal loaders
@@ -199,7 +191,6 @@ const nextConfig: NextConfig = {
       config.externals = config.externals || [];
       config.externals.push({
         'tesseract.js': 'commonjs tesseract.js',
-        'canvas': 'commonjs canvas',
         '@napi-rs/canvas': 'commonjs @napi-rs/canvas',
         'puppeteer': 'commonjs puppeteer',
         'pdf2pic': 'commonjs pdf2pic',
@@ -256,10 +247,8 @@ const nextConfig: NextConfig = {
     // optimizeCss: true,
     // Optimize imports for common heavy libraries
     optimizePackageImports: [
-      'lottie-react',
       'lucide-react',
       'framer-motion',
-      '@heroicons/react',
       'recharts',
       'date-fns',
       'lodash'
@@ -273,25 +262,15 @@ const nextConfig: NextConfig = {
   staticPageGenerationTimeout: 1000,
 
   // Handle API routes properly
-  // Note: chrome-extension:// origins are handled dynamically in route handlers via setCorsHeaders()
-  // Static headers here are for web origins only
+  // Note: chrome-extension:// origins are handled dynamically in route handlers via setCorsHeaders().
+  // We intentionally do NOT set a static Access-Control-Allow-Origin here: the header must contain
+  // exactly one origin (or a wildcard), never a comma-separated list, and it must match the
+  // requesting origin. Route handlers set the correct value per-request instead.
   async headers() {
-    const allowedOrigins = process.env.NODE_ENV === 'production'
-      ? [
-        'https://cvcircle.io',
-        'https://www.cvcircle.io',
-        'https://app.cvcircle.io',
-      ]
-      : [
-        'http://localhost:3000',
-        'http://127.0.0.1:3000',
-      ];
-
     return [
       {
         source: '/api/auth/:path*',
         headers: [
-          { key: 'Access-Control-Allow-Origin', value: allowedOrigins.join(', ') },
           { key: 'Access-Control-Allow-Methods', value: 'GET, POST, PUT, DELETE, OPTIONS' },
           { key: 'Access-Control-Allow-Headers', value: 'Content-Type, Authorization, Cookie' },
           { key: 'Access-Control-Allow-Credentials', value: 'true' },
@@ -301,7 +280,6 @@ const nextConfig: NextConfig = {
       {
         source: '/api/:path*',
         headers: [
-          { key: 'Access-Control-Allow-Origin', value: allowedOrigins.join(', ') },
           { key: 'Access-Control-Allow-Methods', value: 'GET, POST, PUT, DELETE, OPTIONS' },
           { key: 'Access-Control-Allow-Headers', value: 'Content-Type, Authorization, Cookie' },
           { key: 'Access-Control-Allow-Credentials', value: 'true' },
@@ -341,7 +319,12 @@ const nextConfig: NextConfig = {
   },
   // Performance optimizations
   compiler: {
-    removeConsole: process.env.NODE_ENV === 'production',
+    // Strip dev console.log/info/debug from production builds, but KEEP console.error
+    // and console.warn so real errors are still visible in server/production logs.
+    removeConsole:
+      process.env.NODE_ENV === 'production'
+        ? { exclude: ['error', 'warn'] }
+        : false,
   },
   compress: true,
   poweredByHeader: false,
@@ -355,8 +338,45 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       {
+        source: '/dashboard/tracker',
+        destination: '/dashboard/jobs?tab=applications',
+        permanent: true,
+      },
+      {
         source: '/business',
         destination: '/b2b',
+        permanent: true,
+      },
+      // Rebrand: legacy comparison URL
+      {
+        source: '/compare/cvcircle-vs-cakeresume',
+        destination: '/compare/ai-resume-vs-cakeresume',
+        permanent: true,
+      },
+      // Rebrand: legacy blog URL
+      {
+        source: '/blog/why-cvcircle-beats-cakecv',
+        destination: '/blog/why-ai-resume-beats-cakecv',
+        permanent: true,
+      },
+      // Domain migration: redirect legacy domains to buildairesume.com
+      // (active when the app is served from these legacy domains)
+      {
+        source: '/:path*',
+        has: [{ type: 'host', value: 'cvcircle.io' }],
+        destination: 'https://buildairesume.com/:path*',
+        permanent: true,
+      },
+      {
+        source: '/:path*',
+        has: [{ type: 'host', value: 'www.cvcircle.io' }],
+        destination: 'https://buildairesume.com/:path*',
+        permanent: true,
+      },
+      {
+        source: '/:path*',
+        has: [{ type: 'host', value: 'app.cvcircle.io' }],
+        destination: 'https://buildairesume.com/:path*',
         permanent: true,
       },
     ];
@@ -366,12 +386,9 @@ const nextConfig: NextConfig = {
   serverExternalPackages: [
     'pdfjs-dist',
     '@napi-rs/canvas',
-    'canvas',
     'tesseract.js',
     'puppeteer',
     'mongoose',
-    'firebase-admin',
-    'openid-client',
     'pdf2pic',
     'pdf-parse',
     'stripe',

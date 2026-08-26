@@ -18,7 +18,7 @@ interface AnimatedCheckmarkProps {
 export const AnimatedCheckmark: React.FC<AnimatedCheckmarkProps> = ({
   show,
   size = 'md',
-  color = '#80FF00',
+  color = '#013f2e',
   className = ''
 }) => {
   const sizes = {
@@ -93,7 +93,7 @@ export const SaveIndicator: React.FC<SaveIndicatorProps> = ({
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 10 }}
-            className="flex items-center gap-1.5 text-[#80FF00]"
+            className="flex items-center gap-1.5 text-[#013f2e]"
           >
             <AnimatedCheckmark show={true} size="sm" />
             <motion.span

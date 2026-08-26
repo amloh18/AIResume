@@ -7,7 +7,7 @@ import DeferredAnalytics from '@/components/DeferredAnalytics'
 import ViewportMeta from '@/components/ViewportMeta'
 import GlobalCommandBar from '@/components/ui/GlobalCommandBar'
 import { getServerSession } from 'next-auth'
-import { authConfig } from '@/lib/auth-config'
+import { authConfig } from '@/lib/auth'
 import { geistFont } from '@/lib/fonts'
 
 // Allow Next.js to determine rendering strategy (SSG vs SSR) automatically
@@ -26,92 +26,74 @@ export const viewport: Viewport = {
   ],
 }
 
+const APP_URL = process.env.NEXTAUTH_URL || 'https://buildairesume.com';
+
 export const metadata: Metadata = {
   title: {
-    default: 'CVCIRCLE - Job Application tracker and AI based ATS Editor',
-    template: '%s | CVCIRCLE'
+    default: 'AI Resume Builder | Build an ATS-Friendly Resume with AI',
+    template: '%s | AIResume'
   },
-  description: 'CVCircle (CV Circle) - Create ATS-optimized CVs with AI assistance. Free AI career guide, professional templates, resume analysis, career coaching, interview coaching,and real-time analytics. Build your perfect resume in minutes and land your dream job.',
+  description: 'Build, optimize, and tailor an ATS-friendly resume with AI. Create professional resumes, improve your content, and prepare every application faster.',
   keywords: [
-    'CV builder',
-    'resume builder',
-    'AI CV builder',
-    'ATS optimization',
-    'ATS resume checker',
-    'professional CV',
-    'CV templates',
-    'resume templates',
-    'career tools',
-    'job application',
-    'CV maker',
-    'resume maker',
-    'AI career guide',
-    'resume analyzer',
-    'CV analyzer',
-    'ATS resume optimizer',
-    'free resume builder',
-    'online CV builder',
-    'CV Circle',
-    'cv circle',
-    'CV Circle.io',
-    'cv circle io',
-    'CV Circle platform',
-    'CV Circle app',
-    'CVCircle',
-    'cvcircle',
-    'cv circle builder',
-    'CV Circle resume builder',
-    // Advanced & Trending Keywords
+    'AI resume builder',
     'AI resume writer',
-    'automated cover letter generator',
+    'resume builder',
+    'resume maker',
+    'ATS resume builder',
+    'ATS-friendly resume',
+    'resume optimizer',
+    'AI CV builder',
+    'CV builder',
+    'resume templates',
+    'professional resume builder',
+    'job-specific resume',
+    'tailored resume',
+    'resume checker',
+    'resume score',
+    'AI cover letter generator',
     'job application tracker',
-    'AI interview coach',
-    'LinkedIn profile optimizer',
-    'career gap analysis',
-    'resume scoring',
-    'job match technology',
-    'smart job search',
-    'ATS compliance',
-    'career copilot',
-    'resume parser',
-    'job tracking system',
-    'application management',
-    'AI career insights'
+    'CV templates',
+    'professional resume',
+    'free resume builder',
+    'online resume builder',
+    'résumé builder',
+    'international CV',
+    'AI career tools'
   ],
-  authors: [{ name: 'CVCircle Team' }],
-  creator: 'CVCircle',
-  publisher: 'CVCircle',
+  authors: [{ name: 'AIResume Team' }],
+  creator: 'AIResume by Morigrid Labs',
+  publisher: 'Morigrid Labs',
   formatDetection: {
     email: false,
     address: false,
     telephone: false,
   },
-  metadataBase: new URL(process.env.NEXTAUTH_URL || 'https://cvcircle.io'),
+  metadataBase: new URL(APP_URL),
   alternates: {
     canonical: '/',
   },
   openGraph: {
     type: 'website',
     locale: 'en_US',
-    url: 'https://cvcircle.io',
-    title: 'CVCircle (CV Circle) - AI-Powered CV Builder & ATS Resume Optimizer',
-    description: 'CVCircle (CV Circle) - Create ATS-optimized CVs with AI assistance. Free AI career guide, professional templates, resume analysis, and real-time analytics. Build your perfect resume in minutes.',
-    siteName: 'CVCircle (CV Circle)',
+    url: APP_URL,
+    title: 'Build a Better Resume With AI',
+    description: 'Create an ATS-friendly resume, tailor it to every job, and apply with confidence using AI-powered resume tools.',
+    siteName: 'AIResume',
     images: [
       {
         url: '/images/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'CVCircle - AI-Powered CV Builder & ATS Resume Optimizer',
+        alt: 'AIResume - Build a Better Resume With AI',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'CVCircle (CV Circle) - AI-Powered CV Builder & ATS Resume Optimizer',
-    description: 'CVCircle (CV Circle) - Create ATS-optimized CVs with AI assistance. Free AI career guide, professional templates, and resume analysis.',
+    title: 'Build a Better Resume With AI',
+    description: 'Create an ATS-friendly resume, tailor it to every job, and apply with confidence using AI-powered resume tools.',
     images: ['/images/twitter-image.png'],
-    creator: '@cvcircle',
+    creator: '@buildairesume',
   },
   robots: {
     index: true,
@@ -130,22 +112,23 @@ export const metadata: Metadata = {
       'msvalidate.01': ['C0E623844C2A0ACD1B0528453501DDAE'],
     },
   },
-   icons: {
+    icons: {
       icon: [
-        { url: '/images/favicon.png', sizes: 'any' },
-        { url: '/images/favicon.png', sizes: '32x32', type: 'image/png' },
-        { url: '/images/favicon.png', sizes: '16x16', type: 'image/png' },
-        { url: '/images/favicon.png', sizes: '128x128', type: 'image/png' },
+        { url: '/favicon.svg', type: 'image/svg+xml' },
+        { url: '/images/favicon.svg', type: 'image/svg+xml' },
+        { url: '/images/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+        { url: '/images/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
+        { url: '/images/favicon.png', sizes: 'any', type: 'image/png' },
       ],
-      shortcut: '/images/favicon.png',
+      shortcut: '/favicon.svg',
       apple: [
-        { url: '/images/favicon.png', sizes: '180x180', type: 'image/png' },
+        { url: '/images/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
       ],
       other: [
         {
           rel: 'mask-icon',
-          url: '/images/favicon.png',
-          color: '#81ff00',
+          url: '/images/favicon.svg',
+          color: '#013f2e',
         },
       ],
     },
@@ -163,11 +146,14 @@ export default async function RootLayout({
   const session = await getServerSession(authConfig);
 
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <meta name="impact-site-verification" {...{ value: "044e0d11-071e-4480-aa4e-7fae5e6da834" }} />
         {/* Suppress third-party Chrome Extension wallet injection errors (e.g. Rabby Wallet evmAsk.js) */}
-        <script dangerouslySetInnerHTML={{ __html: `
+        <script
+          id="suppress-wallet-errors"
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={{ __html: `
           (function() {
             window.addEventListener('error', function(e) {
               if (e.message && (e.message.indexOf('ethereum') !== -1 || e.message.indexOf('evmAsk') !== -1 || (e.filename && e.filename.indexOf('evmAsk') !== -1))) {
@@ -189,16 +175,17 @@ export default async function RootLayout({
           <div className="fixed inset-0 z-[10000] flex flex-col items-center justify-center bg-[#f3f2ee] dark:bg-[#141810] overflow-hidden">
             <div className="relative w-24 h-24 flex items-center justify-center">
               {/* Concentric Rotating Rings */}
-              <div className="absolute inset-0 border-[3px] border-transparent border-t-[#81ff00] rounded-full animate-spin" style={{ animationDuration: '1.5s' }} />
-              <div className="absolute inset-2 border-[2px] border-transparent border-b-[#81ff00]/50 rounded-full animate-spin" style={{ animationDirection: 'reverse', animationDuration: '2s' }} />
+              <div className="absolute inset-0 border-[3px] border-transparent border-t-[#013f2e] rounded-full animate-spin" style={{ animationDuration: '1.5s' }} />
+              <div className="absolute inset-2 border-[2px] border-transparent border-b-[#013f2e]/50 rounded-full animate-spin" style={{ animationDirection: 'reverse', animationDuration: '2s' }} />
               
-              {/* Center "CV" Text */}
-              <div className="relative z-10 flex items-center justify-center">
-                <span className="text-2xl font-black text-black dark:text-white tracking-tighter">CV</span>
+              {/* Center Logo SVG Fill (No text) */}
+              <div className="relative z-10 w-12 h-12 flex items-center justify-center">
+                <img
+                  src="/images/logo.svg"
+                  alt="Loading"
+                  className="w-10 h-10 object-contain drop-shadow-sm"
+                />
               </div>
-            </div>
-            <div className="mt-8 flex flex-col items-center gap-2">
-              <h3 className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-[0.3em] animate-pulse">Initializing</h3>
             </div>
           </div>
         }>

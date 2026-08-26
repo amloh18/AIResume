@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PreparingSessionLoader from './PreparingSessionLoader';
+import CompanyLogo from '@/components/ui/CompanyLogo';
 import InterviewCoachHeader from './InterviewCoachHeader';
 
 interface SessionHubProps {
@@ -431,17 +432,7 @@ const SessionHub: React.FC<SessionHubProps> = ({ userId, jobId }) => {
                         {job && (
                             <div className="bg-white dark:bg-[#141810] rounded-2xl p-6 shadow-sm">
                                 <div className="flex items-center gap-3 mb-4">
-                                    {job.companyLogo ? (
-                                        <img
-                                            src={job.companyLogo}
-                                            alt={job.company}
-                                            className="w-10 h-10 rounded-lg object-contain"
-                                        />
-                                    ) : (
-                                        <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-                                            <User className="w-5 h-5 text-gray-400" />
-                                        </div>
-                                    )}
+                                    <CompanyLogo company={job.company} size={40} logoUrl={job.companyLogo} jobId={job._id} />
                                     <div>
                                         <h4 className="font-semibold text-gray-900 dark:text-white">{job.company}</h4>
                                         <p className="text-small text-gray-500 dark:text-gray-400">{job.location}</p>

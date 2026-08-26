@@ -3,7 +3,9 @@
 import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Calendar, Clock, AlertCircle, Building, GraduationCap, MapPin, Link as LinkIcon, User, TrendingUp } from 'lucide-react';
+import CompanyLogo from '@/components/ui/CompanyLogo';
 import { CVJourney } from '@/types/cv';
+import { getCurrencySymbol } from '@/lib/config/job-constants';
 
 interface JobApplication {
   id: string;
@@ -46,7 +48,7 @@ const InterviewStageView: React.FC<InterviewStageViewProps> = ({
 
   const getCompRange = (job: JobApplication) => {
     if (!job.salary?.min && !job.salary?.max) return '-';
-    const currency = job.salary.currency || '$';
+    const currency = getCurrencySymbol(job.salary.currency);
     const min = job.salary.min ? `${currency}${job.salary.min >= 1000 ? (job.salary.min / 1000).toFixed(0) + 'k' : job.salary.min}` : '';
     const max = job.salary.max ? `${currency}${job.salary.max >= 1000 ? (job.salary.max / 1000).toFixed(0) + 'k' : job.salary.max}` : '';
     return min && max ? `${min} - ${max}` : min || max;
@@ -84,9 +86,9 @@ const InterviewStageView: React.FC<InterviewStageViewProps> = ({
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
         <GraduationCap className="w-16 h-16 text-gray-400 dark:text-gray-600 mb-4" />
-        <h3 className="text-h3 font-semibold text-gray-900 dark:text-white mb-2">
+        <div className="text-body font-semibold text-gray-900 dark:text-white mb-2">
           No interviews scheduled
-        </h3>
+        </div>
         <p className="text-small text-gray-500 dark:text-gray-400">
           Jobs in interview stage will appear here.
         </p>
@@ -142,19 +144,7 @@ const InterviewStageView: React.FC<InterviewStageViewProps> = ({
                   {/* Company */}
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-white/10 flex items-center justify-center text-small font-bold text-gray-500 dark:text-gray-400 overflow-hidden">
-                        {job.companyLogo ? (
-                          <img
-                            src={job.companyLogo}
-                            alt={`${job.company} logo`}
-                            className="w-full h-full object-contain"
-                            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-                          />
-                        ) : null}
-                        <span style={{ display: job.companyLogo ? 'none' : 'block' }}>
-                          {job.company.substring(0, 2).toUpperCase()}
-                        </span>
-                      </div>
+                      <CompanyLogo company={job.company} size={32} logoUrl={job.companyLogo} jobId={job.id || job._id} />
                       <span className="text-small font-semibold text-gray-900 dark:text-white">{job.company}</span>
                     </div>
                   </td>

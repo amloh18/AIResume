@@ -29,7 +29,7 @@ class Logger {
   private service: string;
   private isProduction: boolean;
 
-  constructor(service: string = 'cvcircle-app') {
+  constructor(service: string = 'airesume-app') {
     this.service = service;
     this.isProduction = process.env.NODE_ENV === 'production';
   }

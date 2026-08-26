@@ -3,6 +3,7 @@ import CVCanvasEngine, { CVCanvasBuilderRef } from './CVCanvasEngine';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { ITemplate } from '@/types/template';
 import { normalizeCvDataForCanvas, normalizeSkillsText } from '@/lib/utils/cv-canvas-normalizer';
+import { clampLevel, fluencyToLevel, levelToFluency, serializeLanguagesForStorage } from '@/lib/utils/cv-snippet-data';
 
 interface CVBuilderProAdapterProps {
   cvData: UnifiedCVDataStructure;
@@ -91,12 +92,50 @@ const CVBuilderProAdapter = forwardRef<CVCanvasBuilderRef, CVBuilderProAdapterPr
       };
     }
 
-    const copyDirectly = ['certifications', 'awards', 'publications', 'references'];
-    copyDirectly.forEach(key => {
-      if (updatedCanvasData[key]) {
-        newCvData[key] = updatedCanvasData[key];
-      }
-    });
+    if (Array.isArray(updatedCanvasData?.certifications) || Array.isArray(updatedCanvasData?.certificates)) {
+      const certs = updatedCanvasData.certifications || updatedCanvasData.certificates;
+      newCvData.certificates = certs.map((cert: any) => ({
+        ...cert,
+        name: cert.name || '',
+        issuer: cert.issuer || '',
+        date: cert.date || cert.startDate || '',
+        url: cert.url || '',
+        description: cert.description || '',
+      }));
+    }
+
+    if (Array.isArray(updatedCanvasData?.awards)) {
+      newCvData.awards = updatedCanvasData.awards.map((award: any) => ({
+        ...award,
+        title: award.title || award.name || '',
+        date: award.date || award.startDate || '',
+        awarder: award.awarder || award.issuer || '',
+        summary: award.summary || '',
+      }));
+    }
+
+    if (Array.isArray(updatedCanvasData?.publications)) {
+      newCvData.publications = updatedCanvasData.publications.map((pub: any) => ({
+        ...pub,
+        name: pub.name || pub.title || '',
+        publisher: pub.publisher || '',
+        releaseDate: pub.releaseDate || pub.startDate || '',
+        url: pub.url || '',
+        summary: pub.summary || pub.description || '',
+      }));
+    }
+
+    if (Array.isArray(updatedCanvasData?.references)) {
+      newCvData.references = updatedCanvasData.references.map((ref: any) => ({
+        ...ref,
+        name: ref.name || '',
+        reference: ref.reference || ref.role || '',
+      }));
+    }
+
+    if (updatedCanvasData?.stats) {
+      newCvData.stats = updatedCanvasData.stats;
+    }
 
     if (Array.isArray(updatedCanvasData?.projects)) {
       newCvData.projects = updatedCanvasData.projects.map((proj: any) => {
@@ -230,9 +269,16 @@ const CVBuilderProAdapter = forwardRef<CVCanvasBuilderRef, CVBuilderProAdapterPr
               .map((item: string) => item.trim())
               .filter(Boolean);
 
+            const levels = Array.isArray(group.levels)
+              ? skills.map((_: string, skillIndex: number) => clampLevel(group.levels[skillIndex], group.rating || 3))
+              : typeof group.rating === 'number'
+                ? skills.map(() => clampLevel(group.rating))
+                : undefined;
+
             return {
               category: (group.category || '').trim(),
               skills,
+              ...(levels ? { levels } : {}),
               ...(typeof group.rating === 'number' ? { rating: group.rating } : {})
             };
           })
@@ -253,18 +299,21 @@ const CVBuilderProAdapter = forwardRef<CVCanvasBuilderRef, CVBuilderProAdapterPr
     }
 
     if (updatedCanvasData?.languages) {
-      if (typeof updatedCanvasData.languages === 'string') {
-        newCvData.languages = updatedCanvasData.languages.split(',').map((l: string) => ({ language: l.trim(), fluency: '' })).filter((l: any) => l.language);
-      } else if (Array.isArray(updatedCanvasData.languages)) {
-        newCvData.languages = updatedCanvasData.languages.map((l: any) => typeof l === 'string' ? { language: l.trim(), fluency: '' } : l);
-      }
+      newCvData.languages = serializeLanguagesForStorage(updatedCanvasData.languages).map((item) => ({
+        language: item.language,
+        fluency: item.fluency || levelToFluency(item.level),
+        level: item.level || fluencyToLevel(item.fluency),
+      }));
     }
 
     if (updatedCanvasData?.interests) {
       if (typeof updatedCanvasData.interests === 'string') {
         newCvData.interests = updatedCanvasData.interests.split(',').map((i: string) => ({ name: i.trim(), keywords: [] })).filter((i: any) => i.name);
       } else if (Array.isArray(updatedCanvasData.interests)) {
-        newCvData.interests = updatedCanvasData.interests.map((i: any) => typeof i === 'string' ? { name: i.trim(), keywords: [] } : i);
+        newCvData.interests = updatedCanvasData.interests.map((i: any) => typeof i === 'string' ? { name: i.trim(), keywords: [] } : {
+          name: i.name || '',
+          keywords: Array.isArray(i.keywords) ? i.keywords : [],
+        });
       }
     }
 

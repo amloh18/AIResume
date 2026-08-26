@@ -214,10 +214,10 @@ export const LetterGuidePanel: React.FC<LetterGuidePanelProps> = ({
             <div className="bg-gray-50 dark:bg-white/[0.02] border border-gray-150 dark:border-white/[0.04] rounded-xl p-4 flex flex-col gap-3">
               <div className="flex items-center justify-between">
                 <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
-                  <Target className="w-3.5 h-3.5 text-[#80FF00]" />
+                  <Target className="w-3.5 h-3.5 text-[#013f2e]" />
                   Target Context
                 </h4>
-                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#80FF00]/10 border border-[#80FF00]/20 text-[9px] font-black text-[#80FF00] uppercase italic">
+                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#013f2e]/10 border border-[#013f2e]/20 text-[9px] font-black text-[#013f2e] uppercase italic">
                   {score}% Match
                 </div>
               </div>
@@ -230,7 +230,7 @@ export const LetterGuidePanel: React.FC<LetterGuidePanelProps> = ({
                 <div className="text-[10px] font-bold text-gray-500 flex items-center gap-1.5 truncate">
                   <Building size={12} className="text-gray-400 shrink-0" />
                   {state.jobData?.company || 'Unknown Company'}
-                  {state.jobData && <CheckCircle2 size={10} className="text-[#80FF00]" />}
+                  {state.jobData && <CheckCircle2 size={10} className="text-[#013f2e]" />}
                 </div>
               </div>
 
@@ -302,7 +302,7 @@ export const LetterGuidePanel: React.FC<LetterGuidePanelProps> = ({
         <div className="p-4 border-t border-gray-200 dark:border-white/5 bg-gray-50/50 dark:bg-white/[0.02] shrink-0">
           <button 
             onClick={onComplete}
-            className="w-full py-3 bg-[#80FF00] hover:bg-[#99ff33] text-black text-xs font-black uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-md shadow-emerald-500/10 active:scale-[0.98]"
+            className="w-full py-3 bg-[#013f2e] hover:bg-[#02523c] text-black text-xs font-black uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-md shadow-emerald-500/10 active:scale-[0.98]"
             title="Review & Export"
           >
             Review & Export <Check className="w-4 h-4" />

@@ -1,12 +1,12 @@
 import { ObjectId } from 'mongodb';
 
-export type UserTier = 'free' | 'pro' | 'auto' | 'power';
+export type UserTier = 'free' | 'auto' | 'power';
 export type UserRole = 'user' | 'admin' | 'super_admin';
-export type JobSource = 'google_talent' | 'serpapi' | 'apify';
-export type ATSType = 'greenhouse' | 'lever' | 'workable' | 'unknown';
+export type JobSource = 'google_talent' | 'serpapi' | 'apify' | 'discovery' | 'naukri' | 'linkedin' | 'indeed' | 'adzuna' | 'lever' | 'ashby' | 'workable';
+export type ATSType = 'greenhouse' | 'lever' | 'workable' | 'naukri' | 'indeed' | 'adzuna' | 'ashby' | 'workday' | 'unknown';
 export type AutomationMode = 'assisted' | 'auto';
 export type ApplicationStatus =
-  | 'draft'
+  | 'saved'
   | 'created'
   | 'queued'
   | 'applying'
@@ -15,6 +15,16 @@ export type ApplicationStatus =
   | 'interview'
   | 'offer'
   | 'rejected';
+
+export type ApplicationStep =
+  | 'queued'
+  | 'tailoring_cv'
+  | 'uploading_resume'
+  | 'answering_questionnaire'
+  | 'submitting'
+  | 'completed'
+  | 'action_required'
+  | 'failed';
 
 export interface User {
   _id: ObjectId;
@@ -154,8 +164,10 @@ export interface AuditLog {
 
 export interface JobListing {
   _id: string;
+  id?: string;
   title: string;
   company: string;
+  companyLogo?: string;
   location: string;
   remote: boolean;
   salaryMin?: number;
@@ -169,8 +181,10 @@ export interface JobListing {
   postedDate?: Date;
   appliedStatus?: ApplicationStatus;
   userId: string;
+  country?: string;
   description?: string;
   keywords?: string[];
+  experienceYears?: number;
 }
 
 export interface MatchDistribution {
@@ -233,8 +247,17 @@ export interface JobsFilter {
   salaryMax?: number;
   atsTypes?: ATSType[];
   appliedStatus?: ApplicationStatus[];
+  remoteOnly?: boolean;
   sortBy?: 'matchScore' | 'postedDate' | 'salary' | 'company';
   sortOrder?: 'asc' | 'desc';
+  datePosted?: 'all' | '24h' | '7d' | '30d';
+  workplaceType?: string[];
+  experienceLevel?: string[];
+  sponsorsVisa?: boolean;
+  roles?: string[];
+  jobTypes?: string[];
+  savedOnly?: boolean;
+  easyApplyOnly?: boolean;
 }
 
 export interface PaginatedJobsResponse {
@@ -291,11 +314,6 @@ export const TIER_LIMITS: Record<UserTier, { dailyApplyCap: number; jobsFetchedP
     jobsFetchedPerMonth: 0,
     autoModeAllowed: false,
   },
-  pro: {
-    dailyApplyCap: 3,
-    jobsFetchedPerMonth: 100,
-    autoModeAllowed: false,
-  },
   auto: {
     dailyApplyCap: 10,
     jobsFetchedPerMonth: 500,
@@ -340,3 +358,48 @@ export const COST_PER_APPLICATION = {
   JOB_FETCH_AMORTIZED: 0.05,
   TOTAL: 0.30,
 } as const;
+
+export interface NaukriIntegrationSettings {
+  enabled: boolean;
+  connectedAt?: string | Date;
+  lastSyncedAt?: string | Date;
+  sessionStatus: 'active' | 'expired' | 'disconnected';
+  userEmail?: string;
+  preferences: {
+    targetTitles: string[];
+    targetLocations: string[];
+    minCtcLakhs?: number;
+    experienceYears?: number;
+    maxNoticePeriodDays?: number;
+    dailyLimit: number;
+    autoApplyEnabled: boolean;
+  };
+  stats: {
+    totalFetched: number;
+    totalApplied: number;
+    lastAppliedAt?: string | Date;
+  };
+}
+
+export interface IndeedIntegrationSettings {
+  enabled: boolean;
+  connectedAt?: string | Date;
+  lastSyncedAt?: string | Date;
+  sessionStatus: 'active' | 'expired' | 'disconnected';
+  userEmail?: string;
+  preferences: {
+    targetTitles: string[];
+    targetLocations: string[];
+    minSalary?: number;
+    salaryCurrency?: string;
+    remoteOnly: boolean;
+    dailyLimit: number;
+    autoApplyEnabled: boolean;
+  };
+  stats: {
+    totalFetched: number;
+    totalApplied: number;
+    lastAppliedAt?: string | Date;
+  };
+}
+

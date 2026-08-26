@@ -10,8 +10,8 @@ export default function StatusBadge({ status }: StatusBadgeProps) {
     ApplicationStatus,
     { label: string; color: string; icon: React.ComponentType<any> }
   > = {
-    draft: {
-      label: 'Draft',
+    saved: {
+      label: 'Saved',
       color: 'bg-gray-500/20 text-gray-600 dark:text-gray-400',
       icon: Clock,
     },

@@ -118,15 +118,16 @@ export async function GET(
     };
 
     // Prepare job data for service - use journey data as fallback if job is missing
+    const jobAny = job as any;
     const jobData = job ? {
       id: job._id.toString(),
       title: job.jobTitle,
       company: job.company,
       location: job.location,
-      description: job.description,
-      requirements: job.requirements,
-      qualifications: job.qualifications,
-      benefits: job.benefits,
+      description: jobAny.jobDescription || jobAny.description,
+      requirements: jobAny.requirements,
+      qualifications: jobAny.qualifications,
+      benefits: jobAny.benefits,
       url: job.jobUrl,
       deadline: job.deadline
     } : {

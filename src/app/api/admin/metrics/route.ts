@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import { User, CV, JobApplication } from '@/models';
+import { withAdminAuth } from '@/lib/middleware/admin-auth';
 
-export async function GET(request: NextRequest) {
+export const GET = withAdminAuth(async (request: NextRequest) => {
   try {
     await getConnection();
 
@@ -11,18 +12,18 @@ export async function GET(request: NextRequest) {
       totalUsers,
       activeUsers,
       totalCVs,
-      totalJobs
+      totalJobs,
+      jobsLanded
     ] = await Promise.all([
       User.countDocuments(),
       User.countDocuments({ 
         lastLogin: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } 
       }),
       CV.countDocuments(),
-      JobApplication.countDocuments()
+      JobApplication.countDocuments(),
+      JobApplication.countDocuments({ status: { $in: ['offer', 'accepted'] } })
     ]);
 
-    // Calculate success rate (mock data for now)
-    const jobsLanded = Math.floor(totalJobs * 0.15); // Assume 15% success rate
     const successRate = totalJobs > 0 ? (jobsLanded / totalJobs) * 100 : 0;
 
     const metrics = {
@@ -44,4 +45,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

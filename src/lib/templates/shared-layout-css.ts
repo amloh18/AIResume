@@ -51,8 +51,14 @@ function generateDateTitleAnchorCSS(layout: LayoutRules): string {
 }
 .item-date-group {
   white-space: nowrap;
-  ${layout.dateTitleAnchor.dateFlexShrink ? 'flex-shrink: 0;' : ''}
+  ${layout.dateTitleAnchor.dateFlexShrink ? 'flex-shrink: 1; min-width: 0;' : 'flex-shrink: 0;'}
+  max-width: 50%;
+  overflow: hidden;
   text-align: right;
+}
+.item-date-group .item-date {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .item-title-group {
   flex: 1;
@@ -280,10 +286,15 @@ function generateTypographyCSS(typography: TypographyRules): string {
 function generateContactInfoCSS(layout: LayoutRules): string {
   const parts: string[] = ['/* ─── CONTACT INFO ──────────────────────────────────────── */'];
 
+  // Self-contained cap for nowrap fields so they can never overflow the
+  // container even when URL shortening is disabled.
+  const nowrapCap = `max-width: ${layout.contactInfo.maxDisplayLength}ch; overflow: hidden; text-overflow: ellipsis; display: inline-block; vertical-align: bottom;`;
+
   if (layout.contactInfo.noWrapFields.includes('email')) {
     parts.push(`
 .contact-link[href^="mailto:"] {
   white-space: nowrap;
+  ${nowrapCap}
 }`);
   }
 
@@ -291,6 +302,7 @@ function generateContactInfoCSS(layout: LayoutRules): string {
     parts.push(`
 .contact-link[href^="http"] {
   white-space: nowrap;
+  ${nowrapCap}
 }`);
   }
 

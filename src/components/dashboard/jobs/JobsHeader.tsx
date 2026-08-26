@@ -43,6 +43,7 @@ const JobsHeader: React.FC<JobsHeaderProps> = ({
 
   return (
     <PageHeader
+      compact
       user={user}
       onMobileMenuToggle={onMobileMenuToggle}
       isMobileMenuOpen={isMobileMenuOpen}
@@ -72,19 +73,16 @@ const JobsHeader: React.FC<JobsHeaderProps> = ({
             </div>
           )}
 
-          {/* Quick Add Button */}
+          {/* Quick Add Button — stays enabled even when the limit is reached so
+              the click handler can show the upgrade card (JobCreationPaywall /
+              tracker-access card) instead of silently doing nothing. */}
           {onQuickAdd && (
             <motion.button
               onClick={onQuickAdd}
-              disabled={limitInfo && !limitInfo.isUnlimited && limitInfo.remaining === 0}
-              className={`h-[36px] flex items-center justify-center gap-2 px-3 sm:px-4 text-small font-bold rounded-xl transition-all duration-200 shadow-sm hover:shadow-md cursor-pointer flex-shrink-0 ${
-                limitInfo && !limitInfo.isUnlimited && limitInfo.remaining === 0
-                  ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed opacity-50'
-                  : 'bg-[#80FF00] hover:bg-[#70DF00] text-black active:scale-95'
-              }`}
-              whileHover={limitInfo && !limitInfo.isUnlimited && limitInfo.remaining === 0 ? {} : { scale: 1.02 }}
-              whileTap={limitInfo && !limitInfo.isUnlimited && limitInfo.remaining === 0 ? {} : { scale: 0.98 }}
-              title={limitInfo && !limitInfo.isUnlimited && limitInfo.remaining === 0 ? 'Tracker Full - Upgrade' : 'Quick Add (Magic Paste)'}
+              className="h-[36px] flex items-center justify-center gap-2 px-3 sm:px-4 text-small font-bold rounded-xl transition-all duration-200 shadow-sm hover:shadow-md cursor-pointer flex-shrink-0 bg-[#013f2e] hover:bg-[#025c43] text-white active:scale-95"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              title="Quick Add (Magic Paste)"
             >
               <Plus size={16} className="flex-shrink-0" />
               <span>Quick Add</span>
@@ -120,14 +118,14 @@ const JobsHeader: React.FC<JobsHeaderProps> = ({
             onClick={onToggleFilters}
             className={`h-[36px] flex items-center justify-center gap-2 px-3 sm:px-4 text-small rounded-xl border transition-all duration-200 cursor-pointer flex-shrink-0 ${
               showFilters
-                ? 'text-lime-600 dark:text-[#80FF00] font-semibold bg-lime-500/5 dark:bg-lime-500/10 border-lime-500/30 dark:border-lime-500/30'
+                ? 'text-[#013f2e] dark:text-[#36D39B] font-bold bg-[#36D39B]/15 border-[#36D39B]/40'
                 : 'bg-white dark:bg-black/20 border-gray-300 dark:border-white/10 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5 font-medium'
             }`}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             title="Toggle Filters & Sorting"
           >
-            <Filter size={16} className={showFilters ? 'text-lime-600 dark:text-[#80FF00]' : 'text-gray-500 dark:text-gray-400'} />
+            <Filter size={16} className={showFilters ? 'text-[#013f2e] dark:text-[#36D39B]' : 'text-gray-500 dark:text-gray-400'} />
             <span className="hidden sm:inline">Filters & Sorting</span>
             <span className="hidden xs:inline sm:hidden">Filters</span>
           </motion.button>

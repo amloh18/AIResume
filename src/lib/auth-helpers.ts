@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authConfig } from '@/lib/auth-config';
+import { authConfig } from '@/lib/auth';
 import { getConnection } from '@/lib/database';
 import { User } from '@/models';
 
@@ -106,7 +106,7 @@ export async function getAuthenticatedUser(request?: NextRequest): Promise<AuthR
     try {
       const { cookies } = await import('next/headers');
       const cookieStore = await cookies();
-      const anonymousToken = cookieStore.get('cvcircle_anonymous_token')?.value;
+      const anonymousToken = cookieStore.get('buildairesume_anonymous_token')?.value;
       
       if (anonymousToken) {
         console.log('👤 Auth - Anonymous token found:', anonymousToken.substring(0, 8));

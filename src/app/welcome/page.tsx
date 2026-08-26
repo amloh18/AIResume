@@ -1,24 +1,24 @@
 // @ts-nocheck
 'use client';
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession, signIn } from 'next-auth/react';
 import { 
   FileText, 
   Briefcase, 
   Target, 
-  Sparkles, 
   Zap, 
   CheckCircle, 
+  CheckCircle2,
   AlertTriangle,
   Upload, 
   Linkedin, 
   ChevronRight, 
   ChevronLeft, 
-  ChevronDown,
-  ChevronUp,
+  ChevronDown, 
+  ChevronUp, 
   Loader2, 
   ArrowRight,
   Shield,
@@ -44,48 +44,300 @@ import {
   History,
   MessageSquare,
   Bot,
-  Kanban
+  Kanban,
+  ExternalLink,
+  Sliders,
+  Compass,
+  Layers,
+  Send,
+  Award,
+  PenTool,
+  FilePlus,
+  Activity,
+  CheckCheck
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Logo from '@/components/ui/Logo';
-import { usePaymentModal } from '@/contexts/PaymentModalContext';
 import CodeVerificationScreen from '@/components/auth/CodeVerificationScreen';
 import { toast } from 'react-hot-toast';
+import { getStrengthDescription, getWeaknessDescription } from '@/lib/cv-descriptions';
 import guestCVService from '@/lib/services/guestCVService';
 
-interface OnboardingState {
-  intent: string;
-  seedingMethod: string;
-  cvScore: number;
-  searchStatus: string;
-  monthlyVolume: string;
-  trackerInterest: string;
-  autoapplyInterest: string;
-  targetRoles: string[];
-  locations: string[];
-  experienceLevel: string;
-  salary: string;
-  visaRequired: boolean | null;
-  parsedCVData: any;
-  droppedFile: string;
+export type OnboardingStage = 
+  | 'INTENT'              // Step 1: What are you here to achieve?
+  | 'PROFILE_SEED'        // Step 2: Build Profile (Upload / Paste / LinkedIn / Scratch)
+  | 'AI_ANALYSIS'         // Step 3: AI Discovery & Analysis ("Improve & Design My CV")
+  | 'CV_READY_FORK'       // Step 4: Profile Ready (Fork: "Just My CV" vs "Find My Next Job")
+  | 'JOB_TARGET_ROLES'    // Step 5: What roles are you targeting?
+  | 'JOB_WORKPLACE'       // Step 6: Workplace type + locations
+  | 'JOB_SALARY'          // Step 7: Salary expectations
+  | 'JOB_EXPERIENCE'      // Step 8: Experience level + availability
+  | 'JOB_SEARCH_INTENSITY' // Step 9: How actively are you looking?
+  | 'JOB_APPLICATION_VOLUME' // Step 10: Expected monthly application volume
+  | 'JOB_APPLICATION_MODE'   // Step 11: How much should BuildAIResume handle?
+  | 'LAUNCH';             // Step 12: Final Launch & CEO Note
+
+export interface CareerPathway {
+  id: string;
+  name: string;
+  icon: string;
+  roles: string[];
 }
 
-const WelcomePage: React.FC = () => {
+export const CAREER_PATHWAYS: CareerPathway[] = [
+  {
+    id: 'engineering',
+    name: 'Software & Tech',
+    icon: '💻',
+    roles: [
+      'Full Stack Engineer',
+      'AI Systems & LLM Engineer',
+      'Frontend Engineer (React / Next.js)',
+      'Backend Systems Engineer',
+      'DevOps & Cloud Architect',
+      'Mobile Engineer (iOS / Android / Flutter)',
+      'Platform & Infrastructure Engineer',
+      'Site Reliability Engineer (SRE)',
+      'Cybersecurity & AppSec Engineer',
+      'Embedded & IoT Engineer',
+      'QA & Test Automation Engineer',
+      'Engineering Manager / Tech Lead'
+    ]
+  },
+  {
+    id: 'data_ai',
+    name: 'Data & AI',
+    icon: '📊',
+    roles: [
+      'Machine Learning Engineer',
+      'GenAI / LLM Research Scientist',
+      'Data Scientist',
+      'Analytics Engineer (dbt / Snowflake)',
+      'Data Platform Engineer',
+      'Business Intelligence Lead',
+      'Data Analyst',
+      'MLOps Engineer',
+      'Computer Vision / NLP Specialist',
+      'AI Product Analyst'
+    ]
+  },
+  {
+    id: 'product',
+    name: 'Product & Project',
+    icon: '🚀',
+    roles: [
+      'AI Product Manager',
+      'Senior Product Manager',
+      'Technical Product Manager (TPM)',
+      'Principal Product Lead',
+      'Growth Product Manager',
+      'Project Manager',
+      'Scrum Master & Agile Delivery Lead',
+      'Product Operations Manager',
+      'Program Director',
+      'Solutions & Delivery Manager'
+    ]
+  },
+  {
+    id: 'design',
+    name: 'Design & Creative',
+    icon: '🎨',
+    roles: [
+      'Product Designer (UI/UX)',
+      'AI Interaction & Prompt Designer',
+      'UX Researcher',
+      'Design Systems Lead',
+      'Brand & Creative Director',
+      'Motion & 3D Interactive Designer',
+      'Visual Designer',
+      'Graphic Designer',
+      'AR/VR Spatial Designer'
+    ]
+  },
+  {
+    id: 'marketing',
+    name: 'Marketing & Growth',
+    icon: '📈',
+    roles: [
+      'Growth Marketing Lead',
+      'Product Marketing Manager (PMM)',
+      'Performance & Paid Acquisition Lead',
+      'AI Content & SEO Strategist',
+      'Lifecycle & CRM Marketing Manager',
+      'Brand & Communications Lead',
+      'Social & Community Growth Lead',
+      'Marketing Analytics & Attribution Lead',
+      'Demand Generation Manager'
+    ]
+  },
+  {
+    id: 'sales_cs',
+    name: 'Sales & Customer Success',
+    icon: '💼',
+    roles: [
+      'Enterprise Account Executive (AE)',
+      'Mid-Market Account Executive',
+      'Business Development Rep (BDR / SDR)',
+      'Customer Success Manager (CSM)',
+      'Pre-Sales Solutions Architect',
+      'Revenue Operations (RevOps) Manager',
+      'Strategic Account Manager',
+      'Head of Sales / Sales Director',
+      'Client Onboarding Lead'
+    ]
+  },
+  {
+    id: 'operations_finance',
+    name: 'Operations & Finance',
+    icon: '⚙️',
+    roles: [
+      'Chief of Staff',
+      'Business Operations (BizOps) Manager',
+      'FP&A / Strategic Finance Lead',
+      'Financial Analyst',
+      'Corporate Strategy Consultant',
+      'Operations Manager',
+      'Controller / Senior Accountant',
+      'Supply Chain & Procurement Lead',
+      'Risk & Compliance Analyst'
+    ]
+  },
+  {
+    id: 'hr_people',
+    name: 'HR & Recruiting',
+    icon: '🤝',
+    roles: [
+      'Technical Recruiter',
+      'Talent Acquisition Lead',
+      'People Operations Manager',
+      'HR Business Partner (HRBP)',
+      'Compensation & Total Rewards Lead',
+      'Employee Experience & Culture Partner',
+      'Global Mobility & Talent Specialist',
+      'Executive Search Lead'
+    ]
+  }
+];
+
+const STAGE_TO_STEP: Record<OnboardingStage | string, number> = {
+  'INTENT': 1,
+  'PROFILE_SEED': 2,
+  'AI_ANALYSIS': 3,
+  'CV_READY_FORK': 4,
+  'JOB_TARGET_ROLES': 5,
+  'JOB_WORKPLACE': 6,
+  'JOB_SALARY': 7,
+  'JOB_EXPERIENCE': 8,
+  'JOB_SEARCH_INTENSITY': 9,
+  'JOB_APPLICATION_VOLUME': 10,
+  'JOB_APPLICATION_MODE': 11,
+  'LAUNCH': 12,
+  // Backward-compatible mappings for old stage names
+  'JOB_TARGETS': 5,
+  'JOB_INTENSITY': 9,
+  'JOB_VOLUME': 10,
+  'TRACKER_AUTOPILOT': 11,
+  'AUTO_APPLY': 11,
+  'CAREER_ADVANTAGE': 11,
+};
+
+export const WELCOME_SALARY_CONFIG: Record<
+  string,
+  {
+    label: string;
+    symbol: string;
+    unit: string;
+    presets: { label: string; value: number }[];
+    defaultVal: number;
+  }
+> = {
+  INR_LPA: {
+    label: 'INR (₹)',
+    symbol: '₹',
+    unit: 'LPA',
+    presets: [
+      { label: '₹8 LPA', value: 8 },
+      { label: '₹12 LPA', value: 12 },
+      { label: '₹18 LPA', value: 18 },
+      { label: '₹25 LPA', value: 25 },
+      { label: '₹35 LPA', value: 35 },
+      { label: '₹50 LPA', value: 50 },
+    ],
+    defaultVal: 18,
+  },
+  GBP: {
+    label: 'GBP (£)',
+    symbol: '£',
+    unit: '/year',
+    presets: [
+      { label: '£45,000 /yr', value: 45000 },
+      { label: '£65,000 /yr', value: 65000 },
+      { label: '£85,000 /yr', value: 85000 },
+      { label: '£110,000 /yr', value: 110000 },
+      { label: '£140,000 /yr', value: 140000 },
+    ],
+    defaultVal: 65000,
+  },
+  USD: {
+    label: 'USD ($)',
+    symbol: '$',
+    unit: '/year',
+    presets: [
+      { label: '$60,000 /yr', value: 60000 },
+      { label: '$90,000 /yr', value: 90000 },
+      { label: '$120,000 /yr', value: 120000 },
+      { label: '$150,000 /yr', value: 150000 },
+      { label: '$200,000 /yr', value: 200000 },
+    ],
+    defaultVal: 90000,
+  },
+  EUR: {
+    label: 'EUR (€)',
+    symbol: '€',
+    unit: '/year',
+    presets: [
+      { label: '€50,000 /yr', value: 50000 },
+      { label: '€70,000 /yr', value: 70000 },
+      { label: '€90,000 /yr', value: 90000 },
+      { label: '€120,000 /yr', value: 120000 },
+    ],
+    defaultVal: 70000,
+  },
+};
+
+const STEP_TO_STAGE: Record<number, OnboardingStage> = {
+  1: 'INTENT',
+  2: 'PROFILE_SEED',
+  3: 'AI_ANALYSIS',
+  4: 'CV_READY_FORK',
+  5: 'JOB_TARGET_ROLES',
+  6: 'JOB_WORKPLACE',
+  7: 'JOB_SALARY',
+  8: 'JOB_EXPERIENCE',
+  9: 'JOB_SEARCH_INTENSITY',
+  10: 'JOB_APPLICATION_VOLUME',
+  11: 'JOB_APPLICATION_MODE',
+  12: 'LAUNCH'
+};
+
+function WelcomePageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: session, status } = useSession();
-  const { openPaymentModal } = usePaymentModal();
   
-  // Onboarding Steps (1 to 10)
-  const [currentStep, setCurrentStep] = useState(1);
+  // Onboarding Stage and Step State
+  const [currentStep, setCurrentStep] = useState<number>(1);
   const [lifecycleState, setLifecycleState] = useState<string>('NEW');
   const [primaryCvId, setPrimaryCvId] = useState<string | null>(null);
-  const [isResuming, setIsResuming] = useState(false);
   const [isLoadingSession, setIsLoadingSession] = useState(true);
   const [analysisSnapshot, setAnalysisSnapshot] = useState<any>(null);
   const [trackerAnimStage, setTrackerAnimStage] = useState(0);
+  const [editorCompleted, setEditorCompleted] = useState(false);
+  const [initialScore, setInitialScore] = useState<number>(64);
+  const [transformedScore, setTransformedScore] = useState<number>(88);
   
   // Selections
-  const [intent, setIntent] = useState<string>('');
+  const [intent, setIntent] = useState<string>('job_search'); // Default to full ecosystem or 'cv'
   const [seedingMethod, setSeedingMethod] = useState<string>('');
   const [cvScore, setCVScore] = useState<number>(0);
   const [searchStatus, setSearchStatus] = useState<string>('');
@@ -97,6 +349,24 @@ const WelcomePage: React.FC = () => {
   const [experienceLevel, setExperienceLevel] = useState<string>('');
   const [salary, setSalary] = useState<string>('');
   const [visaRequired, setVisaRequired] = useState<boolean | null>(null);
+
+  // Canonical job-search preferences (persisted to autoApplyPreferences)
+  const [workplaceTypes, setWorkplaceTypes] = useState<string[]>(['remote']);
+  const [salaryMin, setSalaryMin] = useState<number>(18);
+  const [salaryCurrency, setSalaryCurrency] = useState<string>('INR_LPA');
+  const [experienceYears, setExperienceYears] = useState<number>(2);
+  const [maxNoticePeriodDays, setMaxNoticePeriodDays] = useState<number>(30);
+  const [searchIntensity, setSearchIntensity] = useState<string>('');
+  const [expectedApplicationsPerMonth, setExpectedApplicationsPerMonth] = useState<number>(50);
+  const [applicationMode, setApplicationMode] = useState<string>('');
+
+  const handleSalaryCurrencyChange = (newCur: string) => {
+    setSalaryCurrency(newCur);
+    const cfg = WELCOME_SALARY_CONFIG[newCur];
+    if (cfg) {
+      setSalaryMin(cfg.defaultVal);
+    }
+  };
 
   // Parser Simulator State
   const [isParsing, setIsParsing] = useState(false);
@@ -113,6 +383,100 @@ const WelcomePage: React.FC = () => {
   const [showLinkedInModal, setShowLinkedInModal] = useState(false);
   const [linkedinUrl, setLinkedinUrl] = useState('');
 
+  const [selectedPathway, setSelectedPathway] = useState<string>('engineering');
+  const [customRoleInput, setCustomRoleInput] = useState<string>('');
+  const [loadedProfileName, setLoadedProfileName] = useState<string>('');
+  const [loadedProfileRole, setLoadedProfileRole] = useState<string>('');
+
+  const currentPathway = useMemo(() => {
+    return CAREER_PATHWAYS.find(p => p.id === selectedPathway) || CAREER_PATHWAYS[0];
+  }, [selectedPathway]);
+
+  // Extract personalized details from parsed CV or Master CV profile
+  const candidateName = useMemo(() => {
+    if (parsedCVData?.basics?.name) {
+      return parsedCVData.basics.name.trim().split(' ')[0];
+    }
+    if (parsedCVData?.personalInfo?.fullName) {
+      return parsedCVData.personalInfo.fullName.trim().split(' ')[0];
+    }
+    if (loadedProfileName) {
+      return loadedProfileName.trim().split(' ')[0];
+    }
+    if (session?.user?.name) {
+      return session.user.name.trim().split(' ')[0];
+    }
+    return '';
+  }, [parsedCVData, loadedProfileName, session]);
+
+  // Step 12 CEO Letter Typewriter Effect
+  const letterParagraphs = useMemo(() => [
+    `Dear ${candidateName || 'candidate'},`,
+    `Welcome to AIResume. We built this platform to take the tedious manual labor out of your job search so you can focus on landing roles you truly love.`,
+    `Your Profile is set up and will power your automated application tracking, tailored cover letters, and interview coaching.`
+  ], [candidateName]);
+
+  const fullLetterText = useMemo(() => letterParagraphs.join('\n\n'), [letterParagraphs]);
+  const [typedLetterLength, setTypedLetterLength] = useState<number>(0);
+  const [isTypingLetter, setIsTypingLetter] = useState<boolean>(true);
+
+  useEffect(() => {
+    if (currentStep === 12) {
+      setTypedLetterLength(0);
+      setIsTypingLetter(true);
+      let currentLen = 0;
+      const targetLen = fullLetterText.length;
+
+      const timer = setInterval(() => {
+        currentLen += 2;
+        if (currentLen >= targetLen) {
+          setTypedLetterLength(targetLen);
+          setIsTypingLetter(false);
+          clearInterval(timer);
+        } else {
+          setTypedLetterLength(currentLen);
+        }
+      }, 15);
+
+      return () => clearInterval(timer);
+    }
+  }, [currentStep, fullLetterText]);
+
+  const candidateRole = useMemo(() => {
+    if (parsedCVData?.basics?.label) return parsedCVData.basics.label;
+    if (parsedCVData?.personalInfo?.jobTitle) return parsedCVData.personalInfo.jobTitle;
+    if (parsedCVData?.work?.[0]?.position) return parsedCVData.work[0].position;
+    if (loadedProfileRole) return loadedProfileRole;
+    return '';
+  }, [parsedCVData, loadedProfileRole]);
+
+  // Pre-fill target roles and infer pathway if detected from CV
+  useEffect(() => {
+    if (candidateRole) {
+      const r = candidateRole.toLowerCase();
+      let matchedPathway = 'engineering';
+      if (r.includes('data') || r.includes('ai') || r.includes('machine learning') || r.includes('analyst') || r.includes('intelligence') || r.includes('bi')) {
+        matchedPathway = 'data_ai';
+      } else if (r.includes('design') || r.includes('ux') || r.includes('ui') || r.includes('creative') || r.includes('graphic') || r.includes('art')) {
+        matchedPathway = 'design';
+      } else if (r.includes('product') || r.includes('scrum') || r.includes('project') || r.includes('program') || r.includes('agile')) {
+        matchedPathway = 'product';
+      } else if (r.includes('market') || r.includes('growth') || r.includes('seo') || r.includes('content') || r.includes('social')) {
+        matchedPathway = 'marketing';
+      } else if (r.includes('sales') || r.includes('account') || r.includes('success') || r.includes('bdr') || r.includes('sdr') || r.includes('business dev')) {
+        matchedPathway = 'sales_cs';
+      } else if (r.includes('operat') || r.includes('financ') || r.includes('accounting') || r.includes('supply') || r.includes('consultant')) {
+        matchedPathway = 'operations_finance';
+      } else if (r.includes('hr') || r.includes('recruit') || r.includes('talent') || r.includes('people')) {
+        matchedPathway = 'hr_people';
+      }
+      setSelectedPathway(matchedPathway);
+      if (targetRoles.length === 0) {
+        setTargetRoles([candidateRole]);
+      }
+    }
+  }, [candidateRole]);
+
   // Step 3 Collapsible Panels state
   const [expandedSections, setExpandedSections] = useState({
     categories: true,
@@ -126,29 +490,8 @@ const WelcomePage: React.FC = () => {
     setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
   };
 
-  // Dynamic description mappings for strengths and weaknesses
-  const getStrengthDescription = (strength: string) => {
-    const str = strength.toLowerCase();
-    if (str.includes('keyword') || str.includes('alignment')) return 'Excellent alignment with industry-standard terminology.';
-    if (str.includes('structure') || str.includes('layout')) return 'Easy for human recruiters and ATS software to scan quickly.';
-    if (str.includes('contact') || str.includes('email') || str.includes('phone') || str.includes('details')) return 'Essential details are prominent and formatted correctly.';
-    if (str.includes('skills') || str.includes('expertise')) return 'Well-defined skill sections showing technical competencies.';
-    if (str.includes('experience') || str.includes('work') || str.includes('history') || str.includes('timeline')) return 'Rich work history with clear progression and dates.';
-    return 'Contributes to a highly readable and professional CV.';
-  };
-
-  const getWeaknessDescription = (weakness: string) => {
-    const str = weakness.toLowerCase();
-    if (str.includes('keyword') || str.includes('missing')) return 'Essential industry terms are missing; this hurts ATS keyword screening.';
-    if (str.includes('quantified') || str.includes('achievement') || str.includes('metrics') || str.includes('results')) return 'Recruiters favor metrics (e.g. sales grown 20%, time saved by 5h).';
-    if (str.includes('summary') || str.includes('profile') || str.includes('objective')) return 'A strong summary at the top helps frame your career elevator pitch.';
-    if (str.includes('skills') || str.includes('technical')) return 'Define a clearer skills section to highlight core keywords.';
-    if (str.includes('length') || str.includes('word')) return 'Adjust length to avoid fluff and keep sections crisp.';
-    return 'Improve this section to optimize your resume and bypass ATS filters.';
-  };
-
   const defaultSnapshot = useMemo(() => ({
-    healthIndex: cvScore || 65,
+    healthIndex: cvScore || 64,
     breakdown: {
       structure: 14,
       readability: 13,
@@ -166,7 +509,7 @@ const WelcomePage: React.FC = () => {
     missingKeywords: ['Agile', 'Leadership', 'Project Management', 'Data Analysis', 'Stakeholder Management'],
     strengths: ['Clear experience timeline', 'Strong contact layout', 'Essential skills listing'],
     weaknesses: ['Add metrics/quantified results', 'Add industry standard keywords', 'Include professional summary'],
-    potentialBoost: 15,
+    potentialBoost: 24,
     topPriority: 'Add quantified achievements to work history'
   }), [cvScore]);
 
@@ -196,14 +539,111 @@ const WelcomePage: React.FC = () => {
     };
   }, [analysisSnapshot, defaultSnapshot, cvScore]);
 
-  // Helper Functions
-  const saveSession = async (updates: any) => {
+  // Validation logic: check if required fields are filled for current step
+  const isStepValid = useMemo(() => {
+    switch (currentStep) {
+      case 1:
+        return !!intent;
+      case 2:
+        return seedingMethod === 'scratch' || !!parsedCVData;
+      case 3:
+        return true;
+      case 4:
+        return true;
+      case 5:
+        // Target roles are required
+        return targetRoles.length > 0;
+      case 6:
+        // Workplace types are required
+        return workplaceTypes.length > 0;
+      case 7:
+        // Salary step is always valid (optional)
+        return true;
+      case 8:
+        // Experience step is always valid (optional)
+        return true;
+      case 9:
+        // Search intensity is required
+        return !!searchIntensity;
+      case 10:
+        // Application volume is required
+        return expectedApplicationsPerMonth > 0;
+      case 11:
+        // Application mode is required
+        return !!applicationMode;
+      case 12:
+        return true;
+      default:
+        return true;
+    }
+  }, [currentStep, intent, seedingMethod, parsedCVData, targetRoles, workplaceTypes, searchIntensity, expectedApplicationsPerMonth, applicationMode]);
+
+  // Save Onboarding Session to API (Full User Account Persistence)
+  const saveSession = async (updates: any = {}) => {
     try {
+      const payload = {
+        primary_goal: intent,
+        confidence_score: cvScore,
+        initial_score: initialScore,
+        transformed_score: transformedScore,
+        career_pathway: selectedPathway,
+        target_roles: targetRoles,
+        locations: locations,
+        experience_level: experienceLevel,
+        salary_range: salary,
+        visa_required: visaRequired,
+        search_status: searchStatus,
+        monthly_volume: monthlyVolume,
+        tracker_interest: trackerInterest,
+        autoapply_interest: autoapplyInterest,
+        candidate_name: candidateName,
+        candidate_role: candidateRole,
+        primary_cv_id: primaryCvId,
+        // Canonical job-search preferences
+        workplace_types: workplaceTypes,
+        salary_min: salaryMin,
+        salary_currency: salaryCurrency,
+        experience_years: experienceYears,
+        max_notice_period_days: maxNoticePeriodDays,
+        search_intensity: searchIntensity,
+        expected_applications_per_month: expectedApplicationsPerMonth,
+        application_mode: applicationMode,
+        ...updates
+      };
+
       await fetch('/api/user/onboarding', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updates)
+        body: JSON.stringify(payload)
       });
+
+      // Persist to canonical JobSearchProfile for job-search steps
+      if (currentStep >= 5 && currentStep <= 12 && status === 'authenticated') {
+        const profileUpdates: Record<string, any> = {};
+        if (currentStep === 5) profileUpdates.targetRoles = targetRoles;
+        if (currentStep === 6) {
+          profileUpdates.workplaceTypes = workplaceTypes;
+          profileUpdates.locations = locations;
+        }
+        if (currentStep === 7) {
+          profileUpdates.salary = { min: salaryMin, currency: salaryCurrency };
+        }
+        if (currentStep === 8) {
+          profileUpdates.experience = experienceYears;
+          profileUpdates.maxNoticePeriodDays = maxNoticePeriodDays;
+        }
+        if (currentStep === 9) profileUpdates.searchIntensity = searchIntensity;
+        if (currentStep === 10) profileUpdates.expectedApplicationsPerMonth = expectedApplicationsPerMonth;
+        if (currentStep === 12) profileUpdates.applicationMode = applicationMode;
+
+        if (Object.keys(profileUpdates).length > 0) {
+          await fetch('/api/job-search-profile', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ profileData: profileUpdates })
+          });
+        }
+      }
     } catch (err) {
       console.error('Auto-save failed:', err);
     }
@@ -212,12 +652,11 @@ const WelcomePage: React.FC = () => {
   const savePrimaryCV = async (cvData: any, title: string, score: number) => {
     try {
       if (status === 'authenticated') {
-        // 1. Create/Update Primary CV for Authenticated User
         const response = await fetch('/api/cvs', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            title: title || 'Primary CV',
+            title: title || 'Primary Profile',
             cvData: cvData,
             cvType: 'master',
             isMaster: true,
@@ -237,7 +676,6 @@ const WelcomePage: React.FC = () => {
         if (masterCvId) {
           setPrimaryCvId(masterCvId);
           
-          // 2. Generate Analysis Snapshot
           const analysisRes = await fetch('/api/cv/analysis-snapshot', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -247,9 +685,10 @@ const WelcomePage: React.FC = () => {
           if (analysisData.success) {
             setAnalysisSnapshot(analysisData.data);
             setCVScore(analysisData.data.healthIndex);
+            setInitialScore(analysisData.data.healthIndex || 64);
+            setTransformedScore(Math.min(96, Math.max(88, (analysisData.data.healthIndex || 64) + 24)));
           }
 
-          // 3. Update onboarding session
           await saveSession({
             primary_cv_id: masterCvId,
             userLifecycleState: 'PRIMARY_CV_CREATED'
@@ -262,15 +701,14 @@ const WelcomePage: React.FC = () => {
         // Guest user - save to guest draft!
         const draftResult = await guestCVService.saveGuestDraft({
           cvData: cvData,
-          currentStep: 2, // Start at Step 2 (Templates) in the editor
+          currentStep: 2,
           completedSteps: [],
-          cvTitle: title || 'Primary CV',
+          cvTitle: title || 'Primary Profile',
         });
         
         if (draftResult.success) {
           setPrimaryCvId('guest-draft');
           
-          // Generate analysis snapshot directly from cvData
           const analysisRes = await fetch('/api/cv/analysis-snapshot', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -280,8 +718,9 @@ const WelcomePage: React.FC = () => {
           if (analysisData.success) {
             setAnalysisSnapshot(analysisData.data);
             setCVScore(analysisData.data.healthIndex);
+            setInitialScore(analysisData.data.healthIndex || 64);
+            setTransformedScore(Math.min(96, Math.max(88, (analysisData.data.healthIndex || 64) + 24)));
 
-            // Re-save guest draft with the AI analysis snapshot converted to standard score report format!
             const scoreReport = {
               overall_score: analysisData.data.healthIndex || 0,
               category_scores: [
@@ -308,9 +747,9 @@ const WelcomePage: React.FC = () => {
 
             await guestCVService.saveGuestDraft({
               cvData: cvData,
-              currentStep: 2, // Start at Step 2 (Templates) in the editor
+              currentStep: 2,
               completedSteps: [],
-              cvTitle: title || 'Primary CV',
+              cvTitle: title || 'Primary Profile',
               aiAnalysis: {
                 score: analysisData.data.healthIndex || 0,
                 scoreReport: scoreReport
@@ -318,7 +757,6 @@ const WelcomePage: React.FC = () => {
             });
           }
 
-          // Also save onboarding session if an anonymous user exists
           await saveSession({
             primary_cv_id: 'guest-draft',
             userLifecycleState: 'PRIMARY_CV_CREATED'
@@ -341,169 +779,78 @@ const WelcomePage: React.FC = () => {
     });
   };
 
-  const jsonSample = {
-    basics: {
-      name: "Your Name",
-      email: "email@example.com",
-      phone: "+1 234 567 890",
-      website: "https://yourportfolio.com",
-      location: { address: "City, Country" },
-      profiles: [{ network: "LinkedIn", url: "https://linkedin.com/in/username" }]
-    },
-    work: [{
-      company: "Company Name",
-      position: "Job Title",
-      startDate: "2020-01-01",
-      endDate: "2023-01-01",
-      summary: "Description of your role and impact."
-    }],
-    education: [{
-      institution: "University Name",
-      area: "Field of Study",
-      studyType: "Degree",
-      startDate: "2016-01-01",
-      endDate: "2020-01-01"
-    }],
-    skills: [{ name: "Skill Name", level: "Expert" }]
-  };
-
-  const copyJsonSample = () => {
-    const aiPrompt = `Act as an expert career coach and senior resume writer.
-I will provide you with my current resume or background details.
-Your task is to:
-1. Analyze my background and the standard for high-impact CVs.
-2. Convert my data into a perfectly structured JSON format following the "JSON Resume" standard.
-3. Ensure every bullet point is quantified, uses strong action verbs, and follows the STAR method.
-4. Output ONLY the JSON object, starting with { and ending with }.
-
-Use this schema as a foundation:
-${JSON.stringify(jsonSample, null, 2)}
-
-Please find the CV data attached.`;
-
-    navigator.clipboard.writeText(aiPrompt);
-    // Brief toast logic could go here
-  };
-
-  const handleJsonSubmit = async () => {
-    if (!jsonInput.trim()) return;
-    setJsonError('');
-
-    try {
-      // 1. Try to parse as JSON first
-      const trimmedInput = jsonInput.trim();
-      if (trimmedInput.startsWith('{') || trimmedInput.startsWith('[')) {
-        try {
-          const result = JSON.parse(trimmedInput);
-          setParsedCVData(result);
-          const score = result.analysis?.score || result._score || 72;
-          setCVScore(score);
-          await savePrimaryCV(result, 'Imported JSON', score);
-
-          triggerNotification("JSON Data imported!");
-          setShowJsonModal(false);
-          handleNext();
-          return;
-        } catch (e) {
-          console.warn("Input looked like JSON but failed to parse. Falling back to text parsing...");
-        }
-      }
-
-      // 2. Fallback to Text Parsing (AI Analysis)
-      setDroppedFile('Pasted Content');
-      setIsParsing(true);
-      setParseProgress(0);
-      setParseStep(0);
-      setShowJsonModal(false);
-
-      const formData = new FormData();
-      const file = new File([jsonInput], 'pasted-cv.txt', { type: 'text/plain' });
-      formData.append('file', file);
-
-      const progressInterval = setInterval(() => {
-        setParseProgress(prev => {
-          if (prev >= 95) {
-            return 95;
-          }
-          if (prev === 20) setParseStep(1);
-          if (prev === 45) setParseStep(2);
-          if (prev === 70) setParseStep(3);
-          if (prev === 90) setParseStep(4);
-          return prev + 5;
-        });
-      }, 250);
-
-      const response = await fetch('/api/cv/parse', {
-        method: 'POST',
-        body: formData,
-      });
-
-      clearInterval(progressInterval);
-      await processParseResponse(response, 'Pasted CV');
-    } catch (err: any) {
-      console.error("Import error:", err);
-      setJsonError(err?.message || "Failed to process data. Please check and try again.");
-      setIsParsing(false);
-    }
-  };
-
-  const handleLinkedInSubmit = async () => {
-    if (!linkedinUrl.trim()) return;
-    triggerNotification("LinkedIn sync starting soon!");
-    setShowLinkedInModal(false);
-    // Future: trigger actual sync
-  };
-  // Inline Auth Form State
-  const [authTab, setAuthTab] = useState<'signup' | 'signin'>('signup');
-  const [authEmail, setAuthEmail] = useState('');
-  const [authPassword, setAuthPassword] = useState('');
-  const [authName, setAuthName] = useState('');
-  const [authError, setAuthError] = useState('');
-  const [authSuccess, setAuthSuccess] = useState('');
-  const [authLoading, setAuthLoading] = useState(false);
-  const [verificationCode, setVerificationCode] = useState('');
-  const [isVerifying, setIsVerifying] = useState(false);
-  const [fastTrackToEditor, setFastTrackToEditor] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-
   // Pricing Plans (fetched from API)
   const [plans, setPlans] = useState<any[]>([]);
   const [currencySymbol, setCurrencySymbol] = useState('$');
 
-  // Load Onboarding Session & Initial Auth
+  const hasInitializedRef = useRef(false);
+
+  // Load Onboarding Session & URL query params (Runs ONCE on mount)
   useEffect(() => {
+    if (hasInitializedRef.current) return;
+    hasInitializedRef.current = true;
+
     const initSession = async () => {
       setIsLoadingSession(true);
       try {
-        // Ensure we have at least an anonymous session
         await fetch('/api/auth/anonymous-session');
         
-        // Fetch detailed onboarding session
         const sessionRes = await fetch('/api/user/onboarding');
         const sessionData = await sessionRes.json();
         
-        if (sessionData.success && sessionData.data) {
-          const { onboarding, userLifecycleState } = sessionData.data;
+        const stageParam = searchParams.get('stage');
+        const stepParam = searchParams.get('step');
+
+        if (stageParam === 'cv_ready' || stepParam === '4') {
+          setCurrentStep(4);
+          setEditorCompleted(true);
+          setTransformedScore(prev => Math.min(96, Math.max(88, prev || 88)));
+          triggerNotification('Profile saved! Check out your score boost.');
+        } else if (stepParam && parseInt(stepParam) >= 1 && parseInt(stepParam) <= 12) {
+          setCurrentStep(parseInt(stepParam));
+        } else if (sessionData.success && sessionData.data) {
+          const { onboarding, userLifecycleState, profileName, profileRole, masterCVData, masterCVId } = sessionData.data;
           
           setLifecycleState(userLifecycleState || 'NEW');
+          if (profileName) setLoadedProfileName(profileName);
+          if (profileRole) setLoadedProfileRole(profileRole);
+          if (masterCVData) setParsedCVData(masterCVData);
+          if (masterCVId) setPrimaryCvId(masterCVId);
           
           if (onboarding) {
             if (onboarding.primary_goal) setIntent(onboarding.primary_goal);
-            if (onboarding.confidence_score) setCVScore(onboarding.confidence_score);
+            if (onboarding.confidence_score) {
+              setCVScore(onboarding.confidence_score);
+              setInitialScore(onboarding.initial_score || onboarding.confidence_score);
+              setTransformedScore(onboarding.transformed_score || Math.min(96, Math.max(88, onboarding.confidence_score + 24)));
+            }
             if (onboarding.primary_cv_id) setPrimaryCvId(onboarding.primary_cv_id);
+            if (onboarding.career_pathway) setSelectedPathway(onboarding.career_pathway);
+            if (onboarding.target_roles?.length) setTargetRoles(onboarding.target_roles);
+            if (onboarding.locations?.length) setLocations(onboarding.locations);
+            if (onboarding.experience_level) setExperienceLevel(onboarding.experience_level);
+            if (onboarding.salary_range) setSalary(onboarding.salary_range);
+            if (onboarding.visa_required !== undefined) setVisaRequired(onboarding.visa_required);
+            if (onboarding.search_status) setSearchStatus(onboarding.search_status);
+            if (onboarding.monthly_volume) setMonthlyVolume(onboarding.monthly_volume);
+            if (onboarding.tracker_interest) setTrackerInterest(onboarding.tracker_interest);
+            if (onboarding.autoapply_interest) setAutoapplyInterest(onboarding.autoapply_interest);
             
-            // If they have progress, prepare for "Welcome Back"
+            // Restore canonical job-search preferences
+            if (onboarding.workplace_types?.length) setWorkplaceTypes(onboarding.workplace_types);
+            if (onboarding.salary_min !== undefined) setSalaryMin(onboarding.salary_min);
+            if (onboarding.salary_currency) setSalaryCurrency(onboarding.salary_currency);
+            if (onboarding.experience_years !== undefined) setExperienceYears(onboarding.experience_years);
+            if (onboarding.max_notice_period_days !== undefined) setMaxNoticePeriodDays(onboarding.max_notice_period_days);
+            if (onboarding.search_intensity) setSearchIntensity(onboarding.search_intensity);
+            if (onboarding.expected_applications_per_month !== undefined) setExpectedApplicationsPerMonth(onboarding.expected_applications_per_month);
+            if (onboarding.application_mode) setApplicationMode(onboarding.application_mode);
+            
             if (onboarding.current_stage && userLifecycleState !== 'ONBOARDING_COMPLETE') {
-              const stepMatch = onboarding.current_stage.match(/STEP_(\d+)/);
-              if (stepMatch) {
-                let step = Math.max(1, parseInt(stepMatch[1]));
-                if (step > 5) {
-                  step = step - 1;
-                }
-                if (step > 1) {
-                  setIsResuming(true);
-                  setCurrentStep(step);
-                }
+              const stageKey = onboarding.current_stage as OnboardingStage;
+              const mappedStep = STAGE_TO_STEP[stageKey];
+              if (mappedStep && mappedStep > 1) {
+                setCurrentStep(mappedStep);
               }
             }
           }
@@ -516,17 +863,48 @@ Please find the CV data attached.`;
     };
 
     initSession();
-  }, [status]);
+  }, [status, searchParams]);
 
   // Auto-save logic
   useEffect(() => {
     if (!isLoadingSession && currentStep > 1) {
+      const stageName = STEP_TO_STAGE[currentStep] || 'INTENT';
       saveSession({
-        current_stage: `STEP_${currentStep}`,
-        completed_stages: Array.from({ length: currentStep - 1 }, (_, i) => `STEP_${i + 1}`)
+        current_stage: stageName,
+        completed_stages: Object.values(STEP_TO_STAGE).slice(0, currentStep - 1)
       });
+
+      // Save to localStorage as secondary backup
+      localStorage.setItem('buildairesume_onboarding_state', JSON.stringify({
+        intent,
+        stage: stageName,
+        step: currentStep,
+        seedingMethod,
+        cvScore,
+        initialScore,
+        transformedScore,
+        primaryCvId,
+        editorCompleted,
+        searchStatus,
+        monthlyVolume,
+        trackerInterest,
+        autoapplyInterest,
+        targetRoles,
+        locations,
+        experienceLevel,
+        salary,
+        visaRequired,
+        workplaceTypes,
+        salaryMin,
+        salaryCurrency,
+        experienceYears,
+        maxNoticePeriodDays,
+        searchIntensity,
+        expectedApplicationsPerMonth,
+        applicationMode
+      }));
     }
-  }, [currentStep, isLoadingSession]);
+  }, [currentStep, isLoadingSession, intent, cvScore, primaryCvId, editorCompleted, initialScore, transformedScore, selectedPathway, targetRoles, locations, experienceLevel, salary, visaRequired, searchStatus, monthlyVolume, trackerInterest, autoapplyInterest, workplaceTypes, salaryMin, salaryCurrency, experienceYears, maxNoticePeriodDays, searchIntensity, expectedApplicationsPerMonth, applicationMode]);
 
   // Load plans
   useEffect(() => {
@@ -543,119 +921,77 @@ Please find the CV data attached.`;
       .catch(err => console.error('Failed to fetch pricing plans:', err));
   }, []);
 
-  // Save State Helper
-  const getOnboardingState = (): OnboardingState => ({
-    intent,
-    seedingMethod,
-    cvScore,
-    searchStatus,
-    monthlyVolume,
-    trackerInterest,
-    autoapplyInterest,
-    targetRoles,
-    locations,
-    experienceLevel,
-    salary,
-    visaRequired,
-    parsedCVData,
-    droppedFile
-  });
+  // Prefetch editor route early to make transition instantaneous
+  useEffect(() => {
+    if (currentStep >= 2) {
+      router.prefetch('/editor');
+    }
+  }, [currentStep, router]);
 
-  const saveStateToLocalStorage = (nextStepNum: number) => {
-    const state = getOnboardingState();
-    localStorage.setItem('cvcircle_onboarding_state', JSON.stringify({
-      ...state,
-      step: nextStepNum,
-      fastTrackToEditor
+  // Handlers for Transitions
+  const handleOpenEditorFromStep3 = () => {
+    // 1. Persist state for return
+    sessionStorage.setItem('fromOnboarding', 'true');
+    sessionStorage.setItem('onboardingReturnUrl', '/welcome?stage=cv_ready');
+    sessionStorage.setItem('onboardingReturnStep', '4');
+
+    // 2. Authoritative database update
+    saveSession({
+      current_stage: 'CV_READY_FORK',
+      primary_goal: intent,
+      confidence_score: cvScore
+    });
+
+    // 3. LocalStorage persistence
+    localStorage.setItem('buildairesume_onboarding_state', JSON.stringify({
+      intent,
+      stage: 'CV_READY_FORK',
+      step: 4,
+      seedingMethod,
+      cvScore,
+      initialScore: cvScore || 64,
+      primaryCvId,
+      editorCompleted: false
     }));
+
+    // 4. Navigate directly to Editor starting at Template Selector (Step 2 in editor)
+    const isAuth = status === 'authenticated';
+    const targetEditorUrl = primaryCvId && primaryCvId !== 'guest-draft'
+      ? `/editor?cvId=${primaryCvId}&mode=edit-master&improve=true&step=2&fromOnboarding=true`
+      : isAuth
+        ? '/editor?doc=master-cv&mode=improve&step=2&fromOnboarding=true'
+        : '/editor?cvId=guest-draft&mode=create&step=2&restoreDraft=true&fromOnboarding=true';
+
+    router.push(targetEditorUrl);
   };
 
-  // Restore State
-  useEffect(() => {
-    const saved = localStorage.getItem('cvcircle_onboarding_state');
-    if (saved && status === 'authenticated') {
-      try {
-        const parsed = JSON.parse(saved);
-        setIntent(parsed.intent || '');
-        setSeedingMethod(parsed.seedingMethod || '');
-        setCVScore(parsed.cvScore || 68);
-        setSearchStatus(parsed.searchStatus || '');
-        setMonthlyVolume(parsed.monthlyVolume || '');
-        setTrackerInterest(parsed.trackerInterest || '');
-        setAutoapplyInterest(parsed.autoapplyInterest || '');
-        setTargetRoles(parsed.targetRoles || []);
-        setLocations(parsed.locations || []);
-        setExperienceLevel(parsed.experienceLevel || '');
-        setSalary(parsed.salary || '');
-        setVisaRequired(parsed.visaRequired ?? null);
-        setFastTrackToEditor(parsed.fastTrackToEditor || false);
-        
-        // Restore parsed data
-        if (parsed.parsedCVData) setParsedCVData(parsed.parsedCVData);
-        if (parsed.droppedFile) setDroppedFile(parsed.droppedFile);
-        
-        // Clear local storage
-        localStorage.removeItem('cvcircle_onboarding_state');
-        
-        // If they fast-tracked, call completion logic instead of simple redirect
-        if (parsed.fastTrackToEditor) {
-          completeOnboarding('/editor', parsed);
-        } else {
-          let restoredStep = parsed.step || 5;
-          if (restoredStep > 5) {
-            restoredStep = restoredStep - 1;
-          }
-          setCurrentStep(restoredStep);
-        }
-      } catch (e) {
-        console.error('Error restoring onboarding state:', e);
-      }
-    }
-  }, [status, router]);
-
-  // Handle Next Navigation
   const handleNext = (overrideSeedingMethod?: string) => {
     const activeSeedingMethod = overrideSeedingMethod || seedingMethod;
-    // Skip Step 3 (Analysis) for scratch CVs, go directly to Step 4 (LinkedIn Promo)
-    if (currentStep === 2 && (intent === 'cv_scratch' || activeSeedingMethod === 'scratch')) {
-      setCurrentStep(4);
+
+    if (currentStep === 2 && activeSeedingMethod === 'scratch') {
+      handleOpenEditorFromStep3();
       return;
     }
 
     if (currentStep === 3) {
-      // Go to Step 4 (LinkedIn Promo)
-      setCurrentStep(4);
+      handleOpenEditorFromStep3();
       return;
     }
 
-    if (currentStep === 4 && (intent === 'cv' || intent === 'cv_scratch')) {
-      // Type 1 User Fast-Track check: Route directly to editor after showing LinkedIn Promo
-      completeOnboarding('/editor');
-      return;
-    }
-
-    if (currentStep < 11) {
+    if (currentStep < 12) {
       setCurrentStep(currentStep + 1);
     } else {
-      // Complete Onboarding redirection based on scores
       const rec = getRecommendedTier();
       completeOnboarding(rec.redirectUrl);
     }
   };
 
   const handleBack = () => {
-    if (currentStep === 4) {
-      if (intent === 'cv_scratch' || seedingMethod === 'scratch') {
-        setCurrentStep(2);
-      } else {
-        setCurrentStep(3);
-      }
-    } else if (currentStep > 1) {
+    if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
     }
   };
 
-  // Onboarding Completion Endpoint call
   // Helper to check and transfer guest draft if authenticated
   async function checkAndTransferGuestDraft(forceAuth = false) {
     if (status === 'authenticated' || forceAuth) {
@@ -664,10 +1000,8 @@ Please find the CV data attached.`;
         if (sessionId) {
           const hasDraft = await guestCVService.hasDraft(sessionId);
           if (hasDraft) {
-            console.log('🔄 Onboarding - Transferring guest draft to authenticated user...');
             const transferRes = await guestCVService.transferDraftToUser(sessionId, session?.user?.id);
             if (transferRes.success && transferRes.cvId) {
-              console.log('✅ Onboarding - Draft transferred successfully. CV ID:', transferRes.cvId);
               setPrimaryCvId(transferRes.cvId);
               return transferRes.cvId;
             }
@@ -678,14 +1012,13 @@ Please find the CV data attached.`;
       }
     }
     return null;
-  };
+  }
 
-  // Onboarding Completion Endpoint call
-  const completeOnboarding = async (redirectUrl: string, overrideState?: OnboardingState, forceAuth = false) => {
+  // Complete Onboarding Endpoint
+  const completeOnboarding = async (redirectUrl: string, overrideState?: any, forceAuth = false) => {
     const s_cvScore = overrideState?.cvScore ?? cvScore;
 
     try {
-      // Transfer draft first if authenticated
       let activeCvId = primaryCvId;
       const isUserAuth = status === 'authenticated' || forceAuth;
       if (isUserAuth) {
@@ -696,174 +1029,62 @@ Please find the CV data attached.`;
       }
 
       const rec = getRecommendedTier(overrideState);
-      let primary_goal: 'cv' | 'tracker' | 'auto_apply' = 'cv';
-      let recommended_plan = 'starter_monthly';
-      const isScratch = seedingMethod === 'scratch';
-      
-      // All three user types (Starter, Focused, Smart) must go to the editor to complete their primary CV
-      let activation_route = isScratch 
-        ? '/editor?mode=create&step=2&master=true'
-        : (isUserAuth 
-            ? '/editor?doc=master-cv&mode=improve&step=2' 
-            : '/editor?cvId=guest-draft&mode=create&step=2');
-        
-      let dashboard_layout_type: 'cv' | 'tracker' | 'auto_apply' = 'cv';
+      let primary_goal: 'cv' | 'tracker' | 'auto_apply' = intent === 'cv' ? 'cv' : 'tracker';
+      let recommended_plan = intent === 'cv' ? 'starter_monthly' : 'focused_monthly';
 
-      if (rec.type === 3) {
-        primary_goal = 'auto_apply';
-        recommended_plan = 'smart_quarterly';
-        dashboard_layout_type = 'auto_apply';
-      } else if (rec.type === 2) {
-        primary_goal = 'tracker';
-        recommended_plan = 'focused_monthly';
-        dashboard_layout_type = 'tracker';
-      }
+      const dashboard_layout_type: 'cv' | 'tracker' | 'auto_apply' =
+        intent === 'cv' ? 'cv' : 'tracker';
 
-      // If user has a valid primaryCvId (and not 'guest-draft'), route to it in edit-master mode
-      if (activeCvId && activeCvId !== 'guest-draft') {
-        activation_route = `/editor?cvId=${activeCvId}&mode=edit-master&improve=true&step=2`;
-      }
+      const targetRoute =
+        redirectUrl === '/dashboard'
+          ? redirectUrl
+          : intent === 'cv'
+            ? activeCvId && activeCvId !== 'guest-draft'
+              ? `/editor?cvId=${activeCvId}&mode=edit-master`
+              : '/dashboard'
+            : '/dashboard/jobs?tab=discover';
 
-      let targetRoute = redirectUrl === '/dashboard' ? '/dashboard' : activation_route;
-
-      // Update session status
       await saveSession({
         primary_goal,
         confidence_score: s_cvScore,
         recommended_plan,
+        activation_status: 'completed',
         userLifecycleState: 'ONBOARDING_COMPLETE',
         dashboard_layout_type
       });
 
-      if (isUserAuth && activeCvId && activeCvId !== 'guest-draft') {
-        openPaymentModal({
-          preselectedPlanKey: recommended_plan === 'starter_monthly' ? 'focused_monthly' : recommended_plan,
-          triggerContext: 'onboarding-exit',
-          onSuccess: () => {
-            sessionStorage.setItem('fromOnboarding', 'true');
-            router.push(targetRoute);
-          },
-          onClose: async () => {
-            try {
-              await fetch('/api/user/subscription', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ planKey: 'starter_monthly' })
-              });
-              sessionStorage.setItem('fromOnboarding', 'true');
-            } catch (err) {
-              console.error('Failed to auto-assign starter plan:', err);
-            }
-            router.push(targetRoute);
-          }
-        });
-      } else {
-        // Guest user OR authenticated user with no master CV yet - redirect to editor or dashboard with restore draft flag
-        sessionStorage.setItem('fromOnboarding', 'true');
-        const finalUrl = targetRoute.includes('?') 
-          ? `${targetRoute}&restoreDraft=true&fromOnboarding=true`
-          : `${targetRoute}?restoreDraft=true&fromOnboarding=true`;
-        router.push(finalUrl);
-      }
+      sessionStorage.removeItem('fromOnboarding');
+      sessionStorage.removeItem('onboardingReturnUrl');
+      sessionStorage.removeItem('onboardingReturnStep');
+
+      router.push(targetRoute);
     } catch (err) {
       console.error('Failed to complete onboarding:', err);
       router.push(redirectUrl);
     }
   };
 
-  // Silent Tier Scoring Calculation
-  const getRecommendedTier = (overrideState?: OnboardingState) => {
+  const getRecommendedTier = (overrideState?: any) => {
     const s_intent = overrideState?.intent ?? intent;
-    const s_searchStatus = overrideState?.searchStatus ?? searchStatus;
-    const s_monthlyVolume = overrideState?.monthlyVolume ?? monthlyVolume;
-    const s_trackerInterest = overrideState?.trackerInterest ?? trackerInterest;
-    const s_autoapplyInterest = overrideState?.autoapplyInterest ?? autoapplyInterest;
-
-    let score1 = 0; // Free CV Studio
-    let score2 = 0; // Job Tracker
-    let score3 = 0; // Auto-Apply
-
-    // Intent selection scoring
-    if (s_intent === 'cv' || s_intent === 'cv_scratch') {
-      score1 += 3;
-    } else if (s_intent === 'tracker') {
-      score2 += 3;
-    } else if (s_intent === 'auto_apply') {
-      score3 += 3;
-    }
-
-    // Search activity status scoring
-    if (s_searchStatus === 'browsing') {
-      score1 += 2;
-    } else if (s_searchStatus === 'exploring') {
-      score1 += 1;
-      score2 += 2;
-    } else if (s_searchStatus === 'active') {
-      score2 += 2;
-      score3 += 1;
-    } else if (s_searchStatus === 'aggressive') {
-      score3 += 3;
-      score2 += 1;
-    }
-
-    // Monthly Volume scoring
-    if (s_monthlyVolume === 'low') {
-      score1 += 2;
-    } else if (s_monthlyVolume === 'medium') {
-      score2 += 3;
-    } else if (s_monthlyVolume === 'high') {
-      score3 += 3;
-    } else if (s_monthlyVolume === 'aggressive') {
-      score3 += 4;
-    }
-
-    // Tracker interest scoring
-    if (s_trackerInterest === 'yes') {
-      score2 += 2;
-    } else if (s_trackerInterest === 'no') {
-      score1 += 1;
-    }
-
-    // Auto-Apply interest scoring
-    if (s_autoapplyInterest === 'yes') {
-      score3 += 3;
-    } else if (s_autoapplyInterest === 'no') {
-      score2 += 1;
-      score1 += 1;
-    }
-
-    // Final Recommendation Resolution
-    if (score3 >= score2 && score3 >= score1) {
-      const plan = plans.find(p => p.key === 'smart_quarterly') || plans.find(p => p.key === 'pro_quarterly');
-      const priceText = plan?.regionalPricing?.price 
-        ? `${currencySymbol}${plan.regionalPricing.price}`
-        : `${currencySymbol}34.99`;
-      return {
-        tier: 'Smart',
-        description: 'Best for scale. AI will search, match, customize, and automatically submit applications for you.',
-        price: `${priceText}/quarter`,
-        redirectUrl: '/dashboard/jobs?tab=auto-apply&setup=1',
-        type: 3
-      };
-    } else if (score2 >= score1) {
-      const plan = plans.find(p => p.key === 'focused_monthly') || plans.find(p => p.key === 'pro_monthly');
-      const priceText = plan?.regionalPricing?.price 
-        ? `${currencySymbol}${plan.regionalPricing.price}`
-        : `${currencySymbol}12.99`;
-      return {
-        tier: 'Focused',
-        description: 'Perfect for active searchers looking to organize, track applications, and optimize CVs.',
-        price: `${priceText}/month`,
-        redirectUrl: '/dashboard/tracker?newJob=1',
-        type: 2
-      };
-    } else {
+    if (s_intent === 'cv') {
       return {
         tier: 'Starter',
-        description: 'Create, edit, and export professional templates with basic ATS feedback.',
+        description: 'Create, edit, and export professional templates with ATS feedback.',
         price: 'Free',
-        redirectUrl: '/editor?doc=master-cv&mode=improve',
+        redirectUrl: '/editor?doc=master-cv',
         type: 1
+      };
+    } else {
+      const plan = plans.find(p => p.key === 'focused_monthly') || plans.find(p => p.key === 'focused_yearly');
+      const priceText = plan?.regionalPricing?.price 
+        ? `${currencySymbol}${plan.regionalPricing.price}`
+        : `${currencySymbol}9.99`;
+      return {
+        tier: 'Focused',
+        description: 'Complete job search suite with unlimited CV edits, AI Cover Letters, Mock Interviews, and Application Tracker.',
+        price: `${priceText}/month`,
+        redirectUrl: '/dashboard/jobs?tab=discover',
+        type: 2
       };
     }
   };
@@ -886,64 +1107,22 @@ Please find the CV data attached.`;
 
     if (result._parsed || result.basics || result.work) {
       setParsedCVData(result);
-      const score = result.analysis?.score || result._score || 68;
+      const score = result.analysis?.score || result._score || 64;
       setCVScore(score);
+      setInitialScore(score);
+      setTransformedScore(Math.min(96, Math.max(88, score + 24)));
       await savePrimaryCV(result, fileName, score);
       
-      triggerNotification("CV Parsed successfully!");
+      triggerNotification("Profile created successfully!");
       setTimeout(() => {
         setIsParsing(false);
-        handleNext();
+        setCurrentStep(3);
       }, 800);
     } else {
       throw new Error(result.error || "Parsing failed");
     }
   };
 
-  const handlePasteSubmit = async () => {
-    if (!pasteInput.trim()) return;
-    
-    setDroppedFile('Pasted Content');
-    setIsParsing(true);
-    setParseProgress(0);
-    setParseStep(0);
-    setPasteError('');
-    setShowPasteModal(false);
-
-    const formData = new FormData();
-    const file = new File([pasteInput], 'pasted-cv.txt', { type: 'text/plain' });
-    formData.append('file', file);
-
-    try {
-      const progressInterval = setInterval(() => {
-        setParseProgress(prev => {
-          if (prev >= 95) {
-            return 95;
-          }
-          if (prev === 20) setParseStep(1);
-          if (prev === 45) setParseStep(2);
-          if (prev === 70) setParseStep(3);
-          if (prev === 90) setParseStep(4);
-          return prev + 5;
-        });
-      }, 250);
-
-      const response = await fetch('/api/cv/parse', {
-        method: 'POST',
-        body: formData,
-      });
-
-      clearInterval(progressInterval);
-      await processParseResponse(response, 'Pasted CV');
-    } catch (err: any) {
-      console.error("Paste parsing error:", err);
-      const errMsg = err?.message || "Failed to parse text. Please try again or Start Fresh.";
-      toast.error(errMsg, { duration: 5000, position: 'bottom-right' });
-      setIsParsing(false);
-    }
-  };
-
-  // Actual Parser Implementation
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
@@ -960,18 +1139,13 @@ Please find the CV data attached.`;
       let progressInterval: ReturnType<typeof setInterval> | null = null;
 
       try {
-        // Start visual progress simulator in parallel
         progressInterval = setInterval(() => {
           setParseProgress(prev => {
-            if (prev >= 95) {
-              // Stay at 95% until actual processing finishes
-              return 95;
-            }
-            // Update steps based on progress
+            if (prev >= 95) return 95;
             if (prev === 20) setParseStep(1);
             if (prev === 45) setParseStep(2);
             if (prev === 70) setParseStep(3);
-            if (prev === 90) setParseStep(4); // New "Finalizing" step
+            if (prev === 90) setParseStep(4);
             return prev + 5;
           });
         }, 250);
@@ -987,189 +1161,79 @@ Please find the CV data attached.`;
         if (progressInterval) clearInterval(progressInterval);
         console.error("Parsing error:", err);
         const errMsg = err?.message || "Failed to parse CV. Please try again or Start Fresh.";
-        // Show error inline in the parsing UI instead of resetting silently
         setParseError(errMsg);
         setIsParsing(false);
       }
     }
   };
 
-  // Auth Wall OAuth triggers
-  const handleOAuth = (provider: 'google' | 'linkedin' | 'apple') => {
-    // Save state to localstorage first
-    saveStateToLocalStorage(currentStep + 1);
-    signIn(provider, { callbackUrl: '/welcome' });
-  };
+  const handleJsonSubmit = async () => {
+    if (!jsonInput.trim()) return;
+    setJsonError('');
 
-  // Auth Wall Credentials Form Submission
-  const handleEmailAuthSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setAuthError('');
-    setAuthSuccess('');
-    setAuthLoading(true);
+    try {
+      const trimmedInput = jsonInput.trim();
+      if (trimmedInput.startsWith('{') || trimmedInput.startsWith('[')) {
+        try {
+          const result = JSON.parse(trimmedInput);
+          setParsedCVData(result);
+          const score = result.analysis?.score || result._score || 68;
+          setCVScore(score);
+          setInitialScore(score);
+          setTransformedScore(Math.min(96, Math.max(88, score + 24)));
+          await savePrimaryCV(result, 'Imported JSON', score);
 
-    if (authTab === 'signup') {
-      try {
-        const res = await fetch('/api/auth/register-user', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: authEmail,
-            password: authPassword,
-            firstName: authName.split(' ')[0] || 'User',
-            lastName: authName.split(' ').slice(1).join(' ') || 'User'
-          })
-        });
-        const result = await res.json();
-        if (result.success) {
-          setAuthSuccess('Account created! Verification code sent to your email.');
-          setIsVerifying(true);
-        } else {
-          setAuthError(result.message || 'Registration failed.');
-        }
-      } catch (err) {
-        setAuthError('An error occurred. Please try again.');
-      } finally {
-        setAuthLoading(false);
-      }
-    } else {
-      // Sign In Flow
-      try {
-        const verifyRes = await fetch('/api/auth/verify-credentials', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: authEmail, password: authPassword, portal: 'candidate' })
-        });
-        const verifyResult = await verifyRes.json();
-        
-        if (!verifyResult.success) {
-          if (verifyResult.code === 'EMAIL_NOT_VERIFIED') {
-            setAuthSuccess('Account not verified. Verification code sent.');
-            setIsVerifying(true);
-            return;
-          }
-          setAuthError(verifyResult.error || 'Invalid credentials.');
-          setAuthLoading(false);
+          triggerNotification("JSON Data imported!");
+          setShowJsonModal(false);
+          setCurrentStep(3);
           return;
+        } catch (e) {
+          console.warn("Input looked like JSON but failed to parse. Falling back to text parsing...");
         }
+      }
 
-        const result = await signIn('credentials', {
-          email: authEmail,
-          password: authPassword,
-          redirect: false
+      setDroppedFile('Pasted Content');
+      setIsParsing(true);
+      setParseProgress(0);
+      setParseStep(0);
+      setShowJsonModal(false);
+
+      const formData = new FormData();
+      const file = new File([jsonInput], 'pasted-cv.txt', { type: 'text/plain' });
+      formData.append('file', file);
+
+      const progressInterval = setInterval(() => {
+        setParseProgress(prev => {
+          if (prev >= 95) return 95;
+          if (prev === 20) setParseStep(1);
+          if (prev === 45) setParseStep(2);
+          if (prev === 70) setParseStep(3);
+          if (prev === 90) setParseStep(4);
+          return prev + 5;
         });
+      }, 250);
 
-        if (result?.ok) {
-          setAuthSuccess('Signed in successfully! Continuing...');
-          setTimeout(() => {
-            if (fastTrackToEditor) {
-              completeOnboarding('/editor', undefined, true);
-            } else {
-              setCurrentStep(5);
-            }
-          }, 800);
-        } else {
-          setAuthError(result?.error || 'Authentication failed.');
-        }
-      } catch (err) {
-        setAuthError('Sign in failed.');
-      } finally {
-        setAuthLoading(false);
-      }
-    }
-  };
-
-  const handleVerifyCodeSubmitDirect = async (codeValue: string) => {
-    setAuthError('');
-    setAuthSuccess('');
-    setAuthLoading(true);
-
-    try {
-      const verifyRes = await fetch('/api/auth/verify-and-signin', {
+      const response = await fetch('/api/cv/parse', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: authEmail,
-          code: codeValue,
-          type: 'email-verification'
-        })
-      });
-      const verifyResult = await verifyRes.json();
-
-      if (!verifyResult.success) {
-        setAuthError(verifyResult.message || 'Invalid or expired code.');
-        setAuthLoading(false);
-        return;
-      }
-
-      // Automatically sign in with credentials now that they are verified
-      const result = await signIn('credentials', {
-        email: authEmail,
-        password: authPassword,
-        redirect: false
+        body: formData,
       });
 
-      if (result?.ok) {
-        setAuthSuccess('Account verified and logged in!');
-        setTimeout(() => {
-          if (fastTrackToEditor) {
-            completeOnboarding('/editor', undefined, true);
-          } else {
-            setCurrentStep(5);
-          }
-        }, 800);
-      } else {
-        setAuthError('Verification succeeded, but failed to establish session. Please sign in.');
-        setIsVerifying(false);
-      }
-    } catch (err) {
-      setAuthError('Verification failed.');
-    } finally {
-      setAuthLoading(false);
+      clearInterval(progressInterval);
+      await processParseResponse(response, 'Pasted CV');
+    } catch (err: any) {
+      console.error("Import error:", err);
+      setJsonError(err?.message || "Failed to process data. Please check and try again.");
+      setIsParsing(false);
     }
   };
 
-  const handleResendCode = async () => {
-    setAuthLoading(true);
-    setAuthError('');
-    setAuthSuccess('');
-    try {
-      const res = await fetch('/api/auth/send-code', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: authEmail, type: 'email-verification' })
-      });
-      const result = await res.json();
-      if (result.success) {
-        setAuthSuccess('Verification code resent!');
-      } else {
-        setAuthError(result.message || 'Failed to resend code.');
-      }
-    } catch (err) {
-      setAuthError('Failed to resend code.');
-    } finally {
-      setAuthLoading(false);
-    }
-  };
-
-  // Framer Motion Animation Variants
   const containerVariants = {
-    hidden: { opacity: 0, y: 15 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
-    exit: { opacity: 0, y: -15, transition: { duration: 0.3 } }
+    hidden: { opacity: 0, y: 8 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.22, ease: [0.16, 1, 0.3, 1] } },
+    exit: { opacity: 0, y: -6, transition: { duration: 0.12, ease: 'easeIn' } }
   };
 
-  // Mini Kanban Animation loop for Step 10
-  const [kanbanStage, setKanbanStage] = useState(0);
-  useEffect(() => {
-    if (currentStep !== 10) return;
-    const interval = setInterval(() => {
-      setKanbanStage(prev => (prev + 1) % 3);
-    }, 2800);
-    return () => clearInterval(interval);
-  }, [currentStep]);
-
-  // Mini Auto-Apply animation for Step 9
+  // Animation loops for Tracker and Auto-apply
   const [autoApplyStep, setAutoApplyStep] = useState(0);
   useEffect(() => {
     if (currentStep !== 9) return;
@@ -1179,43 +1243,39 @@ Please find the CV data attached.`;
     return () => clearInterval(interval);
   }, [currentStep]);
 
-  // Rich Tracker Animation loop for Step 8
   useEffect(() => {
     if (currentStep !== 8) return;
     const interval = setInterval(() => {
       setTrackerAnimStage(prev => (prev + 1) % 4);
-    }, 4500);
+    }, 4000);
     return () => clearInterval(interval);
   }, [currentStep]);
 
   return (
-    <div className="h-screen font-sans antialiased flex flex-col selection:bg-lime-200 transition-colors duration-300 overflow-hidden bg-[#f3f2ee] text-[#1A1A1A]">
+    <div className="h-screen font-sans antialiased flex flex-col selection:bg-lime-200 transition-colors duration-300 overflow-hidden bg-[#f3f2ee] text-[#1A1A1A] welcome-page">
       
       {/* Top Header */}
       <header className="px-6 py-5 max-w-7xl mx-auto w-full flex items-center justify-between border-b transition-colors duration-300 border-gray-100">
         <Logo size="sm" />
         
-        {/* Pagination Dots and Step Text */}
+        {/* Dynamic Progress Indicator */}
         {!isLoadingSession && (
           <div className="flex items-center gap-6 text-xs font-semibold text-gray-400">
-            {/* Progress Indicators */}
-            {currentStep !== 11 && (
-              <div className="flex items-center gap-1.5">
-                {[...Array(11)].map((_, i) => (
-                  <div 
-                    key={i} 
-                    className={`h-1.5 rounded-full transition-all duration-300 ${
-                      i + 1 === currentStep 
-                        ? 'w-6 bg-black dark:bg-[#80FF00]' 
-                        : i + 1 < currentStep 
-                        ? 'w-1.5 bg-gray-400 dark:bg-white/40' 
-                        : 'w-1.5 bg-gray-200 dark:bg-white/10'
-                    }`}
+            {currentStep !== 12 && (
+              <div className="flex items-center gap-3 w-48 sm:w-60">
+                <div className="flex-1 h-1.5 rounded-full bg-gray-200 overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-black transition-all duration-500"
+                    style={{ 
+                      width: `${Math.max(8, Math.round((currentStep / 12) * 100))}%` 
+                    }}
                   />
-                ))}
+                </div>
+                <span className="whitespace-nowrap font-bold text-gray-600">
+                  {currentStep <= 4 ? `Phase 1: Profile` : `Phase 2: Job Agent (${currentStep}/12)`}
+                </span>
               </div>
             )}
-            <span>Step {currentStep} of 11</span>
           </div>
         )}
       </header>
@@ -1224,191 +1284,115 @@ Please find the CV data attached.`;
       <main className={`flex flex-col justify-center ${currentStep === 3 ? 'max-w-6xl' : 'max-w-4xl'} mx-auto w-full px-6 py-3 sm:py-4 flex-1 overflow-y-auto transition-all duration-300`}>
         
         <AnimatePresence mode="wait">
-          {isResuming ? (
-            <motion.div
-              key="resume-screen"
-              variants={containerVariants}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              className="w-full bg-white border border-gray-150 rounded-[2.5rem] p-6 md:p-8 shadow-[0_20px_50px_rgba(0,0,0,0.05)] max-w-2xl mx-auto relative overflow-hidden max-h-full flex flex-col"
-            >
-              {/* Subtle top decoration line */}
-              <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-[#80FF00] via-emerald-400 to-[#80FF00]" />
-
-              <div className="flex-1 overflow-y-auto pr-2 space-y-8 pb-4">
-                <div className="space-y-4 text-center">
-                  <div className="relative inline-flex items-center justify-center p-4 rounded-3xl bg-[#80FF00]/10 text-black mb-2 shadow-[0_0_20px_rgba(128,255,0,0.15)]">
-                    <div className="absolute inset-0 bg-[#80FF00]/5 rounded-3xl animate-pulse" />
-                    <History className="h-8 w-8 text-[#80FF00] relative z-10" />
-                  </div>
-                  <h1 className="text-4xl font-extrabold tracking-tight text-gray-900 animate-fade-in">Welcome Back</h1>
-                  <p className="text-gray-500 text-base max-w-md mx-auto">
-                    We've safely saved your progress. Let's pick up right where you left off.
-                  </p>
-                </div>
-
-                {/* Progress Card */}
-                <div className="bg-slate-50/80 rounded-[2rem] p-6 space-y-6 border border-gray-150">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-black uppercase tracking-widest text-gray-400">Your Progress</span>
-                    <span className="text-xs font-black text-black bg-[#80FF00] px-2.5 py-1 rounded-full shadow-sm">
-                      Step {currentStep} of 11
-                    </span>
-                  </div>
-
-                  {/* Progress Line */}
-                  <div className="space-y-2">
-                    <div className="w-full bg-gray-200 h-2.5 rounded-full overflow-hidden p-0.5 border border-gray-200/50">
-                      <motion.div 
-                        className="bg-gradient-to-r from-[#80FF00] to-emerald-400 h-full rounded-full transition-all duration-500 shadow-[0_0_8px_rgba(128,255,0,0.5)]" 
-                        initial={{ width: 0 }}
-                        animate={{ width: `${(currentStep / 11) * 100}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Milestone list */}
-                  <div className="space-y-4 pt-2 border-t border-gray-200/50">
-                    <div className="flex items-center gap-3 text-sm font-bold text-green-700">
-                      <CheckCircle className="h-5 w-5 text-green-600 fill-green-100" />
-                      <span>Primary CV Created</span>
-                    </div>
-                    <div className="flex items-center gap-3 text-sm font-bold text-green-700">
-                      <CheckCircle className="h-5 w-5 text-green-600 fill-green-100" />
-                      <span>ATS Analysis Complete</span>
-                    </div>
-
-                    <div className="flex items-center gap-3 text-sm font-bold text-gray-500">
-                      <div className="w-5 h-5 rounded-full border-2 border-gray-300 bg-white" />
-                      <span>{11 - currentStep} steps remaining to unlock full dashboard</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-3 pt-4 border-t border-gray-100">
-                <Button 
-                  onClick={() => {
-                    setIsResuming(false);
-                  }}
-                  className="w-full bg-black text-white hover:bg-slate-900 font-extrabold py-6 rounded-2xl flex items-center justify-center gap-2 shadow-lg hover:shadow-xl hover:scale-[1.01] active:scale-[0.99] transition-all uppercase tracking-tight text-sm"
-                >
-                  Resume Onboarding <ArrowRight className="h-5 w-5" />
-                </Button>
-                {primaryCvId && (
-                  <Button 
-                    variant="ghost"
-                    onClick={() => router.push(`/editor?cvId=${primaryCvId}`)}
-                    className="w-full text-gray-500 font-bold py-4 hover:bg-slate-100 rounded-2xl transition-colors"
-                  >
-                    Open Primary CV
-                  </Button>
-                )}
-              </div>
-            </motion.div>
-          ) : (
-            <motion.div
-              key={currentStep}
-              variants={containerVariants}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              className="w-full transition-all duration-300 max-h-full flex flex-col overflow-hidden bg-white border border-gray-200 rounded-[2rem] p-6 md:p-8 shadow-sm"
-            >
-              <div className="flex-1 overflow-y-auto pr-2 pb-4 space-y-6">
-            
-            {/* Step 1: Welcome & Intent */}
-            {currentStep === 1 && (
+          <motion.div
+            key={currentStep}
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            className="w-full transition-all duration-300 max-h-full flex flex-col overflow-hidden bg-white border border-gray-200 rounded-[2rem] p-6 md:p-8 shadow-sm"
+          >
+            <div className="flex-1 overflow-y-auto pr-2 pb-4 space-y-6">
+          
+          {/* STEP 1: What are you here to achieve? */}
+          {currentStep === 1 && (
               <div className="space-y-8">
                 <div className="space-y-3 text-center">
-                  <span className="text-xs font-black uppercase tracking-widest text-[#80FF00] bg-black px-3 py-1 rounded-full">Personalization</span>
-                  <h1 className="text-4xl font-extrabold tracking-tight md:text-5xl">
-                    Tailor your career circle
+                  <span className="onboarding-step-label text-black bg-[#013f2e] px-3 py-1 rounded-full font-bold">Goal Alignment</span>
+                  <h1 className="onboarding-title">
+                    What are you trying to accomplish?
                   </h1>
-                  <p className="text-gray-500 text-lg max-w-xl mx-auto">
-                    What is your primary focus today? We will adapt our tools and layout to match your goals.
+                  <p className="onboarding-copy text-gray-500 max-w-xl mx-auto">
+                    Select your primary objective today. We'll configure our tools and layout to match your journey.
                   </p>
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-4 pt-4">
-                  {[
-                    {
-                      id: 'cv',
-                      title: 'Improve Existing CV',
-                      desc: 'Audit and polish your current resume. Fix formatting and target ATS keywords.',
-                      icon: FileText,
-                      badge: 'Type 1'
-                    },
-                    {
-                      id: 'cv_scratch',
-                      title: 'Build From Scratch',
-                      desc: 'Create a professional CV using interactive fields and custom styled templates.',
-                      icon: Sparkles,
-                      badge: 'Type 1'
-                    },
-                    {
-                      id: 'tracker',
-                      title: 'Track Applications',
-                      desc: 'Organize jobs, monitor pipeline stages, and stay on top of interview dates.',
-                      icon: Briefcase,
-                      badge: 'Type 2'
-                    },
-                    {
-                      id: 'auto_apply',
-                      title: 'Auto-Apply & Automate',
-                      desc: 'Automate job search matching, customize bullet points, and auto-submit forms.',
-                      icon: Zap,
-                      badge: 'Type 3'
-                    }
-                  ].map(option => {
-                    const Icon = option.icon;
-                    const isSelected = intent === option.id;
-                    return (
-                      <button
-                        key={option.id}
-                        onClick={() => setIntent(option.id)}
-                        className={`text-left p-6 border-2 rounded-2xl transition-all relative ${
-                          isSelected 
-                            ? 'border-black bg-slate-50' 
-                            : 'border-gray-200 hover:border-gray-300 bg-white'
-                        }`}
-                      >
-                        <div className="flex items-start gap-4">
-                          <div className={`p-3 rounded-xl ${isSelected ? 'bg-black text-white' : 'bg-gray-150'}`}>
-                            <Icon className="h-6 w-6" />
-                          </div>
-                          <div className="space-y-1">
-                            <h3 className="font-bold text-lg">{option.title}</h3>
-                            <p className="text-sm text-gray-500 leading-relaxed">{option.desc}</p>
+                <div className="grid md:grid-cols-2 gap-5 pt-4 max-w-3xl mx-auto">
+                  {/* Path A: Create a Great CV */}
+                  <button
+                    onClick={() => {
+                      setIntent('cv');
+                    }}
+                    className={`text-left p-6 sm:p-7 border-2 rounded-3xl transition-all relative flex flex-col justify-between ${
+                      intent === 'cv'
+                        ? 'border-black bg-slate-50 shadow-md ring-2 ring-black/5' 
+                        : 'border-gray-200 hover:border-gray-300 bg-white hover:shadow-sm'
+                    }`}
+                  >
+                    <div className="flex items-start gap-4">
+                      <div className={`p-3.5 rounded-2xl shrink-0 ${intent === 'cv' ? 'bg-black text-[#013f2e]' : 'bg-gray-100 text-gray-700'}`}>
+                        <FileText className="h-7 w-7" />
+                      </div>
+                      <div className="space-y-1.5 flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-100">
+                            CV Studio
+                          </span>
+                          <div className={`w-5 h-5 rounded-full flex items-center justify-center transition-all ${
+                            intent === 'cv' ? 'bg-black text-[#013f2e] shadow-sm' : 'border-2 border-gray-300'
+                          }`}>
+                            {intent === 'cv' && <Check className="h-3 w-3 stroke-[3]" />}
                           </div>
                         </div>
-                        {isSelected && (
-                          <div className="absolute top-4 right-4 bg-black text-white p-1 rounded-full">
-                            <Check className="h-3 w-3" />
+                        <h3 className="font-extrabold text-xl text-gray-900">Create a Great CV</h3>
+                        <p className="text-sm text-gray-500 leading-relaxed">
+                          Audit, polish, and design a high-impact, ATS-optimized Profile. Export clean PDF &amp; Word files.
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+
+                  {/* Path B: Find My Next Job */}
+                  <button
+                    onClick={() => {
+                      setIntent('job_search');
+                    }}
+                    className={`text-left p-6 sm:p-7 border-2 rounded-3xl transition-all relative flex flex-col justify-between ${
+                      intent === 'job_search'
+                        ? 'border-black bg-slate-50 shadow-md ring-2 ring-black/5' 
+                        : 'border-gray-200 hover:border-gray-300 bg-white hover:shadow-sm'
+                    }`}
+                  >
+                    <div className="flex items-start gap-4">
+                      <div className={`p-3.5 rounded-2xl shrink-0 ${intent === 'job_search' ? 'bg-black text-[#013f2e]' : 'bg-gray-100 text-gray-700'}`}>
+                        <Zap className="h-7 w-7" />
+                      </div>
+                      <div className="space-y-1.5 flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-100">
+                            Full Ecosystem
+                          </span>
+                          <div className={`w-5 h-5 rounded-full flex items-center justify-center transition-all ${
+                            intent === 'job_search' ? 'bg-black text-[#013f2e] shadow-sm' : 'border-2 border-gray-300'
+                          }`}>
+                            {intent === 'job_search' && <Check className="h-3 w-3 stroke-[3]" />}
                           </div>
-                        )}
-                      </button>
-                    );
-                  })}
+                        </div>
+                        <h3 className="font-extrabold text-xl text-gray-900">Find My Next Job</h3>
+                        <p className="text-sm text-gray-500 leading-relaxed">
+                          Build your Profile, auto-track job applications, auto-apply to open roles, and practice AI interviews.
+                        </p>
+                      </div>
+                    </div>
+                  </button>
                 </div>
               </div>
             )}
 
-            {/* Step 2: Seeding Path */}
+            {/* STEP 2: Let's build your career profile (Profile Seeding) */}
             {currentStep === 2 && (
               <div className="space-y-8">
                 <div className="space-y-3 text-center">
-                  <h1 className="text-4xl font-extrabold tracking-tight md:text-5xl">
-                    Import your background
+                  <span className="onboarding-step-label text-black bg-[#013f2e] px-3 py-1 rounded-full font-bold">Career Profile</span>
+                  <h1 className="onboarding-title">
+                    {candidateName ? `${candidateName}, let's build your profile` : `Let's build your career profile`}
                   </h1>
-                  <p className="text-gray-500 text-lg max-w-xl mx-auto">
-                    Seed your profile instantly. Select an import path to feed experience data into CVCircle.
+                  <p className="onboarding-copy text-gray-500 max-w-xl mx-auto">
+                    We'll build your <strong>Profile</strong> — the central source of truth from which all tailored applications and interview prep will be generated.
                   </p>
                 </div>
 
                 {parseError ? (
-                  // Error state: show error card with options to retry or choose differently
                   <div className="max-w-xl mx-auto py-6">
                     <div className="bg-white rounded-[2rem] border border-red-100 shadow-xl p-8 space-y-6">
                       <div className="flex flex-col items-center gap-4 text-center">
@@ -1452,14 +1436,13 @@ Please find the CV data attached.`;
                   </div>
                 ) : !isParsing ? (
                   <div className="space-y-6">
-                    {/* Show method cards only when no seeding method is active */}
                     {!seedingMethod && (
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full">
                         {[
                           { id: 'upload', title: 'Upload CV', desc: 'PDF, Word, TXT', icon: Upload },
-                          { id: 'json', title: 'Paste CV', desc: 'JSON or Text', icon: FileJson },
-                          { id: 'linkedin', title: 'LinkedIn', desc: 'Sync Profile', icon: Linkedin, soon: true },
-                          { id: 'scratch', title: 'Start Fresh', desc: 'No file - manual', icon: Sparkles }
+                          { id: 'json', title: 'Paste Content', desc: 'JSON or Plain Text', icon: FileJson },
+                          { id: 'linkedin', title: 'LinkedIn Sync', desc: 'Profile Import', icon: Linkedin, soon: true },
+                          { id: 'scratch', title: 'Start Fresh', desc: 'Interactive Canvas', icon: PenTool }
                         ].map(method => {
                           const Icon = method.icon;
                           const isSelected = seedingMethod === method.id;
@@ -1471,7 +1454,7 @@ Please find the CV data attached.`;
                                 if (method.id === 'scratch') {
                                   setParsedCVData(null); 
                                   setCVScore(0);
-                                  handleNext('scratch');
+                                  handleOpenEditorFromStep3();
                                 } else if (method.id === 'json') {
                                   setShowJsonModal(true);
                                 } else if (method.id === 'linkedin') {
@@ -1483,11 +1466,11 @@ Please find the CV data attached.`;
                               }`}
                             >
                               {method.soon && (
-                                <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-black text-[#80FF00] text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest shadow-sm z-10">
+                                <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-black text-[#013f2e] text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest shadow-sm z-10">
                                   Coming Soon
                                 </div>
                               )}
-                              <div className={`p-3 rounded-xl ${isSelected ? 'bg-black text-[#80FF00]' : 'bg-gray-150'}`}>
+                              <div className={`p-3 rounded-xl ${isSelected ? 'bg-black text-[#013f2e]' : 'bg-gray-150'}`}>
                                 <Icon className="h-5 w-5" />
                               </div>
                               <div>
@@ -1500,7 +1483,6 @@ Please find the CV data attached.`;
                       </div>
                     )}
 
-                    {/* Upload dropzone - shown fullscreen when upload is selected */}
                     {seedingMethod === 'upload' && (
                       <div className="space-y-3">
                         <div className="border-2 border-dashed border-gray-300 rounded-2xl p-12 text-center hover:border-gray-500 hover:bg-gray-50 transition-all relative cursor-pointer group">
@@ -1515,7 +1497,7 @@ Please find the CV data attached.`;
                               <Upload className="h-10 w-10 text-gray-500 group-hover:scale-110 transition-transform" />
                             </div>
                             <div>
-                              <h4 className="font-bold text-base">Drag & drop your CV here</h4>
+                              <h4 className="font-bold text-base">Drag &amp; drop your CV here</h4>
                               <p className="text-sm text-gray-500 mt-1">or click to browse files</p>
                             </div>
                             <p className="text-xs text-gray-400 border border-gray-200 rounded-full px-3 py-1">PDF, DOCX, TXT · up to 10MB</p>
@@ -1530,128 +1512,54 @@ Please find the CV data attached.`;
                         </button>
                       </div>
                     )}
-
-                    {/* LinkedIn dropzone */}
-                    {seedingMethod === 'linkedin' && (
-                      <div className="space-y-3">
-                        <div className="border-2 border-dashed border-gray-200 rounded-2xl p-10 text-center hover:border-gray-400 transition-colors relative cursor-pointer group">
-                          <input 
-                            type="file" 
-                            accept=".pdf,.doc,.docx,.txt"
-                            onChange={handleFileUpload}
-                            className="absolute inset-0 opacity-0 cursor-pointer"
-                          />
-                          <div className="flex flex-col items-center justify-center gap-2">
-                            <Upload className="h-10 w-10 text-gray-400 group-hover:scale-110 transition-transform" />
-                            <h4 className="font-bold text-sm">Drag & drop your file here</h4>
-                            <p className="text-xs text-gray-500">Supports PDF, DOCX, TXT up to 10MB</p>
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => setSeedingMethod('')}
-                          className="w-full text-xs text-gray-400 hover:text-gray-600 flex items-center justify-center gap-1.5 py-2 transition-colors"
-                        >
-                          <ChevronLeft className="h-3 w-3" />
-                          Choose a different import method
-                        </button>
-                      </div>
-                    )}
                   </div>
                 ) : (
                   <div className="max-w-xl mx-auto py-6">
-                    <style dangerouslySetInnerHTML={{__html: `
-                      @keyframes scanline {
-                        0% { top: 0%; opacity: 0.8; }
-                        50% { top: 100%; opacity: 0.8; }
-                        100% { top: 0%; opacity: 0.8; }
-                      }
-                      .animate-scanline {
-                        animation: scanline 3s ease-in-out infinite;
-                      }
-                    `}} />
-                    
-                    <div className="bg-white dark:bg-black/25 rounded-[2rem] border border-gray-150 dark:border-white/5 shadow-xl p-8 space-y-8 relative overflow-hidden">
-                      {/* Scanning Document Animation */}
-                      <div className="relative w-44 h-56 mx-auto bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl shadow-inner flex flex-col justify-between p-4 overflow-hidden group">
-                        {/* Scan Line */}
-                        <div className="absolute left-0 right-0 h-1 bg-gradient-to-r from-transparent via-[#80FF00] to-transparent shadow-[0_0_8px_#80FF00] animate-scanline z-20" />
-                        
-                        {/* Dummy Document Elements */}
-                        <div className="space-y-3">
-                          <div className="h-3 bg-gray-300 dark:bg-white/20 rounded w-2/3" />
-                          <div className="h-2 bg-gray-200 dark:bg-white/10 rounded w-5/6" />
-                          <div className="h-2 bg-gray-200 dark:bg-white/10 rounded w-full" />
-                        </div>
-                        <div className="space-y-2">
-                          <div className="h-2 bg-gray-200 dark:bg-white/10 rounded w-full" />
-                          <div className="h-2 bg-gray-200 dark:bg-white/10 rounded w-4/5" />
-                        </div>
-                        <div className="space-y-2">
-                          <div className="h-3 bg-gray-300 dark:bg-white/20 rounded w-1/2" />
-                          <div className="h-2 bg-gray-200 dark:bg-white/10 rounded w-full" />
-                        </div>
-                        
-                        {/* Glowing Overlay */}
-                        <div className="absolute inset-0 bg-[#80FF00]/[0.02] pointer-events-none" />
-                      </div>
-
-                      {/* Header */}
+                    <div className="bg-white rounded-[2rem] border border-gray-150 shadow-xl p-8 space-y-8 relative overflow-hidden">
                       <div className="text-center space-y-2">
-                        <h3 className="font-extrabold text-xl text-gray-900 dark:text-white">Parsing Experience Details</h3>
+                        <h3 className="font-extrabold text-xl text-gray-900">Building Profile</h3>
                         <p className="text-xs text-gray-500 max-w-sm mx-auto truncate">File: {droppedFile}</p>
                       </div>
 
-                      {/* Progress bar */}
                       <div className="space-y-2">
-                        <div className="flex justify-between text-xs font-bold text-gray-600 dark:text-gray-400 px-1">
-                          <span>Import Progress</span>
+                        <div className="flex justify-between text-xs font-bold text-gray-600 px-1">
+                          <span>Progress</span>
                           <span>{parseProgress}%</span>
                         </div>
-                        <div className="w-full bg-gray-100 dark:bg-white/5 h-3 rounded-full overflow-hidden p-0.5 border border-gray-200/50 dark:border-white/5">
+                        <div className="w-full bg-gray-100 h-3 rounded-full overflow-hidden p-0.5 border border-gray-200/50">
                           <div 
-                            className="bg-gradient-to-r from-[#80FF00] to-emerald-400 h-full rounded-full transition-all duration-300 shadow-[0_0_8px_rgba(128,255,0,0.5)]" 
+                            className="bg-gradient-to-r from-[#013f2e] to-emerald-400 h-full rounded-full transition-all duration-300 shadow-[0_0_8px_rgba(1, 63, 46,0.5)]" 
                             style={{ width: `${parseProgress}%` }} 
                           />
                         </div>
                       </div>
 
-                      {/* Steps Checklist */}
-                      <div className="space-y-3 bg-gray-50/50 dark:bg-white/[0.02] border border-gray-150 dark:border-white/5 rounded-2xl p-5 text-sm">
+                      <div className="space-y-3 bg-gray-50/50 border border-gray-150 rounded-2xl p-5 text-sm">
                         {[
                           'Reading document layers',
-                          'Extracting work histories',
-                          'Formatting section maps',
-                          'Indexing skills keywords',
-                          'Finalizing & Saving'
+                          'Extracting career history & STAR metrics',
+                          'Formatting Profile layout',
+                          'Indexing industry keywords',
+                          'Finalizing Profile'
                         ].map((label, stepIdx) => {
                           const isCompleted = parseStep > stepIdx;
                           const isActive = parseStep === stepIdx;
-                          
                           return (
-                            <div 
-                              key={stepIdx} 
-                              className={`flex items-center gap-3 transition-all duration-300 ${
-                                isCompleted ? 'text-gray-900 dark:text-white font-bold' : isActive ? 'text-gray-900 dark:text-white font-extrabold' : 'text-gray-400'
-                              }`}
-                            >
+                            <div key={stepIdx} className={`flex items-center gap-3 ${isCompleted ? 'text-gray-900 font-bold' : isActive ? 'text-gray-900 font-extrabold' : 'text-gray-400'}`}>
                               <div className="flex-shrink-0">
                                 {isCompleted ? (
-                                  <div className="w-5 h-5 rounded-full bg-[#80FF00] flex items-center justify-center text-black shadow-md shadow-lime-500/20">
+                                  <div className="w-5 h-5 rounded-full bg-[#013f2e] flex items-center justify-center text-black shadow-sm">
                                     <Check size={11} strokeWidth={4} />
                                   </div>
                                 ) : isActive ? (
-                                  <div className="w-5 h-5 rounded-full border-2 border-[#80FF00] flex items-center justify-center bg-[#80FF00]/10 relative">
-                                    <div className="w-2 h-2 rounded-full bg-[#80FF00] animate-ping absolute" />
-                                    <div className="w-2 h-2 rounded-full bg-[#80FF00]" />
+                                  <div className="w-5 h-5 rounded-full border-2 border-[#013f2e] flex items-center justify-center bg-[#013f2e]/10">
+                                    <div className="w-2 h-2 rounded-full bg-black" />
                                   </div>
                                 ) : (
-                                  <div className="w-5 h-5 rounded-full border-2 border-gray-200 dark:border-white/10" />
+                                  <div className="w-5 h-5 rounded-full border-2 border-gray-200" />
                                 )}
                               </div>
                               <span className="flex-1">{label}</span>
-                              {isActive && (
-                                <span className="text-[10px] uppercase font-black text-[#80FF00] tracking-widest animate-pulse">Analyzing...</span>
-                              )}
                             </div>
                           );
                         })}
@@ -1660,28 +1568,19 @@ Please find the CV data attached.`;
                   </div>
                 )}
 
-                {/* JSON Import Modal */}
+                {/* JSON / Plain Text Modal */}
                 <AnimatePresence>
                   {showJsonModal && (
-                    <motion.div 
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm"
-                    >
-                      <motion.div 
-                        initial={{ scale: 0.9, y: 20 }}
-                        animate={{ scale: 1, y: 0 }}
-                        className="bg-white rounded-3xl p-8 max-w-2xl w-full shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto"
-                      >
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm">
+                      <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} className="bg-white rounded-3xl p-8 max-w-2xl w-full shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <div className="p-2 bg-black rounded-lg text-[#80FF00]">
+                            <div className="p-2 bg-black rounded-lg text-[#013f2e]">
                               <FileJson size={24} />
                             </div>
                             <div>
-                              <h2 className="text-2xl font-black">Paste CV Data</h2>
-                              <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">JSON or Plain Text Import</p>
+                              <h2 className="text-2xl font-black">Paste CV Content</h2>
+                              <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">JSON or Plain Text</p>
                             </div>
                           </div>
                           <button onClick={() => { setShowJsonModal(false); setSeedingMethod(''); }} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
@@ -1690,28 +1589,16 @@ Please find the CV data attached.`;
                         </div>
 
                         <div className="space-y-4">
-                          <div className="p-5 bg-[#80FF00]/5 rounded-[24px] border border-[#80FF00]/10 space-y-2">
-                            <h4 className="text-xs font-black uppercase tracking-widest text-black flex items-center gap-2">
-                              <Info size={14} className="fill-black text-[#80FF00]" /> How it works
-                            </h4>
-                            <p className="text-[11px] leading-relaxed text-gray-600">
-                              Paste your CV in <strong>JSON</strong> format or simply paste your <strong>Raw Text</strong>. Our AI will automatically detect the format and structure your profile.
-                            </p>
-                          </div>
-
-                          <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-2">Content</label>
-                            <textarea 
-                              value={jsonInput}
-                              onChange={(e) => {
-                                setJsonInput(e.target.value);
-                                setJsonError('');
-                              }}
-                              placeholder='Paste your JSON code or full CV text here...'
-                              className="w-full h-40 p-5 bg-slate-50 border border-gray-100 rounded-[24px] font-mono text-[11px] outline-none focus:border-black focus:bg-white transition-all shadow-inner"
-                            />
-                            {jsonError && <p className="text-xs text-red-500 font-bold ml-2">{jsonError}</p>}
-                          </div>
+                          <textarea 
+                            value={jsonInput}
+                            onChange={(e) => {
+                              setJsonInput(e.target.value);
+                              setJsonError('');
+                            }}
+                            placeholder="Paste your CV text or JSON here..."
+                            className="w-full h-44 p-5 bg-slate-50 border border-gray-200 rounded-[24px] font-mono text-xs outline-none focus:border-black focus:bg-white transition-all shadow-inner"
+                          />
+                          {jsonError && <p className="text-xs text-red-500 font-bold">{jsonError}</p>}
                         </div>
 
                         <div className="flex gap-3">
@@ -1719,73 +1606,9 @@ Please find the CV data attached.`;
                           <Button 
                             onClick={handleJsonSubmit}
                             disabled={!jsonInput.trim()}
-                            className="flex-[2] bg-black text-white hover:bg-slate-900 rounded-2xl font-bold py-6 shadow-xl disabled:opacity-30"
+                            className="flex-[2] bg-black text-white hover:bg-slate-900 rounded-2xl font-bold py-6 shadow-xl"
                           >
-                            Import & Continue
-                          </Button>
-                        </div>
-                      </motion.div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                {/* LinkedIn Modal */}
-                <AnimatePresence>
-                  {showLinkedInModal && (
-                    <motion.div 
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm"
-                    >
-                      <motion.div 
-                        initial={{ scale: 0.9, y: 20 }}
-                        animate={{ scale: 1, y: 0 }}
-                        className="bg-white rounded-3xl p-8 max-w-xl w-full shadow-2xl space-y-6"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="p-2 bg-[#0077B5] rounded-lg text-white">
-                              <Linkedin size={24} />
-                            </div>
-                            <div>
-                              <h2 className="text-2xl font-black">Sync LinkedIn</h2>
-                              <p className="text-xs text-[#0077B5] font-bold uppercase tracking-wider">Coming Soon</p>
-                            </div>
-                          </div>
-                          <button onClick={() => { setShowLinkedInModal(false); setSeedingMethod(''); }} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-                            <X size={20} />
-                          </button>
-                        </div>
-
-                        <div className="space-y-4">
-                          <div className="p-5 bg-blue-50 rounded-[24px] border border-blue-100 space-y-2">
-                            <h4 className="text-xs font-black uppercase tracking-widest text-blue-800">Direct Profile Sync</h4>
-                            <p className="text-[11px] leading-relaxed text-blue-900/70">
-                              We're building a native LinkedIn integration. For now, please enter your profile URL to join the early access queue for automated profile updates.
-                            </p>
-                          </div>
-
-                          <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-2">LinkedIn URL</label>
-                            <input 
-                              type="text"
-                              value={linkedinUrl}
-                              onChange={(e) => setLinkedinUrl(e.target.value)}
-                              placeholder="https://linkedin.com/in/yourprofile"
-                              className="w-full p-5 bg-slate-50 border border-gray-100 rounded-[24px] text-sm outline-none focus:border-black focus:bg-white transition-all shadow-inner"
-                            />
-                          </div>
-                        </div>
-
-                        <div className="flex gap-3">
-                          <Button onClick={() => { setShowLinkedInModal(false); setSeedingMethod(''); }} variant="ghost" className="flex-1 rounded-2xl font-bold py-6">Cancel</Button>
-                          <Button 
-                            onClick={handleLinkedInSubmit}
-                            disabled={!linkedinUrl.trim()}
-                            className="flex-[2] bg-black text-white hover:bg-slate-900 rounded-2xl font-bold py-6 shadow-xl disabled:opacity-30"
-                          >
-                            Join Waitlist
+                            Import Profile
                           </Button>
                         </div>
                       </motion.div>
@@ -1795,33 +1618,27 @@ Please find the CV data attached.`;
               </div>
             )}
 
-            {/* Step 3: CV Analysis Dashboard */}
+            {/* STEP 3: What we discovered about you (AI Analysis & Insights) */}
             {currentStep === 3 && (
-              <div className="space-y-6 max-w-3xl mx-auto animate-fadeIn text-gray-900">
+              <div className="space-y-6 max-w-3xl mx-auto text-gray-900">
                 <div className="space-y-2 text-center">
-                  <h1 className="text-4xl font-extrabold tracking-tight md:text-5xl">
-                    Your CV Analysis
+                  <span className="onboarding-step-label text-black bg-[#013f2e] px-3 py-1 rounded-full font-bold">Analysis &amp; Insights</span>
+                  <h1 className="onboarding-title">
+                    {candidateName ? `What AIResume discovered about your career, ${candidateName}` : 'What AIResume discovered about your background'}
                   </h1>
-                  <p className="text-gray-500 text-lg max-w-2xl mx-auto">
-                    We've analyzed your CV to give you actionable insights and a health score.
+                  <p className="onboarding-copy text-gray-500 max-w-2xl mx-auto">
+                    We've scanned your experience and identified key strengths, keyword gaps, and readiness metrics.
                   </p>
                 </div>
 
-                {/* ── MAIN SCORE HEADER ── */}
+                {/* Main Score Header */}
                 <div className="bg-white border border-gray-200 rounded-[24px] p-6 flex flex-col md:flex-row items-center gap-6 shadow-sm">
-                  {/* Radial Score Gauge */}
                   <div className="relative w-28 h-28 shrink-0 flex items-center justify-center">
                     <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+                      <circle cx="50" cy="50" r="42" fill="none" stroke="#F3F4F6" strokeWidth="8" />
                       <circle
-                        cx="50" cy="50" r="42"
-                        fill="none"
-                        stroke="#F3F4F6"
-                        strokeWidth="8"
-                      />
-                      <circle
-                        cx="50" cy="50" r="42"
-                        fill="none"
-                        stroke={activeSnapshot.healthIndex >= 80 ? '#80FF00' : '#F59E0B'}
+                        cx="50" cy="50" r="42" fill="none"
+                        stroke={activeSnapshot.healthIndex >= 80 ? '#013f2e' : '#F59E0B'}
                         strokeWidth="8"
                         strokeDasharray={`${2 * Math.PI * 42}`}
                         strokeDashoffset={`${2 * Math.PI * 42 * (1 - (activeSnapshot.healthIndex || 0) / 100)}`}
@@ -1836,48 +1653,40 @@ Please find the CV data attached.`;
                     </div>
                   </div>
 
-                  {/* Verdict details */}
                   <div className="min-w-0 flex-grow text-center md:text-left space-y-2">
                     <h4 className="text-xl font-black text-gray-900 leading-snug">
-                      CV Health Report
+                      Profile Health Score
                     </h4>
                     <p className="text-sm text-gray-500 font-semibold leading-relaxed">
-                      {activeSnapshot.healthIndex >= 80 ? 'Excellent match' : activeSnapshot.healthIndex >= 60 ? 'Moderate match' : 'Needs Optimization'} · {activeSnapshot.healthIndex >= 80 ? 'strong foundation' : 'foundational setup ready'}
+                      {activeSnapshot.healthIndex >= 80 ? 'Competitive profile' : 'Optimization suggested'} · Potential score boost of +{activeSnapshot.potentialBoost || 24}% in the editor.
                     </p>
                     
-                    {/* Visual Status Pills */}
                     <div className="flex flex-wrap justify-center md:justify-start gap-2 pt-1">
                       <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-green-50 text-green-700 border border-green-200">
-                        {activeSnapshot.stats.skillsFound} skills found
+                        {activeSnapshot.stats.skillsFound} skills indexed
                       </span>
                       <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-50 text-rose-700 border border-rose-200">
-                        {activeSnapshot.missingKeywords.length} gaps
+                        {activeSnapshot.missingKeywords.length} gap keywords
                       </span>
-                      <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200">
+                      <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-50 text-blue-200 border border-blue-200 text-blue-700">
                         {activeSnapshot.stats.experienceYears} Years Exp
                       </span>
                     </div>
                   </div>
                 </div>
 
-                {/* Collapsible Panels */}
+                {/* Collapsible Breakdown Panels */}
                 <div className="space-y-4">
-                  {/* Category Scores Panel */}
                   <div className="bg-white border border-gray-200 rounded-[24px] overflow-hidden shadow-sm">
                     <button
                       onClick={() => toggleSection('categories')}
                       className="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50/50 transition-colors border-b border-gray-100"
                     >
                       <div className="flex items-center gap-3">
-                        <span className="text-lg">📊</span>
-                        <span className="text-sm font-black uppercase tracking-wider text-gray-700">Category Scores</span>
+                        <Activity className="w-5 h-5 text-emerald-600" />
+                        <span className="text-sm font-black uppercase tracking-wider text-gray-700">Category Breakdown</span>
                       </div>
-                      <div className="flex items-center gap-2.5">
-                        <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded bg-amber-500/10 text-amber-600">
-                          Breakdown
-                        </span>
-                        {expandedSections.categories ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
-                      </div>
+                      {expandedSections.categories ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
                     </button>
 
                     {expandedSections.categories && (
@@ -1888,136 +1697,19 @@ Please find the CV data attached.`;
                           { label: 'Content Strength', score: activeSnapshot.breakdown.contentStrength * 5 },
                           { label: 'Skills & Keywords', score: activeSnapshot.breakdown.skillsKeywords * 5 },
                           { label: 'Impact & Achievements', score: activeSnapshot.breakdown.impactAchievements * 5 },
-                        ].map((c, i) => {
-                          const barColor = c.score >= 70 ? 'bg-emerald-500' : c.score >= 40 ? 'bg-amber-500' : 'bg-rose-500';
-                          return (
-                            <div key={i} className="space-y-2">
-                              <div className="flex items-center justify-between text-xs font-bold text-gray-600">
-                                <span>{c.label}</span>
-                                <span>{c.score}%</span>
-                              </div>
-                              <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
-                                <motion.div 
-                                  className={`h-full rounded-full ${barColor}`} 
-                                  initial={{ width: 0 }}
-                                  animate={{ width: `${c.score}%` }}
-                                  transition={{ duration: 1, delay: 0.1 * i }}
-                                />
-                              </div>
+                        ].map((c, i) => (
+                          <div key={i} className="space-y-2">
+                            <div className="flex items-center justify-between text-xs font-bold text-gray-600">
+                              <span>{c.label}</span>
+                              <span>{c.score}%</span>
                             </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Keyword Audit Panel */}
-                  <div className="bg-white border border-gray-200 rounded-[24px] overflow-hidden shadow-sm">
-                    <button
-                      onClick={() => toggleSection('keywords')}
-                      className="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50/50 transition-colors border-b border-gray-100"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="text-lg">🏷️</span>
-                        <span className="text-sm font-black uppercase tracking-wider text-gray-700">Keyword Audit</span>
-                      </div>
-                      <div className="flex items-center gap-2.5">
-                        <span className="text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
-                          <span className="px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-600">{activeSnapshot.missingKeywords.length} missing</span>
-                        </span>
-                        {expandedSections.keywords ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
-                      </div>
-                    </button>
-
-                    {expandedSections.keywords && (
-                      <div className="p-6 space-y-4">
-                        <div className="flex flex-wrap gap-2">
-                          {activeSnapshot.missingKeywords.map((k: string, i: number) => (
-                            <span key={i} className="px-3 py-1.5 text-xs font-bold rounded-lg bg-rose-55/70 text-rose-600 border border-rose-100">
-                              {k}
-                            </span>
-                          ))}
-                        </div>
-                        <div className="flex items-center gap-4 text-[10px] font-extrabold uppercase text-gray-400 border-t border-gray-100 pt-3">
-                          <span className="flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full bg-rose-500" /> Missing in CV
-                          </span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* What's Working For You Panel */}
-                  <div className="bg-white border border-gray-200 rounded-[24px] overflow-hidden shadow-sm">
-                    <button
-                      onClick={() => toggleSection('strengths')}
-                      className="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50/50 transition-colors border-b border-gray-100"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="text-lg">👍</span>
-                        <span className="text-sm font-black uppercase tracking-wider text-gray-700">What's working for you</span>
-                      </div>
-                      <div className="flex items-center gap-2.5">
-                        <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded bg-emerald-500/10 text-emerald-600">
-                          {activeSnapshot.strengths.length} Strengths
-                        </span>
-                        {expandedSections.strengths ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
-                      </div>
-                    </button>
-
-                    {expandedSections.strengths && (
-                      <div className="p-6 divide-y divide-gray-100">
-                        {activeSnapshot.strengths.map((s: string, i: number) => (
-                          <div key={i} className="flex gap-3 py-3 first:pt-0 last:pb-0">
-                            <div className="w-5 h-5 rounded-full bg-emerald-50 flex items-center justify-center shrink-0">
-                              <Check className="w-3.5 h-3.5 text-emerald-600" />
-                            </div>
-                            <div className="space-y-0.5">
-                              <h5 className="text-xs font-black text-gray-900 leading-relaxed">
-                                {s}
-                              </h5>
-                              <p className="text-xs text-gray-500 leading-relaxed">
-                                {getStrengthDescription(s)}
-                              </p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Critical Gaps Panel */}
-                  <div className="bg-white border border-gray-200 rounded-[24px] overflow-hidden shadow-sm">
-                    <button
-                      onClick={() => toggleSection('gaps')}
-                      className="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50/50 transition-colors border-b border-gray-100"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="text-lg">⚠️</span>
-                        <span className="text-sm font-black uppercase tracking-wider text-gray-700">Critical Gaps</span>
-                      </div>
-                      <div className="flex items-center gap-2.5">
-                        <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded bg-rose-500/10 text-rose-600">
-                          {activeSnapshot.weaknesses.length} Blockers
-                        </span>
-                        {expandedSections.gaps ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
-                      </div>
-                    </button>
-
-                    {expandedSections.gaps && (
-                      <div className="p-6 divide-y divide-gray-100">
-                        {activeSnapshot.weaknesses.map((w: string, i: number) => (
-                          <div key={i} className="flex gap-3 py-3 first:pt-0 last:pb-0">
-                            <div className="w-5 h-5 rounded-full bg-rose-50 flex items-center justify-center shrink-0">
-                              <X className="w-3.5 h-3.5 text-rose-600" />
-                            </div>
-                            <div className="space-y-0.5">
-                              <h5 className="text-xs font-black text-gray-900 leading-relaxed">
-                                {w}
-                              </h5>
-                              <p className="text-xs text-gray-500 leading-relaxed">
-                                {getWeaknessDescription(w)}
-                              </p>
+                            <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+                              <motion.div 
+                                className={`h-full rounded-full ${c.score >= 70 ? 'bg-emerald-500' : 'bg-amber-500'}`} 
+                                initial={{ width: 0 }}
+                                animate={{ width: `${c.score}%` }}
+                                transition={{ duration: 0.8, delay: 0.1 * i }}
+                              />
                             </div>
                           </div>
                         ))}
@@ -2026,806 +1718,721 @@ Please find the CV data attached.`;
                   </div>
                 </div>
 
-                {/* AI Recommendation Banner */}
-                <div className="bg-indigo-600 rounded-[24px] p-6 text-white flex flex-col md:flex-row items-center justify-between shadow-xl relative overflow-hidden group gap-4">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-white/20 transition-all" />
-                  <div className="flex items-center gap-4 relative z-10">
-                    <div className="p-3 bg-white/20 backdrop-blur-md rounded-xl shadow-lg">
-                      <Sparkles size={20} className="fill-white animate-pulse" />
-                    </div>
-                    <div className="space-y-0.5">
-                      <h4 className="text-sm font-black uppercase tracking-wide">Onboarding Recommendation</h4>
-                      <p className="text-xs text-indigo-100 max-w-md font-medium leading-relaxed">
-                        Improve your CV's score index by modifying it in the editor. We've saved these suggestions directly to your CV profile draft.
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-6 relative z-10 shrink-0">
-                    <div className="text-center">
-                      <span className="text-3xl font-black">{(activeSnapshot.healthIndex || 0) + (activeSnapshot.potentialBoost || 0)}%</span>
-                      <p className="text-[10px] font-black text-indigo-200 uppercase tracking-widest mt-1">Potential Score</p>
-                    </div>
-                    
-                    <div className="h-10 w-px bg-white/20 hidden md:block" />
-                    
-                    <div className="text-left hidden md:block">
-                      <p className="text-[10px] font-black text-indigo-200 uppercase tracking-widest mb-1">Top Priority</p>
-                      <p className="text-xs font-bold text-white max-w-[200px] leading-tight">
-                        {activeSnapshot.topPriority || 'Address gaps in the editor to boost score.'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Navigation Controls */}
-                <div className="flex flex-col items-center gap-4 pt-4 border-t border-gray-100">
-                  <Button 
-                    onClick={() => {
-                      completeOnboarding('/editor');
-                    }}
-                    className="w-full bg-[#80FF00] hover:bg-[#70e600] text-black font-extrabold py-6 rounded-2xl flex items-center justify-center gap-2 shadow-sm transition-all text-sm uppercase tracking-tight"
-                  >
-                    Go directly to CV Editor (Fast Track) <ArrowRight className="h-5 w-5" />
-                  </Button>
-                  <button 
-                    onClick={handleNext}
-                    className="text-[10px] text-gray-400 hover:text-black font-black uppercase tracking-widest transition-colors flex items-center gap-2"
-                  >
-                    Continue Personalization Flow <ChevronRight size={12} strokeWidth={3} />
-                  </button>
-                </div>
               </div>
             )}
 
-            {/* Step 4: LinkedIn Profile Optimizer Promotion */}
+            {/* STEP 4: Profile Ready Celebration & Real Stats ("Your Profile is ready. Now what?") */}
             {currentStep === 4 && (
-              <div className="space-y-6 flex flex-col justify-between h-full animate-fade-in">
-                <div className="space-y-3 text-center">
-                  <span className="text-xs font-black uppercase tracking-widest text-[#80FF00] bg-black px-3 py-1 rounded-full">Recruiter Magnet</span>
-                  <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl text-gray-900 dark:text-white">
-                    LinkedIn Profile Optimizer
+              <div className="space-y-6 max-w-2xl mx-auto py-2 text-center">
+                <div className="space-y-2">
+                  <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-xs">
+                    <CheckCircle className="w-4 h-4 text-emerald-600" /> Profile Ready
+                  </div>
+                  <h1 className="onboarding-title">
+                    {candidateName ? `${candidateName}, your Profile is ready! 🎉` : 'Your Profile is ready! 🎉'}
                   </h1>
-                  <p className="text-gray-500 dark:text-white/60 text-sm max-w-xl mx-auto">
-                    Sync your CV improvements directly to your LinkedIn. Transform passive profiles into recruiter magnets with optimized taglines and impactful summaries.
+                  <p className="onboarding-copy text-gray-500 max-w-md mx-auto">
+                    Your Profile is finalized and ready to power your career. Select how you'd like to proceed:
                   </p>
                 </div>
 
-                {/* Before/After Showcase */}
-                <div className="bg-slate-50 dark:bg-black/20 p-6 rounded-[2rem] border border-gray-250/60 dark:border-white/5 flex flex-col gap-4 flex-1 justify-center min-h-[220px]">
-                  {/* Before */}
-                  <div className="flex items-center gap-4 bg-white dark:bg-[#1A1A1A]/40 p-4 rounded-2xl border border-gray-200/40 opacity-70">
-                    <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-white/10 flex items-center justify-center font-bold text-gray-400 shrink-0">JD</div>
-                    <div className="space-y-1 flex-1 min-w-0">
-                      <div className="h-3 w-28 bg-gray-200 rounded dark:bg-white/10" />
-                      <div className="text-[11px] text-gray-450 dark:text-gray-400 font-medium font-mono truncate">"Software Developer at ABC Inc | Looking for new opportunities"</div>
-                    </div>
-                    <span className="text-[10px] bg-red-50 text-red-500 px-2 py-0.5 rounded-full font-bold dark:bg-red-500/10 shrink-0">Unoptimized</span>
-                  </div>
-
-                  {/* Arrow connector with animated Sparkle */}
-                  <div className="flex justify-center text-[#80FF00]">
-                    <Sparkles className="w-6 h-6 animate-pulse text-[#80FF00]" />
-                  </div>
-
-                  {/* After */}
-                  <motion.div 
-                    className="flex items-center gap-4 bg-white dark:bg-[#1A1A1A] p-4 rounded-2xl border border-lime-300 dark:border-lime-500/30 shadow-[0_10px_30px_rgba(128,255,0,0.06)]"
-                    initial={{ y: 10, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ duration: 0.5 }}
-                  >
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#80FF00] to-emerald-400 flex items-center justify-center font-bold text-black shadow-sm shrink-0">JD</div>
-                    <div className="space-y-1 flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <div className="h-3 w-32 bg-gray-300 rounded dark:bg-white/20" />
-                        <span className="text-[9px] bg-blue-500/10 text-blue-500 px-1.5 py-0.2 rounded font-bold shrink-0">5x Index Boost</span>
+                {/* Real Stats Card - Transformation Report */}
+                <div className="bg-gradient-to-br from-emerald-50 via-lime-50/40 to-white border border-emerald-200/80 rounded-3xl p-5 sm:p-6 shadow-sm text-left space-y-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-emerald-100 pb-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-sm shadow-sm">
+                        <CheckCheck className="w-4 h-4" />
                       </div>
-                      <div className="text-[11px] text-gray-800 dark:text-gray-200 font-extrabold font-mono truncate">
-                        "Lead Full-Stack Architect | Building scalable Cloud Infra to support 12M+ active sessions"
+                      <div>
+                        <h4 className="font-extrabold text-sm text-emerald-950">Profile Transformation Completed</h4>
+                        <p className="text-[11px] text-emerald-700 font-medium">Your edits have significantly boosted your ATS compatibility</p>
                       </div>
                     </div>
-                    <span className="text-[10px] bg-emerald-50 text-emerald-500 px-2.5 py-0.5 rounded-full font-black dark:bg-emerald-500/10 shrink-0">Attracts DMs</span>
-                  </motion.div>
-                </div>
-              </div>
-            )}
-
-            {/* Step 999: Unused Placeholder */}
-            {currentStep === 999 && (
-              <div className="space-y-6 flex flex-col justify-between h-full">
-                <div className="space-y-3 text-center animate-fade-in">
-                  <span className="text-xs font-black uppercase tracking-widest text-[#80FF00] bg-black px-3 py-1 rounded-full">Recruiter Magnet</span>
-                  <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl text-gray-900 dark:text-white">
-                    LinkedIn Profile Optimizer
-                  </h1>
-                  <p className="text-gray-500 dark:text-white/60 text-sm max-w-xl mx-auto">
-                    Sync your CV improvements directly to your LinkedIn. Transform passive profiles into recruiter magnets with optimized taglines and impactful summaries.
-                  </p>
-                </div>
-
-                {/* Before/After Showcase */}
-                <div className="bg-slate-50 dark:bg-black/20 p-6 rounded-[2rem] border border-gray-250/60 dark:border-white/5 flex flex-col gap-4 flex-1 justify-center min-h-[220px]">
-                  {/* Before */}
-                  <div className="flex items-center gap-4 bg-white dark:bg-[#1A1A1A]/40 p-4 rounded-2xl border border-gray-200/40 opacity-70">
-                    <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-white/10 flex items-center justify-center font-bold text-gray-400 shrink-0">JD</div>
-                    <div className="space-y-1 flex-1 min-w-0">
-                      <div className="h-3 w-28 bg-gray-200 rounded dark:bg-white/10" />
-                      <div className="text-[11px] text-gray-450 dark:text-gray-400 font-medium font-mono truncate">"Software Developer at ABC Inc | Looking for new opportunities"</div>
-                    </div>
-                    <span className="text-[10px] bg-red-50 text-red-500 px-2 py-0.5 rounded-full font-bold dark:bg-red-500/10 shrink-0">Unoptimized</span>
+                    <span className="px-2.5 py-1 bg-emerald-600 text-white text-[10px] font-black uppercase tracking-wider rounded-full shadow-sm">
+                      +{Math.max(15, transformedScore - initialScore)} pts boost
+                    </span>
                   </div>
 
-                  {/* Arrow connector with animated Sparkle */}
-                  <div className="flex justify-center text-[#80FF00]">
-                    <Sparkles className="w-6 h-6 animate-pulse text-[#80FF00]" />
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
+                    <div className="bg-white/90 p-3 rounded-2xl border border-emerald-100 text-center">
+                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Initial Score</span>
+                      <span className="text-xl font-black text-amber-600">{initialScore}/100</span>
+                    </div>
+                    <div className="bg-white/90 p-3 rounded-2xl border border-emerald-200 text-center ring-2 ring-emerald-500/20">
+                      <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider block">Updated Score</span>
+                      <span className="text-xl font-black text-emerald-600">{transformedScore}/100</span>
+                    </div>
+                    <div className="bg-white/90 p-3 rounded-2xl border border-emerald-100 text-center">
+                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Template</span>
+                      <span className="text-xs font-extrabold text-gray-900 truncate block mt-1">Modern ATS Pro</span>
+                    </div>
+                    <div className="bg-white/90 p-3 rounded-2xl border border-emerald-100 text-center">
+                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Readiness</span>
+                      <span className="text-xs font-extrabold text-emerald-600 truncate block mt-1">Application Ready</span>
+                    </div>
                   </div>
 
-                  {/* After */}
-                  <motion.div 
-                    className="flex items-center gap-4 bg-white dark:bg-[#1A1A1A] p-4 rounded-2xl border border-lime-300 dark:border-lime-500/30 shadow-[0_10px_30px_rgba(128,255,0,0.06)]"
-                    initial={{ y: 10, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ duration: 0.5 }}
-                  >
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#80FF00] to-emerald-400 flex items-center justify-center font-bold text-black shadow-sm shrink-0">JD</div>
-                    <div className="space-y-1 flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <div className="h-3 w-32 bg-gray-300 rounded dark:bg-white/20" />
-                        <span className="text-[9px] bg-blue-500/10 text-blue-500 px-1.5 py-0.2 rounded font-bold shrink-0">5x Index Boost</span>
-                      </div>
-                      <div className="text-[11px] text-gray-800 dark:text-gray-200 font-extrabold font-mono truncate">
-                        "Lead Full-Stack Architect | Building scalable Cloud Infra to support 12M+ active sessions"
-                      </div>
-                    </div>
-                    <span className="text-[10px] bg-emerald-50 text-emerald-500 px-2.5 py-0.5 rounded-full font-black dark:bg-emerald-500/10 shrink-0">Attracts DMs</span>
-                  </motion.div>
-                </div>
-              </div>
-            )}
-
-            {/* Step 7: Promotes AI Interview Coach */}
-            {currentStep === 7 && (
-              <div className="space-y-6 flex flex-col justify-between h-full">
-                <div className="space-y-3 text-center animate-fade-in">
-                  <span className="text-xs font-black uppercase tracking-widest text-[#80FF00] bg-black px-3 py-1 rounded-full">Interview Ready</span>
-                  <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl text-gray-900 dark:text-white">
-                    Real-Time AI Interview Coach
-                  </h1>
-                  <p className="text-gray-500 dark:text-white/60 text-sm max-w-xl mx-auto">
-                    Practice answering questions tailored to your CV and specific target roles. Receive immediate, data-driven audio feedback on structural gaps, tone, and confidence.
-                  </p>
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100/70 px-2.5 py-0.5 rounded-full">✓ High-Impact STAR Bullets</span>
+                    <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100/70 px-2.5 py-0.5 rounded-full">✓ ATS Keyword Density</span>
+                    <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100/70 px-2.5 py-0.5 rounded-full">✓ Verified Layout &amp; Margins</span>
+                  </div>
                 </div>
 
-                {/* Conversation Flow Visualizer */}
-                <div className="bg-slate-50 dark:bg-black/20 p-6 rounded-[2rem] border border-gray-250/60 dark:border-white/5 flex flex-col md:flex-row gap-4 flex-1 justify-center min-h-[220px]">
-                  <div className="flex-1 space-y-3">
-                    <div className="bg-white dark:bg-[#1A1A1A] p-3 rounded-2xl rounded-tl-none border border-gray-200/50 dark:border-white/10 shadow-sm">
-                      <span className="text-[9px] font-black uppercase tracking-widest text-indigo-500 flex items-center gap-1 mb-1">
-                        <Bot className="w-3.5 h-3.5" /> AI Coach
-                      </span>
-                      <p className="text-[11px] font-medium leading-relaxed text-gray-800 dark:text-gray-200">
-                        "Tell me about a time you had to optimize performance. What metrics did you use?"
+                <div className="grid md:grid-cols-2 gap-5 pt-1 text-left">
+                  {/* Card A: Just My CV */}
+                  <div className="border-2 border-gray-200 hover:border-gray-400 bg-white rounded-3xl p-6 sm:p-7 flex flex-col justify-between transition-all group shadow-sm hover:shadow-md">
+                    <div className="space-y-3">
+                      <div className="p-3 bg-gray-100 rounded-2xl w-fit text-gray-800 group-hover:bg-black group-hover:text-white transition-colors">
+                        <FileText className="h-6 w-6" />
+                      </div>
+                      <h3 className="font-extrabold text-xl text-gray-900">Just My CV</h3>
+                      <p className="text-xs text-gray-500 leading-relaxed">
+                        I just needed a professional resume. Download PDF, share your CV link, or continue editing in your workspace.
                       </p>
                     </div>
 
-                    {/* Waveform loops */}
-                    <div className="flex items-center gap-1 px-4 h-6">
-                      {[...Array(14)].map((_, i) => (
-                        <motion.div
-                          key={i}
-                          className="w-1 bg-[#80FF00] rounded-full"
-                          animate={{
-                            height: [8, Math.floor(Math.random() * 20) + 8, 8]
-                          }}
-                          transition={{
-                            duration: 0.8 + (i % 3) * 0.2,
-                            repeat: Infinity,
-                            ease: "easeInOut"
-                          }}
-                        />
-                      ))}
-                    </div>
+                    <Button 
+                      onClick={() => completeOnboarding('/dashboard')}
+                      variant="outline"
+                      className="w-full mt-6 py-5 rounded-xl font-extrabold text-xs uppercase tracking-wider border-2 hover:bg-black hover:text-white transition-all"
+                    >
+                      Finish &amp; Open Workspace
+                    </Button>
                   </div>
 
-                  {/* Feedback Rating card overlay */}
-                  <motion.div 
-                    className="w-full md:w-48 bg-white dark:bg-[#1A1A1A] p-4 rounded-2xl border border-blue-500/20 shadow-lg space-y-3 shrink-0"
-                    initial={{ scale: 0.9, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ delay: 0.3 }}
-                  >
-                    <span className="text-[9px] font-black uppercase tracking-widest text-emerald-500">Live AI Evaluation</span>
-                    <div className="space-y-2">
-                      <div>
-                        <div className="flex justify-between text-[10px] font-bold mb-0.5">
-                          <span>Delivery Structure</span>
-                          <span>92%</span>
+                  {/* Card B: Find My Next Job */}
+                  <div className="border-2 border-black bg-slate-50/70 rounded-3xl p-6 sm:p-7 flex flex-col justify-between transition-all relative shadow-md ring-2 ring-black/5">
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="p-3 bg-black text-[#013f2e] rounded-2xl w-fit">
+                          <Zap className="h-6 w-6" />
                         </div>
-                        <div className="w-full bg-gray-150 h-1 rounded-full overflow-hidden dark:bg-white/15">
-                          <div className="bg-emerald-500 h-full rounded-full w-[92%]" />
-                        </div>
+                        <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-black text-[#013f2e]">
+                          Recommended
+                        </span>
                       </div>
-                      <div>
-                        <div className="flex justify-between text-[10px] font-bold mb-0.5">
-                          <span>Confidence Metrics</span>
-                          <span>86%</span>
-                        </div>
-                        <div className="w-full bg-gray-150 h-1 rounded-full overflow-hidden dark:bg-white/15">
-                          <div className="bg-emerald-500 h-full rounded-full w-[86%]" />
-                        </div>
-                      </div>
+                      <h3 className="font-extrabold text-xl text-gray-900">Find My Next Job</h3>
+                      <p className="text-xs text-gray-500 leading-relaxed">
+                        Let AI find matching roles, organize your application pipeline, automate submissions, and prepare for interviews.
+                      </p>
                     </div>
-                    <p className="text-[9px] text-gray-400 dark:text-gray-500 italic">
-                      Tip: Expand on task outcomes using raw numbers.
-                    </p>
-                  </motion.div>
+
+                    <Button 
+                      onClick={() => setCurrentStep(5)}
+                      className="w-full mt-6 py-5 bg-black text-[#013f2e] hover:bg-slate-900 rounded-xl font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-md"
+                    >
+                      Accelerate Job Search <ArrowRight className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
               </div>
             )}
 
-
-
-            {/* Step 5: Search Status */}
+            {/* STEP 5: Target Roles */}
             {currentStep === 5 && (
               <div className="space-y-8">
                 <div className="space-y-3 text-center">
-                  <h1 className="text-4xl font-extrabold tracking-tight md:text-5xl">
-                    Job Search Status
+                  <span className="onboarding-step-label text-black bg-[#013f2e] px-3 py-1 rounded-full font-bold">Target Roles</span>
+                  <h1 className="onboarding-title">
+                    {candidateName ? `${candidateName}, what roles are you targeting?` : 'What roles are you targeting?'}
                   </h1>
-                  <p className="text-gray-500 text-lg max-w-xl mx-auto">
-                    What is your current search strategy? This helps us configure notifications and automation alerts.
+                  <p className="onboarding-copy text-gray-500 max-w-xl mx-auto">
+                    Select the roles you want to be matched with. Our AI will find positions that fit your profile.
                   </p>
                 </div>
 
-                <div className="grid gap-3 max-w-md mx-auto">
-                  {[
-                    { id: 'browsing', label: 'Just browsing', desc: 'No active searches, just updating CV for potential future needs.' },
-                    { id: 'exploring', label: 'Exploring opportunities', desc: 'Open to interesting roles if they fit, checking boards occasionally.' },
-                    { id: 'active', label: 'Actively applying weekly', desc: 'Checking roles, submitting several custom CV applications each week.' },
-                    { id: 'aggressive', label: 'Aggressively hunting', desc: 'Full time search. Submitting applications daily, seeking fast response.' }
-                  ].map(option => (
-                    <button
-                      key={option.id}
-                      onClick={() => {
-                        setSearchStatus(option.id);
-                        handleNext();
-                      }}
-                      className={`text-left p-5 border-2 rounded-xl transition-all relative ${
-                        searchStatus === option.id ? 'border-black bg-slate-50' : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      <h4 className="font-bold">{option.label}</h4>
-                      <p className="text-xs text-gray-500 mt-0.5">{option.desc}</p>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Step 6: Application Volume */}
-            {currentStep === 6 && (
-              <div className="space-y-8">
-                <div className="space-y-3 text-center">
-                  <h1 className="text-4xl font-extrabold tracking-tight md:text-5xl">
-                    Expected Volume
-                  </h1>
-                  <p className="text-gray-500 text-lg max-w-xl mx-auto">
-                    How many job applications do you plan to send per month?
-                  </p>
-                </div>
-
-                <div className="grid md:grid-cols-4 gap-3 max-w-2xl mx-auto">
-                  {[
-                    { id: 'low', label: '0–5', desc: 'Low volume CV' },
-                    { id: 'medium', label: '6–20', desc: 'Targeted search' },
-                    { id: 'high', label: '21–50', desc: 'Active pipeline' },
-                    { id: 'aggressive', label: '50+', desc: 'Scale search' }
-                  ].map(vol => (
-                    <button
-                      key={vol.id}
-                      onClick={() => {
-                        setMonthlyVolume(vol.id);
-                        handleNext();
-                      }}
-                      className={`p-6 border-2 rounded-xl text-center flex flex-col items-center justify-center gap-1 transition-all ${
-                        monthlyVolume === vol.id ? 'border-black bg-slate-50' : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      <span className="text-2xl font-black">{vol.label}</span>
-                      <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">{vol.desc}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Step 8: Integrated Tracker Promotion & Interest */}
-            {currentStep === 8 && (
-              <div className="space-y-6 flex flex-col justify-between h-full animate-fade-in">
-                <div className="space-y-2 text-center">
-                  <span className="text-xs font-black uppercase tracking-widest text-[#80FF00] bg-black px-3 py-1 rounded-full">Automation Suite</span>
-                  <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl text-gray-900 dark:text-white">
-                    Autopilot Application Tracker
-                  </h1>
-                  <p className="text-gray-500 dark:text-white/60 text-sm max-w-xl mx-auto">
-                    Let AI scout matching roles, draft cover letters, autofill forms, and sync interview calendar updates automatically.
-                  </p>
-                </div>
-
-                {/* Rich Animating Visual Board with Explanatory Overlay */}
-                <div className="grid md:grid-cols-2 gap-6 bg-slate-50 dark:bg-black/20 p-6 rounded-[2rem] border border-gray-250/60 dark:border-white/5 flex-1 min-h-[260px] items-center">
-                  
-                  {/* Kanban Pipeline Board */}
-                  <div className="grid grid-cols-4 gap-2 bg-white dark:bg-[#1A1A1A]/40 p-4 rounded-2xl border border-gray-250/60 dark:border-white/5 h-full min-h-[180px]">
-                    {[
-                      { name: 'Scout', color: 'bg-indigo-500' },
-                      { name: 'Applied', color: 'bg-amber-500' },
-                      { name: 'Interviews', color: 'bg-blue-500' },
-                      { name: 'Offers', color: 'bg-[#80FF00]' }
-                    ].map((col, idx) => (
-                      <div key={idx} className="bg-slate-50 dark:bg-[#1A1A1A] p-2 rounded-xl border border-gray-200/50 dark:border-white/5 flex flex-col gap-2 relative overflow-hidden h-full min-h-[140px]">
-                        <span className="text-[8px] font-black uppercase tracking-wider text-gray-400 flex items-center gap-1">
-                          <div className={`w-1 h-1 rounded-full ${col.color}`} /> {col.name}
-                        </span>
-
-                        {/* Animating Card depending on trackerAnimStage */}
-                        {idx === 0 && trackerAnimStage === 0 && (
-                          <motion.div 
-                            layoutId="tracker-live-card"
-                            className="bg-white dark:bg-[#2A2A2A] p-2 rounded-lg border border-indigo-400 shadow-sm text-[10px] space-y-1"
-                          >
-                            <div className="font-extrabold truncate text-gray-900 dark:text-white">React Lead</div>
-                            <div className="text-[8px] text-indigo-500 font-bold">Stripe • Matching!</div>
-                          </motion.div>
-                        )}
-
-                        {idx === 1 && trackerAnimStage === 1 && (
-                          <motion.div 
-                            layoutId="tracker-live-card"
-                            className="bg-white dark:bg-[#2A2A2A] p-2 rounded-lg border border-amber-400 shadow-sm text-[10px] space-y-1"
-                          >
-                            <div className="font-extrabold truncate text-gray-900 dark:text-white">React Lead</div>
-                            <div className="text-[8px] text-amber-500 font-bold flex items-center gap-1">
-                              <Mail className="w-2.5 h-2.5 animate-bounce" /> Sending Apply...
-                            </div>
-                          </motion.div>
-                        )}
-
-                        {idx === 2 && trackerAnimStage === 2 && (
-                          <motion.div 
-                            layoutId="tracker-live-card"
-                            className="bg-white dark:bg-[#2A2A2A] p-2 rounded-lg border border-blue-400 shadow-sm text-[10px] space-y-1"
-                          >
-                            <div className="font-extrabold truncate text-gray-900 dark:text-white">React Lead</div>
-                            <div className="text-[8px] text-blue-500 font-bold">Round 1 Scheduled</div>
-                          </motion.div>
-                        )}
-
-                        {idx === 3 && trackerAnimStage === 3 && (
-                          <motion.div 
-                            layoutId="tracker-live-card"
-                            className="bg-white dark:bg-[#2A2A2A] p-2 rounded-lg border border-lime-400 shadow-md text-[10px] space-y-1"
-                          >
-                            <div className="font-extrabold truncate text-gray-900 dark:text-white">React Lead</div>
-                            <div className="text-[8px] text-[#80FF00] font-black flex items-center gap-0.5">
-                              <Trophy className="w-2.5 h-2.5 text-[#80FF00]" /> Offer $160K
-                            </div>
-                          </motion.div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Stage Explaining Text column */}
-                  <div className="space-y-3">
-                    {[
-                      { stage: 0, title: '1. Auto-Scouting Match', desc: 'AI scans job boards and matches roles to your CV profile instantly.' },
-                      { stage: 1, title: '2. Smart Email Apply', desc: 'Drafts tailored cover letters and emails, auto-submitting in 1-click.' },
-                      { stage: 2, title: '3. Calendar Auto-Sync', desc: 'Reads incoming interview confirmations and schedules preparation triggers.' },
-                      { stage: 3, title: '4. Offer & Pipeline Win', desc: 'Tracks offers, compares salaries, and saves structural highlights.' }
-                    ].map((step, idx) => (
-                      <div 
-                        key={idx}
-                        className={`p-3 rounded-2xl border transition-all duration-300 text-left ${
-                          trackerAnimStage === step.stage 
-                            ? 'bg-white dark:bg-[#1A1A1A] border-lime-300 dark:border-lime-500/30 shadow-md scale-[1.02]' 
-                            : 'border-transparent opacity-40'
-                        }`}
-                      >
-                        <h4 className="text-xs font-black text-gray-900 dark:text-white flex items-center gap-1.5">
-                          <CheckCircle className={`w-3.5 h-3.5 ${trackerAnimStage === step.stage ? 'text-[#80FF00]' : 'text-gray-300'}`} />
-                          {step.title}
-                        </h4>
-                        <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">{step.desc}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Yes/No Selection wrapper */}
-                <div className="space-y-3 text-center max-w-sm mx-auto pt-2">
-                  <h3 className="text-xs font-bold text-gray-500 dark:text-gray-450 uppercase tracking-widest">Would a visual tracker help organize your search?</h3>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => {
-                        setTrackerInterest('yes');
-                        handleNext();
-                      }}
-                      className={`flex-1 py-3 border-2 rounded-xl font-bold transition-all text-xs ${
-                        trackerInterest === 'yes' 
-                          ? 'border-black bg-slate-50 dark:border-[#80FF00] dark:bg-white/5 dark:text-white' 
-                          : 'border-gray-200 hover:border-gray-300 dark:border-white/10 dark:hover:border-white/20 dark:text-gray-300'
-                      }`}
-                    >
-                      Yes, absolutely
-                    </button>
-                    <button
-                      onClick={() => {
-                        setTrackerInterest('no');
-                        handleNext();
-                      }}
-                      className={`flex-1 py-3 border-2 rounded-xl font-bold transition-all text-xs ${
-                        trackerInterest === 'no' 
-                          ? 'border-black bg-slate-50 dark:border-[#80FF00] dark:bg-white/5 dark:text-white' 
-                          : 'border-gray-200 hover:border-gray-300 dark:border-white/10 dark:hover:border-white/20 dark:text-gray-300'
-                      }`}
-                    >
-                      No, just need CV
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Step 9: Auto-Apply feature list */}
-            {currentStep === 9 && (
-              <div className="space-y-8">
-                <div className="space-y-3 text-center">
-                  <h1 className="text-4xl font-extrabold tracking-tight md:text-5xl">
-                    Automate Submissions
-                  </h1>
-                  <p className="text-gray-500 text-lg max-w-xl mx-auto">
-                    Let AI manage the tedious work of finding matching jobs and submitting tailored applications.
-                  </p>
-                </div>
-
-                {/* Auto-apply simulation */}
-                <div className="bg-slate-50 border border-gray-150 p-6 rounded-2xl max-w-md mx-auto space-y-4">
-                  <div className="flex items-center justify-between border-b border-gray-200 pb-2">
-                    <span className="text-xs font-black uppercase text-gray-500 tracking-wider">Autopilot Activity</span>
-                    <span className="text-[10px] bg-black text-[#80FF00] px-2 py-0.5 rounded-full font-black uppercase tracking-wider animate-pulse">Running</span>
-                  </div>
-
-                  <div className="space-y-2.5 text-xs">
-                    {[
-                      { label: 'Scouting compatibility match...', activeStep: 1 },
-                      { label: 'Recalibrating bullet points to job description...', activeStep: 2 },
-                      { label: 'Writing tailored summary paragraph...', activeStep: 3 },
-                      { label: 'Autofilling portal input questions...', activeStep: 4 }
-                    ].map((step, index) => {
-                      const isDone = autoApplyStep >= step.activeStep;
-                      const isCurrent = autoApplyStep === step.activeStep - 1;
-                      return (
-                        <div key={index} className="flex items-center justify-between p-2 rounded-lg bg-white border border-gray-100">
-                          <span className={`${isDone ? 'text-black font-semibold' : isCurrent ? 'text-black font-bold' : 'text-gray-400'}`}>
-                            {step.label}
-                          </span>
-                          {isDone ? (
-                            <Check className="h-4 w-4 text-green-600 stroke-[3]" />
-                          ) : isCurrent ? (
-                            <Loader2 className="h-4 w-4 animate-spin text-black" />
-                          ) : (
-                            <div className="w-4 h-4 rounded-full border border-gray-200" />
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className="space-y-3 text-center max-w-sm mx-auto pt-2">
-                  <h3 className="font-bold">Automate filling repetitive job applications?</h3>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => {
-                        setAutoapplyInterest('yes');
-                        handleNext();
-                      }}
-                      className={`flex-1 py-3 border-2 rounded-xl font-bold transition-all ${
-                        autoapplyInterest === 'yes' ? 'border-black bg-slate-50' : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      Yes, automate it!
-                    </button>
-                    <button
-                      onClick={() => {
-                        setAutoapplyInterest('no');
-                        handleNext();
-                      }}
-                      className={`flex-1 py-3 border-2 rounded-xl font-bold transition-all ${
-                        autoapplyInterest === 'no' ? 'border-black bg-slate-50' : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      No, manual apply
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Step 10: Search preferences */}
-            {currentStep === 10 && (
-              <div className="space-y-8">
-                <div className="space-y-3 text-center">
-                  <h1 className="text-4xl font-extrabold tracking-tight md:text-5xl">
-                    Target Preferences
-                  </h1>
-                  <p className="text-gray-500 text-lg max-w-xl mx-auto">
-                    Define your job target parameters to feed the matching algorithm.
-                  </p>
-                </div>
-
-                <div className="grid md:grid-cols-2 gap-6 max-w-2xl mx-auto text-left">
-                  {/* Roles */}
-                  <div className="space-y-2 md:col-span-2">
-                    <label className="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-1.5 mb-1">
-                      <Search className="h-3.5 w-3.5 text-gray-400" /> Target Roles (Select one or more)
+                <div className="max-w-2xl mx-auto space-y-4 text-left">
+                  {/* Career Pathway Selector */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center justify-between">
+                      <span className="flex items-center gap-1.5"><Layers className="h-3.5 w-3.5 text-black" /> Career Pathway <span className="text-red-500">*</span></span>
+                      <span className="text-[10px] text-gray-400 font-normal">Choose primary field</span>
                     </label>
-                    <div className="relative">
-                      <div className="flex flex-wrap gap-2 max-h-[120px] overflow-y-auto p-3.5 bg-slate-50/70 dark:bg-black/10 rounded-2xl border border-gray-200/60 dark:border-white/5 shadow-inner pr-6">
-                        {[
-                          'Software Engineer', 'Product Manager', 'Data Analyst', 'UX Designer', 'Growth Lead',
-                          'Teacher', 'Sales Associate', 'Customer Service Representative', 'Administrative Assistant',
-                          'Retail Associate', 'Cashier', 'Receptionist', 'Delivery Driver', 'Operations Manager',
-                          'HR Specialist', 'Technical Recruiter', 'Account Executive', 'Marketing Specialist',
-                          'Financial Analyst', 'Business Analyst', 'Content Strategist', 'Office Manager',
-                          'Warehouse Associate', 'Security Officer', 'Other'
-                        ].map(role => {
-                          const isSel = targetRoles.includes(role);
-                          return (
-                            <motion.button
-                              key={role}
-                              type="button"
-                              onClick={() => {
-                                if (isSel) setTargetRoles(prev => prev.filter(r => r !== role));
-                                else setTargetRoles(prev => [...prev, role]);
-                              }}
-                              className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all duration-200 ${
-                                isSel 
-                                  ? 'bg-black text-[#80FF00] border-black shadow-[0_4px_12px_rgba(0,0,0,0.08)] scale-[1.03]' 
-                                  : 'bg-white hover:bg-gray-100 border-gray-200 text-gray-650 hover:text-black hover:scale-[1.01]'
-                              }`}
-                              whileTap={{ scale: 0.97 }}
-                            >
-                              {role}
-                            </motion.button>
-                          );
-                        })}
-                      </div>
-                      {/* Subtle bottom scroll indicator fade */}
-                      <div className="absolute bottom-0 left-0 right-0 h-4 bg-gradient-to-t from-white/90 to-transparent pointer-events-none rounded-b-2xl" />
-                    </div>
-                  </div>
-
-                  {/* Location preference */}
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
-                      <MapPin className="h-3.5 w-3.5" /> Workplace Layout
-                    </label>
-                    <div className="flex gap-2 h-[38px]">
-                      {['Remote', 'Hybrid', 'Onsite'].map(loc => {
-                        const isSel = locations.includes(loc);
+                    
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {CAREER_PATHWAYS.map(p => {
+                        const isSelected = selectedPathway === p.id;
                         return (
                           <button
-                            key={loc}
+                            key={p.id}
+                            type="button"
                             onClick={() => {
-                              if (isSel) setLocations(prev => prev.filter(l => l !== loc));
-                              else setLocations(prev => [...prev, loc]);
+                              setSelectedPathway(p.id);
+                              setTargetRoles(prev => prev.filter(r => p.roles.includes(r)));
                             }}
-                            className={`flex-1 border rounded-xl text-xs font-bold transition-all ${
-                              isSel ? 'bg-black text-white border-black' : 'bg-white border-gray-200 text-gray-655 hover:border-gray-300'
+                            className={`p-2.5 rounded-xl border text-left flex items-center gap-2 transition-all ${
+                              isSelected 
+                                ? 'bg-black text-white border-black shadow-sm ring-2 ring-black/5' 
+                                : 'bg-white hover:bg-gray-50 border-gray-200 text-gray-700'
                             }`}
                           >
-                            {loc}
+                            <span className="text-base">{p.icon}</span>
+                            <div className="min-w-0 flex-1">
+                              <span className="text-xs font-bold block truncate">{p.name}</span>
+                            </div>
+                            {isSelected && <Check className="h-3 w-3 text-[#013f2e] shrink-0" />}
                           </button>
                         );
                       })}
                     </div>
                   </div>
 
-                  {/* Experience */}
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
-                      <Building className="h-3.5 w-3.5" /> Experience Level
+                  {/* Target Roles within Chosen Pathway */}
+                  <div className="space-y-1.5 pt-1">
+                    <label className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center justify-between">
+                      <span className="flex items-center gap-1.5"><Search className="h-3.5 w-3.5 text-black" /> Target Roles in {currentPathway?.name} <span className="text-red-500">*</span></span>
+                      <span className="text-[10px] text-gray-400 font-normal">Select one or more</span>
                     </label>
-                    <select
-                      value={experienceLevel}
-                      onChange={e => setExperienceLevel(e.target.value)}
-                      className="w-full h-[38px] py-2 px-3 bg-white border border-gray-200 rounded-xl text-sm outline-none focus:border-black text-gray-700 font-medium"
-                    >
-                      <option value="">Select Level...</option>
-                      <option value="entry">Entry (0-2 years)</option>
-                      <option value="mid">Mid-Senior (3-6 years)</option>
-                      <option value="senior">Senior (7+ years)</option>
-                      <option value="exec">Lead / Executive</option>
-                    </select>
-                  </div>
 
-                  {/* Target Salary */}
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
-                      <DollarSign className="h-3.5 w-3.5" /> Target Salary Range
-                    </label>
-                    <select
-                      value={salary}
-                      onChange={e => setSalary(e.target.value)}
-                      className="w-full h-[38px] py-2 px-3 bg-white border border-gray-200 rounded-xl text-sm outline-none focus:border-black text-gray-700 font-medium"
-                    >
-                      <option value="">Select Range...</option>
-                      <option value="under_60k">Under $60,000</option>
-                      <option value="60k_90k">$60,000 - $90,000</option>
-                      <option value="90k_120k">$90,000 - $120,000</option>
-                      <option value="120k_150k">$120,000 - $150,000</option>
-                      <option value="150k_180k">$150,000 - $180,000</option>
-                      <option value="180k_220k">$180,000 - $220,000</option>
-                      <option value="above_220k">$220,000+</option>
-                    </select>
-                  </div>
+                    <div className="p-3 bg-slate-50 rounded-2xl border border-gray-200 space-y-2.5">
+                      <div className="flex flex-wrap gap-2 max-h-[160px] overflow-y-auto pr-1">
+                        {currentPathway?.roles.map(role => {
+                          const isSel = targetRoles.includes(role);
+                          return (
+                            <button
+                              key={role}
+                              type="button"
+                              onClick={() => {
+                                if (isSel) setTargetRoles(prev => prev.filter(r => r !== role));
+                                else setTargetRoles(prev => [...prev, role]);
+                              }}
+                              className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 ${
+                                isSel 
+                                  ? 'bg-black text-[#013f2e] border-black shadow-sm' 
+                                  : 'bg-white hover:bg-gray-100 border-gray-200 text-gray-700'
+                              }`}
+                            >
+                              {isSel && <Check className="w-3 h-3 stroke-[3]" />}
+                              {role}
+                            </button>
+                          );
+                        })}
+                      </div>
 
-                  {/* Visa sponsorship */}
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
-                      <Shield className="h-3.5 w-3.5" /> Visa Sponsorship
-                    </label>
-                    <div className="flex gap-2 h-[38px]">
-                      <button
-                        onClick={() => setVisaRequired(true)}
-                        className={`flex-1 border rounded-xl text-xs font-bold transition-all ${
-                          visaRequired === true ? 'bg-black text-white border-black' : 'bg-white border-gray-200 text-gray-655 hover:border-gray-300'
-                        }`}
-                      >
-                        Required
-                      </button>
-                      <button
-                        onClick={() => setVisaRequired(false)}
-                        className={`flex-1 border rounded-xl text-xs font-bold transition-all ${
-                          visaRequired === false ? 'bg-black text-white border-black' : 'bg-white border-gray-200 text-gray-655 hover:border-gray-300'
-                        }`}
-                      >
-                        Not Needed
-                      </button>
+                      {/* Custom Role Input */}
+                      <div className="flex items-center gap-2 pt-1 border-t border-gray-200/60">
+                        <input
+                          type="text"
+                          value={customRoleInput}
+                          onChange={e => setCustomRoleInput(e.target.value)}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter' && customRoleInput.trim()) {
+                              e.preventDefault();
+                              const trimmed = customRoleInput.trim();
+                              if (!targetRoles.includes(trimmed)) {
+                                setTargetRoles(prev => [...prev, trimmed]);
+                              }
+                              setCustomRoleInput('');
+                            }
+                          }}
+                          placeholder="+ Add custom role title..."
+                          className="text-xs bg-white border border-gray-200 rounded-xl px-3 py-1.5 flex-1 outline-none focus:border-black font-medium"
+                        />
+                        {customRoleInput.trim() && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const trimmed = customRoleInput.trim();
+                              if (!targetRoles.includes(trimmed)) {
+                                setTargetRoles(prev => [...prev, trimmed]);
+                              }
+                              setCustomRoleInput('');
+                            }}
+                            className="px-3 py-1.5 bg-black text-[#013f2e] rounded-xl text-xs font-bold"
+                          >
+                            Add
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-
-                <div className="text-center pt-2">
-                  <button 
-                    onClick={handleNext}
-                    className="text-xs text-gray-500 hover:text-black font-semibold uppercase tracking-wider"
-                  >
-                    Skip Target Settings ➔
-                  </button>
                 </div>
               </div>
             )}
 
-            {/* Step 11: Score calculation & Personalized Recommendation */}
-            {currentStep === 11 && (() => {
-              // Custom styles
-              const accentColorClass = "text-lime-600 dark:text-[#80FF00]";
-              const bgGlowClass = "from-lime-50/50 to-emerald-50/30";
-              const borderClass = "border-lime-200 dark:border-[#80FF00]/20";
-              const buttonBgClass = "bg-black text-[#80FF00] hover:bg-slate-900 shadow-md";
-              const TitleText = "Congratulations on completing the 1st step of automating your job search experience!";
-              const DescText = "Let's finalise your Primary CV which will be used for referring, auto-submitting applications, and tailored coaching.";
-              const CtaText = "Start Optimizing My CV";
+            {/* STEP 6: Workplace + Location */}
+            {currentStep === 6 && (
+              <div className="space-y-8">
+                <div className="space-y-3 text-center">
+                  <span className="onboarding-step-label text-black bg-[#013f2e] px-3 py-1 rounded-full font-bold">Workplace + Location</span>
+                  <h1 className="onboarding-title">
+                    {candidateName ? `${candidateName}, where do you want to work?` : 'Where do you want to work?'}
+                  </h1>
+                  <p className="onboarding-copy text-gray-500 max-w-xl mx-auto">
+                    Choose your preferred workplace arrangement and target locations.
+                  </p>
+                </div>
 
-              return (
-                <div className="space-y-8 max-w-2xl mx-auto py-4 relative">
-                  {/* Confetti Animation Effect */}
-                  <div className="absolute inset-0 pointer-events-none overflow-hidden flex items-center justify-center">
-                    {[...Array(25)].map((_, idx) => {
-                      const color = ['bg-[#80FF00]', 'bg-blue-400', 'bg-pink-400', 'bg-amber-400', 'bg-indigo-400'][idx % 5];
-                      return (
-                        <motion.div
-                          key={idx}
-                          className={`absolute w-2 h-2 rounded-full ${color}`}
-                          initial={{ 
-                            x: 0, 
-                            y: 100, 
-                            opacity: 0, 
-                            scale: Math.random() * 0.8 + 0.4 
-                          }}
-                          animate={{ 
-                            x: (Math.random() - 0.5) * 500, 
-                            y: (Math.random() - 0.7) * 400 - 50, 
-                            opacity: [0, 1, 1, 0],
-                            rotate: Math.random() * 360
-                          }}
-                          transition={{ 
-                            duration: 2.5 + Math.random() * 1.5,
-                            repeat: Infinity,
-                            delay: Math.random() * 0.5,
-                            ease: "easeOut"
-                          }}
-                        />
-                      );
-                    })}
+                <div className="max-w-md mx-auto space-y-6 text-left">
+                  {/* Workplace Types */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
+                      <Building className="h-3.5 w-3.5" /> Workplace Type <span className="text-red-500">*</span>
+                    </label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { id: 'remote', label: 'Remote', icon: '🌍' },
+                        { id: 'hybrid', label: 'Hybrid', icon: '🏠' },
+                        { id: 'onsite', label: 'Onsite', icon: '🏢' }
+                      ].map(type => {
+                        const isSel = workplaceTypes.includes(type.id);
+                        return (
+                          <button
+                            key={type.id}
+                            onClick={() => {
+                              if (isSel) setWorkplaceTypes(prev => prev.filter(t => t !== type.id));
+                              else setWorkplaceTypes(prev => [...prev, type.id]);
+                            }}
+                            className={`p-4 border-2 rounded-2xl text-center transition-all ${
+                              isSel ? 'border-black bg-slate-50' : 'border-gray-200 hover:border-gray-300 bg-white'
+                            }`}
+                          >
+                            <span className="text-xl">{type.icon}</span>
+                            <p className="text-xs font-bold mt-1">{type.label}</p>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
 
-                  <div className="space-y-3 text-center relative z-10">
-                    <span className="text-xs font-black uppercase tracking-widest px-3 py-1 rounded-full bg-slate-100 text-black">
-                      Onboarding Completed! 🎉
-                    </span>
-                    <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl text-gray-900 leading-tight">
-                      {TitleText}
-                    </h1>
+                  {/* Locations */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
+                      <MapPin className="h-3.5 w-3.5" /> Target Locations <span className="text-[10px] text-gray-400 font-normal">(Optional)</span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. London, New York, Bangalore"
+                      value={locations.join(', ')}
+                      onChange={e => setLocations(e.target.value.split(',').map(l => l.trim()).filter(Boolean))}
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm outline-none focus:border-black"
+                    />
+                    <p className="text-[10px] text-gray-400">Separate multiple locations with commas</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* STEP 7: Salary */}
+            {currentStep === 7 && (
+              <div className="space-y-8">
+                <div className="space-y-3 text-center">
+                  <span className="onboarding-step-label text-black bg-[#013f2e] px-3 py-1 rounded-full font-bold">Salary Expectations</span>
+                  <h1 className="onboarding-title">
+                    What&apos;s your target salary?
+                  </h1>
+                  <p className="onboarding-copy text-gray-500 max-w-xl mx-auto">
+                    This helps us match you with roles in your compensation range.
+                  </p>
+                </div>
+
+                <div className="max-w-md mx-auto space-y-6 text-left">
+                  {/* 1. Currency Selection FIRST */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
+                      <DollarSign className="h-3.5 w-3.5" /> Currency
+                    </label>
+                    <div className="grid grid-cols-4 gap-2">
+                      {Object.entries(WELCOME_SALARY_CONFIG).map(([key, cfg]) => {
+                        const isCurSel = salaryCurrency === key;
+                        return (
+                          <button
+                            key={key}
+                            type="button"
+                            onClick={() => handleSalaryCurrencyChange(key)}
+                            className={`py-3 px-2 border-2 rounded-2xl text-center transition-all ${
+                              isCurSel
+                                ? 'border-black bg-slate-50 font-bold text-gray-900 shadow-xs'
+                                : 'border-gray-200 hover:border-gray-300 bg-white text-gray-600'
+                            }`}
+                          >
+                            <span className="text-xs font-bold block">{cfg.symbol} {key.split('_')[0]}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
 
-                  {/* Handwritten Note Card */}
-                  <div className="relative bg-[#faf7f2] border border-amber-100 rounded-3xl p-6 md:p-8 shadow-[0_15px_30px_rgba(0,0,0,0.03)] text-left font-serif max-w-lg mx-auto z-10 overflow-hidden transform rotate-[-0.5deg] hover:rotate-0 transition-transform duration-300">
-                    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&display=swap" rel="stylesheet" />
-                    
-                    {/* Decorative paper clip simulation or pen label */}
-                    <div className="absolute top-3 right-4 text-[10px] text-amber-800/40 uppercase tracking-widest font-sans font-black select-none">
-                      CEO's Office
+                  {/* 2. Range-based Minimum Salary Presets */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                        Minimum Target Salary
+                      </label>
+                      <span className="text-xs font-bold text-lime-800 bg-lime-100 px-2.5 py-0.5 rounded-full">
+                        {salaryMin === 0
+                          ? 'Flexible / Any'
+                          : `${WELCOME_SALARY_CONFIG[salaryCurrency]?.symbol || ''}${salaryMin.toLocaleString()} ${WELCOME_SALARY_CONFIG[salaryCurrency]?.unit || ''}+`}
+                      </span>
                     </div>
 
-                    <div className="space-y-4 text-amber-950/90 text-lg leading-relaxed select-text" style={{ fontFamily: "'Caveat', cursive" }}>
-                      <p className="text-xl font-bold">Dear {parsedCVData?.basics?.name ? parsedCVData.basics.name.trim().split(' ')[0] : 'candidate'},</p>
-                      <p>
-                        Welcome to CVCircle. We built this platform to take the tedious manual labor out of your job search so you can focus on landing roles you actually love. You've just mapped your preferences perfectly.
-                      </p>
-                      <p>
-                        Let's finalise your Primary CV. This master profile will fuel our scouting algorithm, auto-submit applications, and power your tailored coaching triggers.
-                      </p>
-                      <div className="pt-2 flex justify-between items-end">
-                        <div className="space-y-0.5">
-                          <p className="font-bold text-xl text-black">Amar Lohia</p>
-                          <p className="text-xs uppercase tracking-wider font-sans font-bold text-gray-400 select-none">CEO, CVCircle</p>
+                    <div className="grid grid-cols-3 gap-2.5">
+                      {(WELCOME_SALARY_CONFIG[salaryCurrency] || WELCOME_SALARY_CONFIG.INR_LPA).presets.map((preset) => {
+                        const isSelected = salaryMin === preset.value;
+                        return (
+                          <button
+                            key={preset.value}
+                            type="button"
+                            onClick={() => setSalaryMin(preset.value)}
+                            className={`py-3.5 px-3 border-2 rounded-2xl text-center transition-all ${
+                              isSelected
+                                ? 'border-black bg-slate-50 font-extrabold text-gray-900 shadow-xs'
+                                : 'border-gray-200 hover:border-gray-300 bg-white text-gray-700 font-medium'
+                            }`}
+                          >
+                            <span className="text-xs font-bold">{preset.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Flexible option */}
+                    <div className="pt-1">
+                      <button
+                        type="button"
+                        onClick={() => setSalaryMin(0)}
+                        className={`w-full py-2.5 px-4 border-2 rounded-2xl text-xs font-bold transition-all text-center ${
+                          salaryMin === 0
+                            ? 'border-black bg-slate-50 text-gray-900 shadow-xs'
+                            : 'border-dashed border-gray-300 hover:border-gray-400 bg-gray-50/50 text-gray-500'
+                        }`}
+                      >
+                        Flexible / Open to offers
+                      </button>
+                    </div>
+                  </div>
+
+                  <p className="text-[10px] text-gray-400 text-center">
+                    We&apos;ll prioritize roles meeting or exceeding your target threshold
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* STEP 8: Experience + Availability */}
+            {currentStep === 8 && (
+              <div className="space-y-8">
+                <div className="space-y-3 text-center">
+                  <span className="onboarding-step-label text-black bg-[#013f2e] px-3 py-1 rounded-full font-bold">Experience + Availability</span>
+                  <h1 className="onboarding-title">
+                    Tell us about your experience
+                  </h1>
+                  <p className="onboarding-copy text-gray-500 max-w-xl mx-auto">
+                    This helps us find roles at the right level and understand your availability.
+                  </p>
+                </div>
+
+                <div className="max-w-md mx-auto space-y-6 text-left">
+                  {/* Years of Experience */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                        Years of Experience
+                      </label>
+                      <span className="text-xs font-bold text-lime-800 bg-lime-100 px-2.5 py-0.5 rounded-full">
+                        {experienceYears === 0 ? '0 years (Fresher)' : `${experienceYears} ${experienceYears === 1 ? 'year' : 'years'}`}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2">
+                      {[
+                        { label: '0–2 yrs', value: 1 },
+                        { label: '3–5 yrs', value: 3 },
+                        { label: '5–8 yrs', value: 5 },
+                        { label: '8+ yrs', value: 8 },
+                      ].map((tier) => {
+                        const isSel = experienceYears === tier.value;
+                        return (
+                          <button
+                            key={tier.label}
+                            type="button"
+                            onClick={() => setExperienceYears(tier.value)}
+                            className={`py-3 px-2 border-2 rounded-2xl text-center transition-all ${
+                              isSel
+                                ? 'border-black bg-slate-50 font-extrabold text-gray-900 shadow-xs'
+                                : 'border-gray-200 hover:border-gray-300 bg-white text-gray-700 font-medium'
+                            }`}
+                          >
+                            <span className="text-xs font-bold block">{tier.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Max Notice Period (Days) - Step 7 Style */}
+                  <div className="space-y-3 pt-2 border-t border-gray-100">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                        Availability / Max Notice Period
+                      </label>
+                      <span className="text-xs font-bold text-lime-800 bg-lime-100 px-2.5 py-0.5 rounded-full">
+                        {maxNoticePeriodDays === 0 ? 'Immediately' : `${maxNoticePeriodDays} days`}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                      {[
+                        { label: 'Immediately', value: 0 },
+                        { label: '15 days', value: 15 },
+                        { label: '30 days', value: 30 },
+                        { label: '60 days', value: 60 },
+                      ].map((preset) => {
+                        const isSelected = maxNoticePeriodDays === preset.value;
+                        return (
+                          <button
+                            key={preset.value}
+                            type="button"
+                            onClick={() => setMaxNoticePeriodDays(preset.value)}
+                            className={`py-3.5 px-2 border-2 rounded-2xl text-center transition-all ${
+                              isSelected
+                                ? 'border-black bg-slate-50 font-extrabold text-gray-900 shadow-xs'
+                                : 'border-gray-200 hover:border-gray-300 bg-white text-gray-700 font-medium'
+                            }`}
+                          >
+                            <span className="text-xs font-bold block">{preset.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2.5 pt-0.5">
+                      {[
+                        { label: '90 days (3 months)', value: 90 },
+                        { label: '90+ days / Flexible', value: 120 },
+                      ].map((preset) => {
+                        const isSelected = maxNoticePeriodDays === preset.value;
+                        return (
+                          <button
+                            key={preset.value}
+                            type="button"
+                            onClick={() => setMaxNoticePeriodDays(preset.value)}
+                            className={`py-3 px-3 border-2 rounded-2xl text-center transition-all ${
+                              isSelected
+                                ? 'border-black bg-slate-50 font-extrabold text-gray-900 shadow-xs'
+                                : 'border-gray-200 hover:border-gray-300 bg-white text-gray-700 font-medium'
+                            }`}
+                          >
+                            <span className="text-xs font-bold block">{preset.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <p className="text-[10px] text-gray-400 text-center">
+                    We&apos;ll prioritize employers whose hiring timelines align with your availability
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* STEP 9: Search Intensity */}
+            {currentStep === 9 && (
+              <div className="space-y-8">
+                <div className="space-y-3 text-center">
+                  <span className="onboarding-step-label text-black bg-[#013f2e] px-3 py-1 rounded-full font-bold">Search Intensity</span>
+                  <h1 className="onboarding-title">
+                    {candidateName ? `${candidateName}, how actively are you searching?` : 'How actively are you looking?'}
+                  </h1>
+                  <p className="onboarding-copy text-gray-500 max-w-xl mx-auto">
+                    This determines how fast we scout new openings and calibrate your alerts.
+                  </p>
+                </div>
+
+                <div className="grid gap-3 max-w-md mx-auto">
+                  {[
+                    { id: 'browsing', label: 'Just browsing', desc: 'No active rush. Updating profile for potential future opportunities.' },
+                    { id: 'exploring', label: 'Exploring opportunities', desc: 'Open to the right role if it fits. Checking boards occasionally.' },
+                    { id: 'active', label: 'Actively applying weekly', desc: 'Submitting tailored applications weekly. Seeking interviews soon.' },
+                    { id: 'aggressive', label: 'Aggressively hunting', desc: 'Full-time search. Daily submissions and seeking rapid hire.' }
+                  ].map(option => (
+                    <button
+                      key={option.id}
+                      onClick={() => setSearchIntensity(option.id)}
+                      className={`text-left p-5 border-2 rounded-2xl transition-all relative flex items-center justify-between ${
+                        searchIntensity === option.id ? 'border-black bg-slate-50' : 'border-gray-200 hover:border-gray-300 bg-white'
+                      }`}
+                    >
+                      <div>
+                        <h4 className="font-bold text-sm text-gray-900">{option.label}</h4>
+                        <p className="text-xs text-gray-500 mt-0.5">{option.desc}</p>
+                      </div>
+                      <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ml-3 transition-all ${
+                        searchIntensity === option.id ? 'bg-black text-[#013f2e] shadow-sm' : 'border-2 border-gray-300'
+                      }`}>
+                        {searchIntensity === option.id && <Check className="h-3 w-3 stroke-[3]" />}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* STEP 10: Application Volume */}
+            {currentStep === 10 && (
+              <div className="space-y-8">
+                <div className="space-y-3 text-center">
+                  <span className="onboarding-step-label text-black bg-[#013f2e] px-3 py-1 rounded-full font-bold">Application Volume</span>
+                  <h1 className="onboarding-title">
+                    How many applications per month?
+                  </h1>
+                  <p className="onboarding-copy text-gray-500 max-w-xl mx-auto">
+                    Set your target volume and we'll help you reach it.
+                  </p>
+                </div>
+
+                <div className="max-w-md mx-auto space-y-6">
+                  <div className="grid grid-cols-2 gap-3">
+                    {[
+                      { value: 5, label: '5', desc: 'Targeted' },
+                      { value: 20, label: '20', desc: 'Focused' },
+                      { value: 50, label: '50', desc: 'Active' },
+                      { value: 100, label: '100+', desc: 'Aggressive' }
+                    ].map(vol => (
+                      <button
+                        key={vol.value}
+                        onClick={() => setExpectedApplicationsPerMonth(vol.value)}
+                        className={`p-6 border-2 rounded-2xl text-center transition-all ${
+                          expectedApplicationsPerMonth === vol.value ? 'border-black bg-slate-50 ring-2 ring-black/5' : 'border-gray-200 hover:border-gray-300 bg-white'
+                        }`}
+                      >
+                        <span className="text-2xl font-black">{vol.label}</span>
+                        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mt-1">{vol.desc}</p>
+                      </button>
+                    ))}
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">Or enter custom amount</label>
+                    <input
+                      type="number"
+                      value={expectedApplicationsPerMonth}
+                      onChange={e => setExpectedApplicationsPerMonth(Number(e.target.value))}
+                      min="1"
+                      max="500"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm outline-none focus:border-black text-center text-lg font-bold"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* STEP 11: Application Mode */}
+            {currentStep === 11 && (
+              <div className="space-y-8">
+                <div className="space-y-3 text-center">
+                  <span className="onboarding-step-label text-black bg-[#013f2e] px-3 py-1 rounded-full font-bold">Application Mode</span>
+                  <h1 className="onboarding-title">
+                    How much should AIResume handle?
+                  </h1>
+                  <p className="onboarding-copy text-gray-500 max-w-xl mx-auto">
+                    Choose your level of automation. You can change this anytime.
+                  </p>
+                </div>
+
+                <div className="grid gap-4 max-w-lg mx-auto">
+                  {[
+                    { id: 'find_only', label: 'Find Only', desc: 'Get personalized job matches. You review and apply yourself.', icon: '🔍', color: 'border-indigo-200 hover:border-indigo-400' },
+                    { id: 'manual_review', label: 'Review Before Submit', desc: 'AIResume prepares applications. You review and approve before submission.', icon: '👀', color: 'border-amber-200 hover:border-amber-400' },
+                    { id: 'automatic', label: 'Fully Automatic', desc: 'AIResume finds, tailors, and submits applications automatically.', icon: '⚡', color: 'border-emerald-200 hover:border-emerald-400' }
+                  ].map(mode => (
+                    <button
+                      key={mode.id}
+                      onClick={() => setApplicationMode(mode.id)}
+                      className={`text-left p-6 border-2 rounded-2xl transition-all relative ${
+                        applicationMode === mode.id 
+                          ? 'border-black bg-slate-50 ring-2 ring-black/5 shadow-sm' 
+                          : `${mode.color} bg-white`
+                      }`}
+                    >
+                      <div className="flex items-start gap-4">
+                        <span className="text-2xl">{mode.icon}</span>
+                        <div className="flex-1">
+                          <h4 className="font-bold text-sm text-gray-900">{mode.label}</h4>
+                          <p className="text-xs text-gray-500 mt-1">{mode.desc}</p>
                         </div>
+                        <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 transition-all ${
+                          applicationMode === mode.id ? 'bg-black text-[#013f2e] shadow-sm' : 'border-2 border-gray-300'
+                        }`}>
+                          {applicationMode === mode.id && <Check className="h-3 w-3 stroke-[3]" />}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* STEP 12: Final Launch & CEO Note */}
+            {currentStep === 12 && (
+              <div className="space-y-8 max-w-2xl mx-auto py-4 relative">
+                <div className="space-y-3 text-center relative z-10">
+                  <span className="onboarding-step-label px-3 py-1 rounded-full bg-slate-100 text-black font-bold">
+                    Setup Completed! 🎉
+                  </span>
+                  <h1 className="onboarding-title text-gray-900 leading-tight">
+                    Congratulations on activating your AI Career Agent!
+                  </h1>
+                </div>
+
+                <div 
+                  onClick={() => {
+                    setTypedLetterLength(fullLetterText.length);
+                    setIsTypingLetter(false);
+                  }}
+                  className="relative bg-[#faf7f2] border border-amber-100 rounded-3xl p-6 md:p-8 shadow-[0_15px_30px_rgba(0,0,0,0.03)] text-left max-w-lg mx-auto z-10 overflow-hidden transform rotate-[-0.5deg] cursor-pointer select-text"
+                >
+                  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&display=swap" rel="stylesheet" />
+                  
+                  <div className="absolute top-3 right-4 text-[10px] text-amber-800/40 uppercase tracking-widest font-sans font-black select-none">
+                    CEO&apos;s Office
+                  </div>
+
+                  <div className="space-y-4 text-amber-950/90 text-xl leading-relaxed" style={{ fontFamily: "'Caveat', cursive" }}>
+                    {fullLetterText.slice(0, typedLetterLength).split('\n\n').map((para, idx) => (
+                      <p key={idx} className={idx === 0 ? "text-2xl font-bold" : ""}>
+                        {para}
+                        {isTypingLetter && idx === fullLetterText.slice(0, typedLetterLength).split('\n\n').length - 1 && (
+                          <span className="inline-block w-0.5 h-5 bg-amber-800 ml-1 animate-pulse" />
+                        )}
+                      </p>
+                    ))}
+
+                    <div className={`pt-3 flex justify-between items-end transition-opacity duration-500 ${typedLetterLength >= fullLetterText.length * 0.8 ? 'opacity-100' : 'opacity-0'}`}>
+                      <div className="space-y-0.5" style={{ fontFamily: "'Caveat', cursive" }}>
+                        <p className="font-bold text-2xl text-black">Amar Lohia</p>
+                        <p className="text-lg font-bold text-amber-900/80">CEO and Founder, AIResume</p>
                       </div>
                     </div>
                   </div>
-
-                  <div className="w-full max-w-lg mx-auto pt-2 z-10 relative">
-                    <Button
-                      onClick={() => completeOnboarding('/editor')}
-                      className={`w-full py-6 rounded-2xl font-extrabold text-base flex items-center justify-center gap-2 transition-all ${buttonBgClass}`}
-                    >
-                      {CtaText} <ChevronRight className="h-5 w-5 stroke-[2.5]" />
-                    </Button>
-                  </div>
-
-                  <div className="text-center pt-2 relative z-10">
-                    <button 
-                      onClick={() => completeOnboarding('/editor')}
-                      className="text-xs text-gray-500 hover:text-black font-bold uppercase tracking-wider transition-colors flex items-center gap-1.5 mx-auto hover:scale-105 duration-200"
-                    >
-                      Review my CV <ArrowRight className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
                 </div>
-              );
-            })()}
+
+                <div className="w-full max-w-lg mx-auto pt-2 z-10 relative">
+                  <Button
+                    onClick={() => completeOnboarding('/dashboard')}
+                    className="w-full py-6 rounded-2xl font-extrabold text-base flex items-center justify-center gap-2 transition-all bg-black text-[#013f2e] hover:bg-slate-900 shadow-md"
+                  >
+                    Launch My Workspace <ChevronRight className="h-5 w-5 stroke-[2.5]" />
+                  </Button>
+                </div>
+              </div>
+            )}
+
               </div>
             </motion.div>
-        )}
-      </AnimatePresence>
+        </AnimatePresence>
 
       </main>
 
-      {/* Footer / Navigation Bar */}
+      {/* Footer Navigation Bar - The ONLY primary CTA to move forward */}
       <footer className="px-6 py-4 border-t transition-colors duration-300 text-xs text-gray-400 border-gray-150 bg-[#f3f2ee]">
         <div className="max-w-7xl mx-auto w-full flex items-center justify-between">
-          {/* Back button */}
-          {currentStep !== 11 ? (
+          {currentStep !== 12 ? (
             <Button
               onClick={handleBack}
               disabled={currentStep === 1}
               variant="ghost"
-              className="font-bold flex items-center gap-1.5 rounded-xl hover:bg-slate-200/50 px-4 py-2 text-gray-500 disabled:opacity-30 dark:hover:bg-white/5 dark:text-gray-400"
+              className="font-bold flex items-center gap-1.5 rounded-xl hover:bg-slate-200/50 px-4 py-2 text-gray-500 disabled:opacity-30"
             >
               <ChevronLeft className="h-4.5 w-4.5" /> Back
             </Button>
@@ -2833,26 +2440,29 @@ Please find the CV data attached.`;
             <div className="w-[80px]" />
           )}
 
-          {/* Copyright text */}
           <div className="text-center font-medium">
-            &copy; {new Date().getFullYear()} CVCircle. All features secured.
+            &copy; {new Date().getFullYear()} AIResume. All features secured.
           </div>
 
-          {/* Next button */}
-          {currentStep !== 11 ? (
+          {currentStep !== 12 ? (
             <Button
-              onClick={handleNext}
-              disabled={
-                (currentStep === 1 && !intent) ||
-                (currentStep === 2 && (!seedingMethod || (seedingMethod !== 'scratch' && !parsedCVData))) ||
-                (currentStep === 5 && !searchStatus) ||
-                (currentStep === 6 && !monthlyVolume) ||
-                (currentStep === 8 && !trackerInterest) ||
-                (currentStep === 9 && !autoapplyInterest)
-              }
-              className="bg-black text-white hover:bg-slate-900 font-bold flex items-center gap-1.5 rounded-xl px-5 py-2.5 shadow-sm disabled:opacity-35 dark:bg-[#80FF00] dark:text-black dark:hover:bg-[#70e600]"
+              onClick={() => handleNext()}
+              disabled={!isStepValid}
+              className={`${
+                currentStep === 3 
+                  ? 'bg-[#013f2e] hover:bg-[#02523c] text-black font-extrabold shadow-md' 
+                  : 'bg-black text-white hover:bg-slate-900 font-bold'
+              } flex items-center gap-1.5 rounded-xl px-5 py-2.5 shadow-sm disabled:opacity-35 transition-all`}
             >
-              Next <ChevronRight className="h-4.5 w-4.5" />
+              {currentStep === 3 ? (
+                <>
+                  Improve &amp; Design My CV <ArrowRight className="h-4 w-4" />
+                </>
+              ) : (
+                <>
+                  Next <ChevronRight className="h-4.5 w-4.5" />
+                </>
+              )}
             </Button>
           ) : (
             <div className="w-[80px]" />
@@ -2862,6 +2472,16 @@ Please find the CV data attached.`;
 
     </div>
   );
-};
+}
 
-export default WelcomePage;
+export default function WelcomePage() {
+  return (
+    <Suspense fallback={
+      <div className="h-screen bg-[#f3f2ee] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-black" />
+      </div>
+    }>
+      <WelcomePageContent />
+    </Suspense>
+  );
+}

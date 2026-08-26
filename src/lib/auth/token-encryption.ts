@@ -9,17 +9,19 @@ const TAG_LENGTH = 16;
  * Key must be 32 bytes (256 bits) for AES-256-GCM
  */
 const getEncryptionKey = (): Buffer => {
-  const keyHex = process.env.TOKEN_ENCRYPTION_KEY;
-  if (!keyHex) {
-    throw new Error('TOKEN_ENCRYPTION_KEY environment variable is not set');
-  }
+  const secret = process.env.TOKEN_ENCRYPTION_KEY || process.env.NEXTAUTH_SECRET || process.env.JWT_SECRET || 'cvcircle-secure-default-encryption-salt-2026';
   
-  const key = Buffer.from(keyHex, 'hex');
-  if (key.length !== 32) {
-    throw new Error('TOKEN_ENCRYPTION_KEY must be 32 bytes (64 hex characters)');
+  if (process.env.TOKEN_ENCRYPTION_KEY && process.env.TOKEN_ENCRYPTION_KEY.length === 64) {
+    try {
+      const key = Buffer.from(process.env.TOKEN_ENCRYPTION_KEY, 'hex');
+      if (key.length === 32) return key;
+    } catch {
+      // fallback to sha256
+    }
   }
-  
-  return key;
+
+  // Derive stable 32-byte key via SHA-256
+  return crypto.createHash('sha256').update(secret).digest();
 };
 
 /**

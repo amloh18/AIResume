@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authConfig } from '@/lib/auth-config';
+import { authConfig } from '@/lib/auth';
 import { mapLinkedInProfileToCV } from '@/lib/services/linkedin-mapper';
 import { encryptToken, decryptToken } from '@/lib/auth/token-encryption';
 

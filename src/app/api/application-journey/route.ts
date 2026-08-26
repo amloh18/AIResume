@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import { getAuthenticatedUser } from '@/lib/auth-helpers';
@@ -364,12 +364,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Prevent journey creation for draft jobs
-    if (job.status === 'draft') {
+    // Prevent journey creation for saved jobs
+    if (job.status === 'saved') {
       return NextResponse.json(
         {
           success: false,
-          error: 'Cannot create journey for draft jobs. Please move the job to "created" status first.'
+          error: 'Cannot create journey for saved jobs. Please move the job to "created" status first.'
         },
         { status: 400 }
       );
@@ -738,14 +738,14 @@ export async function DELETE(request: NextRequest) {
           },
           {
             $set: {
-              status: 'draft',
+              status: 'saved',
               updatedAt: new Date()
             }
           }
         );
 
         if (jobUpdateResult.matchedCount > 0) {
-          console.log('✅ CV Journey DELETE API - Job moved to draft stage successfully');
+          console.log('✅ CV Journey DELETE API - Job moved to saved stage successfully');
         } else {
           console.warn('⚠️ CV Journey DELETE API - Job not found or not updated');
         }

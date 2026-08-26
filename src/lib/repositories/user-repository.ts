@@ -51,7 +51,7 @@ export class UserRepository extends BaseRepository<IUser> {
     return this.create({
       firstName: 'Anonymous',
       lastName: 'User',
-      email: `guest_${anonymousToken.substring(0, 8)}@cvcircle.io`, // Placeholder email
+      email: `guest_${anonymousToken.substring(0, 8)}@buildairesume.com`, // Placeholder email
       isAnonymous: true,
       anonymousToken,
       isEmailVerified: false,

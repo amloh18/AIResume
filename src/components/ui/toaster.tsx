@@ -21,11 +21,16 @@ export function Toaster() {
 
         return (
           <Toast key={id} {...props}>
-            {title && <ToastTitle className="text-white">{title}</ToastTitle>}
-            {description}
-            {action}
-            {/* Only show close button for non-custom components */}
-            {!isCustomComponent && <ToastClose />}
+            <div className="flex w-full items-center justify-between gap-3">
+              <div className="flex items-center gap-2 min-w-0">
+                {title && <ToastTitle className="text-white whitespace-nowrap">{title}</ToastTitle>}
+                {description && <span className="text-small text-gray-400 truncate">{description}</span>}
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                {action}
+                {!isCustomComponent && <ToastClose />}
+              </div>
+            </div>
           </Toast>
         )
       })}

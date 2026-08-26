@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import { CV } from '@/models';
 import { toObjectId, createErrorResponse } from '@/lib/db-utils';
+import { getAuthenticatedUser } from '@/lib/auth-helpers';
 
 /**
  * Deep merge function that properly handles arrays
@@ -174,7 +175,7 @@ function getDefaultItemForField(field: string): any {
     certificates: { name: '', date: '', issuer: '', url: '', description: '' },
     publications: { name: '', publisher: '', releaseDate: '', url: '', summary: '' },
     skills: { category: '', skills: [] },
-    languages: { language: '', fluency: '' },
+    languages: { language: '', fluency: '', level: 3 },
     interests: { name: '', keywords: [] },
     references: { name: '', reference: '' },
     projects: { name: '', startDate: '', endDate: '', description: '', highlights: [], keywords: [], url: '' }
@@ -190,30 +191,28 @@ export async function POST(
 ) {
   try {
     await getConnection();
-    
+
+    const authResult = await getAuthenticatedUser();
+    if (!authResult) {
+      return NextResponse.json(
+        { success: false, message: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+    const userId = authResult.userId;
+
     const { id } = await params;
     const body = await request.json();
     const { 
-      userId, 
       cvData, 
       template, 
       title,
       status = 'draft'
     } = body;
 
-    if (!userId) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: 'User ID is required'
-        },
-        { status: 400 }
-      );
-    }
-
     const cvId = toObjectId(id);
     
-    // Find CV and ensure user owns it
+    // Find CV and ensure the authenticated user owns it
     const cv = await CV.findOne({ _id: cvId, userId });
     
     if (!cv) {
@@ -266,30 +265,31 @@ export async function POST(
 
     await cv.save();
 
-    // Save CV with template to S3 as backup
-    try {
-      const { CVS3Service } = await import('@/lib/services/cvS3Service');
-      const s3Url = await CVS3Service.saveCVToS3(
-        cv._id.toString(),
-        userId,
-        cv.cvData,
-        cv.templateData || template
-      );
-      
-      if (s3Url) {
-        // Store S3 URL in metadata
-        if (!cv.metadata) {
-          cv.metadata = {} as any;
+    // Fire-and-forget: Save CV to S3 as backup (non-critical, don't block response)
+    const s3BackupUrl = (async () => {
+      try {
+        const { CVS3Service } = await import('@/lib/services/cvS3Service');
+        const s3Url = await CVS3Service.saveCVToS3(
+          cv._id.toString(),
+          userId,
+          cv.cvData,
+          cv.templateData || template
+        );
+        
+        if (s3Url) {
+          if (!cv.metadata) {
+            cv.metadata = {} as any;
+          }
+          (cv.metadata as any).s3BackupUrl = s3Url;
+          (cv.metadata as any).s3BackupSavedAt = new Date();
+          await cv.save();
         }
-        (cv.metadata as any).s3BackupUrl = s3Url;
-        (cv.metadata as any).s3BackupSavedAt = new Date();
-        await cv.save();
-        console.log('✅ CV saved to S3:', s3Url);
+      } catch {
+        // Non-critical
       }
-    } catch (s3Error) {
-      console.warn('⚠️ Failed to save CV to S3 (non-critical):', s3Error);
-      // Continue - S3 backup is non-critical
-    }
+    })();
+    // Don't block response on S3 backup
+    s3BackupUrl.catch(() => {});
 
     // Note: Thumbnail generation moved to studio exit for better performance
 
@@ -322,19 +322,16 @@ export async function GET(
   try {
     await getConnection();
     
-    const { id } = await params;
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-
-    if (!userId) {
+    const authResult = await getAuthenticatedUser();
+    if (!authResult) {
       return NextResponse.json(
-        {
-          success: false,
-          message: 'User ID is required'
-        },
-        { status: 400 }
+        { success: false, message: 'Unauthorized' },
+        { status: 401 }
       );
     }
+    const userId = authResult.userId;
+
+    const { id } = await params;
 
     const cvId = toObjectId(id);
     

@@ -101,7 +101,7 @@ const ListEntry = ({ collection, index, moveEntry, deleteEntry, children }: any)
       data-index={index}
       data-entry-id={entryId}
     >
-      <div className={`absolute -left-[32px] top-0 bottom-0 flex flex-col items-center justify-center opacity-0 group-hover/entry:opacity-100 group-focus-within/entry:opacity-100 pointer-events-none group-hover/entry:pointer-events-auto group-focus-within/entry:pointer-events-auto transition-opacity duration-200 no-print z-50 gap-0 ${moriChatMode ? 'hidden' : ''}`}>
+      <div className={`entry-controls absolute -left-[32px] top-0 bottom-0 flex flex-col items-center justify-center opacity-0 group-hover/entry:opacity-100 group-focus-within/entry:opacity-100 pointer-events-none group-hover/entry:pointer-events-auto group-focus-within/entry:pointer-events-auto transition-opacity duration-200 no-print z-50 gap-0 ${moriChatMode ? 'hidden' : ''}`}>
           <button
             onClick={(e: any) => { e.stopPropagation(); moveEntry(collection, index, -1); }}
             className="text-gray-400 hover:text-emerald-500 w-7 h-7 flex items-center justify-center transition-all duration-150 hover:scale-110 active:scale-95 bg-transparent"

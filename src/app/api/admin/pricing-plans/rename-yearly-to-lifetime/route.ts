@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import PricingPlan from '@/models/PricingPlan';
+import { requireAdmin } from '@/lib/middleware/admin-auth';
 
 /**
  * POST /api/admin/pricing-plans/rename-yearly-to-lifetime
@@ -10,14 +11,15 @@ import PricingPlan from '@/models/PricingPlan';
 
 export async function POST(request: NextRequest) {
     try {
+        await requireAdmin(request);
         await getConnection();
 
         // Find and update the pro_yearly plan to pro_lifetime
         const result = await PricingPlan.findOneAndUpdate(
-            { key: 'pro_yearly' },
+            { key: 'focused_yearly' },
             {
                 $set: {
-                    key: 'pro_lifetime',
+                    key: 'focused_yearly',
                     name: 'Lifetime',
                     description: 'One-time payment for lifetime access',
                     features: [
@@ -45,7 +47,7 @@ export async function POST(request: NextRequest) {
             });
         } else {
             // Check if pro_lifetime already exists
-            const existingLifetime = await PricingPlan.findOne({ key: 'pro_lifetime' });
+            const existingLifetime = await PricingPlan.findOne({ key: 'focused_yearly' });
             if (existingLifetime) {
                 return NextResponse.json({
                     success: true,

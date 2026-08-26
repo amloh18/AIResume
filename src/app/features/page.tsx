@@ -19,7 +19,7 @@ import CardNav from '@/components/landing/CardNav'
 import Footer from '@/components/landing/Footer'
 
 export const metadata: Metadata = {
-  title: 'CV Builder Features - AI-Powered Resume Tools & ATS Optimization | CVCircle',
+  title: 'AI Resume Builder Features - AI-Powered Resume Tools & ATS Optimization',
   description: 'Discover powerful CV builder features: AI-powered resume analysis, ATS optimization, job tracking, one-click career kits, and professional templates. Build ATS-friendly resumes that get you hired.',
   keywords: [
     'CV builder features',
@@ -37,16 +37,16 @@ export const metadata: Metadata = {
     'professional CV builder'
   ],
   openGraph: {
-    title: 'CV Builder Features - AI-Powered Resume Tools | CVCircle',
-    description: 'Powerful CV builder features: AI analysis, ATS optimization, job tracking, and professional templates. Build resumes that get you hired.',
-    url: 'https://cvcircle.io/features',
-    siteName: 'CVCircle',
+    title: 'AI Resume Builder Features - AI-Powered Resume Tools',
+    description: 'Powerful resume builder features: AI analysis, ATS optimization, job tracking, and professional templates.',
+    url: 'https://buildairesume.com/features',
+    siteName: 'AIResume',
     images: [
       {
         url: '/images/features-og.png',
         width: 1200,
         height: 630,
-        alt: 'CVCircle Features - AI-Powered CV Builder',
+        alt: 'AIResume Features - AI-Powered Resume Builder',
       },
     ],
     locale: 'en_US',
@@ -54,12 +54,12 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'CV Builder Features - AI-Powered Resume Tools',
+    title: 'AI Resume Builder Features - AI-Powered Resume Tools',
     description: 'Discover powerful CV builder features: AI analysis, ATS optimization, and job tracking.',
     images: ['/images/features-twitter.png'],
   },
   alternates: {
-    canonical: 'https://cvcircle.io/features',
+    canonical: 'https://buildairesume.com/features',
   },
   robots: {
     index: true,
@@ -154,9 +154,9 @@ const navLinks = [
       },
       {
         label: 'Blog',
-        description: 'Research-backed career guides, ATS tips, and resume tutorials from CVCircle.',
+        description: 'Research-backed career guides, ATS tips, and resume tutorials from AIResume.',
         href: '/blog',
-        ariaLabel: 'Read the CVCircle blog',
+        ariaLabel: 'Read the AIResume blog',
         icon: <BookOpen className="w-5 h-5 text-gray-400" />
       },
       { 
@@ -190,9 +190,9 @@ export default function FeaturesPage() {
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
-    "name": "CVCircle Features",
-    "description": "Comprehensive CV builder with AI-powered features, ATS optimization, and job tracking",
-    "url": "https://cvcircle.io/features",
+    "name": "AIResume Features",
+    "description": "Comprehensive resume builder with AI-powered features, ATS optimization, and job tracking",
+    "url": "https://buildairesume.com/features",
     "applicationCategory": "BusinessApplication",
     "operatingSystem": "Web",
     "offers": {
@@ -233,30 +233,40 @@ export default function FeaturesPage() {
 
         <div className="relative z-10">
           <CardNav
-            logo="CVCircle"
+            logo="AIResume"
             links={navLinks}
           />
 
           {/* Hero Section */}
           <section className="relative pt-36 pb-20 px-4">
-            <div className="max-w-7xl mx-auto text-center">
-              <h1 className="text-5xl tablet:text-6xl font-bold text-white mb-6">
-                Powerful CV Builder Features
+            <div className="max-w-7xl mx-auto pl-0 text-left flex flex-col items-start">
+              <div className="mb-6 flex justify-start">
+                <svg width="48" height="24" viewBox="0 0 48 24" fill="none" className="text-[#36D39B]">
+                  <path
+                    d="M2 12C8 4 12 20 18 12C24 4 28 20 34 12C40 4 46 12 46 12"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </div>
+              <h1 className="text-[2.5rem] sm:text-[3.25rem] lg:text-[4rem] font-extrabold text-[#F5F7F7] tracking-tighter leading-[1.05] max-w-5xl mb-6 text-left">
+                Powerful CV Builder <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#36D39B] via-[#4DDCB0] to-[#86E8D1]">Features</span>.
               </h1>
-              <p className="text-xl text-gray-300 mb-8 max-w-3xl mx-auto">
+              <p className="text-base sm:text-lg lg:text-xl text-gray-400 font-normal max-w-2xl leading-relaxed text-left mb-8">
                 Everything you need to create ATS-optimized resumes, track job applications, and land your dream job.
               </p>
-              <div className="flex gap-4 justify-center">
+              <div className="flex flex-wrap gap-4 justify-start">
                 <Link
                   href="/sign-up"
-                  className="px-8 py-4 bg-[#80FF00] text-black font-semibold rounded-lg hover:bg-[#70e600] transition-colors inline-flex items-center gap-2"
+                  className="px-8 py-4 bg-[#013f2e] hover:bg-[#025c43] text-white font-bold rounded-full transition-colors duration-200 shadow-lg inline-flex items-center gap-2"
                 >
                   Get Started Free
                   <ArrowRight size={20} />
                 </Link>
                 <Link
                   href="/ai-career-report"
-                  className="px-8 py-4 bg-transparent border-2 border-[#80FF00] text-[#80FF00] font-semibold rounded-lg hover:bg-[#80FF00]/10 transition-colors inline-flex items-center gap-2"
+                  className="px-8 py-4 bg-white/5 border border-white/15 text-white font-bold rounded-full hover:bg-white/10 transition-colors inline-flex items-center gap-2"
                 >
                   Try Free Analysis
                   <Sparkles size={20} />
@@ -271,26 +281,41 @@ export default function FeaturesPage() {
           {/* Additional Feature Details */}
           <section className="py-20 px-4 bg-white/5 border-y border-white/5 backdrop-blur-sm">
             <div className="max-w-7xl mx-auto">
-              <h2 className="text-4xl font-bold text-white text-center mb-12">
-                Why Choose CVCircle?
-              </h2>
+              <div className="pl-0 mb-14 text-left flex flex-col items-start">
+                <div className="mb-6 flex justify-start">
+                  <svg width="48" height="24" viewBox="0 0 48 24" fill="none" className="text-[#36D39B]">
+                    <path
+                      d="M2 12C8 4 12 20 18 12C24 4 28 20 34 12C40 4 46 12 46 12"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </div>
+                <h2 className="text-[2.25rem] sm:text-[2.85rem] lg:text-[3.5rem] font-extrabold text-[#F5F7F7] tracking-tighter leading-[1.05] max-w-5xl mb-6 text-left">
+                  Why Choose <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#36D39B] via-[#4DDCB0] to-[#86E8D1]">AIResume</span>.
+                </h2>
+                <p className="text-base sm:text-lg lg:text-xl text-gray-400 font-normal max-w-2xl leading-relaxed text-left">
+                  Built from the ground up for modern job seekers and competitive hiring standards.
+                </p>
+              </div>
               <div className="grid tablet:grid-cols-3 gap-8">
-                <div className="bg-white/5 p-8 rounded-2xl border border-white/10 backdrop-blur-sm hover:border-[#80FF00]/30 hover:bg-white/10 transition-all duration-300 shadow-xl">
-                  <Target className="w-12 h-12 text-[#80FF00] mb-4" />
+                <div className="bg-white/5 p-8 rounded-2xl border border-white/10 backdrop-blur-sm hover:border-[#013f2e]/30 hover:bg-white/10 transition-all duration-300 shadow-xl">
+                  <Target className="w-12 h-12 text-[#013f2e] mb-4" />
                   <h3 className="text-2xl font-bold text-white mb-4">ATS-Optimized</h3>
                   <p className="text-gray-300">
                     Every CV is optimized for Applicant Tracking Systems, ensuring your resume gets past automated filters.
                   </p>
                 </div>
-                <div className="bg-white/5 p-8 rounded-2xl border border-white/10 backdrop-blur-sm hover:border-[#80FF00]/30 hover:bg-white/10 transition-all duration-300 shadow-xl">
-                  <Zap className="w-12 h-12 text-[#80FF00] mb-4" />
+                <div className="bg-white/5 p-8 rounded-2xl border border-white/10 backdrop-blur-sm hover:border-[#013f2e]/30 hover:bg-white/10 transition-all duration-300 shadow-xl">
+                  <Zap className="w-12 h-12 text-[#013f2e] mb-4" />
                   <h3 className="text-2xl font-bold text-white mb-4">AI-Powered</h3>
                   <p className="text-gray-300">
                     Get instant AI analysis of your CV with personalized recommendations for improvement.
                   </p>
                 </div>
-                <div className="bg-white/5 p-8 rounded-2xl border border-white/10 backdrop-blur-sm hover:border-[#80FF00]/30 hover:bg-white/10 transition-all duration-300 shadow-xl">
-                  <BarChart3 className="w-12 h-12 text-[#80FF00] mb-4" />
+                <div className="bg-white/5 p-8 rounded-2xl border border-white/10 backdrop-blur-sm hover:border-[#013f2e]/30 hover:bg-white/10 transition-all duration-300 shadow-xl">
+                  <BarChart3 className="w-12 h-12 text-[#013f2e] mb-4" />
                   <h3 className="text-2xl font-bold text-white mb-4">Real-Time Analytics</h3>
                   <p className="text-gray-300">
                     Track your application success rate and get insights into what works best for your industry.
@@ -303,33 +328,33 @@ export default function FeaturesPage() {
           {/* CTA Section */}
           <section className="py-20 px-4">
             <div className="max-w-7xl mx-auto">
-              <div className="relative rounded-3xl overflow-hidden group shadow-2xl shadow-[#80FF00]/5 border border-[#80FF00]/20 bg-black/60 backdrop-blur-md">
+              <div className="relative rounded-3xl overflow-hidden group shadow-2xl shadow-[#013f2e]/5 border border-[#013f2e]/20 bg-black/60 backdrop-blur-md">
                 {/* Dynamic Glow Backdrops */}
-                <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-gradient-to-br from-[#80FF00]/25 via-emerald-950/20 to-transparent rounded-full blur-3xl opacity-70 group-hover:opacity-90 transition-opacity duration-1000 -mr-20 -mt-20 pointer-events-none animate-pulse" style={{ animationDuration: '6s' }} />
+                <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-gradient-to-br from-[#013f2e]/25 via-emerald-950/20 to-transparent rounded-full blur-3xl opacity-70 group-hover:opacity-90 transition-opacity duration-1000 -mr-20 -mt-20 pointer-events-none animate-pulse" style={{ animationDuration: '6s' }} />
                 <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-gradient-to-tr from-emerald-950/40 via-lime-950/20 to-transparent rounded-full blur-3xl opacity-50 group-hover:opacity-75 transition-opacity duration-1000 -ml-20 -mb-20 pointer-events-none" />
-                <div className="absolute inset-0 bg-[radial-gradient(circle_1000px_at_50%_-100px,#80FF00/15,transparent_75%)] opacity-100 pointer-events-none" />
+                <div className="absolute inset-0 bg-[radial-gradient(circle_1000px_at_50%_-100px,#013f2e/15,transparent_75%)] opacity-100 pointer-events-none" />
 
                 {/* Abstract Glowing Tech Circuit / Waves Overlay */}
                 <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                  <svg className="absolute w-[150%] h-[150%] -left-[25%] -top-[25%] text-[#80FF00]/10 opacity-30 group-hover:opacity-40 transition-opacity duration-700" viewBox="0 0 100 100" preserveAspectRatio="none">
+                  <svg className="absolute w-[150%] h-[150%] -left-[25%] -top-[25%] text-[#013f2e]/10 opacity-30 group-hover:opacity-40 transition-opacity duration-700" viewBox="0 0 100 100" preserveAspectRatio="none">
                     <path d="M0,50 Q25,20 50,50 T100,50" fill="none" stroke="currentColor" strokeWidth="0.5" className="animate-pulse" style={{ animationDuration: '8s' }} />
                     <path d="M0,40 Q25,70 50,40 T100,40" fill="none" stroke="currentColor" strokeWidth="0.25" className="animate-pulse" style={{ animationDuration: '12s' }} />
                   </svg>
                   {/* Large abstract glowing orb graphic */}
-                  <div className="absolute w-72 h-72 bg-gradient-to-tr from-[#80FF00]/10 to-emerald-500/10 rounded-full blur-2xl top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 group-hover:scale-125 transition-transform duration-1000 pointer-events-none" />
+                  <div className="absolute w-72 h-72 bg-gradient-to-tr from-[#013f2e]/10 to-emerald-500/10 rounded-full blur-2xl top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 group-hover:scale-125 transition-transform duration-1000 pointer-events-none" />
                 </div>
 
                 <div className="relative p-12 md:p-20 text-center z-10 flex flex-col items-center">
                   <h2 className="text-3xl md:text-6xl font-black text-white mb-6 tracking-tight leading-none max-w-3xl">
-                    Ready to Build Your <span className="text-[#80FF00] bg-clip-text bg-gradient-to-r from-[#80FF00] via-[#a2ff54] to-emerald-400">Perfect CV?</span>
+                    Ready to Build Your <span className="text-[#013f2e] bg-clip-text bg-gradient-to-r from-[#013f2e] via-[#03694c] to-emerald-400">Perfect CV?</span>
                   </h2>
                   <p className="text-gray-300 mb-10 max-w-3xl text-body md:text-h2 leading-relaxed">
-                    Join thousands of professionals who have landed their dream jobs with CVCircle. Built in minutes — free to start.
+                    Join thousands of professionals who have landed their dream jobs with AIResume. Built in minutes — free to start.
                   </p>
                   <div className="flex flex-col sm:flex-row gap-5 justify-center w-full sm:w-auto">
                     <Link
                       href="/sign-up"
-                      className="inline-flex items-center justify-center gap-2.5 bg-[#80FF00] text-black px-12 py-5 rounded-full font-extrabold hover:bg-lime-400 active:scale-[0.98] transition-all text-body shadow-[0_0_40px_rgba(128,255,0,0.4)] group/btn"
+                      className="inline-flex items-center justify-center gap-2.5 bg-[#013f2e] hover:bg-[#025c43] text-white px-12 py-5 rounded-full font-bold active:scale-[0.98] transition-colors duration-200 text-body shadow-lg group/btn"
                     >
                       Start Building Now
                       <ArrowRight className="w-5 h-5 group-hover:translate-x-1.5 transition-transform" />

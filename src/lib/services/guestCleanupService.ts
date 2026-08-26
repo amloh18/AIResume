@@ -7,22 +7,26 @@ import { User, CV, TemporaryCVDraft } from '@/models';
  * Cleans up guest users who have abandoned onboarding.
  * A guest user is deleted if they:
  * 1. Are marked as isAnonymous: true
- * 2. Were created more than 24 hours ago
+ * 2. Were created more than 30 days ago
  * 3. Have no master CV linked in the CV collection
  * 4. Have no master CV draft in the TemporaryCVDraft collection
+ * 
+ * When a real account is created or linked, the anonymous user is
+ * immediately deleted via UserService.mergeAnonymousUser().
  */
 export async function cleanupGuestUsers(): Promise<number> {
   try {
     await getConnection();
     
-    // Find all anonymous users created more than 24 hours ago
-    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    // Find all anonymous users created more than 30 days ago
+    const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+    const cutoff = new Date(Date.now() - THIRTY_DAYS_MS);
     const guestUsers = await User.find({
       isAnonymous: true,
       createdAt: { $lt: cutoff }
     });
     
-    console.log(`🔍 guestCleanupService - Found ${guestUsers.length} total anonymous users older than 24h.`);
+    console.log(`🔍 guestCleanupService - Found ${guestUsers.length} total anonymous users older than 30 days.`);
     
     let deletedCount = 0;
     

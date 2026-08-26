@@ -8,115 +8,7 @@ import mongoose from 'mongoose';
 
 export const dynamic = 'force-dynamic';
 
-// Seed mock emails if the database is empty
-async function seedMockEmailsIfNeeded(userId: string, jobId: string, job: any, accountId: string) {
-  const existingCount = await EmailMessage.countDocuments({ jobId });
-  if (existingCount > 0) return;
-
-  const company = job.company || 'Google';
-  const recruiterName = job.contactDetails?.name || 'Jane Smith';
-  const recruiterEmail = job.contactDetails?.email || 'jane.smith@google.com';
-  const jobTitle = job.jobTitle || job.title || 'Software Engineer';
-
-  // We seed a sequence of emails matching the comms.png mockup exactly
-  const emailsToSeed = [
-    {
-      subject: `Interview Invitation`,
-      direction: 'inbound',
-      senderEmail: recruiterEmail,
-      senderName: recruiterName,
-      bodySnippet: `Hi Amarjot,\n\nThank you for applying for the Software Engineer role...`,
-      receivedAt: new Date(Date.now() - 36 * 60 * 60 * 1000), // 36 hours ago
-      isRead: true,
-      hasAttachments: true,
-      attachmentNames: ['Interview Invite.ics', 'Screening Details.pdf'],
-      stageClassification: 'SCREENING_REQUESTED',
-      triggeredStageChange: true,
-    },
-    {
-      subject: `Re: Interview Invitation`,
-      direction: 'outbound',
-      senderEmail: sessionUserEmail(userId),
-      senderName: 'You',
-      bodySnippet: `Hi Jane,\n\nThank you so much for the opportunity! I'm available...`,
-      receivedAt: new Date(Date.now() - 35 * 60 * 60 * 1000), // 35 hours ago
-      isRead: true,
-      hasAttachments: false,
-      attachmentNames: [],
-      stageClassification: 'FOLLOW_UP_ONLY',
-      triggeredStageChange: false,
-    },
-    {
-      subject: `Interview Confirmation`,
-      direction: 'inbound',
-      senderEmail: recruiterEmail,
-      senderName: recruiterName,
-      bodySnippet: `Great! How about Thursday, June 27 at 2:00 PM PT?\nI'll send a calendar invite.`,
-      receivedAt: new Date(Date.now() - 34 * 60 * 60 * 1000), // 34 hours ago
-      isRead: false,
-      hasAttachments: false,
-      attachmentNames: [],
-      stageClassification: 'FOLLOW_UP_ONLY',
-      triggeredStageChange: false,
-    },
-    {
-      subject: `Interview Scheduled`,
-      direction: 'inbound',
-      senderEmail: recruiterEmail,
-      senderName: recruiterName,
-      bodySnippet: `Our interview is confirmed for Thu, Jun 27 at 2:00 PM PT.\nHere's the calendar invite again.`,
-      receivedAt: new Date(Date.now() - 12 * 60 * 60 * 1000), // 12 hours ago
-      isRead: false,
-      hasAttachments: true,
-      attachmentNames: ['Interview - Amarjot Singh.ics'],
-      stageClassification: 'INTERVIEW_SCHEDULED',
-      triggeredStageChange: true,
-    }
-  ];
-
-  // Insert messages
-  const threadId = new mongoose.Types.ObjectId().toString();
-  for (const m of emailsToSeed) {
-    await EmailMessage.create({
-      userId,
-      accountId,
-      providerMessageId: new mongoose.Types.ObjectId().toString(),
-      providerThreadId: threadId,
-      jobId,
-      matchConfidence: 100,
-      matchStatus: 'auto',
-      direction: m.direction,
-      senderEmail: m.senderEmail,
-      senderName: m.senderName,
-      subject: m.subject,
-      bodySnippet: m.bodySnippet,
-      hasAttachments: m.hasAttachments,
-      attachmentNames: m.attachmentNames,
-      receivedAt: m.receivedAt,
-      isRead: m.isRead,
-      stageClassification: m.stageClassification,
-      triggeredStageChange: m.triggeredStageChange,
-    });
-  }
-
-  // Create thread
-  await EmailThread.create({
-    userId,
-    providerThreadId: threadId,
-    jobId,
-    lastMessageAt: emailsToSeed[emailsToSeed.length - 1].receivedAt,
-    participantEmails: [recruiterEmail],
-    threadSubject: emailsToSeed[0].subject,
-    messageCount: emailsToSeed.length,
-    unreadCount: emailsToSeed.filter(e => !e.isRead && e.direction === 'inbound').length,
-  });
-}
-
-function sessionUserEmail(userId: string) {
-  return 'user@cvcircle.com';
-}
-
-// GET: Fetch synced/mock emails for a jobId
+// GET: Fetch synced emails for a jobId
 export async function GET(request: NextRequest) {
   try {
     await getConnection();
@@ -144,11 +36,10 @@ export async function GET(request: NextRequest) {
     let emailAccount = await EmailAccount.findOne({ userId, syncStatus: 'connected' });
     const isAutomated = !!emailAccount;
 
-    // If there is no email account, we can provision a default mock one for the demo
+    // If there is no email account, create a disconnected default
     if (!emailAccount) {
       emailAccount = await EmailAccount.findOne({ userId });
       if (!emailAccount) {
-        // Create a disconnected account as default to indicate "not connected"
         emailAccount = await EmailAccount.create({
           userId,
           provider: 'gmail',
@@ -157,10 +48,6 @@ export async function GET(request: NextRequest) {
         });
       }
     }
-
-    // Seed mock emails if this is an automated user or if we want to show demonstration emails
-    // Seed them using the connected/disconnected account ID
-    await seedMockEmailsIfNeeded(userId, jobId, job, emailAccount._id.toString());
 
     // Fetch emails
     const messages = await EmailMessage.find({ jobId, userId }).sort({ receivedAt: 1 });
@@ -212,7 +99,7 @@ export async function POST(request: NextRequest) {
         matchConfidence: 100,
         matchStatus: 'manual',
         direction: 'outbound',
-        senderEmail: session.user.email || 'user@cvcircle.com',
+        senderEmail: session.user.email || 'user@buildairesume.com',
         senderName: 'You',
         subject: subject || `Re: Communication regarding job`,
         bodySnippet: bodyText.substring(0, 500),

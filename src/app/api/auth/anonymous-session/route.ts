@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
   try {
     await getConnection();
     const cookieStore = await cookies();
-    let anonymousToken = cookieStore.get('cvcircle_anonymous_token')?.value;
+    let anonymousToken = cookieStore.get('buildairesume_anonymous_token')?.value;
     let user = null;
 
     if (anonymousToken) {
@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
       anonymousToken = crypto.randomUUID();
       user = await userRepository.createAnonymousUser(anonymousToken);
       
-      cookieStore.set('cvcircle_anonymous_token', anonymousToken, {
+      cookieStore.set('buildairesume_anonymous_token', anonymousToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',

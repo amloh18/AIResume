@@ -5,7 +5,7 @@ import { getAllArticles } from '@/data/blogs';
 import { MotionDiv, MotionH2 } from '@/components/ui/motion-wrapper';
 
 const categoryColors: Record<string, string> = {
-  'CVCircle vs Competitors': 'bg-purple-900/40 text-purple-300 border-purple-700/30',
+  'AIResume vs Competitors': 'bg-purple-900/40 text-purple-300 border-purple-700/30',
   'AI & Technology':         'bg-blue-900/40 text-blue-300 border-blue-700/30',
   'ATS Optimization':        'bg-amber-900/40 text-amber-300 border-amber-700/30',
   'Resume Guides':           'bg-green-900/40 text-green-300 border-green-700/30',
@@ -59,7 +59,7 @@ export default function BlogSection() {
             transition={{ duration: 0.5 }}
             className="mb-6 flex justify-start"
           >
-            <svg width="48" height="24" viewBox="0 0 48 24" fill="none" className="text-[#81ff00]">
+            <svg width="48" height="24" viewBox="0 0 48 24" fill="none" className="text-[#36D39B]">
               <path
                 d="M2 12C6 6 10 18 14 12C18 6 22 18 26 12C30 6 34 18 38 12C42 6 46 12 46 12"
                 stroke="currentColor"
@@ -68,11 +68,11 @@ export default function BlogSection() {
               />
             </svg>
           </MotionDiv>
-          <MotionH2 className="!text-[2rem] tablet:!text-[2.5rem] desktop:!text-[3rem] font-extrabold text-white mb-4 tracking-tighter !leading-[1.05]">
-            Outsmart the ATS. <span className="text-[#81ff00]">Get the Interview.</span>
+          <MotionH2 className="tablet:!text-[2.5rem] desktop:!text-[3rem] font-extrabold text-[#F5F7F7] mb-4 tracking-tighter text-4xl! tracking-normal!">
+            Outsmart the ATS. <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#36D39B] via-[#4DDCB0] to-[#86E8D1]">Get the Interview.</span>
           </MotionH2>
           <p className="text-h3 text-gray-400 max-w-2xl leading-relaxed text-left">
-            Expert guides on CV building, ATS optimization, and job search strategy — written by the CVCircle research team.
+            Expert guides on CV building, ATS optimization, and job search strategy — written by the AIResume research team.
           </p>
         </MotionDiv>
 

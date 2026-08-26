@@ -9,10 +9,11 @@ import { sanitizeErrorMessage } from '@/lib/api/error-handler';
 import { downloadCanvasAsPDF } from '@/lib/utils/downloadCanvas';
 import { usePaymentModal } from '@/contexts/PaymentModalContext';
 import DownloadModal from '@/components/ui/DownloadModal';
+import { Skeleton } from '@/components/ui/Skeleton';
 import {
   Sparkles,
   Component, Eye, Target, ZoomIn, ZoomOut, Plus, Shuffle, Palette, X,
-  Check, Info, LayoutTemplate, FileJson
+  Info, LayoutTemplate, FileJson
 } from 'lucide-react';
 
 // Import CV Builder form components
@@ -33,12 +34,9 @@ import { CVSurgeonService, SurgicalFix } from '@/lib/services/cv-surgeon-service
 import { logResumeEnhancerEvent } from '@/lib/services/resumeEnhancerLogClient';
 import { inferRoleContextFromCVData } from '@/lib/utils/resumeEnhancerRoleInference';
 import { calculateOptimalColumnDistribution } from '@/services/sectionRebalancer';
-import type { RecruiterFeatures } from '@/components/resume-enhancer/panels/RecruiterModePanel';
-import type { ATSFeatures } from '@/components/resume-enhancer/panels/ATSModePanel';
 import { getAnalysisModeWithValidation } from '@/lib/utils/analysis-mode';
 import toast from 'react-hot-toast';
 import FloatingFormEditor from '@/components/resume-enhancer/FloatingFormEditor';
-import FloatingPulsePill, { type FloatingPulsePillHandle } from '@/components/resume-enhancer/FloatingPulsePill';
 import ATSMeterPanel from '@/components/resume-enhancer/panels/ATSMeterPanel';
 import MoriChatInterface from '@/components/resume-enhancer/panels/MoriChatInterface';
 import UtilityPanelPill from '@/components/resume-enhancer/components/UtilityPanelPill';
@@ -94,36 +92,7 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [showRoleProfiler, setShowRoleProfiler] = useState(false);
 
-    const isImproveMode = searchParams.get('improve') === 'true' || searchParams.get('mode') === 'improve';
-    const [isSectionEdited, setIsSectionEdited] = useState(false);
-    const [isPdfExported, setIsPdfExported] = useState(false);
 
-    // Improve mode now keeps analysis in the right rail instead of opening the
-    // modal automatically. Users can still run analysis from the rail.
-
-    const handleFinishOnboarding = async () => {
-      try {
-        const res = await fetch('/api/user/onboarding', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            onboarding: {
-              activation_status: 'completed'
-            }
-          })
-        });
-        if (res.ok) {
-          toast.success('Onboarding completed! Welcome to your dashboard.');
-          router.push('/dashboard');
-        } else {
-          toast.error('Failed to update onboarding status.');
-        }
-      } catch (err) {
-        console.error(err);
-        toast.error('An error occurred. Moving to dashboard.');
-        router.push('/dashboard');
-      }
-    };
     const [showJobParserDialog, setShowJobParserDialog] = useState(false);
     const [isATSUnlockDismissed, setIsATSUnlockDismissed] = useState(false);
     const [totalPages, setTotalPages] = useState(1);
@@ -138,7 +107,6 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
 
     const cvPreviewRef = useRef<HTMLDivElement>(null);
     const sidePanelRef = useRef<HTMLDivElement>(null);
-    const pillRef = useRef<FloatingPulsePillHandle>(null);
     const canvasBuilderRef = useRef<any>(null);
     const lastSavedSectionTitlesRef = useRef<string>('');
     const hasLoadedUserSectionTitlesRef = useRef(false);
@@ -152,7 +120,6 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
     const [editorPosition, setEditorPosition] = useState<{ top: number; left: number; height: number; alignment: 'left' | 'right' } | null>(null);
 
     const [viewMode, setViewMode] = useState<ViewMode>('edit'); // New View Mode State
-    const [pageFormat, setPageFormat] = useState<'a4' | 'letter'>('a4');
     const [highlightedField, setHighlightedField] = useState<string | null>(null);
 
     // CV Layout Validation — runs whenever cvData changes
@@ -178,7 +145,6 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
             paperSize: (state.paperSize as 'A4' | 'Letter') || 'A4',
           });
           toast.success('Downloaded successfully!');
-          setIsPdfExported(true);
         } else if (format === 'docx') {
           // DOCX: use the server export API which generates a content-faithful
           // Word document from cvData (all sections present, visual styling differs).
@@ -622,15 +588,33 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
       const handleClose = () => {
         setActiveUtilityPanel(null);
       };
+      const handleOpenAnalysis = () => {
+        setActiveUtilityPanel('analysis');
+      };
       window.addEventListener('set-builder-sidebar', handleSidebar);
       window.addEventListener('open-templates', handleTemplates);
       window.addEventListener('close-utility-panel', handleClose);
+      window.addEventListener('open-analysis-panel', handleOpenAnalysis);
       return () => {
         window.removeEventListener('set-builder-sidebar', handleSidebar);
         window.removeEventListener('open-templates', handleTemplates);
         window.removeEventListener('close-utility-panel', handleClose);
+        window.removeEventListener('open-analysis-panel', handleOpenAnalysis);
       };
     }, []);
+
+    React.useEffect(() => {
+      // Keep the context paperSize (single source for exports) in sync with the
+      // canvas page-size toggle. The canvas owns design.pageSize; this mirrors it.
+      const handlePaperSizeChange = (e: Event) => {
+        const next = (e as CustomEvent).detail;
+        if (next === 'A4' || next === 'Letter') {
+          dispatch({ type: 'SET_PAPER_SIZE', payload: next });
+        }
+      };
+      window.addEventListener('cv-paper-size-changed', handlePaperSizeChange);
+      return () => window.removeEventListener('cv-paper-size-changed', handlePaperSizeChange);
+    }, [dispatch]);
 
     React.useEffect(() => {
       if (state.moriChatMode) {
@@ -889,8 +873,9 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
         }
 
         const jobResult = await jobResponse.json();
-        const jobId = jobResult.data.jobApplication._id;
-        const journeyId = jobResult.data.journey._id;
+        const jobId = jobResult.data?.jobApplication?._id;
+        const journeyId = jobResult.data?.journey?._id;
+        if (!jobId) throw new Error('Failed to create job application');
 
         // If Master CV, we might want to CLONE it instead of converting?
         // But for now, assuming conversion in place is okay or API handles it.
@@ -1305,45 +1290,48 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
 
 
     return (
-      <div className="h-macro min-h-0 relative overflow-hidden bg-gray-50 dark:bg-[#0a0a0a]">
+      <div className="h-full flex-1 min-h-0 relative overflow-hidden bg-gray-50 dark:bg-[#0a0a0a]">
         {/* Main Container */}
-        <div className="h-full w-full flex overflow-hidden relative p-3 gap-3">
+        <div className="h-full w-full flex overflow-hidden relative px-3 pt-1.5 pb-3 gap-3">
           {/* CV Canvas Builder — full drag-drop snippet-based builder with inline editing */}
           <div 
-            className="flex-1 min-h-0 relative flex flex-col rounded-xl overflow-hidden shadow-sm shadow-black/10 dark:shadow-black/30"
+            className="flex-1 lg:flex-none lg:w-[60%] min-h-0 relative flex flex-col rounded-xl overflow-hidden shadow-sm shadow-black/10 dark:shadow-black/30"
             style={{ order: isControlPanelOpen ? 2 : 1 }}
           >
             <div ref={cvPreviewRef} className="flex-1 min-h-0 overflow-hidden">
               {!state.cvData ? (
-                <div className="w-full h-full bg-white dark:bg-[#141810] p-8 flex flex-col gap-6 animate-pulse rounded-xl border border-gray-200 dark:border-white/[0.04]">
-                  {/* Header Skeleton */}
-                  <div className="space-y-3">
-                    <div className="h-6 bg-gray-250 dark:bg-white/10 rounded w-1/3 animate-pulse" />
-                    <div className="h-3.5 bg-gray-200 dark:bg-white/5 rounded w-1/4 animate-pulse" />
-                  </div>
-                  {/* Details Skeletons */}
-                  <div className="flex gap-4">
-                    <div className="h-3 bg-gray-200 dark:bg-white/5 rounded w-20 animate-pulse" />
-                    <div className="h-3 bg-gray-200 dark:bg-white/5 rounded w-20 animate-pulse" />
-                    <div className="h-3 bg-gray-200 dark:bg-white/5 rounded w-20 animate-pulse" />
-                  </div>
-                  <hr className="border-gray-250 dark:border-white/5" />
-                  {/* Summary skeleton */}
-                  <div className="space-y-2.5">
-                    <div className="h-4 bg-gray-250 dark:bg-white/10 rounded w-1/4 animate-pulse" />
-                    <div className="h-3 bg-gray-200 dark:bg-white/5 rounded w-full animate-pulse" />
-                    <div className="h-3 bg-gray-200 dark:bg-white/5 rounded w-5/6 animate-pulse" />
-                  </div>
-                  {/* Experience skeleton */}
-                  <div className="space-y-4 pt-4">
-                    <div className="h-4 bg-gray-250 dark:bg-white/10 rounded w-1/4 animate-pulse" />
+                /* CV sheet skeleton — mimics the document that will render here */
+                <div className="w-full h-full flex items-start justify-center overflow-y-auto p-6">
+                  <div className="w-full max-w-[560px] aspect-[1/1.414] bg-white dark:bg-[#141810] rounded-xl border border-gray-200 dark:border-white/[0.04] shadow-sm p-8 flex flex-col gap-6">
+                    {/* Header Skeleton */}
+                    <div className="space-y-3">
+                      <Skeleton className="h-6 w-1/3" />
+                      <Skeleton className="h-3.5 w-1/4" />
+                    </div>
+                    {/* Details Skeletons */}
+                    <div className="flex gap-4">
+                      <Skeleton className="h-3 w-20" />
+                      <Skeleton className="h-3 w-20" />
+                      <Skeleton className="h-3 w-20" />
+                    </div>
+                    <Skeleton className="h-px w-full" />
+                    {/* Summary skeleton */}
                     <div className="space-y-2.5">
-                      <div className="flex justify-between">
-                        <div className="h-3.5 bg-gray-250 dark:bg-white/10 rounded w-1/3 animate-pulse" />
-                        <div className="h-3 bg-gray-200 dark:bg-white/5 rounded w-16 animate-pulse" />
+                      <Skeleton className="h-4 w-1/4" />
+                      <Skeleton className="h-3 w-full" />
+                      <Skeleton className="h-3 w-5/6" />
+                    </div>
+                    {/* Experience skeleton */}
+                    <div className="space-y-4 pt-2">
+                      <Skeleton className="h-4 w-1/4" />
+                      <div className="space-y-2.5">
+                        <div className="flex justify-between">
+                          <Skeleton className="h-3.5 w-1/3" />
+                          <Skeleton className="h-3 w-16" />
+                        </div>
+                        <Skeleton className="h-3 w-full" />
+                        <Skeleton className="h-3 w-full" />
                       </div>
-                      <div className="h-3 bg-gray-200 dark:bg-white/5 rounded w-full animate-pulse" />
-                      <div className="h-3 bg-gray-200 dark:bg-white/5 rounded w-full animate-pulse" />
                     </div>
                   </div>
                 </div>
@@ -1357,7 +1345,6 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
                   role={state.jobData?.jobTitle || state.jobData?.title || state.targetRole || null}
                   onDataChange={(updatedData: any) => {
                     dispatch({ type: 'SET_CV_DATA', payload: updatedData });
-                    setIsSectionEdited(true);
                   }}
                   onTemplateChange={(newTemplate: any) => {
                     setTemplate(newTemplate);
@@ -1371,130 +1358,17 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
             </div>
           </div>
           
-          {/* Right rail: onboarding setup checklist and AI analysis */}
+          {/* Right rail: AI analysis */}
           <div 
             className={`
-              fixed inset-y-0 right-0 z-50 w-full bg-white dark:bg-[#0a0a0a] flex flex-col h-full gap-3 min-h-0 shadow-2xl transition-all duration-300
-              lg:static lg:w-[426px] lg:shadow-none lg:border lg:border-white/20 lg:dark:border-white/10 lg:rounded-xl lg:flex lg:z-10 lg:p-0 lg:overflow-hidden lg:bg-transparent lg:panel-glass lg:shrink-0 overflow-hidden
+              fixed inset-y-0 right-0 z-50 w-[95%] bg-white dark:bg-[#0a0a0a] flex flex-col h-full gap-3 min-h-0 shadow-2xl transition-all duration-300
+              ${isControlPanelOpen
+                ? 'hidden lg:hidden'
+                : 'lg:static lg:w-[40%] lg:min-w-0 lg:shadow-none lg:border lg:border-white/20 lg:dark:border-white/10 lg:rounded-xl lg:flex lg:z-10 lg:p-0 lg:overflow-hidden lg:bg-transparent lg:panel-glass overflow-hidden'}
               ${activeUtilityPanel === 'analysis' ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}
             `}
             style={{ order: isControlPanelOpen ? 1 : 2 }}
           >
-            {isImproveMode && (() => {
-              const isPersonalInfoVerified = !!(state.cvData?.basics?.name?.trim() && state.cvData?.basics?.email?.trim());
-              const isQualityScoreReviewed = !!(state.surgeonAnalysis || atsScore);
-
-              const checklistItems = [
-                {
-                  id: 'personal',
-                  title: 'Verify Personal Info',
-                  description: 'Ensure your name and email are filled in basics.',
-                  completed: isPersonalInfoVerified,
-                },
-                {
-                  id: 'quality',
-                  title: 'Review Quality Score',
-                  description: 'Review the AI Analysis score for CV health.',
-                  completed: isQualityScoreReviewed,
-                },
-                {
-                  id: 'optimize',
-                  title: 'Optimize Section Data',
-                  description: 'Make at least one edit to any CV section.',
-                  completed: isSectionEdited,
-                },
-                {
-                  id: 'export',
-                  title: 'Export PDF Copy',
-                  description: 'Download the compiled PDF file of your resume.',
-                  completed: isPdfExported,
-                }
-              ];
-
-              const completedCount = checklistItems.filter(item => item.completed).length;
-              const isChecklistComplete = completedCount === checklistItems.length;
-
-              return (
-                <div className="shrink-0 max-h-[46%] bg-white dark:bg-[var(--bg-secondary)] border border-gray-200 dark:border-gray-800 rounded-xl p-4 shadow-sm select-none overflow-y-auto scrollbar-hide">
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 text-teal-600 dark:text-teal-400">
-                      <Sparkles className="h-4 w-4 stroke-[2.5]" />
-                      <h3 className="font-extrabold text-sm tracking-tight text-gray-900 dark:text-white">Onboarding Checklist</h3>
-                    </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Finish these steps to set up your Master CV.
-                    </p>
-
-                  {/* Progress Bar */}
-                  <div className="space-y-1.5 pt-2">
-                    <div className="flex justify-between text-xs font-bold">
-                      <span className="text-gray-400">Setup Progress</span>
-                      <span className="text-teal-700 dark:text-teal-400">{completedCount} of 4 completed</span>
-                    </div>
-                    <div className="w-full bg-gray-150 dark:bg-gray-800 h-2 rounded-full overflow-hidden">
-                      <div 
-                        className="bg-teal-500 h-full transition-all duration-500 ease-out" 
-                        style={{ width: `${(completedCount / 4) * 100}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Checklist List */}
-                  <div className="space-y-2 pt-2">
-                    {checklistItems.map(item => (
-                      <div 
-                        key={item.id} 
-                        className={`p-3 rounded-lg border transition-all flex items-start gap-3 ${
-                          item.completed 
-                            ? 'bg-teal-50/40 border-teal-100 dark:bg-teal-950/20 dark:border-teal-900/30' 
-                            : 'bg-slate-50/50 border-gray-150 dark:bg-gray-900/30 dark:border-gray-800/40'
-                        }`}
-                      >
-                        <div className={`mt-0.5 rounded-full p-0.5 ${
-                          item.completed 
-                            ? 'bg-teal-500 text-white' 
-                            : 'bg-gray-200 text-gray-400 dark:bg-gray-800 dark:text-gray-600'
-                        }`}>
-                          <Check className="h-3.5 w-3.5 stroke-[3]" />
-                        </div>
-                        <div className="space-y-0.5">
-                          <h4 className={`text-xs font-bold ${
-                            item.completed 
-                              ? 'text-gray-900 dark:text-white line-through decoration-teal-500/40' 
-                              : 'text-gray-700 dark:text-gray-300'
-                          }`}>
-                            {item.title}
-                          </h4>
-                          <p className="text-[10px] text-gray-500 leading-relaxed dark:text-gray-500">
-                            {item.description}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Action Button */}
-                  <div className="pt-2">
-                    <button
-                      onClick={handleFinishOnboarding}
-                      className={`w-full py-2.5 px-4 rounded-lg font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${
-                        isChecklistComplete 
-                          ? 'bg-teal-600 hover:bg-teal-700 text-white shadow-md shadow-teal-100 dark:shadow-none' 
-                          : 'bg-gray-100 hover:bg-gray-200 text-gray-400 dark:bg-gray-800 dark:text-gray-500'
-                      }`}
-                    >
-                      Finish Onboarding
-                    </button>
-                    {!isChecklistComplete && (
-                      <p className="text-[9px] text-center text-gray-400 mt-2">
-                        Finish all steps before heading to your dashboard.
-                      </p>
-                    )}
-                  </div>
-                  </div>
-                </div>
-              );
-            })()}
             <div className="flex-1 min-h-0">
               <ATSMeterPanel isUtilityPanelOpen={!!activeUtilityPanel} onClose={() => setActiveUtilityPanel(null)} />
             </div>
@@ -1503,9 +1377,9 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
           {/* Unified Utility Panel (Mori Chat, Design, JSON, Layout) */}
           <div 
             className={`
-              fixed inset-y-0 right-0 z-50 w-full bg-white dark:bg-[var(--bg-secondary)] flex flex-col h-full gap-3 min-h-0 shadow-2xl transition-all duration-300
+              fixed inset-y-0 right-0 z-50 w-[95%] bg-white dark:bg-[var(--bg-secondary)] flex flex-col h-full gap-3 min-h-0 shadow-2xl transition-all duration-300
               ${isControlPanelOpen 
-                ? 'translate-x-0 flex lg:static lg:w-[426px] lg:shadow-sm lg:border lg:border-gray-200 lg:dark:border-white/[0.06] lg:rounded-xl lg:z-10 lg:overflow-hidden lg:shrink-0' 
+                ? 'translate-x-0 flex lg:static lg:w-[40%] lg:min-w-0 lg:shadow-sm lg:border lg:border-gray-200 lg:dark:border-white/[0.06] lg:rounded-xl lg:z-10 lg:overflow-hidden' 
                 : 'translate-x-full hidden lg:hidden w-0'}
             `}
             style={{ order: 3 }}
@@ -1513,13 +1387,14 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
             {/* Mori Chat — always in DOM, visibility toggled via CSS to keep portal target stable */}
             <div className={`flex-1 flex flex-col min-h-0 overflow-hidden ${activeUtilityPanel === 'mori' ? '' : 'hidden'}`}>
               {/* Mori Chat Header */}
-              <div className="sticky top-0 z-20 flex items-center justify-between px-4 py-3 bg-white/95 dark:bg-[var(--bg-secondary)] backdrop-blur-sm border-b border-gray-100 dark:border-white/[0.04]">
+              <div className="sticky top-0 z-20 bg-white/95 dark:bg-[var(--bg-secondary)] backdrop-blur-sm">
+                <UtilityPanelPill activePanel="mori" />
+                <div className="flex lg:hidden items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-white/[0.04]">
                 <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
                   <Sparkles className="w-3.5 h-3.5" />
                   <h3 className="text-xs font-extrabold uppercase tracking-wider">Mori Chat</h3>
                 </div>
                 <div className="flex items-center gap-2">
-                  <UtilityPanelPill activePanel="mori" />
                   <button
                     onClick={() => dispatch({ type: 'SET_MORI_CHAT_MODE', payload: false })}
                     className="p-1 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-white hover:bg-gray-150 dark:hover:bg-white/5 transition-colors"
@@ -1527,6 +1402,7 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
                   >
                     <X className="w-4 h-4" />
                   </button>
+                </div>
                 </div>
               </div>
               

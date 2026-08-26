@@ -105,7 +105,7 @@ function getDefaultItemForField(field: string): any {
     certificates: { name: '', date: '', issuer: '', url: '', description: '' },
     publications: { name: '', publisher: '', releaseDate: '', url: '', summary: '' },
     skills: { category: '', skills: [] },
-    languages: { language: '', fluency: '' },
+    languages: { language: '', fluency: '', level: 3 },
     interests: { name: '', keywords: [] },
     references: { name: '', reference: '' },
     projects: { name: '', startDate: '', endDate: '', description: '', highlights: [], keywords: [], url: '' }
@@ -233,15 +233,15 @@ export async function GET(
       }
     }
 
-    // Increment view count if it's a public CV
+    // Increment view count if it's a public CV (fire-and-forget, non-critical)
     if (cv.metadata.isPublic) {
-      await CV.updateOne(
+      CV.updateOne(
         { _id: cvId },
         {
           $inc: { 'metadata.viewCount': 1 },
           $set: { 'metadata.lastModified': new Date() }
         }
-      );
+      ).catch(() => {}); // Non-critical, don't block response
       cv.metadata.viewCount += 1;
     }
 
@@ -732,6 +732,23 @@ export async function PUT(
       updateOperations
     );
 
+    // Enforce the single-master invariant that the CV pre('save') hook normally
+    // guarantees: CV.updateOne bypasses that hook, so explicitly demote any other
+    // master CV for this user when this update promotes a new one.
+    if (mongoUpdate.$set['metadata.isMaster'] === true || mongoUpdate.$set['metadata.isMaster'] === 'true') {
+      await CV.updateMany(
+        {
+          userId: new mongoose.Types.ObjectId(userId),
+          _id: { $ne: cvId },
+          $or: [
+            { 'metadata.isMaster': true },
+            { 'metadata.isMaster': 'true' }
+          ]
+        },
+        { $set: { 'metadata.isMaster': false } }
+      );
+    }
+
     // Reload the CV document to get updated data
     const updatedCVDoc = await CV.findById(cvId);
     if (!updatedCVDoc) {
@@ -771,96 +788,94 @@ export async function PUT(
       }
     }
 
+    // Fire-and-forget: parallelize independent non-critical operations
+    const fireAndForgetOps: Promise<any>[] = [];
+
     // JOURNEY SCORE SYNC: Propagate updated cv_score_ats into ApplicationJourney.atsScore
-    // so Tracker job cards, Canvas table, and CVListView always display the latest score.
     const effectiveJourneyId = body.journeyId || cv.journeyId?.toString();
     if (
       body.cv_score_ats !== undefined &&
       typeof body.cv_score_ats === 'number' &&
       effectiveJourneyId
     ) {
-      try {
-        const { ApplicationJourneyRelationshipService } = await import('@/lib/services/cvJourneyRelationshipService');
-        const scoreUpdated = await ApplicationJourneyRelationshipService.updateJourneyATSScore(
-          effectiveJourneyId,
-          body.cv_score_ats,
-          body.jobId || undefined,          // optional jobId from request body
-          body.score_breakdown || undefined, // factor breakdown for history
-          cv._id?.toString()                 // cvVersion hash
-        );
-        if (scoreUpdated) {
-          console.log('✅ CV UPDATE API - Journey ATS score synced:', { journeyId: effectiveJourneyId, atsScore: body.cv_score_ats });
-        } else {
-          console.warn('⚠️ CV UPDATE API - Journey ATS score sync skipped (journey not found):', effectiveJourneyId);
-        }
-      } catch (journeyScoreError) {
-        console.error('❌ CV UPDATE API - Error syncing journey ATS score (non-critical):', journeyScoreError);
-        // Non-critical: don't fail the save if journey sync fails
-      }
-    }
-
-    // Log CV update activity
-    try {
-      const { ActivityLogService } = await import('@/lib/services/activityLogService');
-      await ActivityLogService.logUserAction({
-        userId: userId,
-        userEmail: authResult.userEmail,
-        action: 'cv_updated',
-        resourceType: 'cv',
-        resourceId: cv._id.toString(),
-        resourceName: cv.title,
-        status: 'success',
-        metadata: {
-          templateId: cv.templateId?.toString(),
-          status: cv.status
-        }
-      });
-    } catch (logError) {
-      console.error('Failed to log CV update:', logError);
-      // Don't fail the request if logging fails
-    }
-
-    // Save CV with template to S3 as backup
-    try {
-      // Get template data if available
-      let templateData = cv.templateData || null;
-      if (!templateData && cv.templateId) {
-        const { getTemplateById } = await import('@/lib/templates/template-utils');
-        const hardcodedTemplate = getTemplateById(cv.templateId?.toString());
-        if (hardcodedTemplate) {
-          templateData = hardcodedTemplate;
-        } else if (mongoose.Types.ObjectId.isValid(cv.templateId?.toString())) {
-          const template = await Template.findById(cv.templateId);
-          if (template) {
-            templateData = template.toJSON();
-          }
-        }
-      }
-
-      const { CVS3Service } = await import('@/lib/services/cvS3Service');
-      const s3Url = await CVS3Service.saveCVToS3(
-        cv._id.toString(),
-        userId,
-        cv.cvData,
-        templateData
+      fireAndForgetOps.push(
+        import('@/lib/services/cvJourneyRelationshipService')
+          .then(({ ApplicationJourneyRelationshipService }) =>
+            ApplicationJourneyRelationshipService.updateJourneyATSScore(
+              effectiveJourneyId,
+              body.cv_score_ats,
+              body.jobId || undefined,
+              body.score_breakdown || undefined,
+              cv._id?.toString()
+            )
+          )
+          .catch(() => {}) // Non-critical
       );
-
-      if (s3Url) {
-        // Store S3 URL in metadata
-        if (!cv.metadata) {
-          cv.metadata = {} as any;
-        }
-        (cv.metadata as any).s3BackupUrl = s3Url;
-        (cv.metadata as any).s3BackupSavedAt = new Date();
-        await cv.save();
-        console.log('✅ CV UPDATE API - CV saved to S3:', s3Url);
-      }
-    } catch (s3Error) {
-      console.warn('⚠️ CV UPDATE API - Failed to save CV to S3 (non-critical):', s3Error);
-      // Continue - S3 backup is non-critical
     }
 
-    // Note: Thumbnail generation moved to studio exit for better performance
+    // Log CV update activity (fire-and-forget)
+    fireAndForgetOps.push(
+      import('@/lib/services/activityLogService')
+        .then(({ ActivityLogService }) =>
+          ActivityLogService.logUserAction({
+            userId: userId,
+            userEmail: authResult.userEmail,
+            action: 'cv_updated',
+            resourceType: 'cv',
+            resourceId: cv._id.toString(),
+            resourceName: cv.title,
+            status: 'success',
+            metadata: {
+              templateId: cv.templateId?.toString(),
+              status: cv.status
+            }
+          })
+        )
+        .catch(() => {}) // Non-critical
+    );
+
+    // Save CV to S3 as backup (fire-and-forget)
+    fireAndForgetOps.push(
+      (async () => {
+        try {
+          let templateData = cv.templateData || null;
+          if (!templateData && cv.templateId) {
+            const { getTemplateById } = await import('@/lib/templates/template-utils');
+            const hardcodedTemplate = getTemplateById(cv.templateId?.toString());
+            if (hardcodedTemplate) {
+              templateData = hardcodedTemplate;
+            } else if (mongoose.Types.ObjectId.isValid(cv.templateId?.toString())) {
+              const template = await Template.findById(cv.templateId);
+              if (template) {
+                templateData = template.toJSON();
+              }
+            }
+          }
+
+          const { CVS3Service } = await import('@/lib/services/cvS3Service');
+          const s3Url = await CVS3Service.saveCVToS3(
+            cv._id.toString(),
+            userId,
+            cv.cvData,
+            templateData
+          );
+
+          if (s3Url) {
+            if (!cv.metadata) {
+              cv.metadata = {} as any;
+            }
+            (cv.metadata as any).s3BackupUrl = s3Url;
+            (cv.metadata as any).s3BackupSavedAt = new Date();
+            await cv.save();
+          }
+        } catch {
+          // Non-critical: S3 backup failure should not block response
+        }
+      })()
+    );
+
+    // Don't await fire-and-forget ops — they run in background
+    Promise.allSettled(fireAndForgetOps).catch(() => {});
 
     console.log('✅ CV UPDATE API - CV saved successfully');
 

@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
         // 1. Define the Daily Usage Report Campaign
         const campaignData = {
             campaignName: 'Daily Usage Report (High Activity)',
-            subject: 'Your Daily CVCircle Activity Summary',
+            subject: 'Your Daily AIResume Activity Summary',
             htmlContent: `
                 <div style="font-family: Arial, sans-serif; color: #333;">
                     <h1>Hi {{firstName}},</h1>
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
             },
             campaignGoal: 'engagement',
             createdBy: new Date().getTime().toString().padEnd(24, '0').slice(0, 24), // Dummy 24-char hex string logic-ish
-            createdByEmail: session?.user?.email || 'system@cvcircle.io',
+            createdByEmail: session?.user?.email || 'system@buildairesume.com',
             createdByName: session?.user?.name || 'System Auto-Gen',
             tags: ['daily-report', 'high-activity'],
             targetedUserCount: 0 // Will be calculated dynamically on run

@@ -26,7 +26,7 @@ export function useCreditExhaustionHandler() {
   /**
    * Check usage response and automatically show modal if credits exhausted
    * @param usageCheckResponse - Response from /api/user/usage/check
-   * @param preselectedPlanKey - Plan to preselect in payment modal (default: 'pro_monthly')
+   * @param preselectedPlanKey - Plan to preselect in payment modal (default: 'focused_monthly')
    * @returns true if credits are exhausted (modal shown), false otherwise
    */
   const checkUsageAndHandleExhaustion = useCallback((
@@ -42,7 +42,7 @@ export function useCreditExhaustionHandler() {
         hasAccess: boolean;
       };
     },
-    preselectedPlanKey: string = 'pro_monthly'
+    preselectedPlanKey: string = 'focused_monthly'
   ): boolean => {
     return checkAndHandleCreditExhaustion(usageCheckResponse, preselectedPlanKey);
   }, [checkAndHandleCreditExhaustion]);
@@ -59,7 +59,7 @@ export function useCreditExhaustionHandler() {
       resetTime?: Date;
       reason?: string;
     },
-    preselectedPlanKey: string = 'pro_monthly'
+    preselectedPlanKey: string = 'focused_monthly'
   ) => {
     showCreditExhaustion(creditInfo, preselectedPlanKey);
   }, [showCreditExhaustion]);

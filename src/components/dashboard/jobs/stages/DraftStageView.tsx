@@ -2,7 +2,9 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { FileText, Building, MapPin, TrendingUp, Sparkles, DollarSign, MoreHorizontal, Award, Globe, Calendar } from 'lucide-react';
+import { FileText, Building, MapPin, TrendingUp, Sparkles, DollarSign, MoreHorizontal, Award, Globe, Calendar, Loader2 } from 'lucide-react';
+import CompanyLogo from '@/components/ui/CompanyLogo';
+import { getCurrencySymbol } from '@/lib/config/job-constants';
 
 interface JobApplication {
   id: string;
@@ -38,19 +40,25 @@ const DraftStageView: React.FC<DraftStageViewProps> = ({
   onCreateJourney
 }) => {
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
+  const [generatingId, setGeneratingId] = useState<string | null>(null);
 
   const handleCreateJourney = async (job: JobApplication, e: React.MouseEvent) => {
     e.stopPropagation();
+    const jobId = job.id || job._id;
+    if (generatingId === jobId) return; // Prevent double-click
+    setGeneratingId(jobId);
     try {
       await onCreateJourney(job);
     } catch (error) {
       console.error('Error creating journey:', error);
+    } finally {
+      setGeneratingId(null);
     }
   };
 
   const getCompRange = (job: JobApplication) => {
     if (!job.salary?.min && !job.salary?.max) return '-';
-    const currency = job.salary.currency || '$';
+    const currency = getCurrencySymbol(job.salary.currency);
     const min = job.salary.min ? `${currency}${job.salary.min >= 1000 ? (job.salary.min / 1000).toFixed(0) + 'k' : job.salary.min}` : '';
     const max = job.salary.max ? `${currency}${job.salary.max >= 1000 ? (job.salary.max / 1000).toFixed(0) + 'k' : job.salary.max}` : '';
     return min && max ? `${min} - ${max}` : min || max;
@@ -66,9 +74,9 @@ const DraftStageView: React.FC<DraftStageViewProps> = ({
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
         <FileText className="w-16 h-16 text-gray-400 dark:text-gray-600 mb-4" />
-        <h3 className="text-h3 font-semibold text-gray-900 dark:text-white mb-2">
+        <div className="text-body font-semibold text-gray-900 dark:text-white mb-2">
           No draft jobs
-        </h3>
+        </div>
         <p className="text-small text-gray-500 dark:text-gray-400">
           Add a job to get started with your application journey.
         </p>
@@ -110,7 +118,8 @@ const DraftStageView: React.FC<DraftStageViewProps> = ({
           </thead>
           <tbody className="divide-y divide-gray-200 dark:divide-white/10">
             {sortedJobs.map((job) => {
-              const matchScore = job.matchScore || 98; // Mock default if missing
+              // Only show a real score — never fabricate one
+              const matchScore = job.matchScore ?? job.atsScore ?? 0;
               return (
                 <motion.tr
                   key={job.id || job._id}
@@ -122,19 +131,7 @@ const DraftStageView: React.FC<DraftStageViewProps> = ({
                   {/* Company */}
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-white/10 flex items-center justify-center text-small font-bold text-gray-500 dark:text-gray-400 overflow-hidden">
-                        {job.companyLogo ? (
-                          <img
-                            src={job.companyLogo}
-                            alt={`${job.company} logo`}
-                            className="w-full h-full object-contain"
-                            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-                          />
-                        ) : null}
-                        <span style={{ display: job.companyLogo ? 'none' : 'block' }}>
-                          {job.company.substring(0, 2).toUpperCase()}
-                        </span>
-                      </div>
+                      <CompanyLogo company={job.company} size={32} logoUrl={job.companyLogo} jobId={job.id || job._id} />
                       <span className="text-small font-semibold text-gray-900 dark:text-white">{job.company}</span>
                     </div>
                   </td>
@@ -163,7 +160,7 @@ const DraftStageView: React.FC<DraftStageViewProps> = ({
                       matchScore >= 60 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' :
                         'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
                       }`}>
-                      {matchScore}%
+                      {matchScore > 0 ? `${matchScore}%` : '—'}
                     </span>
                   </td>
 
@@ -182,7 +179,7 @@ const DraftStageView: React.FC<DraftStageViewProps> = ({
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-1.5 text-small text-gray-500 dark:text-gray-400">
                       <Globe size={14} />
-                      <span>{job.source || 'Manual'}</span>
+                      <span className="capitalize">{(job.source || 'manual').replace(/-/g, ' ')}</span>
                     </div>
                   </td>
 
@@ -198,10 +195,15 @@ const DraftStageView: React.FC<DraftStageViewProps> = ({
                   <td className="px-6 py-4 whitespace-nowrap text-right" onClick={(e) => e.stopPropagation()}>
                     <button
                       onClick={(e) => handleCreateJourney(job, e)}
-                      className="px-3 py-1.5 bg-lime-500 text-[#141810] text-small font-bold rounded-lg hover:bg-lime-400 transition-colors inline-flex items-center gap-1.5"
+                      disabled={generatingId === (job.id || job._id)}
+                      className="px-3 py-1.5 bg-[#013f2e] text-white text-small font-bold rounded-lg hover:bg-[#025c43] transition-colors inline-flex items-center gap-1.5 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <Sparkles size={14} />
-                      Generate Docs
+                      {generatingId === (job.id || job._id) ? (
+                        <Loader2 size={14} className="animate-spin" />
+                      ) : (
+                        <Sparkles size={14} />
+                      )}
+                      {generatingId === (job.id || job._id) ? 'Generating...' : 'Generate Docs'}
                     </button>
                   </td>
                 </motion.tr>

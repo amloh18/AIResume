@@ -7,13 +7,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, Search, Bell, Command, ChevronRight, Activity, Calendar } from 'lucide-react';
 import AdminNavigation from '@/components/admin/AdminNavigation';
 import RecentActivityPanel from '@/components/admin/RecentActivityPanel';
+import AdminLiveStatusBar from '@/components/admin/AdminLiveStatusBar';
 import { ADMIN_THEME } from '@/lib/config/adminTheme';
 
 // Import admin components
 import AdminKPIs from '@/components/admin/AdminKPIs';
 import CVJourneyKPIs from '@/components/admin/CVJourneyKPIs';
 import UserManagement from '@/components/admin/UserManagement';
-import BusinessManagement from '@/components/admin/BusinessManagement';
 import EmailCampaignManager from '@/components/admin/EmailCampaignManager';
 import DraftManagement from '@/components/admin/DraftManagement';
 import UnifiedNotificationManager from '@/components/admin/UnifiedNotificationManager';
@@ -24,6 +24,15 @@ import LogsViewer from '@/components/admin/LogsViewer';
 import ContentAnalytics from '@/components/admin/ContentAnalytics';
 import SponsorshipManager from '@/components/admin/SponsorshipManager';
 import UserActivityModal from '@/components/admin/UserActivityModal';
+import JobIntelligenceDashboard from '@/components/admin/job-intelligence/JobIntelligenceDashboard';
+
+const KNOWN_TABS = [
+  'job-intelligence',
+  'management',
+  'pricing',
+  'analytics',
+  'overview',
+];
 
 export default function AdminDashboard() {
   const { data: session, status } = useSession();
@@ -49,13 +58,31 @@ export default function AdminDashboard() {
   const user = session?.user as any;
   const isAdmin = user?.type === 'admin' || user?.role === 'admin' || user?.role === 'superadmin';
 
-  // Path-based navigation state derived from URL
+  // Path-based navigation state derived from URL (hyphen-safe parsing)
   const slug = params?.slug as string[] | undefined;
   const rawPath = slug?.[0] || 'overview';
-  const parts = rawPath.split('-');
-  const activeTab = parts[0];
-  const activeSubTab = parts.slice(1).join('-') || '';
   const userIdParam = slug?.[1];
+
+  let activeTab = 'overview';
+  let activeSubTab = '';
+
+  for (const knownTab of KNOWN_TABS) {
+    if (rawPath === knownTab) {
+      activeTab = knownTab;
+      activeSubTab = 'overview';
+      break;
+    } else if (rawPath.startsWith(`${knownTab}-`)) {
+      activeTab = knownTab;
+      activeSubTab = rawPath.substring(knownTab.length + 1);
+      break;
+    }
+  }
+
+  if (activeTab === 'overview' && rawPath !== 'overview') {
+    const parts = rawPath.split('-');
+    activeTab = parts[0];
+    activeSubTab = parts.slice(1).join('-') || '';
+  }
 
   // Update URL path when tab changes
   const handleTabChange = (tab: string, subTab?: string) => {
@@ -84,7 +111,7 @@ export default function AdminDashboard() {
         const data = await response.json();
         setActivities(data.activities || []);
       }
-    } catch (error) {
+    } catch {
       setActivitiesError('Network error');
     } finally {
       setActivitiesLoading(false);
@@ -158,7 +185,7 @@ export default function AdminDashboard() {
         <div className="flex flex-col flex-1 lg:pl-[300px] h-screen overflow-hidden relative z-10">
           
           {/* High-End Header */}
-          <header className="h-24 flex items-center justify-between px-8 border-b border-white/5 bg-[#0a0a0a]/80 backdrop-blur-xl z-30">
+          <header className="h-20 flex items-center justify-between px-8 border-b border-white/5 bg-[#0a0a0a]/80 backdrop-blur-xl z-30">
             <div className="flex items-center gap-6">
               <button 
                 onClick={() => setIsMobileMenuOpen(true)} 
@@ -201,7 +228,7 @@ export default function AdminDashboard() {
                 <input 
                   type="text" 
                   placeholder="Search dashboard..."
-                  className="bg-white/5 border border-white/5 rounded-2xl py-2.5 pl-11 pr-4 w-64 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:bg-white/10 transition-all"
+                  className="bg-white/5 border border-white/5 rounded-2xl py-2 pl-11 pr-4 w-64 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:bg-white/10 transition-all"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -217,13 +244,13 @@ export default function AdminDashboard() {
                     fetchActivities();
                     setIsActivityPanelOpen(true);
                   }}
-                  className="p-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/5 text-white/60 hover:text-emerald-400 transition-all relative"
+                  className="p-2.5 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/5 text-white/60 hover:text-emerald-400 transition-all relative"
                 >
-                  <Activity className="w-5 h-5" />
-                  <span className="absolute top-3 right-3 w-2 h-2 bg-emerald-500 rounded-full border-2 border-[#0a0a0a] animate-pulse" />
+                  <Activity className="w-4 h-4" />
+                  <span className="absolute top-2 right-2 w-2 h-2 bg-emerald-500 rounded-full border-2 border-[#0a0a0a] animate-pulse" />
                 </button>
-                <button className="p-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/5 text-white/60 hover:text-white transition-all">
-                  <Bell className="w-5 h-5" />
+                <button className="p-2.5 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/5 text-white/60 hover:text-white transition-all">
+                  <Bell className="w-4 h-4" />
                 </button>
               </div>
             </div>
@@ -231,14 +258,14 @@ export default function AdminDashboard() {
 
           {/* Dynamic Content Surface */}
           <main className="flex-1 overflow-y-auto overflow-x-hidden scroll-smooth scrollbar-hide">
-            <div className="p-8 lg:p-12 max-w-[1600px] mx-auto">
+            <div className="p-6 lg:p-10 max-w-[1600px] mx-auto">
               <AnimatePresence mode="wait">
                 <motion.div
                   key={`${activeTab}-${activeSubTab}`}
-                  initial={{ opacity: 0, y: 20, scale: 0.98 }}
+                  initial={{ opacity: 0, y: 15, scale: 0.99 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -20, scale: 1.02 }}
-                  transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                  exit={{ opacity: 0, y: -15, scale: 1.01 }}
+                  transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
                   className="min-h-full"
                 >
                   {/* Content Mapping */}
@@ -261,15 +288,22 @@ export default function AdminDashboard() {
                       <UserManagement />
                     )
                   )}
-                  {activeTab === 'management' && activeSubTab === 'businesses' && <BusinessManagement />}
+                  
                   {activeTab === 'management' && activeSubTab === 'campaigns' && <EmailCampaignManager />}
                   {activeTab === 'management' && activeSubTab === 'notifications' && <UnifiedNotificationManager />}
                   {activeTab === 'management' && activeSubTab === 'drafts' && <DraftManagement />}
                   {activeTab === 'management' && activeSubTab === 'sponsorships' && <SponsorshipManager />}
 
+                  {activeTab === 'job-intelligence' && (
+                    <JobIntelligenceDashboard
+                      activeSubTab={activeSubTab || 'overview'}
+                      onSubTabChange={(sub) => handleTabChange('job-intelligence', sub)}
+                    />
+                  )}
+
                   {activeTab === 'pricing' && (
                     <PricingPlanManager 
-                      activeSubTab={activeSubTab} 
+                      activeSubTab={activeSubTab || 'plans'} 
                       onSubTabChange={(sub) => handleTabChange('pricing', sub)} 
                     />
                   )}
@@ -278,20 +312,8 @@ export default function AdminDashboard() {
             </div>
           </main>
 
-          {/* Bottom Info Bar */}
-          <footer className="h-10 px-8 flex items-center justify-between border-t border-white/5 text-[10px] uppercase tracking-[0.2em] text-white/20 font-bold bg-black/20 backdrop-blur-md">
-            <div className="flex items-center gap-4">
-              <span className="flex items-center gap-1.5">
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-                System: Online
-              </span>
-              <span>Response: Fast</span>
-            </div>
-            <div className="flex items-center gap-4">
-              <Calendar className="w-3 h-3" />
-              <span>{new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-            </div>
-          </footer>
+          {/* Live System Status Bar */}
+          <AdminLiveStatusBar />
         </div>
       </div>
 

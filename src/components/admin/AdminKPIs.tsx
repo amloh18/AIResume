@@ -406,9 +406,17 @@ const AdminKPIs: React.FC<AdminKPIsProps> = ({ onTabChange }) => {
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
             {recentUsers.slice(0, 12).map((user, idx) => (
               <div key={idx} className="flex flex-col items-center justify-center bg-white/[0.02] p-6 rounded-[1.5rem] border border-white/5 text-center hover:bg-white/[0.05] transition-all group">
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-600 to-emerald-400 flex items-center justify-center text-black font-black text-lg mb-4 group-hover:shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all">
-                  {(user.name || user.firstName || 'U').charAt(0).toUpperCase()}
-                </div>
+                {user.avatar ? (
+                  <img 
+                    src={user.avatar} 
+                    alt={`${user.firstName || 'User'}`}
+                    className="w-12 h-12 rounded-2xl object-cover border border-white/10 mb-4 group-hover:shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all"
+                  />
+                ) : (
+                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-600 to-emerald-400 flex items-center justify-center text-black font-black text-lg mb-4 group-hover:shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all">
+                    {(user.name || user.firstName || 'U').charAt(0).toUpperCase()}
+                  </div>
+                )}
                 <p className="text-sm font-black text-white truncate w-full px-2">{user.name || user.firstName || 'User'}</p>
                 <p className="text-[10px] font-bold text-white/20 uppercase tracking-[0.15em] mt-1">{user.subscription?.planKey || 'Free'}</p>
               </div>

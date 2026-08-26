@@ -132,13 +132,23 @@ export interface UnifiedCVDataStructure {
   skills: Array<{
     category: string;
     skills: string[];
+    levels?: number[];
+    rating?: number;
   }>;
 
   // Languages
   languages: Array<{
     language: string;
     fluency: string;
+    level?: number;
   }>;
+
+  // Optional highlight stats used by sidebar snippets
+  stats?: {
+    years?: string;
+    projects?: string;
+    industries?: string;
+  };
 
   // Interests
   interests: Array<{
@@ -339,7 +349,9 @@ export const UNIFIED_CV_VALIDATION_SCHEMA = {
         type: "object",
         properties: {
           category: { type: "string" },
-          skills: { type: "array", items: { type: "string" } }
+          skills: { type: "array", items: { type: "string" } },
+          levels: { type: "array", items: { type: "number" } },
+          rating: { type: "number" }
         }
       }
     },
@@ -376,7 +388,8 @@ export const UNIFIED_CV_VALIDATION_SCHEMA = {
         type: "object",
         properties: {
           language: { type: "string" },
-          fluency: { type: "string" }
+          fluency: { type: "string" },
+          level: { type: "number" }
         }
       }
     }

@@ -16,7 +16,7 @@ const CookiePolicy: React.FC = () => {
   const sections = [
     {
       title: "Essential Cookies",
-      icon: <Lock className="w-6 h-6 text-[#81ff00]" />,
+      icon: <Lock className="w-6 h-6 text-[#013f2e]" />,
       description: "These are strictly necessary for the website to function. They enable core features like security, session management, and accessibility.",
       cookies: [
         "next-auth.session-token (Session management)",
@@ -53,14 +53,14 @@ const CookiePolicy: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           className="text-center mb-16"
         >
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-[#81ff00]/10 rounded-2xl mb-6">
-            <Cookie className="w-8 h-8 text-[#81ff00]" />
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-[#013f2e]/10 rounded-2xl mb-6">
+            <Cookie className="w-8 h-8 text-[#013f2e]" />
           </div>
           <h1 className="text-4xl md:text-5xl font-black text-gray-900 dark:text-white mb-6">
             Cookie Policy
           </h1>
           <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-            We value your privacy. This policy explains how and why we use cookies to improve your CVCircle experience.
+            We value your privacy. This policy explains how and why we use cookies to improve your AIResume experience.
           </p>
         </motion.div>
 
@@ -72,7 +72,7 @@ const CookiePolicy: React.FC = () => {
           className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-2xl p-6 mb-12 flex flex-col md:flex-row items-center justify-between gap-6"
         >
           <div className="flex items-center gap-4">
-            <Info className="text-[#81ff00] w-6 h-6 shrink-0" />
+            <Info className="text-[#013f2e] w-6 h-6 shrink-0" />
             <p className="text-sm text-gray-600 dark:text-gray-400">
               Want to change your current cookie choices? You can reset them here and the banner will reappear.
             </p>
@@ -80,7 +80,7 @@ const CookiePolicy: React.FC = () => {
           <Button 
             onClick={handleResetConsent}
             variant="outline"
-            className="shrink-0 border-[#81ff00]/30 hover:bg-[#81ff00]/10 text-[#81ff00]"
+            className="shrink-0 border-[#013f2e]/30 hover:bg-[#013f2e]/10 text-[#013f2e]"
           >
             <RefreshCcw className="w-4 h-4 mr-2" />
             Reset My Choices
@@ -115,7 +115,7 @@ const CookiePolicy: React.FC = () => {
                 <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
                   {section.cookies.map(cookie => (
                     <li key={cookie} className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                      <div className="w-1.5 h-1.5 rounded-full bg-[#81ff00]" />
+                      <div className="w-1.5 h-1.5 rounded-full bg-[#013f2e]" />
                       {cookie}
                     </li>
                   ))}

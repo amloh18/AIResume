@@ -18,7 +18,7 @@ export type AuthMode = 'signin' | 'signup' | 'reset' | 'magic-link' | 'verify-co
 export interface AuthPageProps {
   initialMode?: AuthMode;
   isModal?: boolean;
-  layoutVariant?: 'default' | 'b2b' | 'admin';
+  layoutVariant?: 'default' | 'admin';
   callbackUrl?: string;
 }
 
@@ -211,23 +211,6 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
       // This will be handled by the admin layout component
       return '/admin';
     }
-
-      // Check if user is B2B
-      const isB2b = !!(user as any).b2b?.tenantId || !!(user as any).isB2b;
-      if (isB2b) {
-        // Check if B2B user needs to complete onboarding
-        // setupComplete may be undefined for existing users, treat as false
-        const needsOnboarding = !(user as any).b2b?.setupComplete;
-        const isAdmin = user.role === 'admin' || user.role === 'superadmin';
-        
-        if (needsOnboarding && isAdmin) {
-          // B2B admin needs to complete onboarding
-          return '/b2b/onboarding';
-        }
-        
-        // Regular B2B user goes to dashboard
-        return '/b2b/dashboard';
-      }
 
     // Regular user goes to standard dashboard
     return defaultUrl;
@@ -801,6 +784,52 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
     }
   };
 
+  const handleDevBypass = async (role: 'user' | 'admin') => {
+    setIsLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const response = await fetch('/api/auth/dev-bypass', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setSuccess(`Bypass login successful! Redirecting...`);
+        if (result.user) {
+          posthog.identify(result.user.id, {
+            email: result.user.email,
+            name: result.user.name,
+          });
+          posthog.capture('user_signed_in', {
+            auth_method: 'dev_bypass',
+            email: result.user.email,
+            role: result.user.role,
+          });
+        }
+        
+        setTimeout(() => {
+          if (role === 'admin') {
+            window.location.href = '/admin';
+          } else {
+            window.location.href = callbackUrl || '/dashboard';
+          }
+        }, 800);
+      } else {
+        setError(result.error || 'Bypass login failed.');
+        setIsLoading(false);
+      }
+    } catch (err: any) {
+      console.error('Dev bypass error:', err);
+      setError('An error occurred during dev bypass login.');
+      setIsLoading(false);
+    }
+  };
+
   const switchMode = (newMode: AuthMode) => {
     setMode(newMode);
     setError('');
@@ -925,15 +954,15 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
   const getTitle = () => {
     switch (mode) {
       case 'signin':
-        return isModal ? 'Sign in to CVCircle' : 'Sign In';
+        return isModal ? 'Sign in to AIResume' : 'Sign In';
       case 'signup':
-        return isModal ? 'Join CVCircle' : 'Create your account';
+        return isModal ? 'Join AIResume' : 'Create your account';
       case 'reset':
         return 'Reset Password';
       case 'magic-link':
         return 'Sign In with Code';
       default:
-        return isModal ? 'Sign in to CVCircle' : 'Sign In';
+        return isModal ? 'Sign in to AIResume' : 'Sign In';
     }
   };
 
@@ -976,16 +1005,16 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
         return null;
       case 'reset':
         return (
-          <div className="w-12 h-12 rounded-sm border-2 border-[#80FF00] flex items-center justify-center mb-6 mx-auto">
-            <svg className="w-6 h-6 text-[#80FF00]" fill="currentColor" viewBox="0 0 24 24">
+          <div className="w-12 h-12 rounded-sm border-2 border-[#013f2e] flex items-center justify-center mb-6 mx-auto">
+            <svg className="w-6 h-6 text-[#013f2e]" fill="currentColor" viewBox="0 0 24 24">
               <path d="M12,4A4,4 0 0,1 16,8A4,4 0 0,1 12,12A4,4 0 0,1 8,8A4,4 0 0,1 12,4M12,14C16.42,14 20,15.79 20,18V20H4V18C4,15.79 7.58,14 12,14Z" />
             </svg>
           </div>
         );
       case 'verify-code':
         return (
-          <div className="w-12 h-12 rounded-sm border-2 border-[#80FF00] flex items-center justify-center mb-6 mx-auto">
-            <svg className="w-6 h-6 text-[#80FF00]" fill="currentColor" viewBox="0 0 24 24">
+          <div className="w-12 h-12 rounded-sm border-2 border-[#013f2e] flex items-center justify-center mb-6 mx-auto">
+            <svg className="w-6 h-6 text-[#013f2e]" fill="currentColor" viewBox="0 0 24 24">
               <path d="M20,8L12,13L4,8V6L12,11L20,6M20,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V6C22,4.89 21.1,4 20,4Z" />
             </svg>
           </div>
@@ -1004,7 +1033,7 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
               Forgot Password?{' '}
               <button
                 onClick={() => switchMode('reset')}
-                className="text-[#80FF00] hover:text-[#80FF00]/80 transition-colors duration-200 font-medium"
+                className="text-[#36D39B] hover:text-[#4DDCB0] transition-colors duration-200 font-semibold underline underline-offset-2"
               >
                 Reset Password
               </button>
@@ -1022,17 +1051,17 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
               Remember your password?{' '}
               <button
                 onClick={() => switchMode('signin')}
-                className="text-[#80FF00] hover:text-[#80FF00]/80 transition-colors duration-200 font-medium"
+                className="text-[#36D39B] hover:text-[#4DDCB0] transition-colors duration-200 font-semibold underline underline-offset-2"
               >
                 Sign In
               </button>
             </p>
             {layoutVariant === 'default' && (
-              <p className="text-gray-500 text-small text-center">
-                Don't have an account?{' '}
+              <p className="text-gray-400 text-small text-center">
+                {"Don't have an account?"}{' '}
                 <button
                   onClick={() => switchMode('signup')}
-                  className="text-[#80FF00] hover:text-[#80FF00]/80 transition-colors duration-200 font-medium"
+                  className="text-[#36D39B] hover:text-[#4DDCB0] transition-colors duration-200 font-semibold underline underline-offset-2"
                 >
                   Sign up here
                 </button>
@@ -1044,21 +1073,21 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
       case 'magic-link':
         return (
           <div className="space-y-3">
-            <p className="text-gray-500 text-small text-center">
+            <p className="text-gray-400 text-small text-center">
               Prefer password?{' '}
               <button
                 onClick={() => switchMode('signin')}
-                className="text-[#80FF00] hover:text-[#80FF00]/80 transition-colors duration-200 font-medium"
+                className="text-[#36D39B] hover:text-[#4DDCB0] transition-colors duration-200 font-semibold underline underline-offset-2"
               >
                 Sign in with password
               </button>
             </p>
             {layoutVariant === 'default' && (
-              <p className="text-gray-500 text-small text-center">
-                Don't have an account?{' '}
+              <p className="text-gray-400 text-small text-center">
+                {"Don't have an account?"}{' '}
                 <button
                   onClick={() => switchMode('signup')}
-                  className="text-[#80FF00] hover:text-[#80FF00]/80 transition-colors duration-200 font-medium"
+                  className="text-[#36D39B] hover:text-[#4DDCB0] transition-colors duration-200 font-semibold underline underline-offset-2"
                 >
                   Sign up here
                 </button>
@@ -1180,26 +1209,28 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
             <motion.button
               type="button"
               onClick={() => switchMode('signin')}
-              className={`relative px-8 py-3 text-body font-medium rounded-sm transition-all duration-300 z-10 ${mode === 'signin'
-                ? 'text-black dark:text-black'
-                : 'text-gray-500 hover:text-gray-800 dark:text-white/70 dark:hover:text-white'
-                }`}
+              className={`relative px-8 py-3 text-body font-bold rounded-sm transition-all duration-300 z-10 ${
+                mode === 'signin'
+                  ? 'text-white'
+                  : 'text-gray-500 hover:text-gray-800 dark:text-white/60 dark:hover:text-white'
+              }`}
             >
               Sign In
             </motion.button>
             <motion.button
               type="button"
               onClick={() => switchMode('signup')}
-              className={`relative px-8 py-3 text-body font-medium rounded-sm transition-all duration-300 z-10 ${mode === 'signup'
-                ? 'text-black dark:text-black'
-                : 'text-gray-500 hover:text-gray-800 dark:text-white/70 dark:hover:text-white'
-                }`}
+              className={`relative px-8 py-3 text-body font-bold rounded-sm transition-all duration-300 z-10 ${
+                mode === 'signup'
+                  ? 'text-white'
+                  : 'text-gray-500 hover:text-gray-800 dark:text-white/60 dark:hover:text-white'
+              }`}
             >
               Sign Up
             </motion.button>
             {/* Animated Pill Background */}
             <motion.div
-              className="absolute top-1.5 bottom-1.5 bg-[#80FF00] rounded-sm z-0 shadow-sm"
+              className="absolute top-1.5 bottom-1.5 bg-[#013f2e] rounded-sm z-0 shadow-sm"
               initial={false}
               animate={{
                 left: mode === 'signin' ? '0.375rem' : '50%',
@@ -1259,18 +1290,46 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
                 type="button"
                 onClick={() => handleSendCode(email, 'passwordless-login')}
                 disabled={isLoading || checkingEmail}
-                className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-[#80FF00] to-[#80FF00]/80 hover:from-[#80FF00]/90 hover:to-[#80FF00]/70 text-gray-900 dark:text-black font-semibold py-3 px-6 rounded-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-[#013f2e] to-[#013f2e]/90 hover:from-[#025c43] hover:to-[#013f2e] text-white font-bold py-3 px-6 rounded-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
               >
                 {isLoading || checkingEmail ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 className="w-4 h-4 animate-spin text-white" />
                 ) : (
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12,6A6,6 0 0,0 6,12A6,6 0 0,0 12,18A6,6 0 0,0 18,12A6,6 0 0,0 12,6M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8Z" />
                   </svg>
                 )}
                 {isLoading ? 'Sending code...' : 'Send me a code'}
               </button>
             </motion.div>
+          )}
+
+          {/* Dev Bypass Buttons */}
+          {process.env.NODE_ENV !== 'production' && mode === 'signin' && (
+            <div className="mt-6 pt-6 border-t border-dashed border-gray-200 dark:border-white/10 text-center">
+              <div className="text-xs font-bold tracking-widest text-gray-400 dark:text-white/40 uppercase mb-3 flex items-center justify-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#013f2e] animate-ping" />
+                Dev Bypass Login
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleDevBypass('user')}
+                  disabled={isLoading}
+                  className="px-3 py-2 text-xs font-semibold bg-gray-50 hover:bg-gray-100 dark:bg-white/5 dark:hover:bg-white/10 text-gray-800 dark:text-white/80 rounded border border-gray-200 dark:border-white/10 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  User
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDevBypass('admin')}
+                  disabled={isLoading}
+                  className="px-3 py-2 text-xs font-semibold bg-gray-50 hover:bg-gray-100 dark:bg-white/5 dark:hover:bg-white/10 text-gray-800 dark:text-white/80 rounded border border-gray-200 dark:border-white/10 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Admin
+                </button>
+              </div>
+            </div>
           )}
 
           {/* Footer Links */}

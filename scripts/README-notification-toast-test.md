@@ -1,6 +1,6 @@
 # Notification Toast Test Scripts
 
-This directory contains scripts to test the notification toast system in the CVCircle application.
+This directory contains scripts to test the notification toast system in the AI Resume application.
 
 ## Quick Start
 

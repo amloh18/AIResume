@@ -124,8 +124,8 @@ export default function JDInputPanel({
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-lime-500/20 dark:bg-[#80FF00]/15 rounded-xl">
-            <Briefcase className="w-5 h-5 text-lime-600 dark:text-[#80FF00]" />
+          <div className="p-2.5 bg-lime-500/20 dark:bg-[#013f2e]/15 rounded-xl">
+            <Briefcase className="w-5 h-5 text-lime-600 dark:text-[#013f2e]" />
           </div>
           <div>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -154,7 +154,7 @@ export default function JDInputPanel({
           className="mb-4 p-3 bg-lime-50 dark:bg-[#232f1c] border border-lime-200 dark:border-lime-500/30 rounded-xl"
         >
           <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-lime-600 dark:text-[#80FF00]" />
+            <Sparkles className="w-4 h-4 text-lime-600 dark:text-[#013f2e]" />
             <span className="text-sm text-gray-700 dark:text-white/90">
               Your CV will be tailored specifically for this job with keyword optimization and ATS scoring.
             </span>
@@ -168,7 +168,7 @@ export default function JDInputPanel({
           value={localText}
           onChange={handleTextChange}
           placeholder="Paste the full job description here...&#10;&#10;Include job title, responsibilities, requirements, and qualifications for best results."
-          className="w-full h-full min-h-[200px] p-4 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 resize-none focus:outline-none focus:ring-2 focus:ring-lime-500/50 dark:focus:ring-[#80FF00]/30 focus:border-lime-500 dark:focus:border-[#80FF00]/50"
+          className="w-full h-full min-h-[200px] p-4 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 resize-none focus:outline-none focus:ring-2 focus:ring-lime-500/50 dark:focus:ring-[#013f2e]/30 focus:border-lime-500 dark:focus:border-[#013f2e]/50"
         />
 
         {/* Word count badge */}
@@ -215,7 +215,7 @@ export default function JDInputPanel({
           onClick={handleSubmit}
           disabled={!isValid || isValidating}
           className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-medium transition-all shadow-md hover:shadow-lg ${isValid
-            ? 'bg-lime-500 dark:bg-[#80FF00] text-black hover:bg-lime-600 dark:hover:bg-[#70e600]'
+            ? 'bg-lime-500 dark:bg-[#013f2e] text-black hover:bg-lime-600 dark:hover:bg-[#02523c]'
             : 'bg-gray-100 dark:bg-white/10 text-gray-400 dark:text-white/40 cursor-not-allowed'
             }`}
         >

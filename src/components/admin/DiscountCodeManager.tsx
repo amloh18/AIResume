@@ -28,7 +28,7 @@ interface DiscountCode {
   validFrom: Date;
   validUntil: Date;
   applicablePlans?: string[];  // Legacy
-  applicablePlanKeys?: string[];  // Plan keys (e.g., 'pro_monthly')
+  applicablePlanKeys?: string[];  // Plan keys (e.g., 'focused_monthly')
   minimumOrderValue?: number;
   isActive: boolean;
   requiresCreditCard?: boolean;
@@ -39,7 +39,7 @@ interface DiscountCode {
 
 interface PricingPlan {
   _id: string;
-  key?: string;  // Plan key (e.g., 'pro_monthly')
+  key?: string;  // Plan key (e.g., 'focused_monthly')
   name: string;
   price: number;
   currency: string;

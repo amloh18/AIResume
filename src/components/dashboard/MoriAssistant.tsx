@@ -100,34 +100,34 @@ export default function MoriAssistant() {
   const getEmailDetails = (dept: 'finance' | 'help' | 'support' | 'hello' | 'feedback') => {
     const details = {
       finance: {
-        email: 'finance@cvcircle.io',
+        email: 'finance@buildairesume.com',
         name: 'Billing & Finance',
         subject: 'Billing and Invoice Query',
         body: 'Hello Finance Team,\n\nI have a question regarding my subscription/invoices. [Provide details here].\n\nThank you.'
       },
       help: {
-        email: 'help@cvcircle.io',
+        email: 'help@buildairesume.com',
         name: 'Technical Support',
         subject: 'Technical Assistance Request',
         body: 'Hello Support Team,\n\nI am experiencing a technical issue with [describe feature or issue].\n\nThank you.'
       },
       support: {
-        email: 'support@cvcircle.io',
+        email: 'support@buildairesume.com',
         name: 'Customer Support',
         subject: 'Customer Assistance Query',
-        body: 'Hello CVCircle Team,\n\nI need assistance with my account. [Describe your query].\n\nThank you.'
+        body: 'Hello AIResume Team,\n\nI need assistance with my account. [Describe your query].\n\nThank you.'
       },
       hello: {
-        email: 'hello@cvcircle.io',
+        email: 'hello@buildairesume.com',
         name: 'General Inquiries',
         subject: 'General Inquiry / Partnership',
-        body: 'Hello CVCircle Team,\n\nI would like to query about [general topic].\n\nThank you.'
+        body: 'Hello AIResume Team,\n\nI would like to query about [general topic].\n\nThank you.'
       },
       feedback: {
-        email: 'feedback@cvcircle.io',
+        email: 'feedback@buildairesume.com',
         name: 'Feedback & Testimonial Support',
-        subject: `CVCircle User Testimonial: ${rating}-Star Rating`,
-        body: `Dear CVCircle Team,\n\nHere is my rating and testimonial for my experience using the platform:\n\nRating: ${rating} / 5 Stars\nComment: ${feedbackComment || 'No additional comments.'}\n\nThank you!`
+        subject: `AIResume User Testimonial: ${rating}-Star Rating`,
+        body: `Dear AIResume Team,\n\nHere is my rating and testimonial for my experience using the platform:\n\nRating: ${rating} / 5 Stars\nComment: ${feedbackComment || 'No additional comments.'}\n\nThank you!`
       }
     };
     return details[dept];
@@ -274,7 +274,7 @@ export default function MoriAssistant() {
     if (action === 'Downgrade to Free' || action === 'Keep Free Tier') {
       setCancelLayer(0);
       addMoriMessage(
-        "Excellent choice! Your subscription will transition to the Free Tier at the end of the billing period. We'd love to hear your feedback on CVCircle to help us improve.",
+        "Excellent choice! Your subscription will transition to the Free Tier at the end of the billing period. We'd love to hear your feedback on AIResume to help us improve.",
         'feedback_card'
       );
     } else if (action === 'Contact Finance') {
@@ -293,7 +293,7 @@ export default function MoriAssistant() {
       } else {
         setCancelLayer(4);
         addMoriMessage(
-          "Understood. To finalize: \n1. Click 'Cancel' under your active plan card in settings or email finance@cvcircle.io. \n2. For deletion: click 'Delete Account' at the bottom of the Account settings panel."
+          "Understood. To finalize: \n1. Click 'Cancel' under your active plan card in settings or email finance@buildairesume.com. \n2. For deletion: click 'Delete Account' at the bottom of the Account settings panel."
         );
       }
     }
@@ -588,9 +588,9 @@ export default function MoriAssistant() {
 
                             <button
                               onClick={handleSubmitFeedback}
-                              className="w-full py-2 bg-lime-500 hover:bg-lime-600 text-slate-950 text-center text-[11px] font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow"
+                              className="w-full py-2 bg-[#013f2e] hover:bg-[#025c43] text-white text-center text-[11px] font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow"
                             >
-                              Submit Testimonial to feedback@cvcircle.io
+                              Submit Testimonial to feedback@buildairesume.com
                             </button>
                           </div>
                         )}
@@ -603,7 +603,7 @@ export default function MoriAssistant() {
                       return (
                         <div className="bg-white dark:bg-[#1d232a] border border-gray-200 dark:border-gray-800 rounded-xl p-3 shadow-sm space-y-3">
                           <div className="flex items-center gap-2 border-b border-gray-100 dark:border-gray-800 pb-2">
-                            <Mail className="w-4 h-4 text-lime-500" />
+                            <Mail className="w-4 h-4 text-[#013f2e] dark:text-[#36D39B]" />
                             <span className="text-small font-bold text-gray-700 dark:text-gray-200">
                               Contact {deptDetails.name}
                             </span>
@@ -635,7 +635,7 @@ export default function MoriAssistant() {
 
                           <a
                             href={mailtoUrl}
-                            className="w-full py-2 px-3 bg-slate-900 hover:bg-slate-800 dark:bg-lime-500 dark:hover:bg-lime-600 text-white dark:text-slate-950 font-semibold rounded-lg text-[11px] transition-colors flex items-center justify-center gap-1.5 shadow"
+                            className="w-full py-2 px-3 bg-[#013f2e] hover:bg-[#025c43] text-white font-semibold rounded-lg text-[11px] transition-colors flex items-center justify-center gap-1.5 shadow"
                           >
                             <ExternalLink className="w-3.5 h-3.5" />
                             Compose Email Template
@@ -666,7 +666,7 @@ export default function MoriAssistant() {
                               <>
                                 <button
                                   onClick={() => handleCancelFlowStep('Downgrade to Free')}
-                                  className="w-full p-2 bg-lime-500 hover:bg-lime-600 text-slate-950 text-[11px] font-semibold rounded-lg transition-colors text-center"
+                                  className="w-full p-2 bg-[#013f2e] hover:bg-[#025c43] text-white text-[11px] font-bold rounded-lg transition-colors text-center shadow-sm"
                                 >
                                   Downgrade to Free Tier ($0/mo)
                                 </button>
@@ -680,9 +680,9 @@ export default function MoriAssistant() {
                             ) : (
                               <button
                                 onClick={() => handleCancelFlowStep('Contact Tech Support')}
-                                className="w-full p-2 bg-lime-500 hover:bg-lime-600 text-slate-950 text-[11px] font-semibold rounded-lg transition-colors text-center"
+                                className="w-full p-2 bg-[#013f2e] hover:bg-[#025c43] text-white text-[11px] font-bold rounded-lg transition-colors text-center shadow-sm"
                               >
-                                Email Tech Support (help@cvcircle.io)
+                                Email Tech Support (help@buildairesume.com)
                               </button>
                             )}
                             <button
@@ -698,7 +698,7 @@ export default function MoriAssistant() {
                           <div className="flex flex-col gap-2">
                             <button
                               onClick={() => handleCancelFlowStep('Keep Free Tier')}
-                              className="w-full p-2 bg-lime-500 hover:bg-lime-600 text-slate-950 text-[11px] font-semibold rounded-lg transition-colors text-center"
+                              className="w-full p-2 bg-[#013f2e] hover:bg-[#025c43] text-white text-[11px] font-bold rounded-lg transition-colors text-center shadow-sm"
                             >
                               Keep Free Tier (Preserve My Resumes)
                             </button>

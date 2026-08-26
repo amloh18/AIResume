@@ -28,7 +28,7 @@ export class ApplicationService {
         _id: new ObjectId(),
         userId: new ObjectId(userId),
         jobId: new ObjectId(jobId),
-        status: 'draft',
+        status: 'saved',
         mode,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -41,7 +41,7 @@ export class ApplicationService {
         userId,
         'application_created',
         jobId,
-        { mode, status: 'draft' }
+        { mode, status: 'saved' }
       );
 
       return application;
@@ -119,7 +119,7 @@ export class ApplicationService {
     newStatus: ApplicationStatus
   ): boolean {
     const transitions: Record<ApplicationStatus, ApplicationStatus[]> = {
-      draft: ['created'],
+      saved: ['created'],
       created: ['queued', 'failed'],
       queued: ['applying', 'failed'],
       applying: ['applied', 'failed'],
