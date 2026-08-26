@@ -1,5 +1,8 @@
 import { google } from 'googleapis';
-import { OAuth2Client } from 'google-auth-library';
+
+// Use googleapis' internal OAuth2Client type to avoid version conflicts
+// between google-auth-library (top-level) and googleapis-common (nested)
+type OAuth2Client = InstanceType<typeof google.auth.OAuth2>;
 
 export interface CalendarEvent {
   id?: string;
