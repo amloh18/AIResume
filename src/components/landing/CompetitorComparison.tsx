@@ -59,8 +59,8 @@ function groupFeatures(items: Feature[]) {
 
 const CellIcon = ({ value, isHighlight }: { value: CellValue; isHighlight: boolean }) => {
   if (value === 'yes') return (
-    <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full ${isHighlight ? 'bg-[#81ff00]/20' : 'bg-white/[0.06]'}`}>
-      <Check className={`w-3.5 h-3.5 ${isHighlight ? 'text-[#81ff00]' : 'text-white/35'}`} strokeWidth={3} />
+    <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full ${isHighlight ? 'bg-[#36D39B]/20' : 'bg-white/[0.06]'}`}>
+      <Check className={`w-3.5 h-3.5 ${isHighlight ? 'text-[#36D39B]' : 'text-white/35'}`} strokeWidth={3} />
     </span>
   );
   if (value === 'partial') return (
@@ -144,24 +144,24 @@ const CompetitorComparison: React.FC = () => {
                 key={comp.key}
                 className={`relative rounded-2xl p-5 border transition-all ${
                   comp.highlight
-                    ? 'bg-[#81ff00]/[0.07] border-[#81ff00]/25 shadow-lg shadow-[#81ff00]/5'
+                    ? 'bg-[#36D39B]/[0.07] border-[#36D39B]/25 shadow-lg shadow-[#36D39B]/5'
                     : 'bg-white/[0.03] border-white/[0.07]'
                 }`}
               >
                 {comp.highlight && (
-                  <span className="absolute -top-2.5 left-4 text-[9px] font-extrabold uppercase tracking-widest bg-[#81ff00] text-black px-2 py-0.5 rounded-full">
+                  <span className="absolute -top-2.5 left-4 text-[9px] font-extrabold uppercase tracking-widest bg-[#36D39B] text-black px-2 py-0.5 rounded-full">
                     Best
                   </span>
                 )}
-                <p className={`text-small font-semibold mb-2 ${comp.highlight ? 'text-[#81ff00]' : 'text-gray-400'}`}>
+                <p className={`text-small font-semibold mb-2 ${comp.highlight ? 'text-[#36D39B]' : 'text-gray-400'}`}>
                   {comp.label}
                 </p>
-                <p className={`text-h1 font-extrabold leading-none ${comp.highlight ? 'text-[#81ff00]' : 'text-white/30'}`}>
+                <p className={`text-h1 font-extrabold leading-none ${comp.highlight ? 'text-[#36D39B]' : 'text-white/30'}`}>
                   {pct}<span className="text-small font-bold">%</span>
                 </p>
                 <div className="w-full h-1 rounded-full bg-white/10 mt-3">
                   <motion.div
-                    className={`h-1 rounded-full ${comp.highlight ? 'bg-[#81ff00]' : 'bg-white/20'}`}
+                    className={`h-1 rounded-full ${comp.highlight ? 'bg-[#36D39B]' : 'bg-white/20'}`}
                     initial={{ width: 0 }}
                     whileInView={{ width: `${pct}%` }}
                     viewport={{ once: true }}
@@ -189,22 +189,22 @@ const CompetitorComparison: React.FC = () => {
               <thead>
                 <tr className="border-b border-white/[0.08] bg-white/[0.03]">
                   <th className="p-4 text-left w-[36%] sticky left-0 bg-[#1a2015] z-10 border-r border-white/[0.06]">
-                    <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#81ff00]/70">Feature</span>
+                    <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#36D39B]/70">Feature</span>
                   </th>
                   {competitors.map((comp) => (
                     <th
                       key={comp.key}
                       className={`p-4 text-center w-[16%] ${
-                        comp.highlight ? 'bg-[#81ff00]/[0.05] border-x border-[#81ff00]/20' : ''
+                        comp.highlight ? 'bg-[#36D39B]/[0.05] border-x border-[#36D39B]/20' : ''
                       }`}
                     >
                       <div className="flex flex-col items-center gap-1">
                         {comp.highlight && (
-                          <span className="text-[8px] font-extrabold uppercase tracking-widest bg-[#81ff00] text-black px-1.5 py-0.5 rounded-full">
+                          <span className="text-[8px] font-extrabold uppercase tracking-widest bg-[#36D39B] text-black px-1.5 py-0.5 rounded-full">
                             Us
                           </span>
                         )}
-                        <span className={`text-small font-bold ${comp.highlight ? 'text-[#81ff00]' : 'text-white/40'}`}>
+                        <span className={`text-small font-bold ${comp.highlight ? 'text-[#36D39B]' : 'text-white/40'}`}>
                           {comp.label}
                         </span>
                       </div>
@@ -260,7 +260,7 @@ const CompetitorComparison: React.FC = () => {
                                   isLast ? 'border-b border-white/[0.08]' : 'border-b border-white/[0.04]'
                                 } ${
                                   comp.highlight
-                                    ? 'bg-[#81ff00]/[0.03] border-x border-[#81ff00]/[0.08] group-hover:bg-[#81ff00]/[0.06]'
+                                    ? 'bg-[#36D39B]/[0.03] border-x border-[#36D39B]/[0.08] group-hover:bg-[#36D39B]/[0.06]'
                                     : 'group-hover:bg-white/[0.01]'
                                 }`}
                               >
@@ -290,10 +290,10 @@ const CompetitorComparison: React.FC = () => {
                       <td
                         key={comp.key}
                         className={`px-4 py-4 text-center ${
-                          comp.highlight ? 'bg-[#81ff00]/[0.07] border-x border-[#81ff00]/20' : ''
+                          comp.highlight ? 'bg-[#36D39B]/[0.07] border-x border-[#36D39B]/20' : ''
                         }`}
                       >
-                        <span className={`text-h3 font-extrabold ${comp.highlight ? 'text-[#81ff00]' : 'text-white/25'}`}>
+                        <span className={`text-h3 font-extrabold ${comp.highlight ? 'text-[#36D39B]' : 'text-white/25'}`}>
                           {pct}%
                         </span>
                         <p className="text-[10px] text-white/25 mt-0.5">{score}/{features.length}</p>
@@ -315,8 +315,8 @@ const CompetitorComparison: React.FC = () => {
           transition={{ duration: 0.5, delay: 0.4 }}
         >
           <div className="flex items-center gap-1.5">
-            <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-[#81ff00]/20">
-              <Check className="w-3 h-3 text-[#81ff00]" strokeWidth={3} />
+            <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-[#36D39B]/20">
+              <Check className="w-3 h-3 text-[#36D39B]" strokeWidth={3} />
             </span>
             <span className="text-[11px] text-gray-500">Fully supported</span>
           </div>

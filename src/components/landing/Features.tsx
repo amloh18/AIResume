@@ -13,6 +13,7 @@ import {
   Bot,
   Layers
 } from 'lucide-react';
+import { MorphGrid, MorphSignalDeck } from '@/components/landing/MorphGrid';
 
 export default function Features() {
   const [typedText, setTypedText] = useState('');
@@ -464,6 +465,17 @@ export default function Features() {
           </div>
 
         </div>
+
+        {/* Interactive Morphing Signal Deck (Inspired by reference video 00:02-00:04) */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.7, delay: 0.3 }}
+          className="mt-12 lg:mt-16"
+        >
+          <MorphSignalDeck />
+        </motion.div>
       </div>
     </section>
   );
