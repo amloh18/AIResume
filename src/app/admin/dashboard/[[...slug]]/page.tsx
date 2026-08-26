@@ -25,11 +25,9 @@ import ContentAnalytics from '@/components/admin/ContentAnalytics';
 import SponsorshipManager from '@/components/admin/SponsorshipManager';
 import UserActivityModal from '@/components/admin/UserActivityModal';
 import JobIntelligenceDashboard from '@/components/admin/job-intelligence/JobIntelligenceDashboard';
-import AutomationDashboard from '@/components/admin/automation/AutomationDashboard';
 
 const KNOWN_TABS = [
   'job-intelligence',
-  'automation',
   'management',
   'pricing',
   'analytics',
@@ -300,13 +298,6 @@ export default function AdminDashboard() {
                     <JobIntelligenceDashboard
                       activeSubTab={activeSubTab || 'overview'}
                       onSubTabChange={(sub) => handleTabChange('job-intelligence', sub)}
-                    />
-                  )}
-
-                  {activeTab === 'automation' && (
-                    <AutomationDashboard
-                      activeSubTab={activeSubTab || 'overview'}
-                      onSubTabChange={(sub) => handleTabChange('automation', sub)}
                     />
                   )}
 

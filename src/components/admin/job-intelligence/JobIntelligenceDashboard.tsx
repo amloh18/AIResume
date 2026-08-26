@@ -2,11 +2,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Globe, Activity, RefreshCw } from 'lucide-react';
+import { Globe, Activity, RefreshCw, ShieldAlert } from 'lucide-react';
 import OverviewKPIs from './OverviewKPIs';
 import SourcesGrid from './SourcesGrid';
 import RunsExplorer from './RunsExplorer';
 import LiveJobsBrowser from './LiveJobsBrowser';
+import AutomationOverview from '@/components/admin/automation/AutomationOverview';
 
 interface JobIntelligenceDashboardProps {
   activeSubTab?: string;
@@ -41,6 +42,7 @@ export default function JobIntelligenceDashboard({
 
   const subTabs = [
     { id: 'overview', label: 'Overview', icon: Globe },
+    { id: 'queue', label: 'Queue & Triage', icon: ShieldAlert },
     { id: 'sources', label: 'Sources', icon: Activity },
   ];
 
@@ -101,6 +103,8 @@ export default function JobIntelligenceDashboard({
           <LiveJobsBrowser />
         </div>
       )}
+
+      {currentTab === 'queue' && <AutomationOverview />}
 
       {currentTab === 'sources' && (
         <div className="space-y-8">
