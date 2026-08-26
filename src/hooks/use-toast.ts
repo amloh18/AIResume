@@ -11,6 +11,52 @@ import type {
 const TOAST_LIMIT = 1
 const TOAST_REMOVE_DELAY = 1000000
 
+// ── Toast Suppression (public/onboarding pages) ───────────────────────
+// Public routes where toasts should be suppressed
+const SUPPRESSED_ROUTE_PREFIXES = [
+  '/sign-in',
+  '/sign-up',
+  '/auth/',
+  '/onboarding',
+  '/welcome',
+  '/admin/login',
+  '/admin/unauthorized',
+  '/force-logout',
+];
+
+const SUPPRESSED_ROUTE_EXACT = new Set([
+  '/',
+  '/features',
+  '/templates',
+  '/privacy-policy',
+  '/terms',
+  '/legal',
+  '/editor',
+]);
+
+let _suppressedPathname: string | null = null;
+let _isAuthenticated = false;
+
+/**
+ * Called by ToastSuppressionGate to set the current route and auth state.
+ * This is the single global control point for toast suppression.
+ */
+export function setToastSuppression(pathname: string | null, isAuthenticated: boolean) {
+  _suppressedPathname = pathname;
+  _isAuthenticated = isAuthenticated;
+}
+
+function isToastSuppressed(): boolean {
+  if (!_suppressedPathname) return false;
+  // Always allow toasts when authenticated (dashboard, admin, etc.)
+  if (_isAuthenticated) return false;
+  const path = _suppressedPathname;
+  // Check exact matches
+  if (SUPPRESSED_ROUTE_EXACT.has(path)) return true;
+  // Check prefix matches
+  return SUPPRESSED_ROUTE_PREFIXES.some(prefix => path === prefix || path.startsWith(prefix));
+}
+
 type ToasterToast = ToastProps & {
   id: string
   title?: React.ReactNode
@@ -143,6 +189,11 @@ function dispatch(action: Action) {
 type Toast = Omit<ToasterToast, "id">
 
 function toast({ ...props }: Toast) {
+  // Suppress toasts on public/onboarding pages
+  if (isToastSuppressed()) {
+    return { id: 'suppressed', dismiss: () => {}, update: () => {} };
+  }
+
   const id = genId()
 
   const update = (props: ToasterToast) =>

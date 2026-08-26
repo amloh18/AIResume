@@ -588,7 +588,7 @@ export default function MoriAssistant() {
 
                             <button
                               onClick={handleSubmitFeedback}
-                              className="w-full py-2 bg-lime-500 hover:bg-lime-600 text-slate-950 text-center text-[11px] font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow"
+                              className="w-full py-2 bg-[#013f2e] hover:bg-[#025c43] text-white text-center text-[11px] font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow"
                             >
                               Submit Testimonial to feedback@buildairesume.com
                             </button>
@@ -603,7 +603,7 @@ export default function MoriAssistant() {
                       return (
                         <div className="bg-white dark:bg-[#1d232a] border border-gray-200 dark:border-gray-800 rounded-xl p-3 shadow-sm space-y-3">
                           <div className="flex items-center gap-2 border-b border-gray-100 dark:border-gray-800 pb-2">
-                            <Mail className="w-4 h-4 text-lime-500" />
+                            <Mail className="w-4 h-4 text-[#013f2e] dark:text-[#36D39B]" />
                             <span className="text-small font-bold text-gray-700 dark:text-gray-200">
                               Contact {deptDetails.name}
                             </span>
@@ -635,7 +635,7 @@ export default function MoriAssistant() {
 
                           <a
                             href={mailtoUrl}
-                            className="w-full py-2 px-3 bg-slate-900 hover:bg-slate-800 dark:bg-lime-500 dark:hover:bg-lime-600 text-white dark:text-slate-950 font-semibold rounded-lg text-[11px] transition-colors flex items-center justify-center gap-1.5 shadow"
+                            className="w-full py-2 px-3 bg-[#013f2e] hover:bg-[#025c43] text-white font-semibold rounded-lg text-[11px] transition-colors flex items-center justify-center gap-1.5 shadow"
                           >
                             <ExternalLink className="w-3.5 h-3.5" />
                             Compose Email Template
@@ -666,7 +666,7 @@ export default function MoriAssistant() {
                               <>
                                 <button
                                   onClick={() => handleCancelFlowStep('Downgrade to Free')}
-                                  className="w-full p-2 bg-lime-500 hover:bg-lime-600 text-slate-950 text-[11px] font-semibold rounded-lg transition-colors text-center"
+                                  className="w-full p-2 bg-[#013f2e] hover:bg-[#025c43] text-white text-[11px] font-bold rounded-lg transition-colors text-center shadow-sm"
                                 >
                                   Downgrade to Free Tier ($0/mo)
                                 </button>
@@ -680,7 +680,7 @@ export default function MoriAssistant() {
                             ) : (
                               <button
                                 onClick={() => handleCancelFlowStep('Contact Tech Support')}
-                                className="w-full p-2 bg-lime-500 hover:bg-lime-600 text-slate-950 text-[11px] font-semibold rounded-lg transition-colors text-center"
+                                className="w-full p-2 bg-[#013f2e] hover:bg-[#025c43] text-white text-[11px] font-bold rounded-lg transition-colors text-center shadow-sm"
                               >
                                 Email Tech Support (help@buildairesume.com)
                               </button>
@@ -698,7 +698,7 @@ export default function MoriAssistant() {
                           <div className="flex flex-col gap-2">
                             <button
                               onClick={() => handleCancelFlowStep('Keep Free Tier')}
-                              className="w-full p-2 bg-lime-500 hover:bg-lime-600 text-slate-950 text-[11px] font-semibold rounded-lg transition-colors text-center"
+                              className="w-full p-2 bg-[#013f2e] hover:bg-[#025c43] text-white text-[11px] font-bold rounded-lg transition-colors text-center shadow-sm"
                             >
                               Keep Free Tier (Preserve My Resumes)
                             </button>

@@ -525,7 +525,7 @@ function MyCvsPanel() {
         <>
           <button
             onClick={() => router.push('/editor?mode=create')}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 text-white dark:bg-emerald-500 dark:text-slate-900 px-3.5 py-2 text-xs font-medium hover:bg-emerald-700 dark:hover:bg-emerald-400 transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[#013f2e] text-white font-bold px-3.5 py-2 text-xs hover:bg-[#025c43] transition-colors shadow-sm"
           >
             <Plus size={14} strokeWidth={2} />
             Create CV
@@ -955,7 +955,7 @@ function ContinueJobCard({ job, cvs, onOpenSidebar }: ContinueJobCardProps) {
         {dynamicStep && (
           <button
             onClick={dynamicStep.buttonAction}
-            className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600 text-white dark:bg-emerald-500 dark:text-slate-900 px-3 py-1.5 text-xs font-medium hover:bg-emerald-700 dark:hover:bg-emerald-400 transition-colors truncate"
+            className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#013f2e] text-white font-bold px-3 py-1.5 text-xs hover:bg-[#025c43] transition-colors truncate shadow-sm"
           >
             <dynamicStep.ButtonIcon size={13} />
             <span className="truncate">{dynamicStep.buttonText}</span>
@@ -1138,7 +1138,7 @@ function ProfileAnalyticsPanel() {
       <Panel
         title="Profile Analytics"
         actions={
-          <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-[#83d60d]/15 text-[#589c02] dark:text-[#83d60d] border border-[#83d60d]/30">
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-[#36D39B]/15 text-[#013f2e] dark:text-[#36D39B] border border-[#36D39B]/30">
             Master Profile
           </span>
         }
@@ -1170,7 +1170,7 @@ function ProfileAnalyticsPanel() {
             </p>
             <button
               onClick={() => router.push('/welcome')}
-              className="px-4 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl text-xs font-bold"
+              className="px-4 py-2 bg-[#013f2e] hover:bg-[#025c43] text-white rounded-xl text-xs font-bold transition-colors shadow-sm"
             >
               Set Up Profile
             </button>
@@ -1245,7 +1245,7 @@ function ProfileAnalyticsPanel() {
                   if (id) router.push(`/editor?mode=edit-master&cvId=${id}&improve=true`);
                   else router.push('/editor?doc=master-cv&mode=improve');
                 }}
-                className="py-2 px-3 rounded-xl bg-[var(--accent-primary)] text-slate-950 hover:opacity-90 text-xs font-black flex items-center justify-center gap-1 transition-opacity shadow-sm"
+                className="py-2 px-3 rounded-xl bg-[#013f2e] hover:bg-[#025c43] text-white text-xs font-bold flex items-center justify-center gap-1 transition-colors shadow-sm"
               >
                 Edit
               </button>

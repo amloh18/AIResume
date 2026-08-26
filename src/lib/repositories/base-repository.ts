@@ -371,7 +371,8 @@ export abstract class BaseRepository<T extends Document> {
       return this.find(filters as FilterQuery<T>, queryOptions);
     }
 
-    const searchRegex = new RegExp(searchTerm, 'i');
+    const escaped = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const searchRegex = new RegExp(escaped, 'i');
     const searchQuery = searchFields.map((field) => ({
       [field]: searchRegex,
     }));

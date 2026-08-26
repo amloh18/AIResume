@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Globe, Activity, RefreshCw, ShieldAlert } from 'lucide-react';
 import OverviewKPIs from './OverviewKPIs';
@@ -40,6 +40,11 @@ export default function JobIntelligenceDashboard({
     fetchOverview();
   }, []);
 
+  // Expose refresh function for child components
+  const handleSourceSaved = useCallback(() => {
+    fetchOverview();
+  }, []);
+
   const subTabs = [
     { id: 'overview', label: 'Overview', icon: Globe },
     { id: 'queue', label: 'Queue & Triage', icon: ShieldAlert },
@@ -67,10 +72,11 @@ export default function JobIntelligenceDashboard({
 
         <button
           onClick={fetchOverview}
-          className="p-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-white flex items-center gap-2 text-xs font-bold transition-all"
+          disabled={loading}
+          className="p-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-white flex items-center gap-2 text-xs font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          Refresh Pipeline
+          {loading ? 'Refreshing...' : 'Refresh Pipeline'}
         </button>
       </div>
 
@@ -108,7 +114,7 @@ export default function JobIntelligenceDashboard({
 
       {currentTab === 'sources' && (
         <div className="space-y-8">
-          <SourcesGrid sources={data?.sources || []} />
+          <SourcesGrid sources={data?.sources || []} onSourceSaved={handleSourceSaved} />
           <RunsExplorer />
         </div>
       )}

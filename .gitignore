@@ -1,83 +1,91 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
-# dependencies
-/node_modules
-/.pnp
+# ── Dependencies ────────────────────────────────────────────────────────
+node_modules/
+.pnp
 .pnp.js
 .yarn/install-state.gz
 
-# testing
-/coverage
+# ── Next.js ─────────────────────────────────────────────────────────────
+.next/
+out/
 
-# next.js
-/.next/
-/out/
+# ── Build Artifacts ─────────────────────────────────────────────────────
+build/
+dist/
+*.tsbuildinfo
+next-env.d.ts
 
-# production
-/build
+# ── Testing ─────────────────────────────────────────────────────────────
+coverage/
 
-# misc
-.DS_Store
-*.pem
-
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# local env files
+# ── Environment Variables ───────────────────────────────────────────────
 .env
-.env*.local
-# .env.local  # Temporarily commented to allow Cursor access
+.env.local
 .env.development.local
 .env.test.local
 .env.production.local
+.env.sentry-build-plugin
 
-# Sensitive files
+# ── Sensitive Files ─────────────────────────────────────────────────────
 firebase-key.json
 *.pem
 *.key
 *.csv
 cookies.txt
 
-# vercel
+# ── Deployment ──────────────────────────────────────────────────────────
 .vercel
+.vercelignore
 
-# typescript
-*.tsbuildinfo
-next-env.d.ts
-
-# Test and debug files
-**/test-*.tsx
-**/test-*.ts
-**/debug-*.tsx
-**/debug-*.ts
-*.backup
-
-# IDEs
+# ── IDE / Editor ────────────────────────────────────────────────────────
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 
-# OS files
+# ── OS Metadata ─────────────────────────────────────────────────────────
 .DS_Store
-Thumbs.db 
+Thumbs.db
+.DS_Store?
 
-# images
-/public/images/image_asset
+# ── Logs ────────────────────────────────────────────────────────────────
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
 
-# Plans
-*plan*
-plan-*
+# ── Python / JobSpy Cache ──────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+venv/
+.python-version
 
-# Markdown files
-*.md
-.env.local
+# ── Temporary / Debug Files ─────────────────────────────────────────────
+*.tmp
+*.bak
+*.backup
+*.orig
+*.rej
+*.temp
+*.diff
+*.patch
 
-# Sentry Config File
-.env.sentry-build-plugin
+# ── Test / Debug Artifacts ──────────────────────────────────────────────
+**/test-*.tsx
+**/test-*.ts
+**/debug-*.tsx
+**/debug-*.ts
 
-# ShipStudio metadata
+# ── Tool / IDE Caches ──────────────────────────────────────────────────
+.freebuff/
+.kilo/
+.wrangler/
 .shipstudio/
+.posthog/
+.claude/
+
+# ── Miscellaneous ───────────────────────────────────────────────────────
+/public/images/image_asset

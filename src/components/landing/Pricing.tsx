@@ -326,12 +326,12 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
           viewport={{ once: true }}
         >
           {/* Desktop & Tablet Table */}
-          <div className="hidden md:block w-full overflow-x-auto pt-4">
+          <div className="hidden md:block w-full overflow-visible">
             <table className="w-full border-collapse table-fixed text-left min-w-[760px]">
               <thead>
                 <tr className="border-b border-white/[0.08]">
                   {/* Category Title Column */}
-                  <th className="w-[34%] p-6 lg:p-8 align-bottom">
+                  <th className="w-[34%] p-6 lg:p-8 align-bottom rounded-tl-3xl">
                     <span className="text-xs font-bold uppercase tracking-widest text-[#36D39B] block mb-1">
                       Plan Comparison
                     </span>
@@ -393,14 +393,14 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
                   </th>
 
                   {/* Focused (Monthly / Yearly) Column - Highlighted Glowing Theme */}
-                  <th className="w-[22%] p-6 lg:p-8 text-center align-top border-l border-emerald-500/30 bg-gradient-to-b from-[#36D39B]/20 via-[#14B8A6]/10 to-[#36D39B]/15 relative">
-                    {/* Top edge MOST POPULAR badge */}
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-30 inline-flex items-center gap-1 px-3 py-0.5 rounded-full bg-[#36D39B] text-black text-[9px] font-black uppercase tracking-widest shadow-[0_0_18px_rgba(54,211,155,0.7)] whitespace-nowrap">
+                  <th className="w-[22%] p-6 lg:p-8 text-center align-top border-l border-emerald-500/30 bg-gradient-to-b from-[#36D39B]/20 via-[#14B8A6]/10 to-[#36D39B]/15 relative rounded-tr-3xl">
+                    {/* Top edge MOST POPULAR badge - 50% above the border */}
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#36D39B] text-black text-[9px] font-black uppercase tracking-widest shadow-[0_0_18px_rgba(54,211,155,0.7)] whitespace-nowrap">
                       <Sparkles className="w-2.5 h-2.5 fill-current" /> Most Popular
                     </div>
 
                     {/* Top ambient highlight line */}
-                    <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-[#36D39B] via-[#4DDCB0] to-[#86E8D1]" />
+                    <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-[#36D39B] via-[#4DDCB0] to-[#86E8D1] rounded-tr-3xl" />
 
                     <div className="flex flex-col items-center justify-between h-full space-y-4">
                       <div className="w-full flex flex-col items-center">
@@ -458,33 +458,36 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
               </thead>
 
               <tbody>
-                {PRICING_FEATURES.map((feature, featIndex) => (
-                  <tr
-                    key={`feat-${featIndex}`}
-                    className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors group"
-                  >
-                    <td className="py-4 px-6 lg:px-8 text-xs font-medium text-gray-300 group-hover:text-white transition-colors">
-                      {feature.name}
-                    </td>
+                {PRICING_FEATURES.map((feature, featIndex) => {
+                  const isLastRow = featIndex === PRICING_FEATURES.length - 1;
+                  return (
+                    <tr
+                      key={`feat-${featIndex}`}
+                      className={`${isLastRow ? 'border-b-0' : 'border-b border-white/[0.04]'} hover:bg-white/[0.02] transition-colors group`}
+                    >
+                      <td className={`py-4 px-6 lg:px-8 text-xs font-medium text-gray-300 group-hover:text-white transition-colors ${isLastRow ? 'rounded-bl-3xl' : ''}`}>
+                        {feature.name}
+                      </td>
 
-                    <td className="py-4 px-6 text-center border-l border-white/[0.06] bg-white/[0.01]">
-                      {renderValue(feature.starter_monthly)}
-                    </td>
+                      <td className="py-4 px-6 text-center border-l border-white/[0.06] bg-white/[0.01]">
+                        {renderValue(feature.starter_monthly)}
+                      </td>
 
-                    <td className="py-4 px-6 text-center border-l border-white/[0.06] bg-white/[0.01]">
-                      {renderValue(feature.starter_yearly)}
-                    </td>
+                      <td className="py-4 px-6 text-center border-l border-white/[0.06] bg-white/[0.01]">
+                        {renderValue(feature.starter_yearly)}
+                      </td>
 
-                    <td className="py-4 px-6 text-center border-l border-emerald-500/30 bg-gradient-to-b from-[#36D39B]/[0.08] to-[#14B8A6]/[0.04]">
-                      {renderValue(
-                        focusedBillingInterval === 'yearly'
-                          ? feature.focused_yearly
-                          : feature.focused_monthly,
-                        true
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                      <td className={`py-4 px-6 text-center border-l border-emerald-500/30 bg-gradient-to-b from-[#36D39B]/[0.08] to-[#14B8A6]/[0.04] ${isLastRow ? 'rounded-br-3xl' : ''}`}>
+                        {renderValue(
+                          focusedBillingInterval === 'yearly'
+                            ? feature.focused_yearly
+                            : feature.focused_monthly,
+                          true
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

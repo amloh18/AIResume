@@ -599,7 +599,7 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
                 <button
                   onClick={handleParse}
                   disabled={isParsing || (activeTab === 'paste' && !inputText) || (activeTab === 'url' && !urlInput) || activeTab === 'upload'}
-                  className="w-full relative py-3 bg-gradient-to-r from-lime-500 to-emerald-600 hover:brightness-105 transition-all text-white font-bold rounded-xl text-small shadow-lg shadow-lime-500/10 flex items-center justify-center gap-2"
+                  className="w-full relative py-3 bg-[#013f2e] hover:bg-[#025c43] transition-all text-white font-bold rounded-xl text-small shadow-lg flex items-center justify-center gap-2"
                 >
                   {isParsing ? (
                     <>
@@ -619,7 +619,7 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
                   )}
                 </button>
                 <div className="flex items-center justify-center gap-2 text-[10px] text-gray-500 mt-2">
-                  <Zap className="w-3.5 h-3.5 text-lime-500" />
+                  <Zap className="w-3.5 h-3.5 text-[#013f2e] dark:text-[#36D39B]" />
                   <span>~8 sec</span>
                 </div>
               </div>
@@ -978,14 +978,14 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
               <div className="p-6 border-t border-gray-150 dark:border-white/5 bg-gray-50 dark:bg-[#0c0f0a] flex gap-3 shrink-0">
                 <Button
                   onClick={handleSave}
-                  className={`${showSaveAndTrack && onSaveAndTrack ? 'flex-1' : 'w-full'} bg-lime-500 hover:bg-lime-600 text-[#141810] font-bold rounded-xl text-small py-5`}
+                  className={`${showSaveAndTrack && onSaveAndTrack ? 'flex-1' : 'w-full'} bg-[#013f2e] hover:bg-[#025c43] text-white font-bold rounded-xl text-small py-5 shadow-sm`}
                 >
                   Save Job
                 </Button>
                 {showSaveAndTrack && onSaveAndTrack && (
                   <Button
                     onClick={handleSaveAndTrack}
-                    className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-small py-5"
+                    className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-small py-5 shadow-sm"
                   >
                     Save and Track
                   </Button>

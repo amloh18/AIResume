@@ -71,7 +71,9 @@ const SystemHealth: React.FC = () => {
   useEffect(() => {
     if (mounted) {
       fetchSystemStatus();
-      const interval = setInterval(fetchSystemStatus, 30000);
+      const interval = setInterval(() => {
+        if (!document.hidden) fetchSystemStatus();
+      }, 30000);
       return () => clearInterval(interval);
     }
   }, [mounted]);

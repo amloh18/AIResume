@@ -80,7 +80,7 @@ function InterviewCoachGate() {
                     </p>
                     <button
                         onClick={handleUpgrade}
-                        className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-black font-semibold text-small transition-all duration-200 shadow-md hover:shadow-lg"
+                        className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#013f2e] hover:bg-[#025c43] text-white font-bold text-small transition-all duration-200 shadow-md hover:shadow-lg"
                     >
                         Upgrade to Focused
                         <ChevronRight className="w-4 h-4" />

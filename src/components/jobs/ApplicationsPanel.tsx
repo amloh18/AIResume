@@ -168,12 +168,12 @@ export function ApplicationsPanel({ userId: propUserId, metrics }: ApplicationsP
     }
   }, [deepLinkNewJob]);
 
-  const loadData = useCallback(async (silent = false) => {
+  const loadData = useCallback(async (silent = false, signal?: AbortSignal) => {
     try {
       if (!silent) setLoading(true);
       const [jobsRes, journeysRes] = await Promise.all([
-        fetch('/api/jobs?limit=all', { cache: 'no-store' }),
-        fetch('/api/journeys?limit=all', { cache: 'no-store' }),
+        fetch('/api/jobs?limit=all', { cache: 'no-store', signal }),
+        fetch('/api/journeys?limit=all', { cache: 'no-store', signal }),
       ]);
 
       if (jobsRes.ok) {
@@ -192,15 +192,19 @@ export function ApplicationsPanel({ userId: propUserId, metrics }: ApplicationsP
         const rawJourneys = journeysData?.data?.journeys || (Array.isArray(journeysData?.journeys) ? journeysData.journeys : []);
         setJourneys(rawJourneys);
       }
-    } catch (err) {
-      console.error('Failed to load application tracker data:', err);
+    } catch (err: any) {
+      if (err?.name !== 'AbortError') {
+        console.error('Failed to load application tracker data:', err);
+      }
     } finally {
       if (!silent) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    loadData();
+    const controller = new AbortController();
+    loadData(false, controller.signal);
+    return () => controller.abort();
   }, [loadData]);
 
   useEffect(() => {

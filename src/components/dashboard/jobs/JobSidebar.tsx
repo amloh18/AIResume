@@ -3380,7 +3380,7 @@ ${userName}`
                 </motion.button>
                 <motion.button
                   onClick={() => handleEmailSentConfirmation(true)}
-                  className="px-4 py-2 bg-lime-600 dark:bg-[#013f2e] hover:bg-lime-700 dark:hover:bg-[#02523c] text-white rounded-lg font-medium transition-colors"
+                  className="px-4 py-2 bg-[#013f2e] hover:bg-[#025c43] text-white rounded-lg font-bold transition-colors shadow-sm"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >

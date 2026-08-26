@@ -361,7 +361,7 @@ const OptimizedNavigation: React.FC = () => {
       route: '/editor',
       color: 'text-gray-600 dark:text-gray-400',
       bg: 'bg-gray-50 dark:bg-gray-800/30',
-      activeBg: 'bg-[#1a230f] border-[rgb(129,255,0)]/40',
+      activeBg: 'bg-[#013f2e]/10 border-[#013f2e]/30 dark:bg-[#1a230f] dark:border-[#36D39B]/40',
     },
     {
       id: 'tracker',
@@ -371,7 +371,7 @@ const OptimizedNavigation: React.FC = () => {
       route: '/dashboard/jobs?tab=applications',
       color: 'text-gray-600 dark:text-gray-400',
       bg: 'bg-gray-50 dark:bg-gray-800/30',
-      activeBg: 'bg-[#1a230f] border-[rgb(129,255,0)]/40',
+      activeBg: 'bg-[#013f2e]/10 border-[#013f2e]/30 dark:bg-[#1a230f] dark:border-[#36D39B]/40',
     },
     {
       id: 'cover-letter-generator',
@@ -381,7 +381,7 @@ const OptimizedNavigation: React.FC = () => {
       route: '/editor?tab=cover-letters',
       color: 'text-gray-600 dark:text-gray-400',
       bg: 'bg-gray-50 dark:bg-gray-800/30',
-      activeBg: 'bg-[#1a230f] border-[rgb(129,255,0)]/40',
+      activeBg: 'bg-[#013f2e]/10 border-[#013f2e]/30 dark:bg-[#1a230f] dark:border-[#36D39B]/40',
     },
     {
       id: 'interview-coach',
@@ -391,7 +391,7 @@ const OptimizedNavigation: React.FC = () => {
       route: '/dashboard/interview',
       color: 'text-gray-600 dark:text-gray-400',
       bg: 'bg-gray-50 dark:bg-gray-800/30',
-      activeBg: 'bg-[#1a230f] border-[rgb(129,255,0)]/40',
+      activeBg: 'bg-[#013f2e]/10 border-[#013f2e]/30 dark:bg-[#1a230f] dark:border-[#36D39B]/40',
     },
     {
       id: 'linkedin-enhancer',
@@ -401,7 +401,7 @@ const OptimizedNavigation: React.FC = () => {
       route: '/linkedin-enhancer',
       color: 'text-gray-600 dark:text-gray-400',
       bg: 'bg-gray-50 dark:bg-gray-800/30',
-      activeBg: 'bg-[#1a230f] border-[rgb(129,255,0)]/40',
+      activeBg: 'bg-[#013f2e]/10 border-[#013f2e]/30 dark:bg-[#1a230f] dark:border-[#36D39B]/40',
       badge: 'NEW',
     },
     {
@@ -413,7 +413,7 @@ const OptimizedNavigation: React.FC = () => {
       external: true,
       color: 'text-gray-600 dark:text-gray-400',
       bg: 'bg-gray-50 dark:bg-gray-800/30',
-      activeBg: 'bg-[#1a230f] border-[rgb(129,255,0)]/40',
+      activeBg: 'bg-[#013f2e]/10 border-[#013f2e]/30 dark:bg-[#1a230f] dark:border-[#36D39B]/40',
     },
   ];
 
@@ -495,14 +495,14 @@ const OptimizedNavigation: React.FC = () => {
               key={section.id}
               {...componentProps}
               className={`w-full flex items-center gap-4 px-5 py-4 rounded-xl transition-all duration-200 text-left outline-none focus:outline-none focus:ring-0 focus:shadow-none hover:shadow-none !shadow-none ${isDesktopExpanded ? 'lg:px-4 lg:py-3 lg:justify-start' : 'lg:px-3 lg:py-3 lg:justify-center'} ${isActive
-                ? 'bg-[#1a230f] dark:bg-[#1a230f] border border-[rgb(129,255,0)] text-[rgb(129,255,0)]'
+                ? 'bg-[#013f2e]/10 dark:bg-[#1a230f] border border-[#013f2e]/30 dark:border-[#36D39B] text-[#013f2e] dark:text-[#36D39B]'
                 : 'text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700/50'
                 }`}
               style={{ outline: 'none', boxShadow: 'none' }}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
-              <Icon className={`w-6 h-6 lg:w-5 lg:h-5 flex-shrink-0 ${isActive ? 'text-[rgb(129,255,0)]' : ''}`} />
+              <Icon className={`w-6 h-6 lg:w-5 lg:h-5 flex-shrink-0 ${isActive ? 'text-[#013f2e] dark:text-[#36D39B]' : ''}`} />
               <div className={`flex-1 min-w-0 ${!isDesktopExpanded ? 'lg:hidden' : ''}`}>
                 <div className="text-small font-semibold truncate flex items-baseline gap-1">
                   {section.name}
@@ -510,7 +510,7 @@ const OptimizedNavigation: React.FC = () => {
                   {isExternal && <ExternalLink className="w-3 h-3 opacity-60" />}
                 </div>
                 <div className={`text-small truncate mt-0.5 ${isActive
-                  ? 'text-[rgb(129,255,0)]/70'
+                  ? 'text-[#013f2e]/80 dark:text-[#36D39B]/70'
                   : 'text-gray-500 dark:text-gray-400'
                   }`}>
                   {section.description}
@@ -565,19 +565,19 @@ const OptimizedNavigation: React.FC = () => {
                   isDesktopExpanded ? 'lg:px-4 lg:py-3 lg:justify-start' : 'lg:px-3 lg:py-3 lg:justify-center'
                 } ${
                   isActive
-                    ? 'bg-[#1a230f] dark:bg-[#1a230f] border border-[rgb(129,255,0)] text-[rgb(129,255,0)]'
+                    ? 'bg-[#013f2e]/10 dark:bg-[#1a230f] border border-[#013f2e]/30 dark:border-[#36D39B] text-[#013f2e] dark:text-[#36D39B]'
                     : 'text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700/50'
                 }`}
                 style={{ outline: 'none', boxShadow: 'none' }}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
-                <Icon className={`w-6 h-6 lg:w-5 lg:h-5 flex-shrink-0 ${isActive ? 'text-[rgb(129,255,0)]' : ''}`} />
+                <Icon className={`w-6 h-6 lg:w-5 lg:h-5 flex-shrink-0 ${isActive ? 'text-[#013f2e] dark:text-[#36D39B]' : ''}`} />
                 <div className={`flex-1 min-w-0 ${!isDesktopExpanded ? 'lg:hidden' : ''}`}>
                   <div className="text-small font-semibold truncate flex items-baseline gap-1">
                     <span>{section.name}</span>
                     {section.badge && (
-                      <span className="px-1.5 py-0.5 text-[9px] font-black bg-lime-400 text-black rounded-full leading-none ml-1">
+                      <span className="px-1.5 py-0.5 text-[9px] font-black bg-[#36D39B] text-black rounded-full leading-none ml-1">
                         {section.badge}
                       </span>
                     )}
@@ -586,7 +586,7 @@ const OptimizedNavigation: React.FC = () => {
                   <div
                     className={`text-small truncate mt-0.5 ${
                       isActive
-                        ? 'text-[rgb(129,255,0)]/70'
+                        ? 'text-[#013f2e]/80 dark:text-[#36D39B]/70'
                         : 'text-gray-500 dark:text-gray-400'
                     }`}
                   >

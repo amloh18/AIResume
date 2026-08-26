@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { CheckCircle, Building, DollarSign, Calendar, Clock, AlertCircle, Eye, MapPin, TrendingUp, XCircle, Handshake } from 'lucide-react';
+import { CheckCircle, Building, DollarSign, Calendar, Clock, AlertCircle, Eye, MapPin, TrendingUp, XCircle, Handshake, Loader2 } from 'lucide-react';
 import CompanyLogo from '@/components/ui/CompanyLogo';
 import toast from 'react-hot-toast';
 import { getCurrencySymbol } from '@/lib/config/job-constants';
@@ -73,15 +73,22 @@ const OfferStageView: React.FC<OfferStageViewProps> = ({
     });
   }, [jobs, sortOrder]);
 
+  const [actingJobId, setActingJobId] = useState<string | null>(null);
+
   const handleOfferAction = async (job: JobApplication, action: 'accept' | 'decline', e: React.MouseEvent) => {
     e.stopPropagation();
+    const jobId = job.id || job._id;
+    if (actingJobId === jobId) return; // Prevent double-click
+    setActingJobId(jobId);
     try {
       const newStatus = action === 'accept' ? 'accepted' : 'rejected';
-      await onJobStatusUpdate(job.id || job._id, newStatus);
+      await onJobStatusUpdate(jobId, newStatus);
       toast.success(`Offer ${action === 'accept' ? 'accepted' : 'declined'}!`);
     } catch (error) {
       console.error('Error updating offer status:', error);
       toast.error('Failed to update offer status');
+    } finally {
+      setActingJobId(null);
     }
   };
 
@@ -209,10 +216,11 @@ const OfferStageView: React.FC<OfferStageViewProps> = ({
                     <div className="flex justify-end gap-2">
                       <button
                         onClick={(e) => handleOfferAction(job, 'accept', e)}
-                        className="p-1.5 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+                        disabled={actingJobId === (job.id || job._id)}
+                        className="p-1.5 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         title="Accept Offer"
                       >
-                        <CheckCircle size={16} />
+                        {actingJobId === (job.id || job._id) ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
                       </button>
                       <button
                         onClick={(e) => {
@@ -227,10 +235,11 @@ const OfferStageView: React.FC<OfferStageViewProps> = ({
                       </button>
                       <button
                         onClick={(e) => handleOfferAction(job, 'decline', e)}
-                        className="p-1.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
+                        disabled={actingJobId === (job.id || job._id)}
+                        className="p-1.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         title="Decline Offer"
                       >
-                        <XCircle size={16} />
+                        {actingJobId === (job.id || job._id) ? <Loader2 size={16} className="animate-spin" /> : <XCircle size={16} />}
                       </button>
                     </div>
                   </td>
