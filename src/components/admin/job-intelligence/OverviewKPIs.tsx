@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import { motion } from 'framer-motion';
 import { Database, PlusCircle, RefreshCw, AlertTriangle, Activity, Zap, Clock, ShieldAlert } from 'lucide-react';
 
 interface OverviewKPIsProps {
@@ -21,110 +20,69 @@ interface OverviewKPIsProps {
 }
 
 export default function OverviewKPIs({ kpis }: OverviewKPIsProps) {
-  const cards = [
+  const metrics = [
     {
-      label: 'Active Inventory',
+      label: 'Active Jobs',
       value: (kpis.totalActiveJobs || 0).toLocaleString(),
-      sub: `${kpis.newToday || 0} discovered today`,
-      icon: Database,
-      color: 'emerald',
-      gradient: 'from-emerald-500/20 to-emerald-500/5',
-      border: 'border-emerald-500/30',
-      iconColor: 'text-emerald-400',
+      icon: <Database size={16} strokeWidth={1.75} />,
+      trend: `${kpis.newToday || 0} new today`,
+      trendUp: (kpis.newToday || 0) > 0,
     },
     {
-      label: 'New Jobs Today',
+      label: 'New Today',
       value: (kpis.newToday || 0).toLocaleString(),
-      sub: `+${kpis.updatedToday || 0} re-verified`,
-      icon: PlusCircle,
-      color: 'blue',
-      gradient: 'from-blue-500/20 to-blue-500/5',
-      border: 'border-blue-500/30',
-      iconColor: 'text-blue-400',
+      icon: <PlusCircle size={16} strokeWidth={1.75} />,
+      trend: `+${kpis.updatedToday || 0} re-verified`,
+      trendUp: (kpis.newToday || 0) > 0,
     },
     {
       label: 'Active Sources',
-      value: `${kpis.activeSources || 8} / ${kpis.totalSources || 8}`,
-      sub: 'Greenhouse, Lever, Ashby, Adzuna...',
-      icon: Activity,
-      color: 'purple',
-      gradient: 'from-purple-500/20 to-purple-500/5',
-      border: 'border-purple-500/30',
-      iconColor: 'text-purple-400',
+      value: `${kpis.activeSources || 0}/${kpis.totalSources || 0}`,
+      icon: <Activity size={16} strokeWidth={1.75} />,
+      trend: 'Greenhouse, Lever, Ashby...',
+      trendUp: true,
     },
     {
-      label: 'Ingestion Success Rate',
+      label: 'Success Rate',
       value: `${kpis.ingestionSuccessRate || 99}%`,
-      sub: `${kpis.failedRunsCount || 0} failed runs logged`,
-      icon: Zap,
-      color: 'emerald',
-      gradient: 'from-emerald-500/20 to-emerald-500/5',
-      border: 'border-emerald-500/30',
-      iconColor: 'text-emerald-400',
+      icon: <Zap size={16} strokeWidth={1.75} />,
+      trend: `${kpis.failedRunsCount || 0} failed runs`,
+      trendUp: (kpis.ingestionSuccessRate || 99) >= 95,
     },
     {
-      label: 'Avg Ingestion Latency',
+      label: 'Avg Latency',
       value: `${((kpis.avgIngestionLatencyMs || 3200) / 1000).toFixed(1)}s`,
-      sub: 'Per 500-job batch stream',
-      icon: Clock,
-      color: 'cyan',
-      gradient: 'from-cyan-500/20 to-cyan-500/5',
-      border: 'border-cyan-500/30',
-      iconColor: 'text-cyan-400',
+      icon: <Clock size={16} strokeWidth={1.75} />,
+      trend: 'Per 500-job batch',
+      trendUp: true,
     },
     {
       label: 'Cross-Source Dupes',
-      value: `${kpis.duplicateRate || 14.2}%`,
-      sub: 'Merged via SHA-256 Fingerprint',
-      icon: RefreshCw,
-      color: 'amber',
-      gradient: 'from-amber-500/20 to-amber-500/5',
-      border: 'border-amber-500/30',
-      iconColor: 'text-amber-400',
-    },
-    {
-      label: 'Stale / Expired',
-      value: `${kpis.totalStaleJobs || 0} / ${kpis.totalExpiredJobs || 0}`,
-      sub: 'Auto-reconciled every 6h',
-      icon: AlertTriangle,
-      color: 'rose',
-      gradient: 'from-rose-500/20 to-rose-500/5',
-      border: 'border-rose-500/30',
-      iconColor: 'text-rose-400',
+      value: `${kpis.duplicateRate || 0}%`,
+      icon: <RefreshCw size={16} strokeWidth={1.75} />,
+      trend: 'SHA-256 merged',
+      trendUp: false,
     },
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-      {cards.map((card, i) => {
-        const Icon = card.icon;
-        return (
-          <motion.div
-            key={card.label}
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.05, duration: 0.3 }}
-            className={`p-5 rounded-2xl bg-gradient-to-br ${card.gradient} border ${card.border} backdrop-blur-xl relative overflow-hidden group hover:border-white/20 transition-all`}
-          >
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs uppercase tracking-wider text-white/50 font-bold">
-                {card.label}
-              </span>
-              <div className={`p-2.5 rounded-xl bg-white/5 ${card.iconColor}`}>
-                <Icon className="w-5 h-5" />
-              </div>
+    <div className="bg-white/[0.03] border border-white/10 rounded-2xl shadow-sm grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 divide-x divide-y md:divide-y-0 divide-white/5">
+      {metrics.map((m) => (
+        <div key={m.label} className="px-5 py-4 flex items-center gap-3.5 min-w-0">
+          <div className="w-9 h-9 rounded-full bg-white/5 text-emerald-400 flex items-center justify-center shrink-0">
+            {m.icon}
+          </div>
+          <div className="min-w-0">
+            <div className="text-xl font-semibold tracking-tight text-white leading-none tabular-nums">
+              {m.value}
             </div>
-
-            <div className="text-2xl lg:text-3xl font-black text-white tracking-tight mb-1">
-              {card.value}
+            <div className="mt-1 text-xs text-white/50">{m.label}</div>
+            <div className={`mt-0.5 text-[11px] font-medium ${m.trendUp ? 'text-emerald-400' : 'text-white/30'}`}>
+              {m.trend}
             </div>
-
-            <div className="text-xs text-white/40 font-medium">
-              {card.sub}
-            </div>
-          </motion.div>
-        );
-      })}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

@@ -44,6 +44,7 @@ export default function SourcesGrid({ sources = [] }: { sources?: SourceItem[] }
   const [runningMap, setRunningMap] = useState<Record<string, boolean>>({});
   const [selectedSource, setSelectedSource] = useState<SourceItem | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [activeRuns, setActiveRuns] = useState<Set<string>>(new Set());
 
   // Merge default sources with DB sources
   const mergedSources = DEFAULT_SOURCES.map((def) => {
@@ -51,7 +52,36 @@ export default function SourcesGrid({ sources = [] }: { sources?: SourceItem[] }
     return fromDb ? { ...def, ...fromDb } : def;
   });
 
+  // Check for active runs on mount and periodically
+  React.useEffect(() => {
+    const checkActiveRuns = async () => {
+      try {
+        const res = await fetch('/api/admin/job-intelligence?view=runs&page=1&limit=50');
+        if (res.ok) {
+          const data = await res.json();
+          const running = new Set<string>();
+          (data.runs || []).forEach((run: any) => {
+            if (run.status === 'running') {
+              running.add(run.source);
+            }
+          });
+          setActiveRuns(running);
+        }
+      } catch {}
+    };
+    checkActiveRuns();
+    const interval = setInterval(checkActiveRuns, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
   const handleTriggerRun = async (sourceName: string) => {
+    // Duplicate protection: check if already running
+    if (activeRuns.has(sourceName)) {
+      setFeedback(`⚠️ Ingestion already running for ${sourceName}`);
+      setTimeout(() => setFeedback(null), 3000);
+      return;
+    }
+
     setRunningMap((prev) => ({ ...prev, [sourceName]: true }));
     setFeedback(`Ingestion triggered for ${sourceName}...`);
 
@@ -64,6 +94,7 @@ export default function SourcesGrid({ sources = [] }: { sources?: SourceItem[] }
       const data = await res.json();
       if (data.success) {
         setFeedback(`✓ Ingestion successfully queued for ${sourceName}`);
+        setActiveRuns((prev) => new Set([...prev, sourceName]));
       } else {
         setFeedback(`⚠️ Error: ${data.error || 'Failed to trigger'}`);
       }
@@ -83,11 +114,8 @@ export default function SourcesGrid({ sources = [] }: { sources?: SourceItem[] }
         <div>
           <h2 className="text-xl font-bold text-white flex items-center gap-2">
             <Layers className="w-5 h-5 text-emerald-400" />
-            Ingestion Sources & Adapters
+            Ingestion Sources
           </h2>
-          <p className="text-sm text-white/50">
-            Configure scraping intervals, credentials, priority rankings, and trigger on-demand runs.
-          </p>
         </div>
 
         {feedback && (
@@ -160,11 +188,11 @@ export default function SourcesGrid({ sources = [] }: { sources?: SourceItem[] }
               <div className="flex items-center gap-2 pt-2 border-t border-white/5">
                 <button
                   onClick={() => handleTriggerRun(source.name)}
-                  disabled={isRunning}
+                  disabled={isRunning || activeRuns.has(source.name)}
                   className="flex-1 py-2 px-3 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-xs font-bold flex items-center justify-center gap-1.5 transition-all disabled:opacity-50"
                 >
                   <Play className={`w-3.5 h-3.5 ${isRunning ? 'animate-spin' : ''}`} />
-                  {isRunning ? 'Running...' : 'Run Now'}
+                  {activeRuns.has(source.name) ? 'Running...' : isRunning ? 'Starting...' : 'Run Now'}
                 </button>
 
                 <button
