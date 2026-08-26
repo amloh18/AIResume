@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Globe, Database, Activity, FileText, RefreshCw } from 'lucide-react';
+import { Globe, Activity, RefreshCw } from 'lucide-react';
 import OverviewKPIs from './OverviewKPIs';
 import SourcesGrid from './SourcesGrid';
 import RunsExplorer from './RunsExplorer';
@@ -41,9 +41,7 @@ export default function JobIntelligenceDashboard({
 
   const subTabs = [
     { id: 'overview', label: 'Overview', icon: Globe },
-    { id: 'jobs', label: 'Live Jobs', icon: Database },
     { id: 'sources', label: 'Sources', icon: Activity },
-    { id: 'runs', label: 'Ingestion Runs', icon: FileText },
   ];
 
   const currentTab = activeSubTab || 'overview';
@@ -100,13 +98,16 @@ export default function JobIntelligenceDashboard({
       {currentTab === 'overview' && (
         <div className="space-y-8">
           <OverviewKPIs kpis={data?.kpis || {}} />
-          <SourcesGrid sources={data?.sources || []} />
+          <LiveJobsBrowser />
         </div>
       )}
 
-      {currentTab === 'jobs' && <LiveJobsBrowser />}
-      {currentTab === 'sources' && <SourcesGrid sources={data?.sources || []} />}
-      {currentTab === 'runs' && <RunsExplorer />}
+      {currentTab === 'sources' && (
+        <div className="space-y-8">
+          <SourcesGrid sources={data?.sources || []} />
+          <RunsExplorer />
+        </div>
+      )}
     </div>
   );
 }
