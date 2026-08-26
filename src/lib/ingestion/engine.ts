@@ -169,11 +169,25 @@ export function checkSourceConfig(source: string): ConfigCheck {
   }
 
   if (source === 'jobspy') {
+    const venvPython = path.join(process.cwd(), 'scripts', '.venv', 'bin', 'python');
+    const workerPath = path.join(process.cwd(), 'scripts', 'jobspy-worker.py');
     try {
-      const workerPath = path.join(process.cwd(), 'scripts', 'jobspy-worker.py');
       require('fs').accessSync(workerPath);
     } catch {
       return { ready: false, reason: 'scripts/jobspy-worker.py not found' };
+    }
+    // Check venv Python exists and jobspy package is importable
+    try {
+      require('fs').accessSync(venvPython);
+    } catch {
+      return { ready: false, reason: 'JobSpy venv not found at scripts/.venv/bin/python. Run: python3 -m venv scripts/.venv && scripts/.venv/bin/pip install git+https://github.com/Bunsly/JobSpy.git' };
+    }
+    // Test import
+    try {
+      const { execSync } = require('child_process');
+      execSync(`${venvPython} -c "from jobspy import scrape_jobs"`, { timeout: 10000, stdio: 'ignore' });
+    } catch {
+      return { ready: false, reason: 'JobSpy package not installed in venv. Run: scripts/.venv/bin/pip install git+https://github.com/Bunsly/JobSpy.git' };
     }
   }
 
@@ -572,13 +586,14 @@ async function fetchAdzuna(signal?: AbortSignal): Promise<RawJob[]> {
 const activeJobSpyProcesses = new Map<string, ChildProcess>();
 
 async function fetchJobSpy(signal?: AbortSignal): Promise<RawJob[]> {
+  const venvPython = path.join(process.cwd(), 'scripts', '.venv', 'bin', 'python');
   const workerPath = path.join(process.cwd(), 'scripts', 'jobspy-worker.py');
-  log('FETCH', `JobSpy: spawning python worker at ${workerPath}`);
+  log('FETCH', `JobSpy: spawning python worker at ${workerPath} using ${venvPython}`);
 
   return new Promise((resolve) => {
     const processId = `jobspy-${Date.now()}`;
 
-    const child = spawn('python3', [workerPath], {
+    const child = spawn(venvPython, [workerPath], {
       stdio: ['pipe', 'pipe', 'pipe'],
       env: { ...process.env },
       timeout: 300_000,
