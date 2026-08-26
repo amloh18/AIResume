@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Sparkles, FileText, ChevronRight, Loader2, ArrowRight, AlertTriangle, 
+  Sparkles, FileText, ChevronRight, ChevronLeft, Loader2, ArrowRight, AlertTriangle, 
   PenTool, WifiOff, Layout, Type, Search, Target, HelpCircle, CheckCircle, 
   Save, X, Palette, LayoutTemplate, Download, Settings, ChevronDown, Check,
   Baseline, AlignLeft, MoveHorizontal, Zap, MousePointer2, Brain, History,
@@ -337,10 +337,22 @@ export default function Step4CoverLetter({ onComplete }: Step4CoverLetterProps) 
           </div>
         </div>
 
+        {/* Mobile Backdrop Overlay when a panel is open */}
+        {(showGuidePanel || showMoriChat || showTemplateSelector) && (
+          <div 
+            onClick={() => {
+              setShowGuidePanel(false);
+              setShowMoriChat(false);
+              setShowTemplateSelector(false);
+            }}
+            className="fixed inset-0 bg-black/40 backdrop-blur-xs z-[75] md:hidden transition-opacity"
+          />
+        )}
+
         {/* MIDDLE COLUMN - LETTER GUIDE (radial progress, metrics, context) */}
         <div 
           className={`
-            fixed inset-y-0 right-0 z-50 w-full bg-white dark:bg-[#0a0a0a] flex flex-col h-full gap-3 min-h-0 shadow-2xl transition-all duration-300
+            fixed inset-y-0 right-0 z-[80] w-full bg-white dark:bg-[#0a0a0a] flex flex-col h-full gap-3 min-h-0 shadow-2xl transition-all duration-300
             lg:static lg:w-[400px] lg:shadow-none lg:flex lg:z-10 lg:p-0 lg:overflow-hidden lg:bg-transparent
             ${showGuidePanel || showTemplateSelector ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}
           `}
@@ -463,7 +475,7 @@ export default function Step4CoverLetter({ onComplete }: Step4CoverLetterProps) 
               animate={{ opacity: 1, x: 0, width: 360 }}
               exit={{ opacity: 0, x: 20, width: 0 }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed inset-y-0 right-0 z-50 w-full lg:static lg:w-[360px] flex flex-col shrink-0 h-full relative min-h-0 overflow-hidden shadow-2xl lg:shadow-none bg-white dark:bg-[var(--bg-secondary)]"
+              className="fixed inset-y-0 right-0 z-[80] w-full lg:static lg:w-[360px] flex flex-col shrink-0 h-full relative min-h-0 overflow-hidden shadow-2xl lg:shadow-none bg-white dark:bg-[var(--bg-secondary)]"
               style={{ order: 3 }}
             >
               <MoriCoverLetterChat 
@@ -476,9 +488,21 @@ export default function Step4CoverLetter({ onComplete }: Step4CoverLetterProps) 
       </div>
 
       {/* Mobile unified bottom navigation pill */}
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] md:hidden flex items-center gap-2 bg-white/90 dark:bg-[#141810]/90 backdrop-blur-md border border-lime-200 dark:border-lime-900/30 rounded-2xl p-1.5 shadow-2xl no-print">
-        {/* Zoom & Page Format controls (hidden if a panel is open) */}
-        {!showMoriChat && !showGuidePanel && (
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[70] md:hidden flex items-center gap-1.5 bg-white/95 dark:bg-[#141810]/95 backdrop-blur-md border border-lime-200 dark:border-lime-900/30 rounded-2xl p-1.5 shadow-2xl no-print">
+        {/* Previous Step Button */}
+        <button
+          onClick={() => window.dispatchEvent(new CustomEvent('editor-back-step'))}
+          className="p-2 rounded-xl text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10 active:scale-95 transition-all border-none bg-transparent"
+          title="Previous Step"
+          aria-label="Previous step"
+        >
+          <ChevronLeft size={16} />
+        </button>
+
+        <div className="w-px h-5 bg-gray-200 dark:bg-white/10 mx-0.5" />
+
+        {/* Page Format controls (hidden if a panel is open) */}
+        {!showMoriChat && !showGuidePanel && !showTemplateSelector && (
           <>
             <button 
               onClick={() => setPageFormat(pageFormat === 'a4' ? 'letter' : 'a4')}
@@ -487,16 +511,34 @@ export default function Step4CoverLetter({ onComplete }: Step4CoverLetterProps) 
             >
               <Layout size={16} />
             </button>
-            <div className="w-px h-5 bg-gray-200 dark:bg-white/10 mx-1" />
+            <div className="w-px h-5 bg-gray-200 dark:bg-white/10 mx-0.5" />
           </>
         )}
 
         {/* Panel Buttons */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5">
+          {/* Header Styles */}
+          <button
+            onClick={() => {
+              setShowTemplateSelector(!showTemplateSelector);
+              setShowGuidePanel(false);
+              setShowMoriChat(false);
+            }}
+            className={`p-2 rounded-xl transition-all border-none bg-transparent ${
+              showTemplateSelector
+                ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+                : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
+            }`}
+            title="Header Styles"
+          >
+            <LayoutTemplate size={16} />
+          </button>
+
           {/* Guide Panel */}
           <button
             onClick={() => {
               setShowGuidePanel(!showGuidePanel);
+              setShowTemplateSelector(false);
               setShowMoriChat(false);
             }}
             className={`p-2 rounded-xl transition-all border-none bg-transparent ${
@@ -514,6 +556,7 @@ export default function Step4CoverLetter({ onComplete }: Step4CoverLetterProps) 
             onClick={() => {
               setShowMoriChat(!showMoriChat);
               setShowGuidePanel(false);
+              setShowTemplateSelector(false);
             }}
             className={`p-2 rounded-xl transition-all border-none bg-transparent ${
               showMoriChat
@@ -525,6 +568,18 @@ export default function Step4CoverLetter({ onComplete }: Step4CoverLetterProps) 
             <Sparkles size={16} />
           </button>
         </div>
+
+        <div className="w-px h-5 bg-gray-200 dark:bg-white/10 mx-0.5" />
+
+        {/* Next Step Button */}
+        <button
+          onClick={() => window.dispatchEvent(new CustomEvent('editor-next-step'))}
+          className="p-2 rounded-xl bg-black text-[#013f2e] dark:bg-[#013f2e] dark:text-black hover:opacity-90 active:scale-95 transition-all flex items-center justify-center shadow-sm"
+          title="Next Step"
+          aria-label="Next step"
+        >
+          <ChevronRight size={16} className="stroke-[2.5]" />
+        </button>
       </div>
 
 

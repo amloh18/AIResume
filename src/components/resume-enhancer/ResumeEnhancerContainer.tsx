@@ -2439,6 +2439,29 @@ export default function ResumeEnhancerContainer({
     return Math.round((filledSections / totalSections) * 100);
   };
 
+  // Listen for mobile bottom pill step navigation events
+  useEffect(() => {
+    const handleMobileBack = () => {
+      handleBackStep();
+    };
+    const handleMobileNext = () => {
+      if (isFromOnboarding) {
+        handleOnboardingExit();
+      } else if (state.currentStep === 3) {
+        handleStep3Complete();
+      } else if (state.currentStep === 4) {
+        handleStep4Complete();
+      }
+    };
+
+    window.addEventListener('editor-back-step', handleMobileBack);
+    window.addEventListener('editor-next-step', handleMobileNext);
+    return () => {
+      window.removeEventListener('editor-back-step', handleMobileBack);
+      window.removeEventListener('editor-next-step', handleMobileNext);
+    };
+  }, [state.currentStep, isFromOnboarding, handleBackStep, handleStep3Complete, handleStep4Complete, handleOnboardingExit]);
+
   // Helper function to ensure CV is saved and return cvId
   const ensureCVSaved = async (): Promise<string | null> => {
     // Check if CV is already saved
@@ -3719,42 +3742,6 @@ export default function ResumeEnhancerContainer({
                   <span className="hidden sm:inline">Review</span>
                 </button>
               )}
-
-              {/* Mobile Step Dropdown Trigger */}
-              <div className="relative md:hidden z-[120]">
-                <button
-                  onClick={() => setIsMobileStepsOpen(!isMobileStepsOpen)}
-                  className="w-10 h-10 rounded-xl bg-white dark:bg-[#1a2312] border border-lime-200 dark:border-lime-900/30 flex items-center justify-center text-lime-600 dark:text-lime-400 hover:bg-lime-50 dark:hover:bg-lime-950/20 active:scale-95 transition-all duration-200 shadow-sm border-none bg-transparent"
-                  title="Navigate Steps"
-                >
-                  <ClipboardList className="w-5 h-5 text-lime-600 dark:text-lime-400" />
-                </button>
-                
-                {isMobileStepsOpen && (
-                  <div className="absolute right-0 top-12 z-[130] w-56 bg-white dark:bg-[#11160d] border border-gray-200 dark:border-lime-500/20 rounded-xl shadow-2xl p-2.5 flex flex-col gap-1">
-                    <div className="text-[9px] font-bold text-gray-400 dark:text-lime-400 uppercase tracking-widest px-2.5 py-1.5 border-b border-gray-100 dark:border-lime-500/10 mb-1">
-                      Navigate Steps
-                    </div>
-                    {getHeaderSteps().map((step) => (
-                      <button
-                        key={step.id}
-                        onClick={() => {
-                          handleStepNavigation(step.targetStep, !!step.openTemplateOverlay);
-                          setIsMobileStepsOpen(false);
-                        }}
-                        className={`flex items-center justify-between p-2 rounded-lg transition-all text-left w-full border-none shadow-none bg-transparent hover:bg-gray-100 dark:hover:bg-white/5 ${
-                          step.isActive 
-                            ? 'bg-[#f1f9ec] dark:bg-[#1a2312] text-lime-800 dark:text-lime-400 font-bold' 
-                            : 'text-gray-700 dark:text-gray-300'
-                        }`}
-                      >
-                        <span className="text-xs">{step.label}</span>
-                        {step.isActive && <span className="w-1.5 h-1.5 rounded-full bg-lime-500" />}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
             </>
           )}
 
@@ -3763,7 +3750,7 @@ export default function ResumeEnhancerContainer({
             <button
               onClick={handleOnboardingExit}
               disabled={saveStatus === 'saving'}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#013f2e] hover:bg-[#02523c] text-black font-extrabold text-xs rounded-full shadow-sm hover:shadow transition-all active:scale-95"
+              className="inline-flex items-center gap-1.5 px-3 py-1 sm:px-3.5 sm:py-1.5 bg-[#013f2e] hover:bg-[#02523c] text-white dark:bg-[#80FF00] dark:text-black font-extrabold text-xs rounded-full shadow-sm hover:shadow transition-all active:scale-95 shrink-0"
               title="Save & Continue to Onboarding"
             >
               <Check className="w-3.5 h-3.5 stroke-[3]" />
@@ -3773,18 +3760,20 @@ export default function ResumeEnhancerContainer({
 
           {/* Guest Mode Tag */}
           {isGuestMode && (
-            <span className="px-2.5 py-1 bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-full text-xs font-medium">
+            <span className="px-2.5 py-1 bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-full text-xs font-medium shrink-0">
               Guest
             </span>
           )}
 
           {/* Theme Toggle */}
-          <div>
+          <div className="shrink-0">
             <ThemeToggle variant="pill" />
           </div>
 
           {/* Notification Center */}
-          <NotificationCenter variant="pill" />
+          <div className="shrink-0">
+            <NotificationCenter variant="pill" />
+          </div>
         </div>
 
         {/* Save Error (lightweight inline) */}
