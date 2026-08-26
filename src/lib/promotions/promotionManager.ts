@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { PROMOTION_TYPES, type PromotionContext } from './promotionTypes';
 import type { PromotionConfig } from '@/contexts/FeaturePromotionContext';
 
@@ -43,7 +42,7 @@ export function selectPromotion(options: PromotionManagerOptions): PromotionConf
 
   // Filter promotions by context
   const contextMatches = PROMOTION_TYPES.filter((promotion) => {
-    return promotion.contexts.some((ctx) => contexts.includes(ctx));
+    return promotion.contexts.some((ctx) => (contexts as any[]).includes(ctx));
   });
 
   if (contextMatches.length === 0) {
@@ -84,7 +83,8 @@ export function selectPromotion(options: PromotionManagerOptions): PromotionConf
         return !isPaidUser;
       
       case 'upgrade-free-user':
-        // Show for free users only
+        // Show for free users only outside the dashboard page
+        if (contexts.includes('dashboard')) return false;
         return !isPaidUser;
       
       case 'job-tracking-no-jobs':
@@ -154,10 +154,10 @@ function buildCTARoute(
     case 'upgrade-credit-exhausted':
     case 'upgrade-free-user':
       // Use special route that will be handled by FeaturePromotionCard to open payment modal
-      return 'payment-modal:pro_monthly';
+      return 'payment-modal:focused_monthly';
     
     case 'job-tracking-no-jobs':
-      return '/dashboard/tracker?action=add-job';
+      return '/dashboard/jobs?tab=applications&newJob=1';
     
     default:
       return promotion.ctaRoute || '/dashboard';
@@ -174,7 +174,7 @@ export function getAvailablePromotions(options: PromotionManagerOptions): Promot
   } = options;
 
   const contextMatches = PROMOTION_TYPES.filter((promotion) => {
-    return promotion.contexts.some((ctx) => contexts.includes(ctx));
+    return promotion.contexts.some((ctx) => (contexts as any[]).includes(ctx));
   });
 
   return contextMatches.filter((promotion) => !isDismissed(promotion.id));

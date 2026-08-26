@@ -8,6 +8,7 @@ import {
   DollarSign, GraduationCap, Shield, HelpCircle, Link, ChevronDown, 
   Zap, Clipboard, RefreshCw
 } from 'lucide-react';
+import { getCurrencySymbol } from '@/lib/config/job-constants';
 import { Button } from '@/components/ui/button';
 import toast from 'react-hot-toast';
 import { useUnifiedAuth } from '@/lib/hooks/useUnifiedAuth';
@@ -237,7 +238,7 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
           setEditedSalary({
             min: result.data.salary.min,
             max: result.data.salary.max,
-            currency: result.data.salary.currency || '$',
+            currency: getCurrencySymbol(result.data.salary.currency),
             period: result.data.salary.period || 'yearly'
           });
         }
@@ -367,11 +368,11 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
 
           {/* Sidebar Panel */}
           <motion.div
-            initial={{ x: '100%' }}
+            initial={{ x: 'calc(100% + 12px)' }}
             animate={{ x: 0 }}
-            exit={{ x: '100%' }}
+            exit={{ x: 'calc(100% + 12px)' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed inset-y-0 right-0 w-full max-w-[560px] bg-white dark:bg-[#0c0f0a] shadow-2xl border-l border-gray-200 dark:border-white/10 flex flex-col z-[9999] overflow-hidden"
+            className="fixed top-3 right-3 bottom-3 w-full max-w-[560px] bg-white dark:bg-[#0c0f0a] shadow-2xl flex flex-col z-[9999] rounded-2xl overflow-hidden"
           >
             {/* Header */}
             <div className="p-6 border-b border-gray-150 dark:border-white/5 flex flex-col relative shrink-0">
@@ -386,7 +387,7 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
                 <div className="w-8 h-8 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center text-purple-600 dark:text-purple-400">
                   <Briefcase className="w-4 h-4" />
                 </div>
-                <h2 className="text-h3 font-bold text-gray-900 dark:text-white">Smart Job Analysis</h2>
+                <h2 className="!text-lg font-bold text-gray-900 dark:text-white">Smart Job Analysis</h2>
                 <span className="px-2 py-0.5 text-[9px] font-bold text-purple-700 bg-purple-100 dark:bg-purple-900/30 dark:text-purple-400 rounded-full">
                   BETA
                 </span>
@@ -598,7 +599,7 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
                 <button
                   onClick={handleParse}
                   disabled={isParsing || (activeTab === 'paste' && !inputText) || (activeTab === 'url' && !urlInput) || activeTab === 'upload'}
-                  className="w-full relative py-3 bg-gradient-to-r from-lime-500 to-emerald-600 hover:brightness-105 transition-all text-white font-bold rounded-xl text-small shadow-lg shadow-lime-500/10 flex items-center justify-center gap-2"
+                  className="w-full relative py-3 bg-[#013f2e] hover:bg-[#025c43] transition-all text-white font-bold rounded-xl text-small shadow-lg flex items-center justify-center gap-2"
                 >
                   {isParsing ? (
                     <>
@@ -618,7 +619,7 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
                   )}
                 </button>
                 <div className="flex items-center justify-center gap-2 text-[10px] text-gray-500 mt-2">
-                  <Zap className="w-3.5 h-3.5 text-lime-500" />
+                  <Zap className="w-3.5 h-3.5 text-[#013f2e] dark:text-[#36D39B]" />
                   <span>~8 sec</span>
                 </div>
               </div>
@@ -977,14 +978,14 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
               <div className="p-6 border-t border-gray-150 dark:border-white/5 bg-gray-50 dark:bg-[#0c0f0a] flex gap-3 shrink-0">
                 <Button
                   onClick={handleSave}
-                  className={`${showSaveAndTrack && onSaveAndTrack ? 'flex-1' : 'w-full'} bg-lime-500 hover:bg-lime-600 text-[#141810] font-bold rounded-xl text-small py-5`}
+                  className={`${showSaveAndTrack && onSaveAndTrack ? 'flex-1' : 'w-full'} bg-[#013f2e] hover:bg-[#025c43] text-white font-bold rounded-xl text-small py-5 shadow-sm`}
                 >
                   Save Job
                 </Button>
                 {showSaveAndTrack && onSaveAndTrack && (
                   <Button
                     onClick={handleSaveAndTrack}
-                    className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-small py-5"
+                    className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-small py-5 shadow-sm"
                   >
                     Save and Track
                   </Button>

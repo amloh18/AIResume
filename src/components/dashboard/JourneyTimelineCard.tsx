@@ -38,6 +38,7 @@ import { useSession } from 'next-auth/react';
 import toast from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import { useUserPlan } from '@/lib/hooks/useUserPlan';
+import FormattedJobDescription from '@/components/jobs/FormattedJobDescription';
 import MoveToAppliedModal from '@/components/modals/MoveToAppliedModal';
 // CelebrationModal removed - simplified UX
 import { JourneyAnalyticsService } from '@/lib/utils/journeyAnalytics';
@@ -45,6 +46,7 @@ import { defaultCoverLetterService } from '@/lib/services/defaultCoverLetterServ
 import DownloadModal, { DocumentType, FormatType } from '@/components/ui/DownloadModal';
 import { usePaymentModal } from '@/contexts/PaymentModalContext';
 import { useATS } from '@/contexts/ATSContext';
+import { getCvScoreForDisplay } from '@/lib/utils/cv-scoring';
 import DocumentPreviewSidebar from './jobs/DocumentPreviewSidebar';
 
 interface Journey {
@@ -242,14 +244,14 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
         handleRetryDocuments();
         return;
       case 'upgrade':
-        openPaymentModal({ preselectedPlanKey: 'pro_monthly', triggerContext: 'tracker-generation' });
+        openPaymentModal({ preselectedPlanKey: 'focused_monthly', triggerContext: 'tracker-generation' });
         return;
       case 'edit_manually':
       case 'review':
         onResume(journey);
         return;
       case 'contact_support':
-        window.open('mailto:support@cvcircle.app?subject=Tracker%20document%20generation%20support', '_blank');
+        window.open('mailto:support@buildairesume.com?subject=Tracker%20document%20generation%20support', '_blank');
         return;
       default:
         return;
@@ -1423,7 +1425,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
 
   const fetchATSScore = async (cvId: string, jobId: string, forceRecalculate: boolean = false) => {
     if (userProfile?.currentPlanKey === 'free' || !userProfile?.subscription || userProfile.subscription.status !== 'active') {
-        openPaymentModal({ preselectedPlanKey: 'pro_monthly', triggerContext: 'ats-score' });
+        openPaymentModal({ preselectedPlanKey: 'focused_monthly', triggerContext: 'ats-score' });
         return;
     }
 
@@ -1449,12 +1451,12 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
         return;
       }
 
-      // If not in journey, check CV metadata
-      if (!forceRecalculate && linkedCV?.metadata?.atsScore !== undefined && linkedCV.metadata.atsScore !== null) {
-        console.log('📊 JourneyTimelineCard - Using cached ATS score from CV metadata:', linkedCV.metadata.atsScore);
-        const cachedScore = linkedCV.metadata.atsScore;
-        setAtsScore(cachedScore);
-        updateAtsScore(cachedScore);
+      // If not in journey, check CV metadata using canonical selector
+      const cachedCvScore = getCvScoreForDisplay(linkedCV);
+      if (!forceRecalculate && cachedCvScore !== undefined && cachedCvScore !== null) {
+        console.log('📊 JourneyTimelineCard - Using cached ATS score from CV metadata:', cachedCvScore);
+        setAtsScore(cachedCvScore);
+        updateAtsScore(cachedCvScore);
 
         // Also update journey with cached score
         const journeyResponse = await fetch(`/api/application-journey/${journey.id}`, {
@@ -2548,7 +2550,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                           </p>
                           <motion.button
                             onClick={() => router.push('/editor')}
-                            className="w-full px-2 py-1 bg-lime-500 hover:bg-lime-600 text-black text-small font-medium rounded transition-colors flex items-center gap-1 justify-center"
+                            className="w-full px-2 py-1.5 bg-[#013f2e] hover:bg-[#025c43] text-white text-small font-bold rounded transition-colors flex items-center gap-1 justify-center shadow-sm"
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                           >
@@ -2655,7 +2657,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                       </p>
                       <motion.button
                         onClick={() => router.push('/editor')}
-                        className="w-full px-2 py-1 bg-lime-500 hover:bg-lime-600 text-black text-small font-medium rounded transition-colors flex items-center gap-1 justify-center"
+                        className="w-full px-2 py-1.5 bg-[#013f2e] hover:bg-[#025c43] text-white text-small font-bold rounded transition-colors flex items-center gap-1 justify-center shadow-sm"
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                       >
@@ -2845,7 +2847,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                               <motion.button
                                 onClick={() => {
                                   if (userProfile?.currentPlanKey === 'free' || !userProfile?.subscription || userProfile.subscription.status !== 'active') {
-                                      openPaymentModal({ preselectedPlanKey: 'pro_monthly', triggerContext: 'cover-letter-edit' });
+                                      openPaymentModal({ preselectedPlanKey: 'focused_monthly', triggerContext: 'cover-letter-edit' });
                                       return;
                                   }
                                   // Navigate to cv-builder-pro in edit-cover-letter mode
@@ -3073,7 +3075,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
 
                             <motion.button
                               onClick={() => setDownloadModalOpen(true)}
-                              className="w-full px-2 py-1 bg-lime-600 hover:bg-lime-700 text-white text-small font-medium rounded transition-colors flex items-center gap-1 justify-center min-w-0"
+                              className="w-full px-2 py-1 bg-[#013f2e] hover:bg-[#025c43] text-white text-small font-bold rounded transition-colors flex items-center gap-1 justify-center min-w-0 shadow-sm"
                               whileHover={{ scale: 1.02 }}
                               whileTap={{ scale: 0.98 }}
                             >
@@ -3282,10 +3284,11 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                       {(job?.jobDescription || job?.description) ? (
                         <div className="relative">
                           <div className="text-small text-white/60 mb-1">Description:</div>
-                          <div className="relative max-h-16 overflow-hidden">
-                            <p className="text-small text-white/80 whitespace-pre-wrap leading-relaxed">
-                              {job.jobDescription || job.description}
-                            </p>
+                          <div className="relative max-h-20 overflow-hidden">
+                            <FormattedJobDescription
+                              content={job.jobDescription || job.description}
+                              className="text-small text-white/80 leading-relaxed"
+                            />
                             <div className="absolute bottom-0 left-0 right-0 h-4 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
                           </div>
                         </div>
@@ -3720,7 +3723,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
         coverLetterId={journey.coverLetterId}
         onPaywallRequired={() => {
           openPaymentModal({
-            preselectedPlanKey: 'pro_monthly',
+            preselectedPlanKey: 'focused_monthly',
             triggerContext: 'docx-export',
             returnUrl: window.location.href
           });

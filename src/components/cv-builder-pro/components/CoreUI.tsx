@@ -5,7 +5,8 @@ import React, { useRef, useEffect, useState } from 'react';
 import { ImageIcon, Plus, RefreshCw, ChevronUp, ChevronDown, Trash2, PlusCircle, Wand2, Bold, Italic, Underline, List, AlignLeft, AlignCenter, AlignRight, AlignJustify, Sparkles, ChevronLeft, ChevronRight, Columns } from 'lucide-react';
 import { SNIPPETS, TITLE_STYLES } from '../registry';
 import { getNestedValue, escapeRegExp, formatCVDate } from '../helpers';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
+import { SNIPPET_CATEGORY_JSON_PATH } from '@/lib/utils/cv-snippet-data';
 
 // CORE UI COMPONENTS
 // ==========================================
@@ -125,7 +126,12 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
     }
   };
   const handleKeyDown = (e: React.KeyboardEvent) => { if (!multiline && e.key === 'Enter') e.preventDefault(); };
-  const handleFocus = () => { if (!isEditable) return; setIsEditing(true); if (setFocusedRef) setFocusedRef(contentRef.current); };
+  const handleFocus = () => {
+    if (!isEditable) return;
+    setIsEditing(true);
+    if (setFocusedRef) setFocusedRef(contentRef.current);
+    if (ctx?.setFocusedJsonPath && path) ctx.setFocusedJsonPath(path);
+  };
   const handleBlur = () => {
     if (!isEditable) return;
     setIsEditing(false);
@@ -219,10 +225,15 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
   else if (lowerPath.includes('publisher')) emptyText = "Publisher Name";
 
   const moriHoverClass = moriChatMode ? 'hover:bg-emerald-500/20 hover:shadow-[0_0_0_2px_rgba(16,185,129,0.4)] cursor-pointer rounded-sm' : '';
-  const editHoverClass = isEditable ? 'hover:bg-emerald-50/30 focus:bg-white focus:ring-2 focus:ring-emerald-500/50 focus:shadow-md border border-transparent hover:border-gray-300 focus:border-emerald-400 focus:text-gray-900 rounded-[3px] px-1 py-0.5 -mx-1 -my-0.5' : '';
+  const editHoverClass = isEditable ? 'hover:bg-emerald-50/30 focus:bg-white/80 focus:outline focus:outline-2 focus:outline-emerald-400/60 border border-transparent hover:border-gray-200 focus:border-emerald-300 focus:text-gray-900 rounded-[3px]' : '';
+  // Empty-field placeholder chrome only belongs in edit mode — readOnly previews
+  // must not show "Type here..."/"END DATE" hints over real documents.
+  const emptyPlaceholderClass = isEditable
+    ? `empty:min-w-[60px] ${multiline ? 'empty:block' : 'empty:inline-block'} empty:border-dashed empty:border-gray-300 empty:after:content-[attr(data-empty-text)] empty:after:text-gray-400 empty:after:italic`
+    : '';
 
   return (
-      <span ref={contentRef} data-path={path} data-empty-text={emptyText} contentEditable={isEditable} suppressContentEditableWarning onPaste={handlePaste} onInput={handleInput} onKeyDown={handleKeyDown} onFocus={handleFocus} onBlur={handleBlur} onClick={handleClick} className={`outline-none transition-all duration-200 ${multiline ? 'block w-full' : 'inline'} ${finalClassName} ${moriHoverClass} ${editHoverClass} z-40 relative empty:min-w-[60px] ${multiline ? 'empty:block' : 'empty:inline-block'} empty:border-dashed empty:border-gray-300 empty:after:content-[attr(data-empty-text)] empty:after:text-gray-400 empty:after:italic`} style={{ minHeight: '1.2em' }} />
+      <span ref={contentRef} data-path={path} data-empty-text={emptyText} contentEditable={isEditable} suppressContentEditableWarning onPaste={handlePaste} onInput={handleInput} onKeyDown={handleKeyDown} onFocus={handleFocus} onBlur={handleBlur} onClick={handleClick} className={`outline-none transition-all duration-200 ${multiline ? 'block w-full' : 'inline'} ${finalClassName} ${moriHoverClass} ${editHoverClass} z-40 relative ${emptyPlaceholderClass}`} style={{ minHeight: '1.2em' }} />
     );
   };
   
@@ -364,7 +375,7 @@ const buildSnippetPreviewMarkup = (source: HTMLElement) => {
   return clone.outerHTML;
 };
 
-export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvData, EditableWrapper, moveSnippet, removeSnippet, onReplace, onTogglePhoto, onAddListEntry, moveEntry, deleteEntry, dragState, isDark, activeTemplate, layoutZones, onOpenSkillsSuggestions, isDropAllowed, onMoveToZone }: any) => {
+export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvData, EditableWrapper, moveSnippet, removeSnippet, onReplace, onTogglePhoto, onAddListEntry, moveEntry, deleteEntry, dragState, isDark, activeTemplate, layoutZones, onOpenSkillsSuggestions, isDropAllowed, onMoveToZone, isLastSnippetInZone: isLastSnippetInZoneProp }: any) => {
   const ctx = React.useContext(CanvasContext);
   const [confirmingRemove, setConfirmingRemove] = useState(false);
   if (!instance || !instance.type) return null;
@@ -377,8 +388,13 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
   const primaryTitleKey = (SnippetComponent?.category || '').toLowerCase();
   const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId.replace(/_page_\d+$/, ''));
   const showDropLine = !readOnly && isDropTarget && !(dragState.sourceZoneId === zoneId && (dragState.overIndex === dragState.sourceIndex || dragState.overIndex === dragState.sourceIndex + 1));
-  const zoneBlockCount = Array.isArray(layoutZones?.[zoneId]) ? layoutZones[zoneId].length : 0;
-  const isLastSnippetInZone = index === Math.max(0, zoneBlockCount - 1);
+  // "Last snippet" must be page-local: the final snippet rendered on THIS page gets
+  // no trailing section gap (the pagination model only budgets gaps *between* blocks).
+  // The zoneId prop is page-suffixed (`left_page_0`) while layoutZones is keyed by
+  // bare zone ids, so CanvasZone passes the page-local answer in directly.
+  const bareZoneId = (zoneId || '').replace(/_page_\d+$/, '');
+  const zoneBlockCount = Array.isArray(layoutZones?.[bareZoneId]) ? layoutZones[bareZoneId].length : 0;
+  const isLastSnippetInZone = isLastSnippetInZoneProp ?? index === Math.max(0, zoneBlockCount - 1);
 
   useEffect(() => {
     if (!confirmingRemove) return undefined;
@@ -399,13 +415,18 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
     if (isHeader || readOnly) return;
     const sourceElement = e.currentTarget as HTMLElement;
     const previewMarkup = buildSnippetPreviewMarkup(sourceElement);
-    e.dataTransfer.setData('application/json', JSON.stringify({ source: 'canvas', zoneId, index, instance }));
+    e.dataTransfer.setData('application/json', JSON.stringify({
+      source: 'canvas',
+      zoneId: bareZoneId,
+      index: (layoutZones?.[bareZoneId] || []).findIndex((block: any) => block.id === instance.id),
+      instance,
+    }));
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setDragImage(getTransparentDragImage(), 0, 0);
     document.dispatchEvent(new CustomEvent('snippet-drag-start', {
       detail: {
-        zoneId,
-        index,
+        zoneId: bareZoneId,
+        index: (layoutZones?.[bareZoneId] || []).findIndex((block: any) => block.id === instance.id),
         instance,
         pointer: { x: e.clientX, y: e.clientY },
         previewMarkup,
@@ -443,7 +464,7 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
       return null;
     }
 
-    const isSidebar = ['sidebar', 'left', 'right'].includes(zoneId);
+    const isSidebar = isNarrow;
     const styleKey = isSidebar && activeTemplate?.sidebarTitleStyle ? activeTemplate.sidebarTitleStyle : activeTemplate?.titleStyle;
     const Renderer = TITLE_STYLES[styleKey] || TITLE_STYLES['standard'];
 
@@ -459,7 +480,7 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
   const isHeaderPage = assignedPage === pageIdx;
 
   const showInlineControls = !readOnly && !ctx?.moriChatMode && primaryTitleKey && isHeaderPage;
-  const canAddListEntry = SnippetComponent && ['Experience', 'Education', 'Projects', 'Certifications', 'Awards', 'Publications', 'Volunteer', 'References'].includes(SnippetComponent.category);
+  const canAddListEntry = SnippetComponent && ['Experience', 'Education', 'Projects', 'Certifications', 'Awards', 'Publications', 'Volunteer', 'References', 'Languages', 'Interests', 'Skills'].includes(SnippetComponent.category);
   const controls = showInlineControls ? (
     <div className="absolute opacity-0 group-hover/inner:opacity-100 transition-all duration-200 flex items-center gap-0.5 z-[200] no-print top-[-24px] right-1 bg-white shadow-[0_4px_12px_rgba(0,0,0,0.08)] border border-gray-200 rounded px-1 py-0.5">
       {/* Action icons group */}
@@ -686,21 +707,15 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
   
   return (
     <SnippetContext.Provider value={{ blockId: instance.id, pageIdx, pageAssignments: ctx?.pageAssignments || {} }}>
-      <motion.div
-        layout="position"
-        layoutId={instance.id}
-        initial={{ opacity: 0, y: 12, scale: 0.98 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.95, y: -8 }}
-        transition={{ 
-          layout: { type: 'spring', stiffness: 500, damping: 38 },
-          opacity: { duration: 0.2 },
-          y: { type: 'spring', stiffness: 460, damping: 36 },
-          scale: { duration: 0.18 },
-        }}
+      <div
         data-block-id={instance.id}
         className={`relative group/snippet cv-section-wrapper ${showDropLine ? 'mt-10' : 'mt-0'} ${moriHoverClass}`}
+        data-json-section={SNIPPET_CATEGORY_JSON_PATH[SnippetComponent.category] || ''}
         style={isHeader ? {} : { marginBottom: isLastSnippetInZone ? 0 : 'var(--cv-section-gap, 16px)' }}
+        onMouseDown={() => {
+          const jsonPath = SNIPPET_CATEGORY_JSON_PATH[SnippetComponent.category];
+          if (jsonPath) ctx?.setFocusedJsonPath?.(jsonPath);
+        }}
         onClick={handleMoriClick}
       >
         {showDropLine && (
@@ -710,7 +725,7 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
         )}
         <div className={`relative hover:z-[150] group/inner w-full`}>
           {controls}
-          <div className={`px-2 py-1 pointer-events-auto snippet-content relative z-10 w-full ${!content && !readOnly ? 'min-h-[60px] flex flex-col justify-center' : ''}`}>
+          <div className={`${isNarrow ? '' : ''} pointer-events-auto snippet-content relative z-10 w-full min-w-0 ${!content && !readOnly ? 'min-h-[60px] flex flex-col justify-center' : ''}`}>
             {!readOnly && (
               <div className="absolute left-[-1px] right-[-1px] top-[-1px] bottom-[-1px] bg-emerald-50/10 opacity-0 group-hover/inner:opacity-100 pointer-events-none transition-all duration-200 z-[-1] border border-transparent group-hover/inner:border-emerald-400 group-hover/inner:border-dashed shadow-none group-hover/inner:shadow-sm rounded-md group-hover/inner:rounded-tr-none group-hover/inner:rounded-tl-none transition-shadow"></div>
             )}
@@ -722,7 +737,7 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
             ))}
           </div>
         </div>
-      </motion.div>
+      </div>
     </SnippetContext.Provider>
   );
 };
@@ -733,7 +748,12 @@ const InsertSnippetHandle = ({ onAddSnippet, zoneId, index, alwaysVisible = fals
       <div className="absolute inset-0 cursor-pointer" />
       <div className={`w-full h-[2px] bg-emerald-400 ${alwaysVisible ? 'opacity-100' : 'opacity-0 group-hover/insert:opacity-100'} transition-opacity pointer-events-none absolute left-0 right-0`} />
       <button
-        onClick={() => onAddSnippet(zoneId, index)}
+        type="button"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          onAddSnippet(zoneId, index);
+        }}
         className={`${alwaysVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-90 group-hover/insert:opacity-100 group-hover/insert:scale-100'} transition-all flex items-center gap-1 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-2.5 py-1 rounded-full text-[10px] shadow-md hover:shadow-lg font-sans absolute left-1/2 -translate-x-1/2 cursor-pointer pointer-events-auto`}
       >
         <Plus size={11} /> Add Section
@@ -745,6 +765,7 @@ const InsertSnippetHandle = ({ onAddSnippet, zoneId, index, alwaysVisible = fals
 export const CanvasZone = ({ readOnly = false, zoneId, blocks, cvData, EditableWrapper, handleDrop, moveSnippet, removeSnippet, onReplace, onAddSnippet, onTogglePhoto, onAddListEntry, moveEntry, deleteEntry, dragState, activeTemplate, layoutZones, isDark = false, className = "", onOpenSkillsSuggestions, isDropAllowed, onMoveToZone }: any) => {
   const [isOverZone, setIsOverZone] = useState(false);
   const [dropIntent, setDropIntent] = useState<'valid' | 'invalid' | null>(null);
+  const bareZoneId = (zoneId || '').replace(/_page_\d+$/, '');
   const onDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     setIsOverZone(true);
@@ -801,6 +822,9 @@ export const CanvasZone = ({ readOnly = false, zoneId, blocks, cvData, EditableW
       <div className={`${dragHighlightClass} ${dropStateClass} transition-all duration-300 pb-0 ${className}`} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}>
         
         <div className="flex flex-col gap-0">
+          {!readOnly && blocks.length === 0 && (layoutZones?.[bareZoneId]?.length ?? 0) === 0 && (
+            <InsertSnippetHandle onAddSnippet={onAddSnippet} zoneId={zoneId} index={0} alwaysVisible={true} />
+          )}
           <AnimatePresence mode="popLayout">
             {blocks.map((instance: any, index: number) => (
               <React.Fragment key={instance?.id || `snippet-${index}`}>
@@ -809,6 +833,7 @@ export const CanvasZone = ({ readOnly = false, zoneId, blocks, cvData, EditableW
                   instance={instance}
                   index={index}
                   zoneId={zoneId}
+                  isLastSnippetInZone={index === blocks.length - 1}
                   cvData={cvData}
                   EditableWrapper={EditableWrapper}
                   moveSnippet={moveSnippet}
@@ -844,7 +869,7 @@ export const CanvasZone = ({ readOnly = false, zoneId, blocks, cvData, EditableW
   );
 };
 
-export const StaticLayoutRenderer = ({ template, cvData, ReadOnlyWrapper, design }: any) => {
+export const StaticLayoutRenderer = ({ template, cvData, ReadOnlyWrapper, design, snippetExtra, interactive }: any) => {
   // Priority: explicit design prop > saved canvas design in metadata > hardcoded defaults
   const savedDesign = cvData?.metadata?.canvasDesign || {};
   const defaultDesign = {
@@ -856,7 +881,7 @@ export const StaticLayoutRenderer = ({ template, cvData, ReadOnlyWrapper, design
   };
   const formatOption = defaultDesign.formatOption || 'hybrid';
   const formatClass = formatOption === 'bullets_only' ? 'cv-format-bullets-only' : (formatOption === 'paragraph_only' ? 'cv-format-paragraph-only' : 'cv-format-hybrid');
-  const wrapperStyle = { '--cv-font': defaultDesign.font, '--cv-base-size': `${defaultDesign.fontSize}px`, '--cv-spacing': defaultDesign.spacing, '--cv-accent': defaultDesign.accentColor, '--cv-page-margin': `${defaultDesign.pageMargin}px`, '--cv-sidebar-bg': defaultDesign.sidebarBgColor, '--cv-section-gap': `${defaultDesign.sectionGap}px` } as React.CSSProperties;
+  const wrapperStyle = { '--cv-font': defaultDesign.font, '--cv-base-size': `${defaultDesign.fontSize}px`, '--cv-spacing': defaultDesign.spacing, '--cv-accent': defaultDesign.accentColor, '--cv-page-margin': `${defaultDesign.pageMargin}px`, '--cv-sidebar-bg': defaultDesign.sidebarBgColor, '--cv-section-gap': `${defaultDesign.sectionGap}px`, '--cv-item-gap': `${defaultDesign.itemGap || 12}px`, '--cv-column-gap': `${Math.max(24, (defaultDesign.sectionGap || 16) + 12)}px` } as React.CSSProperties;
 
   const renderZone = (zoneId: string, className: string, isDark = false) => {
     const snippets = template.zones[zoneId] || [];
@@ -870,7 +895,12 @@ export const StaticLayoutRenderer = ({ template, cvData, ReadOnlyWrapper, design
           const TitleRenderer = TITLE_STYLES[styleKey] || TITLE_STYLES['standard'];
           const Title = ({ titleKey, overrideClass }: any) => overrideClass ? <h3 className={overrideClass}><ReadOnlyWrapper path={`sectionTitles.${titleKey}`} nowrap /></h3> : <TitleRenderer isDark={isDark} showIcons={defaultDesign.showHeaderIcons} titleKey={titleKey}><ReadOnlyWrapper path={`sectionTitles.${titleKey}`} nowrap /></TitleRenderer>;
           const isLastSnippet = index === snippets.length - 1;
-          return <div key={index} className="cv-section-wrapper cv-page-breakable pointer-events-none" style={{ marginBottom: isLastSnippet ? 0 : 'var(--cv-section-gap, 16px)' }}><SnippetComponent.render data={cvData} Editable={ReadOnlyWrapper} zoneId={zoneId} isDark={isDark} Title={Title} moveEntry={() => {}} deleteEntry={() => {}} showIcons={defaultDesign.showContactIcons} design={defaultDesign} readOnly={true} /></div>;
+          return (
+            <div key={index} className="flex flex-col">
+              <div className="cv-section-wrapper cv-page-breakable" style={{ marginBottom: isLastSnippet ? 0 : 'var(--cv-section-gap, 16px)', ...(interactive ? {} : { pointerEvents: 'none' }) }}><SnippetComponent.render data={cvData} Editable={ReadOnlyWrapper} zoneId={zoneId} isDark={isDark} Title={Title} moveEntry={() => {}} deleteEntry={() => {}} showIcons={defaultDesign.showContactIcons} design={defaultDesign} readOnly={true} /></div>
+              {snippetExtra?.(type)}
+            </div>
+          );
         })}
       </div>
     );
@@ -892,14 +922,104 @@ export const StaticLayoutRenderer = ({ template, cvData, ReadOnlyWrapper, design
   const isDarkSidebar = isColorDark(defaultDesign.sidebarBgColor || '#f8fafc');
 
   switch (template.type) {
-    case '1-col': return <div className={`w-full h-full cv-document ${formatClass}`} style={{ ...wrapperStyle, padding: '57px 76px', backgroundColor: '#ffffff' }}>{renderZone('main', 'w-full min-w-0')}</div>;
-    case '2-col': return <div className={`w-full h-full flex flex-col cv-document ${formatClass}`} style={{ ...wrapperStyle, backgroundColor: '#ffffff' }}>{template.zones['header'] && <div className="pt-[57px] px-[76px] pb-0">{renderZone('header', 'w-full min-w-0')}</div>}<div className="flex flex-1 items-start px-[76px] pb-[57px] pt-0 gap-8"><div className="flex-1 min-w-0">{renderZone('left', 'h-full')}</div><div className="flex-1 min-w-0">{renderZone('right', 'h-full')}</div></div></div>;
-    case 'sidebar-left': return <div className={`w-full h-full flex cv-document ${formatClass}`} style={{ ...wrapperStyle, backgroundColor: '#ffffff' }}><div className={`w-[32%] min-w-0 border-r border-slate-200 pl-[76px] pr-[19px] py-[57px] ${isDarkSidebar ? 'cv-dark-sidebar text-white' : ''}`} style={{ backgroundColor: 'var(--cv-sidebar-bg)' }}>{renderZone('sidebar', 'h-full', isDarkSidebar)}</div><div className="w-[68%] min-w-0 pl-[19px] pr-[76px] py-[57px]">{renderZone('main', 'h-full')}</div></div>;
-    case 'sidebar-left-dark': return <div className={`w-full h-full flex cv-document ${formatClass}`} style={{ ...wrapperStyle, backgroundColor: '#ffffff' }}><div className={`w-[32%] min-w-0 pl-[76px] pr-[19px] py-[57px] ${isDarkSidebar ? 'cv-dark-sidebar text-white' : ''}`} style={{ backgroundColor: 'var(--cv-sidebar-bg)' }}>{renderZone('sidebar', 'h-full', isDarkSidebar)}</div><div className="w-[68%] min-w-0 pl-[19px] pr-[76px] py-[57px]">{renderZone('main', 'h-full')}</div></div>;
-    case 'sidebar-right': return <div className={`w-full h-full flex cv-document ${formatClass}`} style={{ ...wrapperStyle, backgroundColor: '#ffffff' }}><div className="w-[68%] min-w-0 pl-[76px] pr-[19px] py-[57px]">{renderZone('main', 'h-full')}</div><div className={`w-[32%] min-w-0 border-l border-slate-200 pl-[19px] pr-[76px] py-[57px] ${isDarkSidebar ? 'cv-dark-sidebar text-white' : ''}`} style={{ backgroundColor: 'var(--cv-sidebar-bg)' }}>{renderZone('sidebar', 'h-full', isDarkSidebar)}</div></div>;
-    case 'top-sidebar-right': return <div className={`w-full h-full flex flex-col cv-document ${formatClass}`} style={{ ...wrapperStyle, backgroundColor: '#ffffff' }}>{template.zones['header'] && <div className="pt-[57px] px-[76px] pb-0">{renderZone('header', 'w-full min-w-0')}</div>}<div className="flex flex-1 items-start px-[76px] pb-[57px] pt-0 gap-8"><div className="w-[68%] min-w-0">{renderZone('main', 'h-full')}</div><div className={`w-[32%] min-w-0 border-l border-slate-200 pl-[19px] py-4 -my-4 rounded-lg ${isDarkSidebar ? 'cv-dark-sidebar text-white' : ''}`} style={{ backgroundColor: 'var(--cv-sidebar-bg)' }}>{renderZone('sidebar', 'h-full', isDarkSidebar)}</div></div></div>;
-    case 'top-sidebar-left': return <div className={`w-full h-full flex flex-col cv-document ${formatClass}`} style={{ ...wrapperStyle, backgroundColor: '#ffffff' }}>{template.zones['header'] && <div className="pt-[57px] px-[76px] pb-0">{renderZone('header', 'w-full min-w-0')}</div>}<div className="flex flex-1 items-start px-[76px] pb-[57px] pt-0 gap-8"><div className={`w-[32%] min-w-0 border-r border-slate-200 pr-[19px] py-4 -my-4 rounded-lg ${isDarkSidebar ? 'cv-dark-sidebar text-white' : ''}`} style={{ backgroundColor: 'var(--cv-sidebar-bg)' }}>{renderZone('sidebar', 'h-full', isDarkSidebar)}</div><div className="w-[68%] min-w-0">{renderZone('main', 'h-full')}</div></div></div>;
-    case 'hybrid-split': return <div className={`w-full h-full flex flex-col cv-document ${formatClass}`} style={{ ...wrapperStyle, backgroundColor: '#ffffff' }}>{template.zones['header'] && <div className="pt-[57px] px-[76px] pb-0">{renderZone('header', 'w-full min-w-0')}</div>}<div className="px-[76px] pt-0 pb-0">{renderZone('main', 'w-full min-w-0')}</div><div className="flex flex-1 items-start px-[76px] pb-[57px] pt-0 gap-8"><div className="flex-1 min-w-0">{renderZone('left', 'h-full')}</div><div className="flex-1 min-w-0">{renderZone('right', 'h-full')}</div></div></div>;
+    case '1-col':
+      return (
+        <div className={`w-full h-full cv-document ${formatClass}`} style={{ ...wrapperStyle, padding: 'var(--cv-page-margin)', backgroundColor: '#ffffff' }}>
+          {renderZone('main', 'w-full min-w-0')}
+        </div>
+      );
+    case '2-col':
+      return (
+        <div className={`w-full h-full flex flex-col cv-document ${formatClass}`} style={{ ...wrapperStyle, backgroundColor: '#ffffff' }}>
+          {(template.zones['header'] || []).length > 0 && (
+            <div className="w-full min-w-0" style={{ paddingTop: 'var(--cv-page-margin)', paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 0, marginBottom: 'var(--cv-section-gap, 16px)' }}>
+              {renderZone('header', 'w-full min-w-0')}
+            </div>
+          )}
+          <div className="flex flex-1 items-start gap-[var(--cv-column-gap)]" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)', paddingTop: 0 }}>
+            <div className="flex-1 min-w-0">{renderZone('left', 'h-max')}</div>
+            <div className="flex-1 min-w-0">{renderZone('right', 'h-max')}</div>
+          </div>
+        </div>
+      );
+    case 'sidebar-left':
+    case 'sidebar-left-dark':
+      return (
+        <div className={`w-full h-full flex relative cv-document ${formatClass}`} style={{ ...wrapperStyle, padding: 'var(--cv-page-margin)', backgroundColor: '#ffffff' }}>
+          <div className="absolute left-0 top-0 bottom-0 z-0" style={{ backgroundColor: 'var(--cv-sidebar-bg)', width: 'calc(32% + 0.36 * var(--cv-page-margin))' }}></div>
+          <div className={`w-[32%] min-w-0 relative z-10 ${isDarkSidebar ? 'cv-dark-sidebar text-white' : ''}`} style={{ paddingRight: '5mm' }}>
+            {renderZone('sidebar', 'h-max', isDarkSidebar)}
+          </div>
+          <div className="w-[68%] min-w-0 relative z-10" style={{ paddingLeft: '5mm' }}>
+            {renderZone('main', 'h-max')}
+          </div>
+        </div>
+      );
+    case 'sidebar-right':
+      return (
+        <div className={`w-full h-full flex relative cv-document ${formatClass}`} style={{ ...wrapperStyle, padding: 'var(--cv-page-margin)', backgroundColor: '#ffffff' }}>
+          <div className="absolute right-0 top-0 bottom-0 z-0" style={{ backgroundColor: 'var(--cv-sidebar-bg)', width: 'calc(32% + 0.36 * var(--cv-page-margin))' }}></div>
+          <div className="w-[68%] min-w-0 relative z-10" style={{ paddingRight: '5mm' }}>
+            {renderZone('main', 'h-max')}
+          </div>
+          <div className={`w-[32%] min-w-0 relative z-10 ${isDarkSidebar ? 'cv-dark-sidebar text-white' : ''}`} style={{ paddingLeft: '5mm' }}>
+            {renderZone('sidebar', 'h-max', isDarkSidebar)}
+          </div>
+        </div>
+      );
+    case 'top-sidebar-right':
+      return (
+        <div className={`w-full h-full flex flex-col relative cv-document ${formatClass}`} style={{ ...wrapperStyle, minHeight: 'var(--cv-page-height)', backgroundColor: '#ffffff' }}>
+          {(template.zones['header'] || []).length > 0 && (
+            <div className="relative z-10" style={{ paddingTop: 'var(--cv-page-margin)', paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 0 }}>
+              {renderZone('header', 'w-full min-w-0')}
+            </div>
+          )}
+          <div className="flex flex-1 relative z-10 items-start gap-[var(--cv-column-gap)]" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)', paddingTop: 'var(--cv-section-gap, 16px)' }}>
+            <div className="w-[68%] min-w-0">{renderZone('main', 'h-max')}</div>
+            <div className="absolute right-[var(--cv-page-margin)] top-[var(--cv-section-gap,16px)] bottom-0 rounded-lg z-[-1]" style={{ backgroundColor: 'var(--cv-sidebar-bg)', width: 'calc(32% - 16px)' }}></div>
+            <div className={`w-[32%] min-w-0 ${isDarkSidebar ? 'cv-dark-sidebar text-white' : ''}`} style={{ paddingLeft: '5mm' }}>
+              {renderZone('sidebar', 'h-max', isDarkSidebar)}
+            </div>
+          </div>
+        </div>
+      );
+    case 'top-sidebar-left':
+      return (
+        <div className={`w-full h-full flex flex-col relative cv-document ${formatClass}`} style={{ ...wrapperStyle, minHeight: 'var(--cv-page-height)', backgroundColor: '#ffffff' }}>
+          {(template.zones['header'] || []).length > 0 && (
+            <div className="relative z-10" style={{ paddingTop: 'var(--cv-page-margin)', paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 0 }}>
+              {renderZone('header', 'w-full min-w-0')}
+            </div>
+          )}
+          <div className="flex flex-1 relative z-10 items-start gap-[var(--cv-column-gap)]" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)', paddingTop: 'var(--cv-section-gap, 16px)' }}>
+            <div className="absolute left-[var(--cv-page-margin)] top-[var(--cv-section-gap,16px)] bottom-0 rounded-lg z-[-1]" style={{ backgroundColor: 'var(--cv-sidebar-bg)', width: 'calc(32% - 16px)' }}></div>
+            <div className={`w-[32%] min-w-0 ${isDarkSidebar ? 'cv-dark-sidebar text-white' : ''}`} style={{ paddingRight: '5mm' }}>
+              {renderZone('sidebar', 'h-max', isDarkSidebar)}
+            </div>
+            <div className="w-[68%] min-w-0">{renderZone('main', 'h-max')}</div>
+          </div>
+        </div>
+      );
+    case 'hybrid-split':
+      return (
+        <div className={`w-full h-full flex flex-col cv-document ${formatClass}`} style={{ ...wrapperStyle, minHeight: 'var(--cv-page-height)', backgroundColor: '#ffffff' }}>
+          {(template.zones['header'] || []).length > 0 && (
+            <div style={{ paddingTop: 'var(--cv-page-margin)', paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 0 }}>
+              {renderZone('header', 'w-full min-w-0')}
+            </div>
+          )}
+          {(template.zones['main'] || []).length > 0 && (
+            <div style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingTop: (template.zones['header'] || []).length > 0 ? 'var(--cv-section-gap, 16px)' : 'var(--cv-page-margin)', paddingBottom: 0 }}>
+              {renderZone('main', 'w-full min-w-0')}
+            </div>
+          )}
+          <div className="flex flex-1 items-start gap-[var(--cv-column-gap)]" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)', paddingTop: (template.zones['main'] || []).length > 0 || (template.zones['header'] || []).length > 0 ? 'var(--cv-section-gap, 16px)' : 'var(--cv-page-margin)' }}>
+            <div className="flex-1 min-w-0">{renderZone('left', 'h-max')}</div>
+            <div className="flex-1 min-w-0">{renderZone('right', 'h-max')}</div>
+          </div>
+        </div>
+      );
     default: return <div>Layout not found</div>;
   }
 };

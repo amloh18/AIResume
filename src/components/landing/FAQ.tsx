@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { ChevronDown, ArrowRight } from 'lucide-react';
 
 interface FAQItem {
   id: number;
@@ -11,48 +11,43 @@ interface FAQItem {
 }
 
 const FAQ = () => {
-  const [openItems, setOpenItems] = useState<number[]>([]);
+  const [openItems, setOpenItems] = useState<number[]>([1]);
 
   const faqData: FAQItem[] = [
     {
       id: 1,
-      question: "Can I change my plan after I've purchased it?",
-      answer: "Absolutely. You can upgrade from a Monthly to a Quarterly or Lifetime plan at any time. We will prorate the cost so you only pay the difference. If you wish to downgrade, your change will take effect at the end of your current billing cycle."
+      question: "What is AIResume and how does it help me get hired?",
+      answer: "AIResume is an all-in-one AI career workspace designed to help you land interviews faster. It builds ATS-optimized resumes from scratch or improves existing ones, generates tailored cover letters matching job descriptions, simulates AI interview coaching, and tracks all your job applications in a single Kanban dashboard."
     },
     {
       id: 2,
-      question: "What is the real difference between the Basic and Pro ATS check?",
-      answer: "Think of it this way: The Basic ATS Check ensures your CV has the correct formatting and structure to be readable by automated systems—it's about passing the first gate. The Pro ATS Optimisation is a strategic analysis that suggests keywords and phrasing to help your CV rank higher and get noticed by recruiters for specific roles. It's the difference between being compliant and being competitive."
+      question: "How does the real-time ATS scoring & keyword optimization work?",
+      answer: "When you paste a target job description, our engine analyzes essential hard and soft skills, industry keywords, and ATS parsing criteria. It gives you a real-time match score and precise, actionable bullet point recommendations so your resume consistently beats automated filters and ranks at the top of recruiter pipelines."
     },
     {
       id: 3,
-      question: "Are the Pro plans a one-time payment or a subscription?",
-      answer: "The Daily Pass and Lifetime plan are one-time charges. The Pro Monthly and Quarterly plans are subscriptions that automatically renew to ensure your service is uninterrupted. You can easily cancel the auto-renewal at any time from your account settings, no questions asked."
+      question: "Can I start from scratch or upload my existing resume?",
+      answer: "Both! You can upload an existing PDF or DOCX file for instant AI restructuring and keyword enhancement, or build a brand-new resume step-by-step using our Mori AI Career Assistant with industry-tested, ATS-compliant templates."
     },
     {
       id: 4,
-      question: "What happens to my CVs and documents if my plan ends or I cancel?",
-      answer: "Your work is always yours. After your plan expires, you will still have access to view and download all the documents you created. You will revert to the Essential (Free) plan, meaning you won't be able to create new documents beyond the free limit or use Pro features until you subscribe again."
+      question: "How do the Application Tracker and Auto Applications work?",
+      answer: "The Application Tracker organizes every job in an intuitive Kanban pipeline from 'Saved' to 'Interviewing' and 'Offer'. With Auto Applications, our system automatically tailors your CV and cover letter for each specific role and streamlines submissions, saving you dozens of repetitive hours."
     },
     {
       id: 5,
-      question: "Which plan is the right choice for me?",
-      answer: "Choose Essential if you're targeting one specific role or just want to try our platform. Choose the Daily Pass for a short, intense burst of applications, like for a career fair or urgent openings. Choose Pro Monthly if you are in an active, dedicated job search right now. Choose Pro Quarterly or Lifetime if you are in a strategic, long-term search (common for senior roles) and want the absolute best value and access to future features."
+      question: "What is the difference between the Starter and Focused plans?",
+      answer: "The Starter plan ($0 for monthly with limited usage, or $2/mo yearly) gives you core studio editing, standard templates, live ATS scoring, and 10 tracked applications. The Focused plan ($7/mo yearly or $9.99/mo) unlocks unlimited AI usage, automated applications, the LinkedIn Profile Enhancer, AI Interview Coach, and 24/7 priority support."
     },
     {
       id: 6,
-      question: "What kind of 'Future Pro Add-ons' are included with the Quarterly and Lifetime plans?",
-      answer: "As we develop new premium tools to help you succeed, you get them automatically at no extra cost. This could include things like AI-powered interview practice modules, advanced portfolio builders, or enhanced career analytics to give you a continuous edge in the market."
+      question: "What happens to my documents if I cancel or change my plan?",
+      answer: "Your documents are always 100% yours. If you downgrade or cancel your subscription, you retain full access to view, edit, and download all previously created resumes and cover letters as PDF and DOCX files without any watermarks or restrictions."
     },
     {
       id: 7,
-      question: "What payment methods do you accept?",
-      answer: "We accept all major international Credit and Debit Cards, UPI (including Google Pay, PhonePe, etc.), and Net Banking from all major Bank worldwide. Our payment gateway Polar.sh is secure and encrypted."
-    },
-    {
-      id: 8,
-      question: "Is there a refund policy?",
-      answer: "We are confident in the value our tools provide. For our Pro Quarterly/Pro Lifetime plan, we offer a 7-day money-back guarantee with terms (link). Due to their short-term nature, the Daily Pass and Pro Monthly are non-refundable."
+      question: "What payment methods and currencies do you support?",
+      answer: "We support all major international Credit and Debit Cards (Visa, Mastercard, AMEX), UPI, and regional payment methods via secure SSL-encrypted processing. Prices in non-USD currencies are calculated with live exchange rates with no hidden fees."
     }
   ];
 
@@ -70,44 +65,34 @@ const FAQ = () => {
     visible: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.1,
-        delayChildren: 0.2
-      }
-    }
-  };
-
-  const itemVariants = {
-    hidden: {
-      opacity: 0,
-      y: 20,
-      scale: 0.98
-    },
-    visible: {
-      opacity: 1,
-      y: 0,
-      scale: 1,
-      transition: {
-        duration: 0.5,
-        ease: "easeOut"
+        staggerChildren: 0.08,
+        delayChildren: 0.1
       }
     }
   };
 
   return (
-    <section id="faq" className="relative pt-32 pb-32 bg-[#141810] overflow-hidden">
-      {/* Background Effects - Subtle dark glow */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#81ff00]/3 rounded-full blur-[150px]"></div>
-      </div>
+    <section id="faq" className="relative py-28 bg-[#0a0a0c] overflow-hidden">
+      {/* Background Ambient Glows */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: `
+            radial-gradient(ellipse 60% 40% at 20% 20%, rgba(1, 63, 46, 0.2) 0%, transparent 65%),
+            radial-gradient(ellipse 60% 50% at 80% 60%, rgba(20, 184, 166, 0.08) 0%, transparent 65%),
+            linear-gradient(180deg, #0e1013 0%, #0a0a0c 50%, #060708 100%)
+          `,
+        }}
+      />
 
       <div className="relative z-10 max-w-4xl mx-auto px-4 tablet:px-6 desktop:px-8">
         {/* Section Header */}
         <motion.div
-          className="text-center mb-16"
+          className="text-left mb-14"
           initial={{ opacity: 0, y: 40 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: "easeOut" }}
-          viewport={{ once: true, margin: "-50px" }}
+          viewport={{ once: true }}
         >
           {/* Decorative squiggle */}
           <motion.div
@@ -117,7 +102,7 @@ const FAQ = () => {
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
           >
-            <svg width="48" height="24" viewBox="0 0 48 24" fill="none" className="text-[#81ff00]">
+            <svg width="48" height="24" viewBox="0 0 48 24" fill="none" className="text-[#36D39B]">
               <path
                 d="M2 12C6 6 10 18 14 12C18 6 22 18 26 12C30 6 34 18 38 12C42 6 46 12 46 12"
                 stroke="currentColor"
@@ -126,68 +111,72 @@ const FAQ = () => {
               />
             </svg>
           </motion.div>
-          <h2 className="!text-[2rem] tablet:!text-[2.5rem] desktop:!text-[3rem] font-extrabold text-white text-left tracking-tighter !leading-[1.05] mb-6">
-            Frequently Asked Questions
+          <h2 className="tablet:!text-[2.5rem] desktop:!text-[3rem] font-extrabold text-[#F5F7F7] text-left tracking-tighter mb-4 text-4xl! tracking-normal!">
+            Frequently Asked{' '}
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#36D39B] via-[#4DDCB0] to-[#86E8D1]">
+              Questions
+            </span>
           </h2>
-          <p className="text-small tablet:text-small desktop:text-h3 text-white/70 max-w-3xl leading-relaxed font-light text-left">
-            Everything you need to know about our plans, features, and policies. Can't find what you're looking for?
-            <span className="text-lime-400 font-medium"> Contact our support team</span>.
+          <p className="text-sm tablet:text-base text-gray-400 max-w-3xl leading-relaxed font-light text-left">
+            Everything you need to know about our plans, ATS tools, and auto application features.
           </p>
         </motion.div>
 
-
         {/* FAQ Accordion */}
         <motion.div
-          className="space-y-4"
+          className="space-y-3.5"
           variants={containerVariants}
           initial="hidden"
           whileInView="visible"
-          viewport={{ once: true, margin: "-100px" }}
+          viewport={{ once: true }}
         >
           {faqData.map((item) => {
             const isOpen = openItems.includes(item.id);
 
             return (
-              <div
-                key={item.id}
-                className="group"
-              >
+              <div key={item.id} className="group">
                 <div
-                  className="relative bg-gradient-to-br from-white/5 to-white/10 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden transition-all duration-300 hover:border-lime-400/30 hover:shadow-lg hover:shadow-lime-400/10"
+                  className={`relative backdrop-blur-xl border rounded-2xl overflow-hidden transition-all duration-300 ${
+                    isOpen
+                      ? 'bg-[#111317]/90 border-emerald-500/30 shadow-[0_4px_20px_rgba(1,63,46,0.2)]'
+                      : 'bg-white/[0.02] border-white/[0.07] hover:border-white/20 hover:bg-white/[0.04]'
+                  }`}
                 >
-                  {/* Glow Effect */}
-                  <div
-                    className="absolute inset-0 bg-gradient-to-br from-lime-400/5 to-blue-400/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-                    style={{ filter: 'blur(20px)' }}
-                  />
-
                   {/* Question Button */}
                   <button
-                    className="w-full px-8 py-6 text-left flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:ring-offset-2 focus:ring-offset-gray-900 hover:bg-white/5 transition-colors duration-200"
+                    className="w-full px-6 py-5 text-left flex items-center justify-between focus:outline-none transition-colors duration-200"
                     onClick={(e) => {
                       e.preventDefault();
                       toggleItem(item.id);
                     }}
                   >
-                    <h3 className="text-small tablet:text-body desktop:text-h3 font-semibold text-white pr-4 group-hover:text-lime-400 transition-colors duration-300">
+                    <h3
+                      className={`text-sm tablet:text-base font-semibold pr-4 transition-colors duration-300 ${
+                        isOpen ? 'text-white' : 'text-gray-200 group-hover:text-white'
+                      }`}
+                    >
                       {item.question}
                     </h3>
                     <div
-                      className={`flex-shrink-0 w-8 h-8 bg-gradient-to-br from-lime-400 to-lime-500 rounded-full flex items-center justify-center shadow-lg transition-transform duration-300 ${isOpen ? 'rotate-180 scale-110' : 'rotate-0 scale-100'
-                        }`}
+                      className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center border transition-all duration-300 ${
+                        isOpen
+                          ? 'bg-[#36D39B] text-black border-[#36D39B] rotate-180 scale-105 shadow-[0_0_12px_rgba(54,211,155,0.4)]'
+                          : 'bg-emerald-500/10 text-[#36D39B] border-emerald-500/25 rotate-0 scale-100 group-hover:bg-emerald-500/20 group-hover:border-emerald-400/40'
+                      }`}
                     >
-                      <ChevronDown size={16} className="text-black" />
+                      <ChevronDown size={16} strokeWidth={2.5} className="transition-colors" />
                     </div>
                   </button>
 
                   {/* Answer Content */}
                   <div
-                    className={`overflow-hidden transition-all duration-300 ease-in-out ${isOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
-                      }`}
+                    className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                      isOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+                    }`}
                   >
-                    <div className="px-8 pb-6">
-                      <div className="border-t border-white/10 pt-4">
-                        <p className="text-white/80 leading-relaxed text-small tablet:text-small font-light">
+                    <div className="px-6 pb-5 pt-1">
+                      <div className="border-t border-white/[0.06] pt-3.5">
+                        <p className="text-gray-300/90 leading-relaxed text-xs tablet:text-sm font-normal">
                           {item.answer}
                         </p>
                       </div>
@@ -201,25 +190,21 @@ const FAQ = () => {
 
         {/* Bottom CTA */}
         <motion.div
-          className="text-center mt-16"
-          initial={{ opacity: 0, y: 40 }}
+          className="text-center mt-14"
+          initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
-          viewport={{ once: true, margin: "-50px" }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+          viewport={{ once: true }}
         >
-          <p className="text-white/60 mb-6 text-small tablet:text-small desktop:text-body">Still have questions?</p>
-          <motion.button
-            className="group text-lime-400 hover:text-lime-300 font-semibold transition-colors duration-300 flex items-center gap-2 mx-auto"
-            whileHover={{ x: 5 }}
+          <p className="text-gray-400 mb-3 text-xs">Still have questions?</p>
+          <motion.a
+            href="mailto:support@buildairesume.com?subject=FAQ%20Support%20Inquiry"
+            className="group text-[#36D39B] hover:text-emerald-300 font-semibold transition-colors duration-300 inline-flex items-center gap-2 text-xs"
+            whileHover={{ x: 3 }}
           >
             <span>Contact our support team</span>
-            <motion.div
-              whileHover={{ rotate: 45 }}
-              transition={{ duration: 0.3 }}
-            >
-              <ChevronDown size={16} className="rotate-[-90deg]" />
-            </motion.div>
-          </motion.button>
+            <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+          </motion.a>
         </motion.div>
       </div>
     </section>

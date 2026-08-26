@@ -350,7 +350,7 @@ export default function SidebarMembershipCard() {
   }
 
   // --- Pro Monthly (blue) ---
-  if (planKey === 'pro_monthly') {
+  if (planKey === 'focused_monthly') {
     return (
       <div className="rounded-2xl p-3 bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-sm shadow-black/20 dark:shadow-black/40">
         <div className="flex items-center justify-between mb-2">
@@ -389,7 +389,7 @@ export default function SidebarMembershipCard() {
   }
 
   // --- Pro Quarterly (green) ---
-  if (planKey === 'pro_quarterly') {
+  if (planKey === 'focused_quarterly') {
     return (
       <div className="rounded-2xl p-3 bg-gradient-to-br from-green-500 to-green-600 text-white shadow-sm shadow-black/20 dark:shadow-black/40">
         <div className="flex items-center justify-between mb-2">
@@ -418,7 +418,7 @@ export default function SidebarMembershipCard() {
   }
 
   // --- Pro Yearly (indigo) ---
-  if (planKey === 'pro_yearly') {
+  if (planKey === 'focused_yearly') {
     return (
       <div className="rounded-2xl p-3 bg-gradient-to-br from-indigo-500 to-indigo-600 text-white shadow-sm shadow-black/20 dark:shadow-black/40">
         <div className="flex items-center justify-between mb-2">
@@ -447,7 +447,7 @@ export default function SidebarMembershipCard() {
   }
 
   // --- Pro Lifetime (amber, best value badge) ---
-  if (planKey === 'pro_lifetime') {
+  if (planKey === 'focused_yearly') {
     return (
       <div className="rounded-2xl p-3 bg-gradient-to-br from-amber-500 to-amber-600 text-white shadow-sm shadow-black/20 dark:shadow-black/40 relative overflow-hidden">
         <div className="absolute right-[-35px] top-[10px] bg-white/25 text-white text-[8px] font-bold px-10 py-0.5 rotate-45 transform origin-center shadow-sm">

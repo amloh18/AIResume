@@ -9,6 +9,7 @@ import {
   getPasswordResetTemplate,
   EmailTemplateData
 } from '@/lib/email-templates';
+import { requireAdmin } from '@/lib/middleware/admin-auth';
 
 export interface EmailTemplate {
   id: string;
@@ -31,7 +32,7 @@ const predefinedTemplates: EmailTemplate[] = [
     id: 'new-user-welcome',
     name: 'New User Welcome',
     type: 'welcome',
-    subject: 'Welcome to CVCircle!',
+    subject: 'Welcome to AIResume!',
     description: 'Welcome new users to the platform with an introduction to features and next steps.',
     category: 'transactional',
     sentCount: 0,
@@ -44,20 +45,20 @@ const predefinedTemplates: EmailTemplate[] = [
     id: 'email-verification',
     name: 'Email Verification',
     type: 'verification',
-    subject: 'Verify Your Email - CVCircle',
+    subject: 'Verify Your Email - AIResume',
     description: 'Email verification template for new account signups.',
     category: 'transactional',
     sentCount: 0,
     openRate: 0,
     clickRate: 0,
-    previewHtml: getEmailVerificationTemplate({ firstName: 'John', email: 'john@example.com', link: 'https://www.cvcircle.io/verify?token=abc123' }),
+    previewHtml: getEmailVerificationTemplate({ firstName: 'John', email: 'john@example.com', link: 'https://www.buildairesume.com/verify?token=abc123' }),
     variables: ['firstName', 'email', 'link']
   },
   {
     id: 'verification-code',
     name: '4-Digit Verification Code',
     type: 'verification',
-    subject: 'Your Verification Code - CVCircle',
+    subject: 'Your Verification Code - AIResume',
     description: '4-digit verification code for passwordless login and account verification.',
     category: 'transactional',
     sentCount: 0,
@@ -70,20 +71,20 @@ const predefinedTemplates: EmailTemplate[] = [
     id: 'password-reset',
     name: 'Password Reset',
     type: 'password_reset',
-    subject: 'Reset Your Password - CVCircle',
+    subject: 'Reset Your Password - AIResume',
     description: 'Password reset email with secure link to reset user password.',
     category: 'transactional',
     sentCount: 0,
     openRate: 0,
     clickRate: 0,
-    previewHtml: getPasswordResetTemplate({ firstName: 'John', email: 'john@example.com', link: 'https://www.cvcircle.io/reset?token=abc123' }),
+    previewHtml: getPasswordResetTemplate({ firstName: 'John', email: 'john@example.com', link: 'https://www.buildairesume.com/reset?token=abc123' }),
     variables: ['firstName', 'email', 'link']
   },
   {
     id: 'limit-exhausted',
     name: 'Limit Exhausted (Upgrade)',
     type: 'limit_exhausted',
-    subject: 'Upgrade Your CVCircle Plan',
+    subject: 'Upgrade Your AIResume Plan',
     description: 'Encourage users to upgrade when they reach their plan limits.',
     category: 'marketing',
     sentCount: 0,
@@ -96,7 +97,7 @@ const predefinedTemplates: EmailTemplate[] = [
     id: 'special-offers',
     name: 'Special Offers (Coupon)',
     type: 'special_offers',
-    subject: 'Special Offer - CVCircle',
+    subject: 'Special Offer - AIResume',
     description: 'Promotional email with coupon codes and special offers.',
     category: 'marketing',
     sentCount: 0,
@@ -109,7 +110,7 @@ const predefinedTemplates: EmailTemplate[] = [
     id: 'account-deletion',
     name: 'Account Deletion Confirmation',
     type: 'account_deletion',
-    subject: 'Account Deleted - CVCircle',
+    subject: 'Account Deleted - AIResume',
     description: 'Confirmation email when a user account is deleted.',
     category: 'transactional',
     sentCount: 0,
@@ -122,7 +123,7 @@ const predefinedTemplates: EmailTemplate[] = [
     id: 'membership-reminder',
     name: 'Membership Reminder',
     type: 'membership_reminder',
-    subject: 'Your CVCircle Membership',
+    subject: 'Your AIResume Membership',
     description: 'Remind users about their membership status and benefits.',
     category: 'marketing',
     sentCount: 0,
@@ -135,6 +136,7 @@ const predefinedTemplates: EmailTemplate[] = [
 
 export async function GET(request: NextRequest) {
   try {
+    await requireAdmin(request);
     const { searchParams } = new URL(request.url);
     const category = searchParams.get('category');
     const type = searchParams.get('type');
@@ -181,6 +183,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    await requireAdmin(request);
     const body = await request.json();
     const { templateId, variables } = body;
 
@@ -207,7 +210,7 @@ export async function POST(request: NextRequest) {
       lastName: variables?.lastName || 'Doe',
       email: variables?.email || 'john@example.com',
       code: variables?.code || '1234',
-      link: variables?.link || 'https://www.cvcircle.io/example',
+      link: variables?.link || 'https://www.buildairesume.com/example',
       couponCode: variables?.couponCode || 'SAVE30',
       expirationDate: variables?.expirationDate || 'December 31, 2024',
       usageLimit: variables?.usageLimit || 5,

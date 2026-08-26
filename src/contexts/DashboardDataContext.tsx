@@ -263,14 +263,18 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
         setSecondaryLoading(prev => ({ ...prev, jobs: true }));
         setErrors(prev => ({ ...prev, jobs: null }));
         console.log('🔍 DashboardData - Fetching jobs');
-        const response = await authenticatedFetch(endpoint);
+        let response = await authenticatedFetch(endpoint);
+        if (!response || !response.ok) {
+          response = await fetch(endpoint, { cache: 'no-store' });
+        }
         const contentType = response.headers.get('content-type');
         if (contentType && contentType.includes('application/json')) {
           const result = await response.json();
 
-          if (result.success && result.data?.jobs) {
-            console.log(`✅ DashboardData - Jobs loaded: ${result.data.jobs.length} items`);
-            setJobs(result.data.jobs);
+          const jobsList = result.data?.jobs || result.jobs || [];
+          if (Array.isArray(jobsList)) {
+            console.log(`✅ DashboardData - Jobs loaded: ${jobsList.length} items`);
+            setJobs(jobsList);
           }
         } else {
           console.error('Jobs response is not JSON. Content-Type:', contentType);
@@ -713,6 +717,21 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
 
     refreshAll();
   }, [authLoading, user?.id, refreshAll]);
+
+  // Listen for job change events from other components (tracker, discover, etc.)
+  useEffect(() => {
+    const handleJobChanged = () => {
+      console.log('🔄 DashboardData - Received job change event, refreshing jobs');
+      refreshJobs();
+    };
+
+    window.addEventListener('jobUpdated', handleJobChanged as EventListener);
+    window.addEventListener('jobDeleted', handleJobChanged as EventListener);
+    return () => {
+      window.removeEventListener('jobUpdated', handleJobChanged as EventListener);
+      window.removeEventListener('jobDeleted', handleJobChanged as EventListener);
+    };
+  }, [refreshJobs]);
 
   // Calculate legacy loading state (for backward compatibility)
   const loading = criticalLoading || Object.values(secondaryLoading).some(v => v);

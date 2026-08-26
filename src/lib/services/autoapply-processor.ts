@@ -670,22 +670,107 @@ export async function getApplicationStats(userId: string): Promise<{
 }
 
 // Auto-Apply Job Matching
+/**
+ * Find matching jobs for auto-apply.
+ * 
+ * IMPORTANT: Now reads from JobSearchProfile instead of UserQuota.autoApplySettings.
+ * Falls back to legacy settings if profile doesn't exist.
+ */
 export async function findMatchingJobsForAutoApply(
   userId: string,
   limit: number = 10
 ): Promise<IApplicationQueue[]> {
   await initializeModels();
   
-  // Get user's auto-apply settings
-  const quota = await UserQuota.findOne({ userId });
-  if (!quota || !quota.autoApplyEnabled) {
-    return [];
+  // Read from JobSearchProfile or legacy autoApplySettings based on feature flag
+  let targetRoles: string[] = [];
+  let locations: string[] = [];
+  let remoteOnly = false;
+  let minSalary = 0;
+  let excludeCompanies: string[] = [];
+  
+  const { isFeatureFlagEnabledForUser, FEATURE_FLAGS } = await import('@/lib/feature-flags');
+  const useNewStore = isFeatureFlagEnabledForUser(FEATURE_FLAGS.USE_JOB_SEARCH_PROFILE, userId);
+  
+  if (useNewStore) {
+    try {
+      const { JobSearchProfileService } = await import('./jobSearchProfileService');
+      const { trackNewStoreRead, trackLegacyFallbackRead } = await import('@/lib/migration/migrationTelemetry');
+      const profile = await JobSearchProfileService.getProfile(userId);
+      
+      if (profile) {
+        targetRoles = profile.targetRoles || [];
+        locations = profile.locations || [];
+        remoteOnly = profile.remoteOnly;
+        minSalary = profile.minSalary || 0;
+        
+        const { AutoApplyConfigurationService } = await import('./autoApplyConfigurationService');
+        const config = await AutoApplyConfigurationService.getConfig(userId);
+        
+        if (!config || !config.enabled) {
+          return [];
+        }
+        trackNewStoreRead('AutoApplyProcessor', userId);
+      } else {
+        const quota = await UserQuota.findOne({ userId });
+        if (!quota || !quota.autoApplyEnabled) {
+          return [];
+        }
+        
+        const settings = quota.autoApplySettings;
+        targetRoles = settings.targetRoles || [];
+        locations = settings.locations || [];
+        remoteOnly = settings.remoteOnly || false;
+        minSalary = settings.minSalary || 0;
+        excludeCompanies = settings.excludeCompanies || [];
+        trackLegacyFallbackRead({
+          service: 'AutoApplyProcessor',
+          userId,
+          legacySource: 'user_quota_auto_apply_settings',
+          reason: 'profile_not_found',
+        });
+      }
+    } catch (error) {
+      console.warn('[AutoApply] Could not load JobSearchProfile, falling back to legacy:', error);
+      const { trackLegacyFallbackRead } = await import('@/lib/migration/migrationTelemetry');
+      
+      const quota = await UserQuota.findOne({ userId });
+      if (!quota || !quota.autoApplyEnabled) {
+        return [];
+      }
+      
+      const settings = quota.autoApplySettings;
+      targetRoles = settings.targetRoles || [];
+      locations = settings.locations || [];
+      remoteOnly = settings.remoteOnly || false;
+      minSalary = settings.minSalary || 0;
+      excludeCompanies = settings.excludeCompanies || [];
+      trackLegacyFallbackRead({
+        service: 'AutoApplyProcessor',
+        userId,
+        legacySource: 'user_quota_auto_apply_settings',
+        reason: 'profile_error',
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  } else {
+    // Feature flag disabled — read directly from legacy
+    const quota = await UserQuota.findOne({ userId });
+    if (!quota || !quota.autoApplyEnabled) {
+      return [];
+    }
+    
+    const settings = quota.autoApplySettings;
+    targetRoles = settings.targetRoles || [];
+    locations = settings.locations || [];
+    remoteOnly = settings.remoteOnly || false;
+    minSalary = settings.minSalary || 0;
+    excludeCompanies = settings.excludeCompanies || [];
   }
   
-  const settings = quota.autoApplySettings;
   const { remaining } = await checkUserQuota(userId);
   
-  if (!settings.targetRoles?.length || remaining.hourly <= 0) {
+  if (!targetRoles.length || remaining.hourly <= 0) {
     return [];
   }
   
@@ -693,18 +778,18 @@ export async function findMatchingJobsForAutoApply(
   const matchQuery: any = {
     status: 'queued',
     userId: { $ne: userId }, // Jobs from discovery that match criteria
-    $or: settings.targetRoles.map((role: string) => ({
+    $or: targetRoles.map((role: string) => ({
       jobTitle: { $regex: role, $options: 'i' }
     }))
   };
   
-  if (settings.locations?.length) {
-    matchQuery.$and = settings.locations.map((loc: string) => ({
+  if (locations.length) {
+    matchQuery.$and = locations.map((loc: string) => ({
       location: { $regex: loc, $options: 'i' }
     }));
   }
   
-  if (settings.remoteOnly) {
+  if (remoteOnly) {
     matchQuery.$or = [
       ...(matchQuery.$or || []),
       { location: { $regex: /remote/i } },
@@ -712,14 +797,14 @@ export async function findMatchingJobsForAutoApply(
     ];
   }
   
-  if (settings.excludeCompanies?.length) {
-    matchQuery.company = { $nin: settings.excludeCompanies };
+  if (excludeCompanies.length) {
+    matchQuery.company = { $nin: excludeCompanies };
   }
   
-  if (settings.minSalary) {
+  if (minSalary) {
     matchQuery.$or = [
       ...(matchQuery.$or || []),
-      { salary: { $gte: settings.minSalary } }
+      { salary: { $gte: minSalary } }
     ];
   }
   
@@ -747,11 +832,11 @@ export async function processApplicationQueue(userId: string): Promise<{
   let application: IApplicationQueue | null = null;
   
   try {
-    // Check quota first
+    // Check global quota first
     const { canApply, remaining } = await checkUserQuota(userId);
     
     if (!canApply || remaining.hourly <= 0) {
-      results.errors.push('Quota exceeded');
+      results.errors.push('Daily application limit reached');
       return results;
     }
     
@@ -760,6 +845,35 @@ export async function processApplicationQueue(userId: string): Promise<{
     
     if (!application) {
       return results;
+    }
+    
+    // Check per-source daily limits from User model preferences
+    const User = (await import('@/models/User')).default;
+    const user = await User.findById(userId).lean() as any;
+    if (user) {
+      const source = application.source;
+      let dailyLimit = 25; // default
+
+      if (source === 'naukri' && user.naukriIntegration?.preferences?.dailyLimit) {
+        dailyLimit = user.naukriIntegration.preferences.dailyLimit;
+      } else if (source === 'indeed' && user.indeedIntegration?.preferences?.dailyLimit) {
+        dailyLimit = user.indeedIntegration.preferences.dailyLimit;
+      }
+
+      // Count today's applications for this source
+      const today = new Date().toISOString().split('T')[0];
+      const todayStart = new Date(today + 'T00:00:00Z');
+      await initializeModels();
+      const todayCount = await ApplicationHistory.countDocuments({
+        userId,
+        source,
+        appliedAt: { $gte: todayStart },
+      });
+
+      if (todayCount >= dailyLimit) {
+        results.errors.push(`Daily limit for ${source} reached (${dailyLimit}/${dailyLimit})`);
+        return results;
+      }
     }
     
     // Check API rate limits
@@ -780,39 +894,51 @@ export async function processApplicationQueue(userId: string): Promise<{
     // Record API request
     await recordApiRequest(application.source);
     
-    // In a real implementation, this would:
-    // 1. Generate tailored CV using AI
-    // 2. Generate cover letter
-    // 3. Submit application to the job portal
+    // Use unified apply service for real application submission
+    const { UnifiedApplyService } = await import('./unifiedApplyService');
     
-    // Simulate processing time
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Mark as applied
-    await updateApplicationStatus(application._id!.toString(), 'applied');
-    
-    // Record in quota
-    await recordApplication(userId);
-    
-    // Add to history
-    await addToApplicationHistory({
-      userId: application.userId,
+    const applyResult = await UnifiedApplyService.apply(userId, {
       jobId: application.jobId,
-      jobTitle: application.jobTitle,
+      title: application.jobTitle,
       company: application.company,
+      description: application.metadata?.description || '',
       location: application.location,
-      source: application.source,
-      sourceUrl: application.sourceUrl,
       salary: application.salary,
-      status: 'applied',
-      cvUsed: application.cvTemplateId,
-      coverLetterUsed: application.coverLetterId
+      jobUrl: application.sourceUrl || '',
+      atsType: (application.metadata?.atsType || application.source || 'unknown') as any,
+      source: application.source,
+      screeningQuestions: application.metadata?.screeningQuestions || [],
     });
     
-    // Record success
-    await recordApplicationSuccess(userId);
-    
-    results.successful += 1;
+    if (applyResult.success && applyResult.status === 'applied') {
+      // Successfully applied
+      await updateApplicationStatus(application._id!.toString(), 'applied');
+      await recordApplication(userId);
+      await addToApplicationHistory({
+        userId: application.userId,
+        jobId: application.jobId,
+        jobTitle: application.jobTitle,
+        company: application.company,
+        location: application.location,
+        source: application.source,
+        sourceUrl: application.sourceUrl,
+        salary: application.salary,
+        status: 'applied',
+        cvUsed: application.cvTemplateId,
+        coverLetterUsed: application.coverLetterId
+      });
+      await recordApplicationSuccess(userId);
+      results.successful += 1;
+    } else if (applyResult.status === 'action_required') {
+      // Needs manual action - mark as queued with action required note
+      await updateApplicationStatus(application._id!.toString(), 'queued', applyResult.message);
+      results.errors.push(`Action required: ${applyResult.message}`);
+    } else {
+      // Failed
+      await updateApplicationStatus(application._id!.toString(), 'failed', applyResult.message);
+      results.failed += 1;
+      results.errors.push(applyResult.message);
+    }
     
   } catch (error: any) {
     results.failed += 1;

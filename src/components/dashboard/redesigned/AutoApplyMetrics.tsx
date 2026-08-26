@@ -1,21 +1,50 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import DashboardWidget from './DashboardWidget';
 import { cn } from '@/lib/utils';
+import { authenticatedFetch } from '@/lib/utils/apiUtils';
 
-const data = [
-  { name: 'Mon', apps: 4, matches: 12 },
-  { name: 'Tue', apps: 7, matches: 18 },
-  { name: 'Wed', apps: 5, matches: 15 },
-  { name: 'Thu', apps: 8, matches: 22 },
-  { name: 'Fri', apps: 12, matches: 30 },
-  { name: 'Sat', apps: 3, matches: 10 },
-  { name: 'Sun', apps: 2, matches: 8 },
-];
+interface MetricData {
+  name: string;
+  apps: number;
+  matches: number;
+}
 
 export default function AutoApplyMetrics({ loading = false, empty = false }: { loading?: boolean, empty?: boolean }) {
+  const [data, setData] = useState<MetricData[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchMetrics = async () => {
+      try {
+        const res = await authenticatedFetch('/api/jobs/analytics?period=7d');
+        const result = await res.json();
+        
+        if (result.success && result.data?.dailyMetrics) {
+          // Transform daily metrics to chart format
+          const chartData = result.data.dailyMetrics.map((day: any) => ({
+            name: new Date(day.date).toLocaleDateString('en-US', { weekday: 'short' }),
+            apps: day.applications || 0,
+            matches: day.matches || 0,
+          }));
+          setData(chartData);
+        } else {
+          // No data available - show empty state
+          setData([]);
+        }
+      } catch (err) {
+        console.error('Failed to fetch metrics:', err);
+        setData([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchMetrics();
+  }, []);
+
   return (
     <DashboardWidget
       id="auto-apply-metrics"
@@ -23,11 +52,11 @@ export default function AutoApplyMetrics({ loading = false, empty = false }: { l
       subtitle="System Performance Analytics"
       type="chart"
       userTier={['smart']}
-      loading={loading}
-      empty={empty}
+      loading={loading || isLoading}
+      empty={empty || (!isLoading && data.length === 0)}
       emptyState={{
         title: "No metrics available",
-        description: "Metrics will appear once automation starts.",
+        description: "Metrics will appear once automation starts running.",
       }}
       className="h-[450px]"
     >

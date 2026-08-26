@@ -1,5 +1,6 @@
 import 'server-only';
 import mongoose, { Document, Model, FilterQuery, UpdateQuery, ClientSession } from 'mongoose';
+import { withTransaction } from '@/lib/utils/db-transaction';
 
 /**
  * Base Repository Pattern Implementation
@@ -314,7 +315,7 @@ export abstract class BaseRepository<T extends Document> {
   }
 
   /**
-   * Execute within transaction
+   * Execute within transaction (with fallback for standalone MongoDB instances)
    * 
    * Usage:
    *   await repository.withTransaction(async (session) => {
@@ -323,21 +324,9 @@ export abstract class BaseRepository<T extends Document> {
    *   });
    */
   async withTransaction<R>(
-    operation: (session: ClientSession) => Promise<R>
+    operation: (session?: ClientSession) => Promise<R>
   ): Promise<R> {
-    const session = await mongoose.startSession();
-    session.startTransaction();
-
-    try {
-      const result = await operation(session);
-      await session.commitTransaction();
-      return result;
-    } catch (error) {
-      await session.abortTransaction();
-      throw error;
-    } finally {
-      session.endSession();
-    }
+    return withTransaction(operation);
   }
 
   /**
@@ -382,7 +371,8 @@ export abstract class BaseRepository<T extends Document> {
       return this.find(filters as FilterQuery<T>, queryOptions);
     }
 
-    const searchRegex = new RegExp(searchTerm, 'i');
+    const escaped = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const searchRegex = new RegExp(escaped, 'i');
     const searchQuery = searchFields.map((field) => ({
       [field]: searchRegex,
     }));

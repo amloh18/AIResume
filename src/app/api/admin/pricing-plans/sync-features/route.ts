@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import PricingPlan from '@/models/PricingPlan';
+import { requireAdmin } from '@/lib/middleware/admin-auth';
 
 /**
  * POST /api/admin/pricing-plans/sync-features
@@ -43,7 +44,7 @@ const updatedPlans = [
         ]
     },
     {
-        key: 'pro_monthly',
+        key: 'focused_monthly',
         description: 'Complete career toolkit with monthly flexibility',
         features: [
             'Unlimited CV creation',
@@ -59,7 +60,7 @@ const updatedPlans = [
         notIncludedFeatures: []
     },
     {
-        key: 'pro_quarterly',
+        key: 'focused_quarterly',
         description: 'Best value with priority support included',
         features: [
             'Everything in Monthly plan',
@@ -68,7 +69,7 @@ const updatedPlans = [
         notIncludedFeatures: []
     },
     {
-        key: 'pro_lifetime',
+        key: 'focused_yearly',
         description: 'One-time payment for lifetime access',
         features: [
             'All Professional features forever',
@@ -81,6 +82,7 @@ const updatedPlans = [
 
 export async function POST(request: NextRequest) {
     try {
+        await requireAdmin(request);
         await getConnection();
 
         const results: { key: string; status: string }[] = [];

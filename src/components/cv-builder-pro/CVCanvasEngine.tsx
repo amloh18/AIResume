@@ -4,23 +4,29 @@
 import React, { useState, useEffect, useImperativeHandle, forwardRef, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { GripVertical, Download, Plus, LayoutTemplate, Save, RefreshCw, Layers, Check, Search, Filter, Briefcase, PlusCircle, Trash2, ChevronUp, ChevronDown, ImageIcon, ArrowRight, Loader2, PlayCircle, Eye, MousePointer2, Wand2, Quote, FileText, Palette, FileJson, X, Sparkles, Copy, CopyCheck, AlertCircle, Undo, Redo } from 'lucide-react';
-import { CANVAS_TEMPLATES, TEMPLATE_CATEGORIES, SNIPPETS, TITLE_STYLES, SNIPPET_FAMILIES, ATS_SNIPPETS } from './registry';
+import { CANVAS_TEMPLATES, SNIPPETS, TITLE_STYLES, SNIPPET_FAMILIES, ATS_SNIPPETS } from './registry';
 import { EditableField, CanvasSnippet, CanvasZone, StaticLayoutRenderer, FloatingToolbar, CanvasContext } from './components/CoreUI';
+import { TemplateLibraryGrid } from './components/TemplateLibraryGrid';
 import { JSONSidebarViewer } from './components/JSONSidebarViewer';
+import { SnippetPreviewFrame } from './components/SnippetPreviewFrame';
 import ListEntry from './components/ListEntry';
 import { generateId, setNestedValue, getNestedValue, escapeRegExp } from './helpers';
 import { usePaymentModal } from '@/contexts/PaymentModalContext';
 import { analyzeText } from '@/lib/grammar/engine';
 import { computeCanvasLayoutMetrics } from './layout-utils';
+import { getPageDimensions } from '@/lib/templates/page-dimensions';
 import { DEFAULT_UNIFIED_CV_DATA } from '@/types/unified-cv-schema';
+import { getCanvasSnippetPreviewData } from '@/lib/templates/canvas-initial-data';
 import { useUserData } from '@/lib/hooks/useUserData';
 import { useCanvasFit } from '@/hooks/useCanvasFit';
-import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
+import { useResumeEnhancerSafe } from '@/contexts/ResumeEnhancerContext';
+import { fluencyToLevel, ensureCanvasListShapes, coerceLanguagesForEdit, coerceInterestsForEdit, appendSkillRecord } from '@/lib/utils/cv-snippet-data';
 import UtilityPanelPill from '@/components/resume-enhancer/components/UtilityPanelPill';
 const ReadOnlyWrapper = (props: any) => <EditableField {...props} readOnly={true} />;
 const EditableWrapper = EditableField;
 
 const LIST_SNIPPET_CATEGORIES = ['Experience', 'Education', 'Projects', 'Certifications', 'Awards', 'Publications', 'Volunteer', 'References'];
+const SEEDABLE_LIST_CATEGORIES = [...LIST_SNIPPET_CATEGORIES, 'Languages', 'Interests', 'Skills'];
 
 const getCollectionNameForCategory = (category?: string) => {
   const key = (category || '').toLowerCase();
@@ -33,6 +39,9 @@ const getCollectionNameForCategory = (category?: string) => {
     publications: 'publications',
     volunteer: 'volunteer',
     references: 'references',
+    languages: 'languages',
+    interests: 'interests',
+    skills: 'skills',
   };
 
   return collectionMap[key] || key;
@@ -48,7 +57,18 @@ const createDefaultListEntry = (category?: string) => {
   if (key === 'publications') return { id: generateId(), title: 'Publication Title', publisher: 'Publisher', date: 'Date', description: 'Brief summary.' };
   if (key === 'volunteer') return { id: generateId(), organization: 'Org Name', role: 'Role', date: 'Date', description: '<ul><li>Duties here.</li></ul>' };
   if (key === 'references') return { id: generateId(), name: 'Ref Name', role: 'Role', contact: 'Contact Info' };
+  if (key === 'languages') return { id: generateId(), language: 'Language', fluency: 'Fluent', level: 4 };
+  if (key === 'interests') return { id: generateId(), name: 'Interest', keywords: [] };
+  if (key === 'skills') return { id: generateId(), category: 'Skills', skills: ['New Skill'], skillsText: 'New Skill', levels: [3] };
   return null;
+};
+
+const collectionAsArray = (data: any, collection: string) => {
+  const raw = data?.[collection];
+  if (collection === 'languages') return coerceLanguagesForEdit(raw);
+  if (collection === 'interests') return coerceInterestsForEdit(raw);
+  if (collection === 'skills') return Array.isArray(raw) ? raw : [];
+  return Array.isArray(raw) ? [...raw] : [];
 };
 
 // PROPS AND REF INTERFACE
@@ -133,7 +153,7 @@ const FloatingAICard = ({ pointSuggestion, setPointSuggestion, handleFetchSugges
             <Wand2 size={18} className={pointSuggestion.loading ? 'animate-spin' : 'text-emerald-400'} />
           </div>
           <div>
-            <h4 className="text-[13px] font-bold text-white uppercase tracking-wider">ThinkHard AI</h4>
+            <h4 className="text-sm font-bold text-white uppercase tracking-wider">ThinkHard AI</h4>
             <p className="text-[10px] text-emerald-400/70 font-medium uppercase tracking-widest">{pointSuggestion.loading ? 'Processing...' : 'Contextual Suggestion'}</p>
           </div>
         </div>
@@ -179,7 +199,7 @@ const FloatingAICard = ({ pointSuggestion, setPointSuggestion, handleFetchSugges
                 type="button"
                 onClick={() =>
                   openPaymentModal({
-                    preselectedPlanKey: 'pro_monthly',
+                    preselectedPlanKey: 'focused_monthly',
                     triggerContext: 'ai-contextual-suggestion-limit',
                     returnUrl: window.location.href
                   })
@@ -196,7 +216,7 @@ const FloatingAICard = ({ pointSuggestion, setPointSuggestion, handleFetchSugges
           </div>
         ) : (
           <div className="relative group">
-            <div className={`text-[14px] leading-relaxed transition-all duration-300 ${activeTab === 'original' ? 'text-gray-400 italic' : 'text-gray-100'}`}>
+            <div className={`text-md leading-relaxed transition-all duration-300 ${activeTab === 'original' ? 'text-gray-400 italic' : 'text-gray-100'}`}>
               {activeTab === 'improvement' ? pointSuggestion.text : pointSuggestion.originalText}
             </div>
             {activeTab === 'improvement' && (
@@ -359,12 +379,38 @@ const templateLayoutFlows: Record<string, { global: string[]; columns: string[][
   'hybrid-split': { global: ['header', 'main'], columns: [['left'], ['right']] },
 };
 
+const bareCanvasZoneId = (zoneId?: string) => (zoneId || 'main').replace(/_page_\d+$/, '');
+
+const cloneZoneMap = (zones: Record<string, any[]>): Record<string, any[]> => {
+  const next: Record<string, any[]> = {};
+  Object.keys(zones || {}).forEach((key) => {
+    if (/_page_\d+$/.test(key)) return;
+    const seen = new Set<string>();
+    next[key] = (zones[key] || []).filter((block: any) => {
+      if (!block?.id || seen.has(block.id)) return false;
+      seen.add(block.id);
+      return true;
+    });
+  });
+  return next;
+};
+
+const pickAddTargetZone = (zones: Record<string, any[]>, templateType?: string) => {
+  const keys = Object.keys(zones || {});
+  if (templateType === '2-col' && keys.includes('left')) return 'left';
+  if (keys.includes('main')) return 'main';
+  return keys.find((key) => key !== 'header') || keys[0] || 'main';
+};
+
 const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ cvData, onDataChange, theme = 'dark', template, onTemplateChange, readOnly = false, cvId, jobId, role, moriChatMode = false, isGuestMode = false }, ref) => {
   const isInternalLayoutChange = React.useRef(false);
+  const layoutWriteLock = React.useRef(false);
+  const zonesRef = React.useRef<Record<string, any[]>>({});
   const { userData } = useUserData();
 
   const [activeTemplate, setActiveTemplate] = useState(cvData?.metadata?.canvasTemplate || template || CANVAS_TEMPLATES[0]);
   const [focusedNode, setFocusedNode] = useState<HTMLElement | null>(null);
+  const [focusedJsonPath, setFocusedJsonPath] = useState<string | null>(null);
   const [zones, setZones] = useState<Record<string, any[]>>(() => {
     const raw: Record<string, any[]> = cvData?.metadata?.canvasZones || {};
     // Deduplicate blocks within each zone to prevent React duplicate-key warnings
@@ -399,39 +445,29 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
   const [activeSidebar, setActiveSidebar] = useState<string | null>(null);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [replacingSnippet, setReplacingSnippet] = useState<any>(null);
+  zonesRef.current = zones;
   const [dragState, setDragState] = useState<any>({ isDragging: false, sourceZoneId: null, sourceIndex: null, overZoneId: null, overIndex: null });
   const [dragPreview, setDragPreview] = useState<any>(null);
   const dragDroppedRef = React.useRef(false); // track if a valid drop occurred
   const dragPreviewRef = React.useRef<any>(null); // stable ref to dragPreview for closure access
   const [scanning, setScanning] = useState(false);
-  const { state: enhancerState, dispatch: enhancerDispatch } = useResumeEnhancer();
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') {
-        e.preventDefault();
-        if (e.shiftKey) {
-          enhancerDispatch({ type: 'REDO' });
-        } else {
-          enhancerDispatch({ type: 'UNDO' });
-        }
-      } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'y') {
-        e.preventDefault();
-        enhancerDispatch({ type: 'REDO' });
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [enhancerDispatch]);
+  // Safe variant: falls back to a no-op when rendered outside ResumeEnhancerProvider
+  // (e.g. readOnly CV previews in the dashboard sidebar / global search).
+  const { state: enhancerState, dispatch: enhancerDispatch } = useResumeEnhancerSafe();
 
   // Keep dragPreviewRef in sync with dragPreview state for closure access
   useEffect(() => {
     dragPreviewRef.current = dragPreview;
   }, [dragPreview]);
 
-  // Use the new smart auto-scaling hook
+  // Use the new smart auto-scaling hook.
+  // documentPixelWidth now follows the user's page size (A4 ↔ Letter) so
+  // a Letter document stops being auto-fit against the fixed A4 width.
+  const activePageWidthPx = getPageDimensions(design.pageSize).widthPx;
+  const activePageHeightPx = getPageDimensions(design.pageSize).heightPx;
   const { containerRef: workspaceRef, zoom, setZoom, isAutoFit, triggerAutoFit } = useCanvasFit({
-    documentPixelWidth: 794, // Standard A4 width in pixels
+    documentPixelWidth: activePageWidthPx,
+    documentPixelHeight: activePageHeightPx,
     paddingPx: 64, // 32px padding per side
     maxScale: 2.0,
     minScale: 0.5
@@ -488,23 +524,16 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
   useEffect(() => {
     if (!cvData) return;
 
-    // 1. Sync zones if metadata changed externally
+    // 1. Sync zones if metadata changed externally (including undo/redo)
     if (cvData.metadata?.canvasZones) {
       const raw = cvData.metadata.canvasZones;
-      const currentZonesStr = JSON.stringify(zones);
-      const nextZonesStr = JSON.stringify(raw);
-      
-      if (currentZonesStr !== nextZonesStr) {
-        const deduped: Record<string, any[]> = {};
-        Object.keys(raw).forEach(zoneId => {
-          const seen = new Set<string>();
-          deduped[zoneId] = (raw[zoneId] || []).filter((block: any) => {
-            if (!block?.id || seen.has(block.id)) return false;
-            seen.add(block.id);
-            return true;
-          });
-        });
-        setZones(deduped);
+      const incoming = JSON.stringify(raw);
+      const current = JSON.stringify(zones);
+      const pendingWrite = JSON.stringify(zonesRef.current);
+      const isEchoOfLocalWrite = incoming === pendingWrite || incoming === current;
+
+      if (!isEchoOfLocalWrite) {
+        setZones(cloneZoneMap(raw));
       }
     }
 
@@ -535,6 +564,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
 
     // Use a small timeout to prevent too many updates, but keep data synced
     const timer = setTimeout(() => {
+      if (isInternalLayoutChange.current) return;
       const updatedMetadata = {
         ...cvData?.metadata,
         canvasDesign: design,
@@ -576,7 +606,11 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     const handleZoomIn = () => setZoom((z: number) => Math.min(200, z + 10));
     const handleZoomOut = () => setZoom((z: number) => Math.max(50, z - 10));
     const handleTogglePageSize = () => {
-      setDesign((d: any) => ({ ...d, pageSize: d.pageSize === 'A4' ? 'Letter' : 'A4' }));
+      setDesign((d: any) => {
+        const next = d?.pageSize === 'Letter' ? 'A4' : 'Letter';
+        window.dispatchEvent(new CustomEvent('cv-paper-size-changed', { detail: next }));
+        return { ...d, pageSize: next };
+      });
     };
 
     window.addEventListener('set-builder-sidebar', handleSetSidebar);
@@ -646,10 +680,11 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     pageSize: design.pageSize,
     pageMargin: design.pageMargin,
     sectionGap: design.sectionGap,
+    itemGap: design.itemGap || 12,
     viewportWidth: viewport.width,
     viewportHeight: viewport.height,
     devicePixelRatio: viewport.devicePixelRatio,
-  }), [design.pageMargin, design.pageSize, design.sectionGap, viewport.devicePixelRatio, viewport.height, viewport.width]);
+  }), [design.pageMargin, design.pageSize, design.sectionGap, design.itemGap, viewport.devicePixelRatio, viewport.height, viewport.width]);
 
   const canvasStyleVars = useMemo(() => ({
     width: 'var(--cv-page-width)',
@@ -663,9 +698,10 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     '--cv-page-height': layoutMetrics.pageHeightCss,
     '--cv-sidebar-bg': design.sidebarBgColor,
     '--cv-section-gap': `${layoutMetrics.sectionGapPx}px`,
+    '--cv-item-gap': `${layoutMetrics.itemGapPx}px`,
     '--cv-column-gap': `${Math.max(24, layoutMetrics.sectionGapPx + 12)}px`,
     '--cv-workspace-bg': isDarkUI ? '#1a1a1a' : '#f3f2ee',
-  } as React.CSSProperties), [design.accentColor, design.font, design.fontSize, design.sidebarBgColor, design.spacing, isDarkUI, layoutMetrics.pageGapPx, layoutMetrics.pageHeightCss, layoutMetrics.pageMarginPx, layoutMetrics.pageWidthCss, layoutMetrics.sectionGapPx]);
+  } as React.CSSProperties), [design.accentColor, design.font, design.fontSize, design.itemGap, design.sidebarBgColor, design.spacing, isDarkUI, layoutMetrics.itemGapPx, layoutMetrics.pageGapPx, layoutMetrics.pageHeightCss, layoutMetrics.pageMarginPx, layoutMetrics.pageWidthCss, layoutMetrics.sectionGapPx]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -793,7 +829,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
 
   useImperativeHandle(ref, () => ({
     openTemplateSelector: () => setIsTemplateModalOpen(true),
-    openAddSection: () => setReplacingSnippet({ zoneId: Object.keys(zones)[0] || 'main', isAdd: true }),
+    openAddSection: () => setReplacingSnippet({ zoneId: pickAddTargetZone(zones, activeTemplate?.type), isAdd: true }),
   }));
 
   const loadTemplate = (template: any) => {
@@ -806,6 +842,11 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
       });
     }
     setZones(initialZones);
+    setDesign((prev: any) => ({
+      ...prev,
+      sectionGap: template.preferredSectionGap ?? prev.sectionGap,
+      itemGap: template.preferredItemGap ?? prev.itemGap,
+    }));
     const portalTarget = typeof document !== 'undefined' && document.getElementById('builder-utility-panel-portal');
     if (!portalTarget) {
       setIsTemplateModalOpen(false);
@@ -815,7 +856,11 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
   };
 
   const handleDataChange = (path: string, value: any) => {
-    const updated = setNestedValue(cvData, path, value);
+    let updated = setNestedValue(ensureCanvasListShapes(cvData), path, value);
+    const fluencyMatch = path.match(/^(languages\.\d+)\.fluency$/);
+    if (fluencyMatch) {
+      updated = setNestedValue(updated, `${fluencyMatch[1]}.level`, fluencyToLevel(value));
+    }
     onDataChange(updated);
   };
 
@@ -827,6 +872,16 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
       onDataChange(updated);
     }
   }, [userData?.avatar, cvData?.basics?.avatar, onDataChange, readOnly, cvData]);
+
+  useEffect(() => {
+    if (readOnly) return;
+    const needsShape =
+      typeof cvData?.languages === 'string' ||
+      typeof cvData?.interests === 'string' ||
+      (cvData?.skills != null && !Array.isArray(cvData.skills));
+    if (!needsShape) return;
+    onDataChange(ensureCanvasListShapes(cvData));
+  }, [cvData, onDataChange, readOnly]);
 
   const getFocusedPath = useCallback(() => {
     if (!focusedNode) return null;
@@ -1026,16 +1081,17 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     handleDataChange(issue.path, fixedValue); setAiIssues(prev => prev.filter((i: any) => i.id !== issue.id)); setCvScore(prev => prev + issue.points); if (activeIssueId === issue.id) setActiveIssueId(null);
   };
 
-  const isSnippetDropAllowed = useCallback((targetZoneId: string, dragData: any) => {
+    const isSnippetDropAllowed = useCallback((targetZoneId: string, dragData: any) => {
     if (!dragData?.instance?.type) return false;
     const snippetCategory = SNIPPETS[dragData.instance.type]?.category;
-    const isSidebarZone = ['sidebar', 'left', 'right'].includes(targetZoneId);
+    const zone = bareCanvasZoneId(targetZoneId);
+    const isSidebarZone = ['sidebar', 'left', 'right'].includes(zone);
 
     if (snippetCategory === 'Header') {
-      return targetZoneId === 'header';
+      return zone === 'header';
     }
 
-    if (targetZoneId === 'header') {
+    if (zone === 'header') {
       return false;
     }
 
@@ -1047,124 +1103,166 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
   }, []);
 
   const handleZoneDrop = (targetZoneId: string, dragData: any, targetIndex: number) => {
-    dragDroppedRef.current = true; // mark as a successful drop
+    dragDroppedRef.current = true;
+    const destZone = bareCanvasZoneId(targetZoneId);
+    const sourceZone = bareCanvasZoneId(dragData?.zoneId);
     setZones(prev => {
-      if (!isSnippetDropAllowed(targetZoneId, dragData)) {
+      if (!isSnippetDropAllowed(destZone, dragData)) {
         return prev;
       }
-      const newZones = { ...prev }; if (!newZones[targetZoneId]) newZones[targetZoneId] = [];
-      const insertIndex = targetIndex !== undefined && targetIndex !== null ? targetIndex : newZones[targetZoneId].length;
+      const newZones = cloneZoneMap(prev);
+      if (!newZones[destZone]) newZones[destZone] = [];
+      const insertIndex = targetIndex !== undefined && targetIndex !== null ? targetIndex : newZones[destZone].length;
       if (dragData.source === 'canvas') {
-        const { zoneId: sourceZoneId, index: sourceIndex, instance } = dragData;
-        
-        // Safety check to ensure the source zone exists and has the index
-        if (!newZones[sourceZoneId] || !newZones[sourceZoneId][sourceIndex]) return prev;
-        
-        const sourceList = [...newZones[sourceZoneId]];
+        const { index: sourceIndex, instance } = dragData;
+        if (!newZones[sourceZone] || !newZones[sourceZone][sourceIndex]) return prev;
+
+        const sourceList = [...newZones[sourceZone]];
         sourceList.splice(sourceIndex, 1);
-        newZones[sourceZoneId] = sourceList;
-        
+        newZones[sourceZone] = sourceList;
+
         let finalInsertIndex = insertIndex;
-        if (sourceZoneId === targetZoneId && sourceIndex < insertIndex) finalInsertIndex -= 1;
-        
-        const targetList = sourceZoneId === targetZoneId ? sourceList : [...(newZones[targetZoneId] || [])];
-        targetList.splice(finalInsertIndex, 0, instance);
-        newZones[targetZoneId] = targetList;
+        if (sourceZone === destZone && sourceIndex < insertIndex) finalInsertIndex -= 1;
+
+        const targetList = sourceZone === destZone ? sourceList : [...(newZones[destZone] || [])];
+        targetList.splice(Math.max(0, Math.min(finalInsertIndex, targetList.length)), 0, instance);
+        newZones[destZone] = targetList;
       }
+      isInternalLayoutChange.current = true;
+      window.setTimeout(() => { isInternalLayoutChange.current = false; }, 800);
       return newZones;
     });
   };
 
-  const moveSnippet = (zoneId: string, index: number, dir: number) => { 
-    setZones(prev => { 
-      const newZones = { ...prev }; 
-      const list = [...(newZones[zoneId] || [])]; 
-      if (list.length === 0 || index + dir < 0 || index + dir >= list.length) return prev; 
-      const item = list[index]; 
-      list.splice(index, 1); 
-      list.splice(index + dir, 0, item); 
-      newZones[zoneId] = list; 
-      return newZones; 
-    }); 
+  const moveSnippet = (zoneId: string, index: number, dir: number) => {
+    const destZone = bareCanvasZoneId(zoneId);
+    setZones(prev => {
+      const newZones = cloneZoneMap(prev);
+      const list = [...(newZones[destZone] || [])];
+      if (list.length === 0 || index + dir < 0 || index + dir >= list.length) return prev;
+      const item = list[index];
+      list.splice(index, 1);
+      list.splice(index + dir, 0, item);
+      newZones[destZone] = list;
+      return newZones;
+    });
   };
-  
-  const removeSnippet = (zoneId: string, index: number) => { 
-    setZones(prev => { 
-      const newZones = { ...prev }; 
-      if (newZones[zoneId]) {
-        const list = [...newZones[zoneId]];
-        list.splice(index, 1);
-        newZones[zoneId] = list;
-      }
-      return newZones; 
-    }); 
+
+  const removeSnippet = (zoneId: string, index: number) => {
+    const destZone = bareCanvasZoneId(zoneId);
+    setZones(prev => {
+      const newZones = cloneZoneMap(prev);
+      if (!newZones[destZone]) return prev;
+      const list = [...newZones[destZone]];
+      list.splice(index, 1);
+      newZones[destZone] = list;
+      return newZones;
+    });
   };
 
   const moveEntry = (collection: string, index: number, dir: number) => {
-    const arr = [...(cvData[collection] || [])];
+    const arr = collectionAsArray(cvData, collection);
     if (index + dir < 0 || index + dir >= arr.length) return;
     const item = arr[index]; arr.splice(index, 1); arr.splice(index + dir, 0, item);
     onDataChange({ ...cvData, [collection]: arr });
   };
 
   const deleteEntry = (collection: string, index: number) => {
-    const arr = [...(cvData[collection] || [])]; arr.splice(index, 1);
+    const arr = collectionAsArray(cvData, collection);
+    arr.splice(index, 1);
     onDataChange({ ...cvData, [collection]: arr });
   };
 
-  const handleReplaceClick = (zoneId: string, index: number, currentType: string) => { const category = SNIPPETS[currentType]?.category; setReplacingSnippet({ zoneId, index, currentType, category, isAdd: false }); };
-  const handleAddClick = (zoneId: string, insertIndex?: number) => setReplacingSnippet({ zoneId, isAdd: true, insertIndex });
+  const handleReplaceClick = (zoneId: string, index: number, currentType: string) => {
+    const category = SNIPPETS[currentType]?.category;
+    setReplacingSnippet({ zoneId: bareCanvasZoneId(zoneId), index, currentType, category, isAdd: false });
+  };
+  const handleAddClick = (zoneId: string, insertIndex?: number) => {
+    setReplacingSnippet({ zoneId: bareCanvasZoneId(zoneId), isAdd: true, insertIndex });
+  };
 
   const handleAddListEntry = (type: string) => {
-    const l = getCollectionNameForCategory(type);
-    const updated = { ...cvData };
-    if (l === 'experience') updated.experience = [...(updated.experience || []), { id: generateId(), company: 'New Company', role: 'Job Title', date: 'Date', description: '<ul><li>Describe your responsibilities and achievements here.</li></ul>' }];
-    else if (l === 'education') updated.education = [...(updated.education || []), { id: generateId(), institution: 'Institution Name', degree: 'Degree', date: 'Date', description: 'Additional details.' }];
-    else if (l === 'projects') updated.projects = [...(updated.projects || []), { id: generateId(), name: 'Project Name', role: 'Role', date: 'Date', description: '<ul><li>Project details.</li></ul>' }];
-    else if (l === 'certifications') updated.certifications = [...(updated.certifications || []), { id: generateId(), name: 'Certification Name', issuer: 'Issuer', date: 'Date' }];
-    else if (l === 'awards') updated.awards = [...(updated.awards || []), { id: generateId(), name: 'Award Name', issuer: 'Issuer', date: 'Date' }];
-    else if (l === 'publications') updated.publications = [...(updated.publications || []), { id: generateId(), title: 'Publication Title', publisher: 'Publisher', date: 'Date', description: 'Brief summary.' }];
-    else if (l === 'volunteer') updated.volunteer = [...(updated.volunteer || []), { id: generateId(), organization: 'Org Name', role: 'Role', date: 'Date', description: '<ul><li>Duties here.</li></ul>' }];
-    else if (l === 'references') updated.references = [...(updated.references || []), { id: generateId(), name: 'Ref Name', role: 'Role', contact: 'Contact Info' }];
+    const collection = getCollectionNameForCategory(type);
+    const entry = createDefaultListEntry(type);
+    if (!collection || !entry) return;
+    const updated = ensureCanvasListShapes({ ...cvData });
+    if (collection === 'skills') {
+      updated.skills = appendSkillRecord(updated.skills);
+    } else {
+      updated[collection] = [...collectionAsArray(updated, collection), entry];
+    }
     onDataChange(updated);
   };
 
-  const executeReplaceOrAdd = (newType: string) => {
-    if (!replacingSnippet) return;
-    const snippetDef = SNIPPETS[newType];
-    setZones(prev => {
-      const newZones = { ...prev };
-      if (!newZones[replacingSnippet.zoneId]) {
-        newZones[replacingSnippet.zoneId] = [];
-      }
-      if (replacingSnippet.isAdd) {
-        if (typeof replacingSnippet.insertIndex === 'number') {
-          newZones[replacingSnippet.zoneId].splice(replacingSnippet.insertIndex, 0, { id: generateId(), type: newType });
-        } else {
-          newZones[replacingSnippet.zoneId].push({ id: generateId(), type: newType });
-        }
-      }
-      else {
-        newZones[replacingSnippet.zoneId][replacingSnippet.index] = { id: generateId(), type: newType };
-      }
-      return newZones;
+  const persistLayout = (nextZones: Record<string, any[]>, extraData: Record<string, any> = {}) => {
+    isInternalLayoutChange.current = true;
+    window.setTimeout(() => {
+      isInternalLayoutChange.current = false;
+      layoutWriteLock.current = false;
+    }, 800);
+    zonesRef.current = nextZones;
+    setZones(nextZones);
+    onDataChange({
+      ...cvData,
+      ...extraData,
+      metadata: {
+        ...cvData?.metadata,
+        canvasDesign: design,
+        canvasTemplate: activeTemplate,
+        canvasZones: nextZones,
+      },
     });
+  };
 
-    if (snippetDef && LIST_SNIPPET_CATEGORIES.includes(snippetDef.category)) {
-      const collectionName = getCollectionNameForCategory(snippetDef.category);
-      const collection = cvData?.[collectionName];
-      if (!Array.isArray(collection) || collection.length === 0) {
-        const defaultEntry = createDefaultListEntry(snippetDef.category);
-        if (defaultEntry) {
-          onDataChange({
-            ...cvData,
-            [collectionName]: [...(Array.isArray(collection) ? collection : []), defaultEntry],
-          });
-        }
+  const executeReplaceOrAdd = (newType: string) => {
+    if (!replacingSnippet || layoutWriteLock.current) return;
+    layoutWriteLock.current = true;
+
+    const addContext = replacingSnippet;
+    setReplacingSnippet(null);
+
+    const snippetDef = SNIPPETS[newType];
+    const targetZoneId = bareCanvasZoneId(addContext.zoneId);
+    const newBlock = { id: generateId(), type: newType };
+    const newZones = cloneZoneMap(zonesRef.current);
+    if (!newZones[targetZoneId]) newZones[targetZoneId] = [];
+    const list = [...newZones[targetZoneId]];
+    const allBlocks = Object.values(newZones).flat();
+
+    if (addContext.isAdd) {
+      const alreadyPresent = allBlocks.some((block) => block.type === newType || SNIPPETS[block.type]?.category === snippetDef?.category);
+      if (alreadyPresent) {
+        layoutWriteLock.current = false;
+        return;
       }
+      const insertAt = typeof addContext.insertIndex === 'number'
+        ? Math.max(0, Math.min(addContext.insertIndex, list.length))
+        : list.length;
+      list.splice(insertAt, 0, newBlock);
+    } else if (typeof addContext.index === 'number' && list[addContext.index]) {
+      list[addContext.index] = newBlock;
+    } else {
+      layoutWriteLock.current = false;
+      return;
     }
 
-    setReplacingSnippet(null);
+    newZones[targetZoneId] = list;
+
+    const collectionName = snippetDef && SEEDABLE_LIST_CATEGORIES.includes(snippetDef.category)
+      ? getCollectionNameForCategory(snippetDef.category)
+      : null;
+    const shaped = collectionName ? ensureCanvasListShapes(cvData) : cvData;
+    const collection = collectionName ? shaped?.[collectionName] : null;
+    const defaultEntry = collectionName && (!Array.isArray(collection) || collection.length === 0)
+      ? createDefaultListEntry(snippetDef.category)
+      : null;
+
+    persistLayout(
+      newZones,
+      defaultEntry && collectionName
+        ? { [collectionName]: [...(Array.isArray(collection) ? collection : []), defaultEntry] }
+        : {}
+    );
   };
 
   const photoInputRef = React.useRef<HTMLInputElement>(null);
@@ -1188,9 +1286,13 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     if (!docElement) return undefined;
 
     const measureAndPaginate = () => {
-      const scale = zoomRef.current / 100;
-      const isA4 = design.pageSize === 'A4';
-      const H = isA4 ? 1122.5 : 1056;
+      // Derive the actually-applied zoom scale from the DOM instead of trusting
+      // zoomRef, which can lag behind the current render (e.g. during wheel zoom
+      // re-renders). offsetWidth is transform-independent; the rect width is scaled.
+      const docHTMLEl = docElement as HTMLElement;
+      const appliedScale = docHTMLEl.getBoundingClientRect().width / Math.max(1, docHTMLEl.offsetWidth);
+      const scale = Number.isFinite(appliedScale) && appliedScale > 0 ? appliedScale : zoomRef.current / 100;
+      const H = layoutMetrics.pageHeightPx;
       const M = layoutMetrics.pageMarginPx || 40;
       const usableHeight = H - 2 * M;
 
@@ -1204,9 +1306,9 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
 
         // Find all list entry children inside this block
         const entryElements = Array.from(blockEl.querySelectorAll('.cv-item.cv-page-breakable')) as HTMLElement[];
+        const hasVisibleHeader = !!blockEl.querySelector('h3, .cv-heading');
 
         if (entryElements.length > 0) {
-          let sumEntriesHeight = 0;
           let sumEntryGaps = 0;
           entryElements.forEach((entryEl, idx) => {
             const entryId = entryEl.getAttribute('data-entry-id');
@@ -1214,7 +1316,6 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
               const h = entryEl.getBoundingClientRect().height / scale;
               const unitId = `${blockId}_entry_${entryId}`;
               unitHeights[unitId] = h;
-              sumEntriesHeight += h;
               
               if (idx > 0) {
                 const prevEl = entryElements[idx - 1];
@@ -1224,17 +1325,22 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
             }
           });
 
-          // Accurately measure header height as distance from block top to first entry top
-          const blockTop = blockEl.getBoundingClientRect().top;
-          const firstEntryTop = entryElements[0].getBoundingClientRect().top;
           const headerUnitId = `${blockId}_header`;
-          unitHeights[headerUnitId] = Math.max(0, (firstEntryTop - blockTop) / scale);
+          if (hasVisibleHeader) {
+            const blockTop = blockEl.getBoundingClientRect().top;
+            const firstEntryTop = entryElements[0].getBoundingClientRect().top;
+            unitHeights[headerUnitId] = Math.max(0, (firstEntryTop - blockTop) / scale);
+          } else if (unitHeights[headerUnitId] == null) {
+            unitHeights[headerUnitId] = 0;
+          }
           
-          // Store average entry gap for this block
-          unitHeights[`${blockId}_entryGap`] = entryElements.length > 1 ? (sumEntryGaps / (entryElements.length - 1)) : 16;
+          if (entryElements.length > 1) {
+            unitHeights[`${blockId}_entryGap`] = sumEntryGaps / (entryElements.length - 1);
+          } else if (unitHeights[`${blockId}_entryGap`] == null) {
+            unitHeights[`${blockId}_entryGap`] = 16;
+          }
         } else {
-          // Non-list block
-          unitHeights[blockId] = parentHeight;
+          unitHeights[blockId] = Math.max(unitHeights[blockId] || 0, parentHeight);
         }
       });
 
@@ -1248,9 +1354,132 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
       const layoutType = activeTemplate?.type || '1-col';
       const flow = templateLayoutFlows[layoutType] || { global: [], columns: [] };
       const globalZones = flow.global || [];
-      const globalSet = new Set(globalZones);
-      const columnZones = Object.keys(safeZones).filter(zoneId => !globalSet.has(zoneId));
+      const columnZones = (flow.columns || []).flat();
 
+      // ---- Hybrid One-Pager: unified single-width / split-row flow ----
+      // Sections flow top-to-bottom on each page as whole units (respecting each
+      // section's full height): full-width sections first, then paired 50/50 rows
+      // from left/right. A section that doesn't fit the remaining space moves to the
+      // next page whole, so a single-column section is never shown split across two
+      // pages with a split-row in between, and nothing overlaps.
+      if (layoutType === 'hybrid-split') {
+        const sectionInfo = (block: any): { isList: boolean; total: number; headerH: number; entryGap: number; entries: any[] } => {
+          const snippetDef = SNIPPETS[block.type];
+          const isList = !!(snippetDef && LIST_SNIPPET_CATEGORIES.includes(snippetDef.category));
+          if (isList) {
+            const collectionName = getCollectionNameForCategory(snippetDef.category);
+            const entries = cvData[collectionName] || [];
+            const headerH = unitHeights[`${block.id}_header`] || 40;
+            const entryGap = unitHeights[`${block.id}_entryGap`] || 16;
+            let total = headerH;
+            entries.forEach((e: any, i: number) => {
+              total += (i > 0 ? entryGap : 0) + (unitHeights[`${block.id}_entry_${e.id}`] || 80);
+            });
+            return { isList, total, headerH, entryGap, entries };
+          }
+          return { isList, total: unitHeights[block.id] || 80, headerH: 0, entryGap: 0, entries: [] };
+        };
+
+        const assignSectionWhole = (block: any, info: any, pageNum: number) => {
+          if (info.isList) {
+            newAssignments[`${block.id}_header`] = pageNum;
+            info.entries.forEach((e: any) => {
+              newAssignments[`${block.id}_entry_${e.id}`] = pageNum;
+            });
+          } else {
+            newAssignments[block.id] = pageNum;
+          }
+        };
+
+        const fullWidthBlocks: any[] = [];
+        ['header', 'main'].forEach((z: string) => {
+          (safeZones[z] || []).forEach((b: any) => fullWidthBlocks.push(b));
+        });
+        const rowLeftBlocks = safeZones['left'] || [];
+        const rowRightBlocks = safeZones['right'] || [];
+        const maxRows = Math.max(rowLeftBlocks.length, rowRightBlocks.length);
+
+        let page = 0;
+        let used = 0;
+
+        const placeFullWidth = (block: any) => {
+          const info = sectionInfo(block);
+          if (used > 0 && used + sectionGap + info.total > usableHeight) {
+            page++;
+            used = 0;
+            if (page > maxPageNum) maxPageNum = page;
+          }
+          if (info.total > usableHeight) {
+            // Section taller than a full page: paginate its entries across pages.
+            if (info.isList) {
+              newAssignments[`${block.id}_header`] = page;
+              used = info.headerH;
+              info.entries.forEach((e: any, i: number) => {
+                const eh = unitHeights[`${block.id}_entry_${e.id}`] || 80;
+                if (used > 0 && used + (i > 0 ? info.entryGap : 0) + eh > usableHeight) {
+                  page++;
+                  used = 0;
+                  if (page > maxPageNum) maxPageNum = page;
+                }
+                newAssignments[`${block.id}_entry_${e.id}`] = page;
+                used += (i > 0 ? info.entryGap : 0) + eh;
+              });
+            } else {
+              newAssignments[block.id] = page;
+            }
+            return;
+          }
+          assignSectionWhole(block, info, page);
+          used += (used > 0 ? sectionGap : 0) + info.total;
+        };
+
+        const placeRow = (left: any, right: any) => {
+          const linfo = left ? sectionInfo(left) : null;
+          const rinfo = right ? sectionInfo(right) : null;
+          const rowH = Math.max(linfo ? linfo.total : 0, rinfo ? rinfo.total : 0, 1);
+          if (used > 0 && used + sectionGap + rowH > usableHeight) {
+            page++;
+            used = 0;
+            if (page > maxPageNum) maxPageNum = page;
+          }
+          if (rowH > usableHeight) {
+            // Rare: a half-width section taller than a full page. Paginate each column
+            // independently so nothing overflow; subsequent rows start on a fresh page.
+            [left, right].forEach((b: any) => {
+              if (!b) return;
+              const info = sectionInfo(b);
+              used = 0;
+              if (info.isList) {
+                newAssignments[`${b.id}_header`] = page;
+                used = info.headerH;
+                info.entries.forEach((e: any, i: number) => {
+                  const eh = unitHeights[`${b.id}_entry_${e.id}`] || 80;
+                  if (used > 0 && used + (i > 0 ? info.entryGap : 0) + eh > usableHeight) {
+                    page++;
+                    used = 0;
+                    if (page > maxPageNum) maxPageNum = page;
+                  }
+                  newAssignments[`${b.id}_entry_${e.id}`] = page;
+                  used += (i > 0 ? info.entryGap : 0) + eh;
+                });
+              } else {
+                newAssignments[b.id] = page;
+                if (page > maxPageNum) maxPageNum = page;
+              }
+            });
+            used = 0;
+            return;
+          }
+          if (left) assignSectionWhole(left, linfo!, page);
+          if (right) assignSectionWhole(right, rinfo!, page);
+          used += (used > 0 ? sectionGap : 0) + rowH;
+        };
+
+        fullWidthBlocks.forEach(placeFullWidth);
+        for (let i = 0; i < maxRows; i++) {
+          placeRow(rowLeftBlocks[i], rowRightBlocks[i]);
+        }
+      } else {
       // 2a. First, paginate global stacked zones sequentially
       const globalHeightOnPage: Record<number, number> = {};
       let currentGlobalPage = 0;
@@ -1382,6 +1611,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
           }
         });
       });
+      }
 
       // 3. Set total pages count state only if changed
       const nextTotalPages = maxPageNum + 1;
@@ -1438,7 +1668,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
       clearTimeout(debounceTimer);
       observer.disconnect();
     };
-  }, [cvData.metadata, zones, design.pageSize, activeTemplate.id, layoutMetrics.pageMarginPx, layoutMetrics.sectionGapPx]);
+  }, [cvData, zones, design.pageSize, activeTemplate.id, layoutMetrics.pageMarginPx, layoutMetrics.pageHeightPx, layoutMetrics.sectionGapPx]);
 
   const handleTogglePhoto = () => {
     if (!cvData.basics?.showAvatar) {
@@ -1675,18 +1905,22 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
                     {renderPageZone('main', pageIdx, 'w-full min-w-0')}
                   </div>
                 );
-              case '2-col': 
+              case '2-col': {
+                const headerOnPage = getPageBlocks('header', pageIdx).length > 0;
                 return (
-                  <div className="h-full w-full flex flex-col" style={{ padding: 'var(--cv-page-margin)' }}>
-                    {pageIdx === 0 && safeZones['header'] && (
-                      <div className="mb-4">{renderPageZone('header', pageIdx, 'w-full min-w-0')}</div>
+                  <div className="h-full w-full flex flex-col">
+                    {headerOnPage && (
+                      <div className="w-full min-w-0" style={{ paddingTop: 'var(--cv-page-margin)', paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 0, marginBottom: 0 }}>
+                        {renderPageZone('header', pageIdx, 'w-full min-w-0')}
+                      </div>
                     )}
-                    <div className="flex flex-1 items-start gap-[var(--cv-column-gap)]">
+                    <div className="flex flex-1 items-start gap-[var(--cv-column-gap)]" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)', paddingTop: headerOnPage ? 'var(--cv-section-gap, 16px)' : 'var(--cv-page-margin)' }}>
                       <div className="flex-1 min-w-0">{renderPageZone('left', pageIdx, 'h-max')}</div>
                       <div className="flex-1 min-w-0">{renderPageZone('right', pageIdx, 'h-max')}</div>
                     </div>
                   </div>
                 );
+              }
               case 'sidebar-left': 
                 return (
                   <div className="h-full w-full flex relative" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingTop: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)' }}>
@@ -1726,13 +1960,13 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
               case 'top-sidebar-left': 
                 return (
                   <div className="h-full w-full flex flex-col relative" style={{ minHeight: 'var(--cv-page-height)' }}>
-                    {pageIdx === 0 && safeZones['header'] && (
+                    {pageIdx === 0 && getPageBlocks('header', pageIdx).length > 0 && (
                       <div className="relative z-10" style={{ paddingTop: 'var(--cv-page-margin)', paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 0 }}>
                         {renderPageZone('header', pageIdx, 'w-full min-w-0')}
                       </div>
                     )}
-                    <div className="flex flex-1 relative z-10 items-start gap-[var(--cv-column-gap)]" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)', paddingTop: pageIdx === 0 && safeZones['header'] ? 'var(--cv-section-gap, 16px)' : 'var(--cv-page-margin)' }}>
-                      <div className="absolute left-[var(--cv-page-margin)] top-[var(--cv-section-gap,16px)] bottom-0 rounded-lg z-[-1]" style={{ backgroundColor: 'var(--cv-sidebar-bg)', width: 'calc(32% - 16px)' }}></div>
+                    <div className="flex flex-1 relative z-10 items-start gap-[var(--cv-column-gap)]" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)', paddingTop: pageIdx === 0 && getPageBlocks('header', pageIdx).length > 0 ? 'var(--cv-section-gap, 16px)' : 'var(--cv-page-margin)' }}>
+                      <div className="absolute left-[var(--cv-page-margin)] top-0 bottom-0 rounded-lg z-[-1]" style={{ backgroundColor: 'var(--cv-sidebar-bg)', width: 'calc(32% - 16px)' }}></div>
                       <div className={`w-[32%] min-w-0 ${isDarkSidebar ? 'cv-dark-sidebar text-white' : ''}`} style={{ paddingRight: '5mm' }}>
                         {renderPageZone('sidebar', pageIdx, 'h-max', isDarkSidebar)}
                       </div>
@@ -1745,39 +1979,50 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
               case 'top-sidebar-right': 
                 return (
                   <div className="h-full w-full flex flex-col relative" style={{ minHeight: 'var(--cv-page-height)' }}>
-                    {pageIdx === 0 && safeZones['header'] && (
+                    {pageIdx === 0 && getPageBlocks('header', pageIdx).length > 0 && (
                       <div className="relative z-10" style={{ paddingTop: 'var(--cv-page-margin)', paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 0 }}>
                         {renderPageZone('header', pageIdx, 'w-full min-w-0')}
                       </div>
                     )}
-                    <div className="flex flex-1 relative z-10 items-start gap-[var(--cv-column-gap)]" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)', paddingTop: pageIdx === 0 && safeZones['header'] ? 'var(--cv-section-gap, 16px)' : 'var(--cv-page-margin)' }}>
+                    <div className="flex flex-1 relative z-10 items-start gap-[var(--cv-column-gap)]" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)', paddingTop: pageIdx === 0 && getPageBlocks('header', pageIdx).length > 0 ? 'var(--cv-section-gap, 16px)' : 'var(--cv-page-margin)' }}>
                       <div className="w-[68%] min-w-0">
                         {renderPageZone('main', pageIdx, 'h-max')}
                       </div>
-                      <div className="absolute right-[var(--cv-page-margin)] top-[var(--cv-section-gap,16px)] bottom-0 rounded-lg z-[-1]" style={{ backgroundColor: 'var(--cv-sidebar-bg)', width: 'calc(32% - 16px)' }}></div>
+                      <div className="absolute right-[var(--cv-page-margin)] top-0 bottom-0 rounded-lg z-[-1]" style={{ backgroundColor: 'var(--cv-sidebar-bg)', width: 'calc(32% - 16px)' }}></div>
                       <div className={`w-[32%] min-w-0 ${isDarkSidebar ? 'cv-dark-sidebar text-white' : ''}`} style={{ paddingLeft: '5mm' }}>
                         {renderPageZone('sidebar', pageIdx, 'h-max', isDarkSidebar)}
                       </div>
                     </div>
                   </div>
                 );
-              case 'hybrid-split': 
+              case 'hybrid-split': {
+                // Render only the zone wrappers that actually have content on this page so the
+                // DOM spacing matches the unified pagination model (which budgets gaps only
+                // *between* content groups and reserves one page-margin at the top of a page).
+                const headerOnPage = getPageBlocks('header', pageIdx).length > 0;
+                const mainOnPage = getPageBlocks('main', pageIdx).length > 0;
+                const rowsOnPage = getPageBlocks('left', pageIdx).length > 0 || getPageBlocks('right', pageIdx).length > 0;
                 return (
                   <div className="h-full w-full flex flex-col" style={{ minHeight: 'var(--cv-page-height)' }}>
-                    {pageIdx === 0 && safeZones['header'] && (
+                    {headerOnPage && (
                       <div style={{ paddingTop: 'var(--cv-page-margin)', paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 0 }}>
                         {renderPageZone('header', pageIdx, 'w-full min-w-0')}
                       </div>
                     )}
-                    <div style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingTop: pageIdx === 0 && safeZones['header'] ? 'var(--cv-section-gap, 16px)' : 'var(--cv-page-margin)', paddingBottom: 0 }}>
-                      {renderPageZone('main', pageIdx, 'w-full min-w-0')}
-                    </div>
-                    <div className="flex flex-1 items-start gap-[var(--cv-column-gap)]" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)', paddingTop: 'var(--cv-section-gap, 16px)' }}>
-                      <div className="flex-1 min-w-0">{renderPageZone('left', pageIdx, 'h-max')}</div>
-                      <div className="flex-1 min-w-0">{renderPageZone('right', pageIdx, 'h-max')}</div>
-                    </div>
+                    {mainOnPage && (
+                      <div style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingTop: headerOnPage ? 'var(--cv-section-gap, 16px)' : 'var(--cv-page-margin)', paddingBottom: 0 }}>
+                        {renderPageZone('main', pageIdx, 'w-full min-w-0')}
+                      </div>
+                    )}
+                    {rowsOnPage && (
+                      <div className="flex flex-1 items-start gap-[var(--cv-column-gap)]" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)', paddingTop: mainOnPage || headerOnPage ? 'var(--cv-section-gap, 16px)' : 'var(--cv-page-margin)' }}>
+                        <div className="flex-1 min-w-0">{renderPageZone('left', pageIdx, 'h-max')}</div>
+                        <div className="flex-1 min-w-0">{renderPageZone('right', pageIdx, 'h-max')}</div>
+                      </div>
+                    )}
                   </div>
                 );
+              }
               default: return <div>Layout not found</div>;
             }
           };
@@ -1809,6 +2054,8 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
         setDesign,
         handleDataChange,
         setFocusedNode,
+        setFocusedJsonPath,
+        focusedJsonPath,
         pageAssignments,
         aiIssues: [...aiIssues, ...grammarIssues],
         activeIssueId,
@@ -1838,7 +2085,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
         }
       }}
     >
-      <div className={`h-full w-full flex font-sans overflow-hidden transition-colors duration-300 ${readOnly ? '' : bgApp}`}>
+      <div className={`h-full w-full flex font-sans overflow-hidden transition-colors duration-300 ${readOnly ? 'cv-readonly' : bgApp}`}>
         {/* Hidden file input for avatar upload */}
         {!readOnly && (
           <input
@@ -1868,7 +2115,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
               {renderCanvasLayout()}
             </div>
           ) : (
-            <div key={templateAnimKey} className="transform origin-top transition-transform h-max pb-4 text-gray-900" style={{ transform: `scale(${zoom / 100})` }}>
+            <div key={templateAnimKey} className="transform origin-top h-max pb-4 text-gray-900" style={{ transform: `scale(${zoom / 100})` }}>
               <div className="cv-document-wrapper relative" style={canvasStyleVars}>
                 {renderCanvasLayout()}
               </div>
@@ -1969,11 +2216,11 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
           if (!portalTarget) return null;
           const panelContent = (
             <div className="flex-grow flex flex-col h-full overflow-hidden">
-              <div className={`p-5 border-b flex items-center justify-between shrink-0 ${bgNav}`}>
+              <div className={`shrink-0 ${bgNav}`}>
+                <UtilityPanelPill activePanel="design" />
+                <div className={`lg:hidden p-5 border-b flex items-center justify-between ${bgNav}`}>
                 <h3 className={`font-bold flex items-center gap-2 ${textPrimary}`}><Palette size={18} className={brandGreen}/> Global Design</h3>
-                <div className="flex items-center gap-2">
-                  <UtilityPanelPill activePanel="design" />
-                  <button onClick={() => {
+                <button onClick={() => {
                     setActiveSidebar(null);
                     window.dispatchEvent(new CustomEvent('close-utility-panel'));
                   }} className={textMuted}><X size={18}/></button>
@@ -1981,14 +2228,21 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
               </div>
               <div className="p-5 flex flex-col gap-6 overflow-y-auto custom-scrollbar flex-1">
                 <div><label className={`text-small font-bold uppercase tracking-widest mb-2 block ${textMuted}`}>Typography</label><div className="grid grid-cols-2 gap-2">{['Inter', 'Merriweather', 'Roboto Mono', 'Playfair Display'].map(f => (<button key={f} onClick={() => setDesign({...design, font: f})} className={`py-2 px-1 text-small rounded border transition-colors ${design.font === f ? 'bg-emerald-500/20 border-emerald-500 ' + brandGreen : (isDarkUI ? 'bg-[#222] border-[#333] text-gray-300' : 'bg-white border-gray-200 text-gray-700')}`} style={{ fontFamily: f }}>{f.split(' ')[0]}</button>))}</div></div>
-                <div><label className={`text-small font-bold uppercase tracking-widest mb-2 flex justify-between ${textMuted}`}><span>Font Size</span><span className={brandGreen}>{design.fontSize}px</span></label><input type="range" min="10" max="16" step="0.5" value={design.fontSize} onChange={(e) => setDesign({...design, fontSize: parseFloat(e.target.value)})} className="w-full accent-emerald-500" /></div>
-                <div><label className={`text-small font-bold uppercase tracking-widest mb-2 flex justify-between ${textMuted}`}><span>Line Spacing</span><span className={brandGreen}>{design.spacing.toFixed(1)}x</span></label><input type="range" min="0.5" max="2" step="0.1" value={design.spacing} onChange={(e) => setDesign({...design, spacing: parseFloat(e.target.value)})} className="w-full accent-emerald-500" /></div>
-                <div><label className={`text-small font-bold uppercase tracking-widest mb-2 flex justify-between ${textMuted}`}><span>Page Margin</span><span className={brandGreen}>{design.pageMargin}px</span></label><input type="range" min="0" max="80" step="1" value={design.pageMargin} onChange={(e) => setDesign({...design, pageMargin: parseInt(e.target.value)})} className="w-full accent-emerald-500" /></div>
-                <div><label className={`text-small font-bold uppercase tracking-widest mb-2 block ${textMuted}`}>Accent Color</label><div className="flex gap-3 flex-wrap">{['#7EE787', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#1f2937', '#000000', '#ffffff'].map(c => (<button key={c} onClick={() => setDesign({...design, accentColor: c})} className={`w-7 h-7 rounded-full border-2 transition-transform ${design.accentColor === c ? 'border-white scale-125 shadow-lg' : 'border-transparent hover:scale-110'}`} style={{ backgroundColor: c }} />))}</div></div>
-                <div><label className={`text-small font-bold uppercase tracking-widest mb-2 block ${textMuted}`}>Sidebar Background</label><div className="flex gap-3 flex-wrap">{['#ffffff', '#f8fafc', '#f3f4f6', '#fafaf9', '#f0fdf4', '#f0f9ff', '#fff1f2', '#1e293b', '#0f172a', '#111827', '#1a0f0f', '#0d233a', '#0c2511', '#2a1428'].map(c => (<button key={c} onClick={() => setDesign({...design, sidebarBgColor: c})} className={`w-7 h-7 rounded-full border-2 transition-transform ${design.sidebarBgColor === c ? 'border-emerald-500 scale-125 shadow-lg' : 'border-gray-300 dark:border-gray-600 hover:scale-110'}`} style={{ backgroundColor: c }} />))}</div></div>
-                <div><label className={`text-small font-bold uppercase tracking-widest mb-2 flex justify-between ${textMuted}`}><span>Section Gap</span><span className={brandGreen}>{design.sectionGap}px</span></label><input type="range" min="0" max="60" step="1" value={design.sectionGap} onChange={(e) => setDesign({...design, sectionGap: parseInt(e.target.value)})} className="w-full accent-emerald-500" /></div>
-                <div className="mt-4"><label className={`flex items-center justify-between cursor-pointer`}><span className={`text-small font-bold uppercase tracking-widest ${textMuted}`}>Header Icons</span><div className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors ${design.showHeaderIcons ? brandGreenBg : (isDarkUI ? 'bg-[#333]' : 'bg-gray-300')}`} onClick={() => setDesign({...design, showHeaderIcons: !design.showHeaderIcons})}><span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${design.showHeaderIcons ? 'translate-x-6' : 'translate-x-1'}`} /></div></label></div>
-                <div className="mt-4"><label className={`flex items-center justify-between cursor-pointer`}><span className={`text-small font-bold uppercase tracking-widest ${textMuted}`}>Contact Icons</span><div className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors ${design.showContactIcons ? brandGreenBg : (isDarkUI ? 'bg-[#333]' : 'bg-gray-300')}`} onClick={() => setDesign({...design, showContactIcons: !design.showContactIcons})}><span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${design.showContactIcons ? 'translate-x-6' : 'translate-x-1'}`} /></div></label></div>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-5">
+                  <div><label className={`text-small font-bold uppercase tracking-widest mb-2 flex justify-between ${textMuted}`}><span>Font Size</span><span className={brandGreen}>{design.fontSize}px</span></label><input type="range" min="10" max="16" step="0.5" value={design.fontSize} onChange={(e) => setDesign({...design, fontSize: parseFloat(e.target.value)})} className="w-full accent-emerald-500" /></div>
+                  <div><label className={`text-small font-bold uppercase tracking-widest mb-2 flex justify-between ${textMuted}`}><span>Line Spacing</span><span className={brandGreen}>{design.spacing.toFixed(1)}x</span></label><input type="range" min="0.5" max="2" step="0.1" value={design.spacing} onChange={(e) => setDesign({...design, spacing: parseFloat(e.target.value)})} className="w-full accent-emerald-500" /></div>
+                  <div><label className={`text-small font-bold uppercase tracking-widest mb-2 flex justify-between ${textMuted}`}><span>Page Margin</span><span className={brandGreen}>{design.pageMargin}px</span></label><input type="range" min="0" max="80" step="1" value={design.pageMargin} onChange={(e) => setDesign({...design, pageMargin: parseInt(e.target.value)})} className="w-full accent-emerald-500" /></div>
+                  <div><label className={`text-small font-bold uppercase tracking-widest mb-2 flex justify-between ${textMuted}`}><span>Section Gap</span><span className={brandGreen}>{design.sectionGap}px</span></label><input type="range" min="0" max="60" step="1" value={design.sectionGap} onChange={(e) => setDesign({...design, sectionGap: parseInt(e.target.value)})} className="w-full accent-emerald-500" /></div>
+                  <div><label className={`text-small font-bold uppercase tracking-widest mb-2 flex justify-between ${textMuted}`}><span>Item Gap</span><span className={brandGreen}>{design.itemGap || 12}px</span></label><input type="range" min="0" max="24" step="1" value={design.itemGap || 12} onChange={(e) => setDesign({...design, itemGap: parseInt(e.target.value)})} className="w-full accent-emerald-500" /></div>
+                </div>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-5">
+                  <div><label className={`text-small font-bold uppercase tracking-widest mb-2 block ${textMuted}`}>Accent Color</label><div className="flex gap-2 flex-wrap">{['#7EE787', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#1f2937', '#000000', '#ffffff'].map(c => (<button key={c} onClick={() => setDesign({...design, accentColor: c})} className={`w-6 h-6 rounded-full border-2 transition-transform ${design.accentColor === c ? 'border-white scale-125 shadow-lg' : 'border-transparent hover:scale-110'}`} style={{ backgroundColor: c }} />))}</div></div>
+                  <div><label className={`text-small font-bold uppercase tracking-widest mb-2 block ${textMuted}`}>Sidebar Background</label><div className="flex gap-2 flex-wrap">{['#ffffff', '#f8fafc', '#f3f4f6', '#fafaf9', '#f0fdf4', '#f0f9ff', '#fff1f2', '#1e293b', '#0f172a', '#111827', '#1a0f0f', '#0d233a', '#0c2511', '#2a1428'].map(c => (<button key={c} onClick={() => setDesign({...design, sidebarBgColor: c})} className={`w-6 h-6 rounded-full border-2 transition-transform ${design.sidebarBgColor === c ? 'border-emerald-500 scale-125 shadow-lg' : 'border-gray-300 dark:border-gray-600 hover:scale-110'}`} style={{ backgroundColor: c }} />))}</div></div>
+                </div>
+                <div className="grid grid-cols-2 gap-x-4">
+                  <label className={`flex items-center justify-between cursor-pointer gap-2`}><span className={`text-small font-bold uppercase tracking-widest ${textMuted}`}>Header Icons</span><div className={`relative inline-flex items-center h-6 rounded-full w-11 shrink-0 transition-colors ${design.showHeaderIcons ? brandGreenBg : (isDarkUI ? 'bg-[#333]' : 'bg-gray-300')}`} onClick={() => setDesign({...design, showHeaderIcons: !design.showHeaderIcons})}><span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${design.showHeaderIcons ? 'translate-x-6' : 'translate-x-1'}`} /></div></label>
+                  <label className={`flex items-center justify-between cursor-pointer gap-2`}><span className={`text-small font-bold uppercase tracking-widest ${textMuted}`}>Contact Icons</span><div className={`relative inline-flex items-center h-6 rounded-full w-11 shrink-0 transition-colors ${design.showContactIcons ? brandGreenBg : (isDarkUI ? 'bg-[#333]' : 'bg-gray-300')}`} onClick={() => setDesign({...design, showContactIcons: !design.showContactIcons})}><span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${design.showContactIcons ? 'translate-x-6' : 'translate-x-1'}`} /></div></label>
+                </div>
                 {['sidebar-left', 'sidebar-left-dark', 'sidebar-right', 'top-sidebar-left', 'top-sidebar-right'].includes(activeTemplate.type) && (
                   <div className="mt-4 border-t border-gray-200 dark:border-white/10 pt-4">
                     <label className={`flex items-center justify-between cursor-pointer`}>
@@ -2064,28 +2318,20 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
           if (!portalTarget) return null;
           const panelContent = (
             <div className="flex-grow flex flex-col h-full overflow-hidden">
-              <div className={`p-5 border-b flex items-center justify-between shrink-0 ${bgNav}`}>
+              <div className={`shrink-0 ${bgNav}`}>
+                <UtilityPanelPill activePanel="json" />
+                <div className={`lg:hidden p-5 border-b flex items-center justify-between ${bgNav}`}>
                 <h3 className={`font-bold flex items-center gap-2 ${textPrimary}`}>
                   <FileJson size={18} className={brandGreen} /> Raw JSON
                 </h3>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={handleCopyJsonTemplate}
-                    title="Copy JSON Template"
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-small font-semibold transition-all ${brandGreenBg} hover:opacity-90`}
-                  >
-                    <Copy size={13} />
-                    Copy JSON Template
-                  </button>
-                  <UtilityPanelPill activePanel="json" />
-                  <button onClick={() => {
+                <button onClick={() => {
                     setActiveSidebar(null);
                     window.dispatchEvent(new CustomEvent('close-utility-panel'));
                   }} className={textMuted}><X size={18} /></button>
                 </div>
               </div>
               <div className="flex-1 overflow-hidden relative flex flex-col">
-                <JSONSidebarViewer data={cvData} focusedPath={focusedNode ? focusedNode.getAttribute('data-path') : null} onChange={(newData) => onDataChange(newData)} rainbowHighlight={true} />
+                <JSONSidebarViewer data={cvData} focusedPath={focusedJsonPath || (focusedNode ? focusedNode.getAttribute('data-path') : null)} onChange={(newData) => onDataChange(newData)} onCopyTemplate={handleCopyJsonTemplate} />
               </div>
             </div>
           );
@@ -2239,16 +2485,16 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
         if (!portalTarget) return null;
         const content = (
           <div className="flex-grow flex flex-col h-full overflow-hidden">
-            <div className={`p-5 border-b flex justify-between items-center shrink-0 ${bgNav}`}>
+            <div className={`shrink-0 ${bgNav}`}>
+              <UtilityPanelPill activePanel="layout" />
+              <div className={`lg:hidden p-5 border-b flex justify-between items-center ${bgNav}`}>
               <div className="flex items-center gap-3">
                 <LayoutTemplate size={18} className="text-emerald-500"/>
                 <div>
                   <h3 className={`font-black text-xs uppercase tracking-wider ${textPrimary}`}>Template Library</h3>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <UtilityPanelPill activePanel="layout" />
-                <button onClick={() => {
+              <button onClick={() => {
                   setIsTemplateModalOpen(false);
                   window.dispatchEvent(new CustomEvent('close-utility-panel'));
                 }} className={`p-1.5 rounded-full ${btnSecondary}`}>
@@ -2256,41 +2502,15 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
                 </button>
               </div>
             </div>
-            <div className={`p-4 overflow-y-auto flex-1 custom-scrollbar ${isDarkUI ? 'bg-[#0a0a0a]' : 'bg-gray-100'}`}>
-              <div className="space-y-6">
-                {TEMPLATE_CATEGORIES.map(cat => {
-                  const catTemplates = CANVAS_TEMPLATES.filter(tpl => cat.types.includes(tpl.type));
-                  if (catTemplates.length === 0) return null;
-                  return (
-                    <div key={cat.id} className="space-y-3">
-                      <div className={`py-1.5 flex items-center gap-2 border-b ${isDarkUI ? 'border-[#222] text-white' : 'border-gray-200 text-gray-900'}`}>
-                        <span className="text-emerald-500">{cat.icon}</span>
-                        <h2 className={`${cat.id === 'hybrid' ? 'text-[9px]' : 'text-xs'} font-bold uppercase tracking-wider`}>{cat.name}</h2>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        {catTemplates.map(tpl => {
-                          const isActive = activeTemplate.id === tpl.id;
-                          return (
-                            <div key={tpl.id} onClick={() => loadTemplate(tpl)} className={`group relative rounded-xl border-2 cursor-pointer transition-all overflow-hidden flex flex-col hover:shadow-lg ${bgPanel} ${isActive ? 'border-emerald-500 ring-2 ring-emerald-500/20' : 'border-transparent'}`}>
-                              <div className={`p-2 flex justify-between items-center z-10 shrink-0 ${bgNav}`}>
-                                <div className={`font-bold text-xs ${textPrimary}`}>{tpl.name}</div>
-                                {isActive && <span className="bg-emerald-500/20 text-emerald-500 text-[9px] px-1.5 py-0.5 rounded font-bold">ACTIVE</span>}
-                              </div>
-                              <div className={`relative w-full flex justify-center items-center p-0 overflow-hidden pointer-events-none ${isDarkUI ? 'bg-[#141414]' : 'bg-gray-50'}`}>
-                                <div className="relative w-[177px] h-[250px] bg-white shadow-md overflow-hidden rounded-sm">
-                                  <div className="absolute top-0 left-0 w-[794px] h-[1123px] origin-top-left text-gray-900" style={{ transform: 'scale(0.2229)' }}>
-                                    <StaticLayoutRenderer template={tpl} cvData={cvData} ReadOnlyWrapper={ReadOnlyWrapper} design={design} />
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+            <div className={`p-3 overflow-y-auto flex-1 custom-scrollbar ${isDarkUI ? 'bg-[#0a0a0a]' : 'bg-white'}`}>
+              <TemplateLibraryGrid
+                compact
+                activeTemplateId={activeTemplate.id}
+                onSelect={loadTemplate}
+                cvData={cvData}
+                ReadOnlyWrapper={ReadOnlyWrapper}
+                design={design}
+              />
             </div>
           </div>
         );
@@ -2300,30 +2520,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
 
       {/* REPLACE / ADD SNIPPET MODAL */}
       {replacingSnippet && (() => {
-        const getPreviewData = (realData: any) => {
-          return {
-            ...realData,
-            basics: {
-              name: 'Your Name',
-              title: 'Job Title',
-              summary: 'Professional summary...',
-              ...realData?.basics,
-            },
-            experience: realData?.experience || [],
-            education: realData?.education || [],
-            projects: realData?.projects || [],
-            skills: realData?.skills || {},
-            certifications: realData?.certifications || [],
-            awards: realData?.awards || [],
-            publications: realData?.publications || [],
-            volunteer: realData?.volunteer || [],
-            references: realData?.references || [],
-            languages: realData?.languages || '',
-            interests: realData?.interests || '',
-          };
-        };
-
-        const previewData = getPreviewData(cvData);
+        const previewData = getCanvasSnippetPreviewData(cvData);
         const currentCategories = Object.values(zones).flat().map((z: any) => SNIPPETS[z.type]?.category).filter(Boolean);
 
         // Calculate Recommended Family
@@ -2382,8 +2579,8 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
               className="fixed inset-0 bg-black/40 backdrop-blur-xs z-[110] transition-opacity duration-300"
               onClick={() => setReplacingSnippet(null)}
             />
-            {/* Right Side Panel */}
-            <div className={`fixed top-0 right-0 h-full w-full max-w-[420px] shadow-2xl z-[120] flex flex-col border-l transition-all duration-300 ease-in-out ${isDarkUI ? 'bg-[#111111] border-[#2a2a2a]' : 'bg-white border-gray-200'}`}>
+            {/* Right Side Panel - follows app sidebar pattern: margin all around + rounded corners, two-column layout */}
+            <div className={`fixed right-3 top-3 bottom-3 h-auto w-full max-w-[760px] shadow-2xl z-[120] flex flex-col rounded-2xl overflow-hidden transition-all duration-300 ease-in-out ${isDarkUI ? 'bg-[#111111] border border-[#2a2a2a]' : 'bg-white border border-gray-200'}`}>
               <div className={`p-4 border-b flex justify-between items-center ${isDarkUI ? 'bg-[#111] border-[#2a2a2a]' : 'bg-white border-gray-200'}`}>
                 <h3 className={`font-bold text-body flex items-center gap-2 ${textPrimary}`}>{replacingSnippet.isAdd ? <PlusCircle size={18} className="text-emerald-500"/> : <RefreshCw size={18} className="text-blue-500"/>}{replacingSnippet.isAdd ? 'Add Snippet' : `Replace ${replacingSnippet.category}`}</h3>
                 <button onClick={() => setReplacingSnippet(null)} className={`p-1.5 rounded-full ${isDarkUI ? 'bg-[#222] text-gray-300 hover:bg-[#333]' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'} transition-colors`}><X size={18}/></button>
@@ -2407,7 +2604,8 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
                   )}
                 </div>
               )}
-              <div className={`p-4 overflow-y-auto flex-1 custom-scrollbar space-y-4 ${isDarkUI ? 'bg-[#0a0a0a]' : 'bg-gray-50'}`}>
+              <div className={`p-4 overflow-y-auto flex-1 custom-scrollbar ${isDarkUI ? 'bg-[#0a0a0a]' : 'bg-gray-50'}`}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {sortedSnippets.map(snippet => {
                   const targetZoneId = replacingSnippet.zoneId;
                   const isTargetDark = false; // Always light theme for snippet previews
@@ -2420,33 +2618,31 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
                   const isATS = ATS_SNIPPETS.includes(snippet.id);
                   
                   const isHeader = snippet.category === 'Header';
-                  const scale = isHeader ? 0.5 : 0.4;
-                  const wrapperWidth = isSidebar ? '250%' : (isHeader ? '200%' : '250%');
+                  const scale = isHeader ? 0.36 : 0.40;
 
                   return (
-                    <div key={snippet.id} onClick={() => executeReplaceOrAdd(snippet.id)} className={`group relative rounded-xl border-2 cursor-pointer transition-all overflow-hidden flex flex-col hover:shadow-lg ${isDarkUI ? 'bg-[#111]' : 'bg-white'} ${isCurrent ? 'border-emerald-500 ring-2 ring-emerald-500/20' : (isRecommended && !isCurrent ? 'border-amber-400 ring-2 ring-amber-400/20' : (isDarkUI ? 'border-[#222] hover:border-gray-500' : 'border-gray-200 hover:border-gray-300'))}`}>
-                      <div className={`p-3 flex flex-col gap-1.5 z-10 ${isDarkUI ? 'bg-[#111]' : 'bg-white'} border-b ${isDarkUI ? 'border-[#222]' : 'border-gray-100'}`}>
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <div className={`font-bold text-sm ${textPrimary}`}>{snippet.name}</div>
-                            <div className={`text-[9px] mt-0.5 font-semibold uppercase tracking-wider ${textMuted}`}>{snippet.category}</div>
+                    <div key={snippet.id} onClick={(e) => { e.stopPropagation(); executeReplaceOrAdd(snippet.id); }} className={`group relative rounded-xl border-2 cursor-pointer transition-all overflow-hidden flex flex-col hover:shadow-lg min-w-0 ${isDarkUI ? 'bg-[#111]' : 'bg-white'} ${isCurrent ? 'border-emerald-500 ring-2 ring-emerald-500/20' : (isRecommended && !isCurrent ? 'border-amber-400 ring-2 ring-amber-400/20' : (isDarkUI ? 'border-[#222] hover:border-gray-500' : 'border-gray-200 hover:border-gray-300'))}`}>
+                      <div className={`p-2.5 flex flex-col gap-1 z-10 ${isDarkUI ? 'bg-[#111]' : 'bg-white'} border-b ${isDarkUI ? 'border-[#222]' : 'border-gray-100'}`}>
+                        <div className="flex justify-between items-start gap-1">
+                          <div className="min-w-0">
+                            <div className={`font-bold text-xs truncate ${textPrimary}`}>{snippet.name}</div>
+                            <div className={`text-[8px] mt-0.5 font-semibold uppercase tracking-wider ${textMuted}`}>{snippet.category}</div>
                           </div>
-                          <div className="flex flex-col gap-1 items-end">
-                            {isCurrent && <span className="bg-emerald-500/20 text-emerald-500 text-[8px] px-1.5 py-0.5 rounded font-bold tracking-widest uppercase">CURRENT</span>}
-                            {isRecommended && !isCurrent && <span className="bg-amber-400/20 text-amber-600 text-[8px] px-1.5 py-0.5 rounded font-bold tracking-widest uppercase flex items-center gap-0.5"><Sparkles size={8}/> RECOMMEND</span>}
-                            {isATS && <span className="bg-blue-500/10 text-blue-600 border border-blue-500/20 text-[8px] px-1.5 py-0.5 rounded font-bold tracking-widest uppercase flex items-center gap-0.5"><Check size={8}/> ATS</span>}
+                          <div className="flex flex-col gap-1 items-end shrink-0">
+                            {isCurrent && <span className="bg-emerald-500/20 text-emerald-500 text-[7px] px-1.5 py-0.5 rounded font-bold tracking-widest uppercase">CURRENT</span>}
+                            {isRecommended && !isCurrent && <span className="bg-amber-400/20 text-amber-600 text-[7px] px-1.5 py-0.5 rounded font-bold tracking-widest uppercase flex items-center gap-0.5"><Sparkles size={7}/> RECOMMEND</span>}
+                            {isATS && <span className="bg-blue-500/10 text-blue-600 border border-blue-500/20 text-[7px] px-1.5 py-0.5 rounded font-bold tracking-widest uppercase flex items-center gap-0.5"><Check size={7}/> ATS</span>}
                           </div>
                         </div>
                       </div>
                       
-                      <div className="relative w-full aspect-[16/9] overflow-hidden bg-[#f9f9f9]" style={{ '--cv-font': design.font, '--cv-base-size': `${design.fontSize}px`, '--cv-spacing': design.spacing, '--cv-accent': design.accentColor, '--cv-sidebar-bg': '#ffffff', '--cv-section-gap': `${design.sectionGap}px` } as React.CSSProperties}>
-                        <div className="absolute top-0 left-0 origin-top-left pointer-events-none p-4 opacity-95 group-hover:opacity-100 transition-opacity cv-document text-gray-900" style={{ width: wrapperWidth, transform: `scale(${scale})` }}>
-                          <snippet.render data={previewData} Editable={ReadOnlyWrapper} zoneId={targetZoneId} isDark={isTargetDark} design={design} showIcons={true} layoutZones={zones} Title={({ titleKey }: any) => <TitleRenderer isDark={isTargetDark}><ReadOnlyWrapper path={`sectionTitles.${titleKey}`} nowrap /></TitleRenderer>} moveEntry={() => {}} deleteEntry={() => {}} readOnly={true} />
-                        </div>
-                      </div>
+                      <SnippetPreviewFrame scale={scale} design={design}>
+                        <snippet.render data={previewData} Editable={ReadOnlyWrapper} zoneId={isSidebar ? 'sidebar' : 'main'} isDark={isTargetDark} design={design} showIcons={true} layoutZones={zones} Title={({ titleKey }: any) => <TitleRenderer isDark={isTargetDark} showIcons={design?.showHeaderIcons} titleKey={titleKey}><ReadOnlyWrapper path={`sectionTitles.${titleKey}`} nowrap /></TitleRenderer>} moveEntry={() => {}} deleteEntry={() => {}} readOnly={true} />
+                      </SnippetPreviewFrame>
                     </div>
                   );
                 })}
+                </div>
               </div>
             </div>
           </>
@@ -2478,7 +2674,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
           word-wrap: break-word;
           white-space: normal;
         }
-        .cv-document * {
+        #cv-document-root.cv-document * {
           min-width: 0;
           max-width: 100%;
           box-sizing: border-box;
@@ -2560,7 +2756,8 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
           overflow: hidden;
           font-size: min(calc(var(--cv-base-size) * 0.85), 2cqw) !important;
         }
-        .cv-body { font-size: inherit; line-height: calc(1.6 * var(--cv-spacing)); }
+        .cv-body { font-size: inherit; line-height: calc(1.6 * var(--cv-spacing)); overflow-wrap: anywhere; word-break: break-word; hyphens: auto; }
+        .cv-document .cv-body, .cv-document .cv-prose p { text-align: justify; }
         .cv-document p, .cv-document ul, .cv-document li { font-size: inherit !important; line-height: inherit !important; margin: 0; padding: 0; }
         .cv-document ul { list-style-type: disc !important; padding-left: 1.25rem !important; }
         .cv-document li { display: list-item !important; }
@@ -2571,12 +2768,33 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
         .cv-prose ul { list-style-type: disc !important; padding-left: 1.25rem !important; margin-top: calc(0.25em * var(--cv-spacing)) !important; margin-bottom: calc(0.25em * var(--cv-spacing)) !important; }
         .cv-prose li { display: list-item !important; margin-bottom: calc(0.15em * var(--cv-spacing)) !important; }
         [contenteditable]:empty:before { content: attr(placeholder); color: #9ca3af; pointer-events: none; display: block; }
+        /* Read-only previews: hide edit affordances and empty-field placeholders */
+        .cv-readonly .entry-controls { display: none !important; }
+        .cv-readonly [contenteditable]:empty:before { content: '' !important; display: none !important; }
+        .cv-readonly .group-hover\/entry\:opacity-100 { opacity: 0 !important; }
         .cv-accent-text { color: var(--cv-accent) !important; }
         .cv-accent-bg { background-color: var(--cv-accent) !important; }
         .cv-accent-border { border-color: var(--cv-accent) !important; }
-        .cv-document .cv-gap-sm { gap: calc(8px * var(--cv-spacing)) !important; }
-        .cv-document .cv-gap-md { gap: calc(12px * var(--cv-spacing)) !important; }
-        .cv-document .cv-gap-lg { gap: calc(16px * var(--cv-spacing)) !important; }
+        .cv-document .cv-gap-sm { gap: calc(var(--cv-item-gap, 12px) * 0.67 * var(--cv-spacing)) !important; }
+        .cv-document .cv-gap-md { gap: calc(var(--cv-item-gap, 12px) * var(--cv-spacing)) !important; }
+        .cv-document .cv-gap-lg { gap: calc(var(--cv-item-gap, 12px) * 1.33 * var(--cv-spacing)) !important; }
+
+        /* ─── UNIFIED SPACING RHYTHM ────────────────────────────────
+         * The snippet registry mixes fixed Tailwind utilities (pb-5, mb-4, p-4…)
+         * with the tokenised cv-gap-* classes, so changing design.spacing moved
+         * list items but not headers/boxes → inconsistent padding around snippet
+         * items. These overrides route every structural spacing through the ONE
+         * --cv-spacing token (== 1 by default, so no visual change), keeping the
+         * whole page in sync. Scoped to the CV canvas root so the cover-letter
+         * document (a different renderer) is untouched. */
+        #cv-document-root.cv-document .pb-3 { padding-bottom: calc(12px * var(--cv-spacing)) !important; }
+        #cv-document-root.cv-document .pb-4 { padding-bottom: calc(16px * var(--cv-spacing)) !important; }
+        #cv-document-root.cv-document .pb-5 { padding-bottom: calc(20px * var(--cv-spacing)) !important; }
+        #cv-document-root.cv-document .pb-6 { padding-bottom: calc(24px * var(--cv-spacing)) !important; }
+        #cv-document-root.cv-document .mb-4 { margin-bottom: calc(16px * var(--cv-spacing)) !important; }
+        #cv-document-root.cv-document .p-4 { padding: calc(16px * var(--cv-spacing)) !important; }
+        #cv-document-root.cv-document .p-5 { padding: calc(20px * var(--cv-spacing)) !important; }
+        #cv-document-root.cv-document .p-6 { padding: calc(24px * var(--cv-spacing)) !important; }
         
         /* Layout formats */
         .cv-format-bullets-only .cv-prose p {

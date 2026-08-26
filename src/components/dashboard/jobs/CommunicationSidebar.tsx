@@ -6,7 +6,7 @@ import {
   X, Mail, RefreshCw, AlertTriangle, Send, Sparkles, Check, CheckSquare, 
   Paperclip, Users, FileText, BarChart2, Plus, Calendar, HelpCircle, 
   ChevronRight, ChevronDown, CheckCircle, Trash2, ArrowRight, ExternalLink,
-  MoreVertical, Smile, ThumbsUp
+  MoreVertical, Smile, ThumbsUp, Loader2
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import EmailConnectModal from './EmailConnectModal';
@@ -432,18 +432,60 @@ export const CommunicationSidebar: React.FC<CommunicationSidebarProps> = ({
     return `Application initiated for ${job.jobTitle || job.title} at ${job.company || 'Google'}. Last message was ${isOutbound ? 'sent by you' : 'received from ' + (lastMsg.senderName || lastMsg.senderEmail)} on ${new Date(lastMsg.receivedAt).toLocaleDateString()}. Email communication auto-synced and linked to pipeline status.`;
   };
 
+  const getNextAction = (): string | null => {
+    if (messages.length === 0) return null;
+    const lastInbound = [...messages].reverse().find(m => m.direction === 'inbound');
+    if (!lastInbound) return null;
+    const cls = lastInbound.stageClassification;
+    if (cls === 'INTERVIEW_SCHEDULED') return 'Interview scheduled — prepare with Interview Prep';
+    if (cls === 'SCREENING_REQUESTED') return 'Respond to screening request';
+    if (cls === 'OFFER_RECEIVED') return 'Review and respond to offer';
+    if (cls === 'REJECTION_RECEIVED') return 'Consider follow-up or archive this application';
+    return `Follow up on last message from ${new Date(lastInbound.receivedAt).toLocaleDateString()}`;
+  };
+
+  const getReplyLatency = (): string => {
+    if (messages.length < 2) return '-';
+    const pairs: number[] = [];
+    for (let i = 1; i < messages.length; i++) {
+      if (messages[i].direction === 'outbound' && messages[i - 1].direction === 'inbound') {
+        const inboundTime = new Date(messages[i - 1].receivedAt).getTime();
+        const outboundTime = new Date(messages[i].receivedAt).getTime();
+        pairs.push(outboundTime - inboundTime);
+      }
+    }
+    if (pairs.length === 0) return '-';
+    const avgMs = pairs.reduce((a, b) => a + b, 0) / pairs.length;
+    const hours = avgMs / (1000 * 60 * 60);
+    if (hours < 1) return `${Math.round(hours * 60)}m`;
+    if (hours < 24) return `${hours.toFixed(1)} hrs`;
+    return `${Math.round(hours / 24)}d`;
+  };
+
+  const getSentiment = (): { label: string; color: string } => {
+    if (messages.length === 0) return { label: 'N/A', color: 'text-gray-500' };
+    const positiveWords = ['thank', 'great', 'excited', 'congratulations', 'offer', 'approved', 'accepted', 'love', 'excellent', 'perfect'];
+    const negativeWords = ['unfortunately', 'regret', 'declined', 'rejected', 'not selected', 'closed', 'unable', 'sorry'];
+    const allText = messages.map(m => m.bodySnippet?.toLowerCase() || '').join(' ');
+    const posCount = positiveWords.filter(w => allText.includes(w)).length;
+    const negCount = negativeWords.filter(w => allText.includes(w)).length;
+    if (posCount > negCount) return { label: 'Positive', color: 'text-emerald-500' };
+    if (negCount > posCount) return { label: 'Needs Attention', color: 'text-red-500' };
+    return { label: 'Neutral', color: 'text-gray-500' };
+  };
+
   if (!isOpen) return null;
 
   return (
     <div 
       ref={sidebarRef}
-      className="fixed right-0 top-0 h-screen w-[450px] bg-white dark:bg-[#141810] shadow-2xl z-[9999] border-l border-gray-200 dark:border-white/10 flex flex-col"
+      className="fixed right-3 top-3 bottom-3 h-auto w-[450px] bg-white dark:bg-[#141810] shadow-2xl z-[9999] flex flex-col rounded-2xl overflow-hidden"
     >
       {/* Sidebar Header */}
       <div className="p-4 border-b border-gray-200 dark:border-white/10 flex items-center justify-between bg-white dark:bg-[#191f15] flex-shrink-0">
         <div className="flex items-center gap-2">
           <Mail className="h-5 w-5 text-emerald-500" />
-          <h3 className="font-bold text-gray-900 dark:text-white text-body">Communication</h3>
+          <h3 className="font-bold text-gray-900 dark:text-white text-sm">Communication</h3>
         </div>
         <button 
           onClick={onClose}
@@ -670,7 +712,7 @@ export const CommunicationSidebar: React.FC<CommunicationSidebarProps> = ({
                         setModalInitialTab('email');
                         setIsEmailConnectModalOpen(true);
                       }}
-                      className="w-full bg-[#80FF00] hover:brightness-95 text-black font-semibold py-2.5 rounded-xl text-small flex items-center justify-center gap-1.5 transition duration-150 shadow-sm"
+                      className="w-full bg-[#013f2e] hover:brightness-95 text-black font-semibold py-2.5 rounded-xl text-small flex items-center justify-center gap-1.5 transition duration-150 shadow-sm"
                     >
                       <Plus className="h-3.5 w-3.5" />
                       Connect Automated Integration
@@ -784,15 +826,6 @@ export const CommunicationSidebar: React.FC<CommunicationSidebarProps> = ({
                                 {msg.bodySnippet}
                               </p>
 
-                              {/* Reactions block (mockup 👍 1 for Confirmation message) */}
-                              {msg.subject === 'Interview Confirmation' && (
-                                <div className="mt-3">
-                                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-gray-100 dark:bg-gray-800 text-[11px] font-bold text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-white/5 select-none w-fit transition hover:scale-105 cursor-pointer">
-                                    👍 1
-                                  </span>
-                                </div>
-                              )}
-
                               {/* Attachment chips */}
                               {msg.hasAttachments && msg.attachmentNames && msg.attachmentNames.length > 0 && (
                                 <div className="mt-3 flex flex-wrap gap-2">
@@ -897,14 +930,38 @@ export const CommunicationSidebar: React.FC<CommunicationSidebarProps> = ({
 
                       {showAiDropdown && (
                         <div className="absolute right-0 bottom-8 z-[1010] w-[200px] bg-white dark:bg-[#181f15] border border-gray-200 dark:border-white/10 rounded-xl shadow-xl p-1.5 flex flex-col gap-0.5 text-small text-gray-700 dark:text-gray-300 font-medium">
-                          <button onClick={() => handleAiAssistDraft('initial_outreach')} className="p-2 text-left hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg">Draft Cold Outreach</button>
-                          <button onClick={() => handleAiAssistDraft('thank_you')} className="p-2 text-left hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg">Post-Interview Thank You</button>
-                          <button onClick={() => handleAiAssistDraft('follow_up')} className="p-2 text-left hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg">Follow Up (No Response)</button>
-                          <button onClick={() => handleAiAssistDraft('reschedule')} className="p-2 text-left hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg">Request Reschedule</button>
-                          <button onClick={() => handleAiAssistDraft('extension')} className="p-2 text-left hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg">Request Extension</button>
-                          <button onClick={() => handleAiAssistDraft('negotiation')} className="p-2 text-left hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg">Negotiate Salary Package</button>
-                          <button onClick={() => handleAiAssistDraft('acceptance')} className="p-2 text-left hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg">Formal Acceptance</button>
-                          <button onClick={() => handleAiAssistDraft('decline')} className="p-2 text-left hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg">Politely Decline Offer</button>
+                          <button onClick={() => handleAiAssistDraft('initial_outreach')} disabled={isGeneratingAi} className="p-2 text-left hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                            {isGeneratingAi && <Loader2 size={12} className="animate-spin" />}
+                            Draft Cold Outreach
+                          </button>
+                          <button onClick={() => handleAiAssistDraft('thank_you')} disabled={isGeneratingAi} className="p-2 text-left hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                            {isGeneratingAi && <Loader2 size={12} className="animate-spin" />}
+                            Post-Interview Thank You
+                          </button>
+                          <button onClick={() => handleAiAssistDraft('follow_up')} disabled={isGeneratingAi} className="p-2 text-left hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                            {isGeneratingAi && <Loader2 size={12} className="animate-spin" />}
+                            Follow Up (No Response)
+                          </button>
+                          <button onClick={() => handleAiAssistDraft('reschedule')} disabled={isGeneratingAi} className="p-2 text-left hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                            {isGeneratingAi && <Loader2 size={12} className="animate-spin" />}
+                            Request Reschedule
+                          </button>
+                          <button onClick={() => handleAiAssistDraft('extension')} disabled={isGeneratingAi} className="p-2 text-left hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                            {isGeneratingAi && <Loader2 size={12} className="animate-spin" />}
+                            Request Extension
+                          </button>
+                          <button onClick={() => handleAiAssistDraft('negotiation')} disabled={isGeneratingAi} className="p-2 text-left hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                            {isGeneratingAi && <Loader2 size={12} className="animate-spin" />}
+                            Negotiate Salary Package
+                          </button>
+                          <button onClick={() => handleAiAssistDraft('acceptance')} disabled={isGeneratingAi} className="p-2 text-left hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                            {isGeneratingAi && <Loader2 size={12} className="animate-spin" />}
+                            Formal Acceptance
+                          </button>
+                          <button onClick={() => handleAiAssistDraft('decline')} disabled={isGeneratingAi} className="p-2 text-left hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                            {isGeneratingAi && <Loader2 size={12} className="animate-spin" />}
+                            Politely Decline Offer
+                          </button>
                           <button onClick={() => setShowCustomPromptInput(true)} className="p-2 text-left text-emerald-600 dark:text-emerald-400 font-bold hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg animate-pulse">Custom Prompt draft...</button>
                         </div>
                       )}
@@ -928,7 +985,7 @@ export const CommunicationSidebar: React.FC<CommunicationSidebarProps> = ({
                       </button>
                       <button 
                         onClick={() => setShowCustomPromptInput(true)} 
-                        className="text-gray-400 hover:text-[#80FF00] p-1 hover:scale-110 transition-transform"
+                        className="text-gray-400 hover:text-[#013f2e] p-1 hover:scale-110 transition-transform"
                       >
                         <Sparkles size={16} />
                       </button>
@@ -943,7 +1000,7 @@ export const CommunicationSidebar: React.FC<CommunicationSidebarProps> = ({
                     <button 
                       onClick={handleSendReply}
                       disabled={isSending || !replyText.trim()}
-                      className="h-11 w-11 shrink-0 bg-[#80FF00] hover:brightness-95 text-black rounded-2xl flex items-center justify-center transition hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="h-11 w-11 shrink-0 bg-[#013f2e] hover:brightness-95 text-black rounded-2xl flex items-center justify-center transition hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isSending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                     </button>
@@ -1038,10 +1095,10 @@ export const CommunicationSidebar: React.FC<CommunicationSidebarProps> = ({
                   <p className="text-gray-600 dark:text-gray-300">
                     {getInsightsSummary()}
                   </p>
-                  {messages.length > 0 && (
+                  {getNextAction() && (
                     <div className="flex flex-col gap-1 text-[10px] font-bold bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 p-2.5 rounded-xl border border-yellow-500/10 animate-pulse">
                       <span className="uppercase tracking-wider">Recommended Next Action:</span>
-                      <span className="font-semibold text-small mt-0.5">Attend scheduled interview on Thursday, June 27 at 2:00 PM PT.</span>
+                      <span className="font-semibold text-small mt-0.5">{getNextAction()}</span>
                     </div>
                   )}
                 </div>
@@ -1052,11 +1109,11 @@ export const CommunicationSidebar: React.FC<CommunicationSidebarProps> = ({
                   <div className="grid grid-cols-2 gap-3 text-center">
                     <div className="bg-gray-50 dark:bg-[#181f15] p-3 rounded-xl border border-gray-200 dark:border-white/5 hover:scale-105 transition-transform duration-200">
                       <p className="text-[10px] text-gray-500 uppercase tracking-wide">Reply Latency</p>
-                      <p className="text-h3 font-bold text-gray-900 dark:text-white mt-1">4.5 hrs</p>
+                      <p className="text-h3 font-bold text-gray-900 dark:text-white mt-1">{getReplyLatency()}</p>
                     </div>
                     <div className="bg-gray-50 dark:bg-[#181f15] p-3 rounded-xl border border-gray-200 dark:border-white/5 hover:scale-105 transition-transform duration-200">
                       <p className="text-[10px] text-gray-500 uppercase tracking-wide">Recruiter Sentiment</p>
-                      <p className="text-h3 font-bold text-emerald-500 mt-1">Positive</p>
+                      <p className={`text-h3 font-bold mt-1 ${getSentiment().color}`}>{getSentiment().label}</p>
                     </div>
                   </div>
                 </div>

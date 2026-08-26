@@ -20,9 +20,9 @@ const THEME = {
   card: '#20291d', // Card background
   text: '#ffffff',
   textMuted: 'rgba(255, 255, 255, 0.6)',
-  accent: '#81ff00', // Neon Lime (from landing page)
-  accentSoft: 'rgba(129, 255, 0, 0.1)',
-  border: 'rgba(129, 255, 0, 0.1)',
+  accent: '#013f2e', // Neon Lime (from landing page)
+  accentSoft: 'rgba(1, 63, 46, 0.1)',
+  border: 'rgba(1, 63, 46, 0.1)',
   fontPrimary: "'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif"
 };
 
@@ -84,7 +84,7 @@ export const BASE_TEMPLATE = (content: string, title: string) => `
 <body>
   <div class="wrapper">
     <div class="header">
-      <img src="{{appUrl}}/images/logo.png" alt="CVCircle" class="logo" />
+      <img src="{{appUrl}}/images/logo.png" alt="AIResume" class="logo" />
     </div>
     <div class="main">
       <div class="content">
@@ -98,7 +98,7 @@ export const BASE_TEMPLATE = (content: string, title: string) => `
           <a href="{{unsubscribeUrl}}">Unsubscribe</a>
         </div>
         <p class="footer-text">
-          &copy; ${new Date().getFullYear()} CVCircle. Helping you land your dream job.<br/>
+          &copy; ${new Date().getFullYear()} AIResume. Helping you land your dream job.<br/>
           London, United Kingdom
         </p>
       </div>
@@ -165,7 +165,7 @@ const templates: CampaignTemplate[] = [
     { 
       tag: 'Welcome', 
       title: 'You’re in!', 
-      desc: 'Thanks for joining CVCircle. We’re here to help you get hired faster.',
+      desc: 'Thanks for joining AIResume. We’re here to help you get hired faster.',
       img: 'herobanner_opt.webp'
     },
     [
@@ -174,19 +174,19 @@ const templates: CampaignTemplate[] = [
         content: `
           <div class="founder-letter">
             <p style="color: ${THEME.text};">Hi there,</p>
-            <p style="color: ${THEME.text};">I started CVCircle because I know how frustrating job hunting can be. The constant rewriting, the black-hole of applications, and the uncertainty are exhausting.</p>
+            <p style="color: ${THEME.text};">I started AIResume because I know how frustrating job hunting can be. The constant rewriting, the black-hole of applications, and the uncertainty are exhausting.</p>
             <p style="color: ${THEME.text};">Our goal is simple: to give you the tools that actually work. Whether it’s our AI builder, the LinkedIn optimizer, or the interview coach, we’ve built everything to give you a real edge.</p>
             <p style="color: ${THEME.text};">I’m glad you’re here. Let’s get you that next role.</p>
             <div class="founder-sig">
               <span class="founder-name">Amarjot Lohia</span>
-              <span class="founder-title">Founder & CEO, CVCircle</span>
+              <span class="founder-title">Founder & CEO, AIResume</span>
             </div>
           </div>
         `
       }
     ],
     { text: 'Go to Dashboard', link: '/dashboard' },
-    { subjectTemplate: 'Welcome to CVCircle (Message from our CEO)' }
+    { subjectTemplate: 'Welcome to AIResume (Message from our CEO)' }
   ),
 
   // 2. CHROME EXTENSION
@@ -406,7 +406,7 @@ const templates: CampaignTemplate[] = [
       }
     ],
     { text: 'Claim 50% Discount', link: '/pricing' },
-    { subjectTemplate: 'Special: 50% off CVCircle Starter Yearly' }
+    { subjectTemplate: 'Special: 50% off AIResume Starter Yearly' }
   ),
 
   // 13. APP TRACKER
@@ -514,7 +514,7 @@ const templates: CampaignTemplate[] = [
     {
       tag: 'Invite Friends',
       title: 'Sharing is winning',
-      desc: 'Invite a friend to CVCircle and we’ll give you both a free Day Pass.',
+      desc: 'Invite a friend to AIResume and we’ll give you both a free Day Pass.',
       img: 'global_opportunities.webp'
     },
     [
@@ -541,7 +541,7 @@ const templates: CampaignTemplate[] = [
       {
         title: 'Share your story',
         content: `
-          <p>If CVCircle helped you get hired, we’d love to hear about it. Reply to this email or click below to tell us your success story.</p>
+          <p>If AIResume helped you get hired, we’d love to hear about it. Reply to this email or click below to tell us your success story.</p>
         `
       }
     ],
@@ -554,7 +554,7 @@ const templates: CampaignTemplate[] = [
     {
       tag: 'Update',
       title: 'A new way to get hired',
-      desc: 'We just added a major new tool to CVCircle. Come check it out!',
+      desc: 'We just added a major new tool to AIResume. Come check it out!',
       img: 'career_insights.webp'
     },
     [
@@ -606,7 +606,7 @@ const templates: CampaignTemplate[] = [
       }
     ],
     { text: 'See the Deals', link: '/pricing' },
-    { subjectTemplate: 'Final Call: 50% Off CVCircle ⌛' }
+    { subjectTemplate: 'Final Call: 50% Off AIResume ⌛' }
   ),
 
   // 23. MID-YEAR REVIEW
@@ -654,7 +654,7 @@ const templates: CampaignTemplate[] = [
     {
       tag: 'Your Opinion',
       title: 'How can we do better?',
-      desc: 'We’re building CVCircle for you, so we want to hear what you think.',
+      desc: 'We’re building AIResume for you, so we want to hear what you think.',
       img: 'herobanner.webp'
     },
     [

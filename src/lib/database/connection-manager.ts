@@ -184,6 +184,9 @@ class DatabaseConnectionManager {
    * Internal connection method
    */
   private async connect(): Promise<typeof mongoose> {
+    // TLS is only required for Atlas/cloud URIs (mongodb+srv://). Forcing ssl:true
+    // on a local mongodb:// connection fails because local mongod has TLS disabled.
+    const isTlsUri = this.config.uri.startsWith('mongodb+srv://');
     const options: ConnectOptions = {
       bufferCommands: true,
       maxPoolSize: 10,
@@ -192,8 +195,9 @@ class DatabaseConnectionManager {
       socketTimeoutMS: 45000,
       connectTimeoutMS: 30000,
       retryWrites: true,
-      ssl: true,
-      tlsAllowInvalidCertificates: false,
+      ...(isTlsUri
+        ? { ssl: true, tlsAllowInvalidCertificates: false }
+        : { ssl: false }),
       ...this.config.options,
     };
 

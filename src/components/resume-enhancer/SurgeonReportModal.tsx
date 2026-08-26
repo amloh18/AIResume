@@ -5,7 +5,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { AlertTriangle, CheckCircle2, ChevronDown, ChevronUp, Sparkles, X, Eye, EyeOff, TrendingUp, Users, CheckCircle } from 'lucide-react';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
-import CVPreviewContent from '@/components/cv-preview/CVPreviewContent';
+import CVOverlayDocument from '@/components/cv-builder-pro/CVOverlayDocument';
 import FieldFixOverlay from '@/components/resume-enhancer/annotations/FieldFixOverlay';
 import type { FixAnnotation, FixCategory } from '@/components/resume-enhancer/annotations/fix-annotation';
 import { CVSurgeonService } from '@/lib/services/cv-surgeon-service';
@@ -189,7 +189,7 @@ export default function SurgeonReportModal({ isOpen, onClose, onReviewAndFix }: 
     [state.activeFixId, state.fixAnnotations]
   );
 
-  // Helper to get skill items (same as in CVPreviewContent) - must be defined before useMemo
+  // Helper to get skill items - must be defined before useMemo
   const getSkillItems = (s: any): string[] => {
     const items =
       (Array.isArray(s?.skills) && s.skills) ||
@@ -591,7 +591,7 @@ export default function SurgeonReportModal({ isOpen, onClose, onReviewAndFix }: 
             disabled
               ? 'opacity-60 cursor-not-allowed border-transparent'
               : isActive
-                ? 'bg-[#80FF00]/10 border-[#80FF00]/40'
+                ? 'bg-[#013f2e]/10 border-[#013f2e]/40'
                 : 'bg-white/0 hover:bg-white/5 border-white/10'
           ].join(' ')}
         >
@@ -708,7 +708,7 @@ export default function SurgeonReportModal({ isOpen, onClose, onReviewAndFix }: 
                   type="button"
                   onClick={() =>
                     openPaymentModal({
-                      preselectedPlanKey: 'pro_monthly',
+                      preselectedPlanKey: 'focused_monthly',
                       triggerContext: 'surgeon-report-restricted',
                       returnUrl: window.location.href
                     })
@@ -721,9 +721,9 @@ export default function SurgeonReportModal({ isOpen, onClose, onReviewAndFix }: 
             )}
             <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
               <div className="flex items-center gap-3 min-w-0">
-                <Sparkles className="w-4 h-4 text-[#80FF00]" />
+                <Sparkles className="w-4 h-4 text-[#013f2e]" />
                 <InfoTooltip content="Issues are highlighted directly on your CV. Select a fix on the left, then apply it from the right panel.">
-                  <div className="text-white font-semibold cursor-help truncate">CVCircle Optimisation Report</div>
+                  <div className="text-white font-semibold cursor-help truncate">AIResume Optimisation Report</div>
                 </InfoTooltip>
                 <div className="hidden md:flex items-center gap-3 text-xs text-white/70">
                   <span className="whitespace-nowrap">{openFixes.length} open</span>
@@ -749,7 +749,7 @@ export default function SurgeonReportModal({ isOpen, onClose, onReviewAndFix }: 
                           colorStops={[
                             { threshold: 0, color: '#ef4444' },
                             { threshold: 50, color: '#f59e0b' },
-                            { threshold: 70, color: '#80FF00' }
+                            { threshold: 70, color: '#013f2e' }
                           ]}
                         />
                       </div>
@@ -778,7 +778,7 @@ export default function SurgeonReportModal({ isOpen, onClose, onReviewAndFix }: 
                   <button
                     onClick={() => setRecruiterView((v) => !v)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-2 ${recruiterView
-                      ? 'bg-[#80FF00] text-black hover:bg-[#70e600]'
+                      ? 'bg-[#013f2e] text-black hover:bg-[#02523c]'
                       : 'bg-white/10 text-white/90 hover:bg-white/15'
                       }`}
                   >
@@ -856,7 +856,7 @@ export default function SurgeonReportModal({ isOpen, onClose, onReviewAndFix }: 
                         }
                       }
                     }}
-                    className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#80FF00] hover:bg-[#70e600] text-black transition-colors"
+                    className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#013f2e] hover:bg-[#02523c] text-black transition-colors"
                   >
                     {openFixes.length === 0 ? 'Refresh' : 'Fix All'}
                   </button>
@@ -925,145 +925,46 @@ export default function SurgeonReportModal({ isOpen, onClose, onReviewAndFix }: 
               <div className={`flex-1 min-h-0 bg-black/10 relative overflow-hidden cv-report-container ${recruiterView ? 'recruiter-view-active' : ''}`}>
                 <div ref={docScrollRef} className="h-full overflow-y-auto overscroll-contain flex justify-center">
                   <div className="w-full max-w-[210mm] mx-auto">
-                    <CVPreviewContent
+                    <CVOverlayDocument
                       cvData={state.cvData}
-                      theme="light"
-                      showBadge={false}
-                      templateName=""
-                      customCSS={`
-                        .cv-preview-container {
-                      width: 100%;
-                      padding: 0;
-                      margin: 0;
-                          background: white;
-                      border-radius: 0;
-                      box-shadow: none;
-                    }
-                    .space-y-8 {
-                      margin: 0 !important;
-                      padding: 0 !important;
-                      gap: 0 !important;
-                    }
-                    /* Force all CV preview text to be dark (fix white text issue) */
-                    .cv-report-container * {
-                      color: #111827 !important;
-                    }
-                    .cv-report-container .cv-page,
-                    .cv-report-container .cv-page * {
-                      color: #111827 !important;
-                    }
-                    .cv-report-container h1,
-                    .cv-report-container h2,
-                    .cv-report-container h3,
-                    .cv-report-container h4,
-                    .cv-report-container h5,
-                    .cv-report-container h6,
-                    .cv-report-container p,
-                    .cv-report-container span,
-                    .cv-report-container div,
-                    .cv-report-container li,
-                    .cv-report-container td {
-                      color: #111827 !important;
-                    }
-                    /* Force CV page to fit container width in report mode */
-                    .cv-report-container .cv-page {
-                      margin: 0 !important;
-                      padding: 2rem !important;
-                      width: 100% !important;
-                      max-width: 100% !important;
-                      min-width: 0 !important;
-                      box-sizing: border-box !important;
-                    }
-                    .cv-report-container .space-y-8 {
-                      width: 100% !important;
-                      margin: 0 !important;
-                      padding: 0 !important;
-                    }
-                    .cv-report-container .space-y-8 > .cv-page {
-                      width: 100% !important;
-                      max-width: 100% !important;
-                    }
-                    /* Override inline style width - use attribute selector with !important */
-                    .cv-report-container div[style*="210mm"] {
-                      width: 100% !important;
-                      max-width: 100% !important;
-                    }
-                    ${recruiterView ? `
-                      /* Recruiter View: Blur everything except key elements recruiters scan in 6 seconds */
-                      /* Blur all text content by default - be specific to avoid blurring containers */
-                      .cv-report-container.recruiter-view-active .cv-page p:not(h1 p):not(h2 p):not(h3 p):not(h5 p):not(h6 p),
-                      .cv-report-container.recruiter-view-active .cv-page span:not(h1 span):not(h2 span):not(h3 span):not(h5 span):not(h6 span),
-                      .cv-report-container.recruiter-view-active .cv-page li,
-                      .cv-report-container.recruiter-view-active .cv-page td {
-                        filter: blur(4px) !important;
-                        opacity: 0.3 !important;
-                        transition: filter 0.3s ease, opacity 0.3s ease;
-                      }
-                      /* Keep section headers (h5) visible - these are section titles */
-                      .cv-report-container.recruiter-view-active .cv-page h5,
-                      .cv-report-container.recruiter-view-active .space-y-8 h5 {
-                        filter: blur(0) !important;
-                        opacity: 1 !important;
-                        font-weight: 600 !important;
-                        color: #111827 !important;
-                      }
-                      /* Keep job titles (h6 in work experience) visible */
-                      .cv-report-container.recruiter-view-active .cv-page h6,
-                      .cv-report-container.recruiter-view-active .space-y-8 h6 {
-                        filter: blur(0) !important;
-                        opacity: 1 !important;
-                        font-weight: 600 !important;
-                        color: #111827 !important;
-                      }
-                      /* Keep company names visible - typically first paragraph after job title in work sections */
-                      .cv-report-container.recruiter-view-active .cv-page [class*="space-y"] > div > p:first-of-type,
-                      .cv-report-container.recruiter-view-active .cv-page [class*="space-y"] > div > div > p:first-of-type {
-                        filter: blur(0) !important;
-                        opacity: 1 !important;
-                        color: #111827 !important;
-                        font-weight: 500 !important;
-                      }
-                      /* Keep dates visible - typically in spans or last paragraph of work entries */
-                      .cv-report-container.recruiter-view-active .cv-page [class*="space-y"] > div > p:last-child {
-                        filter: blur(0) !important;
-                        opacity: 1 !important;
-                        color: #111827 !important;
-                      }
-                      /* Keep personal info header visible - name (h1/h2/h3) and job title */
-                      .cv-report-container.recruiter-view-active .cv-page h1,
-                      .cv-report-container.recruiter-view-active .cv-page h2,
-                      .cv-report-container.recruiter-view-active .cv-page h3,
-                      .cv-report-container.recruiter-view-active .cv-page [class*="text-center"] h1,
-                      .cv-report-container.recruiter-view-active .cv-page [class*="text-center"] h2,
-                      .cv-report-container.recruiter-view-active .cv-page [class*="text-center"] h3 {
-                        filter: blur(0) !important;
-                        opacity: 1 !important;
-                        font-weight: 600 !important;
-                        color: #111827 !important;
-                      }
-                      /* Ensure the CV page container itself is visible */
-                      .cv-report-container.recruiter-view-active .cv-page {
-                        opacity: 1 !important;
-                        background: white !important;
-                        filter: none !important;
-                      }
-                      /* Ensure container is visible */
-                      .cv-report-container.recruiter-view-active {
-                        opacity: 1 !important;
-                      }
-                    ` : ''}
-                      `}
-                      overlaysEnabled={true}
+                      overlaysEnabled
                       annotations={state.fixAnnotations}
                       activeFixId={state.activeFixId}
                       onSelectFix={handleSelectFix}
                       onApplyFix={handleApplyFix}
                       onDismissFix={handleDismissFix}
-                      ignoreStructureVisibility={true}
                       renderMode="continuous"
                       overlayInlineCard={false}
                       ghostSkills={ghostSkills}
                       onAddGhostSkill={handleAddGhostSkill}
+                      customCSS={`
+                        .cv-report-container .cv-snapshot-wrapper {
+                          margin: 0;
+                          background: white;
+                        }
+                        ${recruiterView ? `
+                          /* Recruiter View: blur body copy, keep the structure recruiters scan in 6 seconds */
+                          .cv-report-container.recruiter-view-active .cv-document .cv-body,
+                          .cv-report-container.recruiter-view-active .cv-document .cv-prose,
+                          .cv-report-container.recruiter-view-active .cv-document .cv-body p,
+                          .cv-report-container.recruiter-view-active .cv-document .cv-body li {
+                            filter: blur(4px) !important;
+                            opacity: 0.3 !important;
+                            transition: filter 0.3s ease, opacity 0.3s ease;
+                          }
+                          .cv-report-container.recruiter-view-active .cv-document .cv-heading,
+                          .cv-report-container.recruiter-view-active .cv-document .cv-title,
+                          .cv-report-container.recruiter-view-active .cv-document .cv-subtitle,
+                          .cv-report-container.recruiter-view-active .cv-document .cv-date,
+                          .cv-report-container.recruiter-view-active .cv-document .cv-name,
+                          .cv-report-container.recruiter-view-active .cv-document .cv-role,
+                          .cv-report-container.recruiter-view-active .cv-document .cv-contact,
+                          .cv-report-container.recruiter-view-active .cv-document .cv-section {
+                            filter: blur(0) !important;
+                            opacity: 1 !important;
+                          }
+                        ` : ''}
+                      `}
                     />
                   </div>
                 </div>

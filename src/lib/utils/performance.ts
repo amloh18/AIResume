@@ -47,16 +47,15 @@ export const optimizedVariants = {
 
 export const optimizedHoverEffects = {
   subtle: {
-    scale: 1.01,
+    scale: 1.008,
     transition: optimizedTransitions.fast
   },
   normal: {
-    scale: 1.02,
+    scale: 1.01,
     transition: optimizedTransitions.fast
   },
   card: {
-    scale: 1.02,
-    y: -2,
+    scale: 1.01,
     transition: optimizedTransitions.fast
   }
 };
@@ -213,9 +212,9 @@ export const cssOptimizations = {
   smoothScroll: 'scroll-behavior: smooth;',
   
   // Optimized transitions
-  fastTransition: 'transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);',
-  normalTransition: 'transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);',
-  slowTransition: 'transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);'
+  fastTransition: 'transition: transform 120ms ease-out, background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease;',
+  normalTransition: 'transition: transform 160ms ease-out, box-shadow 160ms ease-out, border-color 160ms ease-out, background-color 160ms ease-out;',
+  slowTransition: 'transition: transform 200ms ease-out, box-shadow 200ms ease-out, border-color 200ms ease-out, background-color 200ms ease-out;'
 };
 
 // Export all optimizations

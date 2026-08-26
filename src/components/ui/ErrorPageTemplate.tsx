@@ -45,7 +45,7 @@ const ErrorPageTemplate: React.FC<ErrorPageTemplateProps> = ({
             damping: 20,
             delay: 0.1 
           }}
-          className="text-[120px] md:text-[180px] font-black text-[#81ff00] leading-none select-none opacity-20 dark:opacity-10"
+          className="text-[200px] md:text-[320px] font-black font-[1000] text-[#013f2e] leading-none select-none opacity-25 dark:opacity-15 [-webkit-text-stroke:2px_rgba(1, 63, 46,0.45)]"
         >
           {code}
         </motion.h1>
@@ -101,7 +101,7 @@ const ErrorPageTemplate: React.FC<ErrorPageTemplateProps> = ({
 
         {showHome && (
           <Link href="/">
-            <Button className="bg-[#81ff00] hover:bg-[#72e000] text-black font-semibold px-8">
+            <Button className="bg-[#013f2e] hover:bg-[#02523c] text-black font-semibold px-8">
               <Home className="mr-2 w-4 h-4" />
               Return Home
             </Button>
@@ -122,7 +122,7 @@ const ErrorPageTemplate: React.FC<ErrorPageTemplateProps> = ({
             repeat: Infinity,
             ease: "linear",
           }}
-          className="absolute -top-1/4 -left-1/4 w-1/2 h-1/2 bg-[#81ff00] rounded-full blur-[120px]"
+          className="absolute -top-1/4 -left-1/4 w-1/2 h-1/2 bg-[#013f2e] rounded-full blur-[120px]"
         />
         <motion.div
           animate={{
@@ -135,7 +135,7 @@ const ErrorPageTemplate: React.FC<ErrorPageTemplateProps> = ({
             repeat: Infinity,
             ease: "linear",
           }}
-          className="absolute -bottom-1/4 -right-1/4 w-1/2 h-1/2 bg-[#81ff00] rounded-full blur-[120px]"
+          className="absolute -bottom-1/4 -right-1/4 w-1/2 h-1/2 bg-[#013f2e] rounded-full blur-[120px]"
         />
       </div>
     </div>

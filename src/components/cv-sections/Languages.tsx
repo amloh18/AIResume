@@ -113,7 +113,7 @@ const Languages: React.FC<LanguagesProps> = ({
         
         .language-item:hover {
           border-color: ${template.globalStyles.primaryColor}30;
-          transform: translateY(-1px);
+          transform: scale(1.01);
           box-shadow: 0 2px 6px rgba(0,0,0,0.08);
         }
         

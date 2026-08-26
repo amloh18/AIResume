@@ -51,7 +51,7 @@ const InterviewModePage: React.FC = () => {
 
         if (!jobData.success || !jobData.data) {
           toast.error('Job not found');
-          router.push('/dashboard/tracker');
+          router.push('/dashboard/jobs?tab=applications');
           return;
         }
 
@@ -67,7 +67,7 @@ const InterviewModePage: React.FC = () => {
 
         if (!journeyData.success || !journeyData.data?.journeys || journeyData.data.journeys.length === 0) {
           toast.error('CV journey not found. Create a CV journey first.');
-          router.push(`/dashboard/tracker`);
+          router.push('/dashboard/jobs?tab=applications');
           return;
         }
 
@@ -75,7 +75,7 @@ const InterviewModePage: React.FC = () => {
       } catch (error) {
         console.error('Error loading interview mode data:', error);
         toast.error('Failed to load interview data');
-        router.push('/dashboard/tracker');
+        router.push('/dashboard/jobs?tab=applications');
       } finally {
         setLoading(false);
       }
@@ -125,7 +125,7 @@ const InterviewModePage: React.FC = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
-              onClick={() => router.push('/dashboard/tracker')}
+              onClick={() => router.push('/dashboard/jobs?tab=applications')}
               className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
             >
               <ArrowLeft className="w-5 h-5" />
@@ -140,7 +140,7 @@ const InterviewModePage: React.FC = () => {
             </div>
           </div>
           <button
-            onClick={() => router.push('/dashboard/tracker')}
+            onClick={() => router.push('/dashboard/jobs?tab=applications')}
             className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
           >
             <X className="w-5 h-5" />

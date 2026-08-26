@@ -21,6 +21,7 @@ interface PageHeaderProps {
   isMobileMenuOpen?: boolean;
   rightContent?: React.ReactNode;
   actions?: React.ReactNode; // Optional Row 2 action buttons
+  compact?: boolean; // Tighter spacing: little top padding, no bottom padding
 }
 
 export default function PageHeader(props: PageHeaderProps) {
@@ -33,9 +34,7 @@ export default function PageHeader(props: PageHeaderProps) {
     
     // Check nested routes
     if (pathname.includes('/dashboard/tracker')) return 'Tracker';
-    if (pathname.includes('/dashboard/vault')) return 'Vault';
     if (pathname.includes('/dashboard/settings')) return 'Settings';
-    if (pathname.includes('/dashboard/canvas')) return 'Canvas';
     if (pathname.includes('/dashboard/interview')) return 'Interview Coach';
 
     const segment = pathname.split('/').pop() || '';
@@ -43,7 +42,7 @@ export default function PageHeader(props: PageHeaderProps) {
   };
 
   return (
-    <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 mb-4">
+    <div className={`w-full flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${props.compact ? "pt-2" : "pb-4 mb-4"}`}>
       {/* Left: Breadcrumbs */}
       <div className="flex items-center gap-1.5 text-body text-gray-500 dark:text-gray-400 font-medium">
         <span 

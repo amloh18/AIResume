@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     try {
         await getConnection();
 
-        const email = 'testuser@cvcircle.io';
+        const email = 'testuser@buildairesume.com';
         console.log(`Seeding dashboard with 50 jobs for ${email}...`);
 
         // 1. Find the user
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
         ];
 
         const locations = ['Remote', 'San Francisco, CA', 'New York, NY', 'Seattle, WA', 'Austin, TX', 'London, UK', 'Berlin, DE'];
-        const statuses = ['draft', 'created', 'applied', 'screening', 'interview', 'offer', 'rejected', 'withdrawn'];
+        const statuses = ['saved', 'created', 'applied', 'screening', 'interview', 'offer', 'rejected', 'withdrawn'];
         const priorities = ['low', 'medium', 'high'];
 
         const jobsData = [];

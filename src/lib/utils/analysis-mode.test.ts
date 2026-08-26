@@ -1,12 +1,7 @@
 // @ts-nocheck
 import { describe, it, expect } from 'vitest';
-import {
-    getAnalysisModeWithValidation,
-    getAnalysisMode,
-    validateRole,
-    validateJD,
-    sanitizeInput
-} from './analysis-mode'; // Importing from analysis-mode which re-exports from cv-data-validator
+import { getAnalysisModeWithValidation } from './analysis-mode';
+import { validateRole, validateJD, sanitizeInput } from './cv-data-validator';
 
 describe('Analysis Mode Hardening Tests', () => {
 

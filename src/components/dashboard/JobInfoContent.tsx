@@ -6,6 +6,7 @@ import {
   ExternalLink, DollarSign, Settings, Calendar, FileText, Star,
   Edit, CheckCircle, Copy, Trash2, Archive, X
 } from 'lucide-react';
+import FormattedJobDescription from '@/components/jobs/FormattedJobDescription';
 
 interface JobInfoContentProps {
   job: any;
@@ -166,10 +167,8 @@ const JobInfoContent: React.FC<JobInfoContentProps> = ({
             <label className="block text-small font-medium text-gray-700 dark:text-gray-300 mb-2">
               Job Description
             </label>
-            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 max-h-32 overflow-y-auto">
-              <p className="text-gray-600 dark:text-gray-400 text-small whitespace-pre-wrap">
-                {job.jobDescription}
-              </p>
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 max-h-48 overflow-y-auto">
+              <FormattedJobDescription content={job.jobDescription} />
             </div>
           </div>
         )}

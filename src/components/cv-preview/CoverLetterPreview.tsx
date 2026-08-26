@@ -4,6 +4,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { FileText, User, Building, Calendar } from 'lucide-react';
 import { CoverLetterTemplate, getCVTemplateStyleForCoverLetter } from '@/lib/templates/cover-letter-templates';
+import { getPageDimensions } from '@/lib/templates/page-dimensions';
 
 interface CoverLetterPreviewProps {
   content: string;
@@ -28,16 +29,10 @@ const CoverLetterPreview: React.FC<CoverLetterPreviewProps> = ({
   footer,
   pageSize = 'A4'
 }) => {
-  // Page dimensions in pixels (at 96 DPI)
-  // A4: 210mm x 297mm -> 794px x 1123px
-  // Letter: 8.5in x 11in -> 816px x 1056px
-  const A4_WIDTH = 794;
-  const A4_HEIGHT = 1123;
-  const LETTER_WIDTH = 816;
-  const LETTER_HEIGHT = 1056;
-
-  const width = pageSize === 'A4' ? A4_WIDTH : LETTER_WIDTH;
-  const height = pageSize === 'A4' ? A4_HEIGHT : LETTER_HEIGHT;
+  // Page dimensions in pixels (at 96 DPI) — single source of truth shared with
+  // the editor canvas and the PDF export (page-dimensions.ts).
+  const width = getPageDimensions(pageSize).widthPx;
+  const height = getPageDimensions(pageSize).heightPx;
 
   // Get CV template styling for this cover letter template
   const cvTemplateStyle = template?.id ? getCVTemplateStyleForCoverLetter(template.id) : null;
@@ -260,7 +255,8 @@ const CoverLetterPreview: React.FC<CoverLetterPreviewProps> = ({
 
     return (
       <div
-        className="bg-white shadow-lg mx-auto origin-top"
+        data-cl-document
+        className="cover-letter-document bg-white shadow-lg mx-auto origin-top"
         style={{
           width: `${width}px`,
           height: `${height}px`,
@@ -353,7 +349,8 @@ const CoverLetterPreview: React.FC<CoverLetterPreviewProps> = ({
   // Legacy rendering fallback
   return (
     <div
-      className="bg-white mx-auto shadow-lg"
+      data-cl-document
+      className="cover-letter-document bg-white mx-auto shadow-lg"
       style={{
         width: `${width}px`,
         height: `${height}px`,

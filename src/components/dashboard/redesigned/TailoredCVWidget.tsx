@@ -13,13 +13,9 @@ interface Document {
   role: string;
 }
 
-const defaultDocs: Document[] = [
-  { id: '1', title: 'Frontend Engineer CV', matchScore: 92, updatedAt: '2d ago', role: 'Google' },
-  { id: '2', title: 'Senior Dev Resume', matchScore: 88, updatedAt: '5d ago', role: 'Meta' },
-  { id: '3', title: 'React Specialist CV', matchScore: 95, updatedAt: '1w ago', role: 'Stripe' },
-];
-
-export default function TailoredCVWidget({ docs = defaultDocs, loading = false, empty = false }: { docs?: Document[], loading?: boolean, empty?: boolean }) {
+export default function TailoredCVWidget({ docs, loading = false, empty = false }: { docs?: Document[], loading?: boolean, empty?: boolean }) {
+  const displayDocs = docs || [];
+  const isEmpty = empty || displayDocs.length === 0;
   return (
     <DashboardWidget
       id="tailored-cvs"
@@ -41,7 +37,7 @@ export default function TailoredCVWidget({ docs = defaultDocs, loading = false, 
       className="h-full"
     >
       <div className="space-y-3">
-        {docs.map((doc) => (
+        {displayDocs.map((doc) => (
           <div 
             key={doc.id} 
             className="group flex items-center gap-4 p-3 rounded-2xl bg-gray-50 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 hover:border-[#83d60d]/30 transition-all cursor-pointer"

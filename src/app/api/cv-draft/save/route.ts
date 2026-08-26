@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authConfig } from '@/lib/auth-config';
+import { authConfig } from '@/lib/auth';
 import { getConnection } from '@/lib/database';
 import TemporaryCVDraft from '@/models/TemporaryCVDraft';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
@@ -102,6 +102,20 @@ export async function POST(request: NextRequest) {
     if (!sessionId) {
       // Generate new session ID
       sessionId = randomBytes(16).toString('hex');
+    }
+
+    // Guard against cross-account contamination: a guest sessionId whose draft
+    // was already transferred (userId/convertedAt set) must NEVER be reused to
+    // overwrite that draft. The guest gets a fresh sessionId + clean draft instead.
+    if (!session?.user?.id) {
+      const existingOwned = await TemporaryCVDraft.findOne({
+        sessionId,
+        isForMasterCV: isForMasterCV !== false
+      });
+      if (existingOwned && (existingOwned.userId || existingOwned.convertedAt)) {
+        console.warn('🛡️ SessionId already transferred to an account; allocating a fresh guest sessionId');
+        sessionId = randomBytes(16).toString('hex');
+      }
     }
 
     // Find existing draft by session ID (or user ID if authenticated)

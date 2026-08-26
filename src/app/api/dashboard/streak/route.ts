@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
         .select('createdAt updatedAt')
         .lean(),
       JobApplication.find({ userId: userObjectId })
-        .select('createdAt updatedAt status')
+        .select('createdAt updatedAt status appliedAt')
         .lean(),
       ApplicationJourney.find({ userId: userObjectId })
         .select('createdAt updatedAt currentStep totalSteps')
@@ -46,10 +46,17 @@ export async function GET(request: NextRequest) {
     // Calculate current streak (consecutive days with activity)
     const streak = calculateStreak(cvs, jobs, journeys);
 
-    // Calculate weekly stats
-    const thisWeekApps = jobs.filter(job => 
-      new Date(job.createdAt) >= startOfWeek
-    ).length;
+    // Applications submitted this week = jobs whose appliedAt (the moment they
+    // first reached an applied-like status) falls within this week. Legacy jobs
+    // without appliedAt fall back to an applied-like status updated this week.
+    const appliedLikeStatuses = ['applied', 'screening', 'interview', 'offer', 'accepted'];
+    const thisWeekApps = jobs.filter(job => {
+      if (job.appliedAt) return new Date(job.appliedAt) >= startOfWeek;
+      return (
+        appliedLikeStatuses.includes(job.status) &&
+        job.updatedAt && new Date(job.updatedAt) >= startOfWeek
+      );
+    }).length;
 
     // Calculate monthly goal from user settings (default 20)
     const user = (await import('@/models/User').then(m => m.default.findById(userObjectId).select('monthlyGoal').lean())) as any;
@@ -107,7 +114,7 @@ function calculateStreak(cvs: any[], jobs: any[], journeys: any[]): {
 
   // Calculate current streak (from today backwards)
   let currentStreak = 0;
-  let checkDate = new Date();
+  const checkDate = new Date();
   checkDate.setHours(0, 0, 0, 0);
 
   while (true) {

@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { callAIWithFallback, hasAIApiKeys } from '@/lib/utils/ai-api-helper';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { getUserCvTailoringMode } from '@/lib/cv-tailoring/getUserCvTailoringMode';
+import {
+    buildCvTailoringPrompt,
+    extractAtsKeywords,
+    parseCvTailoringMode,
+    applyDeterministicAtsPass,
+} from '@/lib/cv-tailoring/tailoringMode';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -25,9 +34,10 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const { cvData, jobData }: {
+        const { cvData, jobData, tailoringMode }: {
             cvData: UnifiedCVDataStructure;
             jobData: any;
+            tailoringMode?: string;
         } = body;
 
         if (!cvData || !jobData) {
@@ -51,48 +61,18 @@ export async function POST(request: NextRequest) {
         const jobDescription = jobData.jobDescription || jobData.description || '';
         const jobTitle = jobData.title || jobData.jobTitle || 'Target Role';
         const company = jobData.company || jobData.companyName || 'Target Company';
-
-        // Construct the prompt
-        const prompt = `
-**Role**: Senior Executive Career Architect & ATS Algorithm Expert.
-**Goal**: Transform a multi-section Master CV JSON into a Tailored CV JSON that positions the candidate as the "Ideal Hire" (Top 1% match) regardless of domain pivots, seniority gaps, or skill-set outliers.
-
-### 1. LOGICAL GATES (PRIORITY EXECUTION)
-- **Tenure Protection**: Calculate (Current Year - Earliest Start Date). If total years < JD Requirement, you MUST include all roles (even outliers/internships). Never omit a role that contributes to the minimum duration threshold.
-- **Evidence Verification**: You are FORBIDDEN from adding technical tools (e.g., Python, SQL) not present in the Master CV. You may only use functional synonyms (e.g., "Data Cleaning" for "Data Governance").
-- **Reverse Chronology**: Maintain strict newest-to-oldest order for Experience, Projects, and Education.
-
-### 2. SECTION-SPECIFIC TAILORING
-- **Summary**: Write a 3-sentence "Hook." Sentence 1: Total years + target role title. Sentence 2: The "Bridge" between user skills and the JD's specific problem. Sentence 3: Alignment with company culture (e.g., "Simpler, Better, Faster").
-- **Work Experience**: Transform every bullet into: [Power Verb] + [JD Context] + [Quantifiable Result]. 
-    - *If Overskilled*: Focus on "Execution" and "Efficiency." 
-    - *If Underskilled*: Focus on "Learning Agility" and "Technical Logic Foundations."
-- **Projects**: Rewrite project descriptions to sound like professional business solutions. Prioritize projects that utilize tools mentioned in the JD.
-- **Education**: If the degree field is unrelated to the JD, highlight relevant modules, thesis topics, or honors that prove analytical or logical rigor.
-
-### 3. DOMAIN & SENIORITY "SPIN" (OUTLIER HANDLING)
-- **Functional Translation**: For career pivoters, translate domain-specific tasks into universal business value. 
-    - (Example: Web Dev "API Integration" -> "Streamlined cross-platform data connectivity and integrity").
-- **Level Calibration**: Match the "Seniority Vibe." For Junior roles, emphasize "Hands-on tools" and "supporting teams." For Senior roles, emphasize "ROI," "Scalability," and "Stakeholder influence."
-
-### 4. OUTPUT CONSTRAINTS (API STABILITY)
-- **Zero Prose**: Return ONLY valid JSON. No conversational text.
-- **Schema Lock**: Maintain exact 1:1 key-value mapping from the Input JSON.
-- **Title Optimization**: Adjust titles slightly to match JD nomenclature ONLY if truthful (e.g., "Analyst" to "Sales Data Analyst").
-- **Metric Retention**: 100% of numerical data from the Master CV must be carried over.
-
-TARGET JOB:
-Title: ${jobTitle}
-Company: ${company}
-Description: ${jobDescription}
-
-CANDIDATE CV DATA (JSON):
-${JSON.stringify(cvData)}
-
-OUTPUT FORMAT:
-Return ONLY the valid JSON of the tailored CV data. The structure must match the input JSON structure exactly (UnifiedCVDataStructure).
-Do not include any markdown formatting or explanation. Just the JSON.
-    `;
+        const session = await getServerSession(authOptions);
+        const savedMode = session?.user?.id ? await getUserCvTailoringMode(session.user.id) : undefined;
+        const mode = parseCvTailoringMode(tailoringMode || savedMode);
+        const atsKeywords = extractAtsKeywords(jobDescription);
+        const prompt = buildCvTailoringPrompt({
+            mode,
+            cvData,
+            jobTitle,
+            company,
+            jobDescription,
+            atsKeywords,
+        });
 
         const aiResponse = await callAIWithFallback({
             prompt,
@@ -107,7 +87,11 @@ Do not include any markdown formatting or explanation. Just the JSON.
             // Extract JSON from potential markdown blocks
             const jsonMatch = aiResponse.content.match(/\{[\s\S]*\}/);
             if (jsonMatch) {
-                tailoredCvData = JSON.parse(jsonMatch[0]);
+                tailoredCvData = applyDeterministicAtsPass(JSON.parse(jsonMatch[0]), {
+                    mode,
+                    jobTitle,
+                    atsKeywords,
+                });
             } else {
                 throw new Error('No JSON found in response');
             }

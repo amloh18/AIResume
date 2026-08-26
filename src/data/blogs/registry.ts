@@ -3,7 +3,7 @@ export type { BlogArticle, BlogArticleMeta, BlogSection } from './types';
 
 // All article slugs for this project
 export const ARTICLE_SLUGS = [
-  'why-cvcircle-beats-cakecv',
+  'why-ai-resume-beats-cakecv',
   'ai-resume-builder-2026',
   'ats-score-optimization',
   'data-analyst-resume-2026',
@@ -23,7 +23,7 @@ export type ArticleSlug = (typeof ARTICLE_SLUGS)[number];
 
 // Static import map for all articles
 // When a new JSON file is added to src/data/blogs/, just add its import here
-import article01 from './01-why-cvcircle-beats-cakecv.json';
+import article01 from './01-why-ai-resume-beats-cakecv.json';
 import article02 from './02-ai-resume-builder-2026.json';
 import article03 from './03-ats-score-optimization.json';
 import article04 from './04-data-analyst-resume-2026.json';
@@ -39,7 +39,7 @@ import article13 from './13-ai-cover-letter-generator-guide.json';
 import article14 from './14-career-gap-resume-guide.json';
 
 const ARTICLE_REGISTRY: Record<ArticleSlug, BlogArticle> = {
-  'why-cvcircle-beats-cakecv': article01,
+  'why-ai-resume-beats-cakecv': article01,
   'ai-resume-builder-2026': article02,
   'ats-score-optimization': article03,
   'data-analyst-resume-2026': article04,

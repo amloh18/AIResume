@@ -1,9 +1,9 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
-// Synced user data for campaign targeting (from cvcircle.users)
+// Synced user data for campaign targeting (from main users)
 export interface IAdminUser extends Document {
   // Core user info (synced from main DB)
-  mainUserId: mongoose.Types.ObjectId; // Reference to cvcircle.users._id
+  mainUserId: mongoose.Types.ObjectId; // Reference to main users._id
   email: string;
   firstName: string;
   lastName: string;

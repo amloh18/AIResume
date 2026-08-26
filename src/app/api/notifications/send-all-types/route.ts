@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
         category: 'application_tracker',
         interactive: true,
         actionType: 'prep_interview',
-        actionUrl: '/dashboard/tracker',
+        actionUrl: '/dashboard/jobs?tab=applications',
         persistent: true,
       },
       // --- ALERTS & ACTIONS REQUIRED (CTA-Based) ---
@@ -139,7 +139,7 @@ export async function POST(request: NextRequest) {
         category: 'application_tracker',
         interactive: true,
         actionType: 'send_follow_up',
-        actionUrl: '/dashboard/tracker',
+        actionUrl: '/dashboard/jobs?tab=applications',
       }
     ];
 

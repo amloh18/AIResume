@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
         <head>
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Reset your CV Circle password</title>
+          <title>Reset your AIResume password</title>
           <style>
             body {
               font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
               transition: transform 0.2s ease;
             }
             .button:hover {
-              transform: translateY(-2px);
+              transform: scale(1.015);
             }
             .footer {
               margin-top: 40px;
@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
         </head>
         <body>
           <div class="container">
-            <div class="logo">CV Circle</div>
+            <div class="logo">AIResume</div>
             <h1>Reset your password</h1>
             <p>We received a request to reset your password. Click the button below to create a new password.</p>
 
@@ -163,7 +163,7 @@ export async function POST(request: NextRequest) {
 
             <div class="footer">
               <p>This email was sent to ${email}</p>
-              <p>© 2026 CVCircle by Morigrid Labs. All rights reserved.</p>
+              <p>© 2026 AIResume by Morigrid Labs. All rights reserved.</p>
             </div>
           </div>
         </body>
@@ -171,7 +171,7 @@ export async function POST(request: NextRequest) {
     `;
 
     const emailText = `
-      Reset your CV Circle password
+      Reset your AIResume password
 
       We received a request to reset your password. Click the following link to create a new password:
       ${resetUrl}
@@ -181,7 +181,7 @@ export async function POST(request: NextRequest) {
       If you didn't request this password reset, please ignore this email.
 
       ---
-      CV Circle Team
+      AIResume Team
     `;
 
     // Send email using the email service
@@ -189,7 +189,7 @@ export async function POST(request: NextRequest) {
     
     await sendEmail({
       to: email,
-      subject: 'Reset your CV Circle password',
+      subject: 'Reset your AIResume password',
       text: emailText,
       html: emailHtml,
     });

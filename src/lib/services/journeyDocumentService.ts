@@ -8,12 +8,18 @@ import {
   createCompletedGenerationState,
   createFailedGenerationState,
   createInProgressGenerationState,
-  deriveCompanyType,
-  fillTrackerPrompt,
   getJourneyGenerationEntitlement,
   serializeExperienceForPrompt
 } from '@/lib/utils/journey-generation';
 import { formatCoverLetterHeader, formatCoverLetterFooter, mergeCoverLetterContent } from '@/lib/utils/coverLetterUtils';
+import { getUserCvTailoringMode } from '@/lib/cv-tailoring/getUserCvTailoringMode';
+import {
+  buildCoverLetterTailoringPrompt,
+  buildCvTailoringPrompt,
+  extractAtsKeywords,
+  applyDeterministicAtsPass,
+  type CvTailoringMode,
+} from '@/lib/cv-tailoring/tailoringMode';
 
 export interface CreateJourneyDocumentsResult {
   success: boolean;
@@ -113,6 +119,9 @@ export async function createJourneyDocuments(
       }
     }
     const shouldTailorDocuments = generationEntitlement.mode === 'tailored';
+    const tailoringMode = shouldTailorDocuments
+      ? await getUserCvTailoringMode(userId)
+      : 'standard';
     currentJourney.generationState = createInProgressGenerationState(generationEntitlement);
     currentJourney.metadata.updatedAt = new Date();
     await currentJourney.save();
@@ -211,7 +220,7 @@ export async function createJourneyDocuments(
           if (shouldTailorDocuments) {
             try {
               console.log('🚀 Journey Document Service - Tailoring CV content for job...');
-              const tailoredCvData = await tailorCVContent(duplicatedCvData, job);
+              const tailoredCvData = await tailorCVContent(duplicatedCvData, job, tailoringMode);
               if (tailoredCvData) {
                 duplicatedCvData = tailoredCvData;
                 cvWasTailored = true;
@@ -379,15 +388,18 @@ export async function createJourneyDocuments(
       let footer = '';
       let body = '';
 
+      const jobAny = job as any;
+      const jobObj = job && typeof (job as any).toObject === 'function' ? (job as any).toObject() : (job || {});
+
       try {
         // Generate header
         header = formatCoverLetterHeader(cvDataWithAnalysis, {
+          ...jobObj,
           title: currentJourney.jobTitle,
           company: currentJourney.company,
-          jobDescription: job.jobDescription || job.description || '',
-          location: job.location || '',
-          contactPerson: job.contactPerson || 'Hiring Manager',
-          ...job.toObject()
+          jobDescription: jobAny?.jobDescription || jobAny?.description || '',
+          location: jobAny?.location || '',
+          contactPerson: jobAny?.contactDetails?.name || 'Hiring Manager',
         });
 
         // Generate footer
@@ -401,20 +413,23 @@ export async function createJourneyDocuments(
       if (shouldTailorDocuments) {
         try {
           console.log('🚀 Journey Document Service - Generating tailored cover letter body with AI...');
-          const promptOverride = fillTrackerPrompt('tailored_cover_letter', {
-            position: currentJourney.jobTitle,
+          const jobDescText = jobAny?.jobDescription || jobAny?.description || '';
+          const promptOverride = buildCoverLetterTailoringPrompt({
+            mode: tailoringMode,
+            jobTitle: currentJourney.jobTitle,
             company: currentJourney.company,
             experience: serializeExperienceForPrompt(cvDataWithAnalysis),
-            'job description': job.jobDescription || job.description || ''
+            jobDescription: jobDescText,
+            atsKeywords: extractAtsKeywords(jobDescText),
           });
 
           const generatedCoverLetter = await aiCoverLetterService.generateModularCoverLetter({
             cvData: cvDataWithAnalysis,
             jobData: {
+              ...jobObj,
               title: currentJourney.jobTitle,
               company: currentJourney.company,
-              jobDescription: job.jobDescription || job.description || '',
-              ...job.toObject()
+              jobDescription: jobDescText,
             },
             recipientName: 'Hiring Manager',
             companyName: currentJourney.company,
@@ -436,7 +451,7 @@ export async function createJourneyDocuments(
           console.log('✅ Journey Document Service - Using header-only cover letter fallback for non-tailored generation');
         } else {
           usedFallbackContent = true;
-          const recipientName = job?.contactPerson || currentJourney.contactPerson || 'Hiring Manager';
+          const recipientName = job?.contactDetails?.name || currentJourney.contactPerson || 'Hiring Manager';
           body = `Dear ${recipientName},
 
 I am writing to express my interest in the ${currentJourney.jobTitle} position at ${currentJourney.company}. This version is based on my existing Master CV and is intended as a solid starting point for this application.
@@ -652,18 +667,24 @@ Thank you for your time and consideration. I would welcome the opportunity to di
 /**
  * Tailor CV content using AI based on job requirements
  */
-async function tailorCVContent(cvData: UnifiedCVDataStructure, jobData: any): Promise<UnifiedCVDataStructure | null> {
+async function tailorCVContent(
+  cvData: UnifiedCVDataStructure,
+  jobData: any,
+  mode: CvTailoringMode
+): Promise<UnifiedCVDataStructure | null> {
   try {
     const jobDescription = jobData.jobDescription || jobData.description || '';
     const jobTitle = jobData.title || jobData.jobTitle || 'Target Role';
-    const prompt = `${fillTrackerPrompt('tailored_resume', {
-      'target position': jobTitle,
-      'type of company': deriveCompanyType(jobData),
-      'job description': jobDescription,
-      'resume content': JSON.stringify(cvData)
-    })}
-
-Return ONLY valid JSON with the exact same structure as the input UnifiedCVDataStructure. Do not include markdown or explanation.`;
+    const company = jobData.company || jobData.companyName || 'Target Company';
+    const atsKeywords = extractAtsKeywords(jobDescription);
+    const prompt = buildCvTailoringPrompt({
+      mode,
+      cvData,
+      jobTitle,
+      company,
+      jobDescription,
+      atsKeywords,
+    });
 
     const aiResponse = await callAIWithFallback({
       prompt,
@@ -675,7 +696,12 @@ Return ONLY valid JSON with the exact same structure as the input UnifiedCVDataS
     // Parse the response
     const jsonMatch = aiResponse.content.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
+      const parsed = JSON.parse(jsonMatch[0]);
+      return applyDeterministicAtsPass(parsed, {
+        mode,
+        jobTitle,
+        atsKeywords,
+      }) as UnifiedCVDataStructure;
     }
 
     return null;

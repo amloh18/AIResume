@@ -34,8 +34,8 @@ const DashboardContent: React.FC<{ children?: React.ReactNode; noPadding?: boole
          <div
            data-dashboard-sidebar
            className={`hidden lg:flex lg:flex-col lg:sticky lg:top-0 lg:h-screen lg:z-[120] lg:py-0 lg:px-0 ${
-             isDesktopExpanded ? 'lg:w-[280px]' : 'lg:w-[84px]'
-           } overflow-visible pointer-events-auto transition-all duration-300 flex-shrink-0 border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-[#141810]`}
+             isDesktopExpanded ? 'lg:w-[280px]' : 'lg:w-[64px]'
+           } overflow-visible pointer-events-auto transition-all duration-300 flex-shrink-0 bg-white dark:bg-[#141810]`}
          >
            <OptimizedNavigation />
          </div>
@@ -59,15 +59,15 @@ const DashboardContent: React.FC<{ children?: React.ReactNode; noPadding?: boole
         {/* Removed padding-left hacks since the sticky sidebar naturally pushes this flex-1 container */}
         <div className="flex flex-col flex-1 layout-stable relative z-0 transition-all duration-300 min-w-0">
           {/* Global Header */}
-          <header className="w-full h-16 bg-white dark:bg-[#141810] flex items-center justify-between px-6 z-[60] sticky top-0 flex-shrink-0 border-b border-gray-100 dark:border-gray-800/60">
+          <header className="w-full h-14 bg-white dark:bg-[#141810] flex items-center justify-between px-6 z-[60] sticky top-0 flex-shrink-0">
             {/* Left: Mobile hamburger menu toggle */}
             <div className="flex items-center w-[20%] sm:w-[25%] lg:hidden">
               <button
                 onClick={toggleSidebar}
-                className="p-2 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                className="p-1.5 rounded-lg bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
                 aria-label="Toggle menu"
               >
-                <svg className="w-5 h-5 text-gray-700 dark:text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 text-gray-700 dark:text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
               </button>

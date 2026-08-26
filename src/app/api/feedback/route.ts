@@ -5,7 +5,7 @@
 
 import { NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authConfig } from '@/lib/auth-config';
+import { authConfig } from '@/lib/auth';
 import { z } from 'zod';
 import { withValidation, successResponse, errorResponse } from '@/lib/validation/api-validator';
 import { getConnection } from '@/lib/database';

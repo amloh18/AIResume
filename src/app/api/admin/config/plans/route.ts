@@ -10,13 +10,11 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      plans: ['free', 'starter_monthly', 'starter_yearly', 'pro_monthly', 'pro_yearly'],
+      plans: ['free', 'starter_monthly', 'starter_yearly', 'focused_monthly', 'focused_yearly'],
       planDisplayNames: {
         free: 'Free Tier',
         starter_monthly: 'Starter Monthly',
         starter_yearly: 'Starter Yearly',
-        pro_monthly: 'Professional Monthly',
-        pro_yearly: 'Professional Yearly'
       }
     });
 

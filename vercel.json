@@ -16,7 +16,7 @@
       "headers": [
         {
           "key": "Access-Control-Allow-Origin",
-          "value": "https://cvcircle.io, https://www.cvcircle.io, https://app.cvcircle.io"
+          "value": "https://buildairesume.com, https://www.buildairesume.com, https://cvcircle.io, https://www.cvcircle.io, https://app.cvcircle.io"
         },
         {
           "key": "Access-Control-Allow-Methods",
@@ -41,7 +41,7 @@
       "headers": [
         {
           "key": "Access-Control-Allow-Origin",
-          "value": "https://cvcircle.io, https://www.cvcircle.io, https://app.cvcircle.io"
+          "value": "https://buildairesume.com, https://www.buildairesume.com, https://cvcircle.io, https://www.cvcircle.io, https://app.cvcircle.io"
         },
         {
           "key": "Access-Control-Allow-Methods",

@@ -166,7 +166,7 @@ export class CampaignEmailService {
 
                         htmlContent = htmlContent.replace(/{{email}}/g, user.email);
 
-                        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://cvcircle.io';
+                        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://buildairesume.com';
                         htmlContent = htmlContent.replace(/{{appUrl}}/g, appUrl);
 
                         const unsubscribeUrl = `${appUrl}/unsubscribe?email=${encodeURIComponent(user.email)}&c=${campaign._id}`;
@@ -189,7 +189,7 @@ export class CampaignEmailService {
                         let sendResponse: { success: boolean; messageId?: string; error?: string };
                         try {
                             const mailResult = await transporter!.sendMail({
-                                from: (campaign.fromEmail ? `"${campaign.fromName || 'CVCircle'}" <${campaign.fromEmail}>` : undefined),
+                                from: (campaign.fromEmail ? `"${campaign.fromName || 'AIResume'}" <${campaign.fromEmail}>` : undefined),
                                 to: user.email,
                                 subject,
                                 text: campaign.plainTextContent || htmlContent,

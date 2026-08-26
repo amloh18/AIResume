@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { callGeminiWithAllKeysFallback } from '@/lib/utils/gemini-api-fallback';
+import { withAdminAuth } from '@/lib/middleware/admin-auth';
 
-export async function POST(request: NextRequest) {
+export const POST = withAdminAuth(async (request: NextRequest) => {
   try {
     const { prompt, category, context } = await request.json();
 
@@ -79,4 +80,4 @@ Additional Context: ${context || 'None'}`;
       details: error.message
     }, { status: 500 });
   }
-}
+});

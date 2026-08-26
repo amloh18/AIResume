@@ -104,6 +104,23 @@ export function getCVTemplateStyleForCoverLetter(coverLetterTemplateId: string) 
   return cvTemplateId ? CV_TEMPLATE_STYLES[cvTemplateId] : null;
 }
 
+// Reverse lookup: CV template id -> cover-letter template id (derived from
+// COVER_LETTER_TO_CV_TEMPLATE_MAP so the two can never drift).
+const CV_TO_COVER_LETTER_TEMPLATE_MAP: Record<string, string> = Object.fromEntries(
+  Object.entries(COVER_LETTER_TO_CV_TEMPLATE_MAP).map(([clId, cvId]) => [cvId, clId])
+);
+
+/**
+ * Resolve the cover-letter template that matches a CV template id, so the
+ * cover-letter preview uses the same visual style as the selected CV template.
+ * Returns undefined when no canonical mapping exists.
+ */
+export function getCoverLetterTemplateIdForCV(cvTemplateId?: string | null): string | undefined {
+  if (!cvTemplateId) return undefined;
+  if (COVER_LETTER_TO_CV_TEMPLATE_MAP[cvTemplateId]) return cvTemplateId;
+  return CV_TO_COVER_LETTER_TEMPLATE_MAP[cvTemplateId];
+}
+
 export const COVER_LETTER_TEMPLATES: CoverLetterTemplate[] = [
   // 1. The "Zurich Minimalist"
   {

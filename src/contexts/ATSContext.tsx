@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 
 export interface ATSAnalysis {
   score: number;
@@ -27,7 +27,6 @@ export interface ATSAnalysis {
     sectionHeaders: { passed: boolean; issues: string[] };
     contactInfo: { passed: boolean; issues: string[] };
   };
-  // New: Rich audit report from CV Surgeon
   audit_report?: {
     cv_profile_strength?: {
       score: number;
@@ -58,6 +57,18 @@ export interface SurgeonAnalysis {
   scoreReport?: any;
 }
 
+// Deep Dive types (merged from ATSDeepDiveContext)
+export type ParserType = 'taleo' | 'greenhouse' | 'lever' | 'generic';
+export type ActiveLayer = 'reading-path' | 'timeline' | 'heatmap' | null;
+
+interface ATSDeepDiveState {
+  isActive: boolean;
+  activeLayers: Set<ActiveLayer>;
+  selectedParser: ParserType;
+  showCriticalOnly: boolean;
+  selectedFactor: string | null;
+}
+
 interface ATSContextState {
   // ATS Score and Analysis
   atsScore: number | null;
@@ -69,6 +80,9 @@ interface ATSContextState {
   surgeonAnalysis: SurgeonAnalysis | null;
   isSurgeonLoading: boolean;
   surgeonError: string | null;
+
+  // Deep Dive UI State (merged from ATSDeepDiveContext)
+  deepDive: ATSDeepDiveState;
 
   // Metadata
   lastUpdated: Date | null;
@@ -85,6 +99,15 @@ interface ATSContextValue extends ATSContextState {
   // Surgeon Analysis methods
   updateSurgeonAnalysis: (analysis: SurgeonAnalysis, cvId: string) => Promise<void>;
   refreshSurgeonAnalysis: (cvId: string) => Promise<void>;
+
+  // Deep Dive methods (merged from ATSDeepDiveContext)
+  activateDeepDive: () => void;
+  deactivateDeepDive: () => void;
+  toggleDeepDiveLayer: (layer: ActiveLayer) => void;
+  setDeepDiveParser: (parser: ParserType) => void;
+  toggleDeepDiveCriticalOnly: () => void;
+  selectDeepDiveFactor: (factor: string | null) => void;
+  isDeepDiveLayerActive: (layer: ActiveLayer) => boolean;
 
   // Combined refresh
   refreshAll: (cvId: string, journeyId?: string, jobId?: string) => Promise<void>;
@@ -104,6 +127,13 @@ export function ATSProvider({ children }: { children: ReactNode }) {
     surgeonAnalysis: null,
     isSurgeonLoading: false,
     surgeonError: null,
+    deepDive: {
+      isActive: false,
+      activeLayers: new Set(['timeline']),
+      selectedParser: 'generic',
+      showCriticalOnly: true,
+      selectedFactor: null,
+    },
     lastUpdated: null,
     cvId: null,
     journeyId: null,
@@ -179,8 +209,8 @@ export function ATSProvider({ children }: { children: ReactNode }) {
           }
         }
       } else {
-        // Fetch from ATS API
-        const response = await fetch('/api/ats/calculate-score', {
+        // Fetch from the unified jobs/match API
+        const response = await fetch('/api/jobs/match', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ cvId: effectiveCvId, jobId: effectiveJobId, userId }),
@@ -189,22 +219,19 @@ export function ATSProvider({ children }: { children: ReactNode }) {
         if (response.ok) {
           const result = await response.json();
           if (result.success && result.data) {
-            const score = result.data.score || result.data.atsScore;
+            const score = result.data.atsScore || result.data.score;
             const analysis: ATSAnalysis = {
               score,
-              missingKeywords: result.data.missingKeywords || [],
-              matchedKeywords: result.data.matchedKeywords || result.data.strengths || [],
-              strengths: result.data.strengths || [],
+              missingKeywords: result.data.keywordAnalysis?.gaps?.map((g: any) => g.keyword) || result.data.missingKeywords || [],
+              matchedKeywords: result.data.keywordAnalysis?.matchedKeywords || result.data.matchedKeywords || result.data.strengths || [],
+              strengths: result.data.keywordAnalysis?.matchedKeywords || result.data.strengths || [],
               suggestions: result.data.suggestions || [],
-              extractedKeywords: result.data.keywordAnalysis?.extractedKeywords || [],
+              extractedKeywords: result.data.keywordAnalysis?.matchedKeywords || [],
               warnings: result.data.warnings || [],
               keywordAnalysis: result.data.keywordAnalysis,
               scoreResult: result.data.scoreResult,
-              formatScore: result.data.scoreResult?.atsScore ? Math.round((result.data.scoreResult.atsScore.formatting / 20) * 100) : undefined,
-              actionVerbsCount: result.data.scoreResult?.cvScore?.impactVerbs,
-              readabilityScore: result.data.scoreResult?.cvScore ? Math.round((result.data.scoreResult.cvScore.readability / 20) * 100) : undefined,
-              factorBreakdown: result.data.factorBreakdown || result.data.analysis?.factorBreakdown,
-              knockOutFactors: result.data.knockOutFactors || result.data.analysis?.knockOutFactors,
+              factorBreakdown: result.data.factorBreakdown || result.data.atsScoreBreakdown,
+              knockOutFactors: result.data.knockOutFactors,
               updatedAt: new Date().toISOString(),
             };
 
@@ -325,6 +352,71 @@ export function ATSProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // Deep Dive methods (merged from ATSDeepDiveContext)
+  const activateDeepDive = useCallback(() => {
+    setState(prev => ({
+      ...prev,
+      deepDive: { ...prev.deepDive, isActive: true },
+    }));
+  }, []);
+
+  const deactivateDeepDive = useCallback(() => {
+    setState(prev => ({
+      ...prev,
+      deepDive: {
+        ...prev.deepDive,
+        isActive: false,
+        activeLayers: new Set(['timeline']),
+        selectedFactor: null,
+      },
+    }));
+  }, []);
+
+  const toggleDeepDiveLayer = useCallback((layer: ActiveLayer) => {
+    setState(prev => {
+      const newLayers = new Set(prev.deepDive.activeLayers);
+      if (layer === null) {
+        newLayers.clear();
+      } else if (newLayers.has(layer)) {
+        newLayers.delete(layer);
+      } else {
+        newLayers.add(layer);
+      }
+      return {
+        ...prev,
+        deepDive: { ...prev.deepDive, activeLayers: newLayers },
+      };
+    });
+  }, []);
+
+  const setDeepDiveParser = useCallback((parser: ParserType) => {
+    setState(prev => ({
+      ...prev,
+      deepDive: { ...prev.deepDive, selectedParser: parser },
+    }));
+  }, []);
+
+  const toggleDeepDiveCriticalOnly = useCallback(() => {
+    setState(prev => ({
+      ...prev,
+      deepDive: { ...prev.deepDive, showCriticalOnly: !prev.deepDive.showCriticalOnly },
+    }));
+  }, []);
+
+  const selectDeepDiveFactor = useCallback((factor: string | null) => {
+    setState(prev => ({
+      ...prev,
+      deepDive: { ...prev.deepDive, selectedFactor: factor },
+    }));
+  }, []);
+
+  const isDeepDiveLayerActive = useCallback(
+    (layer: ActiveLayer) => {
+      return state.deepDive.activeLayers.has(layer);
+    },
+    [state.deepDive.activeLayers]
+  );
+
   // Refresh all data
   const refreshAll = useCallback(async (cvId: string, journeyId?: string, jobId?: string) => {
     setState(prev => ({
@@ -350,6 +442,13 @@ export function ATSProvider({ children }: { children: ReactNode }) {
       surgeonAnalysis: null,
       isSurgeonLoading: false,
       surgeonError: null,
+      deepDive: {
+        isActive: false,
+        activeLayers: new Set(['timeline']),
+        selectedParser: 'generic',
+        showCriticalOnly: true,
+        selectedFactor: null,
+      },
       lastUpdated: null,
       cvId: null,
       journeyId: null,
@@ -363,6 +462,13 @@ export function ATSProvider({ children }: { children: ReactNode }) {
     refreshATSScore,
     updateSurgeonAnalysis,
     refreshSurgeonAnalysis,
+    activateDeepDive,
+    deactivateDeepDive,
+    toggleDeepDiveLayer,
+    setDeepDiveParser,
+    toggleDeepDiveCriticalOnly,
+    selectDeepDiveFactor,
+    isDeepDiveLayerActive,
     refreshAll,
     reset,
   };

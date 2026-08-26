@@ -242,9 +242,11 @@ export async function POST(
       scoreReport: scoreReport || null
     };
 
-    const finalScore = scoreReport?.overall_score !== undefined
-      ? scoreReport.overall_score
-      : score;
+    // Canonical score: the deterministic score computed by CentralScoreManager
+    // (client side) must drive the persisted roots. The LLM review
+    // (scoreReport.overall_score) lives only inside metadata.surgeonAnalysis
+    // and must never overwrite the deterministic cv_score_* / atsScore values.
+    const finalScore = typeof score === 'number' ? score : (scoreReport?.overall_score ?? 0);
 
     cv.metadata = cv.metadata || {} as any;
     (cv.metadata as any).surgeonAnalysis = surgeonAnalysis;

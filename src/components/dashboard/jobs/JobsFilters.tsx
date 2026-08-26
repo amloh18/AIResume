@@ -61,7 +61,7 @@ const JobsFilters: React.FC<JobsFiltersProps> = ({
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Filter size={18} className="text-gray-600 dark:text-gray-400" />
-          <h3 className="text-h3 font-semibold text-gray-900 dark:text-white">Filters & Sorting</h3>
+          <div className="text-body font-semibold text-gray-900 dark:text-white">Filters & Sorting</div>
         </div>
         <div className="flex items-center gap-2">
           {hasActiveFilters && (
@@ -92,7 +92,7 @@ const JobsFilters: React.FC<JobsFiltersProps> = ({
             className="w-full px-3 py-2 border border-gray-300 dark:border-lime-500/20 rounded-lg bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white text-small focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="all">All Statuses</option>
-            <option value="draft">Draft</option>
+            <option value="saved">Saved</option>
             <option value="created">Staging</option>
             <option value="applied">Applied</option>
             <option value="interview">Interview</option>

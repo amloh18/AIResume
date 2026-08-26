@@ -189,7 +189,7 @@ const VolunteerSection: React.FC<VolunteerSectionProps> = ({
                   type="text"
                   value={volunteer.organization || ''}
                   onChange={(e) => updateVolunteer(index, 'organization', e.target.value)}
-                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#013f2e] focus:bg-white/15 transition-colors"
                   placeholder="Red Cross"
                 />
               </div>
@@ -200,7 +200,7 @@ const VolunteerSection: React.FC<VolunteerSectionProps> = ({
                   type="text"
                   value={volunteer.position || ''}
                   onChange={(e) => updateVolunteer(index, 'position', e.target.value)}
-                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#013f2e] focus:bg-white/15 transition-colors"
                   placeholder="Volunteer Coordinator"
                 />
               </div>
@@ -211,7 +211,7 @@ const VolunteerSection: React.FC<VolunteerSectionProps> = ({
                   type="month"
                   value={volunteer.startDate || ''}
                   onChange={(e) => updateVolunteer(index, 'startDate', e.target.value)}
-                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#013f2e] focus:bg-white/15 transition-colors"
                   placeholder="YYYY-MM"
                 />
               </div>
@@ -222,7 +222,7 @@ const VolunteerSection: React.FC<VolunteerSectionProps> = ({
                   type="month"
                   value={volunteer.endDate || ''}
                   onChange={(e) => updateVolunteer(index, 'endDate', e.target.value)}
-                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#013f2e] focus:bg-white/15 transition-colors"
                   placeholder="YYYY-MM"
                 />
               </div>
@@ -238,7 +238,7 @@ const VolunteerSection: React.FC<VolunteerSectionProps> = ({
                         type="checkbox"
                         checked={volunteer.useRichText !== false}
                         onChange={(e) => updateVolunteer(index, 'useRichText', e.target.checked)}
-                        className="rounded border-white/20 bg-white/5 text-[#80FF00] focus:ring-[#80FF00]/50"
+                        className="rounded border-white/20 bg-white/5 text-[#013f2e] focus:ring-[#013f2e]/50"
                       />
                       Use Rich Text
                     </label>
@@ -270,7 +270,7 @@ const VolunteerSection: React.FC<VolunteerSectionProps> = ({
                             newHighlights[hIndex] = e.target.value;
                             updateVolunteer(index, 'highlights', newHighlights);
                           }}
-                          className="flex-1 px-4 py-2 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+                          className="flex-1 px-4 py-2 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#013f2e] focus:bg-white/15 transition-colors"
                           placeholder="Achievement or key detail..."
                         />
                         <button
@@ -292,7 +292,7 @@ const VolunteerSection: React.FC<VolunteerSectionProps> = ({
                         const newHighlights = [...(volunteer.highlights || []), ''];
                         updateVolunteer(index, 'highlights', newHighlights);
                       }}
-                      className="flex items-center gap-2 text-sm text-[#80FF00] hover:text-[#70e600] transition-colors mt-2"
+                      className="flex items-center gap-2 text-sm text-[#013f2e] hover:text-[#02523c] transition-colors mt-2"
                     >
                       <Plus size={14} />
                       Add Bullet Point
@@ -320,7 +320,7 @@ const VolunteerSection: React.FC<VolunteerSectionProps> = ({
       {safeData.length > 0 && (
         <button
           onClick={handleAdd}
-          className="w-full py-4 border-2 border-dashed border-[var(--border-primary)] hover:border-[#80FF00]/50 text-[color:var(--text-tertiary)] hover:text-[#80FF00] rounded-none transition-colors flex items-center justify-center gap-2"
+          className="w-full py-4 border-2 border-dashed border-[var(--border-primary)] hover:border-[#013f2e]/50 text-[color:var(--text-tertiary)] hover:text-[#013f2e] rounded-none transition-colors flex items-center justify-center gap-2"
         >
           <Plus size={20} />
           Add another Volunteer Experience

@@ -45,9 +45,9 @@ interface CreditExhaustionProviderProps {
 export const CreditExhaustionProvider: React.FC<CreditExhaustionProviderProps> = ({ children }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [creditInfo, setCreditInfo] = useState<CreditInfo | null>(null);
-  const [preselectedPlanKey, setPreselectedPlanKey] = useState<string>('pro_monthly');
+  const [preselectedPlanKey, setPreselectedPlanKey] = useState<string>('focused_monthly');
 
-  const showCreditExhaustion = useCallback((info: CreditInfo, planKey: string = 'pro_monthly') => {
+  const showCreditExhaustion = useCallback((info: CreditInfo, planKey: string = 'focused_monthly') => {
     setCreditInfo(info);
     setPreselectedPlanKey(planKey);
     setIsVisible(true);
@@ -74,7 +74,7 @@ export const CreditExhaustionProvider: React.FC<CreditExhaustionProviderProps> =
         hasAccess: boolean;
       };
     },
-    planKey: string = 'pro_monthly'
+    planKey: string = 'focused_monthly'
   ): boolean => {
     // Check if credits are exhausted
     if (!usageCheckResponse.allowed && usageCheckResponse.usage) {

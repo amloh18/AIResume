@@ -43,7 +43,7 @@ export default function ContextTipItem({ issue, onFix, onDismiss, onAiAssist, on
             return { icon: AlertCircle, color: '#ffaa00', bg: 'bg-amber-500/10', border: 'border-amber-500/20' };
         }
         if (issue.severity === 'positive') {
-            return { icon: CheckCircle, color: '#80FF00', bg: 'bg-[#80FF00]/10', border: 'border-[#80FF00]/20' };
+            return { icon: CheckCircle, color: '#013f2e', bg: 'bg-[#013f2e]/10', border: 'border-[#013f2e]/20' };
         }
         return { icon: Zap, color: categoryColor.color, bg: categoryColor.bg, border: categoryColor.border };
     };

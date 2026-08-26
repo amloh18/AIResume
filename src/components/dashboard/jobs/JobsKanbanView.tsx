@@ -40,7 +40,7 @@ interface JobApplication {
   title?: string;
   company: string;
   status:
-    | "draft"
+    | "saved"
     | "created"
     | "applied"
     | "screening"
@@ -83,7 +83,7 @@ interface JobApplication {
 interface JobsKanbanViewProps {
   jobs: JobApplication[];
   jobsByStatus: {
-    draft: JobApplication[];
+    saved: JobApplication[];
     created: JobApplication[];
     applied: JobApplication[];
     interview: JobApplication[];
@@ -254,49 +254,49 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
   onImproveATS,
   onDownload,
 }) => {
-  // Draft color (used as default for all stages)
-  const draftColor =
+  // Saved color (used as default for all stages)
+  const savedColor =
     "bg-gray-100 dark:bg-gray-500/20 border-gray-300 dark:border-gray-500/30 text-gray-600 dark:text-white";
 
   const allStages = [
     {
-      status: "draft",
-      title: "Draft",
-      color: draftColor,
-      hoverColor: draftColor,
+      status: "saved",
+      title: "Saved",
+      color: savedColor,
+      hoverColor: savedColor,
     },
     {
       status: "created",
       title: "Staging",
-      color: draftColor,
+      color: savedColor,
       hoverColor:
         "bg-purple-100 dark:bg-purple-500/20 border-purple-300 dark:border-purple-500/30 text-purple-600 dark:text-white",
     },
     {
       status: "applied",
       title: "Applied",
-      color: draftColor,
+      color: savedColor,
       hoverColor:
         "bg-blue-100 dark:bg-blue-500/20 border-blue-300 dark:border-blue-500/30 text-blue-600 dark:text-white",
     },
     {
       status: "interview",
       title: "Interview",
-      color: draftColor,
+      color: savedColor,
       hoverColor:
         "bg-orange-100 dark:bg-orange-500/20 border-orange-300 dark:border-orange-500/30 text-orange-600 dark:text-white",
     },
     {
       status: "offer",
       title: "Offer",
-      color: draftColor,
+      color: savedColor,
       hoverColor:
         "bg-green-100 dark:bg-green-500/20 border-green-300 dark:border-green-500/30 text-green-600 dark:text-white",
     },
     {
       status: "rejected",
       title: "Rejected",
-      color: draftColor,
+      color: savedColor,
       hoverColor:
         "bg-red-100 dark:bg-red-500/20 border-red-300 dark:border-red-500/30 text-red-600 dark:text-white",
     },
@@ -305,7 +305,7 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
   // Filter stages based on focus mode
   const stages = isFocusMode
     ? allStages.filter(
-        (stage) => stage.status !== "draft" && stage.status !== "rejected",
+        (stage) => stage.status !== "saved" && stage.status !== "rejected",
       )
     : allStages;
 
@@ -314,14 +314,6 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
     const now = new Date();
     return Math.floor(
       (now.getTime() - lastUpdate.getTime()) / (1000 * 60 * 60 * 24),
-    );
-  };
-
-  const isFollowUpNeeded = (job: JobApplication) => {
-    const days = getDaysSinceLastUpdate(job);
-    return (
-      ["applied", "interview", "offer"].includes(job.status) &&
-      (days >= 3 || days >= 7)
     );
   };
 
@@ -381,12 +373,12 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
                 <div key={stage.status} className="space-y-4 py-4">
                   {/* Stage Header */}
                   <div
-                    className={`p-3 rounded-xl border-2 border-solid ${stage.color} min-h-[60px] flex items-center justify-center sticky top-0 z-10 backdrop-blur-sm bg-white/80 dark:bg-[#141810]/80 cursor-pointer transition-all duration-200 group`}
+                    className={`p-2.5 rounded-xl border-2 border-solid ${stage.color} min-h-[48px] flex items-center justify-center sticky top-0 z-10 backdrop-blur-sm bg-white/80 dark:bg-[#141810]/80 cursor-pointer transition-all duration-200 group`}
                     onMouseEnter={(e) => {
-                      e.currentTarget.className = `p-3 rounded-xl border-2 border-solid ${stage.hoverColor} min-h-[60px] flex items-center justify-center sticky top-0 z-10 backdrop-blur-sm bg-white/80 dark:bg-[#141810]/80 cursor-pointer transition-all duration-200 group`;
+                      e.currentTarget.className = `p-2.5 rounded-xl border-2 border-solid ${stage.hoverColor} min-h-[48px] flex items-center justify-center sticky top-0 z-10 backdrop-blur-sm bg-white/80 dark:bg-[#141810]/80 cursor-pointer transition-all duration-200 group`;
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.className = `p-3 rounded-xl border-2 border-solid ${stage.color} min-h-[60px] flex items-center justify-center sticky top-0 z-10 backdrop-blur-sm bg-white/80 dark:bg-[#141810]/80 cursor-pointer transition-all duration-200 group`;
+                      e.currentTarget.className = `p-2.5 rounded-xl border-2 border-solid ${stage.color} min-h-[48px] flex items-center justify-center sticky top-0 z-10 backdrop-blur-sm bg-white/80 dark:bg-[#141810]/80 cursor-pointer transition-all duration-200 group`;
                     }}
                     onClick={(e) => {
                       e.stopPropagation();
@@ -394,16 +386,16 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
                     }}
                   >
                     <div className="flex items-center justify-between w-full">
-                      <h3 className="text-small font-medium text-black dark:text-white tracking-tight">
+                      <div className="text-small font-semibold text-black dark:text-white tracking-tight">
                         {stage.title}
-                      </h3>
+                      </div>
                       <span className="text-small">{stageJobs.length}</span>
                     </div>
                   </div>
 
                   {/* Stage-Specific Content */}
                   <div className="mt-4">
-                    {stage.status === "draft" && onCreateJourney && (
+                    {stage.status === "saved" && onCreateJourney && (
                       <DraftStageView
                         jobs={stageJobs as any}
                         onJobClick={onJobClick as any}
@@ -419,6 +411,7 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
                         getJourneyStatusText={getJourneyStatusText}
                         onJobClick={onJobClick as any}
                         onRefresh={onRefresh}
+                        onDownload={onDownload as any}
                       />
                     )}
                     {stage.status === "applied" && onJobStatusUpdate && (
@@ -451,6 +444,7 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
                       <RejectedStageView
                         jobs={stageJobs as any}
                         onJobClick={onJobClick as any}
+                        onJobStatusUpdate={onJobStatusUpdate as any}
                         isFullScreen={!!zoomedStage}
                       />
                     )}
@@ -461,28 +455,28 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
         </div>
       ) : (
         // All stages - horizontal scrollable with proper width
-        <div className="flex flex-row gap-4 h-full min-w-max pb-4 pl-0 sm:pl-2 pr-0 sm:pr-4 overflow-x-auto scrollbar-hide">
+        <div className="flex flex-row gap-4 h-full min-h-[600px] pb-4 overflow-x-auto scrollbar-hide">
           {stages.map((stage) => {
             const stageJobs =
               jobsByStatus[stage.status as keyof typeof jobsByStatus];
             return (
               <div
                 key={stage.status}
-                className="flex flex-col gap-4 w-[320px] flex-shrink-0 h-full max-h-full"
+                className="flex flex-col gap-4 flex-1 min-w-[220px] h-full max-h-full"
               >
                 {/* Stage Header */}
                 <div
-                  className={`flex-shrink-0 p-3 rounded-xl border-2 border-solid ${stage.color} min-h-[60px] flex items-center justify-center cursor-pointer transition-all duration-200 group`}
+                  className={`flex-shrink-0 p-2.5 rounded-xl border-2 border-solid ${stage.color} min-h-[48px] flex items-center justify-center cursor-pointer transition-all duration-200 group`}
                   style={
                     {
                       "--hover-color": stage.hoverColor,
                     } as React.CSSProperties
                   }
                   onMouseEnter={(e) => {
-                    e.currentTarget.className = `p-3 rounded-xl border-2 border-solid ${stage.hoverColor} min-h-[60px] flex items-center justify-center cursor-pointer transition-all duration-200 group`;
+                    e.currentTarget.className = `p-2.5 rounded-xl border-2 border-solid ${stage.hoverColor} min-h-[48px] flex items-center justify-center cursor-pointer transition-all duration-200 group`;
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.className = `p-3 rounded-xl border-2 border-solid ${stage.color} min-h-[60px] flex items-center justify-center cursor-pointer transition-all duration-200 group`;
+                    e.currentTarget.className = `p-2.5 rounded-xl border-2 border-solid ${stage.color} min-h-[48px] flex items-center justify-center cursor-pointer transition-all duration-200 group`;
                   }}
                   onClick={(e) => {
                     e.stopPropagation();
@@ -490,25 +484,33 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
                   }}
                 >
                   <div className="flex items-center justify-between w-full">
-                    <h3 className="text-small font-medium text-black dark:text-white tracking-tight">
+                    <div className="text-small font-semibold text-black dark:text-white tracking-tight">
                       {stage.title}
-                    </h3>
+                    </div>
                     <span className="text-small">{stageJobs.length}</span>
                   </div>
                 </div>
 
                 {/* Drop Zone */}
                 <div
-                  className={`w-full rounded-xl border-2 border-dashed transition-all duration-300 flex-1 overflow-y-auto scrollbar-hide min-h-0 ${
+                  className={`w-full rounded-xl border-2 transition-all duration-300 flex-1 overflow-y-auto scrollbar-hide min-h-0 relative ${
                     draggedJob
                       ? isDraggableStage(stage.status)
-                        ? `border-blue-300 dark:border-[rgb(60,75,60)] bg-blue-50 dark:bg-[rgb(60,75,60)]/20`
-                        : "border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/30 opacity-50"
-                      : "border-transparent"
+                        ? 'border-dashed border-lime-400 dark:border-lime-500/50 bg-lime-50/50 dark:bg-lime-900/10'
+                        : 'border-dashed border-gray-300 dark:border-gray-600 bg-gray-50/50 dark:bg-gray-800/20 opacity-50'
+                      : 'border-[var(--border-primary)]/60 border-solid'
                   }`}
                   onDragOver={onDragOver}
                   onDrop={(e) => onDrop(e, stage.status)}
                 >
+                  {/* Drop indicator overlay when dragging */}
+                  {draggedJob && isDraggableStage(stage.status) && (
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+                      <div className="px-3 py-1.5 rounded-lg bg-lime-100 dark:bg-lime-900/30 border border-lime-300 dark:border-lime-500/30 text-lime-700 dark:text-lime-300 text-xs font-semibold opacity-60">
+                        Drop here
+                      </div>
+                    </div>
+                  )}
                   {/* Job Cards */}
                   <div
                     className={
@@ -539,7 +541,7 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
                             </div>
                           </div>
                         ))
-                      : (stage.status === "draft" ||
+                      : (stage.status === "saved" ||
                             stage.status === "created") &&
                           zoomedStage
                         ? // Show journey cards for created stage when zoomed

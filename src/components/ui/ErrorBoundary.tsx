@@ -89,8 +89,8 @@ class ErrorBoundary extends Component<Props, State> {
       window.location.href = '/linkedin-enhancer'; // Refresh without params
     } else if (currentPath.includes('/ats-resume-checker')) {
       window.location.href = '/ats-resume-checker'; // Refresh without params
-    } else if (currentPath.includes('/dashboard/tracker')) {
-      window.location.href = '/dashboard/tracker'; // Reset tracker state
+    } else if (currentPath.includes('/dashboard/tracker') || currentPath.includes('/dashboard/jobs')) {
+      window.location.href = '/dashboard/jobs?tab=applications'; // Reset tracker state
     } else {
       // Default to dashboard for other pages
       window.location.href = '/dashboard';

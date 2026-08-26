@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import { User } from '@/models';
 import subscriptionService from '@/lib/services/subscriptionService';
+import { requireAdmin } from '@/lib/middleware/admin-auth';
 
 export async function GET(request: NextRequest) {
   try {
+    await requireAdmin(request);
     await getConnection();
 
     const { searchParams } = new URL(request.url);
@@ -61,6 +63,8 @@ export async function GET(request: NextRequest) {
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
+        avatar: user.avatar || null,
+        isAnonymous: user.isAnonymous || false,
         role: user.role || 'user',
         currentPlanKey: currentPlanKey,
         subscription: {

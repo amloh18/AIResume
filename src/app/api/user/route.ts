@@ -109,7 +109,7 @@ export async function GET(request: NextRequest) {
 
     const { currentPlanKey, subscription } = !isAdminAuthUser
       ? subscriptionService.getEffectivePlan(user)
-      : { currentPlanKey: 'pro_lifetime', subscription: { status: 'active', planKey: 'pro_lifetime' } };
+      : { currentPlanKey: 'focused_yearly', subscription: { status: 'active', planKey: 'focused_yearly' } };
 
     // Format user data for frontend
     const userData = {
@@ -324,7 +324,7 @@ export async function PUT(request: NextRequest) {
 
     const { currentPlanKey, subscription } = !isAdminAuthUser 
       ? subscriptionService.getEffectivePlan(user)
-      : { currentPlanKey: 'pro_lifetime', subscription: { status: 'active', planKey: 'pro_lifetime' } };
+      : { currentPlanKey: 'focused_yearly', subscription: { status: 'active', planKey: 'focused_yearly' } };
 
     return NextResponse.json({
       success: true,

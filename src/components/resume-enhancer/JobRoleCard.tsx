@@ -69,8 +69,8 @@ export default function JobRoleCard({
       {/* Mode Chips */}
       <div className="flex flex-wrap gap-1.5 mb-3">
         {isMaster && (
-          <span className="px-2 py-0.5 text-[10px] font-medium bg-[#80FF00]/20 text-[#80FF00] rounded border border-[#80FF00]/30">
-            Master CV
+          <span className="px-2 py-0.5 text-[10px] font-medium bg-[#013f2e]/20 text-[#013f2e] rounded border border-[#013f2e]/30">
+            Profile
           </span>
         )}
         {isStandalone && (
@@ -97,7 +97,7 @@ export default function JobRoleCard({
             e.stopPropagation();
             onAddJD();
           }}
-          className="w-full px-3 py-2 bg-[#80FF00]/10 hover:bg-[#80FF00]/20 border border-[#80FF00]/30 rounded-lg text-[10px] font-medium text-[#80FF00] transition-colors flex items-center justify-center gap-2"
+          className="w-full px-3 py-2 bg-[#013f2e]/10 hover:bg-[#013f2e]/20 border border-[#013f2e]/30 rounded-lg text-[10px] font-medium text-[#013f2e] transition-colors flex items-center justify-center gap-2"
         >
           <Plus className="w-3 h-3" />
           <span>Add JD</span>

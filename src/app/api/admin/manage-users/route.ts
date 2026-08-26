@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import { User } from '@/models';
+import { withAdminAuth } from '@/lib/middleware/admin-auth';
 
-export async function POST(request: NextRequest) {
+// Defense in depth: the edge proxy gates /api/admin/*, but this route can
+// create/delete admin accounts, so it must also enforce admin auth in-route.
+export const POST = withAdminAuth(async (request: NextRequest) => {
   try {
     await getConnection();
 
@@ -96,4 +99,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

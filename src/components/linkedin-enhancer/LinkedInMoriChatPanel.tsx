@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { usePaymentModal } from '@/contexts/PaymentModalContext';
+import MoriChatLimitPanel from '@/components/payment/MoriChatLimitPanel';
 import { useSession } from 'next-auth/react';
 import { useAuthModalStore } from '@/lib/stores/authModalStore';
 import { 
@@ -9,6 +9,7 @@ import {
   MousePointer2, MessageSquare, History, Edit2, X, Plus, ChevronRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { sanitizeMoriChatMessage } from '@/lib/utils/mori-chat-response';
 
 interface Option {
   label: string;
@@ -49,7 +50,6 @@ const SUGGESTIONS = [
 ];
 
 export default function LinkedInMoriChatPanel({ cvId, cvType, onCvUpdated, onClose }: LinkedInMoriChatPanelProps) {
-  const { openPaymentModal } = usePaymentModal();
   const { data: session, status: sessionStatus } = useSession();
   const { openModal } = useAuthModalStore();
   const isGuestMode = sessionStatus === 'unauthenticated';
@@ -196,7 +196,7 @@ export default function LinkedInMoriChatPanel({ cvId, cvType, onCvUpdated, onClo
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: result.message || "I've processed your request.",
+        content: sanitizeMoriChatMessage(result.message) || "I've processed your request.",
         timestamp: Date.now(),
         options: result.options
       };
@@ -543,26 +543,7 @@ export default function LinkedInMoriChatPanel({ cvId, cvType, onCvUpdated, onClo
         </AnimatePresence>
 
         {limitExhausted ? (
-          <div className="pointer-events-auto relative p-5 bg-gradient-to-br from-emerald-500/10 via-teal-500/5 to-purple-500/10 dark:from-emerald-500/20 dark:to-purple-500/20 border border-emerald-500/20 dark:border-emerald-500/40 rounded-2xl shadow-xl flex flex-col items-center text-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-500 animate-pulse">
-              <Sparkles className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-            </div>
-            <div>
-              <h4 className="text-[13.5px] font-bold text-slate-800 dark:text-white">
-                Mori Chat Limit Reached
-              </h4>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 max-w-[290px] leading-relaxed">
-                You've exhausted your limit of 5 free AI conversations this month. Upgrade to Pro for unlimited edits!
-              </p>
-            </div>
-            <button
-              onClick={() => openPaymentModal({ preselectedPlanKey: 'pro_monthly', triggerContext: 'mori-chat-limit' })}
-              className="w-full py-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-xl text-[12px] font-semibold transition-all shadow-md shadow-emerald-500/20 active:scale-[0.98] flex items-center justify-center gap-1.5"
-            >
-              <span>Upgrade to Pro</span>
-              <Sparkles className="w-3.5 h-3.5" />
-            </button>
-          </div>
+          <MoriChatLimitPanel />
         ) : (
           <div className={`pointer-events-auto relative group shadow-xl bg-white dark:bg-[var(--bg-primary)] border border-slate-200 dark:border-[var(--border-primary)] transition-all ${currentSelection ? 'rounded-b-xl rounded-t-none border-t-0' : 'rounded-2xl'}`}>
             <textarea

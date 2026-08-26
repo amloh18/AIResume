@@ -65,13 +65,6 @@ const PLAN_NAMES: Record<string, string> = {
     starter_yearly: 'Starter Yearly',
     focused_monthly: 'Focused Monthly',
     focused_yearly: 'Focused Yearly',
-    smart_quarterly: 'Smart Quarterly',
-    smart_yearly: 'Smart Yearly',
-    pro_monthly: 'Pro Monthly',
-    pro_quarterly: 'Pro Quarterly',
-    pro_yearly: 'Pro Yearly',
-    pro_lifetime: 'Pro Lifetime',
-    pro: 'Pro',
 };
 
 const defaultMembership: MembershipInfo = {
@@ -109,10 +102,8 @@ async function fetchMembershipInfo(): Promise<MembershipInfo> {
         isFreePlan: planKey === 'free' || planKey === 'starter_monthly',
         isProMember: [
             'focused_monthly', 'focused_yearly',
-            'smart_quarterly', 'smart_yearly',
-            'pro_monthly', 'pro_quarterly', 'pro_yearly', 'pro_lifetime', 'pro'
         ].includes(planKey) && isActive,
-        isLifetimeMember: planKey === 'pro_lifetime' && isActive,
+        isLifetimeMember: false,
         limits,
         // Free tier (free + starter_monthly) is always active — no subscription expiry
         isSubscriptionActive: (planKey === 'free' || planKey === 'starter_monthly') ? true : isActive,
@@ -254,8 +245,6 @@ export function useMembership(): UseMembershipReturn {
 export function isProPlan(planKey: string): boolean {
     return [
         'focused_monthly', 'focused_yearly',
-        'smart_quarterly', 'smart_yearly',
-        'pro_monthly', 'pro_quarterly', 'pro_yearly', 'pro_lifetime', 'pro'
     ].includes(planKey);
 }
 

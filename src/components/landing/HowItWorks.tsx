@@ -72,8 +72,21 @@ const HowItWorks = () => {
   return (
     <section
       id="how-it-works"
-      className="relative pt-32 pb-20 bg-[#141810] overflow-visible"
+      className="relative pt-32 pb-20 bg-[#0a0a0c] overflow-visible"
     >
+      {/* Background Ambient Glows (Matching Everyday Superpowers) */}
+      <div 
+        className="absolute inset-0 pointer-events-none overflow-hidden"
+        style={{
+          background: `
+            radial-gradient(ellipse 60% 40% at 20% 15%, rgba(1, 63, 46, 0.25) 0%, transparent 65%),
+            radial-gradient(ellipse 60% 50% at 80% 50%, rgba(20, 184, 166, 0.08) 0%, transparent 65%),
+            radial-gradient(ellipse 70% 50% at 50% 85%, rgba(1, 63, 46, 0.2) 0%, transparent 65%),
+            linear-gradient(180deg, #0e1013 0%, #0a0a0c 50%, #060708 100%)
+          `
+        }}
+      />
+
       <div className="relative z-10 max-w-7xl mx-auto px-4 tablet:px-6 desktop:px-8">
         {/* Full Width Header */}
         <div className="mb-12 tablet:mb-16">
@@ -85,7 +98,7 @@ const HowItWorks = () => {
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
           >
-            <svg width="48" height="24" viewBox="0 0 48 24" fill="none" className="text-[#81ff00]">
+            <svg width="48" height="24" viewBox="0 0 48 24" fill="none" className="text-[#36D39B]">
               <path
                 d="M2 12C6 6 10 18 14 12C18 6 22 18 26 12C30 6 34 18 38 12C42 6 46 12 46 12"
                 stroke="currentColor"
@@ -97,13 +110,13 @@ const HowItWorks = () => {
 
           {/* Headline */}
           <motion.h2
-            className="!text-[2rem] tablet:!text-[2.5rem] desktop:!text-[3rem] font-extrabold text-white mb-3 tracking-tighter !leading-[1.05]"
+            className="tablet:!text-[2.5rem] desktop:!text-[3rem] font-extrabold text-[#F5F7F7] mb-3 tracking-tighter text-4xl! tracking-normal!"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.1 }}
           >
-            Stop juggling <span className="text-transparent bg-clip-text bg-gradient-to-r from-lime-400 to-lime-500">five different apps.</span>
+            Stop juggling <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#36D39B] via-[#4DDCB0] to-[#86E8D1]">five different apps.</span>
           </motion.h2>
           <motion.p
             className="text-h3 text-gray-400 max-w-2xl leading-relaxed text-left"
@@ -112,7 +125,7 @@ const HowItWorks = () => {
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.15 }}
           >
-            CVCircle makes it simple to manage your entire job application.
+            AIResume makes it simple to manage your entire job application.
           </motion.p>
         </div>
 
@@ -133,19 +146,21 @@ const HowItWorks = () => {
                 transition={{ duration: 0.6, delay: 0.2 }}
               >
                 {features.map((feature, index) => (
-                  <div
+                  <motion.div
                     key={index}
                     onClick={() => handleStepClick(index)}
-                    className={`relative pl-4 border-l-2 cursor-pointer transition-all duration-300 min-h-[80px] flex flex-col justify-center ${index === activeStep
-                      ? 'border-gray-700 opacity-100' // Base track for active (progress bar overlays it)
-                      : 'border-gray-700 opacity-60 hover:opacity-80'
-                      }`}
+                    className={`relative pl-4 border-l-2 cursor-pointer transition-all duration-300 min-h-[80px] flex flex-col justify-center ${
+                      index === activeStep
+                        ? 'border-gray-700 opacity-100'
+                        : 'border-gray-700 opacity-50 hover:opacity-80'
+                    }`}
                   >
                     {/* Active Step Progress Bar */}
                     {index === activeStep && (
                       <motion.div
-                        className="absolute left-[-2px] top-0 w-[2px] bg-[#81ff00]"
-                        style={{ height: `${100 - progress}%` }} // Grows from 0 to 100% as progress drops from 100 to 0
+                        layoutId="active-step-bar"
+                        className="absolute left-[-2px] top-0 w-[2px] bg-[#36D39B] shadow-[0_0_10px_rgba(54,211,155,0.8)]"
+                        style={{ height: `${100 - progress}%` }}
                         transition={{ duration: 0.05, ease: "linear" }}
                       />
                     )}
@@ -156,7 +171,7 @@ const HowItWorks = () => {
                     <p className="text-gray-400 text-small leading-relaxed">
                       {feature.description}
                     </p>
-                  </div>
+                  </motion.div>
                 ))}
               </motion.div>
 
@@ -173,7 +188,7 @@ const HowItWorks = () => {
                   >
                     {/* Progress bar on the border for mobile */}
                     <motion.div
-                      className="absolute left-[-2px] top-0 w-[2px] bg-[#81ff00]"
+                      className="absolute left-[-2px] top-0 w-[2px] bg-[#36D39B]"
                       style={{ height: `${100 - progress}%` }}
                       transition={{ duration: 0.05, ease: "linear" }}
                     />
@@ -193,8 +208,9 @@ const HowItWorks = () => {
                     <button
                       key={index}
                       onClick={() => handleStepClick(index)}
-                      className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${index === activeStep ? 'bg-[#81ff00]' : 'bg-gray-800'
-                        }`}
+                      className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${
+                        index === activeStep ? 'bg-[#36D39B]' : 'bg-gray-800'
+                      }`}
                       aria-label={`Go to step ${index + 1}`}
                     />
                   ))}
@@ -212,7 +228,7 @@ const HowItWorks = () => {
             transition={{ duration: 0.8, delay: 0.3 }}
           >
             {/* Glowing effect behind image */}
-            <div className="absolute -inset-4 bg-gradient-to-r from-[#81ff00]/20 via-[#6dd600]/20 to-[#5cc000]/20 rounded-3xl blur-2xl opacity-50" />
+            <div className="absolute -inset-4 bg-gradient-to-r from-[#36D39B]/20 via-[#4DDCB0]/15 to-[#86E8D1]/10 rounded-3xl blur-2xl opacity-60" />
 
             {/* Image container with 1:1 aspect ratio */}
             <div className="relative rounded-2xl overflow-hidden border border-white/10 shadow-2xl bg-white backdrop-blur-sm aspect-square min-h-[280px] tablet:min-h-[400px] flex items-center justify-center p-6 tablet:p-10">

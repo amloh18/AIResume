@@ -48,7 +48,7 @@ const ChromeExtension = () => {
                 viewport={{ once: true }}
                 transition={{ duration: 0.5 }}
               >
-                <svg width="48" height="24" viewBox="0 0 48 24" fill="none" className="text-[#81ff00]">
+                <svg width="48" height="24" viewBox="0 0 48 24" fill="none" className="text-[#36D39B]">
                   <path
                     d="M2 12C6 6 10 18 14 12C18 6 22 18 26 12C30 6 34 18 38 12C42 6 46 12 46 12"
                     stroke="currentColor"
@@ -57,10 +57,10 @@ const ChromeExtension = () => {
                   />
                 </svg>
               </motion.div>
-              <h2 className="!text-[2rem] tablet:!text-[2.5rem] desktop:!text-[3rem] font-extrabold text-white mb-4 tracking-tighter !leading-[1.05] text-left">
+              <h2 className="tablet:!text-[2.5rem] desktop:!text-[3rem] font-extrabold text-[#F5F7F7] mb-4 tracking-tighter text-left text-4xl! tracking-normal!">
                 Our Browser Extension Works on
                 <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-lime-400 to-lime-500">
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#36D39B] via-[#4DDCB0] to-[#86E8D1]">
                   100+ Job Sites
                 </span>
               </h2>
@@ -70,7 +70,7 @@ const ChromeExtension = () => {
             </div>
             <motion.button
               onClick={() => window.open('https://chromewebstore.google.com/detail/fphkljfgefkfemmlfbpnjdojnfeadaii?utm_source=item-share-cb', '_blank')}
-              className="bg-lime-400 hover:bg-lime-500 text-black font-semibold px-6 py-3 tablet:px-8 tablet:py-4 rounded-full transition-all duration-300 transform hover:scale-105 shadow-lg shadow-lime-400/20 whitespace-nowrap flex-shrink-0"
+              className="bg-[#013f2e] hover:bg-[#025c43] text-white font-bold px-6 py-3 tablet:px-8 tablet:py-4 rounded-full transition-colors duration-200 transform hover:scale-105 shadow-lg whitespace-nowrap flex-shrink-0"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               initial={{ opacity: 0, x: 20 }}

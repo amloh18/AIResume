@@ -7,26 +7,111 @@ import type {
   User,
 } from '@/types/automation-schema';
 import { MATCH_SCORE_WEIGHTS, MATCH_SCORE_THRESHOLDS } from '@/types/automation-schema';
+import { calculateLevenshteinDistance } from '@/lib/services/semantic-matcher-service';
+import {
+  extractUserSkills,
+  extractJobSkills,
+  computeSmartMatch,
+} from '@/lib/services/smartSkillMatcher';
 
 export class JobMatchingService {
+  /**
+   * Compute match score for a user and job.
+   * 
+   * IMPORTANT: Now reads from canonical JobSearchProfile instead of legacy job_preferences.
+   * Falls back to legacy job_preferences if profile doesn't exist.
+   */
   static async computeScore(userId: string, jobId: string): Promise<JobMatch> {
     try {
       const { getDb } = await import('@/lib/db');
       const db = await getDb();
 
-      const [user, job, preferences] = await Promise.all([
+      const [user, job] = await Promise.all([
         db.collection<User>('users').findOne({ _id: new ObjectId(userId) }),
         db.collection<Job>('jobs').findOne({ _id: new ObjectId(jobId) }),
-        db.collection<JobPreferences>('job_preferences').findOne({
-          userId: new ObjectId(userId),
-        }),
       ]);
 
-      if (!user || !job || !preferences) {
-        throw new Error('User, job, or preferences not found');
+      if (!user || !job) {
+        throw new Error('User or job not found');
       }
 
-      const breakdown = await this.calculateBreakdown(user, job, preferences);
+      // Read from JobSearchProfile or legacy job_preferences based on feature flag
+      let preferences: JobPreferences | null = null;
+      
+      const { isFeatureFlagEnabledForUser, FEATURE_FLAGS } = await import('@/lib/feature-flags');
+      const useNewStore = isFeatureFlagEnabledForUser(FEATURE_FLAGS.USE_JOB_SEARCH_PROFILE, userId);
+      
+      if (useNewStore) {
+        try {
+          const { JobSearchProfileService } = await import('./jobSearchProfileService');
+          const { trackNewStoreRead, trackLegacyFallbackRead } = await import('@/lib/migration/migrationTelemetry');
+          const profile = await JobSearchProfileService.getProfile(userId);
+          
+          if (profile) {
+            preferences = {
+              titles: profile.targetRoles,
+              locations: profile.locations,
+              country: 'UK',
+              remoteOnly: profile.remoteOnly,
+              salaryMin: profile.minSalary,
+            } as JobPreferences;
+            trackNewStoreRead('JobMatchingService', userId);
+          } else {
+            preferences = await db.collection<JobPreferences>('job_preferences').findOne({
+              userId: new ObjectId(userId),
+            });
+            trackLegacyFallbackRead({
+              service: 'JobMatchingService',
+              userId,
+              legacySource: 'job_preferences',
+              reason: 'profile_not_found',
+            });
+          }
+        } catch (error) {
+          console.warn('[JobMatchingService] Could not load JobSearchProfile, falling back to legacy:', error);
+          const { trackLegacyFallbackRead } = await import('@/lib/migration/migrationTelemetry');
+          preferences = await db.collection<JobPreferences>('job_preferences').findOne({
+            userId: new ObjectId(userId),
+          });
+          trackLegacyFallbackRead({
+            service: 'JobMatchingService',
+            userId,
+            legacySource: 'job_preferences',
+            reason: 'profile_error',
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+      } else {
+        // Feature flag disabled — read directly from legacy
+        preferences = await db.collection<JobPreferences>('job_preferences').findOne({
+          userId: new ObjectId(userId),
+        });
+      }
+
+      if (!preferences) {
+        throw new Error('Preferences not found');
+      }
+
+      // Load user's master CV for skill extraction
+      const primaryCvId = (user as any).primary_cv_id || (user as any).settings?.primaryCvId;
+      let userSkills: string[] = [];
+
+      if (primaryCvId) {
+        try {
+          const CV = (await import('@/models/CV')).default;
+          const cv = await CV.findById(primaryCvId).lean() as any;
+          if (cv?.cvData) {
+            userSkills = extractUserSkills(cv.cvData);
+          }
+        } catch {}
+      }
+
+      // Fallback: extract skills from user preferences titles as keywords
+      if (userSkills.length === 0 && preferences.titles?.length) {
+        userSkills = preferences.titles.map((t) => t.toLowerCase());
+      }
+
+      const breakdown = await this.calculateBreakdown(user, job, preferences, userSkills);
       const score =
         breakdown.skills * MATCH_SCORE_WEIGHTS.SKILLS +
         breakdown.title * MATCH_SCORE_WEIGHTS.TITLE +
@@ -66,61 +151,30 @@ export class JobMatchingService {
   private static async calculateBreakdown(
     user: User,
     job: Job,
-    preferences: JobPreferences
+    preferences: JobPreferences,
+    userSkills: string[] = []
   ): Promise<MatchBreakdown> {
-    const skillsScore = await this.calculateSkillsScore(job);
-    const titleScore = this.calculateTitleScore(preferences.titles, job.title);
-    const locationScore = this.calculateLocationScore(
-      preferences.locations,
-      job.location,
-      preferences.remoteOnly,
-      job.remote
-    );
-    const recencyScore = this.calculateRecencyScore(
+    const jobSkills = extractJobSkills({
+      description: (job as any).description || (job as any).jobDescription || '',
+      keywords: job.keywords || [],
+      title: job.title,
+    });
+
+    const userTitles = preferences.titles || [];
+
+    const smartResult = computeSmartMatch(
+      userSkills,
+      jobSkills,
+      userTitles,
+      job.title,
+      job.location || '',
+      preferences.locations || [],
+      job.remote || false,
+      preferences.remoteOnly || false,
       job.postedDate || job.createdAt
     );
 
-    return {
-      skills: skillsScore,
-      title: titleScore,
-      location: locationScore,
-      recency: recencyScore,
-    };
-  }
-
-  private static async calculateSkillsScore(job: Job): Promise<number> {
-    if (!job.keywords || job.keywords.length === 0) {
-      return 50;
-    }
-    return 75;
-  }
-
-  private static calculateTitleScore(
-    userTitles: string[],
-    jobTitle: string
-  ): number {
-    const normalizedJobTitle = jobTitle.toLowerCase();
-    const normalizedUserTitles = userTitles.map((t) => t.toLowerCase());
-
-    for (const userTitle of normalizedUserTitles) {
-      if (normalizedJobTitle.includes(userTitle)) {
-        return 100;
-      }
-
-      if (userTitle.includes(normalizedJobTitle)) {
-        return 90;
-      }
-
-      const similarity = this.calculateStringSimilarity(
-        userTitle,
-        normalizedJobTitle
-      );
-      if (similarity > 0.7) {
-        return 80;
-      }
-    }
-
-    return 30;
+    return smartResult.breakdown;
   }
 
   private static calculateLocationScore(
@@ -175,36 +229,8 @@ export class JobMatchingService {
       return 1.0;
     }
 
-    const editDistance = this.levenshteinDistance(longer, shorter);
+    const editDistance = calculateLevenshteinDistance(longer, shorter);
     return (longer.length - editDistance) / longer.length;
-  }
-
-  private static levenshteinDistance(str1: string, str2: string): number {
-    const matrix: number[][] = [];
-
-    for (let i = 0; i <= str2.length; i++) {
-      matrix[i] = [i];
-    }
-
-    for (let j = 0; j <= str1.length; j++) {
-      matrix[0][j] = j;
-    }
-
-    for (let i = 1; i <= str2.length; i++) {
-      for (let j = 1; j <= str1.length; j++) {
-        if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
-          matrix[i][j] = matrix[i - 1][j - 1];
-        } else {
-          matrix[i][j] = Math.min(
-            matrix[i - 1][j - 1] + 1,
-            matrix[i][j - 1] + 1,
-            matrix[i - 1][j] + 1
-          );
-        }
-      }
-    }
-
-    return matrix[str2.length][str1.length];
   }
 
   static async rematchAllJobsForUser(userId: string): Promise<void> {

@@ -12,7 +12,7 @@ export const CV_SNAPSHOT_A4_HEIGHT = 1123;
 // Inject Google Fonts link once per document lifetime so thumbnail renders use preloaded fonts
 const GOOGLE_FONTS_URL = 'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=Merriweather:ital,wght@0,300;0,400;0,700;1,300;1,400&family=Roboto+Mono:wght@300;400;500;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Lora:ital,wght@0,400;0,600;0,700;1,400&family=Outfit:wght@300;400;500;600;700&display=swap';
 let fontsInjected = false;
-function ensureFontsLoaded() {
+export function ensureFontsLoaded() {
   if (fontsInjected || typeof document === 'undefined') return;
   fontsInjected = true;
   // preconnect
@@ -28,7 +28,7 @@ function ensureFontsLoaded() {
   document.head.appendChild(link);
 }
 
-const SNAPSHOT_STYLES = `
+export const SNAPSHOT_STYLES = `
   @import url('${GOOGLE_FONTS_URL}');
   .cv-snapshot-wrapper .cv-document {
     font-family: var(--cv-font), sans-serif;
@@ -79,7 +79,8 @@ const SNAPSHOT_STYLES = `
     overflow: hidden;
     font-size: min(calc(var(--cv-base-size) * 0.85), 2cqw) !important;
   }
-  .cv-snapshot-wrapper .cv-body { font-size: inherit; line-height: calc(1.6 * var(--cv-spacing)); }
+  .cv-snapshot-wrapper .cv-body { font-size: inherit; line-height: calc(1.6 * var(--cv-spacing)); overflow-wrap: anywhere; word-break: break-word; hyphens: auto; }
+  .cv-snapshot-wrapper .cv-body, .cv-snapshot-wrapper .cv-prose p { text-align: justify; }
   .cv-snapshot-wrapper .cv-document p,
   .cv-snapshot-wrapper .cv-document ul,
   .cv-snapshot-wrapper .cv-document li {
@@ -112,9 +113,9 @@ const SNAPSHOT_STYLES = `
   .cv-snapshot-wrapper .cv-accent-text { color: var(--cv-accent) !important; }
   .cv-snapshot-wrapper .cv-accent-bg { background-color: var(--cv-accent) !important; }
   .cv-snapshot-wrapper .cv-accent-border { border-color: var(--cv-accent) !important; }
-  .cv-snapshot-wrapper .cv-document .cv-gap-sm { gap: calc(0.5rem * var(--cv-spacing)) !important; }
-  .cv-snapshot-wrapper .cv-document .cv-gap-md { gap: calc(0.75rem * var(--cv-spacing)) !important; }
-  .cv-snapshot-wrapper .cv-document .cv-gap-lg { gap: calc(1rem * var(--cv-spacing)) !important; }
+  .cv-snapshot-wrapper .cv-document .cv-gap-sm { gap: calc(var(--cv-item-gap, 12px) * 0.67 * var(--cv-spacing)) !important; }
+  .cv-snapshot-wrapper .cv-document .cv-gap-md { gap: calc(var(--cv-item-gap, 12px) * var(--cv-spacing)) !important; }
+  .cv-snapshot-wrapper .cv-document .cv-gap-lg { gap: calc(var(--cv-item-gap, 12px) * 1.33 * var(--cv-spacing)) !important; }
   
   /* Layout formats */
   .cv-format-bullets-only .cv-prose p {
@@ -150,9 +151,10 @@ export default function CVSnapshotDocument({
 }: CVSnapshotDocumentProps) {
   const normalizedCvData = useMemo(() => normalizeCvDataForCanvas(cvData), [cvData]);
   const displayTemplate = useMemo(() => {
-    if (!template) return null;
-    return CANVAS_TEMPLATES.find((item) => item.id === template._id || item.id === template.id) || template;
-  }, [template]);
+    const requested = template || cvData?.metadata?.canvasTemplate;
+    if (!requested) return CANVAS_TEMPLATES[0] || null;
+    return CANVAS_TEMPLATES.find((item) => item.id === requested._id || item.id === requested.id) || requested;
+  }, [template, cvData]);
 
   // Ensure Google Fonts are loaded once (module-level flag prevents duplicates)
   useEffect(() => { ensureFontsLoaded(); }, []);
@@ -183,6 +185,7 @@ export default function CVSnapshotDocument({
           '--cv-page-margin': `${design?.pageMargin || 40}px`,
           '--cv-sidebar-bg': design?.sidebarBgColor || '#f8fafc',
           '--cv-section-gap': `${design?.sectionGap || 16}px`,
+          '--cv-item-gap': `${design?.itemGap || 12}px`,
           '--cv-page-width': '210mm',
           '--cv-page-height': '297mm',
         } as React.CSSProperties}

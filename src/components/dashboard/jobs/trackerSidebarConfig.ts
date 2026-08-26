@@ -2,6 +2,7 @@ import type { TrackerCreatedStagePreview } from '@/lib/utils/tracker-created-sta
 
 export type TrackerStage =
   | 'draft'
+  | 'saved'
   | 'created'
   | 'applied'
   | 'screening'
@@ -43,6 +44,8 @@ export interface TrackerSidebarOpenContext {
   sourceAction?: TrackerCardActionId;
   preferredDetailsView?: TrackerDetailsView;
   highlightAction?: TrackerSidebarActionId;
+  /** Deep link: automatically open the Edit Job sidebar once the job loads. */
+  autoOpenEdit?: boolean;
 }
 
 export interface TrackerSidebarMetric {
@@ -349,10 +352,10 @@ export function buildTrackerSidebarConfig({
   let trackerJourneyEmptyState =
     'No journey has been created for this job yet. The contextual card above tells you the best next step for this stage.';
 
-  if (stage === 'draft') {
+  if (stage === 'saved') {
     journeyCard = {
-      eyebrow: 'Draft Stage',
-      title: 'This job is not started yet',
+      eyebrow: 'Saved Stage',
+      title: 'This job is saved but not started yet',
       summary:
         'As soon as you move this job to Created, the tracker starts generating your CV and cover letter automatically.',
       bullets: getDraftStageBullets(trackerGenerationPreview),

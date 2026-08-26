@@ -6,10 +6,18 @@ export const setNestedValue = (obj: any, path: string, value: any) => {
   const newObj = JSON.parse(JSON.stringify(obj));
   const parts = path.split('.');
   const last = parts.pop()!;
-  const target = parts.reduce((acc: any, part: string) => {
-    if (!acc[part]) acc[part] = {};
+  const target = parts.reduce((acc: any, part: string, index: number) => {
+    const nextPart = parts[index + 1] ?? last;
+    const nextIsIndex = /^\d+$/.test(nextPart);
+    if (acc[part] == null) {
+      acc[part] = nextIsIndex ? [] : {};
+    }
     return acc[part];
   }, newObj);
+  if (Array.isArray(target) && /^\d+$/.test(last)) {
+    const idx = Number(last);
+    while (target.length <= idx) target.push(null);
+  }
   target[last] = value;
   return newObj;
 };

@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Generate referral link based on user ID
-    const referralLink = `https://cvcircle.com/ref/${user._id.toString()}`;
+    const referralLink = `https://buildairesume.com/ref/${user._id.toString()}`;
 
     // For now, return default referral stats
     // In a real application, you would query a referrals collection

@@ -1,10 +1,17 @@
 import mongoose, { Document, Schema } from 'mongoose';
+import {
+  JOB_APPLICATION_SOURCES,
+  sanitizeJobApplicationSource,
+  type JobApplicationSource,
+} from '@/lib/jobs/jobApplicationSource';
 
 export interface IJobApplication extends Document {
   userId: mongoose.Types.ObjectId | string;
   // cvId removed - relationships now managed through CVJourney
   jobTitle: string;
   company: string;
+  companyLogo?: string; // Resolved company logo URL
+  appliedAt?: Date; // When the application was actually submitted (first applied-like status)
   jobUrl?: string;
   jobDescription?: string;
   sponsorship?: 'yes' | 'no' | 'unknown';
@@ -22,7 +29,7 @@ export interface IJobApplication extends Document {
     deadline?: Date;
     status?: string;
   };
-  status: 'draft' | 'created' | 'applied' | 'screening' | 'interview' | 'offer' | 'rejected' | 'accepted' | 'withdrawn';
+  status: 'saved' | 'created' | 'applied' | 'screening' | 'interview' | 'offer' | 'rejected' | 'accepted' | 'withdrawn';
   priority: 'low' | 'medium' | 'high';
   applicationDate?: Date;
   deadline?: Date;
@@ -62,8 +69,9 @@ export interface IJobApplication extends Document {
     size: number;
   }>;
   tags: string[];
-  source?: 'extension' | 'manual' | 'import' | 'linkedin' | 'indeed' | 'company-website' | 'referral' | 'other';
+  source?: JobApplicationSource;
   sourceUrl?: string;
+  atsType?: 'greenhouse' | 'lever' | 'workable' | 'naukri' | 'indeed' | 'adzuna' | 'ashby' | 'workday' | 'unknown';
   atsScore?: number;
   isArchived: boolean;
   // Phase 4: Intelligence & Automation fields
@@ -179,6 +187,15 @@ const jobApplicationSchema = new Schema<IJobApplication>({
     trim: true,
     maxlength: [100, 'Company name cannot exceed 100 characters']
   },
+  companyLogo: {
+    type: String,
+    trim: true,
+    maxlength: [1000, 'Company logo URL cannot exceed 1000 characters']
+  },
+  appliedAt: {
+    type: Date,
+    required: false
+  },
   jobUrl: {
     type: String,
     trim: true,
@@ -224,7 +241,7 @@ const jobApplicationSchema = new Schema<IJobApplication>({
   },
   status: {
     type: String,
-    enum: ['draft', 'created', 'applied', 'screening', 'interview', 'offer', 'rejected', 'accepted', 'withdrawn'],
+    enum: ['saved', 'created', 'applied', 'screening', 'interview', 'offer', 'rejected', 'accepted', 'withdrawn'],
     default: 'created',
     required: true
   },
@@ -306,13 +323,18 @@ const jobApplicationSchema = new Schema<IJobApplication>({
   tags: [{ type: String, trim: true }],
   source: {
     type: String,
-    enum: ['extension', 'manual', 'import', 'linkedin', 'indeed', 'company-website', 'referral', 'other'],
+    enum: JOB_APPLICATION_SOURCES,
     default: 'manual'
   },
   sourceUrl: {
     type: String,
     trim: true,
     maxlength: [500, 'Source URL cannot exceed 500 characters']
+  },
+  atsType: {
+    type: String,
+    enum: ['greenhouse', 'lever', 'workable', 'naukri', 'indeed', 'adzuna', 'ashby', 'workday', 'unknown'],
+    default: 'unknown',
   },
   atsScore: {
     type: Number,
@@ -467,6 +489,26 @@ jobApplicationSchema.index({ userId: 1, company: 1 });
 jobApplicationSchema.index({ userId: 1, isArchived: 1 });
 jobApplicationSchema.index({ 'contacts.email': 1 });
 
+jobApplicationSchema.pre('validate', function (next) {
+  this.source = sanitizeJobApplicationSource(this.source);
+  next();
+});
 
+const ExistingJobApplication = mongoose.models.JobApplication as mongoose.Model<IJobApplication> | undefined;
+if (ExistingJobApplication) {
+  const sourcePath = ExistingJobApplication.schema.path('source') as { enumValues?: string[]; options?: { enum?: string[] } } | undefined;
+  if (sourcePath) {
+    sourcePath.enumValues = [...JOB_APPLICATION_SOURCES];
+    if (sourcePath.options) sourcePath.options.enum = [...JOB_APPLICATION_SOURCES];
+  }
+  const schemaWithFlag = ExistingJobApplication.schema as typeof ExistingJobApplication.schema & { __sourceSanitizeHook?: boolean };
+  if (!schemaWithFlag.__sourceSanitizeHook) {
+    schemaWithFlag.pre('validate', function (next) {
+      this.source = sanitizeJobApplicationSource(this.source);
+      next();
+    });
+    schemaWithFlag.__sourceSanitizeHook = true;
+  }
+}
 
-export default mongoose.models.JobApplication || mongoose.model<IJobApplication>('JobApplication', jobApplicationSchema, 'jobapplications'); 
+export default ExistingJobApplication || mongoose.model<IJobApplication>('JobApplication', jobApplicationSchema, 'jobapplications'); 

@@ -37,7 +37,7 @@ export const GrammarCorrectionCard: React.FC<GrammarCorrectionCardProps> = ({
           <div className="text-small text-gray-400">Suggestion:</div>
           <button
             onClick={() => onApply(issue)}
-            className="w-full text-left px-3 py-2 bg-white/10 hover:bg-[#80FF00]/20 hover:text-[#80FF00] border border-transparent hover:border-[#80FF00]/40 rounded text-small text-white transition-all"
+            className="w-full text-left px-3 py-2 bg-white/10 hover:bg-[#013f2e]/20 hover:text-[#013f2e] border border-transparent hover:border-[#013f2e]/40 rounded text-small text-white transition-all"
           >
             {issue.suggestion || '(Remove)'}
           </button>

@@ -105,7 +105,7 @@ export async function getCountryPricing(countryCode: string): Promise<CountryPri
  */
 export async function getPricingForPlan(
   countryCode: string,
-  planKey: 'free' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly' | 'pro_lifetime'
+  planKey: 'free' | 'focused_monthly' | 'focused_quarterly' | 'focused_yearly' | 'focused_yearly'
 ): Promise<{ price: number; currency: string; currencySymbol: string; planId: string } | null> {
   try {
     let countryPricing = await getCountryPricing(countryCode);
@@ -128,10 +128,9 @@ export async function getPricingForPlan(
     // Map planKey to planPrices key
     const planKeyMap: Record<string, keyof typeof countryPricing.planPrices> = {
       'free': 'free',
-      'pro_monthly': 'monthly',
-      'pro_quarterly': 'quarterly',
-      'pro_yearly': 'yearly',
-      'pro_lifetime': 'lifetime'
+      'focused_monthly': 'monthly',
+      'focused_quarterly': 'quarterly',
+      'focused_yearly': 'yearly',
     };
 
     const planPricesKey = planKeyMap[planKey];

@@ -1,8 +1,11 @@
+/**
+ * @deprecated This model is legacy. Use JobApplication from './JobApplication' for all new code.
+ * This model is only kept for backward compatibility with autoSyncService, calendar sync, and unifiedLimitService.
+ */
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IJob extends Document {
   userId: mongoose.Types.ObjectId; // ObjectId, references the User schema
-  tenantId?: mongoose.Types.ObjectId; // B2B Tenant ID for isolation
   jobTitle: string;
   company: string;
   companyLogo?: string; // Company logo URL
@@ -16,12 +19,12 @@ export interface IJob extends Document {
     period?: 'hourly' | 'monthly' | 'yearly';
   };
   sponsorship?: 'yes' | 'no' | 'unknown';
-  status: 'draft' | 'created' | 'applied' | 'screening' | 'interview' | 'offer' | 'rejected' | 'accepted' | 'withdrawn'; // Single status field for Kanban board
+  status: 'saved' | 'created' | 'applied' | 'screening' | 'interview' | 'offer' | 'rejected' | 'accepted' | 'withdrawn'; // Single status field for Kanban board
   priority: 'low' | 'medium' | 'high';
 
   // Active vs. Archived categorization for limit enforcement
   isArchived: boolean; // If true, doesn't count against active job limit
-  isPublic: boolean; // For B2B careers page
+  isPublic: boolean;
   applicationDate?: Date;
   deadline?: Date;
   notes?: string;
@@ -86,11 +89,6 @@ const jobSchema = new Schema<IJob>({
     ref: 'User',
     required: [true, 'User ID is required']
   },
-  tenantId: {
-    type: Schema.Types.ObjectId,
-    ref: 'Tenant',
-    index: true // Fast lookup for B2B queries
-  },
   jobTitle: {
     type: String,
     required: [true, 'Job title is required'],
@@ -150,7 +148,7 @@ const jobSchema = new Schema<IJob>({
   },
   status: {
     type: String,
-    enum: ['draft', 'created', 'applied', 'screening', 'interview', 'offer', 'rejected', 'accepted', 'withdrawn'],
+    enum: ['saved', 'created', 'applied', 'screening', 'interview', 'offer', 'rejected', 'accepted', 'withdrawn'],
     default: 'created',
     required: true
     // Note: Index defined in compound index below for Kanban board queries
@@ -388,31 +386,6 @@ jobSchema.pre('save', function (next) {
     });
   }
   next();
-});
-
-// Auto-sync to calendar after save (only for non-created status)
-jobSchema.post('save', async function (doc) {
-  try {
-    // Only sync if status is not 'created'
-    if (doc.status !== 'created') {
-      const { AutoSyncService } = await import('@/lib/services/autoSyncService');
-
-      // Get user identifier
-      const userId = doc.userId?.toString();
-
-      if (userId) {
-        // Run sync in background to avoid blocking the save operation
-        setImmediate(() => {
-          AutoSyncService.syncUserJobApplications(userId).catch(error => {
-            console.error('Background calendar sync failed:', error);
-          });
-        });
-      }
-    }
-  } catch (error) {
-    console.error('Error in calendar sync post-save hook:', error);
-    // Don't throw error to avoid breaking the save operation
-  }
 });
 
 export default mongoose.models.Job || mongoose.model<IJob>('Job', jobSchema);

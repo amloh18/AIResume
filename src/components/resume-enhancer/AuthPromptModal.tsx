@@ -59,11 +59,11 @@ export default function AuthPromptModal({
             className="bg-white dark:bg-[#141810] rounded-2xl shadow-2xl shadow-black/30 dark:shadow-black/60 w-full max-w-md mx-4 overflow-hidden"
           >
             {/* Header */}
-            <div className="border-b border-gray-200 dark:border-white/10 bg-gradient-to-r from-[#80FF00]/10 to-[#80FF00]/5 p-6">
+            <div className="border-b border-gray-200 dark:border-white/10 bg-gradient-to-r from-[#013f2e]/10 to-[#013f2e]/5 p-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-[#80FF00]/20 rounded-lg">
-                    <Lock className="w-6 h-6 text-[#80FF00]" />
+                  <div className="p-2 bg-[#013f2e]/20 rounded-lg">
+                    <Lock className="w-6 h-6 text-[#013f2e]" />
                   </div>
                   <div>
                     <h2 className="text-xl font-bold text-gray-900 dark:text-white">
@@ -103,7 +103,7 @@ export default function AuthPromptModal({
                 <button
                   onClick={handleGoogleSignIn}
                   disabled={isRedirecting}
-                  className="w-full px-4 py-3 bg-white dark:bg-[#1a2015] border-2 border-gray-200 dark:border-white/10 rounded-lg hover:border-[#80FF00] dark:hover:border-[#80FF00] transition-all flex items-center justify-center space-x-3 font-medium text-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full px-4 py-3 bg-white dark:bg-[#1a2015] border-2 border-gray-200 dark:border-white/10 rounded-lg hover:border-[#013f2e] dark:hover:border-[#013f2e] transition-all flex items-center justify-center space-x-3 font-medium text-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <svg className="w-5 h-5" viewBox="0 0 24 24">
                     <path
@@ -130,7 +130,7 @@ export default function AuthPromptModal({
                 <button
                   onClick={handleSignUp}
                   disabled={isRedirecting}
-                  className="w-full px-4 py-3 bg-lime-500 dark:bg-[#80FF00] text-black rounded-lg hover:bg-lime-600 dark:hover:bg-[#70e600] font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 shadow-lg hover:shadow-xl"
+                  className="w-full px-4 py-3 bg-lime-500 dark:bg-[#013f2e] text-black rounded-lg hover:bg-lime-600 dark:hover:bg-[#02523c] font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 shadow-lg hover:shadow-xl"
                 >
                   <UserPlus className="w-5 h-5" />
                   <span>Sign Up with Email</span>

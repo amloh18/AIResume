@@ -1,24 +1,21 @@
-import { MongoClient, Db } from 'mongodb';
-import clientPromise from './mongodb';
+import mongoose from 'mongoose';
+import type { Db, MongoClient } from 'mongodb';
+import { getConnection } from '@/lib/database';
 
-let cachedDb: Db | null = null;
-
+/**
+ * Single database access layer.
+ *
+ * Everything routes through the Mongoose connection manager
+ * (src/lib/database/connection-manager.ts), so the whole app shares one
+ * MongoDB connection. `getDb` exposes the underlying native `Db` handle for
+ * the (legacy) services that operate on raw collections directly.
+ */
 export async function getDb(): Promise<Db> {
-  if (cachedDb) {
-    return cachedDb;
-  }
-
-  try {
-    const client = await clientPromise;
-    const db = client.db(process.env.MONGODB_DB_NAME || 'cvcircle');
-    cachedDb = db;
-    return db;
-  } catch (error) {
-    console.error('Failed to connect to database:', error);
-    throw error;
-  }
+  await getConnection();
+  return mongoose.connection.db as unknown as Db;
 }
 
-export async function getClient(): Promise<MongoClient> {
-  return await clientPromise;
+export async function getClient() {
+  await getConnection();
+  return mongoose.connection.getClient();
 }

@@ -317,7 +317,7 @@ async function detectRegionFromIP(ip: string): Promise<RegionInfo> {
         signal: controller.signal,
         headers: {
           'Accept': 'application/json',
-          'User-Agent': 'CVCircle/1.0'
+          'User-Agent': 'AIResume/1.0'
         }
       });
 
@@ -372,15 +372,14 @@ export async function getPricingForRegion(
   region: string
 ): Promise<{ price: number; currency: string; displayPrice: string; polarPriceId?: string } | null> {
   // Map plan key
-  const planKeyMap: Record<string, 'free' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly' | 'pro_lifetime'> = {
+  const planKeyMap: Record<string, 'free' | 'focused_monthly' | 'focused_quarterly' | 'focused_yearly'> = {
     'free': 'free',
-    'pro_monthly': 'pro_monthly',
-    'pro_quarterly': 'pro_quarterly',
-    'pro_yearly': 'pro_yearly',
-    'pro_lifetime': 'pro_lifetime'
+    'focused_monthly': 'focused_monthly',
+    'focused_quarterly': 'focused_quarterly',
+    'focused_yearly': 'focused_yearly',
   };
   
-  const planKey = planKeyMap[plan.key] || 'pro_monthly';
+  const planKey = planKeyMap[plan.key] || 'focused_monthly';
 
   try {
     // Use CountryPricing service

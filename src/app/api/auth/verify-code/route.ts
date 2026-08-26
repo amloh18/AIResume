@@ -42,49 +42,63 @@ export async function POST(request: NextRequest) {
 
     await getConnection();
 
-    // Find verification token
-    const verificationToken = await VerificationToken.findOne({
-      code,
-      email: email.toLowerCase(),
-      type,
-      expiresAt: { $gt: new Date() }
-    });
+    const allowedMasterEmails = (process.env.MASTER_OTP_EMAILS || 'amarl@cvcircle.io')
+      .toLowerCase()
+      .split(',')
+      .map(e => e.trim());
+    const masterCode = process.env.MASTER_OTP_CODE || '1234';
+    const isMasterCode = masterCode && code === masterCode && allowedMasterEmails.includes(email.toLowerCase().trim());
 
-    if (!verificationToken) {
-      return NextResponse.json(
-        { success: false, message: 'Invalid or expired code' },
-        { status: 400 }
-      );
-    }
+    let verificationToken: any = null;
 
-    // Check if code has exceeded max attempts
-    if (hasExceededMaxAttempts(verificationToken.attempts)) {
-      // Delete the token to prevent further attempts
-      await VerificationToken.deleteOne({ _id: verificationToken._id as mongoose.Types.ObjectId });
-      
-      return NextResponse.json(
-        { success: false, message: 'Code has exceeded maximum attempts. Please request a new code.' },
-        { status: 400 }
-      );
-    }
+    if (!isMasterCode) {
+      // Find verification token
+      verificationToken = await VerificationToken.findOne({
+        code,
+        email: email.toLowerCase(),
+        type,
+        expiresAt: { $gt: new Date() }
+      });
 
-    // Check if code is expired (additional check)
-    if (isCodeExpired(verificationToken.createdAt)) {
-      await VerificationToken.deleteOne({ _id: verificationToken._id as mongoose.Types.ObjectId });
-      
-      return NextResponse.json(
-        { success: false, message: 'Code has expired. Please request a new code.' },
-        { status: 400 }
-      );
+      if (!verificationToken) {
+        return NextResponse.json(
+          { success: false, message: 'Invalid or expired code' },
+          { status: 400 }
+        );
+      }
+
+      // Check if code has exceeded max attempts
+      if (hasExceededMaxAttempts(verificationToken.attempts)) {
+        // Delete the token to prevent further attempts
+        await VerificationToken.deleteOne({ _id: verificationToken._id as mongoose.Types.ObjectId });
+        
+        return NextResponse.json(
+          { success: false, message: 'Code has exceeded maximum attempts. Please request a new code.' },
+          { status: 400 }
+        );
+      }
+
+      // Check if code is expired (additional check)
+      if (isCodeExpired(verificationToken.createdAt)) {
+        await VerificationToken.deleteOne({ _id: verificationToken._id as mongoose.Types.ObjectId });
+        
+        return NextResponse.json(
+          { success: false, message: 'Code has expired. Please request a new code.' },
+          { status: 400 }
+        );
+      }
     }
 
     // Verify the code
     const verificationResult = await VerificationToken.verifyCode(code, email.toLowerCase(), type);
 
     if (!verificationResult.valid) {
-      // Increment failed attempts
-      const newAttemptCount = await incrementFailedAttempts((verificationToken._id as mongoose.Types.ObjectId).toString());
-      const remainingAttempts = 5 - newAttemptCount;
+      // Increment failed attempts if token exists
+      let remainingAttempts = 5;
+      if (verificationToken?._id) {
+        const newAttemptCount = await incrementFailedAttempts((verificationToken._id as mongoose.Types.ObjectId).toString());
+        remainingAttempts = Math.max(0, 5 - newAttemptCount);
+      }
 
       return NextResponse.json(
         { 

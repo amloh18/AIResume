@@ -1,7 +1,7 @@
 {
-  "name": "CVCircle - CV Builder with Advanced AI Tools",
-  "short_name": "CVCircle",
-  "description": "CV builder with Advanced Application Tracking and AI-powered tools.",
+  "name": "AIResume - AI Resume Builder with Advanced AI Tools",
+  "short_name": "AIResume",
+  "description": "AI resume builder with ATS optimization, job tracking, and AI-powered career tools.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
@@ -50,37 +50,25 @@
       "sizes": "1280x720",
       "type": "image/png",
       "form_factor": "wide",
-      "label": "CVCircle desktop interface"
+      "label": "AIResume desktop interface"
     },
     {
       "src": "/images/screenshot-mobile.png",
       "sizes": "390x844",
       "type": "image/png",
       "form_factor": "narrow",
-      "label": "CVCircle mobile interface"
+      "label": "AIResume mobile interface"
     }
   ],
   "shortcuts": [
     {
-      "name": "Create New CV",
-      "short_name": "New CV",
-      "description": "Start creating a new CV",
-      "url": "/studio",
+      "name": "Create New Resume",
+      "short_name": "New Resume",
+      "description": "Start creating a new resume with the AI resume builder",
+      "url": "/editor",
       "icons": [
         {
           "src": "/images/shortcut-new-cv.png",
-          "sizes": "96x96"
-        }
-      ]
-    },
-    {
-      "name": "AI Career Report",
-      "short_name": "Career Report",
-      "description": "Get AI-powered career insights",
-      "url": "/ai-career-report",
-      "icons": [
-        {
-          "src": "/images/shortcut-career-report.png",
           "sizes": "96x96"
         }
       ]

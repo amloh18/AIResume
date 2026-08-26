@@ -25,6 +25,7 @@ import {
   Briefcase,
   ChevronRight,
 } from "lucide-react";
+import CompanyLogo from "@/components/ui/CompanyLogo";
 import { CVJourney } from "@/types/cv";
 import { isJobStale, getFollowUpNudge, calculateSuccessProbability } from "@/lib/utils/jobIntelligence";
 
@@ -37,7 +38,7 @@ interface JobApplication {
   company: string;
   companyLogo?: string;
   status:
-    | "draft"
+    | "saved"
     | "created"
     | "applied"
     | "screening"
@@ -124,19 +125,15 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
   // Prevent infinite loops by tracking attempts locally
   const hasAnalyzedRef = React.useRef(false);
 
-  const [progress, setProgress] = useState(15);
-  const primaryJourney = jobJourneys[0];
-  const atsScore = primaryJourney?.atsScore || job.atsScore;
-  const isGenerating = stage === "created" && (
-    !primaryJourney ||
-    primaryJourney.status === "processing_documents" ||
-    (primaryJourney.status !== "creation_failed" && primaryJourney.status !== "ready" && (!primaryJourney.cvId || !primaryJourney.coverLetterId))
-  );
+  const [progress, setProgress] = useState(0);
+  const primaryJourney = jobJourneys && jobJourneys.length > 0 ? jobJourneys[0] : null;
+  const atsScore = primaryJourney?.atsScore || job.atsScore || job.matchScore;
+  const isGenerating = stage === "created" && primaryJourney?.status === "processing_documents";
 
   // Progress simulation timer
   React.useEffect(() => {
     if (!isGenerating) {
-      setProgress(15);
+      setProgress(0);
       return;
     }
 
@@ -151,30 +148,27 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
     return () => clearInterval(timer);
   }, [isGenerating]);
 
-  // Polling database for updates on journey status
+  // Polling database for updates on journey status ONLY if actively generating
   React.useEffect(() => {
     if (!isGenerating) return;
 
     let isMounted = true;
     const pollTimer = setInterval(async () => {
       try {
-        const res = await fetch(`/api/application-journey?jobId=${job.id || job._id}`);
+        const jobId = job.id || job._id;
+        const res = await fetch(`/api/application-journey?jobId=${jobId}`);
         if (res.ok && isMounted) {
           const result = await res.json();
           if (result.success && result.data?.journeys && result.data.journeys.length > 0) {
             const updatedJourney = primaryJourney
               ? result.data.journeys.find(
-                  (j: any) => j.id === primaryJourney.id || j._id === primaryJourney.id || j.jobId === job.id || j.jobId === job._id
+                  (j: any) => j.id === primaryJourney.id || j._id === primaryJourney.id || j.jobId === jobId
                 )
               : result.data.journeys[0];
-            if (updatedJourney) {
-              const hasBoth = updatedJourney.cvId && updatedJourney.coverLetterId;
-              const notProcessing = updatedJourney.status !== "processing_documents";
-              if (hasBoth || notProcessing || updatedJourney.status === "ready" || updatedJourney.status === "creation_failed") {
-                clearInterval(pollTimer);
-                if (isMounted) {
-                  onRefresh?.();
-                }
+            if (updatedJourney && updatedJourney.status !== "processing_documents") {
+              clearInterval(pollTimer);
+              if (isMounted) {
+                onRefresh?.();
               }
             }
           }
@@ -182,59 +176,13 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
       } catch (err) {
         console.error("Error polling journey status in Kanban card:", err);
       }
-    }, 2500);
+    }, 3000);
 
     return () => {
       isMounted = false;
       clearInterval(pollTimer);
     };
   }, [isGenerating, primaryJourney?.id, job.id, job._id, onRefresh]);
-
-  // Auto-trigger analysis if score is missing
-  React.useEffect(() => {
-    const checkAndAnalyze = async () => {
-      // Only trigger if:
-      // 1. matchScore is undefined
-      // 2. job has description (needed for analysis)
-      // 3. Not already analyzing
-      // 3. Not already analyzing
-      // 4. Not analyzed in this session (global check)
-      if (
-        job.matchScore === undefined &&
-        job.jobDescription &&
-        !isAnalyzing &&
-        !hasAnalyzedRef.current &&
-        !analyzedJobIds.has(job.id)
-      ) {
-        try {
-          setIsAnalyzing(true);
-          hasAnalyzedRef.current = true; // Mark as attempted locally
-          analyzedJobIds.add(job.id); // Mark as attempted globally
-
-          // Dynamically import to avoid circular dependencies if any
-          const { triggerJobAnalysis } =
-            await import("@/lib/services/jobAnalysisService");
-          const result = await triggerJobAnalysis(job);
-
-          if (result) {
-            // Dispatch event to refresh jobs
-            window.dispatchEvent(
-              new CustomEvent("jobUpdated", {
-                detail: { jobId: job.id, ...result },
-              }),
-            );
-          }
-        } catch (error) {
-          console.error("Failed to auto-analyze job:", error);
-        } finally {
-          setIsAnalyzing(false);
-        }
-      }
-    };
-
-    const timeoutId = setTimeout(checkAndAnalyze, 1000); // Small delay to prevent immediate flood on mount
-    return () => clearTimeout(timeoutId);
-  }, [job.matchScore, job.jobDescription, job.id, isAnalyzing]); // Dependencies
 
   const handlePracticeClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -352,7 +300,7 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
                   e.stopPropagation();
                   onAction?.("generate_docs", job, e);
                 }}
-                className="w-full py-1.5 bg-lime-500 text-[#141810] text-small font-bold rounded-lg hover:bg-lime-400 transition-colors"
+                className="w-full py-1.5 bg-[#013f2e] text-white text-small font-bold rounded-lg hover:bg-[#025c43] transition-colors shadow-sm"
               >
                 Generate Docs
               </button>
@@ -477,7 +425,7 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
                       e.stopPropagation();
                       onAction?.("inject_data", job, e);
                     }}
-                    className="py-1.5 bg-lime-500/10 text-lime-600 dark:text-lime-400 border border-lime-500/20 rounded-lg text-small font-medium hover:bg-lime-500/20 transition-colors"
+                    className="py-1.5 bg-[#36D39B]/15 text-[#013f2e] dark:text-[#36D39B] border border-[#36D39B]/30 rounded-lg text-small font-medium hover:bg-[#36D39B]/25 transition-colors"
                   >
                     Improve ATS
                   </button>
@@ -507,8 +455,8 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
           <Clock size={12} />
           <span>Applied {getDaysAgo(job.applicationDate)}</span>
         </div>
-        <div className="text-small text-gray-400 font-medium">
-          {job.source || "Manual"}
+        <div className="text-small text-gray-400 font-medium capitalize">
+          {(job.source || "manual").replace(/-/g, " ")}
         </div>
       </div>
 
@@ -534,7 +482,7 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
                     e.stopPropagation();
                     onAction?.("move_interview", job, e);
                   }}
-                  className="py-1.5 bg-lime-500 text-[#141810] rounded-lg text-small font-bold hover:bg-lime-400 transition-colors"
+                  className="py-1.5 bg-[#013f2e] text-white rounded-lg text-small font-bold hover:bg-[#025c43] transition-colors shadow-sm"
                 >
                   Move Stage
                 </button>
@@ -549,7 +497,7 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
                 </button>
                 <button
                   onClick={handlePracticeClick}
-                  className="col-span-2 mt-2 py-1.5 bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 rounded-lg text-small font-medium hover:text-lime-500 dark:hover:text-[#80FF00] transition-colors flex items-center justify-center gap-2"
+                  className="col-span-2 mt-2 py-1.5 bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 rounded-lg text-small font-medium hover:text-[#013f2e] dark:hover:text-[#36D39B] transition-colors flex items-center justify-center gap-2"
                 >
                   <GraduationCap size={12} />
                   Practice
@@ -621,14 +569,14 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
                       e.stopPropagation();
                       onAction?.("add_feedback", job, e);
                     }}
-                    className="py-1.5 bg-lime-500 text-[#141810] rounded-lg text-small font-bold hover:bg-lime-400 transition-colors"
+                    className="py-1.5 bg-[#013f2e] text-white rounded-lg text-small font-bold hover:bg-[#025c43] transition-colors shadow-sm"
                   >
                     Add Feedback
                   </button>
                 </div>
                 <button
                   onClick={handlePracticeClick}
-                  className="w-full mt-2 py-1.5 bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 rounded-lg text-small font-medium hover:text-lime-500 dark:hover:text-[#80FF00] transition-colors flex items-center justify-center gap-2"
+                  className="w-full mt-2 py-1.5 bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 rounded-lg text-small font-medium hover:text-[#013f2e] dark:hover:text-[#36D39B] transition-colors flex items-center justify-center gap-2"
                 >
                   <GraduationCap size={12} />
                   Practice
@@ -723,10 +671,10 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
           ? "ring-2 ring-blue-500 ring-opacity-50"
           : "border-gray-200 dark:border-white/20"
       } ${isDragging ? "opacity-50" : ""} ${!canDrag ? "cursor-default" : "cursor-grab active:cursor-grabbing"}
-      ${isExpired ? "opacity-60 grayscale border-dashed border-gray-300 dark:border-gray-600" : "shadow-lg group-hover:shadow-xl"}
+      ${isExpired ? "opacity-60 grayscale border-dashed border-gray-300 dark:border-gray-600" : "shadow-sm group-hover:shadow-md"}
       `}
     >
-      <div className="p-4">
+      <div className="p-3">
         {isStale && (
           <div className="mb-3 flex items-center justify-between bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 px-2 py-1.5 rounded text-small font-medium border border-red-100 dark:border-red-900/30">
             <div className="flex items-center gap-1.5">
@@ -754,22 +702,8 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
         )}
 
         {/* Visual Anchor: Logo & Title */}
-        <div className="flex gap-3">
-          <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-white/5 flex items-center justify-center text-small font-bold text-gray-500 overflow-hidden flex-shrink-0">
-            {job.companyLogo ? (
-              <img
-                src={job.companyLogo}
-                alt={`${job.company} logo`}
-                className="w-full h-full object-contain"
-                onError={(e) => {
-                  (e.currentTarget as HTMLImageElement).style.display = "none";
-                }}
-              />
-            ) : null}
-            <span style={{ display: job.companyLogo ? "none" : "block" }}>
-              {(job.company || "NA").substring(0, 2).toUpperCase()}
-            </span>
-          </div>
+        <div className="flex gap-2.5">
+          <CompanyLogo company={job.company} size={28} logoUrl={job.companyLogo} jobId={job.id || job._id} />
           <div className="min-w-0 flex-1">
             <div className="flex justify-between items-start">
               <h4 className="font-bold text-small text-gray-900 dark:text-white truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
@@ -792,7 +726,7 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
 
         {/* Stage Specific Content */}
         <div className="mt-1">
-          {stage === "draft" && renderDraftContent()}
+          {stage === "saved" && renderDraftContent()}
           {stage === "created" && renderCreatedContent()}
           {stage === "applied" && renderAppliedContent()}
           {stage === "interview" && renderInterviewContent()}

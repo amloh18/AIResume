@@ -5,6 +5,7 @@ import { motion, useAnimation, AnimatePresence } from 'framer-motion';
 import { ArrowRight, Star, X, Volume2, VolumeX } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { heroTopPaddingClass } from '@/components/landing/announcementBannerConfig';
 
 const JOB_SITES = [
   { name: 'LinkedIn', domain: 'linkedin.com' },
@@ -24,7 +25,7 @@ const JOB_SITES = [
   { name: 'Freelancer', domain: 'freelancer.com' }
 ];
 
-const Hero = () => {
+const Hero = ({ withBanner = false }: { withBanner?: boolean }) => {
   const router = useRouter();
   const [isVideoLoaded, setIsVideoLoaded] = useState(false);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
@@ -33,20 +34,26 @@ const Hero = () => {
   return (
     <section
       id="hero"
-      className="relative h-screen min-h-[800px] desktop:min-h-[900px] w-full overflow-hidden flex flex-col items-center bg-[#141810]"
+      className="relative h-screen min-h-[800px] desktop:min-h-[900px] w-full overflow-hidden flex flex-col items-center bg-[#0a0a0c]"
     >
-      {/* Background Glow Effects */}
-      <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] bg-gradient-to-b from-purple-600/20 via-pink-500/10 to-transparent rounded-full blur-[120px]" />
-        <div className="absolute top-1/3 -left-40 w-[400px] h-[400px] bg-orange-500/10 rounded-full blur-[100px]" />
-        <div className="absolute top-1/4 -right-40 w-[400px] h-[400px] bg-blue-500/10 rounded-full blur-[100px]" />
-      </div>
+      {/* Background Ambient Glows */}
+      <div 
+        className="absolute inset-0 pointer-events-none overflow-hidden"
+        style={{
+          background: `
+            radial-gradient(ellipse 60% 40% at 20% 15%, rgba(1, 63, 46, 0.25) 0%, transparent 65%),
+            radial-gradient(ellipse 60% 50% at 80% 50%, rgba(20, 184, 166, 0.08) 0%, transparent 65%),
+            radial-gradient(ellipse 70% 50% at 50% 85%, rgba(1, 63, 46, 0.2) 0%, transparent 65%),
+            linear-gradient(180deg, #0e1013 0%, #0a0a0c 50%, #060708 100%)
+          `
+        }}
+      />
 
       {/* Content Wrapper */}
       <div className="relative z-20 w-full max-w-7xl mx-auto px-4 tablet:px-6 desktop:px-8 flex flex-col items-center h-full">
         
         {/* Top: Celebrating Line */}
-        <div className="pt-32 tablet:pt-28 desktop:pt-32 w-full flex flex-col items-center">
+        <div className={`${heroTopPaddingClass(withBanner)} w-full flex flex-col items-center transition-[padding] duration-300`}>
           <motion.div 
             className="mb-6 desktop:mb-8 flex items-center gap-3 px-4 py-2 rounded-full bg-white/5 border border-white/10 backdrop-blur-md shadow-2xl"
             initial={{ opacity: 0, y: -20 }}
@@ -62,43 +69,30 @@ const Hero = () => {
             </div>
             <div className="flex items-center gap-2 leading-none">
               <p className="text-small tablet:text-small font-semibold text-white/90">
-                <span className="text-[#81ff00]">15,000+</span> professionals celebrating new jobs
+                <span className="text-[#36D39B]">15,000+</span> professionals celebrating new jobs
               </p>
             </div>
           </motion.div>
 
           {/* Headline & CTAs */}
+          <motion.p
+            className="mb-4 text-xs tablet:text-sm font-semibold uppercase tracking-[0.25em] text-[#36D39B] text-center"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.15 }}
+          >
+            AI-powered career tools
+          </motion.p>
+
           <motion.h1
-            className="!text-[1.8rem] sm:!text-[2.2rem] tablet:!text-[2.8rem] desktop:!text-[3.2rem] font-extrabold text-white mb-10 tracking-tighter leading-[1.1] sm:leading-none w-full text-center px-2"
+            className="tablet:!text-[2.5rem] desktop:!text-[3rem] font-extrabold text-[#F5F7F7] mb-8 sm:mb-10 tracking-tighter leading-[1.1] sm:leading-[1.1] text-4xl! tracking-normal! w-full text-center px-2"
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, ease: "easeOut" }}
           >
-            <span className="relative inline-block w-full sm:w-auto">
-              <span className="relative z-10 block py-3 px-4 sm:px-8 whitespace-normal sm:whitespace-nowrap">
-                All Job tools in one Platform,<br className="hidden sm:block" />
-                Start Creating CV now
-              </span>
-              
-              {/* Realistic Single Brush Shape */}
-              <svg 
-                className="absolute inset-0 w-full h-full z-0 pointer-events-none" 
-                viewBox="0 0 100 100" 
-                preserveAspectRatio="none"
-              >
-                <defs>
-                  <filter id="highlighter-brush">
-                    <feTurbulence type="fractalNoise" baseFrequency="0.08" numOctaves="4" result="noise" />
-                    <feDisplacementMap in="SourceGraphic" in2="noise" scale="6" />
-                  </filter>
-                </defs>
-                <path 
-                  d="M2,12 C20,10 40,15 60,12 C80,10 98,14 98,12 L97,88 C80,85 60,90 40,88 C20,85 3,89 2,88 Z" 
-                  fill="#81ff00" 
-                  fillOpacity="0.55"
-                  filter="url(#highlighter-brush)"
-                />
-              </svg>
+            Build a Better Resume <br className="hidden sm:block" />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#36D39B] via-[#4DDCB0] to-[#86E8D1]">
+              With AI
             </span>
           </motion.h1>
 
@@ -108,29 +102,39 @@ const Hero = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.3, ease: "easeOut" }}
           >
-            <span className="text-white font-semibold">Stop wasting time. Use the ultimate AI job search copilot for automated CV tailoring, instant cover letter generation, and smart application tracking.</span>
+            <span className="text-white font-semibold">Create an ATS-friendly resume, tailor it to every job, and apply with confidence using AI-powered resume tools.</span>
           </motion.p>
 
           <motion.div
-            className="flex flex-col tablet:flex-row items-center justify-center gap-4 w-full tablet:w-auto mb-12 desktop:mb-16"
+            className="flex flex-col desktop:flex-row items-center justify-center gap-3 desktop:gap-4 w-full desktop:w-auto mb-12 desktop:mb-16 max-w-lg desktop:max-w-none mx-auto"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.4, ease: "easeOut" }}
           >
             <button
               onClick={() => router.push('/welcome')}
-              className="group w-full tablet:w-auto inline-flex items-center justify-center gap-3 bg-[#81ff00] hover:bg-[#6dd600] text-black px-6 py-3 tablet:px-8 tablet:py-3.5 rounded-full font-bold text-small tablet:text-small shadow-[0_0_20px_rgba(129,255,0,0.3)] transition-all hover:scale-105 uppercase tracking-wide"
+              className="group w-full desktop:w-auto inline-flex items-center justify-center gap-3 bg-[#013f2e] hover:bg-[#025c43] text-white px-6 py-3.5 desktop:px-8 desktop:py-3.5 rounded-full font-bold text-xs desktop:text-sm shadow-lg transition-all duration-200 hover:scale-105 uppercase tracking-wide cursor-pointer"
             >
-              START FREE
-              <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
+              Build My Resume
+              <ArrowRight className="w-4 h-4 desktop:w-5 desktop:h-5 transition-transform group-hover:translate-x-1" />
             </button>
             
-            <button
-              onClick={() => window.open('https://chromewebstore.google.com/detail/fphkljfgefkfemmlfbpnjdojnfeadaii?utm_source=item-share-cb', '_blank')}
-              className="w-full tablet:w-auto inline-flex items-center justify-center gap-3 bg-white/5 hover:bg-white/10 text-white px-6 py-3 tablet:px-8 tablet:py-3.5 rounded-full font-bold text-small tablet:text-small backdrop-blur-md border border-white/10 transition-all hover:scale-105 uppercase tracking-wide"
-            >
-              Download Extension
-            </button>
+            {/* Inline CTAs on Mobile and Tablet */}
+            <div className="grid grid-cols-2 gap-2.5 sm:gap-3 w-full desktop:w-auto desktop:flex desktop:items-center desktop:gap-4">
+              <button
+                onClick={() => router.push('/explore')}
+                className="w-full desktop:w-auto inline-flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 text-white px-3 sm:px-5 desktop:px-7 py-3 desktop:py-3.5 rounded-full font-bold text-[11px] sm:text-xs desktop:text-xs backdrop-blur-md border border-white/10 transition-all hover:scale-105 uppercase tracking-wide cursor-pointer whitespace-nowrap text-center"
+              >
+                Explore Templates
+              </button>
+
+              <button
+                onClick={() => window.open('https://chromewebstore.google.com/detail/fphkljfgefkfemmlfbpnjdojnfeadaii?utm_source=item-share-cb', '_blank')}
+                className="w-full desktop:w-auto inline-flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 text-white px-3 sm:px-5 desktop:px-7 py-3 desktop:py-3.5 rounded-full font-bold text-[11px] sm:text-xs desktop:text-xs backdrop-blur-md border border-white/10 transition-all hover:scale-105 uppercase tracking-wide cursor-pointer whitespace-nowrap text-center"
+              >
+                Download Extension
+              </button>
+            </div>
           </motion.div>
         </div>
 
@@ -140,10 +144,23 @@ const Hero = () => {
             className="relative w-[140%] sm:w-full max-w-6xl flex flex-col items-center justify-center cursor-pointer overflow-visible shrink-0"
             initial={{ opacity: 0, y: 60 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.6, ease: "easeOut" }}
+            transition={{ type: 'spring', stiffness: 260, damping: 24, delay: 0.5 }}
             onClick={() => setIsPopupOpen(true)}
           >
-            <div className="relative w-full aspect-video group rounded-2xl overflow-hidden shadow-2xl border border-white/10 bg-black">
+            {/* Floating Live Signal Chip (Video-inspired) */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8, x: 30 }}
+              animate={{ opacity: 1, scale: 1, x: 0 }}
+              transition={{ type: 'spring', stiffness: 350, damping: 22, delay: 1.1 }}
+              className="absolute -bottom-4 -right-2 sm:-right-6 z-30 hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#061811]/90 border border-emerald-400/30 shadow-[0_8px_25px_rgba(1,63,46,0.5)] backdrop-blur-md"
+            >
+              <div className="w-4 h-4 rounded-full bg-emerald-400 text-black flex items-center justify-center text-[9px] font-extrabold">
+                ✓
+              </div>
+              <span className="text-xs font-bold text-white tracking-tight">14/14 Keywords Matched</span>
+            </motion.div>
+
+            <div className="relative w-full aspect-video group rounded-2xl overflow-hidden shadow-2xl border border-white/10 bg-black transition-transform duration-500 hover:scale-[1.01]">
               <div className="absolute -inset-1 bg-gradient-to-r from-purple-500/20 to-lime-500/20 rounded-2xl blur-2xl opacity-50 group-hover:opacity-75 transition duration-1000 group-hover:duration-200"></div>
               
               {/* Expand Button Overlay */}
@@ -158,7 +175,7 @@ const Hero = () => {
               {/* Placeholder Image */}
               <Image
                 src="/images/herobanner.webp"
-                alt="CVCircle Dashboard"
+                alt="AIResume - Resume Builder Dashboard"
                 fill
                 className="object-cover transition-opacity duration-1000"
                 priority
@@ -168,8 +185,8 @@ const Hero = () => {
               {/* YouTube Embed */}
               <div className={`absolute inset-0 w-full h-full transition-opacity duration-1000 pointer-events-none overflow-hidden ${isVideoLoaded ? 'opacity-100' : 'opacity-0'}`}>
                 <iframe
-                  src="https://www.youtube-nocookie.com/embed/U1ElC0WlJWQ?autoplay=1&mute=1&loop=1&playlist=U1ElC0WlJWQ&controls=0&showinfo=0&rel=0&modestbranding=1&iv_load_policy=3&disablekb=1&enablejsapi=1&origin=https://cvcircle.io&playsinline=1"
-                  title="CVCircle Demo"
+                  src="https://www.youtube-nocookie.com/embed/U1ElC0WlJWQ?autoplay=1&mute=1&loop=1&playlist=U1ElC0WlJWQ&controls=0&showinfo=0&rel=0&modestbranding=1&iv_load_policy=3&disablekb=1&enablejsapi=1&origin=https://buildairesume.com&playsinline=1"
+                  title="AIResume Demo"
                   className="absolute inset-0 w-full h-full border-0 pointer-events-none"
                   allow="autoplay; encrypted-media"
                   onLoad={() => setIsVideoLoaded(true)}
@@ -219,7 +236,7 @@ const Hero = () => {
               {/* YouTube embed inside popup */}
               <iframe
                 src={`https://www.youtube-nocookie.com/embed/U1ElC0WlJWQ?autoplay=1&mute=${isPopupMuted ? '1' : '0'}&controls=1&showinfo=0&rel=0&modestbranding=1&enablejsapi=1`}
-                title="CVCircle Demo Popup"
+                title="AIResume Demo Popup"
                 className="w-full h-full border-0"
                 allow="autoplay; encrypted-media; picture-in-picture"
                 allowFullScreen

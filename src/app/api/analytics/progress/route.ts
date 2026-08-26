@@ -72,12 +72,12 @@ export async function GET(request: NextRequest) {
     
     // Use aggregation pipelines to count by date - much faster than fetching all documents
     const [jobsData, cvsData, coverLettersData] = await Promise.all([
-      // Jobs aggregation - exclude draft jobs as they're not meaningful progress
+      // Jobs aggregation - exclude saved jobs as they're not meaningful progress
       JobApplication.aggregate([
         {
           $match: {
             userId: userIdQuery,
-            status: { $ne: 'draft' }, // Exclude draft jobs - they're not active progress
+            status: { $ne: 'saved' }, // Exclude saved jobs - they're not active progress
             $or: [
               { createdAt: { $gte: startDate } },
               { updatedAt: { $gte: startDate } }

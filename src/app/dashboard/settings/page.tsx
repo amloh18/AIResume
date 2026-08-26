@@ -36,7 +36,8 @@ import {
   Loader2,
   Award,
   Star,
-  ArrowRight
+  ArrowRight,
+  Globe
 } from 'lucide-react';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 import Pricing from '@/components/landing/Pricing';
@@ -47,7 +48,6 @@ import AddPaymentMethodModal from '@/components/payment/AddPaymentMethodModal';
 import CalendarSyncSettings from '@/components/settings/CalendarSyncSettings';
 import { uploadToS3 } from '@/lib/utils/upload';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import PageHeader from '@/components/dashboard/PageHeader';
 import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
 import { useUserData } from '@/lib/hooks/useUserData';
 import { getPlanName } from '@/lib/utils/userPlanUtils';
@@ -1617,7 +1617,7 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
                         value={passwordForm.currentPassword}
                         onChange={(e) => handlePasswordInputChange('currentPassword', e.target.value)}
                         placeholder="Enter your current password"
-                        className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+                        className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#013f2e] focus:bg-white/15 transition-colors"
                       />
                       <button
                         type="button"
@@ -1640,7 +1640,7 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
                         value={passwordForm.newPassword}
                         onChange={(e) => handlePasswordInputChange('newPassword', e.target.value)}
                         placeholder="Enter your new password"
-                        className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+                        className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#013f2e] focus:bg-white/15 transition-colors"
                       />
                       <button
                         type="button"
@@ -1666,7 +1666,7 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
                         value={passwordForm.confirmPassword}
                         onChange={(e) => handlePasswordInputChange('confirmPassword', e.target.value)}
                         placeholder="Confirm your new password"
-                        className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+                        className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#013f2e] focus:bg-white/15 transition-colors"
                       />
                       <button
                         type="button"
@@ -1707,7 +1707,7 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
                     <button
                       type="submit"
                       disabled={passwordLoading || passwordForm.newPassword.length < 8 || passwordForm.newPassword !== passwordForm.confirmPassword}
-                      className="flex-1 px-4 py-2.5 rounded-lg font-medium bg-[#80FF00]/10 text-[#80FF00] hover:bg-[#80FF00]/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                      className="flex-1 px-4 py-2.5 rounded-lg font-medium bg-[#013f2e]/10 text-[#013f2e] hover:bg-[#013f2e]/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
                     >
                       {passwordLoading ? (
                         <>
@@ -2025,7 +2025,7 @@ const MembershipBilling = ({ user }: { user: User }) => {
   };
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 min-w-0 max-w-full bg-[#f3f2ee] dark:bg-transparent">
+    <div className="p-4 sm:p-6 lg:p-8 min-w-0 max-w-full overflow-x-hidden">
       <div className="space-y-8 min-w-0 max-w-full">
 
         {/* Plan Cards Section */}
@@ -2449,26 +2449,15 @@ const getTabDescription = (tab: string) => {
 };
 
 const SettingsPageShell = () => (
-  <div className="w-full min-w-0 overflow-x-hidden pb-20">
+  <div className="w-full min-w-0 overflow-x-hidden pt-6 md:pt-8 pb-20">
     <div className="max-w-6xl mx-auto px-4 md:px-6 w-full min-w-0">
-      <div className="py-5">
-        <h1 className="text-h1 font-black text-gray-900 dark:text-white">Settings</h1>
+      <div className="mb-6">
+        <h1 className="text-h1 font-bold text-gray-900 dark:text-white">Settings</h1>
         <div className="mt-2 h-3 w-80 max-w-full rounded bg-gray-200 dark:bg-white/10 animate-pulse" />
       </div>
-      <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
-        <div className="flex gap-6 overflow-hidden">
-          {settingsTabs.map((tab) => {
-            const IconComponent = tab.icon;
-            return (
-              <div key={tab.id} className="flex items-center gap-2 px-4 py-3 text-gray-600 dark:text-gray-300">
-                <IconComponent className="h-4 w-4" />
-                <span className="hidden sm:inline text-small font-medium">{tab.name}</span>
-              </div>
-            );
-          })}
-        </div>
+      <div className="bg-white dark:bg-[#141810] rounded-2xl border border-gray-200/80 dark:border-white/10 shadow-sm overflow-hidden">
+        <AccountProfileSkeleton />
       </div>
-      <AccountProfileSkeleton />
     </div>
   </div>
 );
@@ -2566,31 +2555,27 @@ const SettingsContent = () => {
   };
 
   return (
-    <RouteGuard requireAuth={true}>
-      <div className="w-full min-w-0 overflow-x-hidden pb-20">
-        <div className="max-w-6xl mx-auto px-4 md:px-6 w-full min-w-0">
-          {/* Page Header - Same style as other dashboard pages */}
-          <PageHeader
-            title="Settings"
-            description={getTabDescription(activeTab)}
-            user={{
-              name: userData ? `${userData?.firstName || ''} ${userData?.lastName || ''}`.trim() || user?.name || 'User' : user?.name || 'User',
-              email: userData?.email || user?.email || '',
-              username: userData?.username || user?.username,
-              profilePhoto: userData?.profilePhoto || user?.image,
-              designation: 'Software Developer',
-              subscription: userData?.subscription,
-              isEmailVerified: userData?.isEmailVerified || false
-            }}
-            showSettings={true}
-            onMobileMenuToggle={toggleSidebar}
-            isMobileMenuOpen={isOpen}
-          />
-
-          {/* Settings Tabs */}
+    /* Same rounded-card-with-margins shell as the dashboard: white workspace,
+       off-white card inset right/bottom (+ left on mobile/tablet where the
+       sidebar is hidden); content scrolls inside the card. */
+    <div className="absolute inset-0 dashboard-workspace text-[#0f172a] dark:text-gray-150 font-sans overflow-hidden flex flex-col pr-3 pb-3 pl-3 lg:pl-0">
+      <div className="dashboard-content-card rounded-2xl border border-[var(--border-primary)] shadow-sm flex-1 min-h-0 flex flex-col overflow-hidden">
+        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden scrollbar-hide overscroll-contain">
+          <RouteGuard requireAuth={true}>
+            <div className="w-full min-w-0 overflow-x-hidden pt-6 md:pt-8 pb-20">
+              <div className="max-w-6xl mx-auto px-4 md:px-6 w-full min-w-0">
+          {/* Settings Tabs - inline with heading (matching Jobs Hub header) */}
           <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full min-w-0 max-w-full">
-            <div className="border-b border-gray-200 dark:border-gray-700 mb-6 min-w-0 max-w-full overflow-x-hidden">
-              <div className="overflow-x-auto scrollbar-hide -mx-6 px-6 md:mx-0 md:px-0 min-w-0 max-w-full">
+            <div className="flex items-center justify-between gap-6 flex-wrap mb-6">
+              <div>
+                <h1 className="text-h1 font-bold text-gray-900 dark:text-white">
+                  Settings
+                </h1>
+                <p className="mt-1 text-small text-gray-600 dark:text-gray-400">
+                  {getTabDescription(activeTab)}
+                </p>
+              </div>
+              <div className="overflow-x-auto scrollbar-hide min-w-0 max-w-full">
                 <TabsList className="flex w-max bg-transparent border-0 justify-start">
                   {settingsTabs.map((tab) => {
                     const IconComponent = tab.icon;
@@ -2612,12 +2597,17 @@ const SettingsContent = () => {
 
             {/* Content Area */}
             <TabsContent value={activeTab} className="mt-0 min-w-0 max-w-full overflow-x-hidden">
-              {renderTabContent()}
+              <div className="bg-white dark:bg-[#141810] rounded-2xl border border-gray-200/80 dark:border-white/10 shadow-sm overflow-hidden">
+                {renderTabContent()}
+              </div>
             </TabsContent>
           </Tabs>
-        </div>
+          </div>
+          </div>
+      </RouteGuard>
       </div>
-    </RouteGuard>
+    </div>
+  </div>
   );
 };
 

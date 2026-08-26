@@ -5,13 +5,10 @@ export type PlanKey =
   | 'starter_yealry'
   | 'focused_monthly'
   | 'focused_yearly'
+  | 'focused_quarterly'
   | 'smart_quarterly'
   | 'smart_quaterly'
-  | 'smart_yearly'
-  | 'pro_monthly'
-  | 'pro_quarterly'
-  | 'pro_yearly'
-  | 'pro_lifetime';
+  | 'smart_yearly';
 
 export const PLAN_NAMES: Record<PlanKey, string> = {
   free: 'Free (No Subscription)',
@@ -20,13 +17,10 @@ export const PLAN_NAMES: Record<PlanKey, string> = {
   starter_yealry: 'Starter Yearly ($19.99/yr)',
   focused_monthly: 'Focused Monthly',
   focused_yearly: 'Focused Yearly',
+  focused_quarterly: 'Focused Quarterly',
   smart_quarterly: 'Smart Quarterly',
   smart_quaterly: 'Smart Quarterly',
   smart_yearly: 'Smart Yearly',
-  pro_monthly: 'Pro Monthly',
-  pro_quarterly: 'Pro Quarterly',
-  pro_yearly: 'Pro Yearly',
-  pro_lifetime: 'Pro Lifetime'
 };
 
 export interface UserPlan {
@@ -45,7 +39,7 @@ export interface UserPlan {
 export function hasAIAccess(userPlan: UserPlan | null): boolean {
   if (!userPlan) return false;
 
-  const proPlans: PlanKey[] = ['focused_monthly', 'focused_yearly', 'smart_quaterly', 'smart_yearly', 'pro_monthly', 'pro_quarterly', 'pro_yearly', 'pro_lifetime'];
+  const proPlans: PlanKey[] = ['focused_monthly', 'focused_yearly', 'smart_quaterly', 'smart_yearly', 'focused_monthly', 'focused_quarterly', 'focused_yearly', 'focused_yearly'];
   const hasProPlan = proPlans.includes(userPlan.currentPlanKey);
 
   // Check if subscription is active
@@ -76,7 +70,7 @@ export function hasSpecificAIAccess(userPlan: UserPlan | null, feature: 'basic' 
       return true; // All PRO users get basic AI
     case 'advanced':
       // Advanced features for quarterly and yearly plans
-      return ['focused_yearly', 'smart_quaterly', 'smart_yearly', 'pro_quarterly', 'pro_yearly', 'pro_lifetime'].includes(userPlan?.currentPlanKey || 'free');
+      return ['focused_yearly', 'smart_quaterly', 'smart_yearly', 'focused_quarterly', 'focused_yearly', 'focused_yearly'].includes(userPlan?.currentPlanKey || 'free');
     case 'all':
       return true; // All PRO users get all features
     default:

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import Logo from '@/components/ui/Logo';
 import { Menu, X } from 'lucide-react';
@@ -40,79 +41,95 @@ interface CardNavProps {
   links: NavLink[];
   className?: string;
   onCtaClick?: () => void;
+  withBanner?: boolean;
 }
 
 const CardNav = ({
   logo,
   links,
   className = '',
-  onCtaClick
+  onCtaClick,
+  withBanner = false,
 }: CardNavProps) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [hoveredLink, setHoveredLink] = useState<string | null>(null);
   const [isVisible, setIsVisible] = useState(true);
-  const [lastScrollY, setLastScrollY] = useState(0);
+  const [mounted, setMounted] = useState(false);
+  const lastScrollYRef = useRef(0);
   const navRef = useRef<HTMLElement>(null);
   const router = useRouter();
   const pathname = usePathname();
-  const isBusinessRoute = pathname?.startsWith('/b2b');
 
-  // Handle scroll behavior
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Lock body scroll when mobile menu is open to eliminate background touch lag
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isMobileMenuOpen]);
+
+  // Handle scroll behavior with rAF throttling - no listener recreation or unnecessary re-renders
+  useEffect(() => {
+    let ticking = false;
+
     const handleScroll = () => {
-      const currentScrollY = window.scrollY;
-      
-      // Don't hide navbar in the hero section (top 100px)
-      if (currentScrollY < 100) {
-        setIsVisible(true);
-        setLastScrollY(currentScrollY);
-        return;
-      }
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const currentScrollY = window.scrollY;
+          const prevScrollY = lastScrollYRef.current;
 
-      // Add a small threshold (e.g., 5px) to avoid flickering on tiny scrolls
-      const scrollThreshold = 5;
-      
-      if (Math.abs(currentScrollY - lastScrollY) < scrollThreshold) {
-        return;
-      }
+          // Don't hide navbar in the hero section (top 100px)
+          if (currentScrollY < 100) {
+            setIsVisible(true);
+          } else if (Math.abs(currentScrollY - prevScrollY) >= 8) {
+            if (currentScrollY > prevScrollY) {
+              // Scrolling down - hide navbar
+              setIsVisible(false);
+            } else {
+              // Scrolling up - show navbar
+              setIsVisible(true);
+            }
+          }
 
-      if (currentScrollY > lastScrollY) {
-        // Scrolling down - hide navbar
-        setIsVisible(false);
-      } else {
-        // Scrolling up - show navbar
-        setIsVisible(true);
+          lastScrollYRef.current = currentScrollY;
+          ticking = false;
+        });
+        ticking = true;
       }
-      
-      setLastScrollY(currentScrollY);
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [lastScrollY]);
+  }, []);
 
   // Determine if any submenu is currently open
   const isAnySubmenuOpen = hoveredLink !== null;
 
   const handleCtaClick = () => {
+    setIsMobileMenuOpen(false);
     if (onCtaClick) {
       onCtaClick();
-    } else if (isBusinessRoute) {
-      router.push('/b2b/login?callbackUrl=%2Fb2b%2Fdashboard');
     } else {
       // Default action - route to sign in page
       router.push('/sign-in');
     }
   };
 
-
   const scrollToSection = (href: string, isExternal?: boolean) => {
     if (typeof window === 'undefined') return;
-    
+
     // Close mobile menu when clicking a link
     setIsMobileMenuOpen(false);
     setHoveredLink(null);
-    
+
     if (href.startsWith('#')) {
       const element = document.querySelector(href);
       if (element) {
@@ -124,7 +141,7 @@ const CardNav = ({
     } else {
       if (isExternal) {
         if (href.startsWith('/')) {
-           router.push(href);
+          router.push(href);
         } else {
           window.open(href, '_blank', 'noopener,noreferrer');
         }
@@ -147,7 +164,8 @@ const CardNav = ({
   };
 
   return (
-    <div className={`card-nav-container ${className} ${isAnySubmenuOpen ? 'submenu-open' : ''} ${!isVisible && !isMobileMenuOpen ? 'nav-hidden' : ''}`}>
+    <>
+      <div className={`card-nav-container ${className} ${withBanner ? 'with-banner' : ''} ${isAnySubmenuOpen ? 'submenu-open' : ''} ${hoveredLink ? `submenu-${hoveredLink.toLowerCase().replace(/\s+/g, '-')}` : ''} ${!isVisible && !isMobileMenuOpen ? 'nav-hidden' : ''}`}>
       <nav ref={navRef} className="card-nav">
         <div className="card-nav-content">
            <button 
@@ -157,10 +175,7 @@ const CardNav = ({
             type="button"
           >
             <div className="logo-image-wrapper relative">
-              <Logo size="lg" />
-              {isBusinessRoute && (
-                <sup className="absolute -top-2 -right-4 text-[10px] font-bold text-[#80FF00]">HR</sup>
-              )}
+              <Logo size="xs" />
             </div>
           </button>
 
@@ -252,16 +267,6 @@ const CardNav = ({
           </div>
 
           <div className="nav-actions flex items-center h-full">
-            {!isBusinessRoute && (
-              <button
-                type="button"
-                className="card-nav-business-button hidden md:flex"
-                onClick={() => scrollToSection('/b2b', true)}
-              >
-                Business
-              </button>
-            )}
-
             <button
               type="button"
               className="card-nav-cta-button"
@@ -269,8 +274,7 @@ const CardNav = ({
             >
               Login
             </button>
-            
-            {/* Mobile Menu Button */}
+                        {/* Mobile Menu Button */}
             <button
               type="button"
               className="mobile-menu-button"
@@ -282,55 +286,56 @@ const CardNav = ({
           </div>
         </div>
       </nav>
-      
-            {/* Mobile Menu Dropdown */}
-      {isMobileMenuOpen && (
-        <div className="mobile-menu-dropdown">
-          <div className="mobile-menu-content">
-            {links.map((link, index) => {
-              // @ts-ignore
-              const sectionId = link.href.startsWith('#') ? link.href.substring(1) : null;
-              // @ts-ignore
-              const isCurrentSection = typeof currentSection !== 'undefined' && sectionId === currentSection;
-              // @ts-ignore
-              const shouldHide = typeof isAtHero !== 'undefined' && !isAtHero && isCurrentSection;
-              
-              return (
-                <button
-                  key={`mobile-${link.label}-${index}`}
-                  className="mobile-nav-link"
-                  onClick={() => scrollToSection(link.href, link.isExternal)}
-                  aria-label={link.ariaLabel}
-                  style={{
-                    display: shouldHide ? 'none' : 'block'
-                  }}
-                >
-                  {link.label}
-                </button>
-              );
-            })}
-            
-            {!isBusinessRoute && (
-              <button
-                type="button"
-                className="mobile-cta-button mb-4"
-                onClick={() => scrollToSection('/b2b', true)}
-              >
-                Business
-              </button>
-            )}
-
-            <button
-              type="button"
-              className="mobile-cta-button"
-              onClick={handleCtaClick}
-            >
-              Login
-            </button>
-          </div>
-        </div>
-      )}
     </div>
+
+    {/* Fullscreen Mobile Menu Portal - escaped from transformed container */}
+    {mounted && isMobileMenuOpen && createPortal(
+      <div className="mobile-menu-dropdown" role="dialog" aria-modal="true" aria-label="Mobile Navigation">
+        <div className="mobile-menu-header">
+          <button
+            className="logo-container"
+            onClick={handleLogoClick}
+            aria-label="Go to top"
+            type="button"
+          >
+            <div className="logo-image-wrapper relative">
+              <Logo size="xs" />
+            </div>
+          </button>
+          <button
+            type="button"
+            className="mobile-menu-close-button"
+            onClick={() => setIsMobileMenuOpen(false)}
+            aria-label="Close mobile menu"
+          >
+            <X size={24} />
+          </button>
+        </div>
+
+        <div className="mobile-menu-content">
+          {links.map((link, index) => (
+            <button
+              key={`mobile-${link.label}-${index}`}
+              className="mobile-nav-link"
+              onClick={() => scrollToSection(link.href, link.isExternal)}
+              aria-label={link.ariaLabel}
+            >
+              {link.label}
+            </button>
+          ))}
+
+          <button
+            type="button"
+            className="mobile-cta-button"
+            onClick={handleCtaClick}
+          >
+            Login
+          </button>
+        </div>
+      </div>,
+      document.body
+    )}
+  </>
   );
 };
 

@@ -10,12 +10,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { gsap } from 'gsap';
 import { X, Save, Eye, Loader2, Sparkles, User, Settings, LogOut, Sun, Moon, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Minimize2, Maximize2, Home, Plus, Palette, FileText, PenTool, Edit2, Check, ClipboardList } from 'lucide-react';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
+import { Skeleton } from '@/components/ui/Skeleton';
 import StepIndicator from './StepIndicator';
 import Step1Dashboard from './steps/Step1Dashboard';
 import Step2Template from './steps/Step2Template';
 import Step3CV from './steps/Step3CV';
 import Step4CoverLetter from './steps/Step4CoverLetter';
 import Step5Review from './steps/Step5Review';
+import BottomStepBar from './BottomStepBar';
 
 import ErrorBoundary from './ErrorBoundary';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
@@ -32,7 +34,8 @@ import { CVSurgeonService } from '@/lib/services/cv-surgeon-service';
 import { CentralScoreManager } from '@/lib/pill-engine/CentralScoreManager';
 
 import { logResumeEnhancerEvent } from '@/lib/services/resumeEnhancerLogClient';
-import { inferRoleContextFromCVData } from '@/lib/utils/resumeEnhancerRoleInference';
+import { inferRoleContextFromCVData, inferSeniorityFromYears } from '@/lib/utils/resumeEnhancerRoleInference';
+import { mapExperienceLevelToSeniority, isDeepEqual, extractCvIdFromResponse } from '@/lib/resume-metrics';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 import { comprehensiveSignOut } from '@/lib/utils/signout';
 
@@ -94,11 +97,20 @@ export default function ResumeEnhancerContainer({
   const pathname = usePathname();
   const { state, dispatch, goToStep, loadCV, setRoleContext, resetState, setJobSidebarOpen, setTemplateOverlayOpen } = useResumeEnhancer();
   const { isOpen: isMobileMenuOpen, toggleSidebar, isDesktopExpanded } = useMobileSidebar();
+  const requestedStep = useMemo(() => {
+    const rawStep = searchParams.get('step');
+    const parsed = Number(rawStep);
+    return Number.isInteger(parsed) && parsed >= 1 && parsed <= 5
+      ? (parsed as 1 | 2 | 3 | 4 | 5)
+      : null;
+  }, [searchParams]);
+
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const [stepOneDocumentTab, setStepOneDocumentTab] = useState<'cvs' | 'cover-letters'>(
     searchParams.get('tab') === 'cover-letters' ? 'cover-letters' : 'cvs'
   );
-  const showTemplateOverlay = state.isTemplateOverlayOpen;
+  const [isTemplateOverlayActive, setIsTemplateOverlayActive] = useState(requestedStep === 2);
+  const showTemplateOverlay = state.isTemplateOverlayOpen || isTemplateOverlayActive;
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [tempTitle, setTempTitle] = useState('');
@@ -152,13 +164,6 @@ export default function ResumeEnhancerContainer({
   const [isTransferringDraft, setIsTransferringDraft] = useState(false);
   const [showSaveWarningModal, setShowSaveWarningModal] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState<{ type: 'step' | 'path', target: number | string } | null>(null);
-  const requestedStep = useMemo(() => {
-    const rawStep = searchParams.get('step');
-    const parsed = Number(rawStep);
-    return Number.isInteger(parsed) && parsed >= 1 && parsed <= 5
-      ? (parsed as 1 | 2 | 3 | 4 | 5)
-      : null;
-  }, [searchParams]);
 
   // Use ATS Context for shared ATS data
   const {
@@ -199,6 +204,15 @@ export default function ResumeEnhancerContainer({
     );
   }, [state.cvData, state.keywordGapAnalysis, state.atsScoreCap]);
   // Check if this is a master CV - check mode, state, or sessionStorage flag
+  const isFromOnboarding = useMemo(() => {
+    if (typeof window !== 'undefined') {
+      const fromOnboardingSession = sessionStorage.getItem('fromOnboarding') === 'true';
+      const fromOnboardingQuery = searchParams.get('fromOnboarding') === 'true';
+      return fromOnboardingSession || fromOnboardingQuery;
+    }
+    return false;
+  }, [searchParams]);
+
   const isMasterCV = useMemo(() => {
     if (mode === 'edit-master' || state.cvType === 'master') {
       return true;
@@ -216,7 +230,7 @@ export default function ResumeEnhancerContainer({
   const scoreLabel = isMasterCV ? 'CV score' : (isJourneyCV ? 'ATS score' : 'CV score');
   const openIssuesCount = (state.fixAnnotations || []).filter((f) => f.status === 'open').length;
 
-  const coverLetterBlockedMessage = 'Cover letter editing is unavailable for Master CVs. Use a journey or standalone CV to write a job-specific cover letter.';
+  const coverLetterBlockedMessage = 'Cover letter editing is unavailable for Profile. Use a tailored application or standalone CV to write a job-specific cover letter.';
 
   const goToStepSafely = useCallback((step: 1 | 2 | 3 | 4 | 5, options?: { silent?: boolean }) => {
     // Phase 1: Master CV Guard
@@ -697,24 +711,6 @@ export default function ResumeEnhancerContainer({
     }
   };
 
-  const getSeniorityFromYears = (years: number): string => {
-    if (years < 2) return 'beginner';
-    if (years < 5) return 'experienced';
-    if (years < 10) return 'professional';
-    if (years < 15) return 'senior';
-    return 'executive';
-  };
-
-  const mapExperienceLevelToSeniority = (level?: string): string | null => {
-    if (!level) return null;
-    const normalized = String(level).trim().toLowerCase();
-    if (normalized === 'entry' || normalized === 'junior') return 'beginner';
-    if (normalized === 'mid' || normalized === 'middle' || normalized === 'mid-level') return 'professional';
-    if (normalized === 'senior') return 'senior';
-    if (normalized === 'executive' || normalized === 'lead' || normalized === 'principal') return 'executive';
-    return null;
-  };
-
   // Sync cvId prop to state if available and state doesn't have it
   useEffect(() => {
     if (cvId && !state.cvId) {
@@ -1150,78 +1146,144 @@ export default function ResumeEnhancerContainer({
       }
 
       if (mode === 'edit' || mode === 'edit-master' || mode === 'edit-cover-letter') {
-        let actualCvId = cvId;
-        let effectiveJourneyId = journeyId;
+        let actualCvId = cvId || searchParams.get('cvId');
+        let effectiveJourneyId = journeyId || searchParams.get('journeyId');
+        const effectiveJobId = searchParams.get('jobId') || searchParams.get('job');
+        const effectiveClId = clId || searchParams.get('clId') || searchParams.get('coverLetterId');
         let coverLetterData: any = null;
         
         setIsLoading(true);
         try {
-          // Fallback: If we have a journeyId query parameter but no direct cvId, pre-resolve it from the journey
+          // Fallback 1: Resolve from jobId if present
+          if (!actualCvId && effectiveJobId) {
+            try {
+              const [journeyRes, jobRes] = await Promise.all([
+                fetch(`/api/application-journey?jobId=${effectiveJobId}`),
+                fetch(`/api/jobs/${effectiveJobId}`)
+              ]);
+              if (journeyRes.ok) {
+                const jData = await journeyRes.json();
+                const foundJourney = jData.data?.journeys?.[0] || jData.data?.journey;
+                if (foundJourney?.cvId) {
+                  actualCvId = foundJourney.cvId;
+                  effectiveJourneyId = foundJourney.id || foundJourney._id;
+                }
+              }
+              if (!actualCvId && jobRes.ok) {
+                const jobData = await jobRes.json();
+                const job = jobData.data?.job || jobData.job;
+                if (job?.linkedCvId || job?.cvId) {
+                  actualCvId = job.linkedCvId || job.cvId;
+                }
+              }
+            } catch (err) {
+              console.warn('Failed to resolve cvId from jobId:', err);
+            }
+          }
+
+          // Fallback 2: Resolve from journeyId query parameter
           if (!actualCvId && effectiveJourneyId) {
-            console.log('🔍 edit-cover-letter: Fetching journey to resolve cvId:', effectiveJourneyId);
             try {
               const journeyResponse = await fetch(`/api/application-journey?journeyId=${effectiveJourneyId}`);
               if (journeyResponse.ok) {
                 const journeyResult = await journeyResponse.json();
-                if (journeyResult.success && journeyResult.data?.journey?.cvId) {
-                  actualCvId = journeyResult.data.journey.cvId;
-                  console.log('✅ Resolved cvId from journey query param:', actualCvId);
+                const j = journeyResult.data?.journey || journeyResult.data?.journeys?.[0];
+                if (j?.cvId) {
+                  actualCvId = j.cvId;
                 }
               }
             } catch (err) {
-              console.error('Failed to pre-resolve cvId from journey param:', err);
+              console.warn('Failed to pre-resolve cvId from journey param:', err);
             }
           }
 
-          if (mode === 'edit-cover-letter' && clId) {
-             const clResponse = await fetch(`/api/cover-letters/${clId}?userId=${userId === 'guest' ? '' : userId}`);
-             if (clResponse.ok) {
-                 const clResult = await clResponse.json();
-                 if (clResult.success && clResult.coverLetter) {
-                    coverLetterData = clResult.coverLetter;
-                    actualCvId = coverLetterData.cvId || actualCvId;
-                    effectiveJourneyId = coverLetterData.journeyId || effectiveJourneyId;
+          // Fallback 3: Resolve from cover letter if edit-cover-letter
+          if (effectiveClId) {
+            try {
+              const clResponse = await fetch(`/api/cover-letters/${effectiveClId}?userId=${userId === 'guest' ? '' : userId}`);
+              if (clResponse.ok) {
+                const clResult = await clResponse.json();
+                if (clResult.success && clResult.coverLetter) {
+                  coverLetterData = clResult.coverLetter;
+                  actualCvId = coverLetterData.cvId || actualCvId;
+                  effectiveJourneyId = coverLetterData.journeyId || effectiveJourneyId;
 
-                    // Fallback: If cover letter does not have cvId but has journeyId, fetch the journey to retrieve cvId
-                    if (!actualCvId && effectiveJourneyId) {
-                      console.log('🔍 edit-cover-letter: Missing cvId, fetching from journey:', effectiveJourneyId);
-                      try {
-                        const journeyResponse = await fetch(`/api/application-journey?journeyId=${effectiveJourneyId}`);
-                        if (journeyResponse.ok) {
-                          const journeyResult = await journeyResponse.json();
-                          if (journeyResult.success && journeyResult.data?.journey?.cvId) {
-                            actualCvId = journeyResult.data.journey.cvId;
-                            console.log('✅ Found cvId in journey:', actualCvId);
-                          }
+                  if (!actualCvId && effectiveJourneyId) {
+                    try {
+                      const journeyResponse = await fetch(`/api/application-journey?journeyId=${effectiveJourneyId}`);
+                      if (journeyResponse.ok) {
+                        const journeyResult = await journeyResponse.json();
+                        const j = journeyResult.data?.journey || journeyResult.data?.journeys?.[0];
+                        if (j?.cvId) {
+                          actualCvId = j.cvId;
                         }
-                      } catch (err) {
-                        console.error('Failed to fetch cvId from journey:', err);
                       }
+                    } catch (err) {
+                      console.warn('Failed to fetch cvId from journey:', err);
                     }
-                 }
-             }
+                  }
+                }
+              }
+            } catch (clErr) {
+              console.warn('Failed to fetch cover letter:', clErr);
+            }
+          }
+
+          // Fallback 4: Resolve Master CV if edit-master
+          if (!actualCvId && mode === 'edit-master') {
+            try {
+              const masterResponse = await fetch('/api/cvs/master');
+              if (masterResponse.ok) {
+                const masterResult = await masterResponse.json();
+                const masterCv = masterResult.data?.cv || masterResult.cv;
+                if (masterCv?.id || masterCv?._id) {
+                  actualCvId = masterCv.id || masterCv._id;
+                }
+              }
+            } catch (mErr) {
+              console.warn('Failed to fetch master CV:', mErr);
+            }
+          }
+
+          // Fallback 5: Resolve user's most recent CV if in generic edit mode
+          if (!actualCvId && mode === 'edit' && userId !== 'guest') {
+            try {
+              const cvsResponse = await fetch('/api/cvs?limit=1');
+              if (cvsResponse.ok) {
+                const cvsResult = await cvsResponse.json();
+                const firstCv = cvsResult.data?.cvs?.[0] || cvsResult.cvs?.[0];
+                if (firstCv?.id || firstCv?._id) {
+                  actualCvId = firstCv.id || firstCv._id;
+                }
+              }
+            } catch (cErr) {
+              console.warn('Failed to fetch fallback CV:', cErr);
+            }
           }
           
           // If this is a standalone cover letter (no cvId), load it directly into step 4
           if (!actualCvId && coverLetterData) {
             dispatch({
               type: 'SET_AUTO_COVER_LETTER',
-              payload: { draft: coverLetterData.body || extractBodyFromContent(coverLetterData.content || ''), coverLetterId: coverLetterData.id || coverLetterData._id || clId }
+              skipHistory: true,
+              payload: { draft: coverLetterData.body || extractBodyFromContent(coverLetterData.content || ''), coverLetterId: coverLetterData.id || coverLetterData._id || effectiveClId }
             });
             dispatch({ type: 'SET_CV_TYPE', payload: 'standalone' });
             goToStepSafely(4, { silent: true });
             setCompletedSteps([1, 2, 3]);
-            initializedRef.current = { mode, cvId };
+            initializedRef.current = { mode, cvId: undefined };
             setIsLoading(false);
             return;
           }
 
+          // If STILL no cvId found, gracefully fallback to create mode (Step 1)
           if (!actualCvId) {
-             console.error('Failed to determine CV ID for editing.');
-             toast.error('Could not find the CV associated with this cover letter.');
-             router.push('/editor');
-             setIsLoading(false);
-             return;
+            console.log('ℹ️ No CV ID found for editing. Gracefully starting in create mode.');
+            dispatch({ type: 'SET_MODE', payload: 'create' });
+            goToStepSafely(1, { silent: true });
+            initializedRef.current = { mode: 'create', cvId: undefined };
+            setIsLoading(false);
+            return;
           }
 
           const response = await fetch(`/api/cvs/${actualCvId}`);
@@ -1237,7 +1299,7 @@ export default function ResumeEnhancerContainer({
           }
 
           // Fetch associated cover letter if we don't have it yet (e.g. loading CV directly in edit mode)
-          if (!coverLetterData && actualCvId && userId !== 'guest') {
+          if (!coverLetterData && actualCvId && userId !== 'guest' && !isMasterCV && !isFromOnboarding) {
              try {
                 const clListResponse = await fetch(`/api/cover-letters?userId=${userId}&cvId=${actualCvId}`);
                 if (clListResponse.ok) {
@@ -1274,7 +1336,7 @@ export default function ResumeEnhancerContainer({
             cv.cvType || (cv.metadata?.isMaster ? 'master' : cv.journeyId ? 'journey' : 'standalone');
 
           // For journey CVs: ensure we have jobData to show journey-based interface
-          if (resolvedCvType === 'journey' || cv.journeyId || journeyId || effectiveJourneyId) {
+          if ((resolvedCvType === 'journey' || cv.journeyId || journeyId || effectiveJourneyId) && !isMasterCV && !isFromOnboarding) {
             // Journey CV detected
             const finalJourneyId = cv.journeyId || journeyId || effectiveJourneyId;
 
@@ -1350,6 +1412,7 @@ export default function ResumeEnhancerContainer({
           if (coverLetterData) {
             dispatch({
               type: 'SET_AUTO_COVER_LETTER',
+              skipHistory: true,
               payload: { draft: coverLetterData.body || extractBodyFromContent(coverLetterData.content || ''), coverLetterId: coverLetterData.id || coverLetterData._id || clId }
             });
           }
@@ -1363,7 +1426,7 @@ export default function ResumeEnhancerContainer({
 
             const inferredSeniority =
               mapExperienceLevelToSeniority(cv?.metadata?.aiAnalysis?.experienceLevel?.level) ||
-              getSeniorityFromYears(calculateTotalWorkYears(cv.cvData?.work || [])) ||
+              inferSeniorityFromYears(calculateTotalWorkYears(cv.cvData?.work || [])) ||
               '';
 
             if (inferredRole || inferredSeniority) {
@@ -1547,7 +1610,7 @@ export default function ResumeEnhancerContainer({
           initializedRef.current = { mode, cvId };
         } else {
           console.error('Journey mode requires either cvId or journeyId');
-          router.push('/dashboard/tracker');
+          router.push('/dashboard/jobs?tab=applications');
         }
       } else {
         // Create mode (default)
@@ -1571,7 +1634,7 @@ export default function ResumeEnhancerContainer({
 
                   // CRITICAL: Check if journey deeply has a CV already
                   // If so, switch to edit mode and load that CV instead of creating new one
-                  if (journey.cvId) {
+                  if (journey?.cvId) {
                     console.log('✅ Journey already has CV:', journey.cvId, '- Switching to EDIT mode');
 
                     // Fetch the CV details
@@ -1713,7 +1776,7 @@ export default function ResumeEnhancerContainer({
 
       const inferredSeniority =
         mapExperienceLevelToSeniority((state.cvData as any)?.metadata?.aiAnalysis?.experienceLevel?.level) ||
-        getSeniorityFromYears(calculateTotalWorkYears(cvData?.work || [])) ||
+        inferSeniorityFromYears(calculateTotalWorkYears(cvData?.work || [])) ||
         '';
 
       if (inferredRole || inferredSeniority) {
@@ -2203,6 +2266,7 @@ export default function ResumeEnhancerContainer({
   };
 
   const handleStep2Complete = () => {
+    setIsTemplateOverlayActive(false);
     setTemplateOverlayOpen(false);
 
     // Guest mode: Save draft after template selection
@@ -2230,7 +2294,7 @@ export default function ResumeEnhancerContainer({
 
 
 
-  const handleStep3Complete = () => {
+  const handleStep3Complete = async () => {
     if (isMasterCV) {
       toast.error(coverLetterBlockedMessage);
       return;
@@ -2240,7 +2304,7 @@ export default function ResumeEnhancerContainer({
 
     // Guest mode: Save draft before moving to Step 4
     if (isGuestMode) {
-      guestCVService.saveGuestDraft({
+      await guestCVService.saveGuestDraft({
         cvData: state.cvData,
         currentStep: 4,
         completedSteps: [...completedSteps, 3],
@@ -2251,7 +2315,7 @@ export default function ResumeEnhancerContainer({
         cvTitle: state.cvTitle
       }).catch(err => console.error('Failed to save draft:', err));
     } else if (hasUnsavedChanges) {
-      handleSmartSave();
+      await handleSmartSave();
     }
 
     goToStepSafely(4, { silent: true });
@@ -2280,19 +2344,6 @@ export default function ResumeEnhancerContainer({
   };
 
   // Helper for deep equality check (simple but effective for our state objects)
-  const isDeepEqual = (a: any, b: any) => {
-    if (a === b) return true;
-    if (typeof a !== 'object' || a === null || typeof b !== 'object' || b === null) return false;
-    const keysA = Object.keys(a);
-    const keysB = Object.keys(b);
-    if (keysA.length !== keysB.length) return false;
-    for (const key of keysA) {
-      if (!keysB.includes(key)) return false;
-      if (!isDeepEqual(a[key], b[key])) return false;
-    }
-    return true;
-  };
-
   // Check if there are unsaved changes
   const hasUnsavedChanges = useMemo(() => {
     // If no initial data is captured yet, it's not "unsaved" yet
@@ -2323,10 +2374,10 @@ export default function ResumeEnhancerContainer({
     return dataChanged || titleChanged || templateChanged;
   }, [mode, state.cvData, state.cvTitle, state.selectedTemplate, isDeepEqual]);
 
-  const handleBackStep = () => {
+  const handleBackStep = async () => {
     if (state.currentStep <= 1) return;
     if (hasUnsavedChanges) {
-      handleSmartSave();
+      await handleSmartSave();
     }
     goToStep(state.currentStep - 1);
   };
@@ -2341,6 +2392,11 @@ export default function ResumeEnhancerContainer({
   };
 
   const handleExit = async () => {
+    if (isFromOnboarding) {
+      await handleOnboardingExit();
+      return;
+    }
+
     if (state.currentStep > 1) {
       if (hasUnsavedChanges) {
         await handleSmartSave();
@@ -2353,7 +2409,7 @@ export default function ResumeEnhancerContainer({
     let returnPath = '/dashboard'; // Default
 
     if (journeyId) {
-      returnPath = '/dashboard/tracker';
+      returnPath = '/dashboard/jobs?tab=applications';
     } else if (cvId && (mode === 'edit' || mode === 'edit-master')) {
       returnPath = '/editor';
     }
@@ -2381,25 +2437,6 @@ export default function ResumeEnhancerContainer({
     if (state.cvData.volunteer && state.cvData.volunteer.length > 0) filledSections++;
 
     return Math.round((filledSections / totalSections) * 100);
-  };
-
-  const extractCvIdFromResponse = (result: any): string | null => {
-    // Try multiple possible response structures
-    const cvId =
-      result?.data?.cv?.id ||
-      result?.data?.cv?._id ||
-      result?.data?.id ||
-      result?.cv?.id ||
-      result?.cv?._id ||
-      result?.id ||
-      null;
-
-    // Convert to string if it's an ObjectId
-    if (cvId) {
-      return String(cvId);
-    }
-
-    return null;
   };
 
   // Helper function to ensure CV is saved and return cvId
@@ -2559,6 +2596,11 @@ export default function ResumeEnhancerContainer({
           template: state.selectedTemplate,
           cvTitle: state.cvTitle
         });
+        // Reset the unsaved-changes baseline so the user isn't re-prompted
+        // right after a successful guest save.
+        initialCVDataRef.current = JSON.parse(JSON.stringify(state.cvData));
+        initialCVTitleRef.current = state.cvTitle;
+        initialTemplateRef.current = state.selectedTemplate;
         setSaveStatus('success');
         setTimeout(() => setSaveStatus('idle'), 1200);
         dispatch({ type: 'SET_SAVING', payload: false });
@@ -2660,7 +2702,6 @@ export default function ResumeEnhancerContainer({
         
         // Update state with the found ID
         dispatch({ type: 'SET_CV_ID', payload: result.existingMasterCVId });
-        if (setExternalCvId) setExternalCvId(result.existingMasterCVId);
         
         // Retry the save as PUT
         response = await fetch(`/api/cvs/${result.existingMasterCVId}`, {
@@ -2775,10 +2816,17 @@ export default function ResumeEnhancerContainer({
                  const newClId = clResult.data?.id || clResult.coverLetter?._id;
                  if (newClId) {
                      dispatch({ type: 'SET_AUTO_COVER_LETTER', payload: { draft: state.autoGeneratedCoverLetter, coverLetterId: newClId } });
+                 } else {
+                     console.error('Cover letter save response was OK but contained no ID');
+                     toast.error('Cover letter could not be saved, but your CV was saved.');
                  }
+             } else if (!clResponse.ok) {
+                 console.error('Cover letter save failed with status:', clResponse.status);
+                 toast.error('Cover letter could not be saved, but your CV was saved.');
              }
           } catch (clErr) {
              console.error("Failed to save cover letter:", clErr);
+             toast.error('Cover letter could not be saved, but your CV was saved.');
           }
       }
       
@@ -2873,7 +2921,60 @@ export default function ResumeEnhancerContainer({
     }
   };
 
+  const isSavingAndExitingRef = useRef(false);
+
+  const handleOnboardingExit = async () => {
+    if (isSavingAndExitingRef.current) return;
+    isSavingAndExitingRef.current = true;
+
+    try {
+      setSaveStatus('saving');
+      await handleSmartSave(true);
+
+      // Persist onboarding stage update to database
+      try {
+        await fetch('/api/user/onboarding', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            current_stage: 'CV_READY_FORK',
+            userLifecycleState: 'PRIMARY_CV_CREATED'
+          })
+        });
+      } catch (err) {
+        console.error('Failed to update onboarding session:', err);
+      }
+
+      // Update local storage backup
+      try {
+        const saved = localStorage.getItem('buildairesume_onboarding_state');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          localStorage.setItem('buildairesume_onboarding_state', JSON.stringify({
+            ...parsed,
+            stage: 'CV_READY_FORK',
+            step: 4,
+            editorCompleted: true
+          }));
+        }
+      } catch (e) {
+        console.error('Failed to update local storage onboarding state:', e);
+      }
+
+      const returnUrl = (typeof window !== 'undefined' && sessionStorage.getItem('onboardingReturnUrl')) || '/welcome?stage=cv_ready';
+      router.push(returnUrl);
+    } catch (err) {
+      console.error('Failed to save CV on onboarding exit:', err);
+      toast.error('We could not save your latest changes. Please try again.');
+      isSavingAndExitingRef.current = false;
+    }
+  };
+
   const handleHomeStepClick = async () => {
+    if (isFromOnboarding) {
+      await handleOnboardingExit();
+      return;
+    }
     // Guests should sign up before navigating away — show auth prompt instead
     if (isGuestMode) {
       setShowAuthPrompt(true);
@@ -2932,6 +3033,36 @@ export default function ResumeEnhancerContainer({
     const isCreateMode = mode === 'create' || mode === 'create-cover-letter';
     const isCoverLetterMode = mode === 'edit-cover-letter' || mode === 'create-cover-letter';
     
+    // For users in the onboarding flow, present a clean "Design → Edit → Review" lifecycle
+    if (isFromOnboarding) {
+      return [
+        {
+          id: 'layout',
+          label: 'Design',
+          isActive: state.isTemplateOverlayOpen,
+          isCompleted: !state.isTemplateOverlayOpen && !!state.selectedTemplate,
+          targetStep: 3,
+          openTemplateOverlay: true
+        },
+        {
+          id: 'edit',
+          label: 'Edit',
+          isActive: state.currentStep === 3 && !state.isTemplateOverlayOpen,
+          isCompleted: state.currentStep > 3 && !state.isTemplateOverlayOpen,
+          targetStep: 3,
+          openTemplateOverlay: false
+        },
+        {
+          id: 'review',
+          label: 'Review',
+          isActive: state.currentStep === 5,
+          isCompleted: false,
+          targetStep: 5,
+          openTemplateOverlay: false
+        }
+      ];
+    }
+
     // 1. Determine if we show Layout Selection (only for new Master or new Journey CVs, or when editing/creating cover letter)
     const showLayoutStep = (isCreateMode && (state.cvType === 'master' || state.cvType === 'journey')) || isCoverLetterMode;
     
@@ -3019,7 +3150,7 @@ export default function ResumeEnhancerContainer({
 
           const activePill = (
             <div className="flex items-center bg-[#f1f9ec] dark:bg-[#1a2312] border border-[#dcedd9] dark:border-[#2a3c1d] rounded-2xl px-4 py-1.5 shadow-sm transition-all duration-300">
-              <div className="w-8 h-8 rounded-full bg-lime-600 dark:bg-[#72e000] flex items-center justify-center text-white dark:text-black flex-shrink-0">
+              <div className="w-8 h-8 rounded-full bg-lime-600 dark:bg-[#02523c] flex items-center justify-center text-white dark:text-black flex-shrink-0">
                 <IconComponent className="w-4 h-4 stroke-[2.5]" />
               </div>
               <div className="flex flex-col ml-3 text-left">
@@ -3044,11 +3175,11 @@ export default function ResumeEnhancerContainer({
             >
               {/* Circle */}
               {step.isCompleted ? (
-                <div className="w-6 h-6 rounded-full bg-lime-500 dark:bg-[#80FF00] flex items-center justify-center text-black flex-shrink-0 shadow-sm shadow-lime-500/20 transition-transform group-hover:scale-105">
+                <div className="w-6 h-6 rounded-full bg-lime-500 dark:bg-[#013f2e] flex items-center justify-center text-black flex-shrink-0 shadow-sm shadow-lime-500/20 transition-transform group-hover:scale-105">
                   <Check className="w-3.5 h-3.5 stroke-[3] text-black" />
                 </div>
               ) : (
-                <div className="w-7 h-7 rounded-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 flex items-center justify-center text-gray-400 dark:text-gray-500 flex-shrink-0 transition-colors group-hover:border-lime-500 dark:group-hover:border-[#80FF00] group-hover:text-lime-600 dark:group-hover:text-lime-400">
+                <div className="w-7 h-7 rounded-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 flex items-center justify-center text-gray-400 dark:text-gray-500 flex-shrink-0 transition-colors group-hover:border-lime-500 dark:group-hover:border-[#013f2e] group-hover:text-lime-600 dark:group-hover:text-lime-400">
                   <IconComponent className="w-3.5 h-3.5 stroke-[2]" />
                 </div>
               )}
@@ -3164,26 +3295,150 @@ export default function ResumeEnhancerContainer({
     }
   }, []); // Empty deps - only run on mount
 
-  if (isLoading) {
+  if (isLoading && !showTemplateOverlay && requestedStep !== 2) {
+    // Keep the editor chrome visible while the document loads: header skeleton + a
+    // step-aware body skeleton (CV sheet + control panel, or letter sheet + panel).
+    const isCanvasStep = state.currentStep === 3;
+    const isLetterStep = state.currentStep === 4;
     return (
-      <div className="dashboard-page resume-enhancer-page flex items-center justify-center min-h-screen bg-[var(--bg-primary)]">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-[color:var(--accent-primary)] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-[color:var(--text-secondary)]">Loading Editor...</p>
-        </div>
+      <div className="h-macro dashboard-workspace flex flex-col overflow-hidden w-full" role="status" aria-label="Loading document">
+        {/* Editor header skeleton — static chrome */}
+        <header className="editor-header relative h-14 flex items-center justify-between gap-2 px-3 sm:px-6 bg-[var(--header-bg)] sticky top-0 z-[60]">
+          <div className="flex items-center gap-3 min-w-0">
+            <Skeleton className="hidden md:block w-10 h-10 rounded-xl" />
+            <div className="space-y-1.5 min-w-0">
+              <Skeleton className="h-4 w-40 sm:w-52" />
+              <Skeleton className="h-2.5 w-24" />
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Skeleton className="h-9 w-24 rounded-lg" />
+            <Skeleton className="h-9 w-9 rounded-lg" />
+            <Skeleton className="h-9 w-9 rounded-lg" />
+          </div>
+        </header>
+
+        {/* CV canvas step: A4 preview sheet + control panel */}
+        {isCanvasStep && (
+          <div className="flex-1 min-h-0 flex gap-3 p-3">
+            <div className="flex-1 lg:flex-none lg:w-[60%] min-h-0 flex items-start justify-center overflow-y-auto bg-gray-100/50 dark:bg-[#141810] rounded-xl border border-gray-200 dark:border-white/[0.04] p-6">
+              <div className="w-full max-w-[560px] aspect-[1/1.414] bg-white dark:bg-[#141810] rounded-xl border border-gray-200 dark:border-white/[0.04] shadow-sm p-8 flex flex-col gap-6">
+                <div className="space-y-3">
+                  <Skeleton className="h-6 w-1/3" />
+                  <Skeleton className="h-3.5 w-1/4" />
+                </div>
+                <div className="flex gap-4">
+                  <Skeleton className="h-3 w-20" />
+                  <Skeleton className="h-3 w-20" />
+                  <Skeleton className="h-3 w-20" />
+                </div>
+                <Skeleton className="h-px w-full" />
+                <div className="space-y-2.5">
+                  <Skeleton className="h-4 w-1/4" />
+                  <Skeleton className="h-3 w-full" />
+                  <Skeleton className="h-3 w-5/6" />
+                </div>
+                <div className="space-y-4 pt-2">
+                  <Skeleton className="h-4 w-1/4" />
+                  <div className="space-y-2.5">
+                    <div className="flex justify-between">
+                      <Skeleton className="h-3.5 w-1/3" />
+                      <Skeleton className="h-3 w-16" />
+                    </div>
+                    <Skeleton className="h-3 w-full" />
+                    <Skeleton className="h-3 w-full" />
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="hidden lg:flex flex-col gap-3 flex-1 min-h-0">
+              <div className="dashboard-content-card rounded-2xl border border-[var(--border-primary)] p-4 space-y-3 flex-1">
+                <Skeleton className="h-4 w-2/5" />
+                <Skeleton className="h-3 w-full" />
+                <Skeleton className="h-3 w-5/6" />
+                <Skeleton className="h-9 w-full rounded-lg" />
+                <Skeleton className="h-9 w-full rounded-lg" />
+              </div>
+              <div className="dashboard-content-card rounded-2xl border border-[var(--border-primary)] p-4 space-y-3 flex-1">
+                <Skeleton className="h-4 w-1/3" />
+                <Skeleton className="h-8 w-16" />
+                <Skeleton className="h-3 w-3/4" />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Cover letter step: letter sheet + tuning panel */}
+        {isLetterStep && (
+          <div className="flex-1 min-h-0 flex gap-3 p-3">
+            <div className="flex-1 min-h-0 overflow-y-auto bg-gray-100/50 dark:bg-[#141810] rounded-xl border border-gray-200 dark:border-white/[0.04] p-6 lg:p-10 flex justify-center">
+              <div className="w-full max-w-[620px] min-h-[520px] bg-white dark:bg-[#141810] rounded-xl border border-gray-200 dark:border-white/[0.04] shadow-sm p-10 space-y-4">
+                <div className="space-y-2">
+                  <Skeleton className="h-8 w-64 mx-auto" />
+                  <Skeleton className="h-3 w-40 mx-auto" />
+                  <Skeleton className="h-3 w-52 mx-auto" />
+                </div>
+                <Skeleton className="h-px w-full my-4" />
+                <div className="space-y-2.5">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <Skeleton key={i} className={`h-3 ${i % 3 === 0 ? 'w-full' : i % 3 === 1 ? 'w-5/6' : 'w-2/3'}`} />
+                  ))}
+                </div>
+                <div className="space-y-2.5 pt-2">
+                  <Skeleton className="h-3 w-11/12" />
+                  <Skeleton className="h-3 w-4/5" />
+                  <Skeleton className="h-3 w-3/4" />
+                </div>
+              </div>
+            </div>
+            <div className="hidden lg:flex flex-col gap-3 w-[300px] shrink-0">
+              <div className="dashboard-content-card rounded-2xl border border-[var(--border-primary)] p-4 space-y-3 flex-1">
+                <Skeleton className="h-4 w-2/5" />
+                <Skeleton className="h-8 w-20 rounded-full" />
+                <Skeleton className="h-8 w-20 rounded-full" />
+                <Skeleton className="h-9 w-full rounded-lg" />
+              </div>
+              <div className="dashboard-content-card rounded-2xl border border-[var(--border-primary)] p-4 space-y-3 flex-1">
+                <Skeleton className="h-4 w-1/3" />
+                <Skeleton className="h-3 w-full" />
+                <Skeleton className="h-3 w-5/6" />
+                <Skeleton className="h-3 w-2/3" />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Other steps: generic content skeleton */}
+        {!isCanvasStep && !isLetterStep && (
+          <div className="flex-1 min-h-0 p-6">
+            <div className="dashboard-content-card rounded-2xl border border-[var(--border-primary)] p-6 space-y-4">
+              <Skeleton className="h-7 w-64" />
+              <Skeleton className="h-4 w-96 max-w-full" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 pt-4">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="dashboard-content-card rounded-2xl border border-[var(--border-primary)] p-6 space-y-3">
+                    <Skeleton className="h-14 w-14 rounded-full" />
+                    <Skeleton className="h-5 w-28" />
+                    <Skeleton className="h-3 w-40" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
 
   return (
-    <div className="h-macro bg-[#f3f2ee] dark:bg-[#1a230f] flex overflow-hidden w-full">
+    <div className="h-macro dashboard-workspace flex overflow-hidden w-full">
       {/* Desktop Sidebar - Hidden on sm/md, visible on lg and up */}
       {state.currentStep === 1 && (
         <div
           data-dashboard-sidebar
           className={`hidden lg:flex lg:flex-col lg:sticky lg:top-0 lg:h-screen lg:z-[120] lg:py-0 lg:px-0 ${
-            isDesktopExpanded ? 'lg:w-[280px]' : 'lg:w-[84px]'
-          } overflow-visible pointer-events-auto transition-all duration-300 flex-shrink-0 border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-[#141810]`}
+            isDesktopExpanded ? 'lg:w-[280px]' : 'lg:w-[64px]'
+          } overflow-visible pointer-events-auto transition-all duration-300 flex-shrink-0 bg-white dark:bg-[#141810]`}
         >
           <OptimizedNavigation />
         </div>
@@ -3209,21 +3464,24 @@ export default function ResumeEnhancerContainer({
       {/* Main Content Area */}
       <div className="dashboard-page resume-enhancer-page flex flex-col flex-1 min-w-0 h-screen overflow-hidden text-[color:var(--text-primary)]">
         {/* HEADER - Top Bar */}
-        <header className={`editor-header relative min-h-16 flex items-center justify-between gap-2 px-3 sm:px-6 border-b border-[color:var(--border-primary)] bg-[var(--header-bg)] sticky top-0 z-[60] shadow-sm ${state.currentStep === 1 ? 'flex-wrap py-2 sm:py-0' : ''}`}>
+        <header className={`editor-header relative h-14 flex items-center justify-between gap-2 px-3 sm:px-6 bg-[var(--header-bg)] sticky top-0 z-[60] ${state.currentStep === 1 ? 'flex-wrap py-2 sm:py-0 min-h-14' : ''}`}>
           {(state.currentStep > 1 || state.isTemplateOverlayOpen) ? (
             <>
-              {/* Left Column: Home Button & CV Title Inline Editor & Save Status */}
-              <div className="flex items-center gap-3 min-w-0 lg:w-[280px] flex-shrink-0">
-                <button
-                  onClick={handleHomeStepClick}
-                  className="hidden md:flex w-10 h-10 rounded-xl bg-white dark:bg-[#1a2312] border border-lime-200 dark:border-lime-900/30 items-center justify-center text-lime-600 dark:text-lime-400 hover:bg-lime-50 dark:hover:bg-lime-950/20 active:scale-95 transition-all duration-200 flex-shrink-0 shadow-sm"
-                  title="Back to Step 1"
-                >
-                  <Home className="w-5 h-5 text-lime-600 dark:text-lime-400" />
-                </button>
+              {/* Left Column: Home Button & CV Title Inline Editor & Save Status - all inline */}
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 lg:flex-initial">
+                {!isFromOnboarding && (
+                  <button
+                    onClick={handleHomeStepClick}
+                    className="flex w-9 h-9 rounded-xl bg-white dark:bg-[#1a2312] border border-lime-200 dark:border-lime-900/30 items-center justify-center text-lime-600 dark:text-lime-400 hover:bg-lime-50 dark:hover:bg-lime-950/20 active:scale-95 transition-all duration-200 flex-shrink-0 shadow-sm"
+                    title="Back to Step 1"
+                  >
+                    <Home className="w-4 h-4 text-lime-600 dark:text-lime-400" />
+                  </button>
+                )}
                 
-                <div className="flex flex-col min-w-0">
-                  <div className="flex items-center gap-1.5 group">
+                <div className="flex items-center gap-2 min-w-0 flex-wrap sm:flex-nowrap">
+                  {/* Title editor */}
+                  <div className="flex items-center gap-1 group min-w-0 shrink">
                     {isEditingTitle ? (
                       <input
                         type="text"
@@ -3234,86 +3492,88 @@ export default function ResumeEnhancerContainer({
                           if (e.key === 'Enter') saveTitle();
                           if (e.key === 'Escape') setIsEditingTitle(false);
                         }}
-                        className="text-sm font-bold text-gray-900 dark:text-white bg-transparent border-b border-lime-500 focus:outline-none px-1 py-0.5 max-w-[200px]"
+                        className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white bg-transparent border-b border-lime-500 focus:outline-none px-1 py-0.5 max-w-[150px] sm:max-w-[220px]"
                         autoFocus
                       />
                     ) : (
                       <>
                         <span 
                           onClick={startEditingTitle}
-                          className="text-sm font-bold text-gray-900 dark:text-white cursor-pointer hover:text-lime-500 dark:hover:text-lime-400 transition-colors truncate max-w-[200px]"
+                          className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white cursor-pointer hover:text-lime-500 dark:hover:text-lime-400 transition-colors truncate max-w-[140px] sm:max-w-[220px]"
                           title="Click to edit"
                         >
                           {state.cvTitle || 'Untitled CV'}
                         </span>
                         <button
                           onClick={startEditingTitle}
-                          className="p-1 text-lime-600/70 dark:text-lime-400/70 hover:text-lime-600 dark:hover:text-lime-400 hover:scale-110 transition-all"
+                          className="p-0.5 text-lime-600/70 dark:text-lime-400/70 hover:text-lime-600 dark:hover:text-lime-400 hover:scale-110 transition-all shrink-0"
                           aria-label="Edit title"
                         >
-                          <Edit2 className="w-3.5 h-3.5" />
+                          <Edit2 className="w-3 h-3" />
                         </button>
                       </>
                     )}
                   </div>
                   
-                  {/* Row 2: CV type chip + save status inline */}
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <div className="relative group/chip cursor-help z-50">
-                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider shrink-0 ${
-                        state.cvType === 'master'
-                          ? 'bg-blue-500/15 text-blue-500 dark:text-blue-400 border border-blue-500/30'
-                          : state.cvType === 'journey'
-                          ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
-                          : 'bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border border-cyan-500/30'
-                      }`}>
-                        {state.cvType === 'master' ? '⭐ Primary CV' : state.cvType === 'journey' ? '🎯 Job-Tailored' : '✦ Custom CV'}
-                      </span>
+                  {/* CV type chip */}
+                  <div className="relative group/chip cursor-help z-50 shrink-0 hidden sm:block">
+                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider shrink-0 ${
+                      state.cvType === 'master'
+                        ? 'bg-blue-500/15 text-blue-500 dark:text-blue-400 border border-blue-500/30'
+                        : state.cvType === 'journey'
+                        ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
+                        : 'bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border border-cyan-500/30'
+                    }`}>
+                      {state.cvType === 'master' ? '⭐ Primary CV' : state.cvType === 'journey' ? '🎯 Job-Tailored' : '✦ Custom CV'}
+                    </span>
 
-                      {/* Detail Popup Card */}
-                      <div className="absolute left-0 top-full mt-2 w-80 p-4 rounded-xl bg-white dark:bg-[#11160d] border border-gray-200 dark:border-lime-500/20 shadow-2xl backdrop-blur-md opacity-0 pointer-events-none group-hover/chip:opacity-100 group-hover/chip:pointer-events-auto transition-all duration-200 transform translate-y-1 group-hover/chip:translate-y-0 text-left">
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-lime-500/10">
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-lime-400">CV Classification Guide</span>
+                    {/* Detail Popup Card */}
+                    <div className="absolute left-0 top-full mt-2 w-80 p-4 rounded-xl bg-white dark:bg-[#11160d] border border-gray-200 dark:border-lime-500/20 shadow-2xl backdrop-blur-md opacity-0 pointer-events-none group-hover/chip:opacity-100 group-hover/chip:pointer-events-auto transition-all duration-200 transform translate-y-1 group-hover/chip:translate-y-0 text-left">
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-lime-500/10">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-lime-400">CV Classification Guide</span>
+                        </div>
+                        
+                        <div className="space-y-2.5 text-[11px] leading-relaxed">
+                          {/* Primary */}
+                          <div className={`p-2 rounded-lg transition-colors ${state.cvType === 'master' ? 'bg-blue-500/5 dark:bg-blue-500/10 border border-blue-500/20' : 'opacity-60'}`}>
+                            <div className="font-black text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
+                              <span>⭐ Primary CV</span>
+                              {state.cvType === 'master' && <span className="text-[8px] px-1 bg-blue-500/15 rounded text-blue-600 dark:text-blue-400 font-bold uppercase">Active</span>}
+                            </div>
+                            <p className="text-gray-600 dark:text-gray-300 mt-1">Your main CV and master source of truth. Contains your complete history. All tailored versions are derived from this.</p>
                           </div>
-                          
-                          <div className="space-y-2.5 text-[11px] leading-relaxed">
-                            {/* Primary */}
-                            <div className={`p-2 rounded-lg transition-colors ${state.cvType === 'master' ? 'bg-blue-500/5 dark:bg-blue-500/10 border border-blue-500/20' : 'opacity-60'}`}>
-                              <div className="font-black text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
-                                <span>⭐ Primary CV</span>
-                                {state.cvType === 'master' && <span className="text-[8px] px-1 bg-blue-500/15 rounded text-blue-600 dark:text-blue-400 font-bold uppercase">Active</span>}
-                              </div>
-                              <p className="text-gray-600 dark:text-gray-300 mt-1">Your main CV and master source of truth. Contains your complete history. All tailored versions are derived from this.</p>
-                            </div>
 
-                            {/* Journey */}
-                            <div className={`p-2 rounded-lg transition-colors ${state.cvType === 'journey' ? 'bg-amber-500/5 dark:bg-amber-500/10 border border-amber-500/20' : 'opacity-60'}`}>
-                              <div className="font-black text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
-                                <span>🎯 Job-Tailored</span>
-                                {state.cvType === 'journey' && <span className="text-[8px] px-1 bg-amber-500/15 rounded text-amber-600 dark:text-amber-400 font-bold uppercase">Active</span>}
-                              </div>
-                              <p className="text-gray-600 dark:text-gray-300 mt-1">A version customized for a specific job tracking journey. Optimized for a specific Job Description (JD) to maximize ATS score.</p>
+                          {/* Journey */}
+                          <div className={`p-2 rounded-lg transition-colors ${state.cvType === 'journey' ? 'bg-amber-500/5 dark:bg-amber-500/10 border border-amber-500/20' : 'opacity-60'}`}>
+                            <div className="font-black text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                              <span>🎯 Job-Tailored</span>
+                              {state.cvType === 'journey' && <span className="text-[8px] px-1 bg-amber-500/15 rounded text-amber-600 dark:text-amber-400 font-bold uppercase">Active</span>}
                             </div>
+                            <p className="text-gray-600 dark:text-gray-300 mt-1">A version customized for a specific job tracking journey. Optimized for a specific Job Description (JD) to maximize ATS score.</p>
+                          </div>
 
-                            {/* Standalone */}
-                            <div className={`p-2 rounded-lg transition-colors ${state.cvType === 'standalone' ? 'bg-cyan-500/5 dark:bg-cyan-500/10 border border-cyan-500/20' : 'opacity-60'}`}>
-                              <div className="font-black text-cyan-600 dark:text-cyan-400 flex items-center gap-1.5">
-                                <span>✦ Custom CV</span>
-                                {state.cvType === 'standalone' && <span className="text-[8px] px-1 bg-cyan-500/15 rounded text-cyan-600 dark:text-cyan-400 font-bold uppercase">Active</span>}
-                              </div>
-                              <p className="text-gray-600 dark:text-gray-300 mt-1">A standalone clone or custom draft. Perfect for general editing, experimentation, or targeting a new niche without tracking a job.</p>
+                          {/* Standalone */}
+                          <div className={`p-2 rounded-lg transition-colors ${state.cvType === 'standalone' ? 'bg-cyan-500/5 dark:bg-cyan-500/10 border border-cyan-500/20' : 'opacity-60'}`}>
+                            <div className="font-black text-cyan-600 dark:text-cyan-400 flex items-center gap-1.5">
+                              <span>✦ Custom CV</span>
+                              {state.cvType === 'standalone' && <span className="text-[8px] px-1 bg-cyan-500/15 rounded text-cyan-600 dark:text-cyan-400 font-bold uppercase">Active</span>}
                             </div>
+                            <p className="text-gray-600 dark:text-gray-300 mt-1">A standalone clone or custom draft. Perfect for general editing, experimentation, or targeting a new niche without tracking a job.</p>
                           </div>
                         </div>
                       </div>
                     </div>
-                    <span className={`w-1 h-1 rounded-full shrink-0 ${
+                  </div>
+
+                  {/* Save status inline */}
+                  <div className="flex items-center gap-1 shrink-0">
+                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
                       saveStatus === 'error' ? 'bg-red-500' :
                       saveStatus === 'saving' ? 'bg-amber-500 animate-pulse' :
-                      'bg-lime-500 dark:bg-[#80FF00]'
+                      'bg-lime-500 dark:bg-[#013f2e]'
                     }`} />
-                    <span className="text-[9px] text-gray-500 dark:text-gray-400 truncate">
+                    <span className="text-[10px] text-gray-500 dark:text-gray-400 truncate">
                       {saveStatus === 'saving' ? 'Saving...' :
                        saveStatus === 'success' ? 'Saved' :
                        saveStatus === 'offline' ? 'Saved offline' :
@@ -3324,8 +3584,18 @@ export default function ResumeEnhancerContainer({
                 </div>
               </div>
 
-              {/* Center Column: Dynamic Stepper */}
-              {renderHeaderStepper()}
+              {/* Center: Step Control Navigation (Centered strictly to the full top bar) */}
+              <div className="hidden lg:flex items-center justify-center absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-10 origin-center">
+                <div className="pointer-events-auto flex items-center justify-center origin-center">
+                  <BottomStepBar
+                    steps={getHeaderSteps()}
+                    currentStep={state.currentStep}
+                    isTemplateOverlayOpen={state.isTemplateOverlayOpen}
+                    onNavigate={(targetStep, openOverlay) => handleStepNavigation(targetStep, openOverlay)}
+                  />
+                </div>
+              </div>
+
             </>
           ) : (
             <div className="flex items-center flex-1 min-w-0 gap-4">
@@ -3368,7 +3638,7 @@ export default function ResumeEnhancerContainer({
                 <motion.button
                   onClick={() => handleSmartSave(true)}
                   disabled={saveStatus === 'saving'}
-                  className="hidden md:inline-flex lg:hidden p-1.5 sm:px-4 sm:py-1.5 bg-lime-500 dark:bg-[#80FF00] hover:bg-lime-600 dark:hover:bg-[#70e600] disabled:bg-gray-300 dark:disabled:bg-[var(--bg-tertiary)] disabled:cursor-not-allowed text-black disabled:text-gray-500 dark:disabled:text-[color:var(--text-tertiary)] rounded-full text-xs font-semibold transition-colors flex items-center space-x-1.5 shadow-md hover:shadow-lg overflow-hidden min-w-[36px] sm:min-w-[85px] justify-center"
+                  className="hidden md:inline-flex lg:hidden p-1.5 sm:px-4 sm:py-1.5 bg-lime-500 dark:bg-[#013f2e] hover:bg-lime-600 dark:hover:bg-[#02523c] disabled:bg-gray-300 dark:disabled:bg-[var(--bg-tertiary)] disabled:cursor-not-allowed text-black disabled:text-gray-500 dark:disabled:text-[color:var(--text-tertiary)] rounded-full text-xs font-semibold transition-colors flex items-center space-x-1.5 shadow-md hover:shadow-lg overflow-hidden min-w-[36px] sm:min-w-[85px] justify-center"
                   title="Save"
                   whileHover={{ scale: saveStatus === 'saving' ? 1 : 1.05 }}
                   whileTap={{ scale: 0.95 }}
@@ -3488,6 +3758,19 @@ export default function ResumeEnhancerContainer({
             </>
           )}
 
+          {/* Onboarding Save & Continue Action */}
+          {isFromOnboarding && (
+            <button
+              onClick={handleOnboardingExit}
+              disabled={saveStatus === 'saving'}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#013f2e] hover:bg-[#02523c] text-black font-extrabold text-xs rounded-full shadow-sm hover:shadow transition-all active:scale-95"
+              title="Save & Continue to Onboarding"
+            >
+              <Check className="w-3.5 h-3.5 stroke-[3]" />
+              <span className="hidden sm:inline">Save &amp; Continue</span>
+            </button>
+          )}
+
           {/* Guest Mode Tag */}
           {isGuestMode && (
             <span className="px-2.5 py-1 bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-full text-xs font-medium">
@@ -3496,7 +3779,7 @@ export default function ResumeEnhancerContainer({
           )}
 
           {/* Theme Toggle */}
-          <div className="hidden sm:block">
+          <div>
             <ThemeToggle variant="pill" />
           </div>
 
@@ -3515,11 +3798,11 @@ export default function ResumeEnhancerContainer({
       </header>
 
       {/* Content Area */}
-      <div className="flex-1 min-h-0 flex overflow-hidden bg-[var(--bg-primary)]">
+      <div className="flex-1 min-h-0 flex flex-col overflow-hidden bg-[var(--bg-primary)]">
         {/* Main Content */}
-        <main className="flex-1 min-h-0 overflow-hidden bg-[var(--bg-primary)]">
-          <div className="w-full h-full min-h-0 box-border overflow-hidden flex flex-col">
-            <div ref={stepContentRef} className="h-full min-h-0 flex flex-col relative">
+        <main className="flex-1 min-h-0 overflow-hidden bg-[var(--bg-primary)] flex flex-col">
+          <div className="w-full flex-1 min-h-0 box-border overflow-hidden flex flex-col">
+            <div ref={stepContentRef} className="flex-1 min-h-0 flex flex-col relative">
               <AnimatePresence mode="wait">
                 {state.currentStep === 1 && (
                   <motion.div

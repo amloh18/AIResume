@@ -64,7 +64,7 @@ class SystemEmailTracker {
                         systemType: type
                     },
                     fromName: 'System',
-                    fromEmail: 'noreply@cvcircle.com',
+                    fromEmail: 'noreply@buildairesume.com',
                     campaignType: 'transactional',
                     creatorId: 'system',
                     createdByName: 'System Automation'

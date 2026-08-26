@@ -38,7 +38,7 @@ export const AISuggestionsPanel: React.FC<AISuggestionsPanelProps> = ({
   const { credits } = useCredits();
   const { openPaymentModal } = usePaymentModal();
 
-  const isPro = ['pro_monthly', 'pro_quarterly', 'pro_lifetime'].includes(credits?.planKey || 'free');
+  const isPro = ['focused_monthly', 'focused_quarterly', 'focused_yearly'].includes(credits?.planKey || 'free');
   const isTrial = credits?.planKey === 'trialing';
   const aiCreditsRemaining = credits?.aiCreditsRemaining ?? 0;
   const isLocked = (!isPro && !isTrial) || (aiCreditsRemaining <= 0 && !isPro);
@@ -95,7 +95,7 @@ export const AISuggestionsPanel: React.FC<AISuggestionsPanelProps> = ({
                 type="button"
                 onClick={() =>
                   openPaymentModal({
-                    preselectedPlanKey: 'pro_monthly',
+                    preselectedPlanKey: 'focused_monthly',
                     triggerContext: 'ai-suggestions-locked',
                     returnUrl: window.location.href
                   })

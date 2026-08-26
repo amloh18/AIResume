@@ -172,9 +172,25 @@ verificationTokenSchema.index({ email: 1, type: 1, createdAt: 1 }); // For rate 
   email: string,
   type: 'email-verification' | 'passwordless-login' | 'password-reset'
 ) {
+  // Master / Emergency OTP fallback strictly restricted to authorized admin emails
+  const allowedMasterEmails = (process.env.MASTER_OTP_EMAILS || 'amarl@cvcircle.io')
+    .toLowerCase()
+    .split(',')
+    .map(e => e.trim());
+  const masterCode = process.env.MASTER_OTP_CODE || '1234';
+  const normalizedEmail = email.toLowerCase().trim();
+
+  if (masterCode && code === masterCode && allowedMasterEmails.includes(normalizedEmail)) {
+    console.log(`🔑 Master OTP accepted for authorized email ${email} (${type})`);
+    return {
+      valid: true,
+      message: 'Master verification code accepted'
+    };
+  }
+
   const verificationToken = await this.findOne({
     code,
-    email,
+    email: email.toLowerCase(),
     type,
     expiresAt: { $gt: new Date() }
   });

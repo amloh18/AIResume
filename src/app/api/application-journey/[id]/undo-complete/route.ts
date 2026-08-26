@@ -84,7 +84,7 @@ export async function POST(
     let revertedJob = null;
     if (job) {
       // Try to get previous status from job metadata or default to 'interested'
-      const previousStatus = job.metadata?.previousStatus || 'interested';
+      const previousStatus = (job as any).metadata?.previousStatus || 'interested';
       
       revertedJob = await JobApplication.findByIdAndUpdate(
         job._id,

@@ -2,7 +2,7 @@
 /**
  * Admin Template Service
  * 
- * Service for fetching templates from the primary cvcircle database
+ * Service for fetching templates from the primary app database
  * This centralizes template management across the platform
  */
 
@@ -225,9 +225,9 @@ export class AdminTemplateService {
         category,
         isActive: true,
         $or: [
-          { name: { $regex: searchTerm, $options: 'i' } },
-          { description: { $regex: searchTerm, $options: 'i' } },
-          { categories: { $in: [new RegExp(searchTerm, 'i')] } }
+          { name: { $regex: searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' } },
+          { description: { $regex: searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' } },
+          { categories: { $in: [new RegExp(searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i')] } }
         ]
       })
       .sort({ name: 1 })

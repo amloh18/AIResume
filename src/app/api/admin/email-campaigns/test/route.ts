@@ -1,15 +1,12 @@
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthenticatedUser } from '@/lib/auth-helpers';
+import { requireAdmin } from '@/lib/middleware/admin-auth';
 import { sendEmail } from '@/lib/email-service';
 
 export async function POST(request: NextRequest) {
     try {
-        // 1. Auth Check
-        const authUser = await getAuthenticatedUser();
-        if (!authUser) {
-            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-        }
+        // 1. Auth Check - Admin only
+        await requireAdmin(request);
 
         const body = await request.json();
         const { emails, subject, htmlContent, fromName, fromEmail } = body;
@@ -37,7 +34,7 @@ export async function POST(request: NextRequest) {
                 content = content.replace(/{{lastName}}/g, '');
                 content = content.replace(/{{email}}/g, email);
 
-                const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://cvcircle.io';
+                const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://buildairesume.com';
                 content = content.replace(/{{appUrl}}/g, appUrl);
 
                 // Mock Unsubscribe for Test

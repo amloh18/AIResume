@@ -21,12 +21,10 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 min
 
 /** Canonical USD prices — single source of truth. Matches Polar catalog. */
 export const PLAN_USD_PRICES: Record<string, number> = {
-  starter_monthly:  0,
-  starter_yearly:   19.99,
-  focused_monthly:  9.99,
-  focused_yearly:   79.99,
-  smart_quarterly:  59.99,
-  smart_yearly:     199.00,
+  starter_monthly:  0,     // Regular $4.99 (free for now)
+  starter_yearly:   19.99, // $2/month ($19.99 total billed annually)
+  focused_monthly:  9.99,  // $9.99/month
+  focused_yearly:   79.99, // $7/month ($79.99 total billed annually)
 };
 
 export async function GET(request: NextRequest) {
@@ -57,10 +55,118 @@ export async function GET(request: NextRequest) {
       query.targetAudience   = 'all';
     }
 
-    const plans = await PricingPlanModel.find(query).sort({ sortOrder: 1 }).lean();
+    let plans = await PricingPlanModel.find(query).sort({ sortOrder: 1 }).lean();
 
     if (!plans?.length) {
-      throw new Error('No pricing plans found in database');
+      console.warn('⚠️ No pricing plans found in database. Initializing default plans...');
+      const defaultPlans = [
+        {
+          key: 'starter_monthly',
+          name: 'Starter Monthly',
+          description: 'Essential tools for resume creation and editing',
+          billingCycle: 'monthly',
+          price_monthly: 0,
+          price: 0,
+          sortOrder: 1,
+          status: 'active',
+          displayOnLanding: true,
+          targetAudience: 'all',
+          storageLimit: 100,
+          features: [
+            'Access to ALL templates and snippets',
+            'Unlimited CV & Cover Letter Edits',
+            'Real-time ATS Scoring & Editor',
+            'AI Cover Letter Generator',
+            'PDF & DOCX Downloads',
+            'Mori AI chat',
+            '10 Auto Job Applications (includes CV generation & Journeys)',
+          ],
+          credits: { cvCredits: 10, exportCredits: 10, atsCheckCredits: 10, jobCredits: 10, resetSchedule: 'monthly' },
+          isPopular: false,
+          isBestValue: false,
+        },
+        {
+          key: 'starter_yearly',
+          name: 'Starter Yearly',
+          description: 'Annual plan for ongoing resume improvements',
+          billingCycle: 'yearly',
+          price_yearly: 19.99,
+          price: 19.99,
+          sortOrder: 2,
+          status: 'active',
+          displayOnLanding: true,
+          targetAudience: 'all',
+          storageLimit: 250,
+          features: [
+            'Access to ALL templates and snippets',
+            'Unlimited CV & Cover Letter Edits',
+            'Real-time ATS Scoring & Editor',
+            'AI Cover Letter Generator',
+            'PDF & DOCX Downloads',
+            'Mori AI chat',
+          ],
+          credits: { cvCredits: 50, exportCredits: 50, atsCheckCredits: 50, jobCredits: 50, resetSchedule: 'yearly' },
+          isPopular: false,
+          isBestValue: false,
+        },
+        {
+          key: 'focused_monthly',
+          name: 'Focused Monthly',
+          description: 'Complete suite for active job hunters and interview prep',
+          billingCycle: 'monthly',
+          price_monthly: 9.99,
+          price: 9.99,
+          sortOrder: 3,
+          status: 'active',
+          displayOnLanding: true,
+          targetAudience: 'all',
+          storageLimit: 500,
+          features: [
+            'Unlimited CV & Cover Letter Edits',
+            'Real-time ATS Scoring & Editor',
+            'AI Cover Letter Generator',
+            'LinkedIn Enhancer',
+            'AI Interview Coach Mock Simulator',
+            'Application Tracker (Full Kanban access)',
+            'All features unlimited',
+          ],
+          credits: { cvCredits: -1, exportCredits: -1, atsCheckCredits: -1, jobCredits: -1, resetSchedule: 'monthly' },
+          isPopular: false,
+          isBestValue: false,
+        },
+        {
+          key: 'focused_yearly',
+          name: 'Focused Yearly',
+          description: 'Ultimate package with priority features for high-growth careers',
+          billingCycle: 'yearly',
+          price_yearly: 79.99,
+          price: 79.99,
+          sortOrder: 4,
+          status: 'active',
+          displayOnLanding: true,
+          targetAudience: 'all',
+          storageLimit: 1000,
+          features: [
+            'Unlimited CV & Cover Letter Edits',
+            'Real-time ATS Scoring & Editor',
+            'AI Cover Letter Generator',
+            'LinkedIn Enhancer',
+            'AI Interview Coach Mock Simulator',
+            'Application Tracker (Full Kanban access)',
+            'All features unlimited',
+          ],
+          credits: { cvCredits: -1, exportCredits: -1, atsCheckCredits: -1, jobCredits: -1, resetSchedule: 'yearly' },
+          isPopular: true,
+          isBestValue: true,
+        },
+      ];
+
+      try {
+        await PricingPlanModel.insertMany(defaultPlans, { ordered: false });
+        plans = await PricingPlanModel.find(query).sort({ sortOrder: 1 }).lean();
+      } catch (seedErr) {
+        plans = defaultPlans as any;
+      }
     }
 
     // Dynamic Sync from Polar Dashboard Products catalog
@@ -98,7 +204,10 @@ export async function GET(request: NextRequest) {
 
     const currentDate = new Date();
 
-    const enhancedPlans = plans.map((plan: any) => {
+    // Filter out smart plans completely
+    const filteredDbPlans = plans.filter((plan: any) => !plan.key?.includes('smart'));
+
+    const enhancedPlans = filteredDbPlans.map((plan: any) => {
       const usdPrice = PLAN_USD_PRICES[plan.key] ?? 0;
 
       // Promotion check
@@ -118,22 +227,46 @@ export async function GET(request: NextRequest) {
       // Duration metadata derived from plan key/billing cycle
       let durationInfo = null;
       if (plan.key?.includes('monthly'))  durationInfo = { durationInDays: 30,   durationType: 'month',    displayText: '1 month' };
-      else if (plan.key?.includes('quarterly')) durationInfo = { durationInDays: 90, durationType: 'quarter', displayText: '3 months' };
       else if (plan.key?.includes('yearly'))   durationInfo = { durationInDays: 365, durationType: 'year',   displayText: '1 year' };
 
-      // Dynamically add/remove "Mori AI chat" as feature for all plans except focused_monthly
-      const currentFeatures = Array.isArray(plan.features) ? [...plan.features] : [];
-      let updatedFeatures = currentFeatures;
-      if (plan.key !== 'focused_monthly') {
-        if (!currentFeatures.some((f: string) => f.toLowerCase().includes('mori'))) {
-          updatedFeatures.push('Mori AI chat');
-        }
+      // Set canonical features for each of the 4 plans
+      let updatedFeatures: string[] = [];
+      if (plan.key === 'starter_monthly') {
+        updatedFeatures = [
+          'Access to ALL templates and snippets',
+          'Unlimited CV & Cover Letter Edits',
+          'Real-time ATS Scoring & Editor',
+          'AI Cover Letter Generator',
+          'PDF & DOCX Downloads',
+          'Mori AI chat',
+          '10 Auto Job Applications (includes CV generation & Journeys)'
+        ];
+      } else if (plan.key === 'starter_yearly') {
+        updatedFeatures = [
+          'Access to ALL templates and snippets',
+          'Unlimited CV & Cover Letter Edits',
+          'Real-time ATS Scoring & Editor',
+          'AI Cover Letter Generator',
+          'PDF & DOCX Downloads',
+          'Mori AI chat'
+        ];
+      } else if (plan.key === 'focused_monthly' || plan.key === 'focused_yearly') {
+        updatedFeatures = [
+          'Unlimited CV & Cover Letter Edits',
+          'Real-time ATS Scoring & Editor',
+          'AI Cover Letter Generator',
+          'LinkedIn Enhancer',
+          'AI Interview Coach Mock Simulator',
+          'Application Tracker (Full Kanban access)',
+          'All features unlimited'
+        ];
       } else {
-        updatedFeatures = currentFeatures.filter((f: string) => !f.toLowerCase().includes('mori'));
+        updatedFeatures = Array.isArray(plan.features) ? [...plan.features] : [];
       }
 
       return {
         ...plan,
+        isPopular: plan.key === 'focused_yearly',
         features: updatedFeatures,
         // Canonical USD price — use this for checkout amount validation
         usdPrice: effectiveUsdPrice,

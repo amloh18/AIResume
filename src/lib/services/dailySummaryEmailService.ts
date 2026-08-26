@@ -101,7 +101,7 @@ class DailySummaryEmailService {
 
     // Get current job counts by status
     const jobsByStatus = {
-      draft: await JobApplication.countDocuments({ userId: userObjectId, status: 'draft' }),
+      saved: await JobApplication.countDocuments({ userId: userObjectId, status: 'saved' }),
       created: await JobApplication.countDocuments({ userId: userObjectId, status: 'created' }),
       applied: await JobApplication.countDocuments({ userId: userObjectId, status: 'applied' }),
       interview: await JobApplication.countDocuments({ userId: userObjectId, status: 'interview' }),
@@ -151,7 +151,7 @@ class DailySummaryEmailService {
     <!-- Header -->
     <div style="background-color: #141810; padding: 30px; text-align: center; border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
       <div style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 20px;">
-        <img src="${process.env.NEXT_PUBLIC_APP_URL || 'https://cvcircle.io'}/images/logo.png" alt="CVCircle" style="height: 40px; display: block;">
+        <img src="${process.env.NEXT_PUBLIC_APP_URL || 'https://buildairesume.com'}/images/logo.png" alt="AIResume" style="height: 40px; display: block;">
       </div>
       <p style="color: #757575; margin: 0; font-size: 14px;">${date}</p>
     </div>
@@ -165,30 +165,30 @@ class DailySummaryEmailService {
       <!-- Daily Activity Cards -->
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 30px;">
         <div style="background-color: #313a28; padding: 15px; border-radius: 12px; text-align: center; border: 1px solid rgba(255, 255, 255, 0.08);">
-          <div style="font-size: 24px; font-weight: 800; color: #99FF00; margin-bottom: 5px;">${summary.jobsAdded}</div>
+          <div style="font-size: 24px; font-weight: 800; color: #013f2e; margin-bottom: 5px;">${summary.jobsAdded}</div>
           <div style="font-size: 12px; color: #757575; text-transform: uppercase; letter-spacing: 0.5px;">Jobs Added</div>
         </div>
         <div style="background-color: #313a28; padding: 15px; border-radius: 12px; text-align: center; border: 1px solid rgba(255, 255, 255, 0.08);">
-          <div style="font-size: 24px; font-weight: 800; color: #99FF00; margin-bottom: 5px;">${summary.jobsApplied}</div>
+          <div style="font-size: 24px; font-weight: 800; color: #013f2e; margin-bottom: 5px;">${summary.jobsApplied}</div>
           <div style="font-size: 12px; color: #757575; text-transform: uppercase; letter-spacing: 0.5px;">Applied</div>
         </div>
         <div style="background-color: #313a28; padding: 15px; border-radius: 12px; text-align: center; border: 1px solid rgba(255, 255, 255, 0.08);">
-          <div style="font-size: 24px; font-weight: 800; color: #99FF00; margin-bottom: 5px;">${summary.interviewsScheduled}</div>
+          <div style="font-size: 24px; font-weight: 800; color: #013f2e; margin-bottom: 5px;">${summary.interviewsScheduled}</div>
           <div style="font-size: 12px; color: #757575; text-transform: uppercase; letter-spacing: 0.5px;">Interviews</div>
         </div>
         <div style="background-color: #313a28; padding: 15px; border-radius: 12px; text-align: center; border: 1px solid rgba(255, 255, 255, 0.08);">
-          <div style="font-size: 24px; font-weight: 800; color: #99FF00; margin-bottom: 5px;">${summary.documentsReady}</div>
+          <div style="font-size: 24px; font-weight: 800; color: #013f2e; margin-bottom: 5px;">${summary.documentsReady}</div>
           <div style="font-size: 12px; color: #757575; text-transform: uppercase; letter-spacing: 0.5px;">Docs Ready</div>
         </div>
       </div>
       
       <!-- Upgrade Section (Only for Free Plan) -->
       ${isFreePlan ? `
-      <div style="background: linear-gradient(135deg, rgba(153, 255, 0, 0.1) 0%, rgba(153, 255, 0, 0.05) 100%); border: 1px solid rgba(153, 255, 0, 0.3); border-radius: 12px; padding: 20px; text-align: center; margin-bottom: 30px;">
+      <div style="background: linear-gradient(135deg, rgba(1, 63, 46, 0.1) 0%, rgba(1, 63, 46, 0.05) 100%); border: 1px solid rgba(1, 63, 46, 0.3); border-radius: 12px; padding: 20px; text-align: center; margin-bottom: 30px;">
         <h3 style="color: #ffffff; margin: 0 0 10px 0; font-size: 18px;">Unlock Your Full Potential 🚀</h3>
-        <p style="color: #e5e5e5; font-size: 14px; margin: 0 0 20px 0;">Get unlimited AI tailoring, advanced analytics, and priority support with CVCircle Pro.</p>
-        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://cvcircle.io'}/dashboard/settings?tab=billing" 
-           style="display: inline-block; background: linear-gradient(to right, #99FF00, #88e600); color: #000000; padding: 10px 24px; text-decoration: none; border-radius: 9999px; font-weight: 700; font-size: 14px;">
+        <p style="color: #e5e5e5; font-size: 14px; margin: 0 0 20px 0;">Get unlimited AI tailoring, advanced analytics, and priority support with AIResume Pro.</p>
+        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://buildairesume.com'}/dashboard/settings?tab=billing" 
+           style="display: inline-block; background: linear-gradient(to right, #013f2e, #02523c); color: #000000; padding: 10px 24px; text-decoration: none; border-radius: 9999px; font-weight: 700; font-size: 14px;">
           Upgrade to Pro
         </a>
       </div>
@@ -196,7 +196,7 @@ class DailySummaryEmailService {
 
       <!-- Dashboard Button -->
       <div style="text-align: center;">
-        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://cvcircle.io'}/dashboard" 
+        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://buildairesume.com'}/dashboard" 
            style="display: inline-block; background-color: #313a28; color: #ffffff; padding: 12px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; border: 1px solid rgba(255, 255, 255, 0.08);">
           Go to Dashboard
         </a>
@@ -206,7 +206,7 @@ class DailySummaryEmailService {
     
     <div style="background-color: #141810; padding: 20px; text-align: center; border-top: 1px solid rgba(255, 255, 255, 0.08);">
       <p style="font-size: 12px; color: #757575; margin: 0;">
-        &copy; 2026 CVCircle by Morigrid Labs. All rights reserved.<br>
+        &copy; 2026 AIResume by Morigrid Labs. All rights reserved.<br>
         You received this email because you have active job applications.
       </p>
     </div>
@@ -246,14 +246,14 @@ Docs Ready: ${summary.documentsReady}
 ${isFreePlan ? `
 UNLOCK YOUR FULL POTENTIAL
 --------------------------
-Get unlimited AI tailoring, advanced analytics, and priority support with CVCircle Pro.
-Upgrade here: ${process.env.NEXT_PUBLIC_APP_URL || 'https://cvcircle.io'}/dashboard/settings?tab=billing
+Get unlimited AI tailoring, advanced analytics, and priority support with AIResume Pro.
+Upgrade here: ${process.env.NEXT_PUBLIC_APP_URL || 'https://buildairesume.com'}/dashboard/settings?tab=billing
 ` : ''}
 
-View your dashboard: ${process.env.NEXT_PUBLIC_APP_URL || 'https://cvcircle.io'}/dashboard
+View your dashboard: ${process.env.NEXT_PUBLIC_APP_URL || 'https://buildairesume.com'}/dashboard
 
 ---
-© 2026 CVCircle by Morigrid Labs. All rights reserved.
+© 2026 AIResume by Morigrid Labs. All rights reserved.
     `.trim();
   }
 

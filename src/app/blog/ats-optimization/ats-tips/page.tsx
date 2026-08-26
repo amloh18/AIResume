@@ -5,7 +5,7 @@ import { MotionDiv } from '@/components/ui/motion-wrapper';
 import CardNav from '@/components/landing/CardNav';
 
 export const metadata: Metadata = {
-  title: 'ATS Resume Tips: Pass Every Application Tracking System | CVCircle',
+  title: 'ATS Resume Tips: Pass Every Application Tracking System | AIResume',
   description: 'Learn ATS resume tips to pass every application tracking system. Optimize keywords, formatting, and structure to get your resume past ATS.',
   keywords: ['ATS resume tips', 'pass ATS', 'application tracking system', 'ATS optimization'],
   alternates: { canonical: '/blog/ats-optimization/ats-tips' },
@@ -91,9 +91,9 @@ const navLinks = [
       },
       {
         label: 'Blog',
-        description: 'Research-backed career guides, ATS tips, and resume tutorials from CVCircle.',
+        description: 'Research-backed career guides, ATS tips, and resume tutorials from AIResume.',
         href: '/blog',
-        ariaLabel: 'Read the CVCircle blog',
+        ariaLabel: 'Read the AIResume blog',
         icon: <BookOpen className="w-5 h-5 text-gray-400" />,
       },
     ],
@@ -110,7 +110,7 @@ export default function AtsTipsPage() {
     <div className="min-h-screen bg-[#0d1209]">
       <div className="relative z-10">
         <CardNav
-          logo="CVCircle"
+          logo="AIResume"
           links={navLinks}
         />
 
@@ -226,8 +226,8 @@ export default function AtsTipsPage() {
         <footer className="py-8 px-4 border-t border-white/5">
           <div className="max-w-7xl mx-auto flex justify-between items-center">
             <div className="flex items-center gap-2">
-              <div className="w-6 h-6 bg-[#81ff00] rounded"><span className="text-black font-bold text-small">CV</span></div>
-              <span className="text-gray-500 text-small">© 2026 CVCircle</span>
+              <div className="w-6 h-6 bg-[#013f2e] rounded"><span className="text-black font-bold text-small">CV</span></div>
+              <span className="text-gray-500 text-small">© 2026 AIResume</span>
             </div>
             <div className="flex gap-6">
               <Link href="/privacy-policy" className="text-gray-500 text-small">Privacy</Link>

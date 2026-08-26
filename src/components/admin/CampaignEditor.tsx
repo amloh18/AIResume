@@ -143,9 +143,9 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
     tags: [],
     notes: "",
     campaignType: "marketing",
-    fromName: "CVCircle Team",
-    fromEmail: "support@cvcircle.io",
-    replyTo: "support@cvcircle.io",
+    fromName: "AIResume Team",
+    fromEmail: "support@buildairesume.com",
+    replyTo: "support@buildairesume.com",
     previewText: "",
     sendType: "now",
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -412,10 +412,10 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
           description: aiPrompt.slice(0, 50) + "...",
           category: templateCategoryFilter !== "all" ? (templateCategoryFilter as any) : "newsletter",
           scenario: "AI Generated",
-          subjectTemplate: data.subject || "Exciting news from CVCircle",
+          subjectTemplate: data.subject || "Exciting news from AIResume",
           htmlContent: generatedHtml,
-          defaultFromName: "CVCircle Team",
-          defaultFromEmail: "support@cvcircle.io"
+          defaultFromName: "AIResume Team",
+          defaultFromEmail: "support@buildairesume.com"
         };
         
         setAvailableTemplates(prev => [newTemplate, ...prev]);
