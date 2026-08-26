@@ -19,6 +19,8 @@ interface User {
   email: string;
   firstName: string;
   lastName: string;
+  avatar?: string | null;
+  isAnonymous?: boolean;
   role: string;
   currentPlanKey: string;
   subscription: {
@@ -316,12 +318,25 @@ const UserManagement: React.FC = () => {
                       >
                         <td className="px-8 py-6">
                           <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-600 to-emerald-400 flex items-center justify-center text-black font-black text-sm group-hover:shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-all">
-                              {user.firstName?.charAt(0) || 'U'}
-                            </div>
+                            {user.avatar ? (
+                              <img 
+                                src={user.avatar} 
+                                alt={`${user.firstName} ${user.lastName}`}
+                                className="w-10 h-10 rounded-xl object-cover border border-white/10 group-hover:shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-all"
+                              />
+                            ) : (
+                              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-600 to-emerald-400 flex items-center justify-center text-black font-black text-sm group-hover:shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-all">
+                                {user.firstName?.charAt(0) || 'U'}
+                              </div>
+                            )}
                             <div>
-                              <div className="text-sm font-black text-white group-hover:text-emerald-400 transition-colors">
+                              <div className="text-sm font-black text-white group-hover:text-emerald-400 transition-colors flex items-center gap-2">
                                 {user.firstName} {user.lastName}
+                                {user.isAnonymous && (
+                                  <span className="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                                    Guest
+                                  </span>
+                                )}
                               </div>
                               <div className="text-xs text-white/30 font-medium">{user.email}</div>
                             </div>

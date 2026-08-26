@@ -63,6 +63,8 @@ export async function GET(request: NextRequest) {
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
+        avatar: user.avatar || null,
+        isAnonymous: user.isAnonymous || false,
         role: user.role || 'user',
         currentPlanKey: currentPlanKey,
         subscription: {
