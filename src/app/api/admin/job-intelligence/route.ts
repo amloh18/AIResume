@@ -118,25 +118,52 @@ export async function GET(req: NextRequest) {
       const skip = (page - 1) * limit;
 
       const filter: any = {};
+      // Handle both old (string) and new (object) status field
       if (statusFilter && statusFilter !== 'all') {
-        filter.status = statusFilter;
+        filter.$or = [
+          { status: statusFilter },
+          { status: { $exists: false } }, // Include old jobs without status field
+        ];
       }
       if (query) {
-        filter.$or = [
-          { title: { $regex: query, $options: 'i' } },
-          { 'company.name': { $regex: query, $options: 'i' } },
-          { 'location.city': { $regex: query, $options: 'i' } },
-          { skills: { $regex: query, $options: 'i' } },
-        ];
+        filter.$and = filter.$and || [];
+        filter.$and.push({
+          $or: [
+            { title: { $regex: query, $options: 'i' } },
+            { 'company.name': { $regex: query, $options: 'i' } },
+            { company: { $regex: query, $options: 'i' } }, // Old schema
+            { 'location.city': { $regex: query, $options: 'i' } },
+            { location: { $regex: query, $options: 'i' } }, // Old schema
+            { skills: { $regex: query, $options: 'i' } },
+            { keywords: { $regex: query, $options: 'i' } }, // Old schema
+          ],
+        });
       }
 
       const [jobs, total] = await Promise.all([
-        jobsColl.find(filter).sort({ postedAt: -1 }).skip(skip).limit(limit).toArray(),
+        jobsColl.find(filter).sort({ postedAt: -1, createdAt: -1 }).skip(skip).limit(limit).toArray(),
         jobsColl.countDocuments(filter),
       ]);
 
+      // Normalize jobs for consistent response
+      const normalizedJobs = jobs.map((job: any) => ({
+        ...job,
+        // Ensure source.primary exists for old schema
+        source: typeof job.source === 'string' 
+          ? { primary: job.source, sourceUrl: job.applyUrl || '' }
+          : job.source,
+        // Ensure company.name exists for old schema
+        company: typeof job.company === 'string'
+          ? { name: job.company }
+          : job.company,
+        // Ensure location exists
+        location: typeof job.location === 'string'
+          ? { city: job.location, country: job.country || '' }
+          : job.location,
+      }));
+
       return NextResponse.json({
-        jobs,
+        jobs: normalizedJobs,
         pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
       });
     }
@@ -214,6 +241,16 @@ export async function POST(req: NextRequest) {
 
     // 1. Trigger manual run via in-process ingestion
     if (action === 'trigger_run') {
+      // Valid sources that have fetchers implemented
+      const VALID_SOURCES = ['greenhouse', 'lever', 'ashby', 'remotive', 'remoteok'];
+      
+      if (!VALID_SOURCES.includes(sourceName)) {
+        return NextResponse.json({
+          success: false,
+          error: `Source "${sourceName}" is not implemented. Available sources: ${VALID_SOURCES.join(', ')}`,
+        }, { status: 400 });
+      }
+
       // Run ingestion directly in this process (no external microservice needed)
       const { default: mongoose } = await import('mongoose');
       const db = mongoose.connection.db;

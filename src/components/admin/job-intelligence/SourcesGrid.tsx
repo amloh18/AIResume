@@ -33,11 +33,8 @@ const DEFAULT_SOURCES: SourceItem[] = [
   { name: 'greenhouse', displayName: 'Greenhouse ATS', type: 'ats', enabled: true, priority: 95, schedule: { frequencyMinutes: 30 } },
   { name: 'lever', displayName: 'Lever ATS', type: 'ats', enabled: true, priority: 90, schedule: { frequencyMinutes: 30 } },
   { name: 'ashby', displayName: 'Ashby ATS', type: 'ats', enabled: true, priority: 90, schedule: { frequencyMinutes: 30 } },
-  { name: 'workday', displayName: 'Workday ATS', type: 'ats', enabled: true, priority: 80, schedule: { frequencyMinutes: 60 } },
-  { name: 'adzuna', displayName: 'Adzuna Job API', type: 'api', enabled: true, priority: 85, schedule: { frequencyMinutes: 60 } },
   { name: 'remotive', displayName: 'Remotive Remote API', type: 'api', enabled: true, priority: 75, schedule: { frequencyMinutes: 60 } },
   { name: 'remoteok', displayName: 'RemoteOK API', type: 'api', enabled: true, priority: 70, schedule: { frequencyMinutes: 60 } },
-  { name: 'jobspy', displayName: 'JobSpy Multi-Portal', type: 'scraper', enabled: false, priority: 50, schedule: { frequencyMinutes: 180 } },
 ];
 
 export default function SourcesGrid({ sources = [] }: { sources?: SourceItem[] }) {
