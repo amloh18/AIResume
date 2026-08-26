@@ -327,7 +327,7 @@ export const TIER_LIMITS: Record<UserTier, { dailyApplyCap: number; jobsFetchedP
 };
 
 export const MATCH_SCORE_THRESHOLDS = {
-  DISPLAY_MIN: 60,
+  DISPLAY_MIN: 20,
   AUTO_APPLY_MIN: 70,
   EXCELLENT: 80,
   GOOD: 60,
