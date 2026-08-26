@@ -371,7 +371,7 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
           type="text"
           value={safePersonalInfo.name}
           onChange={(e) => handleNameChange(e.target.value)}
-          className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+          className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#013f2e] focus:bg-white/15 transition-colors"
           placeholder="John Doe"
         />
       </div>
@@ -382,7 +382,7 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
           type="text"
           value={safePersonalInfo.label}
           onChange={(e) => handleFieldChange('label', e.target.value)}
-          className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+          className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#013f2e] focus:bg-white/15 transition-colors"
           placeholder="Senior Product Manager"
         />
       </div>
@@ -394,7 +394,7 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
           type="email"
           value={safePersonalInfo.email}
           onChange={(e) => handleFieldChange('email', e.target.value)}
-          className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+          className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#013f2e] focus:bg-white/15 transition-colors"
           placeholder="john.doe@example.com"
         />
       </div>
@@ -405,7 +405,7 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
           type="tel"
           value={safePersonalInfo.phone}
           onChange={(e) => handleFieldChange('phone', e.target.value)}
-          className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+          className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#013f2e] focus:bg-white/15 transition-colors"
           placeholder="+1 (555) 123-4567"
         />
       </div>
@@ -417,7 +417,7 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
           type="url"
           value={safePersonalInfo.url}
           onChange={(e) => handleFieldChange('url', e.target.value)}
-          className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+          className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#013f2e] focus:bg-white/15 transition-colors"
           placeholder="https://yourportfolio.com"
         />
       </div>
@@ -469,7 +469,7 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
             };
             onUpdate('location', updatedLocation);
           }}
-          className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors cursor-text"
+          className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#013f2e] focus:bg-white/15 transition-colors cursor-text"
           placeholder="San Francisco, CA"
         />
       </div>

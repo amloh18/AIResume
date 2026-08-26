@@ -84,7 +84,7 @@ export const EntitlementNotice: React.FC<EntitlementNoticeProps> = ({
           <div className="p-5 sm:p-6 space-y-4">
             {/* Header Icon + Title & Job Subtitle */}
             <div className="flex items-start gap-3 pr-6">
-              <div className="w-10 h-10 rounded-2xl bg-lime-500/15 border border-lime-500/30 flex items-center justify-center text-lime-700 dark:text-[#80FF00] shrink-0 mt-0.5">
+              <div className="w-10 h-10 rounded-2xl bg-lime-500/15 border border-lime-500/30 flex items-center justify-center text-lime-700 dark:text-[#013f2e] shrink-0 mt-0.5">
                 <Zap className="w-5 h-5" />
               </div>
               <div className="min-w-0">
@@ -108,8 +108,8 @@ export const EntitlementNotice: React.FC<EntitlementNoticeProps> = ({
             <div className="p-4 rounded-2xl bg-gradient-to-br from-gray-900 via-gray-950 to-black text-white border border-white/10 shadow-md space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-[#80FF00]" />
-                  <span className="font-black text-[11px] text-[#80FF00] tracking-wide uppercase">
+                  <Sparkles className="w-3.5 h-3.5 text-[#013f2e]" />
+                  <span className="font-black text-[11px] text-[#013f2e] tracking-wide uppercase">
                     Focused Plan
                   </span>
                 </div>
@@ -120,15 +120,15 @@ export const EntitlementNotice: React.FC<EntitlementNoticeProps> = ({
 
               <div className="space-y-1.5 text-[11px] text-gray-300">
                 <div className="flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-[#80FF00] shrink-0" />
+                  <CheckCircle2 className="w-3.5 h-3.5 text-[#013f2e] shrink-0" />
                   <span>50 automated applications every day</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-[#80FF00] shrink-0" />
+                  <CheckCircle2 className="w-3.5 h-3.5 text-[#013f2e] shrink-0" />
                   <span>Automatic screening questionnaire resolution</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-[#80FF00] shrink-0" />
+                  <CheckCircle2 className="w-3.5 h-3.5 text-[#013f2e] shrink-0" />
                   <span>Instant tailored CVs & cover letters</span>
                 </div>
               </div>
@@ -136,7 +136,7 @@ export const EntitlementNotice: React.FC<EntitlementNoticeProps> = ({
               <Link
                 href="/dashboard/billing"
                 onClick={onClose}
-                className="w-full py-2.5 rounded-xl text-xs font-black bg-[#80FF00] hover:brightness-95 text-black shadow-md transition-all flex items-center justify-center gap-1.5 mt-1"
+                className="w-full py-2.5 rounded-xl text-xs font-black bg-[#013f2e] hover:brightness-95 text-black shadow-md transition-all flex items-center justify-center gap-1.5 mt-1"
               >
                 <span>Upgrade to Focused</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -202,7 +202,7 @@ export const EntitlementNotice: React.FC<EntitlementNoticeProps> = ({
               <button
                 type="button"
                 onClick={handleManualApply}
-                className="w-full py-2.5 rounded-xl text-xs font-bold bg-[#0f172a] hover:bg-[#1e293b] dark:bg-[#80FF00] text-white dark:text-black transition-all flex items-center justify-center gap-1.5"
+                className="w-full py-2.5 rounded-xl text-xs font-bold bg-[#0f172a] hover:bg-[#1e293b] dark:bg-[#013f2e] text-white dark:text-black transition-all flex items-center justify-center gap-1.5"
               >
                 <span>Apply Manually {company ? `to ${company}` : 'Instead'}</span>
                 <ExternalLink className="w-3.5 h-3.5" />
@@ -261,7 +261,7 @@ export const EntitlementNotice: React.FC<EntitlementNoticeProps> = ({
               <Link
                 href="/dashboard/jobs?tab=applications"
                 onClick={onClose}
-                className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-[#0f172a] hover:bg-[#1e293b] dark:bg-[#80FF00] text-white dark:text-black transition-all text-center"
+                className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-[#0f172a] hover:bg-[#1e293b] dark:bg-[#013f2e] text-white dark:text-black transition-all text-center"
               >
                 Check Tracker
               </Link>
@@ -318,7 +318,7 @@ export const EntitlementNotice: React.FC<EntitlementNoticeProps> = ({
               <Link
                 href="/dashboard/jobs?tab=settings"
                 onClick={onClose}
-                className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-[#0f172a] hover:bg-[#1e293b] dark:bg-[#80FF00] text-white dark:text-black transition-all text-center"
+                className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-[#0f172a] hover:bg-[#1e293b] dark:bg-[#013f2e] text-white dark:text-black transition-all text-center"
               >
                 Settings
               </Link>
@@ -374,7 +374,7 @@ export const EntitlementNotice: React.FC<EntitlementNoticeProps> = ({
             <button
               type="button"
               onClick={handleManualApply}
-              className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-[#0f172a] hover:bg-[#1e293b] dark:bg-[#80FF00] text-white dark:text-black transition-all flex items-center justify-center gap-1.5"
+              className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-[#0f172a] hover:bg-[#1e293b] dark:bg-[#013f2e] text-white dark:text-black transition-all flex items-center justify-center gap-1.5"
             >
               <span>Apply Manually</span>
               <ExternalLink className="w-3.5 h-3.5" />

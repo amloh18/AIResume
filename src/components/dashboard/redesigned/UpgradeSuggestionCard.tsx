@@ -163,7 +163,7 @@ const VARIANTS: Record<VariantId, CardVariant> = {
     hairline: 'via-lime-400/50',
     chip: 'bg-lime-400/15 text-lime-300 border-lime-400/25',
     check: 'text-lime-400',
-    ctaBtn: 'bg-[#80FF00] text-slate-950 hover:shadow-lime-400/20',
+    ctaBtn: 'bg-[#013f2e] text-slate-950 hover:shadow-lime-400/20',
     eyebrow: (s) => s.eyebrow,
     headline: (s) => s.headline,
     cta: (s) => s.cta,

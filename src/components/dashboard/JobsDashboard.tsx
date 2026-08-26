@@ -864,7 +864,7 @@ export default function JobsDashboard() {
                     setNewJobsCount(0);
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-[#0f172a] dark:bg-[#80FF00] text-white dark:text-black text-sm font-semibold rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all"
+                  className="flex items-center gap-2 px-4 py-2.5 bg-[#0f172a] dark:bg-[#013f2e] text-white dark:text-black text-sm font-semibold rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all"
                 >
                   <ArrowUp className="w-4 h-4" />
                   {newJobsCount} new job{newJobsCount !== 1 ? 's' : ''}
@@ -961,7 +961,7 @@ export default function JobsDashboard() {
                 <button
                   type="button"
                   onClick={() => handleFilterChange({ savedOnly: false, sortBy: 'matchScore' })}
-                  className="px-4 py-2 rounded-xl bg-lime-500 hover:bg-lime-600 dark:bg-[#80FF00] text-white dark:text-black font-bold text-xs transition-colors"
+                  className="px-4 py-2 rounded-xl bg-lime-500 hover:bg-lime-600 dark:bg-[#013f2e] text-white dark:text-black font-bold text-xs transition-colors"
                 >
                   Browse Recommended Jobs
                 </button>
@@ -1001,7 +1001,7 @@ export default function JobsDashboard() {
                       <button
                         type="button"
                         onClick={() => setPage((p) => p + 1)}
-                        className="px-5 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 hover:border-lime-500 bg-white dark:bg-[#141810] text-xs font-bold text-gray-800 dark:text-gray-200 hover:text-lime-600 dark:hover:text-[#80FF00] transition-all shadow-xs"
+                        className="px-5 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 hover:border-lime-500 bg-white dark:bg-[#141810] text-xs font-bold text-gray-800 dark:text-gray-200 hover:text-lime-600 dark:hover:text-[#013f2e] transition-all shadow-xs"
                       >
                         Load more jobs ({displayedJobs.length} of {total})
                       </button>

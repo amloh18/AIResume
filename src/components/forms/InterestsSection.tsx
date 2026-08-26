@@ -101,7 +101,7 @@ const InterestsSection: React.FC<InterestsSectionProps> = ({
                 type="text"
                 value={interest.name || ''}
                 onChange={(e) => updateInterest(index, 'name', e.target.value)}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#013f2e] focus:bg-white/15 transition-colors"
                 placeholder="Photography, Rock Climbing, Cooking"
               />
             </div>
@@ -114,12 +114,12 @@ const InterestsSection: React.FC<InterestsSectionProps> = ({
                   value={newKeyword}
                   onChange={(e) => setNewKeyword(e.target.value)}
                   placeholder="Add a keyword..."
-                  className="flex-1 px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+                  className="flex-1 px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#013f2e] focus:bg-white/15 transition-colors"
                   onKeyPress={(e) => e.key === 'Enter' && addKeyword(index)}
                 />
                 <button
                   onClick={() => addKeyword(index)}
-                  className="px-4 py-3 bg-[#80FF00] text-black rounded-none hover:bg-[#70e600] transition-colors"
+                  className="px-4 py-3 bg-[#013f2e] text-black rounded-none hover:bg-[#02523c] transition-colors"
                 >
                   <Plus size={16} />
                 </button>
@@ -129,12 +129,12 @@ const InterestsSection: React.FC<InterestsSectionProps> = ({
                 {(interest.keywords || []).map((keyword: string, keywordIndex: number) => (
                   <span
                     key={keywordIndex}
-                    className="inline-flex items-center gap-1 px-3 py-1 bg-[#80FF00]/20 text-[#80FF00] rounded-none text-sm"
+                    className="inline-flex items-center gap-1 px-3 py-1 bg-[#013f2e]/20 text-[#013f2e] rounded-none text-sm"
                   >
                     {keyword}
                     <button
                       onClick={() => removeKeyword(index, keywordIndex)}
-                      className="text-[#80FF00] hover:text-red-400 transition-colors"
+                      className="text-[#013f2e] hover:text-red-400 transition-colors"
                     >
                       <X size={12} />
                     </button>
@@ -151,7 +151,7 @@ const InterestsSection: React.FC<InterestsSectionProps> = ({
           const newInterest = { name: '', keywords: [] };
           onUpdate([...safeData, newInterest]);
         }}
-        className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#80FF00]/50 text-white/60 hover:text-[#80FF00] rounded-none transition-colors flex items-center justify-center gap-2"
+        className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#013f2e]/50 text-white/60 hover:text-[#013f2e] rounded-none transition-colors flex items-center justify-center gap-2"
       >
         <Plus size={20} />
         Add Interest

@@ -201,7 +201,7 @@ const MOCK_PERSONAS: Record<string, { label: string; role: string; icon: string;
 /* Color Accent Presets                                                       */
 /* -------------------------------------------------------------------------- */
 const ACCENT_COLORS = [
-  { id: 'lime', name: 'Forest Lime', color: '#81ff00', bg: 'bg-[#81ff00]' },
+  { id: 'lime', name: 'Forest Lime', color: '#013f2e', bg: 'bg-[#013f2e]' },
   { id: 'emerald', name: 'Emerald', color: '#10b981', bg: 'bg-[#10b981]' },
   { id: 'sapphire', name: 'Sapphire Blue', color: '#2563eb', bg: 'bg-[#2563eb]' },
   { id: 'violet', name: 'Royal Violet', color: '#8b5cf6', bg: 'bg-[#8b5cf6]' },
@@ -228,14 +228,14 @@ const SNIPPET_GROUPS = [
 /* Auto-Demo Tour Sequence Steps                                              */
 /* -------------------------------------------------------------------------- */
 const AUTO_TOUR_STEPS = [
-  { tplIndex: 0, personaKey: 'tech', color: '#81ff00', desc: 'Minimalist Single Column (ATS Optimized)' },
-  { tplIndex: 1, personaKey: 'tech', color: '#81ff00', desc: 'Modern Split 2-Column Layout' },
+  { tplIndex: 0, personaKey: 'tech', color: '#013f2e', desc: 'Minimalist Single Column (ATS Optimized)' },
+  { tplIndex: 1, personaKey: 'tech', color: '#013f2e', desc: 'Modern Split 2-Column Layout' },
   { tplIndex: 2, personaKey: 'design', color: '#10b981', desc: 'Professional Sidebar Left Panel' },
   { tplIndex: 4, personaKey: 'tech', color: '#2563eb', desc: 'Two Column 50/50 Architecture' },
-  { tplIndex: 5, personaKey: 'exec', color: '#81ff00', desc: 'Harvard Executive Academic Format' },
+  { tplIndex: 5, personaKey: 'exec', color: '#013f2e', desc: 'Harvard Executive Academic Format' },
   { tplIndex: 6, personaKey: 'design', color: '#8b5cf6', desc: 'Designer Portfolio Timeline Style' },
   { tplIndex: 9, personaKey: 'exec', color: '#10b981', desc: 'Header & Right Sidebar Hybrid' },
-  { tplIndex: 12, personaKey: 'tech', color: '#81ff00', desc: 'Dense One-Pager Hybrid Layout' },
+  { tplIndex: 12, personaKey: 'tech', color: '#013f2e', desc: 'Dense One-Pager Hybrid Layout' },
 ];
 
 export default function ExploreStudioClient() {
@@ -246,7 +246,7 @@ export default function ExploreStudioClient() {
   const [activeSidebarTab, setActiveSidebarTab] = useState<'templates' | 'snippets' | 'styles' | 'personas'>('templates');
   const [activePersonaKey, setActivePersonaKey] = useState<string>('tech');
   const [selectedSnippetCategory, setSelectedSnippetCategory] = useState<string>('Header');
-  const [accentColor, setAccentColor] = useState<string>('#81ff00');
+  const [accentColor, setAccentColor] = useState<string>('#013f2e');
   const [zoomLevel, setZoomLevel] = useState<number>(0.92);
   const [canvasTheme, setCanvasTheme] = useState<'light' | 'dark'>('light');
 
@@ -269,7 +269,7 @@ export default function ExploreStudioClient() {
       titleStyle: raw.titleStyle,
       sidebarTitleStyle: (raw as any).sidebarTitleStyle || 'sidebar-default',
       globalStyles: {
-        primaryColor: '#81ff00',
+        primaryColor: '#013f2e',
         fontFamily: 'Inter',
       }
     };
@@ -402,7 +402,7 @@ export default function ExploreStudioClient() {
   }, [selectedSnippetCategory]);
 
   return (
-    <div className="min-h-screen bg-[#0f140c] text-white selection:bg-[#81ff00] selection:text-black">
+    <div className="min-h-screen bg-[#0f140c] text-white selection:bg-[#013f2e] selection:text-black">
       {/* Announcement Banner */}
       <AnnouncementBanner onDismiss={() => setBannerActive(false)} />
 
@@ -417,11 +417,11 @@ export default function ExploreStudioClient() {
       {/* Hero Header */}
       <section className={`${heroTopPaddingClass(bannerActive)} pb-6 px-4 sm:px-6 max-w-7xl mx-auto text-center transition-[padding] duration-300`}>
         {/* Auto / Manual Status Indicator Badge */}
-        <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-[#81ff00]/10 border border-[#81ff00]/30 text-xs font-bold uppercase tracking-wider mb-3">
+        <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-[#013f2e]/10 border border-[#013f2e]/30 text-xs font-bold uppercase tracking-wider mb-3">
           {isAutoDemo ? (
             <>
-              <span className="w-2 h-2 rounded-full bg-[#81ff00] animate-ping" />
-              <span className="text-[#81ff00] flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-[#013f2e] animate-ping" />
+              <span className="text-[#013f2e] flex items-center gap-1.5">
                 <Play className="w-3 h-3 fill-current" />
                 Auto-Demo Tour Playing · Hover or click to interact
               </span>
@@ -492,7 +492,7 @@ export default function ExploreStudioClient() {
                     }}
                     className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
                       active
-                        ? 'bg-[#81ff00] text-black shadow-sm font-extrabold'
+                        ? 'bg-[#013f2e] text-black shadow-sm font-extrabold'
                         : 'text-gray-400 hover:text-white hover:bg-white/5'
                     }`}
                   >
@@ -511,7 +511,7 @@ export default function ExploreStudioClient() {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between pb-1 border-b border-white/10">
                     <span className="text-xs font-extrabold uppercase tracking-wider text-gray-300 flex items-center gap-1.5">
-                      <LayoutTemplate className="w-3.5 h-3.5 text-[#81ff00]" />
+                      <LayoutTemplate className="w-3.5 h-3.5 text-[#013f2e]" />
                       Live Template Thumbnails
                     </span>
                     <span className="text-[10px] text-gray-500 font-mono">
@@ -539,7 +539,7 @@ export default function ExploreStudioClient() {
                 <div className="space-y-4">
                   <div>
                     <h3 className="text-xs font-extrabold uppercase tracking-wider text-white flex items-center gap-1.5 mb-1">
-                      <Layers className="w-3.5 h-3.5 text-[#81ff00]" />
+                      <Layers className="w-3.5 h-3.5 text-[#013f2e]" />
                       <span>Modular Section Snippets</span>
                     </h3>
                     <p className="text-[11px] text-gray-400">
@@ -561,7 +561,7 @@ export default function ExploreStudioClient() {
                           }}
                           className={`p-2 rounded-xl text-[11px] font-bold flex flex-col items-center gap-1 transition-all cursor-pointer ${
                             active
-                              ? 'bg-[#81ff00] text-black font-extrabold shadow-sm'
+                              ? 'bg-[#013f2e] text-black font-extrabold shadow-sm'
                               : 'bg-white/5 text-gray-300 border border-white/10 hover:bg-white/10'
                           }`}
                         >
@@ -576,7 +576,7 @@ export default function ExploreStudioClient() {
                   <div className="space-y-2 pt-2">
                     <div className="text-xs font-bold text-gray-300 flex items-center justify-between">
                       <span>{selectedSnippetCategory} Variations:</span>
-                      <span className="text-[10px] text-[#81ff00] font-bold">{snippetsInCategory.length} styles</span>
+                      <span className="text-[10px] text-[#013f2e] font-bold">{snippetsInCategory.length} styles</span>
                     </div>
 
                     <div className="space-y-2">
@@ -586,7 +586,7 @@ export default function ExploreStudioClient() {
                           className="p-3 rounded-2xl border border-white/10 bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/20 transition-all flex items-center justify-between gap-3 group"
                         >
                           <div>
-                            <div className="text-xs font-bold text-white group-hover:text-[#81ff00] transition-colors">
+                            <div className="text-xs font-bold text-white group-hover:text-[#013f2e] transition-colors">
                               {snip.name}
                             </div>
                             <div className="text-[10px] text-gray-400 font-mono">
@@ -596,7 +596,7 @@ export default function ExploreStudioClient() {
 
                           <button
                             onClick={() => handleSwapSnippet(snip.id, snip.category)}
-                            className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-[#81ff00] text-white hover:text-black text-xs font-bold transition-all shrink-0 flex items-center gap-1 cursor-pointer"
+                            className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-[#013f2e] text-white hover:text-black text-xs font-bold transition-all shrink-0 flex items-center gap-1 cursor-pointer"
                           >
                             <span>Swap</span>
                             <ArrowRight className="w-3 h-3" />
@@ -632,7 +632,7 @@ export default function ExploreStudioClient() {
                           }}
                           className={`p-2 rounded-xl border flex flex-col items-center gap-1.5 transition-all cursor-pointer ${
                             accentColor === col.color
-                              ? 'border-[#81ff00] bg-white/10 shadow-sm'
+                              ? 'border-[#013f2e] bg-white/10 shadow-sm'
                               : 'border-white/10 bg-white/[0.02] hover:border-white/20'
                           }`}
                         >
@@ -669,7 +669,7 @@ export default function ExploreStudioClient() {
                           }}
                           className={`p-2.5 rounded-xl border text-xs font-semibold text-left transition-all cursor-pointer ${
                             activeTemplate.titleStyle === st.id
-                              ? 'border-[#81ff00] bg-[#81ff00]/10 text-[#81ff00]'
+                              ? 'border-[#013f2e] bg-[#013f2e]/10 text-[#013f2e]'
                               : 'border-white/10 bg-white/[0.02] text-gray-300 hover:bg-white/[0.05]'
                           }`}
                         >
@@ -699,7 +699,7 @@ export default function ExploreStudioClient() {
                           }}
                           className={`w-full p-3 rounded-2xl border text-left flex items-center justify-between transition-all cursor-pointer ${
                             activePersonaKey === key
-                              ? 'border-[#81ff00] bg-[#81ff00]/10 text-white'
+                              ? 'border-[#013f2e] bg-[#013f2e]/10 text-white'
                               : 'border-white/10 bg-white/[0.02] hover:bg-white/[0.05] text-gray-300'
                           }`}
                         >
@@ -711,15 +711,15 @@ export default function ExploreStudioClient() {
                             </div>
                           </div>
                           {activePersonaKey === key && (
-                            <Check className="w-4 h-4 text-[#81ff00]" />
+                            <Check className="w-4 h-4 text-[#013f2e]" />
                           )}
                         </button>
                       ))}
                     </div>
                   </div>
 
-                  <div className="p-4 rounded-2xl bg-[#81ff00]/10 border border-[#81ff00]/30 text-center space-y-2 mt-4">
-                    <div className="w-10 h-10 rounded-full bg-[#81ff00]/20 text-[#81ff00] font-black text-sm flex items-center justify-center mx-auto">
+                  <div className="p-4 rounded-2xl bg-[#013f2e]/10 border border-[#013f2e]/30 text-center space-y-2 mt-4">
+                    <div className="w-10 h-10 rounded-full bg-[#013f2e]/20 text-[#013f2e] font-black text-sm flex items-center justify-center mx-auto">
                       96%
                     </div>
                     <div className="text-xs font-bold text-white">ATS Compatibility Verified</div>
@@ -735,7 +735,7 @@ export default function ExploreStudioClient() {
             <div className="p-3 border-t border-white/10 bg-black/40">
               <button
                 onClick={() => router.push(`/welcome?template=${activeTemplate.id || activeTemplate._id}`)}
-                className="w-full py-3 rounded-2xl bg-[#81ff00] hover:bg-[#6ed600] text-black font-extrabold text-xs uppercase tracking-wider transition-all shadow-[0_0_20px_rgba(129,255,0,0.25)] flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full py-3 rounded-2xl bg-[#013f2e] hover:bg-[#6ed600] text-black font-extrabold text-xs uppercase tracking-wider transition-all shadow-[0_0_20px_rgba(1, 63, 46,0.25)] flex items-center justify-center gap-2 cursor-pointer"
               >
                 <span>Build Resume With This Template</span>
                 <ArrowRight className="w-4 h-4" />
@@ -753,7 +753,7 @@ export default function ExploreStudioClient() {
                 <span className="text-xs font-extrabold text-white">
                   {activeTemplate.name}
                 </span>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#81ff00]/15 text-[#81ff00] border border-[#81ff00]/30">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#013f2e]/15 text-[#013f2e] border border-[#013f2e]/30">
                   {activeTemplate.type}
                 </span>
                 {isAutoDemo && (
@@ -851,12 +851,12 @@ export default function ExploreStudioClient() {
             {/* Bottom floating hint */}
             <div className="p-3 border-t border-white/10 bg-[#10150d]/95 backdrop-blur-md flex items-center justify-between text-xs text-gray-400">
               <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-[#81ff00] animate-pulse" />
+                <span className="w-2 h-2 rounded-full bg-[#013f2e] animate-pulse" />
                 <span>Hover any block on canvas to see section toolbars, drag handles & inline edit mode.</span>
               </div>
               <button
                 onClick={() => router.push('/welcome')}
-                className="text-[#81ff00] hover:underline font-bold text-xs flex items-center gap-1 cursor-pointer"
+                className="text-[#013f2e] hover:underline font-bold text-xs flex items-center gap-1 cursor-pointer"
               >
                 <span>Launch Full App</span>
                 <ArrowRight className="w-3 h-3" />

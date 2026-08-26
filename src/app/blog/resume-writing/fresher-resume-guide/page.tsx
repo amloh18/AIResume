@@ -130,7 +130,7 @@ export default function FresherResumeGuidePage() {
           <div className="prose prose-invert max-w-none">
             <section className="mb-12">
               <h2 className="text-h2 font-bold text-white mb-4 flex items-center gap-3">
-                <span className="w-8 h-8 bg-[#81ff00]/20 rounded-full flex items-center justify-center text-[#81ff00]">1</span>
+                <span className="w-8 h-8 bg-[#013f2e]/20 rounded-full flex items-center justify-center text-[#013f2e]">1</span>
                 Why Freshers Struggle with Resumes
               </h2>
               <p className="text-gray-300 mb-4">
@@ -143,7 +143,7 @@ export default function FresherResumeGuidePage() {
 
             <section className="mb-12">
               <h2 className="text-h2 font-bold text-white mb-4 flex items-center gap-3">
-                <span className="w-8 h-8 bg-[#81ff00]/20 rounded-full flex items-center justify-center text-[#81ff00]">2</span>
+                <span className="w-8 h-8 bg-[#013f2e]/20 rounded-full flex items-center justify-center text-[#013f2e]">2</span>
                 What to Include in Your Fresher Resume
               </h2>
               <div className="grid md:grid-cols-2 gap-4 mt-6">
@@ -166,7 +166,7 @@ export default function FresherResumeGuidePage() {
 
             <section className="mb-12">
               <h2 className="text-h2 font-bold text-white mb-4 flex items-center gap-3">
-                <span className="w-8 h-8 bg-[#81ff00]/20 rounded-full flex items-center justify-center text-[#81ff00]">3</span>
+                <span className="w-8 h-8 bg-[#013f2e]/20 rounded-full flex items-center justify-center text-[#013f2e]">3</span>
                 How to Highlight Skills Without Experience
               </h2>
               <div className="bg-[#1a1f1a] rounded-xl p-6 border border-green-800/50">
@@ -229,7 +229,7 @@ export default function FresherResumeGuidePage() {
         <footer className="py-8 px-4 border-t border-white/5">
           <div className="max-w-7xl mx-auto flex justify-between items-center">
             <div className="flex items-center gap-2">
-              <div className="w-6 h-6 bg-[#81ff00] rounded"><span className="text-black font-bold text-small">CV</span></div>
+              <div className="w-6 h-6 bg-[#013f2e] rounded"><span className="text-black font-bold text-small">CV</span></div>
               <span className="text-gray-500 text-small">© 2026 AIResume</span>
             </div>
             <div className="flex gap-6">

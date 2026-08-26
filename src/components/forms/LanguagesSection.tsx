@@ -38,11 +38,11 @@ function SortableLanguageItem({ language, index, onUpdate, onRemove, onDuplicate
       <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4">
         <div>
           <label className="block text-white/80 text-sm font-medium mb-2">Language Name</label>
-          <input type="text" value={language.language || ''} onChange={(e) => onUpdate(index, 'language', e.target.value)} className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors" placeholder="English" />
+          <input type="text" value={language.language || ''} onChange={(e) => onUpdate(index, 'language', e.target.value)} className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#013f2e] focus:bg-white/15 transition-colors" placeholder="English" />
         </div>
         <div>
           <label className="block text-white/80 text-sm font-medium mb-2">Fluency Level</label>
-          <select value={language.fluency || ''} onChange={(e) => onUpdate(index, 'fluency', e.target.value)} className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors">
+          <select value={language.fluency || ''} onChange={(e) => onUpdate(index, 'fluency', e.target.value)} className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white focus:outline-none focus:border-[#013f2e] focus:bg-white/15 transition-colors">
             <option value="">Select fluency level</option>
             <option value="Native">Native</option>
             <option value="Fluent">Fluent</option>
@@ -61,7 +61,7 @@ function SortableLanguageItem({ language, index, onUpdate, onRemove, onDuplicate
           max={5}
           value={language.level || 3}
           onChange={(e) => onUpdate(index, 'level', Number(e.target.value))}
-          className="w-full accent-[#80FF00]"
+          className="w-full accent-[#013f2e]"
         />
       </div>
     </div>
@@ -120,7 +120,7 @@ const LanguagesSection: React.FC<LanguagesSectionProps> = ({ data, onUpdate, onA
           ))}
         </SortableContext>
       </DndContext>
-      <button onClick={() => onUpdate([...safeData, { language: '', fluency: '', level: 3 }])} className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#80FF00]/50 text-white/50 hover:text-[#80FF00] rounded-none transition-colors flex items-center justify-center gap-2">
+      <button onClick={() => onUpdate([...safeData, { language: '', fluency: '', level: 3 }])} className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#013f2e]/50 text-white/50 hover:text-[#013f2e] rounded-none transition-colors flex items-center justify-center gap-2">
         <Plus size={20} /> Add Language
       </button>
     </>

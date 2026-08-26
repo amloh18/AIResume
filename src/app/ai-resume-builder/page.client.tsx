@@ -195,7 +195,7 @@ export default function AIResumeBuilderPage() {
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 max-w-md mx-auto">
               <Link
                 href="/editor?mode=create"
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-8 py-4 rounded-xl bg-lime-400 hover:bg-lime-300 text-slate-950 font-bold text-base transition-all duration-200 hover:scale-[1.02] shadow-[0_0_25px_rgba(163,230,53,0.3)]"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-8 py-4 rounded-xl bg-[#013f2e] hover:bg-[#025c43] text-white font-bold text-base transition-colors duration-200 hover:scale-[1.02] shadow-lg"
               >
                 <span>Build Your Resume Free</span>
                 <ArrowRight className="w-4 h-4" />
@@ -515,7 +515,7 @@ export default function AIResumeBuilderPage() {
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                 <Link
                   href="/editor?mode=create"
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl bg-lime-400 hover:bg-lime-300 text-slate-950 font-bold text-base transition-all duration-200 hover:scale-105 shadow-[0_0_25px_rgba(163,230,53,0.3)]"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl bg-[#013f2e] hover:bg-[#025c43] text-white font-bold text-base transition-colors duration-200 hover:scale-105 shadow-lg"
                 >
                   <span>Get Started Free</span>
                   <ArrowRight className="w-4 h-4" />

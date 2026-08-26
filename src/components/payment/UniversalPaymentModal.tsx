@@ -1406,7 +1406,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                               <button
                                 onClick={() => setStep(2)}
                                 disabled={!selectedPlan || isCurrentPlan(selectedPlan)}
-                                className="w-full tablet:w-auto px-16 py-4 bg-[#80FF00] hover:bg-[#99ff33] text-black rounded-2xl font-black disabled:bg-gray-200 dark:disabled:bg-gray-800 disabled:text-gray-400 dark:disabled:text-gray-600 disabled:cursor-not-allowed transition-all shadow-xl shadow-lime-500/20 active:scale-95 text-base flex items-center justify-center gap-3 group"
+                                className="w-full tablet:w-auto px-16 py-4 bg-[#013f2e] hover:bg-[#02523c] text-black rounded-2xl font-black disabled:bg-gray-200 dark:disabled:bg-gray-800 disabled:text-gray-400 dark:disabled:text-gray-600 disabled:cursor-not-allowed transition-all shadow-xl shadow-lime-500/20 active:scale-95 text-base flex items-center justify-center gap-3 group"
                               >
                                 <Shield className="w-5 h-5 opacity-50 group-hover:scale-110 transition-transform" />
                                 <span>
@@ -1591,7 +1591,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                                 value={discountCode}
                                 onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
                                 placeholder="Enter code here"
-                                className="flex-1 px-4 py-2.5 rounded-xl text-sm bg-gray-50 dark:bg-[#232f1c] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 border border-gray-300 dark:border-white/20 focus:outline-none focus:ring-2 focus:ring-lime-500 dark:focus:ring-[#80FF00]/50 focus:border-lime-500 dark:focus:border-[#80FF00]/50 transition-colors"
+                                className="flex-1 px-4 py-2.5 rounded-xl text-sm bg-gray-50 dark:bg-[#232f1c] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 border border-gray-300 dark:border-white/20 focus:outline-none focus:ring-2 focus:ring-lime-500 dark:focus:ring-[#013f2e]/50 focus:border-lime-500 dark:focus:border-[#013f2e]/50 transition-colors"
                               />
                               <button
                                 onClick={applyDiscountCode}
@@ -1772,7 +1772,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                           <button
                             onClick={handlePayment}
                             disabled={loading}
-                            className="w-full max-w-md py-4 bg-[#80FF00] hover:bg-[#99ff33] text-black rounded-2xl font-black disabled:bg-gray-200 dark:disabled:bg-gray-800 disabled:text-gray-400 dark:disabled:text-gray-600 disabled:cursor-not-allowed transition-all shadow-xl shadow-lime-500/20 active:scale-95 text-base flex items-center justify-center gap-3 mx-auto"
+                            className="w-full max-w-md py-4 bg-[#013f2e] hover:bg-[#02523c] text-black rounded-2xl font-black disabled:bg-gray-200 dark:disabled:bg-gray-800 disabled:text-gray-400 dark:disabled:text-gray-600 disabled:cursor-not-allowed transition-all shadow-xl shadow-lime-500/20 active:scale-95 text-base flex items-center justify-center gap-3 mx-auto"
                           >
                             {loading ? (
                               <>

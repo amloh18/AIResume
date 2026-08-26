@@ -610,14 +610,14 @@ export const WYSIWYGToolbar: React.FC<WYSIWYGToolbarProps> = ({
           className={`p-1.5 rounded transition-all duration-300 ml-auto flex items-center gap-1.5 ${
             isGenerating ? 'opacity-50 cursor-not-allowed' : 
             isValueEmpty 
-              ? 'bg-[#80FF00]/10 hover:bg-[#80FF00]/20 text-[#80FF00] animate-pulse transform hover:scale-105 shadow-[0_0_10px_rgba(128,255,0,0.2)] px-3' 
+              ? 'bg-[#013f2e]/10 hover:bg-[#013f2e]/20 text-[#013f2e] animate-pulse transform hover:scale-105 shadow-[0_0_10px_rgba(1, 63, 46,0.2)] px-3' 
               : 'hover:bg-[var(--bg-tertiary)] opacity-60'
           }`}
           title="AI: Generate writing suggestions"
         >
           <Sparkles
             size={15}
-            className={`${isValueEmpty ? 'text-[#80FF00]' : 'text-[color:var(--text-secondary)]'} ${isGenerating ? 'animate-pulse' : ''}`}
+            className={`${isValueEmpty ? 'text-[#013f2e]' : 'text-[color:var(--text-secondary)]'} ${isGenerating ? 'animate-pulse' : ''}`}
           />
           {isValueEmpty && <span className="text-small font-semibold">Suggest</span>}
         </button>

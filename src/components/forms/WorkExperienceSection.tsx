@@ -133,7 +133,7 @@ function SortableWorkItem({
             type="text"
             value={work.position || ''}
             onChange={(e) => onUpdate(index, 'position', e.target.value)}
-            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#013f2e] focus:bg-white/15 transition-colors"
             placeholder='e.g., "Lead Solutions Architect"'
           />
         </div>
@@ -143,7 +143,7 @@ function SortableWorkItem({
             type="text"
             value={work.name || ''}
             onChange={(e) => onUpdate(index, 'name', e.target.value)}
-            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#013f2e] focus:bg-white/15 transition-colors"
             placeholder='e.g., "Global Tech Solutions"'
           />
         </div>
@@ -153,7 +153,7 @@ function SortableWorkItem({
             type="month"
             value={work.startDate || ''}
             onChange={(e) => onUpdate(index, 'startDate', e.target.value)}
-            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#013f2e] focus:bg-white/15 transition-colors"
             placeholder="YYYY-MM"
           />
         </div>
@@ -163,7 +163,7 @@ function SortableWorkItem({
             type="month"
             value={work.endDate || ''}
             onChange={(e) => onUpdate(index, 'endDate', e.target.value)}
-            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#013f2e] focus:bg-white/15 transition-colors"
             placeholder="YYYY-MM"
           />
         </div>
@@ -441,7 +441,7 @@ const WorkExperienceSection: React.FC<WorkExperienceSectionProps> = ({
       {safeData.length > 0 && (
         <button
           onClick={addWorkItem}
-          className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#80FF00]/50 text-white/50 hover:text-[#80FF00] rounded-none transition-all flex items-center justify-center gap-2"
+          className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#013f2e]/50 text-white/50 hover:text-[#013f2e] rounded-none transition-all flex items-center justify-center gap-2"
         >
           <Plus size={20} />
           Add another Work Experience

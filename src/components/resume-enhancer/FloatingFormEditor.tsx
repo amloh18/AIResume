@@ -520,7 +520,7 @@ export default function FloatingFormEditor({
                         </button>
                         <button
                             onClick={handleClose}
-                            className="p-2 rounded-none bg-[#80FF00]/10 text-[#80FF00] hover:bg-[#80FF00]/20 transition-all duration-200 hover:scale-[1.015]"
+                            className="p-2 rounded-none bg-[#013f2e]/10 text-[#013f2e] hover:bg-[#013f2e]/20 transition-all duration-200 hover:scale-[1.015]"
                             aria-label="Accept"
                             title="Accept"
                         >

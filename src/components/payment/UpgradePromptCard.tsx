@@ -106,7 +106,7 @@ export default function UpgradePromptCard({
               </button>
               <button
                 onClick={handleUpgrade}
-                className="flex-1 px-3 py-2 rounded-lg bg-[#80FF00] text-slate-950 text-[13px] font-semibold hover:brightness-95 transition-all"
+                className="flex-1 px-3 py-2 rounded-lg bg-[#013f2e] text-slate-950 text-[13px] font-semibold hover:brightness-95 transition-all"
               >
                 {primaryLabel}
               </button>

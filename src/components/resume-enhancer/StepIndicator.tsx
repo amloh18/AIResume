@@ -44,8 +44,8 @@ export default function StepIndicator({
                   disabled={!isClickable}
                   className={`
                     w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm transition-all duration-300 flex-shrink-0
-                    ${isCompleted ? 'bg-[#80FF00] text-black cursor-pointer hover:bg-[#70e600] shadow-sm shadow-[#80FF00]/20' : ''}
-                    ${isActive && !isCompleted ? 'bg-white/5 text-white ring-2 ring-[#80FF00]/50 shadow-sm shadow-black/30' : ''}
+                    ${isCompleted ? 'bg-[#013f2e] text-black cursor-pointer hover:bg-[#02523c] shadow-sm shadow-[#013f2e]/20' : ''}
+                    ${isActive && !isCompleted ? 'bg-white/5 text-white ring-2 ring-[#013f2e]/50 shadow-sm shadow-black/30' : ''}
                     ${!isActive && !isCompleted ? 'bg-white/5 text-gray-500' : ''}
                     ${isClickable ? 'cursor-pointer' : 'cursor-default'}
                   `}
@@ -63,7 +63,7 @@ export default function StepIndicator({
                 {/* Connector line */}
                 {index < steps.length - 1 && (
                   <div
-                    className={`flex-1 h-0.5 rounded-full ${completedSteps.includes(step.number) ? 'bg-[#80FF00]' : 'bg-white/10'
+                    className={`flex-1 h-0.5 rounded-full ${completedSteps.includes(step.number) ? 'bg-[#013f2e]' : 'bg-white/10'
                       }`}
                   />
                 )}
@@ -101,7 +101,7 @@ export default function StepIndicator({
                 disabled={!isClickable}
                 className={`
                     w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm transition-all duration-300 flex-shrink-0
-                    ${isCompleted ? 'bg-[#80FF00] text-black cursor-pointer hover:bg-[#70e600] shadow-sm shadow-[#80FF00]/20' : ''}
+                    ${isCompleted ? 'bg-[#013f2e] text-black cursor-pointer hover:bg-[#02523c] shadow-sm shadow-[#013f2e]/20' : ''}
                     ${isActive && !isCompleted ? 'bg-white/5 text-white shadow-sm shadow-black/30' : ''}
                     ${!isActive && !isCompleted ? 'bg-white/5 text-gray-500' : ''}
                     ${isClickable ? 'cursor-pointer' : 'cursor-default'}
@@ -117,7 +117,7 @@ export default function StepIndicator({
               </motion.button>
               <span className={`
                   text-sm font-medium whitespace-nowrap
-                  ${isCompleted ? 'text-[#80FF00]' : ''}
+                  ${isCompleted ? 'text-[#013f2e]' : ''}
                   ${isActive && !isCompleted ? 'text-white' : ''}
                   ${!isActive && !isCompleted ? 'text-gray-500' : ''}
                 `}>

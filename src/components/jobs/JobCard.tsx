@@ -88,7 +88,7 @@ export function JobCard({
   } else if (score >= 80) {
     matchTier = {
       label: 'Strong match',
-      badgeClass: 'text-lime-700 dark:text-[#80FF00] bg-lime-500/10 border-lime-500/30',
+      badgeClass: 'text-lime-700 dark:text-[#013f2e] bg-lime-500/10 border-lime-500/30',
       dotClass: 'bg-lime-500',
     };
   } else if (score >= 70) {
@@ -153,7 +153,7 @@ export function JobCard({
 
         {/* Job Title */}
         <div className="space-y-2">
-          <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white leading-snug line-clamp-2 group-hover:text-lime-600 dark:group-hover:text-[#80FF00] transition-colors">
+          <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white leading-snug line-clamp-2 group-hover:text-lime-600 dark:group-hover:text-[#013f2e] transition-colors">
             {job.title}
           </h3>
 
@@ -196,7 +196,7 @@ export function JobCard({
           {/* Status info */}
           <div className="flex items-center justify-between text-xs">
             {isSaved ? (
-              <span className="inline-flex items-center gap-1.5 font-bold text-lime-600 dark:text-[#80FF00]">
+              <span className="inline-flex items-center gap-1.5 font-bold text-lime-600 dark:text-[#013f2e]">
                 <CheckCircle2 className="w-3.5 h-3.5" />
                 Saved in Staging
               </span>
@@ -222,7 +222,7 @@ export function JobCard({
                   e.stopPropagation();
                   onApply();
                 }}
-                className="col-span-2 px-4 py-2.5 rounded-xl bg-lime-500 hover:bg-lime-600 dark:bg-[#80FF00] dark:hover:brightness-95 text-white dark:text-black text-xs font-bold transition-all shadow-sm flex justify-center items-center gap-1.5"
+                className="col-span-2 px-4 py-2.5 rounded-xl bg-lime-500 hover:bg-lime-600 dark:bg-[#013f2e] dark:hover:brightness-95 text-white dark:text-black text-xs font-bold transition-all shadow-sm flex justify-center items-center gap-1.5"
               >
                 <Sparkles className="w-3.5 h-3.5" />
                 <span>Prepare Application</span>
@@ -254,7 +254,7 @@ export function JobCard({
                     e.stopPropagation();
                     onApply();
                   }}
-                  className="px-3.5 py-2 rounded-xl bg-gray-900 hover:bg-black dark:bg-[#80FF00] dark:hover:brightness-95 text-white dark:text-black text-xs font-bold transition-all shadow-sm flex justify-center items-center gap-1"
+                  className="px-3.5 py-2 rounded-xl bg-gray-900 hover:bg-black dark:bg-[#013f2e] dark:hover:brightness-95 text-white dark:text-black text-xs font-bold transition-all shadow-sm flex justify-center items-center gap-1"
                 >
                   <span>Apply</span>
                 </button>

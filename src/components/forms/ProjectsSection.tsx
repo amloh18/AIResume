@@ -119,22 +119,22 @@ function SortableProjectItem({
       <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4">
         <div>
           <label className="block text-white/80 text-sm font-medium mb-2">Project Name</label>
-          <input type="text" value={project.name || ''} onChange={(e) => onUpdate(index, 'name', e.target.value)} className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors" placeholder="E-commerce Platform" />
+          <input type="text" value={project.name || ''} onChange={(e) => onUpdate(index, 'name', e.target.value)} className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#013f2e] focus:bg-white/15 transition-colors" placeholder="E-commerce Platform" />
         </div>
         <div>
           <label className="block text-white/80 text-sm font-medium mb-2">Project URL</label>
-          <input type="url" value={project.url || ''} onChange={(e) => onUpdate(index, 'url', e.target.value)} className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors" placeholder="https://github.com/username/project" />
+          <input type="url" value={project.url || ''} onChange={(e) => onUpdate(index, 'url', e.target.value)} className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#013f2e] focus:bg-white/15 transition-colors" placeholder="https://github.com/username/project" />
         </div>
       </div>
 
       <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4 mt-4">
         <div>
           <label className="block text-white/80 text-sm font-medium mb-2">Start Date</label>
-          <input type="month" value={project.startDate || ''} onChange={(e) => onUpdate(index, 'startDate', e.target.value)} className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors" placeholder="YYYY-MM" />
+          <input type="month" value={project.startDate || ''} onChange={(e) => onUpdate(index, 'startDate', e.target.value)} className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#013f2e] focus:bg-white/15 transition-colors" placeholder="YYYY-MM" />
         </div>
         <div>
           <label className="block text-white/80 text-sm font-medium mb-2">End Date</label>
-          <input type="month" value={project.endDate || ''} onChange={(e) => onUpdate(index, 'endDate', e.target.value)} className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors" placeholder="YYYY-MM" />
+          <input type="month" value={project.endDate || ''} onChange={(e) => onUpdate(index, 'endDate', e.target.value)} className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#013f2e] focus:bg-white/15 transition-colors" placeholder="YYYY-MM" />
         </div>
       </div>
 
@@ -148,7 +148,7 @@ function SortableProjectItem({
                   type="checkbox"
                   checked={project.useRichText !== false}
                   onChange={(e) => onUpdate(index, 'useRichText', e.target.checked)}
-                  className="rounded border-white/20 bg-white/5 text-[#80FF00] focus:ring-[#80FF00]/50"
+                  className="rounded border-white/20 bg-white/5 text-[#013f2e] focus:ring-[#013f2e]/50"
                 />
                 Use Rich Text
               </label>
@@ -182,7 +182,7 @@ function SortableProjectItem({
                       newHighlights[hIndex] = e.target.value;
                       onUpdate(index, 'highlights', newHighlights);
                     }}
-                    className="flex-1 px-4 py-2 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+                    className="flex-1 px-4 py-2 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#013f2e] focus:bg-white/15 transition-colors"
                     placeholder="Achievement or key detail..."
                   />
                   <button
@@ -204,7 +204,7 @@ function SortableProjectItem({
                   const newHighlights = [...(project.highlights || []), ''];
                   onUpdate(index, 'highlights', newHighlights);
                 }}
-                className="flex items-center gap-2 text-sm text-[#80FF00] hover:text-[#70e600] transition-colors mt-2"
+                className="flex items-center gap-2 text-sm text-[#013f2e] hover:text-[#02523c] transition-colors mt-2"
               >
                 <Plus size={14} />
                 Add Bullet Point
@@ -432,7 +432,7 @@ const ProjectsSection: React.FC<ProjectsSectionProps> = ({
           };
           onUpdate([...safeData, newProject]);
         }}
-        className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#80FF00]/50 text-white/50 hover:text-[#80FF00] rounded-none transition-colors flex items-center justify-center gap-2"
+        className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#013f2e]/50 text-white/50 hover:text-[#013f2e] rounded-none transition-colors flex items-center justify-center gap-2"
       >
         <Plus size={20} />
         Add another Project

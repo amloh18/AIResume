@@ -497,7 +497,7 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
                 </button>
                 <button
                   onClick={handlePracticeClick}
-                  className="col-span-2 mt-2 py-1.5 bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 rounded-lg text-small font-medium hover:text-lime-500 dark:hover:text-[#80FF00] transition-colors flex items-center justify-center gap-2"
+                  className="col-span-2 mt-2 py-1.5 bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 rounded-lg text-small font-medium hover:text-lime-500 dark:hover:text-[#013f2e] transition-colors flex items-center justify-center gap-2"
                 >
                   <GraduationCap size={12} />
                   Practice
@@ -576,7 +576,7 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
                 </div>
                 <button
                   onClick={handlePracticeClick}
-                  className="w-full mt-2 py-1.5 bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 rounded-lg text-small font-medium hover:text-lime-500 dark:hover:text-[#80FF00] transition-colors flex items-center justify-center gap-2"
+                  className="w-full mt-2 py-1.5 bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 rounded-lg text-small font-medium hover:text-lime-500 dark:hover:text-[#013f2e] transition-colors flex items-center justify-center gap-2"
                 >
                   <GraduationCap size={12} />
                   Practice

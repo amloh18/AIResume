@@ -2,13 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Globe, Database, Activity, FileText, ShieldAlert, GitMerge, BarChart3, RefreshCw } from 'lucide-react';
+import { Globe, Database, Activity, FileText, RefreshCw } from 'lucide-react';
 import OverviewKPIs from './OverviewKPIs';
 import SourcesGrid from './SourcesGrid';
 import RunsExplorer from './RunsExplorer';
-import ErrorsHub from './ErrorsHub';
-import DuplicateMatrix from './DuplicateMatrix';
-import SupplyAnalytics from './SupplyAnalytics';
 import LiveJobsBrowser from './LiveJobsBrowser';
 
 interface JobIntelligenceDashboardProps {
@@ -47,9 +44,6 @@ export default function JobIntelligenceDashboard({
     { id: 'jobs', label: 'Live Jobs', icon: Database },
     { id: 'sources', label: 'Sources', icon: Activity },
     { id: 'runs', label: 'Ingestion Runs', icon: FileText },
-    { id: 'errors', label: 'Diagnostics Hub', icon: ShieldAlert },
-    { id: 'duplicates', label: 'Duplicate Matrix', icon: GitMerge },
-    { id: 'analytics', label: 'Supply Analytics', icon: BarChart3 },
   ];
 
   const currentTab = activeSubTab || 'overview';
@@ -113,9 +107,6 @@ export default function JobIntelligenceDashboard({
       {currentTab === 'jobs' && <LiveJobsBrowser />}
       {currentTab === 'sources' && <SourcesGrid sources={data?.sources || []} />}
       {currentTab === 'runs' && <RunsExplorer />}
-      {currentTab === 'errors' && <ErrorsHub />}
-      {currentTab === 'duplicates' && <DuplicateMatrix />}
-      {currentTab === 'analytics' && <SupplyAnalytics />}
     </div>
   );
 }

@@ -1005,16 +1005,16 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
         return null;
       case 'reset':
         return (
-          <div className="w-12 h-12 rounded-sm border-2 border-[#80FF00] flex items-center justify-center mb-6 mx-auto">
-            <svg className="w-6 h-6 text-[#80FF00]" fill="currentColor" viewBox="0 0 24 24">
+          <div className="w-12 h-12 rounded-sm border-2 border-[#013f2e] flex items-center justify-center mb-6 mx-auto">
+            <svg className="w-6 h-6 text-[#013f2e]" fill="currentColor" viewBox="0 0 24 24">
               <path d="M12,4A4,4 0 0,1 16,8A4,4 0 0,1 12,12A4,4 0 0,1 8,8A4,4 0 0,1 12,4M12,14C16.42,14 20,15.79 20,18V20H4V18C4,15.79 7.58,14 12,14Z" />
             </svg>
           </div>
         );
       case 'verify-code':
         return (
-          <div className="w-12 h-12 rounded-sm border-2 border-[#80FF00] flex items-center justify-center mb-6 mx-auto">
-            <svg className="w-6 h-6 text-[#80FF00]" fill="currentColor" viewBox="0 0 24 24">
+          <div className="w-12 h-12 rounded-sm border-2 border-[#013f2e] flex items-center justify-center mb-6 mx-auto">
+            <svg className="w-6 h-6 text-[#013f2e]" fill="currentColor" viewBox="0 0 24 24">
               <path d="M20,8L12,13L4,8V6L12,11L20,6M20,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V6C22,4.89 21.1,4 20,4Z" />
             </svg>
           </div>
@@ -1033,7 +1033,7 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
               Forgot Password?{' '}
               <button
                 onClick={() => switchMode('reset')}
-                className="text-[#80FF00] hover:text-[#80FF00]/80 transition-colors duration-200 font-medium"
+                className="text-[#013f2e] hover:text-[#013f2e]/80 transition-colors duration-200 font-medium"
               >
                 Reset Password
               </button>
@@ -1051,7 +1051,7 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
               Remember your password?{' '}
               <button
                 onClick={() => switchMode('signin')}
-                className="text-[#80FF00] hover:text-[#80FF00]/80 transition-colors duration-200 font-medium"
+                className="text-[#013f2e] hover:text-[#013f2e]/80 transition-colors duration-200 font-medium"
               >
                 Sign In
               </button>
@@ -1061,7 +1061,7 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
                 {"Don't have an account?"}{' '}
                 <button
                   onClick={() => switchMode('signup')}
-                  className="text-[#80FF00] hover:text-[#80FF00]/80 transition-colors duration-200 font-medium"
+                  className="text-[#013f2e] hover:text-[#013f2e]/80 transition-colors duration-200 font-medium"
                 >
                   Sign up here
                 </button>
@@ -1077,7 +1077,7 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
               Prefer password?{' '}
               <button
                 onClick={() => switchMode('signin')}
-                className="text-[#80FF00] hover:text-[#80FF00]/80 transition-colors duration-200 font-medium"
+                className="text-[#013f2e] hover:text-[#013f2e]/80 transition-colors duration-200 font-medium"
               >
                 Sign in with password
               </button>
@@ -1087,7 +1087,7 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
                 {"Don't have an account?"}{' '}
                 <button
                   onClick={() => switchMode('signup')}
-                  className="text-[#80FF00] hover:text-[#80FF00]/80 transition-colors duration-200 font-medium"
+                  className="text-[#013f2e] hover:text-[#013f2e]/80 transition-colors duration-200 font-medium"
                 >
                   Sign up here
                 </button>
@@ -1228,7 +1228,7 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
             </motion.button>
             {/* Animated Pill Background */}
             <motion.div
-              className="absolute top-1.5 bottom-1.5 bg-[#80FF00] rounded-sm z-0 shadow-sm"
+              className="absolute top-1.5 bottom-1.5 bg-[#013f2e] rounded-sm z-0 shadow-sm"
               initial={false}
               animate={{
                 left: mode === 'signin' ? '0.375rem' : '50%',
@@ -1288,7 +1288,7 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
                 type="button"
                 onClick={() => handleSendCode(email, 'passwordless-login')}
                 disabled={isLoading || checkingEmail}
-                className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-[#80FF00] to-[#80FF00]/80 hover:from-[#80FF00]/90 hover:to-[#80FF00]/70 text-gray-900 dark:text-black font-semibold py-3 px-6 rounded-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-[#013f2e] to-[#013f2e]/80 hover:from-[#013f2e]/90 hover:to-[#013f2e]/70 text-gray-900 dark:text-black font-semibold py-3 px-6 rounded-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoading || checkingEmail ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -1306,7 +1306,7 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
           {process.env.NODE_ENV !== 'production' && mode === 'signin' && (
             <div className="mt-6 pt-6 border-t border-dashed border-gray-200 dark:border-white/10 text-center">
               <div className="text-xs font-bold tracking-widest text-gray-400 dark:text-white/40 uppercase mb-3 flex items-center justify-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#80FF00] animate-ping" />
+                <span className="w-1.5 h-1.5 rounded-full bg-[#013f2e] animate-ping" />
                 Dev Bypass Login
               </div>
               <div className="grid grid-cols-2 gap-2">

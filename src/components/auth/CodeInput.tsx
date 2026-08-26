@@ -150,7 +150,7 @@ export default function CodeInput({
               transition-all duration-200
               ${error 
                 ? 'border-2 border-red-500 focus:border-2 focus:border-red-500' 
-                : 'border border-gray-300 dark:border-[#80FF00]/50 focus:border-2 focus:border-[#80FF00]'
+                : 'border border-gray-300 dark:border-[#013f2e]/50 focus:border-2 focus:border-[#013f2e]'
               }
               ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-text'}
             `}

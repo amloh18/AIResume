@@ -64,7 +64,7 @@ export const AnimatedScore: React.FC<AnimatedScoreProps> = ({
       <motion.span 
         className={`font-bold tabular-nums ${sizes[size]}`}
         style={{
-          color: value >= 70 ? '#80FF00' : value >= 50 ? '#f59e0b' : '#ef4444'
+          color: value >= 70 ? '#013f2e' : value >= 50 ? '#f59e0b' : '#ef4444'
         }}
       >
         <motion.span>{displayValue}</motion.span>
@@ -112,7 +112,7 @@ export const AnimatedProgressBar: React.FC<AnimatedProgressBarProps> = ({
   colorStops = [
     { threshold: 0, color: '#ef4444' },
     { threshold: 50, color: '#f59e0b' },
-    { threshold: 70, color: '#80FF00' }
+    { threshold: 70, color: '#013f2e' }
   ]
 }) => {
   const percentage = Math.max(0, Math.min(100, (value / max) * 100));
@@ -125,7 +125,7 @@ export const AnimatedProgressBar: React.FC<AnimatedProgressBarProps> = ({
         return stop.color;
       }
     }
-    return colorStops[0]?.color || '#80FF00';
+    return colorStops[0]?.color || '#013f2e';
   };
 
   return (

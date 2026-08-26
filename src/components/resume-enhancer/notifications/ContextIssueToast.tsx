@@ -47,10 +47,10 @@ export function ContextIssueToast({ issue, onFix, onDismiss, onAiAssist }: Conte
         if (issue.severity === 'positive') {
             return {
                 icon: CheckCircle,
-                color: '#80FF00',
-                bg: 'bg-[#80FF00]/10',
-                border: 'border-[#80FF00]/30',
-                shadow: 'shadow-[#80FF00]/20'
+                color: '#013f2e',
+                bg: 'bg-[#013f2e]/10',
+                border: 'border-[#013f2e]/30',
+                shadow: 'shadow-[#013f2e]/20'
             };
         }
         // default for suggestion/info

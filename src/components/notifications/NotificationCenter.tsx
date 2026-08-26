@@ -34,7 +34,7 @@ function ProgressCircle({ progress, size = 36, strokeWidth = 3 }: { progress: nu
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          className="stroke-emerald-600 dark:stroke-[#80FF00] transition-all duration-300 ease-out"
+          className="stroke-emerald-600 dark:stroke-[#013f2e] transition-all duration-300 ease-out"
           strokeWidth={strokeWidth}
           strokeDasharray={circumference}
           strokeDashoffset={offset}
@@ -114,7 +114,7 @@ export default function NotificationCenter({ variant = 'default' }: Notification
       case 'applied': return 'text-emerald-600 bg-emerald-500/10 dark:text-emerald-400 dark:bg-emerald-500/15';
       case 'interview': return 'text-purple-600 bg-purple-500/10 dark:text-purple-400 dark:bg-purple-500/15';
       case 'improvement': return 'text-amber-600 bg-amber-500/10 dark:text-amber-400 dark:bg-amber-500/15';
-      case 'recommendation': return 'text-lime-600 bg-lime-500/10 dark:text-[#80FF00] dark:bg-[#80FF00]/15';
+      case 'recommendation': return 'text-lime-600 bg-lime-500/10 dark:text-[#013f2e] dark:bg-[#013f2e]/15';
       default: return 'text-gray-500 bg-gray-500/10 dark:bg-gray-500/15';
     }
   };
@@ -155,7 +155,7 @@ export default function NotificationCenter({ variant = 'default' }: Notification
               cx="20"
               cy="20"
               r="17"
-              className="stroke-emerald-500 dark:stroke-[#80FF00] transition-all duration-300 ease-out drop-shadow-[0_0_4px_rgba(128,255,0,0.6)]"
+              className="stroke-emerald-500 dark:stroke-[#013f2e] transition-all duration-300 ease-out drop-shadow-[0_0_4px_rgba(1, 63, 46,0.6)]"
               strokeWidth="2.5"
               strokeDasharray={2 * Math.PI * 17}
               strokeDashoffset={2 * Math.PI * 17 - (Math.min(100, Math.max(0, activeProgress.progress || 0)) / 100) * (2 * Math.PI * 17)}
@@ -169,15 +169,15 @@ export default function NotificationCenter({ variant = 'default' }: Notification
           size={16}
           className={`transition-colors ${
             activeProgress
-              ? 'text-emerald-600 dark:text-[#80FF00] animate-pulse'
+              ? 'text-emerald-600 dark:text-[#013f2e] animate-pulse'
               : isOpen
-                ? 'text-emerald-600 dark:text-[#80FF00]'
-                : 'text-gray-600 dark:text-gray-400 group-hover:text-emerald-600 dark:group-hover:text-[#80FF00]'
+                ? 'text-emerald-600 dark:text-[#013f2e]'
+                : 'text-gray-600 dark:text-gray-400 group-hover:text-emerald-600 dark:group-hover:text-[#013f2e]'
           }`}
         />
 
         {unreadCount > 0 && !activeProgress && (
-          <span className="absolute -top-1 -right-1 bg-emerald-500 dark:bg-[#80FF00] text-white dark:text-black text-[9px] font-black rounded-full h-4 w-4 flex items-center justify-center border-2 border-white dark:border-[#141810] shadow-[0_0_8px_rgba(128,255,0,0.8)]">
+          <span className="absolute -top-1 -right-1 bg-emerald-500 dark:bg-[#013f2e] text-white dark:text-black text-[9px] font-black rounded-full h-4 w-4 flex items-center justify-center border-2 border-white dark:border-[#141810] shadow-[0_0_8px_rgba(1, 63, 46,0.8)]">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
@@ -213,7 +213,7 @@ export default function NotificationCenter({ variant = 'default' }: Notification
                           Updates
                         </h2>
                         {unreadCount > 0 && (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-[#80FF00]/15 text-emerald-700 dark:text-[#80FF00] border border-emerald-200 dark:border-[#80FF00]/30 tabular-nums">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-[#013f2e]/15 text-emerald-700 dark:text-[#013f2e] border border-emerald-200 dark:border-[#013f2e]/30 tabular-nums">
                             {unreadCount} new
                           </span>
                         )}
@@ -222,7 +222,7 @@ export default function NotificationCenter({ variant = 'default' }: Notification
                         {unreadCount > 0 && (
                           <button
                             onClick={markAllAsRead}
-                            className="text-[11px] font-semibold text-emerald-600 dark:text-[#80FF00] hover:underline transition-colors"
+                            className="text-[11px] font-semibold text-emerald-600 dark:text-[#013f2e] hover:underline transition-colors"
                           >
                             Mark all read
                           </button>
@@ -244,7 +244,7 @@ export default function NotificationCenter({ variant = 'default' }: Notification
                             onClick={() => setActiveTab('notifications')}
                             className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-[11px] font-bold uppercase tracking-wider rounded-lg transition-all ${
                               activeTab === 'notifications'
-                                ? 'bg-white dark:bg-[#1c2415] text-emerald-800 dark:text-[#80FF00] shadow-xs border border-gray-200/60 dark:border-[#80FF00]/30'
+                                ? 'bg-white dark:bg-[#1c2415] text-emerald-800 dark:text-[#013f2e] shadow-xs border border-gray-200/60 dark:border-[#013f2e]/30'
                                 : 'text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white'
                             }`}
                           >
@@ -255,7 +255,7 @@ export default function NotificationCenter({ variant = 'default' }: Notification
                             onClick={() => setActiveTab('activities')}
                             className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-[11px] font-bold uppercase tracking-wider rounded-lg transition-all ${
                               activeTab === 'activities'
-                                ? 'bg-white dark:bg-[#1c2415] text-emerald-800 dark:text-[#80FF00] shadow-xs border border-gray-200/60 dark:border-[#80FF00]/30'
+                                ? 'bg-white dark:bg-[#1c2415] text-emerald-800 dark:text-[#013f2e] shadow-xs border border-gray-200/60 dark:border-[#013f2e]/30'
                                 : 'text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white'
                             }`}
                           >
@@ -276,12 +276,12 @@ export default function NotificationCenter({ variant = 'default' }: Notification
                               {activeProgressArray.map((p) => (
                                 <div
                                   key={p.id}
-                                  className="p-3.5 rounded-xl bg-emerald-50/70 dark:bg-[#80FF00]/5 border border-emerald-200 dark:border-[#80FF00]/25 shadow-xs flex items-center gap-3.5"
+                                  className="p-3.5 rounded-xl bg-emerald-50/70 dark:bg-[#013f2e]/5 border border-emerald-200 dark:border-[#013f2e]/25 shadow-xs flex items-center gap-3.5"
                                 >
                                   <ProgressCircle progress={p.progress || 0} size={40} strokeWidth={3.5} />
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center justify-between gap-2">
-                                      <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-[#80FF00]">
+                                      <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-[#013f2e]">
                                         {p.type === 'progress' ? 'Applying...' : 'In Progress'}
                                       </span>
                                     </div>
@@ -307,7 +307,7 @@ export default function NotificationCenter({ variant = 'default' }: Notification
                                 className={`group relative p-3.5 rounded-xl border transition-all cursor-pointer ${
                                   n.read
                                     ? 'bg-gray-50/50 dark:bg-white/[0.02] border-gray-200/70 dark:border-white/5 hover:bg-gray-100/60 dark:hover:bg-white/[0.04]'
-                                    : 'bg-white dark:bg-[#1a230f]/60 border-emerald-300/70 dark:border-[#80FF00]/30 shadow-xs hover:border-emerald-400 dark:hover:border-[#80FF00]/50'
+                                    : 'bg-white dark:bg-[#1a230f]/60 border-emerald-300/70 dark:border-[#013f2e]/30 shadow-xs hover:border-emerald-400 dark:hover:border-[#013f2e]/50'
                                 }`}
                               >
                                 <div className="flex items-start gap-3">
@@ -315,7 +315,7 @@ export default function NotificationCenter({ variant = 'default' }: Notification
                                     className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
                                       n.read
                                         ? 'bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500'
-                                        : 'bg-emerald-100/80 text-emerald-700 dark:bg-[#80FF00]/15 dark:text-[#80FF00]'
+                                        : 'bg-emerald-100/80 text-emerald-700 dark:bg-[#013f2e]/15 dark:text-[#013f2e]'
                                     }`}
                                   >
                                     <Bell size={15} />
@@ -345,7 +345,7 @@ export default function NotificationCenter({ variant = 'default' }: Notification
                                   </div>
                                 </div>
                                 {!n.read && (
-                                  <div className="absolute top-3.5 right-3.5 w-2 h-2 bg-emerald-500 dark:bg-[#80FF00] rounded-full shadow-[0_0_6px_rgba(16,185,129,0.8)] dark:shadow-[0_0_6px_#80FF00]" />
+                                  <div className="absolute top-3.5 right-3.5 w-2 h-2 bg-emerald-500 dark:bg-[#013f2e] rounded-full shadow-[0_0_6px_rgba(16,185,129,0.8)] dark:shadow-[0_0_6px_#013f2e]" />
                                 )}
                               </div>
                             ))
@@ -355,7 +355,7 @@ export default function NotificationCenter({ variant = 'default' }: Notification
                         <div className="space-y-2">
                           {secondaryLoading.activities && allActivities.length === 0 ? (
                             <div className="flex justify-center py-10">
-                              <Loader2 className="animate-spin text-emerald-600 dark:text-[#80FF00]" size={24} />
+                              <Loader2 className="animate-spin text-emerald-600 dark:text-[#013f2e]" size={24} />
                             </div>
                           ) : allActivities.length === 0 ? (
                             <EmptyState icon={Clock} title="No activity" sub="Your timeline is empty" />
@@ -392,7 +392,7 @@ export default function NotificationCenter({ variant = 'default' }: Notification
                       <div className="p-4 bg-gray-50/60 dark:bg-white/[0.02] border-t border-gray-200/70 dark:border-white/10 flex-shrink-0">
                         <button
                           onClick={markAllAsRead}
-                          className="w-full py-2 text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-[#80FF00] hover:bg-emerald-50 dark:hover:bg-[#80FF00]/10 rounded-xl transition-all"
+                          className="w-full py-2 text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-[#013f2e] hover:bg-emerald-50 dark:hover:bg-[#013f2e]/10 rounded-xl transition-all"
                         >
                           Mark all as read
                         </button>

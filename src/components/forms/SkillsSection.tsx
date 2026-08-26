@@ -47,11 +47,11 @@ function SortableSkillItem({ skill, index, onUpdate, onRemove, onDuplicate, skil
       <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4">
         <div>
           <label className="block text-white/80 text-sm font-medium mb-2">Category</label>
-          <input type="text" value={skill.category || skill.name || ''} onChange={(e) => onUpdate(index, 'category', e.target.value)} className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors" placeholder="Programming Languages" />
+          <input type="text" value={skill.category || skill.name || ''} onChange={(e) => onUpdate(index, 'category', e.target.value)} className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#013f2e] focus:bg-white/15 transition-colors" placeholder="Programming Languages" />
         </div>
         <div>
           <label className="block text-white/80 text-sm font-medium mb-2">Skills</label>
-          <input type="text" value={skillInput} onChange={(e) => onSkillInputChange(index, e.target.value)} onBlur={(e) => { const arr = e.target.value.split(',').map(s => s.trim()).filter(s => s.length > 0); onUpdate(index, 'skills', arr); }} className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors" placeholder="JavaScript, Python, Java, React" />
+          <input type="text" value={skillInput} onChange={(e) => onSkillInputChange(index, e.target.value)} onBlur={(e) => { const arr = e.target.value.split(',').map(s => s.trim()).filter(s => s.length > 0); onUpdate(index, 'skills', arr); }} className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#013f2e] focus:bg-white/15 transition-colors" placeholder="JavaScript, Python, Java, React" />
           <p className="text-white/50 text-xs mt-1">Separate multiple skills with commas</p>
         </div>
       </div>
@@ -291,7 +291,7 @@ const SkillsSection: React.FC<SkillsSectionProps> = ({ data, onUpdate, onAdd, on
           ))}
         </SortableContext>
       </DndContext>
-      <button onClick={() => onUpdate([...safeData, { category: '', skills: [] }])} className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#80FF00]/50 text-white/50 hover:text-[#80FF00] rounded-none transition-colors flex items-center justify-center gap-2">
+      <button onClick={() => onUpdate([...safeData, { category: '', skills: [] }])} className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#013f2e]/50 text-white/50 hover:text-[#013f2e] rounded-none transition-colors flex items-center justify-center gap-2">
         <Plus size={20} /> Add Skill Category
       </button>
 
@@ -313,14 +313,14 @@ const SkillsSection: React.FC<SkillsSectionProps> = ({ data, onUpdate, onAdd, on
               <button
                 type="button"
                 onClick={() => setActivePanel('skills')}
-                className={`px-4 py-2 rounded-none text-sm font-medium transition-colors ${activePanel === 'skills' ? 'bg-[#80FF00] text-black' : 'bg-white/5 text-white/70 hover:text-white'}`}
+                className={`px-4 py-2 rounded-none text-sm font-medium transition-colors ${activePanel === 'skills' ? 'bg-[#013f2e] text-black' : 'bg-white/5 text-white/70 hover:text-white'}`}
               >
                 Skills
               </button>
               <button
                 type="button"
                 onClick={() => setActivePanel('analysis')}
-                className={`px-4 py-2 rounded-none text-sm font-medium transition-colors ${activePanel === 'analysis' ? 'bg-[#80FF00] text-black' : 'bg-white/5 text-white/70 hover:text-white'}`}
+                className={`px-4 py-2 rounded-none text-sm font-medium transition-colors ${activePanel === 'analysis' ? 'bg-[#013f2e] text-black' : 'bg-white/5 text-white/70 hover:text-white'}`}
               >
                 Perfect Score
               </button>
@@ -339,7 +339,7 @@ const SkillsSection: React.FC<SkillsSectionProps> = ({ data, onUpdate, onAdd, on
                       type="button"
                       onClick={applySelected}
                       disabled={selectedCount === 0}
-                      className="px-4 py-2 rounded-none bg-[#80FF00] hover:bg-[#70e600] text-black font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-4 py-2 rounded-none bg-[#013f2e] hover:bg-[#02523c] text-black font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Add Selected {selectedCount > 0 ? `(${selectedCount})` : ''}
                     </button>
@@ -393,7 +393,7 @@ const SkillsSection: React.FC<SkillsSectionProps> = ({ data, onUpdate, onAdd, on
                                     key={k}
                                     type="button"
                                     onClick={() => toggleSkill(cat.category, skill)}
-                                    className={`px-3 py-2 rounded-none border text-sm transition-colors ${on ? 'bg-[#80FF00]/20 border-[#80FF00]/50 text-white' : 'bg-black/10 border-white/10 text-white/70 hover:text-white hover:border-white/20'}`}
+                                    className={`px-3 py-2 rounded-none border text-sm transition-colors ${on ? 'bg-[#013f2e]/20 border-[#013f2e]/50 text-white' : 'bg-black/10 border-white/10 text-white/70 hover:text-white hover:border-white/20'}`}
                                   >
                                     {skill}
                                   </button>

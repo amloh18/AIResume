@@ -591,7 +591,7 @@ export default function SurgeonReportModal({ isOpen, onClose, onReviewAndFix }: 
             disabled
               ? 'opacity-60 cursor-not-allowed border-transparent'
               : isActive
-                ? 'bg-[#80FF00]/10 border-[#80FF00]/40'
+                ? 'bg-[#013f2e]/10 border-[#013f2e]/40'
                 : 'bg-white/0 hover:bg-white/5 border-white/10'
           ].join(' ')}
         >
@@ -721,7 +721,7 @@ export default function SurgeonReportModal({ isOpen, onClose, onReviewAndFix }: 
             )}
             <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
               <div className="flex items-center gap-3 min-w-0">
-                <Sparkles className="w-4 h-4 text-[#80FF00]" />
+                <Sparkles className="w-4 h-4 text-[#013f2e]" />
                 <InfoTooltip content="Issues are highlighted directly on your CV. Select a fix on the left, then apply it from the right panel.">
                   <div className="text-white font-semibold cursor-help truncate">AIResume Optimisation Report</div>
                 </InfoTooltip>
@@ -749,7 +749,7 @@ export default function SurgeonReportModal({ isOpen, onClose, onReviewAndFix }: 
                           colorStops={[
                             { threshold: 0, color: '#ef4444' },
                             { threshold: 50, color: '#f59e0b' },
-                            { threshold: 70, color: '#80FF00' }
+                            { threshold: 70, color: '#013f2e' }
                           ]}
                         />
                       </div>
@@ -778,7 +778,7 @@ export default function SurgeonReportModal({ isOpen, onClose, onReviewAndFix }: 
                   <button
                     onClick={() => setRecruiterView((v) => !v)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-2 ${recruiterView
-                      ? 'bg-[#80FF00] text-black hover:bg-[#70e600]'
+                      ? 'bg-[#013f2e] text-black hover:bg-[#02523c]'
                       : 'bg-white/10 text-white/90 hover:bg-white/15'
                       }`}
                   >
@@ -856,7 +856,7 @@ export default function SurgeonReportModal({ isOpen, onClose, onReviewAndFix }: 
                         }
                       }
                     }}
-                    className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#80FF00] hover:bg-[#70e600] text-black transition-colors"
+                    className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#013f2e] hover:bg-[#02523c] text-black transition-colors"
                   >
                     {openFixes.length === 0 ? 'Refresh' : 'Fix All'}
                   </button>

@@ -117,7 +117,7 @@ export default function AnnotatedText({
         className={[
           'relative cursor-pointer rounded-sm px-0.5 py-[1px] transition-colors inline-flex items-center gap-1',
           severityClasses,
-          isActive ? 'ring-2 ring-[#80FF00]/50 ring-offset-2 ring-offset-transparent' : 'ring-0',
+          isActive ? 'ring-2 ring-[#013f2e]/50 ring-offset-2 ring-offset-transparent' : 'ring-0',
         ].join(' ')}
         onClick={handleSelect}
         title={`${categoryColor.label}: Click to select suggestion`}

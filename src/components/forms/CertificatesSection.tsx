@@ -173,7 +173,7 @@ const CertificatesSection: React.FC<CertificatesSectionProps> = ({
                 type="text"
                 value={certificate.name || ''}
                 onChange={(e) => updateCertificate(index, 'name', e.target.value)}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#013f2e] focus:bg-white/15 transition-colors"
                 placeholder="AWS Certified Solutions Architect"
               />
             </div>
@@ -184,7 +184,7 @@ const CertificatesSection: React.FC<CertificatesSectionProps> = ({
                 type="text"
                 value={certificate.issuer || ''}
                 onChange={(e) => updateCertificate(index, 'issuer', e.target.value)}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#013f2e] focus:bg-white/15 transition-colors"
                 placeholder="Amazon Web Services"
               />
             </div>
@@ -195,7 +195,7 @@ const CertificatesSection: React.FC<CertificatesSectionProps> = ({
                 type="month"
                 value={certificate.date || ''}
                 onChange={(e) => updateCertificate(index, 'date', e.target.value)}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#013f2e] focus:bg-white/15 transition-colors"
                 placeholder="YYYY-MM"
               />
             </div>
@@ -206,7 +206,7 @@ const CertificatesSection: React.FC<CertificatesSectionProps> = ({
                 type="url"
                 value={certificate.url || ''}
                 onChange={(e) => updateCertificate(index, 'url', e.target.value)}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#013f2e] focus:bg-white/15 transition-colors"
                 placeholder="https://aws.amazon.com/certification/"
               />
             </div>
@@ -222,7 +222,7 @@ const CertificatesSection: React.FC<CertificatesSectionProps> = ({
                       type="checkbox"
                       checked={certificate.useRichText !== false}
                       onChange={(e) => updateCertificate(index, 'useRichText', e.target.checked)}
-                      className="rounded border-white/20 bg-white/5 text-[#80FF00] focus:ring-[#80FF00]/50"
+                      className="rounded border-white/20 bg-white/5 text-[#013f2e] focus:ring-[#013f2e]/50"
                     />
                     Use Rich Text
                   </label>
@@ -254,7 +254,7 @@ const CertificatesSection: React.FC<CertificatesSectionProps> = ({
                           newHighlights[hIndex] = e.target.value;
                           updateCertificate(index, 'highlights', newHighlights);
                         }}
-                        className="flex-1 px-4 py-2 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+                        className="flex-1 px-4 py-2 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#013f2e] focus:bg-white/15 transition-colors"
                         placeholder="Highlight or key detail..."
                       />
                       <button
@@ -276,7 +276,7 @@ const CertificatesSection: React.FC<CertificatesSectionProps> = ({
                       const newHighlights = [...(certificate.highlights || []), ''];
                       updateCertificate(index, 'highlights', newHighlights);
                     }}
-                    className="flex items-center gap-2 text-sm text-[#80FF00] hover:text-[#70e600] transition-colors mt-2"
+                    className="flex items-center gap-2 text-sm text-[#013f2e] hover:text-[#02523c] transition-colors mt-2"
                   >
                     <Plus size={14} />
                     Add Bullet Point
@@ -312,7 +312,7 @@ const CertificatesSection: React.FC<CertificatesSectionProps> = ({
             };
             onUpdate([...safeData, newCertificate]);
           }}
-          className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#80FF00]/50 text-white/50 hover:text-[#80FF00] rounded-none transition-colors flex items-center justify-center gap-2"
+          className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#013f2e]/50 text-white/50 hover:text-[#013f2e] rounded-none transition-colors flex items-center justify-center gap-2"
         >
           <Plus size={20} />
           Add another Certification

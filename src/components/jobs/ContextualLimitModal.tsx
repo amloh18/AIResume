@@ -57,7 +57,7 @@ export const ContextualLimitModal: React.FC<ContextualLimitModalProps> = ({
         <div className="p-6 sm:p-7 space-y-5">
           {/* Header Icon */}
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200/60 dark:border-amber-800/40 flex items-center justify-center text-amber-600 dark:text-[#80FF00]">
+            <div className="w-11 h-11 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200/60 dark:border-amber-800/40 flex items-center justify-center text-amber-600 dark:text-[#013f2e]">
               <Clock className="w-6 h-6" />
             </div>
             <div>
@@ -92,8 +92,8 @@ export const ContextualLimitModal: React.FC<ContextualLimitModalProps> = ({
             <div className="p-5 rounded-2xl bg-gradient-to-br from-gray-900 via-gray-950 to-black text-white border border-white/10 shadow-md space-y-3.5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-[#80FF00]" />
-                  <span className="font-extrabold text-xs text-[#80FF00] tracking-wide uppercase">
+                  <Sparkles className="w-4 h-4 text-[#013f2e]" />
+                  <span className="font-extrabold text-xs text-[#013f2e] tracking-wide uppercase">
                     Recommended
                   </span>
                 </div>
@@ -111,15 +111,15 @@ export const ContextualLimitModal: React.FC<ContextualLimitModalProps> = ({
 
               <div className="space-y-1.5 text-[11px] text-gray-300 pt-1">
                 <div className="flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-[#80FF00]" />
+                  <CheckCircle2 className="w-3.5 h-3.5 text-[#013f2e]" />
                   <span>50 automated applications every day (1,500/mo)</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-[#80FF00]" />
+                  <CheckCircle2 className="w-3.5 h-3.5 text-[#013f2e]" />
                   <span>Unlimited manual job applications & tracking</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-[#80FF00]" />
+                  <CheckCircle2 className="w-3.5 h-3.5 text-[#013f2e]" />
                   <span>Instant AI Resume tailoring & cover letters</span>
                 </div>
               </div>
@@ -127,7 +127,7 @@ export const ContextualLimitModal: React.FC<ContextualLimitModalProps> = ({
               <Link
                 href="/dashboard/billing"
                 onClick={onClose}
-                className="w-full py-2.5 rounded-xl text-xs font-black bg-[#80FF00] hover:brightness-95 text-black shadow-md transition-all flex items-center justify-center gap-1.5 mt-2"
+                className="w-full py-2.5 rounded-xl text-xs font-black bg-[#013f2e] hover:brightness-95 text-black shadow-md transition-all flex items-center justify-center gap-1.5 mt-2"
               >
                 <span>Upgrade to Focused</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -140,7 +140,7 @@ export const ContextualLimitModal: React.FC<ContextualLimitModalProps> = ({
             <div className="space-y-2">
               <div className="p-3.5 rounded-2xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/50 dark:border-emerald-900/30 text-xs text-emerald-800 dark:text-emerald-300 space-y-1">
                 <div className="font-bold flex items-center gap-1.5">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-[#80FF00]" />
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-[#013f2e]" />
                   <span>Manual actions are never blocked</span>
                 </div>
                 <p className="text-[11px] text-gray-600 dark:text-gray-400">
@@ -155,7 +155,7 @@ export const ContextualLimitModal: React.FC<ContextualLimitModalProps> = ({
                     onClose();
                     onManualApplyFallback();
                   }}
-                  className="w-full py-2.5 rounded-xl text-xs font-bold bg-gray-900 hover:bg-black dark:bg-[#80FF00] text-white dark:text-black transition-all flex items-center justify-center gap-1.5"
+                  className="w-full py-2.5 rounded-xl text-xs font-bold bg-gray-900 hover:bg-black dark:bg-[#013f2e] text-white dark:text-black transition-all flex items-center justify-center gap-1.5"
                 >
                   Apply Manually Instead
                   <ChevronRight className="w-3.5 h-3.5" />

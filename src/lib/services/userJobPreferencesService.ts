@@ -147,11 +147,17 @@ export class UserJobPreferencesService {
 
       await user.save();
 
-      // Sync to legacy job_preferences collection (used by matching engine)
-      await UserJobPreferencesService.syncToLegacyJobPreferences(userId, merged).catch(() => {});
+      // Sync to legacy stores (unless disabled by feature flag)
+      const { isFeatureFlagEnabled } = await import('@/lib/feature-flags');
+      const legacyWritesDisabled = isFeatureFlagEnabled('disable_legacy_job_search_writes');
 
-      // Sync to UserQuota.autoApplySettings (used by auto-apply processor)
-      await UserJobPreferencesService.syncToUserQuotaSettings(userId, merged).catch(() => {});
+      if (!legacyWritesDisabled) {
+        // Sync to legacy job_preferences collection (used by matching engine)
+        await UserJobPreferencesService.syncToLegacyJobPreferences(userId, merged).catch(() => {});
+
+        // Sync to UserQuota.autoApplySettings (used by auto-apply processor)
+        await UserJobPreferencesService.syncToUserQuotaSettings(userId, merged).catch(() => {});
+      }
 
       // Invalidate recommendation cache (non-blocking)
       UserJobPreferencesService.invalidateCache(userId).catch(() => {});

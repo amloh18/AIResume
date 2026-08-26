@@ -61,8 +61,8 @@ export default function AdminDashboardSelector({
         >
           {/* Header */}
           <div className="text-center mb-6">
-            <div className="w-16 h-16 rounded-none border-2 border-[#80FF00] flex items-center justify-center mx-auto mb-4">
-              <LayoutGrid className="w-8 h-8 text-[#80FF00]" />
+            <div className="w-16 h-16 rounded-none border-2 border-[#013f2e] flex items-center justify-center mx-auto mb-4">
+              <LayoutGrid className="w-8 h-8 text-[#013f2e]" />
             </div>
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
               Welcome, Admin
@@ -79,7 +79,7 @@ export default function AdminDashboardSelector({
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => handleSelect('admin')}
-              className="w-full p-4 rounded-none border-2 border-gray-200 dark:border-white/10 hover:border-[#80FF00] transition-all duration-200 text-left group"
+              className="w-full p-4 rounded-none border-2 border-gray-200 dark:border-white/10 hover:border-[#013f2e] transition-all duration-200 text-left group"
             >
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-none border-2 border-[#88E03F] flex items-center justify-center group-hover:bg-[#88E03F]/10 transition-colors">
@@ -101,7 +101,7 @@ export default function AdminDashboardSelector({
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => handleSelect('user')}
-              className="w-full p-4 rounded-none border-2 border-gray-200 dark:border-white/10 hover:border-[#80FF00] transition-all duration-200 text-left group"
+              className="w-full p-4 rounded-none border-2 border-gray-200 dark:border-white/10 hover:border-[#013f2e] transition-all duration-200 text-left group"
             >
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-none border-2 border-[#88E03F] flex items-center justify-center group-hover:bg-[#88E03F]/10 transition-colors">

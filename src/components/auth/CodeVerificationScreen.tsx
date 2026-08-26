@@ -212,7 +212,7 @@ export default function CodeVerificationScreen({
       
       {/* Email Display */}
       {email && (
-        <p className="text-[#80FF00] text-body mb-4 font-medium">
+        <p className="text-[#013f2e] text-body mb-4 font-medium">
           {email}
         </p>
       )}

@@ -109,7 +109,7 @@ export default function FeaturePromotionCard({ promotion, onDismiss }: FeaturePr
           {/* Auto-dismiss progress line */}
           <div className="absolute top-0 left-0 right-0 h-0.5 bg-gray-100 dark:bg-white/5 z-20">
             <motion.div
-              className="h-full bg-[#80FF00]"
+              className="h-full bg-[#013f2e]"
               initial={{ width: '100%' }}
               animate={{ width: `${progress}%` }}
               transition={{ ease: 'linear', duration: 0.05 }}
@@ -176,7 +176,7 @@ export default function FeaturePromotionCard({ promotion, onDismiss }: FeaturePr
               </button>
               <button
                 onClick={handleCTAClick}
-                className="flex-1 px-3 py-2 rounded-lg bg-[#80FF00] text-slate-950 dashboard-promo-small font-semibold hover:brightness-95 transition-all"
+                className="flex-1 px-3 py-2 rounded-lg bg-[#013f2e] text-slate-950 dashboard-promo-small font-semibold hover:brightness-95 transition-all"
               >
                 {promotion.ctaText}
               </button>

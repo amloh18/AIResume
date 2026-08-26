@@ -1162,7 +1162,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
                         className={`w-full px-3 py-2 bg-white dark:bg-[#232f1c] border ${fieldErrors.jobTitle
                           ? 'border-red-500 dark:border-red-500'
                           : 'border-gray-300 dark:border-white/20'
-                          } text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-small focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md`}
+                          } text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-small focus:border-lime-500 dark:focus:border-[#013f2e]/50 focus:outline-none rounded-md`}
                         placeholder="Enter job title"
                         maxLength={100}
                       />
@@ -1191,7 +1191,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
                           className={`w-full px-3 py-2 bg-white dark:bg-[#232f1c] border ${fieldErrors.company
                             ? 'border-red-500 dark:border-red-500'
                             : 'border-gray-300 dark:border-white/20'
-                            } text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-small focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md`}
+                            } text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-small focus:border-lime-500 dark:focus:border-[#013f2e]/50 focus:outline-none rounded-md`}
                           placeholder="Enter company name"
                           maxLength={100}
                         />
@@ -1207,7 +1207,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
                             type="text"
                             value={formData.location || ''}
                             onChange={(e) => handleFormChange('location', e.target.value)}
-                            className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-small focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md"
+                            className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-small focus:border-lime-500 dark:focus:border-[#013f2e]/50 focus:outline-none rounded-md"
                             placeholder="Enter location"
                           />
                           {locationFlag && (
@@ -1237,7 +1237,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
                         className={`w-full px-3 py-2 bg-white dark:bg-[#232f1c] border ${fieldErrors.jobUrl
                           ? 'border-red-500 dark:border-red-500'
                           : 'border-gray-300 dark:border-white/20'
-                          } text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-small focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md`}
+                          } text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-small focus:border-lime-500 dark:focus:border-[#013f2e]/50 focus:outline-none rounded-md`}
                         placeholder="https://company.com/job-posting"
                       />
                       {fieldErrors.jobUrl && (
@@ -1260,7 +1260,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
                               type="button"
                               onClick={() => handleFormChange('deadline', dateStr)}
                               className={`px-3 py-1.5 text-small font-medium rounded-lg transition-all ${isSelected
-                                ? 'bg-lime-500 dark:bg-[#80FF00] text-white dark:text-black'
+                                ? 'bg-lime-500 dark:bg-[#013f2e] text-white dark:text-black'
                                 : 'bg-gray-100 dark:bg-[#232f1c] text-gray-700 dark:text-white/70 hover:bg-gray-200 dark:hover:bg-white/10 border border-gray-300 dark:border-white/20'
                                 }`}
                               whileHover={{ scale: 1.05 }}
@@ -1293,7 +1293,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
                                 key={priority}
                                 onClick={() => handleFormChange('priority', priority)}
                                 className={`px-3 py-2 text-small font-medium transition-all ${formData.priority === priority
-                                  ? 'bg-lime-500 dark:bg-[#80FF00] text-white dark:text-black rounded-lg'
+                                  ? 'bg-lime-500 dark:bg-[#013f2e] text-white dark:text-black rounded-lg'
                                   : 'text-gray-700 dark:text-white/70 hover:text-gray-900 dark:hover:text-white rounded-lg'
                                   }`}
                               >
@@ -1354,7 +1354,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
                             type="number"
                             value={formData.salary?.min || ''}
                             onChange={(e) => handleFormChange('salary', { ...formData.salary, min: e.target.value ? parseInt(e.target.value) : undefined })}
-                            className="w-full pl-8 pr-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-small focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md"
+                            className="w-full pl-8 pr-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-small focus:border-lime-500 dark:focus:border-[#013f2e]/50 focus:outline-none rounded-md"
                             placeholder="e.g. 80000"
                           />
                         </div>
@@ -1370,7 +1370,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
                             type="number"
                             value={formData.salary?.max || ''}
                             onChange={(e) => handleFormChange('salary', { ...formData.salary, max: e.target.value ? parseInt(e.target.value) : undefined })}
-                            className="w-full pl-8 pr-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-small focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md"
+                            className="w-full pl-8 pr-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-small focus:border-lime-500 dark:focus:border-[#013f2e]/50 focus:outline-none rounded-md"
                             placeholder="e.g. 120000"
                           />
                         </div>
@@ -1392,7 +1392,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
                       rows={10}
                       value={formData.jobDescription || ''}
                       onChange={(e) => handleFormChange('jobDescription', e.target.value)}
-                      className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-small focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md resize-none"
+                      className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-small focus:border-lime-500 dark:focus:border-[#013f2e]/50 focus:outline-none rounded-md resize-none"
                       placeholder="Paste the job description here..."
                       maxLength={10000}
                     />
@@ -1414,7 +1414,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
                               key={sponsorship}
                               onClick={() => handleFormChange('sponsorship', sponsorship)}
                               className={`flex-1 px-3 py-2 text-small font-medium transition-all ${formData.sponsorship === sponsorship
-                                ? 'bg-lime-500 dark:bg-[#80FF00] text-white dark:text-black rounded-xl'
+                                ? 'bg-lime-500 dark:bg-[#013f2e] text-white dark:text-black rounded-xl'
                                 : 'text-gray-700 dark:text-white/70 hover:text-gray-900 dark:hover:text-white rounded-lg'
                                 }`}
                             >
@@ -1430,7 +1430,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
                           type="text"
                           value={formData.tags?.join(', ') || ''}
                           onChange={(e) => handleFormChange('tags', e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0))}
-                          className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-small focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-lg"
+                          className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-small focus:border-lime-500 dark:focus:border-[#013f2e]/50 focus:outline-none rounded-lg"
                           placeholder="Remote, Full-time, FinTech"
                         />
                         <div className="text-gray-500 dark:text-white/50 text-small mt-1">Separate tags with commas</div>
@@ -1447,7 +1447,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
                               type="text"
                               value={formData.contactDetails?.name || ''}
                               onChange={(e) => handleFormChange('contactDetails', { ...formData.contactDetails, name: e.target.value })}
-                              className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-small focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md"
+                              className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-small focus:border-lime-500 dark:focus:border-[#013f2e]/50 focus:outline-none rounded-md"
                               placeholder="HR Manager"
                             />
                           </div>
@@ -1457,7 +1457,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
                               type="text"
                               value={formData.contactDetails?.role || ''}
                               onChange={(e) => handleFormChange('contactDetails', { ...formData.contactDetails, role: e.target.value })}
-                              className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-small focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md"
+                              className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-small focus:border-lime-500 dark:focus:border-[#013f2e]/50 focus:outline-none rounded-md"
                               placeholder="HR Manager"
                             />
                           </div>
@@ -1469,7 +1469,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
                               type="email"
                               value={formData.contactDetails?.email || ''}
                               onChange={(e) => handleFormChange('contactDetails', { ...formData.contactDetails, email: e.target.value })}
-                              className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-small focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md"
+                              className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-small focus:border-lime-500 dark:focus:border-[#013f2e]/50 focus:outline-none rounded-md"
                               placeholder="hr@company.com"
                             />
                           </div>
@@ -1479,7 +1479,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
                               type="tel"
                               value={formData.contactDetails?.phone || ''}
                               onChange={(e) => handleFormChange('contactDetails', { ...formData.contactDetails, phone: e.target.value })}
-                              className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-small focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md"
+                              className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-small focus:border-lime-500 dark:focus:border-[#013f2e]/50 focus:outline-none rounded-md"
                               placeholder="+1 (555) 123-4567"
                             />
                           </div>
@@ -1502,7 +1502,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
                       rows={6}
                       value={formData.notes || ''}
                       onChange={(e) => handleFormChange('notes', e.target.value)}
-                      className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-small focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md resize-none"
+                      className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-small focus:border-lime-500 dark:focus:border-[#013f2e]/50 focus:outline-none rounded-md resize-none"
                       placeholder="Add any personal notes here..."
                       maxLength={500}
                     />
