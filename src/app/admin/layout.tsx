@@ -4,6 +4,8 @@ import { ADMIN_THEME } from '@/lib/config/adminTheme';
 import { getAuthenticatedUser } from '@/lib/auth-helpers';
 import AdminLayoutClient from '@/components/admin/AdminLayoutClient';
 
+export const dynamic = 'force-dynamic';
+
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   // Check if user is authenticated and is an admin
   const authResult = await getAuthenticatedUser();

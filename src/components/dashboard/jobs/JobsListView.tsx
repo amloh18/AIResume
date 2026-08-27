@@ -5,6 +5,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import {
   CheckCircle,
+  CheckCircle2,
   XCircle,
   MapPin,
   Clock,
@@ -13,10 +14,12 @@ import {
   Briefcase,
   Eye,
   Pencil,
-  Trash2
+  Trash2,
+  Loader2
 } from 'lucide-react';
 import CompanyLogo from '@/components/ui/CompanyLogo';
 import { CVJourney } from '@/types/cv';
+import { useJobLiveStatusStore } from '@/lib/stores/jobLiveStatusStore';
 
 interface JobApplication {
   id: string;
@@ -442,7 +445,23 @@ const JobsListView: React.FC<JobsListViewProps> = ({
 
                     {/* Status */}
                     <td className="py-3.5 px-4">
-                      {getStatusBadge(job.status)}
+                      {(() => {
+                        const liveStatus = useJobLiveStatusStore.getState().statuses[jobId];
+                        if (liveStatus) {
+                          const isSuccess = liveStatus.step === 'submitted' || liveStatus.success;
+                          return (
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border ${
+                              isSuccess
+                                ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 animate-pulse'
+                                : 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30 animate-pulse'
+                            }`}>
+                              {isSuccess ? <CheckCircle2 className="w-3 h-3 text-emerald-500" /> : <Loader2 className="w-3 h-3 animate-spin text-blue-500" />}
+                              <span>{liveStatus.title}</span>
+                            </span>
+                          );
+                        }
+                        return getStatusBadge(job.status);
+                      })()}
                     </td>
 
                     {/* Actions */}

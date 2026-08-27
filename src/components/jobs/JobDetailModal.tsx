@@ -26,6 +26,8 @@ import { authenticatedFetch, authenticatedFetchWithUserId } from '@/lib/utils/ap
 import { MatchScoreBadge } from './MatchScoreBadge';
 import { MatchBreakdownBars } from './MatchBreakdownBars';
 import { renderRichText, timeAgo } from '@/lib/utils/format-utils';
+import { useJobLiveStatusStore } from '@/lib/stores/jobLiveStatusStore';
+import { JobLiveStatusCard } from '@/components/jobs/JobLiveStatusCard';
 
 export interface JobDetailModalProps {
   job: JobListing | null;
@@ -300,6 +302,21 @@ export function JobDetailModal({
 
             {/* Body */}
             <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5 space-y-6">
+              {/* Live Status Card if active for this job */}
+              {(() => {
+                const targetId = String(job._id || job.id || '');
+                const liveStatus = targetId ? useJobLiveStatusStore.getState().statuses[targetId] : undefined;
+                if (!liveStatus) return null;
+                return (
+                  <div className="rounded-2xl overflow-hidden shadow-sm">
+                    <JobLiveStatusCard
+                      status={liveStatus}
+                      onClose={() => useJobLiveStatusStore.getState().clearStatus(targetId)}
+                    />
+                  </div>
+                );
+              })()}
+
               {/* Match breakdown */}
               <section>
                 <h4 className="flex items-center gap-2 text-small font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">

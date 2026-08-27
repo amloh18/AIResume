@@ -247,98 +247,83 @@ const CoverLetterPreview: React.FC<CoverLetterPreviewProps> = ({
 
     const contactInfo = contactItems.filter(Boolean).join(' | ');
 
-    // Get dynamic margins or default to 40px
-    const paddingTop = layout.spacing?.margins?.top ? parseInt(layout.spacing.margins.top) : 40;
-    const paddingBottom = layout.spacing?.margins?.bottom ? parseInt(layout.spacing.margins.bottom) : 40;
-    const paddingLeft = layout.spacing?.margins?.left ? parseInt(layout.spacing.margins.left) : 40;
-    const paddingRight = layout.spacing?.margins?.right ? parseInt(layout.spacing.margins.right) : 40;
+    // Get dynamic margins or standard document page margins
+    const paddingTop = layout.spacing?.margins?.top ? parseInt(layout.spacing.margins.top) : 52;
+    const paddingBottom = layout.spacing?.margins?.bottom ? parseInt(layout.spacing.margins.bottom) : 52;
+    const paddingLeft = layout.spacing?.margins?.left ? parseInt(layout.spacing.margins.left) : 56;
+    const paddingRight = layout.spacing?.margins?.right ? parseInt(layout.spacing.margins.right) : 56;
 
     return (
       <div
         data-cl-document
-        className="cover-letter-document bg-white shadow-lg mx-auto origin-top"
+        className="cover-letter-document bg-white shadow-2xl mx-auto origin-top rounded-sm"
         style={{
           width: `${width}px`,
-          height: `${height}px`,
+          minHeight: `${height}px`,
           maxWidth: '100%',
-          aspectRatio: `${width}/${height}`,
-          transform: 'scale(1)', 
+          paddingTop: `${paddingTop}px`,
+          paddingBottom: `${paddingBottom}px`,
+          paddingLeft: `${paddingLeft}px`,
+          paddingRight: `${paddingRight}px`,
           boxSizing: 'border-box',
-          overflow: 'hidden',
           backgroundColor: 'white',
-          color: 'black'
+          color: '#111827',
+          fontFamily: layout.typography?.fontFamily || 'Inter, -apple-system, BlinkMacSystemFont, sans-serif'
         }}
       >
         <style dangerouslySetInnerHTML={{ __html: `
           .cl-container.${template.className} {
-            padding: 0 !important;
             max-width: 100% !important;
             margin: 0 !important;
             box-shadow: none !important;
-            height: 100% !important;
             min-height: 100% !important;
-          }
-          .cl-container .cl-header,
-          .cl-container .cl-body,
-          .cl-container .cl-signoff,
-          .cl-container .candidate-info,
-          .cl-container .recipient-info {
-            padding-left: 0 !important;
-            padding-right: 0 !important;
-            padding-top: 0 !important;
-            padding-bottom: 0 !important;
           }
         `}} />
         <div
-          className={`cl-container ${template.className} text-black`}
+          className={`cl-container ${template.className} text-gray-900`}
           style={{
-            height: '100%',
-            paddingTop: `${paddingTop}px`,
-            paddingBottom: `${paddingBottom}px`,
-            paddingLeft: `${paddingLeft}px`,
-            paddingRight: `${paddingRight}px`,
+            width: '100%',
             boxSizing: 'border-box',
             display: 'flex',
-            flexDirection: 'column'
+            flexDirection: 'column',
+            justifyContent: 'flex-start'
           }}
         >
-          <header className="cl-header" style={{ marginBottom: '20px' }}>
+          <header className="cl-header" style={{ marginBottom: '24px' }}>
             <div className="candidate-info">
-              <h1 className="candidate-name" style={{ color: 'black' }}>{senderName}</h1>
-              <p className="candidate-contact">{contactInfo}</p>
+              <h1 className="candidate-name" style={{ fontSize: '24px', fontWeight: 800, color: '#111827', letterSpacing: '-0.025em', marginBottom: '4px' }}>{senderName}</h1>
+              {contactInfo && <p className="candidate-contact" style={{ fontSize: '12px', color: '#4b5563', fontWeight: 500, lineHeight: 1.5 }}>{contactInfo}</p>}
             </div>
 
-            <hr className="header-divider" style={{ margin: '15px 0' }} />
+            <hr className="header-divider" style={{ margin: '18px 0', border: 'none', borderTop: '1px solid #e5e7eb' }} />
 
-            <div className="recipient-info">
-              <p className="to-label">To:</p>
-              <p className="recipient-name">{recipientName}</p>
-              <p className="company-name">{companyName}</p>
-              <p className="company-location">{jobData?.location || ''}</p>
-              <p className="cl-date">{headerDate}</p>
+            <div className="recipient-info" style={{ fontSize: '12px', lineHeight: 1.5, color: '#374151' }}>
+              <p className="to-label" style={{ fontSize: '11px', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px' }}>To:</p>
+              <p className="recipient-name" style={{ fontWeight: 700, color: '#111827' }}>{recipientName}</p>
+              <p className="company-name" style={{ fontWeight: 600, color: '#1f2937' }}>{companyName}</p>
+              {jobData?.location && <p className="company-location" style={{ color: '#4b5563' }}>{jobData.location}</p>}
+              <p className="cl-date" style={{ color: '#6b7280', marginTop: '4px' }}>{headerDate}</p>
             </div>
           </header>
 
-          <section className="cl-body" style={{ marginTop: '0px' }}>
-            {/* Greeting removed as per request */}
-
+          <section className="cl-body" style={{ marginTop: '4px', flex: '1 0 auto' }}>
             {bodyContent ? (
               bodyContent.split('\n\n').map((paragraph, index) => (
-                <div key={index} className={`cl-module ${index === 0 ? 'introduction' : 'bridge'}`} style={{ marginBottom: '12px' }}>
+                <div key={index} className={`cl-module ${index === 0 ? 'introduction' : 'bridge'}`} style={{ marginBottom: '16px', fontSize: '13px', lineHeight: 1.7, color: '#1f2937', textAlign: 'justify' }}>
                   {paragraph.trim().split('\n').map((line, lineIndex) => (
-                    <span key={lineIndex} dangerouslySetInnerHTML={{ __html: line }} style={{ display: 'block' }} />
+                    <span key={lineIndex} dangerouslySetInnerHTML={{ __html: line }} style={{ display: 'block', marginBottom: lineIndex < paragraph.trim().split('\n').length - 1 ? '4px' : '0px' }} />
                   ))}
                 </div>
               ))
             ) : (
-              <div style={{ color: '#666', fontStyle: 'italic', padding: '20px 0' }}>
+              <div style={{ color: '#6b7280', fontStyle: 'italic', padding: '20px 0', fontSize: '13px' }}>
                 No body content found. Start writing...
               </div>
             )}
 
-            <div className="cl-signoff" style={{ marginTop: '20px' }}>
+            <div className="cl-signoff" style={{ marginTop: '28px', fontSize: '13px', lineHeight: 1.6, color: '#1f2937' }}>
               <div style={{ marginBottom: '20px' }} dangerouslySetInnerHTML={{ __html: sincerelyText }} />
-              <div className="signature-name" dangerouslySetInnerHTML={{ __html: signatureName }} />
+              <div className="signature-name" style={{ fontWeight: 700, color: '#111827' }} dangerouslySetInnerHTML={{ __html: signatureName }} />
             </div>
           </section>
         </div>
@@ -350,21 +335,20 @@ const CoverLetterPreview: React.FC<CoverLetterPreviewProps> = ({
   return (
     <div
       data-cl-document
-      className="cover-letter-document bg-white mx-auto shadow-lg"
+      className="cover-letter-document bg-white mx-auto shadow-xl rounded-sm"
       style={{
         width: `${width}px`,
-        height: `${height}px`,
+        minHeight: `${height}px`,
         maxWidth: '100%',
-        aspectRatio: `${width} / ${height}`,
-        padding: `${margins.top}px ${margins.right}px ${margins.bottom}px ${margins.left}px`,
-        fontFamily: layout.typography.fontFamily,
-        color: layout.styling.primaryColor,
+        padding: `${margins.top + 10}px ${margins.right + 10}px ${margins.bottom + 10}px ${margins.left + 10}px`,
+        fontFamily: layout.typography?.fontFamily || 'Times New Roman, serif',
+        color: layout.styling?.primaryColor || '#111827',
         boxSizing: 'border-box',
         wordWrap: 'break-word',
         overflowWrap: 'break-word',
         display: 'flex',
         flexDirection: 'column',
-        overflow: 'hidden'
+        backgroundColor: 'white'
       }}
     >
       {/* Header - Styled similar to CV template headers */}

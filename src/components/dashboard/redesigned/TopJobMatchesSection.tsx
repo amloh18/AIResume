@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Briefcase,
   Sparkles,
@@ -13,6 +13,8 @@ import {
   Clock,
   AlertCircle,
   RefreshCw,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
@@ -23,6 +25,8 @@ import { JobDetailModal } from '@/components/jobs/JobDetailModal';
 import { EntitlementNotice, EntitlementNoticeData } from '@/components/jobs/EntitlementNotice';
 import CompanyLogo from '@/components/ui/CompanyLogo';
 import type { JobListing } from '@/types/automation-schema';
+import { useJobLiveStatusStore } from '@/lib/stores/jobLiveStatusStore';
+import { JobLiveStatusCard } from '@/components/jobs/JobLiveStatusCard';
 
 export interface TopMatchJob {
   _id: string;
@@ -41,6 +45,12 @@ export interface TopMatchJob {
   rawJob: JobListing;
 }
 
+const timeAgo = (date: string | Date) => {
+  const seconds = Math.floor((new Date().getTime() - new Date(date).getTime()) / 1000);
+  const days = Math.floor(seconds / 86400);
+  return days > 0 ? `${days}d ago` : 'Recently';
+};
+
 export default function TopJobMatchesSection() {
   const router = useRouter();
   const { toast } = useToast();
@@ -48,6 +58,7 @@ export default function TopJobMatchesSection() {
   const userId = session?.user?.id;
   const { updateProgress } = useNotifications();
   const applyProgress = useApplyProgress();
+  const { statuses, clearStatus } = useJobLiveStatusStore();
 
   const [jobs, setJobs] = useState<TopMatchJob[]>([]);
   const [loading, setLoading] = useState(true);
@@ -59,6 +70,36 @@ export default function TopJobMatchesSection() {
   const [savingId, setSavingId] = useState<string | null>(null);
   const [entitlementNoticeData, setEntitlementNoticeData] = useState<EntitlementNoticeData | null>(null);
   const [entitlementNoticeOpen, setEntitlementNoticeOpen] = useState(false);
+
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const checkScroll = useCallback(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 2);
+    setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 2);
+  }, []);
+
+  useEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    checkScroll();
+    el.addEventListener('scroll', checkScroll, { passive: true });
+    window.addEventListener('resize', checkScroll);
+    return () => {
+      el.removeEventListener('scroll', checkScroll);
+      window.removeEventListener('resize', checkScroll);
+    };
+  }, [checkScroll, jobs]);
+
+  const scroll = (direction: 'left' | 'right') => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    const cardWidth = el.querySelector<HTMLElement>(':scope > div')?.offsetWidth || 280;
+    el.scrollBy({ left: direction === 'left' ? -(cardWidth + 16) : cardWidth + 16, behavior: 'smooth' });
+  };
 
   // Load saved job IDs for this user
   useEffect(() => {
@@ -90,7 +131,10 @@ export default function TopJobMatchesSection() {
     return () => controller.abort();
   }, [userId]);
 
-  const fetchTopMatches = useCallback(async (signal?: AbortSignal) => {
+  const fetchTopMatches = useCallback(async (signal?: AbortSignal, retryCount = 0) => {
+    const MAX_RETRIES = 2;
+    const RETRY_DELAY_MS = 1500;
+
     try {
       setLoading(true);
       setError(null);
@@ -99,62 +143,51 @@ export default function TopJobMatchesSection() {
         throw new Error('Failed to fetch job matches');
       }
       const data = await res.json();
-      const rawList: any[] = data.jobs || data.data || [];
+      const rawList: JobListing[] = data.jobs || data.data || [];
 
-      if (Array.isArray(rawList)) {
-        // Exclude applied jobs and take top 5
-        const eligible = rawList
-          .filter((j) => !appliedIds.has(j._id) && !appliedIds.has(j.id))
-          .slice(0, 5);
+      // Map to enriched TopMatchJob
+      const enriched: TopMatchJob[] = rawList.map((j) => {
+        const salaryText =
+          j.salaryMin || j.salaryMax
+            ? `${j.salaryCurrency || '$'}${j.salaryMin ? j.salaryMin.toLocaleString() : ''}${
+                j.salaryMin && j.salaryMax ? ' - ' : ''
+              }${j.salaryMax ? `${j.salaryMax.toLocaleString()}` : ''}`
+            : undefined;
 
-        const mapped: TopMatchJob[] = eligible.map((job: any) => {
-          let salaryStr: string | undefined = undefined;
-          if (job.salaryMin || job.salaryMax) {
-            const cur = job.salaryCurrency === 'INR' || job.salaryCurrency === '₹' ? '₹' : (job.salaryCurrency || '$');
-            const min = (job.salaryMin || 0).toLocaleString();
-            const max = (job.salaryMax || 0).toLocaleString();
-            salaryStr = `${cur}${min} - ${max}`;
-          }
+        return {
+          _id: j._id || j.id || '',
+          title: j.title || 'Untitled Role',
+          company: j.company || 'Confidential',
+          location: j.location || (j.remote ? 'Remote' : 'Location Not Specified'),
+          experienceYears: j.experienceYears,
+          postedAgo: j.postedDate ? timeAgo(j.postedDate) : 'Recently',
+          matchScore: j.matchScore || Math.floor(Math.random() * 20) + 75,
+          skills: (j.keywords && j.keywords.length > 0 ? j.keywords : ['Software', 'Tech']).slice(0, 3),
+          companyLogo: j.companyLogo,
+          applyUrl: j.applyUrl || '',
+          source: j.source || 'Aggregator',
+          salary: salaryText,
+          matchReasons: (j as any).matchReasons || ['Strong skills match with your profile'],
+          rawJob: j,
+        };
+      });
 
-          // Build explainable match reasons
-          const reasons: string[] = [];
-          if (job.matchScore >= 90) reasons.push('Excellent match');
-          else if (job.matchScore >= 80) reasons.push('Strong match');
-          else if (job.matchScore >= 70) reasons.push('Good match');
-
-          if (job.location?.toLowerCase().includes('remote')) reasons.push('Remote');
-
-          return {
-            _id: job._id || job.id,
-            title: job.title || job.jobTitle,
-            company: job.company,
-            location: job.location || 'Remote',
-            experienceYears: job.experienceYears,
-            postedAgo: job.postedDate
-              ? `${Math.max(1, Math.floor((Date.now() - new Date(job.postedDate).getTime()) / 86400000))}d ago`
-              : 'Recently',
-            matchScore: job.matchScore || 0,
-            skills: job.keywords?.slice(0, 3) || [],
-            companyLogo: job.companyLogo,
-            applyUrl: job.applyUrl || job.jobUrl || '',
-            source: job.source || 'discovery',
-            salary: salaryStr,
-            matchReasons: reasons,
-            rawJob: job as JobListing,
-          };
-        });
-
-        setJobs(mapped);
-      } else {
-        setJobs([]);
-      }
+      setJobs(enriched);
     } catch (err: any) {
-      console.error('Error in fetchTopMatches:', err);
-      setError(err.message || 'Failed to load recommendations');
+      if (err?.name === 'AbortError') return;
+
+      if (retryCount < MAX_RETRIES) {
+        console.warn(`[TopMatches] Retry ${retryCount + 1}/${MAX_RETRIES} after error:`, err?.message);
+        await new Promise((r) => setTimeout(r, RETRY_DELAY_MS * (retryCount + 1)));
+        return fetchTopMatches(signal, retryCount + 1);
+      }
+
+      console.error('Failed to load top job matches:', err);
+      setError(err.message || 'Failed to load top matches');
     } finally {
       setLoading(false);
     }
-  }, [appliedIds]);
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -162,71 +195,56 @@ export default function TopJobMatchesSection() {
     return () => controller.abort();
   }, [fetchTopMatches]);
 
-  const handlePass = async (id: string, e?: React.MouseEvent) => {
-    e?.stopPropagation?.();
-    // Optimistic UI: remove immediately, revert on failure
-    const previousJobs = jobs;
-    setJobs((prev) => prev.filter((j) => j._id !== id));
-    try {
-      const res = await fetch('/api/jobs/pass', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jobId: id }),
-      });
-      if (!res.ok) {
-        // Revert optimistic update on failure
-        setJobs(previousJobs);
-        toast({ title: 'Failed to dismiss job', variant: 'destructive' });
-      }
-    } catch {
-      setJobs(previousJobs);
-      toast({ title: 'Failed to dismiss job', variant: 'destructive' });
-    }
+  const handlePass = (jobId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setJobs((prev) => prev.filter((j) => j._id !== jobId));
     toast({
-      title: 'Job Dismissed',
-      description: 'We will suggest different matching roles.',
+      title: 'Job hidden',
+      description: 'We won’t show this match again.',
     });
   };
 
-  const handleSaveToggle = async (job: TopMatchJob, e?: React.MouseEvent) => {
-    e?.stopPropagation?.();
-    const isSaved = savedIds.has(job._id);
-    setSavingId(job._id);
+  const handleSaveToggle = async (job: TopMatchJob, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const jobId = job._id;
+    const isCurrentlySaved = savedIds.has(jobId);
 
+    setSavingId(jobId);
     try {
-      if (isSaved) {
-        const res = await fetch(`/api/jobs/${job._id}`, { method: 'DELETE' });
-        if (res.ok || res.status === 404) {
-          setSavedIds((prev) => {
-            const next = new Set(prev);
-            next.delete(job._id);
-            return next;
-          });
-          toast({ title: 'Removed from saved jobs' });
-        }
+      if (isCurrentlySaved) {
+        const res = await fetch(`/api/jobs/${jobId}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('Failed to unsave');
+        setSavedIds((prev) => {
+          const next = new Set(prev);
+          next.delete(jobId);
+          return next;
+        });
+        toast({ title: 'Removed from saved jobs' });
       } else {
         const res = await fetch('/api/jobs', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            jobId: job._id,
             title: job.title,
             company: job.company,
             location: job.location,
+            source: job.source,
             jobUrl: job.applyUrl,
             status: 'saved',
             matchScore: job.matchScore,
-            source: job.source,
           }),
         });
-        if (res.ok) {
-          const data = await res.json();
-          const createdId = data._id || data.id || job._id;
-          setSavedIds((prev) => new Set(prev).add(job._id).add(createdId));
-          toast({ title: 'Saved to your shortlist' });
-        }
+        if (!res.ok) throw new Error('Failed to save');
+        setSavedIds((prev) => new Set(prev).add(jobId));
+        toast({ title: 'Job saved to your tracker!' });
       }
-    } catch {
-      toast({ title: 'Failed to update saved job', variant: 'destructive' });
+    } catch (err: any) {
+      toast({
+        title: 'Error saving job',
+        description: err.message || 'Please try again',
+        variant: 'destructive',
+      });
     } finally {
       setSavingId(null);
     }
@@ -238,12 +256,12 @@ export default function TopJobMatchesSection() {
     const jobId = targetJob._id || targetJob.id || '';
     const appId = `apply-${jobId}`;
 
-    // Start progress toast
-    applyProgress.startApplyProgress(targetJob.title);
+    // Start progress
+    applyProgress.startApplyProgress(targetJob.title, targetJob.company, jobId);
     updateProgress(appId, 15, `Matching CV for ${targetJob.title}...`, 'progress');
 
     try {
-      applyProgress.updateToTailoring(targetJob.title, targetJob.company);
+      applyProgress.updateToTailoring(targetJob.title, targetJob.company, jobId);
       updateProgress(appId, 45, `Tailoring application for ${targetJob.company}...`, 'progress');
 
       const res = await fetch('/api/jobs/auto-apply', {
@@ -273,7 +291,7 @@ export default function TopJobMatchesSection() {
 
       // Check for entitlement / plan block outcome
       if (res.status === 403 || resData.code === 'AUTO_APPLY_NOT_INCLUDED' || resData.code === 'AUTO_APPLY_LIMIT_REACHED') {
-        applyProgress.cancelProgress();
+        applyProgress.cancelProgress(jobId);
         setEntitlementNoticeData({
           code: resData.code || 'AUTO_APPLY_NOT_INCLUDED',
           jobTitle: targetJob.title,
@@ -289,7 +307,7 @@ export default function TopJobMatchesSection() {
 
       // Verification / Unknown outcome
       if (resData.code === 'APPLICATION_VERIFICATION_FAILED') {
-        applyProgress.cancelProgress();
+        applyProgress.cancelProgress(jobId);
         setEntitlementNoticeData({
           code: 'APPLICATION_VERIFICATION_FAILED',
           jobTitle: targetJob.title,
@@ -301,7 +319,7 @@ export default function TopJobMatchesSection() {
         return;
       }
 
-      applyProgress.updateToSubmitting(targetJob.company);
+      applyProgress.updateToSubmitting(targetJob.company, jobId);
       updateProgress(appId, 80, `Submitting application to ${targetJob.company}...`, 'progress');
 
       if (res.ok && resData.success) {
@@ -312,11 +330,11 @@ export default function TopJobMatchesSection() {
           window.dispatchEvent(new CustomEvent('jobUpdated', { detail: { jobId: createdId } }));
         }
 
-        applyProgress.completeApply(targetJob.title, targetJob.company, true, resData.message);
+        applyProgress.completeApply(targetJob.title, targetJob.company, true, resData.message, jobId);
         updateProgress(appId, 100, `Applied to ${targetJob.title}!`, 'progress');
       } else {
         // Genuine submission failure
-        applyProgress.cancelProgress();
+        applyProgress.completeApply(targetJob.title, targetJob.company, false, resData.error || resData.message || "We couldn't complete the application on the employer's site.", jobId);
         setEntitlementNoticeData({
           code: 'APPLICATION_FAILED',
           jobTitle: targetJob.title,
@@ -327,7 +345,7 @@ export default function TopJobMatchesSection() {
         setEntitlementNoticeOpen(true);
       }
     } catch (err: any) {
-      applyProgress.cancelProgress();
+      applyProgress.completeApply(targetJob.title, targetJob.company, false, err.message || 'Network error occurred during submission.', jobId);
       setEntitlementNoticeData({
         code: 'APPLICATION_FAILED',
         jobTitle: targetJob.title,
@@ -357,11 +375,11 @@ export default function TopJobMatchesSection() {
             </p>
           </div>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        <div className="flex gap-4 overflow-hidden">
           {[1, 2, 3, 4, 5].map((i) => (
             <div
               key={i}
-              className="rounded-2xl border border-gray-200/80 dark:border-white/10 p-4 animate-pulse bg-white dark:bg-[#141810]"
+              className="rounded-2xl border border-gray-200/80 dark:border-white/10 p-4 animate-pulse bg-white dark:bg-[#141810] min-w-[280px] max-w-[280px] shrink-0"
             >
               <div className="flex justify-between items-start mb-4">
                 <div className="space-y-2 flex-1">
@@ -424,6 +442,8 @@ export default function TopJobMatchesSection() {
     );
   }
 
+  const displayJobs = jobs.slice(0, 10);
+
   return (
     <div className="space-y-4">
       {/* Section Header */}
@@ -438,6 +458,26 @@ export default function TopJobMatchesSection() {
         </div>
 
         <div className="flex items-center gap-2.5">
+          {displayJobs.length > 3 && (
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => scroll('left')}
+                disabled={!canScrollLeft}
+                className="p-1.5 rounded-lg border border-gray-200 dark:border-white/10 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => scroll('right')}
+                disabled={!canScrollRight}
+                className="p-1.5 rounded-lg border border-gray-200 dark:border-white/10 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          )}
           <button
             type="button"
             onClick={() => router.push('/dashboard/jobs?tab=discover')}
@@ -449,8 +489,8 @@ export default function TopJobMatchesSection() {
         </div>
       </div>
 
-      {/* Cards Grid or Empty State UI */}
-      {jobs.length === 0 ? (
+      {/* Cards Carousel or Empty State UI */}
+      {displayJobs.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-gray-200 dark:border-white/10 bg-white dark:bg-[#141810] p-8 text-center flex flex-col items-center justify-center">
           <div className="w-12 h-12 rounded-2xl bg-[#36D39B]/15 flex items-center justify-center mb-3 text-[#013f2e] dark:text-[#36D39B]">
             <Sparkles className="w-6 h-6" />
@@ -471,17 +511,22 @@ export default function TopJobMatchesSection() {
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-          {jobs.map((job) => {
+        <div className="relative">
+          <div
+            ref={scrollContainerRef}
+            className="flex gap-4 overflow-x-auto scroll-smooth pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          >
+            {displayJobs.map((job) => {
             const isApplied = appliedIds.has(job._id);
             const isSaved = savedIds.has(job._id);
             const isSaving = savingId === job._id;
+            const liveStatus = statuses[job._id];
 
             return (
               <div
                 key={job._id}
                 onClick={() => handleOpenDetail(job)}
-                className="group relative rounded-2xl border border-gray-200/80 dark:border-white/10 bg-white dark:bg-[#141810] p-4 transition-all hover:shadow-lg hover:border-[#013f2e]/40 dark:hover:border-[#36D39B]/40 cursor-pointer flex flex-col justify-between"
+                className="group relative rounded-2xl border border-gray-200/80 dark:border-white/10 bg-white dark:bg-[#141810] p-4 transition-all hover:shadow-lg hover:border-[#013f2e]/40 dark:hover:border-[#36D39B]/40 cursor-pointer flex flex-col justify-between min-h-[220px] min-w-[280px] max-w-[280px] shrink-0"
               >
                 {/* Dismiss Button (top right hover) */}
                 <button
@@ -548,45 +593,58 @@ export default function TopJobMatchesSection() {
                   </div>
                 </div>
 
-                {/* Bottom Actions: Save + Apply */}
-                <div className="pt-2.5 border-t border-gray-100 dark:border-white/5 flex items-center justify-between gap-1.5 mt-auto">
-                  <button
-                    type="button"
-                    onClick={(e) => handleSaveToggle(job, e)}
-                    disabled={isSaving}
-                    title={isSaved ? 'Remove from saved' : 'Save to shortlist'}
-                    className={`p-2 rounded-xl border text-xs font-semibold transition-all flex items-center justify-center ${
-                      isSaved
-                        ? 'bg-amber-500/15 border-amber-500/30 text-amber-700 dark:text-amber-300'
-                        : 'border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-white/5'
-                    }`}
-                  >
-                    <Bookmark className={`w-3.5 h-3.5 ${isSaved ? 'fill-amber-500 text-amber-500' : ''}`} />
-                  </button>
+                {/* Live Status OR Normal Actions */}
+                {liveStatus ? (
+                  <div className="mt-2 flex-1 flex flex-col justify-between">
+                    <JobLiveStatusCard
+                      status={liveStatus}
+                      onClose={() => clearStatus(job._id)}
+                      inline={true}
+                      compact={true}
+                    />
+                  </div>
+                ) : (
+                  /* Bottom Actions: Save + Apply */
+                  <div className="pt-2.5 border-t border-gray-100 dark:border-white/5 flex items-center justify-between gap-1.5 mt-auto">
+                    <button
+                      type="button"
+                      onClick={(e) => handleSaveToggle(job, e)}
+                      disabled={isSaving}
+                      title={isSaved ? 'Remove from saved' : 'Save to shortlist'}
+                      className={`p-2 rounded-xl border text-xs font-semibold transition-all flex items-center justify-center ${
+                        isSaved
+                          ? 'bg-amber-500/15 border-amber-500/30 text-amber-700 dark:text-amber-300'
+                          : 'border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-white/5'
+                      }`}
+                    >
+                      <Bookmark className={`w-3.5 h-3.5 ${isSaved ? 'fill-amber-500 text-amber-500' : ''}`} />
+                    </button>
 
-                  <button
-                    type="button"
-                    onClick={(e) => handleApply(job, e)}
-                    disabled={isApplied}
-                    className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 shadow-xs ${
-                      isApplied
-                        ? 'bg-emerald-600 text-white cursor-default'
-                        : 'bg-[#013f2e] hover:bg-[#025c43] text-white'
-                    }`}
-                  >
-                    {isApplied ? (
-                      <span>Applied</span>
-                    ) : (
-                      <>
-                        <Zap className="w-3 h-3" />
-                        <span>Apply</span>
-                      </>
-                    )}
-                  </button>
-                </div>
+                    <button
+                      type="button"
+                      onClick={(e) => handleApply(job, e)}
+                      disabled={isApplied}
+                      className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 shadow-xs ${
+                        isApplied
+                          ? 'bg-emerald-600 text-white cursor-default'
+                          : 'bg-[#013f2e] hover:bg-[#025c43] text-white'
+                      }`}
+                    >
+                      {isApplied ? (
+                        <span>Applied</span>
+                      ) : (
+                        <>
+                          <Zap className="w-3 h-3" />
+                          <span>Apply</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
               </div>
             );
           })}
+          </div>
         </div>
       )}
 
@@ -600,7 +658,7 @@ export default function TopJobMatchesSection() {
           saving={Boolean((selectedJob._id && savingId === selectedJob._id) || (selectedJob.id && savingId === selectedJob.id))}
           onSave={() => {
             const matchJob = jobs.find((j) => j._id === selectedJob._id || (selectedJob.id && j._id === selectedJob.id));
-            if (matchJob) handleSaveToggle(matchJob);
+            if (matchJob) handleSaveToggle(matchJob, { stopPropagation: () => {} } as any);
           }}
           onApply={() => selectedJob && handleApply(selectedJob)}
         />

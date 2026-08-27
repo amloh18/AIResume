@@ -26,7 +26,6 @@ const IngestionLockSchema = new mongoose.Schema(
 
 // TTL index: MongoDB automatically deletes documents when expiresAt passes
 IngestionLockSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
-IngestionLockSchema.index({ segmentKey: 1 });
 
 let _LockModel: mongoose.Model<any> | null = null;
 

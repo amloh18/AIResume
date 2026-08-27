@@ -205,22 +205,18 @@ export async function POST(request: NextRequest) {
     const coverLetter = new CoverLetter({
       userId,
       title,
-      content: ' ', // Single space to satisfy "required" validation if strict
+      content: content || bodyContent || ' ',
       header: header || undefined,
-      body: bodyContent || undefined,
+      body: bodyContent || content || undefined,
       footer: footer || undefined,
       status: status || 'draft',
       jobId,
       cvId,
-      journeyId: journeyId || undefined, // Store journeyId if provided
+      journeyId: journeyId || undefined,
       metadata: coverLetterMetadata
     });
 
     await coverLetter.save();
-
-    // Note: Cover Letter-to-Journey linking is now handled by ApplicationPackageService
-    // Cover letters are created as freestanding documents and linked to journeys separately
-    // This enforces the "Application Package" model where documents belong to specific packages
 
     return NextResponse.json({
       success: true,
@@ -232,7 +228,7 @@ export async function POST(request: NextRequest) {
         jobId: coverLetter.jobId,
         cvId: coverLetter.cvId,
         userId: coverLetter.userId,
-        lastModified: coverLetter.metadata.lastModified,
+        lastModified: coverLetter.metadata?.lastModified || coverLetter.updatedAt || new Date(),
         createdAt: coverLetter.createdAt,
         updatedAt: coverLetter.updatedAt,
         metadata: coverLetter.metadata

@@ -132,7 +132,10 @@ export async function getAuthenticatedUser(request?: NextRequest): Promise<AuthR
     console.log('❌ Auth - No valid authentication found');
     return null;
 
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.digest === 'DYNAMIC_SERVER_USAGE' || error?.message?.includes('Dynamic server usage')) {
+      throw error;
+    }
     console.error('❌ Auth - Error during authentication:', error);
     if (error instanceof Error) {
       console.error('❌ Auth - Error message:', error.message);
