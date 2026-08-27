@@ -40,6 +40,8 @@ import {
   type TrackerSidebarActionPayload,
   type TrackerSidebarOpenContext,
 } from './trackerSidebarConfig';
+import { useJobLiveStatusStore } from '@/lib/stores/jobLiveStatusStore';
+import { JobLiveStatusCard } from '@/components/jobs/JobLiveStatusCard';
 
 interface JobApplication {
   id: string;
@@ -1862,6 +1864,20 @@ ${userName}`
           {/* Scrollable Content */}
           <div className="flex-1 overflow-y-auto min-h-0">
             <div className="space-y-6 px-6 py-5 pb-8">
+              {/* Live Status Card if active for this job */}
+              {(() => {
+                const liveStatus = useJobLiveStatusStore.getState().statuses[jobId];
+                if (!liveStatus) return null;
+                return (
+                  <div className="rounded-2xl overflow-hidden shadow-sm">
+                    <JobLiveStatusCard
+                      status={liveStatus}
+                      onClose={() => useJobLiveStatusStore.getState().clearStatus(jobId)}
+                    />
+                  </div>
+                );
+              })()}
+
               <section className="space-y-4">
                 {terminalStageLabel && (
                   <div className="flex items-center justify-end">

@@ -4,6 +4,8 @@ import React from 'react';
 import type { JobListing } from '@/types/automation-schema';
 import CompanyLogo from '@/components/ui/CompanyLogo';
 import { timeAgo } from '@/lib/utils/format-utils';
+import { useJobLiveStatusStore } from '@/lib/stores/jobLiveStatusStore';
+import { JobLiveStatusCard } from '@/components/jobs/JobLiveStatusCard';
 import {
   MapPin,
   CheckCircle2,
@@ -66,6 +68,10 @@ export function JobCard({
   onApply,
   onPass,
 }: JobCardProps) {
+  const jobId = String(job._id || job.id || '');
+  const liveStatus = useJobLiveStatusStore((state) => (jobId ? state.statuses[jobId] : undefined));
+  const { clearStatus } = useJobLiveStatusStore();
+
   const skills = extractSkills(job);
   const expYears = extractExperience(job);
   const score = job.matchScore || 0;
@@ -111,7 +117,7 @@ export function JobCard({
   return (
     <div
       onClick={onOpen}
-      className="group relative flex flex-col justify-between rounded-2xl border border-gray-200 dark:border-white/10 p-5 cursor-pointer transition-all duration-200 bg-white dark:bg-[#141810] hover:border-lime-500/40 hover:shadow-xl hover:scale-[1.01]"
+      className="group relative flex flex-col justify-between rounded-2xl border border-gray-200 dark:border-white/10 p-5 cursor-pointer transition-all duration-200 bg-white dark:bg-[#141810] hover:border-lime-500/40 hover:shadow-xl hover:scale-[1.01] min-h-[300px]"
     >
       {/* Optional subtle pass/dismiss button */}
       {onPass && (
@@ -151,7 +157,7 @@ export function JobCard({
           )}
         </div>
 
-        {/* Job Title */}
+        {/* Job Title & Location */}
         <div className="space-y-2">
           <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white leading-snug line-clamp-2 group-hover:text-lime-600 dark:group-hover:text-[#013f2e] transition-colors">
             {job.title}
@@ -172,96 +178,109 @@ export function JobCard({
               </div>
             )}
           </div>
-
-          {/* Skills tags */}
-          <div className="flex flex-wrap gap-1.5 pt-1">
-            {skills.map((skill, idx) => (
-              <span
-                key={idx}
-                className="px-2.5 py-0.5 rounded-lg text-[11px] font-medium bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300"
-              >
-                {skill}
-              </span>
-            ))}
-          </div>
-
-          {/* Freshness timestamp */}
-          <div className="text-[11px] text-gray-500 dark:text-gray-500 pt-0.5">
-            Posted {timeAgo(job.postedDate)}
-          </div>
         </div>
 
-        {/* Bottom Section: Readiness & Action Journey */}
-        <div className="mt-auto pt-3 border-t border-gray-100 dark:border-white/5 space-y-2.5">
-          {/* Status info */}
-          <div className="flex items-center justify-between text-xs">
-            {isSaved ? (
-              <span className="inline-flex items-center gap-1.5 font-bold text-lime-600 dark:text-[#013f2e]">
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                Saved in Staging
-              </span>
-            ) : isAutoApplyCapable ? (
-              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
-                <Check className="w-3 h-3" />
-                Auto-Apply available
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1 text-[11px] text-gray-500 dark:text-gray-400">
-                <Sparkles className="w-3 h-3 text-lime-500" />
-                Tailored CV supported
-              </span>
-            )}
+        {/* Live Status OR Normal Skills/Actions */}
+        {liveStatus ? (
+          <div className="mt-1 flex-1 flex flex-col justify-between">
+            <JobLiveStatusCard
+              status={liveStatus}
+              onClose={() => clearStatus(jobId)}
+              inline={true}
+            />
           </div>
-
-          {/* Primary Action Buttons */}
-          <div className="grid grid-cols-2 gap-2">
-            {isSaved ? (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onApply();
-                }}
-                className="col-span-2 px-4 py-2.5 rounded-xl bg-lime-500 hover:bg-lime-600 dark:bg-[#013f2e] dark:hover:brightness-95 text-white text-xs font-bold transition-all shadow-sm flex justify-center items-center gap-1.5"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Prepare Application</span>
-              </button>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onSave();
-                  }}
-                  disabled={saving}
-                  className="px-3.5 py-2 rounded-xl border border-gray-200 dark:border-white/10 hover:border-lime-500 dark:hover:border-lime-500 text-gray-800 dark:text-gray-200 text-xs font-bold transition-all flex items-center justify-center gap-1.5 bg-white dark:bg-white/5 hover:bg-gray-50 dark:hover:bg-white/10 shadow-xs"
+        ) : (
+          <>
+            {/* Skills tags */}
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              {skills.map((skill, idx) => (
+                <span
+                  key={idx}
+                  className="px-2.5 py-0.5 rounded-lg text-[11px] font-medium bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300"
                 >
-                  {saving ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin text-lime-500" />
-                  ) : (
-                    <>
-                      <Bookmark className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />
-                      <span>Save</span>
-                    </>
-                  )}
-                </button>
+                  {skill}
+                </span>
+              ))}
+            </div>
 
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onApply();
-                  }}
-                  className="px-3.5 py-2 rounded-xl bg-gray-900 hover:bg-black dark:bg-[#013f2e] dark:hover:brightness-95 text-white text-xs font-bold transition-all shadow-sm flex justify-center items-center gap-1"
-                >
-                  <span>Apply</span>
-                </button>
-              </>
-            )}
-          </div>
-        </div>
+            {/* Freshness timestamp */}
+            <div className="text-[11px] text-gray-500 dark:text-gray-500 pt-0.5">
+              Posted {timeAgo(job.postedDate)}
+            </div>
+
+            {/* Bottom Section: Readiness & Action Journey */}
+            <div className="mt-auto pt-3 border-t border-gray-100 dark:border-white/5 space-y-2.5">
+              {/* Status info */}
+              <div className="flex items-center justify-between text-xs">
+                {isSaved ? (
+                  <span className="inline-flex items-center gap-1.5 font-bold text-lime-600 dark:text-[#013f2e]">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    Saved in Staging
+                  </span>
+                ) : isAutoApplyCapable ? (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                    <Check className="w-3 h-3" />
+                    Auto-Apply available
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-[11px] text-gray-500 dark:text-gray-400">
+                    <Sparkles className="w-3 h-3 text-lime-500" />
+                    Tailored CV supported
+                  </span>
+                )}
+              </div>
+
+              {/* Primary Action Buttons */}
+              <div className="grid grid-cols-2 gap-2">
+                {isSaved ? (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onApply();
+                    }}
+                    className="col-span-2 px-4 py-2.5 rounded-xl bg-lime-500 hover:bg-lime-600 dark:bg-[#013f2e] dark:hover:brightness-95 text-white text-xs font-bold transition-all shadow-sm flex justify-center items-center gap-1.5"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Prepare Application</span>
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSave();
+                      }}
+                      disabled={saving}
+                      className="px-3.5 py-2 rounded-xl border border-gray-200 dark:border-white/10 hover:border-lime-500 dark:hover:border-lime-500 text-gray-800 dark:text-gray-200 text-xs font-bold transition-all flex items-center justify-center gap-1.5 bg-white dark:bg-white/5 hover:bg-gray-50 dark:hover:bg-white/10 shadow-xs"
+                    >
+                      {saving ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-lime-500" />
+                      ) : (
+                        <>
+                          <Bookmark className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />
+                          <span>Save</span>
+                        </>
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onApply();
+                      }}
+                      className="px-3.5 py-2 rounded-xl bg-gray-900 hover:bg-black dark:bg-[#013f2e] dark:hover:brightness-95 text-white text-xs font-bold transition-all shadow-sm flex justify-center items-center gap-1"
+                    >
+                      <span>Apply</span>
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

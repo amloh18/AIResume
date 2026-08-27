@@ -6,6 +6,8 @@ import { motion } from 'framer-motion';
 import { ShieldX, ArrowLeft, LogOut, Lock } from 'lucide-react';
 import { signOut, useSession } from 'next-auth/react';
 
+export const dynamic = 'force-dynamic';
+
 export default function AdminUnauthorizedPage() {
   const { data: session } = useSession();
 

@@ -411,13 +411,13 @@ export default function JobsDashboard() {
     const appId = `apply-${job._id}`;
     setIsApplying(appId);
 
-    // Start progress toast
-    applyProgress.startApplyProgress(job.title);
+    // Start progress
+    applyProgress.startApplyProgress(job.title, job.company, job._id);
     updateProgress(appId, 15, `Matching CV for ${job.title}...`, 'progress');
 
     try {
       // Update progress: tailoring
-      applyProgress.updateToTailoring(job.title, job.company);
+      applyProgress.updateToTailoring(job.title, job.company, job._id);
       updateProgress(appId, 45, `Tailoring application for ${job.company}...`, 'progress');
 
       const res = await fetch('/api/jobs/auto-apply', {
@@ -451,7 +451,7 @@ export default function JobsDashboard() {
         resData.code === 'AUTO_APPLY_NOT_INCLUDED' ||
         resData.code === 'AUTO_APPLY_LIMIT_REACHED'
       ) {
-        applyProgress.cancelProgress();
+        applyProgress.cancelProgress(job._id);
         setEntitlementNoticeData({
           code: resData.code || 'AUTO_APPLY_NOT_INCLUDED',
           jobTitle: job.title,
@@ -467,7 +467,7 @@ export default function JobsDashboard() {
 
       // Verification / Unknown outcome
       if (resData.code === 'APPLICATION_VERIFICATION_FAILED') {
-        applyProgress.cancelProgress();
+        applyProgress.cancelProgress(job._id);
         setEntitlementNoticeData({
           code: 'APPLICATION_VERIFICATION_FAILED',
           jobTitle: job.title,
@@ -481,7 +481,7 @@ export default function JobsDashboard() {
 
       // Authentication required
       if (resData.code === 'AUTHENTICATION_REQUIRED') {
-        applyProgress.cancelProgress();
+        applyProgress.cancelProgress(job._id);
         setEntitlementNoticeData({
           code: 'AUTHENTICATION_REQUIRED',
           jobTitle: job.title,
@@ -493,7 +493,7 @@ export default function JobsDashboard() {
       }
 
       // Update progress: submitting
-      applyProgress.updateToSubmitting(job.company);
+      applyProgress.updateToSubmitting(job.company, job._id);
       updateProgress(appId, 80, `Submitting application to ${job.company}...`, 'progress');
 
       if (res.ok && resData.success) {
@@ -503,11 +503,11 @@ export default function JobsDashboard() {
           window.dispatchEvent(new CustomEvent('jobUpdated', { detail: { jobId: createdId } }));
         }
 
-        applyProgress.completeApply(job.title, job.company, true, resData.message);
+        applyProgress.completeApply(job.title, job.company, true, resData.message, job._id);
         updateProgress(appId, 100, `Applied to ${job.title}!`, 'progress');
       } else {
         // Genuine submission failure on employer site
-        applyProgress.cancelProgress();
+        applyProgress.completeApply(job.title, job.company, false, resData.error || resData.message || "We couldn't complete the application on the employer's site.", job._id);
         setEntitlementNoticeData({
           code: 'APPLICATION_FAILED',
           jobTitle: job.title,
@@ -518,7 +518,7 @@ export default function JobsDashboard() {
         setEntitlementNoticeOpen(true);
       }
     } catch (err: any) {
-      applyProgress.cancelProgress();
+      applyProgress.completeApply(job.title, job.company, false, err.message || 'Network error occurred during submission.', job._id);
       setEntitlementNoticeData({
         code: 'APPLICATION_FAILED',
         jobTitle: job.title,

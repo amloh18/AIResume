@@ -43,6 +43,8 @@ import { useDashboardData } from '@/contexts/DashboardDataContext';
 import { useToast } from '@/hooks/use-toast';
 import UpgradeSuggestionCard from '@/components/dashboard/redesigned/UpgradeSuggestionCard';
 import TopJobMatchesSection from '@/components/dashboard/redesigned/TopJobMatchesSection';
+import { useJobLiveStatusStore } from '@/lib/stores/jobLiveStatusStore';
+import { JobLiveStatusCard } from '@/components/jobs/JobLiveStatusCard';
 import ProfileAnalyticsSidebar from '@/components/dashboard/redesigned/ProfileAnalyticsSidebar';
 import CompanyLogo from '@/components/ui/CompanyLogo';
 import DocumentPreviewSidebar from '@/components/dashboard/jobs/DocumentPreviewSidebar';
@@ -927,8 +929,15 @@ function ContinueJobCard({ job, cvs, onOpenSidebar }: ContinueJobCardProps) {
     };
   }, [job, hasLinkedCv, linkedCvId, atsScore, router, onOpenSidebar]);
 
+  const jobId = String(job?.id || job?._id || '');
+  const liveStatus = useJobLiveStatusStore((state) => (jobId ? state.statuses[jobId] : undefined));
+  const { clearStatus } = useJobLiveStatusStore();
+
   return (
-    <div className="rounded-xl bg-[#faf7ef] dark:bg-white/[0.03] border border-[var(--border-primary)] p-4 flex flex-col justify-between h-full">
+    <div
+      onClick={() => onOpenSidebar(job)}
+      className="rounded-xl bg-[#faf7ef] dark:bg-white/[0.03] border border-[var(--border-primary)] p-4 flex flex-col justify-between h-full cursor-pointer hover:shadow-md transition-all"
+    >
       <div>
         <p className="text-sm font-semibold text-[var(--text-primary)] leading-snug line-clamp-1">
           {job.jobTitle || 'Untitled role'}
@@ -943,31 +952,50 @@ function ContinueJobCard({ job, cvs, onOpenSidebar }: ContinueJobCardProps) {
           Job added {timeAgo(job.createdAt || job.updatedAt)}
         </p>
 
-        {dynamicStep && (
-          <div className={`mt-3 flex items-center gap-1.5 text-xs font-medium ${dynamicStep.statusColor}`}>
-            <dynamicStep.StatusIcon size={14} />
-            <span>{dynamicStep.statusText}</span>
+        {liveStatus ? (
+          <div className="mt-3">
+            <JobLiveStatusCard
+              status={liveStatus}
+              onClose={() => clearStatus(jobId)}
+              inline={true}
+              compact={true}
+            />
           </div>
+        ) : (
+          dynamicStep && (
+            <div className={`mt-3 flex items-center gap-1.5 text-xs font-medium ${dynamicStep.statusColor}`}>
+              <dynamicStep.StatusIcon size={14} />
+              <span>{dynamicStep.statusText}</span>
+            </div>
+          )
         )}
       </div>
 
-      <div className="mt-4 flex items-center gap-2 pt-2 border-t border-black/5 dark:border-white/5">
-        {dynamicStep && (
+      {!liveStatus && (
+        <div className="mt-4 flex items-center gap-2 pt-2 border-t border-black/5 dark:border-white/5">
+          {dynamicStep && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                dynamicStep.buttonAction();
+              }}
+              className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#013f2e] text-white font-bold px-3 py-1.5 text-xs hover:bg-[#025c43] transition-colors truncate shadow-sm"
+            >
+              <dynamicStep.ButtonIcon size={13} />
+              <span className="truncate">{dynamicStep.buttonText}</span>
+            </button>
+          )}
           <button
-            onClick={dynamicStep.buttonAction}
-            className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#013f2e] text-white font-bold px-3 py-1.5 text-xs hover:bg-[#025c43] transition-colors truncate shadow-sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenSidebar(job);
+            }}
+            className="inline-flex items-center justify-center gap-1 rounded-lg border border-[var(--border-primary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] px-3 py-1.5 text-xs font-medium transition-colors"
           >
-            <dynamicStep.ButtonIcon size={13} />
-            <span className="truncate">{dynamicStep.buttonText}</span>
+            View Job
           </button>
-        )}
-        <button
-          onClick={() => onOpenSidebar(job)}
-          className="inline-flex items-center justify-center gap-1 rounded-lg border border-[var(--border-primary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] px-3 py-1.5 text-xs font-medium transition-colors"
-        >
-          View Job
-        </button>
-      </div>
+        </div>
+      )}
     </div>
   );
 }
