@@ -27,7 +27,6 @@ import { useMembership } from '@/lib/hooks/useMembership';
 import toast from 'react-hot-toast';
 import { CVJourney } from '@/types/cv';
 import JobSidebar from '@/components/dashboard/jobs/JobSidebar';
-import EditJobSidebar from '@/components/dashboard/jobs/EditJobSidebar';
 import JobParserSidebar from '@/components/dashboard/jobs/JobParserSidebar';
 import JobsListView from '@/components/dashboard/jobs/JobsListView';
 import JobsKanbanView from '@/components/dashboard/jobs/JobsKanbanView';
@@ -132,9 +131,7 @@ export function ApplicationsPanel({ userId: propUserId, metrics }: ApplicationsP
   const [showBulkActions, setShowBulkActions] = useState(false);
   const [draggedJob, setDraggedJob] = useState<string | null>(null);
   const [zoomedStage, setZoomedStage] = useState<string | null>(null);
-  const [showAddJobModal, setShowAddJobModal] = useState(false);
   const [showJobParserDialog, setShowJobParserDialog] = useState(false);
-  const [editingJob, setEditingJob] = useState<JobApplication | null>(null);
   const [showPaywall, setShowPaywall] = useState(false);
   const [showTrackerAccessPrompt, setShowTrackerAccessPrompt] = useState(false);
   const [paywallInfo, setPaywallInfo] = useState<{ currentCount: number; limit: number } | null>(null);
@@ -164,7 +161,7 @@ export function ApplicationsPanel({ userId: propUserId, metrics }: ApplicationsP
 
   useEffect(() => {
     if (deepLinkNewJob) {
-      setShowAddJobModal(true);
+      setShowJobParserDialog(true);
     }
   }, [deepLinkNewJob]);
 
@@ -408,13 +405,13 @@ export function ApplicationsPanel({ userId: propUserId, metrics }: ApplicationsP
   };
 
   const handleAddJob = () => {
-    setEditingJob(null);
-    setShowAddJobModal(true);
+    setShowJobParserDialog(true);
   };
 
   const handleEditJob = (job: JobApplication) => {
-    setEditingJob(job);
-    setShowAddJobModal(true);
+    setSelectedJob(job);
+    setSidebarOpenContext({ autoOpenEdit: true });
+    setShowModal(true);
   };
 
   const handleDeleteJob = async (job: JobApplication) => {
@@ -438,8 +435,6 @@ export function ApplicationsPanel({ userId: propUserId, metrics }: ApplicationsP
 
   const handleJobSaved = () => {
     loadData(true);
-    setShowAddJobModal(false);
-    setEditingJob(null);
   };
 
   const handleViewModeChange = (mode: 'list' | 'kanban') => {
@@ -558,9 +553,50 @@ export function ApplicationsPanel({ userId: propUserId, metrics }: ApplicationsP
     setShowDownloadModal(true);
   };
 
-  const handleParseComplete = () => {
+  const handleParseComplete = async (data?: any) => {
     setShowJobParserDialog(false);
-    loadData();
+    if (!data) {
+      loadData(true);
+      return;
+    }
+
+    try {
+      const payload = {
+        jobTitle: data.jobTitle || 'Untitled Role',
+        company: data.company || 'Unknown Company',
+        location: data.location || 'Remote',
+        jobUrl: data.jobUrl || '',
+        jobDescription: data.jobDescription || data.jobDescriptionRaw || '',
+        salary: data.salary,
+        experienceLevel: data.experienceLevel,
+        tags: data.tags || [],
+        sponsorship: data.sponsorship,
+        benefits: data.benefits,
+        status: 'created',
+        source: 'manual',
+      };
+
+      const res = await authenticatedFetch('/api/jobs', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        toast.success('Job application created successfully!');
+        window.dispatchEvent(new CustomEvent('creditsUpdated'));
+        window.dispatchEvent(new CustomEvent('jobUpdated'));
+        loadData(true);
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        toast.error(errorData.error || errorData.message || 'Failed to save job application');
+      }
+    } catch (err) {
+      console.error('Failed to create job application:', err);
+      toast.error('Failed to create job application');
+    }
   };
 
   const planKey = membership?.planKey || 'free';
@@ -735,15 +771,8 @@ export function ApplicationsPanel({ userId: propUserId, metrics }: ApplicationsP
             </div>
 
             <button
-              onClick={() => setShowJobParserDialog(true)}
-              className="flex items-center justify-center gap-1.5 h-9 px-3.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#1a230f] hover:border-lime-500 text-gray-800 dark:text-gray-200 text-xs font-semibold transition-colors"
-            >
-              <Zap className="w-3.5 h-3.5 text-lime-500" />
-              <span>Parse JD</span>
-            </button>
-            <button
               onClick={handleAddJob}
-              className="flex items-center justify-center gap-1.5 h-9 px-4 rounded-xl bg-lime-500 hover:bg-lime-400 text-black text-xs font-bold transition-all shadow-sm"
+              className="flex items-center justify-center gap-1.5 h-9 px-4 rounded-xl bg-lime-500 hover:bg-lime-400 text-white text-xs font-bold transition-all shadow-sm"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Add Job</span>
@@ -904,37 +933,6 @@ export function ApplicationsPanel({ userId: propUserId, metrics }: ApplicationsP
           />
         </div>
       )}
-
-      <EditJobSidebar
-        isOpen={showAddJobModal}
-        onClose={() => {
-          setShowAddJobModal(false);
-          setEditingJob(null);
-        }}
-        onJobSaved={handleJobSaved}
-        existingJobs={jobs}
-        editingJob={editingJob ? {
-          id: editingJob.id,
-          jobTitle: editingJob.jobTitle,
-          company: editingJob.company,
-          location: editingJob.location,
-          jobUrl: editingJob.jobUrl,
-          jobDescription: editingJob.jobDescription,
-          notes: editingJob.notes,
-          priority: editingJob.priority,
-          status: editingJob.status,
-          deadline: editingJob.deadline ? (typeof editingJob.deadline === 'string' ? editingJob.deadline : new Date(editingJob.deadline).toISOString().split('T')[0]) : undefined,
-          applicationDate: editingJob.applicationDate ? (typeof editingJob.applicationDate === 'string' ? editingJob.applicationDate : new Date(editingJob.applicationDate).toISOString().split('T')[0]) : undefined,
-          salary: editingJob.salary,
-          sponsorship: editingJob.sponsorship,
-          tags: editingJob.tags,
-          contactDetails: editingJob.contactDetails || { name: '', email: '', phone: '', role: '' },
-          source: editingJob.source as any,
-          createdAt: editingJob.createdAt,
-          updatedAt: editingJob.updatedAt
-        } : null}
-        userId={userId || ''}
-      />
 
       {showModal && selectedJob && (
         <JobSidebar

@@ -44,7 +44,7 @@ export default function StepIndicator({
                   disabled={!isClickable}
                   className={`
                     w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm transition-all duration-300 flex-shrink-0
-                    ${isCompleted ? 'bg-[#013f2e] text-black cursor-pointer hover:bg-[#02523c] shadow-sm shadow-[#013f2e]/20' : ''}
+                    ${isCompleted ? 'bg-[#013f2e] text-white cursor-pointer hover:bg-[#02523c] shadow-sm shadow-[#013f2e]/20' : ''}
                     ${isActive && !isCompleted ? 'bg-white/5 text-white ring-2 ring-[#013f2e]/50 shadow-sm shadow-black/30' : ''}
                     ${!isActive && !isCompleted ? 'bg-white/5 text-gray-500' : ''}
                     ${isClickable ? 'cursor-pointer' : 'cursor-default'}
@@ -54,7 +54,7 @@ export default function StepIndicator({
                   title={step.label}
                 >
                   {isCompleted ? (
-                    <Check className="w-4 h-4 stroke-[2.5] text-black" />
+                    <Check className="w-4 h-4 stroke-[2.5] text-white" />
                   ) : (
                     <span>{step.number}</span>
                   )}
@@ -101,7 +101,7 @@ export default function StepIndicator({
                 disabled={!isClickable}
                 className={`
                     w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm transition-all duration-300 flex-shrink-0
-                    ${isCompleted ? 'bg-[#013f2e] text-black cursor-pointer hover:bg-[#02523c] shadow-sm shadow-[#013f2e]/20' : ''}
+                    ${isCompleted ? 'bg-[#013f2e] text-white cursor-pointer hover:bg-[#02523c] shadow-sm shadow-[#013f2e]/20' : ''}
                     ${isActive && !isCompleted ? 'bg-white/5 text-white shadow-sm shadow-black/30' : ''}
                     ${!isActive && !isCompleted ? 'bg-white/5 text-gray-500' : ''}
                     ${isClickable ? 'cursor-pointer' : 'cursor-default'}
@@ -110,7 +110,7 @@ export default function StepIndicator({
                 whileTap={isClickable ? { scale: 0.95 } : {}}
               >
                 {isCompleted ? (
-                  <Check className="w-4 h-4 stroke-[2.5] text-black" />
+                  <Check className="w-4 h-4 stroke-[2.5] text-white" />
                 ) : (
                   <span>{step.number}</span>
                 )}

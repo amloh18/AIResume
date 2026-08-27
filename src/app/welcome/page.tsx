@@ -74,8 +74,9 @@ export type OnboardingStage =
   | 'JOB_EXPERIENCE'      // Step 8: Experience level + availability
   | 'JOB_SEARCH_INTENSITY' // Step 9: How actively are you looking?
   | 'JOB_APPLICATION_VOLUME' // Step 10: Expected monthly application volume
-  | 'JOB_APPLICATION_MODE'   // Step 11: How much should BuildAIResume handle?
-  | 'LAUNCH';             // Step 12: Final Launch & CEO Note
+  | 'TRACKER_AUTOPILOT'   // Step 11: Application Autopilot / Pipeline Tracker
+  | 'JOB_APPLICATION_MODE'   // Step 12: How much should BuildAIResume handle?
+  | 'LAUNCH';             // Step 13: Final Launch & CEO Note
 
 export interface CareerPathway {
   id: string;
@@ -230,15 +231,15 @@ const STAGE_TO_STEP: Record<OnboardingStage | string, number> = {
   'JOB_EXPERIENCE': 8,
   'JOB_SEARCH_INTENSITY': 9,
   'JOB_APPLICATION_VOLUME': 10,
-  'JOB_APPLICATION_MODE': 11,
-  'LAUNCH': 12,
+  'TRACKER_AUTOPILOT': 11,
+  'JOB_APPLICATION_MODE': 12,
+  'LAUNCH': 13,
   // Backward-compatible mappings for old stage names
   'JOB_TARGETS': 5,
   'JOB_INTENSITY': 9,
   'JOB_VOLUME': 10,
-  'TRACKER_AUTOPILOT': 11,
-  'AUTO_APPLY': 11,
-  'CAREER_ADVANTAGE': 11,
+  'AUTO_APPLY': 12,
+  'CAREER_ADVANTAGE': 12,
 };
 
 export const WELCOME_SALARY_CONFIG: Record<
@@ -316,8 +317,9 @@ const STEP_TO_STAGE: Record<number, OnboardingStage> = {
   8: 'JOB_EXPERIENCE',
   9: 'JOB_SEARCH_INTENSITY',
   10: 'JOB_APPLICATION_VOLUME',
-  11: 'JOB_APPLICATION_MODE',
-  12: 'LAUNCH'
+  11: 'TRACKER_AUTOPILOT',
+  12: 'JOB_APPLICATION_MODE',
+  13: 'LAUNCH'
 };
 
 function WelcomePageContent() {
@@ -421,7 +423,7 @@ function WelcomePageContent() {
   const [isTypingLetter, setIsTypingLetter] = useState<boolean>(true);
 
   useEffect(() => {
-    if (currentStep === 12) {
+    if (currentStep === 13) {
       setTypedLetterLength(0);
       setIsTypingLetter(true);
       let currentLen = 0;
@@ -569,9 +571,12 @@ function WelcomePageContent() {
         // Application volume is required
         return expectedApplicationsPerMonth > 0;
       case 11:
+        // Tracker Autopilot (optional / default yes)
+        return true;
+      case 12:
         // Application mode is required
         return !!applicationMode;
-      case 12:
+      case 13:
         return true;
       default:
         return true;
@@ -618,7 +623,7 @@ function WelcomePageContent() {
       });
 
       // Persist to canonical JobSearchProfile for job-search steps
-      if (currentStep >= 5 && currentStep <= 12 && status === 'authenticated') {
+      if (currentStep >= 5 && currentStep <= 13 && status === 'authenticated') {
         const profileUpdates: Record<string, any> = {};
         if (currentStep === 5) profileUpdates.targetRoles = targetRoles;
         if (currentStep === 6) {
@@ -626,10 +631,11 @@ function WelcomePageContent() {
           profileUpdates.locations = locations;
         }
         if (currentStep === 7) {
-          profileUpdates.salary = { min: salaryMin, currency: salaryCurrency };
+          profileUpdates.minSalary = salaryMin;
+          profileUpdates.salaryCurrency = salaryCurrency;
         }
         if (currentStep === 8) {
-          profileUpdates.experience = experienceYears;
+          profileUpdates.experienceYears = experienceYears;
           profileUpdates.maxNoticePeriodDays = maxNoticePeriodDays;
         }
         if (currentStep === 9) profileUpdates.searchIntensity = searchIntensity;
@@ -978,7 +984,7 @@ function WelcomePageContent() {
       return;
     }
 
-    if (currentStep < 12) {
+    if (currentStep < 13) {
       setCurrentStep(currentStep + 1);
     } else {
       const rec = getRecommendedTier();
@@ -1244,10 +1250,10 @@ function WelcomePageContent() {
   }, [currentStep]);
 
   useEffect(() => {
-    if (currentStep !== 8) return;
+    if (currentStep !== 11) return;
     const interval = setInterval(() => {
       setTrackerAnimStage(prev => (prev + 1) % 4);
-    }, 4000);
+    }, 3500);
     return () => clearInterval(interval);
   }, [currentStep]);
 
@@ -1261,18 +1267,18 @@ function WelcomePageContent() {
         {/* Dynamic Progress Indicator */}
         {!isLoadingSession && (
           <div className="flex items-center gap-6 text-xs font-semibold text-gray-400">
-            {currentStep !== 12 && (
+            {currentStep !== 13 && (
               <div className="flex items-center gap-3 w-48 sm:w-60">
                 <div className="flex-1 h-1.5 rounded-full bg-gray-200 overflow-hidden">
                   <div
                     className="h-full rounded-full bg-black transition-all duration-500"
                     style={{ 
-                      width: `${Math.max(8, Math.round((currentStep / 12) * 100))}%` 
+                      width: `${Math.max(8, Math.round((currentStep / 13) * 100))}%` 
                     }}
                   />
                 </div>
                 <span className="whitespace-nowrap font-bold text-gray-600">
-                  {currentStep <= 4 ? `Phase 1: Profile` : `Phase 2: Job Agent (${currentStep}/12)`}
+                  {currentStep <= 4 ? `Phase 1: Profile` : `Phase 2: Job Agent (${currentStep}/13)`}
                 </span>
               </div>
             )}
@@ -1298,7 +1304,7 @@ function WelcomePageContent() {
           {currentStep === 1 && (
               <div className="space-y-8">
                 <div className="space-y-3 text-center">
-                  <span className="onboarding-step-label text-black bg-[#013f2e] px-3 py-1 rounded-full font-bold">Goal Alignment</span>
+                  <span className="onboarding-step-label text-white bg-[#013f2e] px-3 py-1 rounded-full font-bold">Goal Alignment</span>
                   <h1 className="onboarding-title">
                     What are you trying to accomplish?
                   </h1>
@@ -1383,7 +1389,7 @@ function WelcomePageContent() {
             {currentStep === 2 && (
               <div className="space-y-8">
                 <div className="space-y-3 text-center">
-                  <span className="onboarding-step-label text-black bg-[#013f2e] px-3 py-1 rounded-full font-bold">Career Profile</span>
+                  <span className="onboarding-step-label text-white bg-[#013f2e] px-3 py-1 rounded-full font-bold">Career Profile</span>
                   <h1 className="onboarding-title">
                     {candidateName ? `${candidateName}, let's build your profile` : `Let's build your career profile`}
                   </h1>
@@ -1548,7 +1554,7 @@ function WelcomePageContent() {
                             <div key={stepIdx} className={`flex items-center gap-3 ${isCompleted ? 'text-gray-900 font-bold' : isActive ? 'text-gray-900 font-extrabold' : 'text-gray-400'}`}>
                               <div className="flex-shrink-0">
                                 {isCompleted ? (
-                                  <div className="w-5 h-5 rounded-full bg-[#013f2e] flex items-center justify-center text-black shadow-sm">
+                                  <div className="w-5 h-5 rounded-full bg-[#013f2e] flex items-center justify-center text-white shadow-sm">
                                     <Check size={11} strokeWidth={4} />
                                   </div>
                                 ) : isActive ? (
@@ -1622,7 +1628,7 @@ function WelcomePageContent() {
             {currentStep === 3 && (
               <div className="space-y-6 max-w-3xl mx-auto text-gray-900">
                 <div className="space-y-2 text-center">
-                  <span className="onboarding-step-label text-black bg-[#013f2e] px-3 py-1 rounded-full font-bold">Analysis &amp; Insights</span>
+                  <span className="onboarding-step-label text-white bg-[#013f2e] px-3 py-1 rounded-full font-bold">Analysis &amp; Insights</span>
                   <h1 className="onboarding-title">
                     {candidateName ? `What AIResume discovered about your career, ${candidateName}` : 'What AIResume discovered about your background'}
                   </h1>
@@ -1833,7 +1839,7 @@ function WelcomePageContent() {
             {currentStep === 5 && (
               <div className="space-y-8">
                 <div className="space-y-3 text-center">
-                  <span className="onboarding-step-label text-black bg-[#013f2e] px-3 py-1 rounded-full font-bold">Target Roles</span>
+                  <span className="onboarding-step-label text-white bg-[#013f2e] px-3 py-1 rounded-full font-bold">Target Roles</span>
                   <h1 className="onboarding-title">
                     {candidateName ? `${candidateName}, what roles are you targeting?` : 'What roles are you targeting?'}
                   </h1>
@@ -1955,7 +1961,7 @@ function WelcomePageContent() {
             {currentStep === 6 && (
               <div className="space-y-8">
                 <div className="space-y-3 text-center">
-                  <span className="onboarding-step-label text-black bg-[#013f2e] px-3 py-1 rounded-full font-bold">Workplace + Location</span>
+                  <span className="onboarding-step-label text-white bg-[#013f2e] px-3 py-1 rounded-full font-bold">Workplace + Location</span>
                   <h1 className="onboarding-title">
                     {candidateName ? `${candidateName}, where do you want to work?` : 'Where do you want to work?'}
                   </h1>
@@ -2018,7 +2024,7 @@ function WelcomePageContent() {
             {currentStep === 7 && (
               <div className="space-y-8">
                 <div className="space-y-3 text-center">
-                  <span className="onboarding-step-label text-black bg-[#013f2e] px-3 py-1 rounded-full font-bold">Salary Expectations</span>
+                  <span className="onboarding-step-label text-white bg-[#013f2e] px-3 py-1 rounded-full font-bold">Salary Expectations</span>
                   <h1 className="onboarding-title">
                     What&apos;s your target salary?
                   </h1>
@@ -2114,7 +2120,7 @@ function WelcomePageContent() {
             {currentStep === 8 && (
               <div className="space-y-8">
                 <div className="space-y-3 text-center">
-                  <span className="onboarding-step-label text-black bg-[#013f2e] px-3 py-1 rounded-full font-bold">Experience + Availability</span>
+                  <span className="onboarding-step-label text-white bg-[#013f2e] px-3 py-1 rounded-full font-bold">Experience + Availability</span>
                   <h1 className="onboarding-title">
                     Tell us about your experience
                   </h1>
@@ -2231,7 +2237,7 @@ function WelcomePageContent() {
             {currentStep === 9 && (
               <div className="space-y-8">
                 <div className="space-y-3 text-center">
-                  <span className="onboarding-step-label text-black bg-[#013f2e] px-3 py-1 rounded-full font-bold">Search Intensity</span>
+                  <span className="onboarding-step-label text-white bg-[#013f2e] px-3 py-1 rounded-full font-bold">Search Intensity</span>
                   <h1 className="onboarding-title">
                     {candidateName ? `${candidateName}, how actively are you searching?` : 'How actively are you looking?'}
                   </h1>
@@ -2273,7 +2279,7 @@ function WelcomePageContent() {
             {currentStep === 10 && (
               <div className="space-y-8">
                 <div className="space-y-3 text-center">
-                  <span className="onboarding-step-label text-black bg-[#013f2e] px-3 py-1 rounded-full font-bold">Application Volume</span>
+                  <span className="onboarding-step-label text-white bg-[#013f2e] px-3 py-1 rounded-full font-bold">Application Volume</span>
                   <h1 className="onboarding-title">
                     How many applications per month?
                   </h1>
@@ -2317,11 +2323,245 @@ function WelcomePageContent() {
               </div>
             )}
 
-            {/* STEP 11: Application Mode */}
+            {/* STEP 11: Pipeline Autopilot (Kanban Board Graphic) */}
             {currentStep === 11 && (
+              <div className="space-y-6 max-w-2xl mx-auto py-2">
+                <div className="space-y-2 text-center">
+                  <span className="onboarding-step-label text-white bg-[#013f2e] px-3 py-1 rounded-full font-bold">
+                    Pipeline Autopilot
+                  </span>
+                  <h1 className="onboarding-title">
+                    Keep your search organized automatically
+                  </h1>
+                  <p className="onboarding-copy text-gray-500 max-w-lg mx-auto text-xs sm:text-sm">
+                    Track every stage from auto-scouting to verified offer letters in one real-time visual pipeline.
+                  </p>
+                </div>
+
+                {/* High-Fidelity Kanban Board Mockup */}
+                <div className="bg-gradient-to-b from-slate-50 via-white to-slate-50 border border-gray-200/90 rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 shadow-sm space-y-3 sm:space-y-4">
+                  {/* Board Header Bar */}
+                  <div className="flex items-center justify-between text-xs pb-2.5 border-b border-gray-150">
+                    <div className="flex items-center gap-2">
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                      </span>
+                      <span className="font-bold text-gray-800 text-xs sm:text-sm">Live Search Pipeline</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] uppercase font-extrabold tracking-wider px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        {trackerAnimStage === 0 && '1. Auto-Scouting'}
+                        {trackerAnimStage === 1 && '2. Submitted'}
+                        {trackerAnimStage === 2 && '3. Interview Ready'}
+                        {trackerAnimStage === 3 && '4. Offer Received'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* 4 Kanban Columns */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-2.5">
+                    {/* Column 1: Scout */}
+                    <div className={`flex flex-col rounded-xl p-2 sm:p-2.5 transition-all ${
+                      trackerAnimStage === 0 
+                        ? 'bg-indigo-50/70 border-2 border-indigo-400/80 ring-2 ring-indigo-400/20' 
+                        : 'bg-slate-50/80 border border-gray-200'
+                    }`}>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[11px] font-black uppercase tracking-wider text-indigo-700">Scout</span>
+                        <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded-md bg-indigo-100/80 text-indigo-800">12</span>
+                      </div>
+                      <div className="space-y-1.5 flex-1 min-h-[90px]">
+                        {trackerAnimStage === 0 ? (
+                          <motion.div 
+                            layoutId="tracker-live-card"
+                            className="bg-white border-2 border-indigo-500 rounded-lg p-2 shadow-sm space-y-1"
+                          >
+                            <p className="text-[11px] font-black text-gray-900 leading-tight">Lead AI Engineer</p>
+                            <p className="text-[9px] font-semibold text-gray-500">OpenAI · Remote</p>
+                            <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 text-[8px] font-black uppercase">
+                              <Sparkles className="w-2.5 h-2.5" /> 98% Match
+                            </div>
+                          </motion.div>
+                        ) : (
+                          <div className="bg-white border border-gray-150 rounded-lg p-2 space-y-0.5 opacity-75">
+                            <p className="text-[10px] font-bold text-gray-800 truncate">Staff Architect</p>
+                            <p className="text-[8px] text-gray-400">Anthropic · Hybrid</p>
+                            <span className="text-[8px] text-indigo-600 font-semibold">95% Match</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Column 2: Applied */}
+                    <div className={`flex flex-col rounded-xl p-2 sm:p-2.5 transition-all ${
+                      trackerAnimStage === 1 
+                        ? 'bg-amber-50/70 border-2 border-amber-400/80 ring-2 ring-amber-400/20' 
+                        : 'bg-slate-50/80 border border-gray-200'
+                    }`}>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[11px] font-black uppercase tracking-wider text-amber-700">Applied</span>
+                        <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded-md bg-amber-100/80 text-amber-800">5</span>
+                      </div>
+                      <div className="space-y-1.5 flex-1 min-h-[90px]">
+                        {trackerAnimStage === 1 ? (
+                          <motion.div 
+                            layoutId="tracker-live-card"
+                            className="bg-white border-2 border-amber-500 rounded-lg p-2 shadow-sm space-y-1"
+                          >
+                            <p className="text-[11px] font-black text-gray-900 leading-tight">Lead AI Engineer</p>
+                            <p className="text-[9px] font-semibold text-gray-500">OpenAI · Remote</p>
+                            <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 text-[8px] font-black uppercase">
+                              <Check className="w-2.5 h-2.5" /> Tailored CV Sent
+                            </div>
+                          </motion.div>
+                        ) : (
+                          <div className="bg-white border border-gray-150 rounded-lg p-2 space-y-0.5 opacity-75">
+                            <p className="text-[10px] font-bold text-gray-800 truncate">Senior Full Stack</p>
+                            <p className="text-[8px] text-gray-400">Stripe · London</p>
+                            <span className="text-[8px] text-amber-600 font-semibold">Submitted</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Column 3: Interviews */}
+                    <div className={`flex flex-col rounded-xl p-2 sm:p-2.5 transition-all ${
+                      trackerAnimStage === 2 
+                        ? 'bg-blue-50/70 border-2 border-blue-400/80 ring-2 ring-blue-400/20' 
+                        : 'bg-slate-50/80 border border-gray-200'
+                    }`}>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[11px] font-black uppercase tracking-wider text-blue-700">Interview</span>
+                        <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded-md bg-blue-100/80 text-blue-800">2</span>
+                      </div>
+                      <div className="space-y-1.5 flex-1 min-h-[90px]">
+                        {trackerAnimStage === 2 ? (
+                          <motion.div 
+                            layoutId="tracker-live-card"
+                            className="bg-white border-2 border-blue-500 rounded-lg p-2 shadow-sm space-y-1"
+                          >
+                            <p className="text-[11px] font-black text-gray-900 leading-tight">Lead AI Engineer</p>
+                            <p className="text-[9px] font-semibold text-gray-500">OpenAI · Remote</p>
+                            <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 text-[8px] font-black uppercase">
+                              <Target className="w-2.5 h-2.5" /> Round 2 Scheduled
+                            </div>
+                          </motion.div>
+                        ) : (
+                          <div className="bg-white border border-gray-150 rounded-lg p-2 space-y-0.5 opacity-75">
+                            <p className="text-[10px] font-bold text-gray-800 truncate">Product Engineer</p>
+                            <p className="text-[8px] text-gray-400">Linear · Remote</p>
+                            <span className="text-[8px] text-blue-600 font-semibold">Prep Ready</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Column 4: Offers */}
+                    <div className={`flex flex-col rounded-xl p-2 sm:p-2.5 transition-all ${
+                      trackerAnimStage === 3 
+                        ? 'bg-emerald-50/70 border-2 border-emerald-400/80 ring-2 ring-emerald-400/20' 
+                        : 'bg-slate-50/80 border border-gray-200'
+                    }`}>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[11px] font-black uppercase tracking-wider text-emerald-700">Offers</span>
+                        <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded-md bg-emerald-100/80 text-emerald-800">1</span>
+                      </div>
+                      <div className="space-y-1.5 flex-1 min-h-[90px]">
+                        {trackerAnimStage === 3 ? (
+                          <motion.div 
+                            layoutId="tracker-live-card"
+                            className="bg-white border-2 border-emerald-500 rounded-lg p-2 shadow-sm space-y-1"
+                          >
+                            <p className="text-[11px] font-black text-gray-900 leading-tight">Lead AI Engineer</p>
+                            <p className="text-[9px] font-semibold text-gray-500">OpenAI · Remote</p>
+                            <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 text-[8px] font-black uppercase">
+                              🎉 $175,000 /yr
+                            </div>
+                          </motion.div>
+                        ) : (
+                          <div className="bg-white border border-gray-150 rounded-lg p-2 space-y-0.5 opacity-75">
+                            <p className="text-[10px] font-bold text-gray-800 truncate">Platform Lead</p>
+                            <p className="text-[8px] text-gray-400">Vercel · Remote</p>
+                            <span className="text-[8px] text-emerald-600 font-semibold">🎉 $165k Offer</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4 Feature Highlights Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {[
+                    { title: '1. Auto-Scouting Match', desc: 'Finds verified openings matching your Target Roles & Salary.', stage: 0 },
+                    { title: '2. Smart Submission Log', desc: 'Tracks tailored CV versions and cover letter submissions.', stage: 1 },
+                    { title: '3. Calendar Auto-Sync', desc: 'Syncs interview prep cards, schedules, and recruiter links.', stage: 2 },
+                    { title: '4. Offer & Negotiation', desc: 'Compares total compensation, equity, and market benchmarks.', stage: 3 }
+                  ].map((feat) => {
+                    const isActive = trackerAnimStage === feat.stage;
+                    return (
+                      <div
+                        key={feat.title}
+                        className={`p-3 rounded-xl border text-left transition-all ${
+                          isActive 
+                            ? 'bg-white border-black ring-2 ring-black/5 shadow-sm' 
+                            : 'bg-slate-50/70 border-gray-200 text-gray-600'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <h4 className={`text-xs font-bold ${isActive ? 'text-black' : 'text-gray-700'}`}>{feat.title}</h4>
+                          {isActive && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />}
+                        </div>
+                        <p className="text-[11px] text-gray-500 mt-0.5 leading-snug">{feat.desc}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Question & Interactive Choice Buttons (Non-overlapping) */}
+                <div className="pt-3 border-t border-gray-200/80 space-y-3 text-center">
+                  <div className="space-y-0.5">
+                    <p className="text-xs font-black uppercase tracking-wider text-gray-800">
+                      Want AIResume to keep your search organized?
+                    </p>
+                    <p className="text-[11px] text-gray-500">
+                      You can modify or disable automated tracking at any time in settings.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-w-md mx-auto">
+                    <button
+                      onClick={() => setTrackerInterest('yes')}
+                      className={`p-3 rounded-xl border-2 font-bold text-xs transition-all flex items-center justify-center gap-2 ${
+                        trackerInterest === 'yes' || !trackerInterest
+                          ? 'border-black bg-black text-[#013f2e] shadow-sm'
+                          : 'border-gray-200 bg-white hover:border-gray-300 text-gray-700'
+                      }`}
+                    >
+                      <Check className="w-4 h-4 stroke-[3]" />
+                      <span>Yes, keep it organized</span>
+                    </button>
+                    <button
+                      onClick={() => setTrackerInterest('no')}
+                      className={`p-3 rounded-xl border-2 font-bold text-xs transition-all flex items-center justify-center gap-2 ${
+                        trackerInterest === 'no'
+                          ? 'border-black bg-slate-100 text-black shadow-sm'
+                          : 'border-gray-200 bg-white hover:border-gray-300 text-gray-600'
+                      }`}
+                    >
+                      <span>No, manual tracking</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* STEP 12: Application Mode */}
+            {currentStep === 12 && (
               <div className="space-y-8">
                 <div className="space-y-3 text-center">
-                  <span className="onboarding-step-label text-black bg-[#013f2e] px-3 py-1 rounded-full font-bold">Application Mode</span>
+                  <span className="onboarding-step-label text-white bg-[#013f2e] px-3 py-1 rounded-full font-bold">Application Mode</span>
                   <h1 className="onboarding-title">
                     How much should AIResume handle?
                   </h1>
@@ -2363,8 +2603,8 @@ function WelcomePageContent() {
               </div>
             )}
 
-            {/* STEP 12: Final Launch & CEO Note */}
-            {currentStep === 12 && (
+            {/* STEP 13: Final Launch & CEO Note */}
+            {currentStep === 13 && (
               <div className="space-y-8 max-w-2xl mx-auto py-4 relative">
                 <div className="space-y-3 text-center relative z-10">
                   <span className="onboarding-step-label px-3 py-1 rounded-full bg-slate-100 text-black font-bold">
@@ -2427,7 +2667,7 @@ function WelcomePageContent() {
       {/* Footer Navigation Bar - The ONLY primary CTA to move forward */}
       <footer className="px-6 py-4 border-t transition-colors duration-300 text-xs text-gray-400 border-gray-150 bg-[#f3f2ee]">
         <div className="max-w-7xl mx-auto w-full flex items-center justify-between">
-          {currentStep !== 12 ? (
+          {currentStep !== 13 ? (
             <Button
               onClick={handleBack}
               disabled={currentStep === 1}
@@ -2444,13 +2684,13 @@ function WelcomePageContent() {
             &copy; {new Date().getFullYear()} AIResume. All features secured.
           </div>
 
-          {currentStep !== 12 ? (
+          {currentStep !== 13 ? (
             <Button
               onClick={() => handleNext()}
               disabled={!isStepValid}
               className={`${
                 currentStep === 3 
-                  ? 'bg-[#013f2e] hover:bg-[#02523c] text-black font-extrabold shadow-md' 
+                  ? 'bg-[#013f2e] hover:bg-[#02523c] text-white font-extrabold shadow-md' 
                   : 'bg-black text-white hover:bg-slate-900 font-bold'
               } flex items-center gap-1.5 rounded-xl px-5 py-2.5 shadow-sm disabled:opacity-35 transition-all`}
             >

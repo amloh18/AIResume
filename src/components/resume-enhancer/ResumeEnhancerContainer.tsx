@@ -49,7 +49,6 @@ import { AnimatedScore, AnimatedProgressBar } from '@/components/ui/AnimatedScor
 import JobCard from './JobCard';
 import JobRoleCard from './JobRoleCard';
 import JobSidebar from '@/components/dashboard/jobs/JobSidebar';
-import EditJobSidebar from '@/components/dashboard/jobs/EditJobSidebar';
 import JobParserSidebar from '@/components/dashboard/jobs/JobParserSidebar';
 import AuthPromptModal from './AuthPromptModal';
 import { CVJourney } from '@/types/cv';
@@ -148,7 +147,6 @@ export default function ResumeEnhancerContainer({
   const [activeSection, setActiveSection] = useState<string>('personal');
   const [isScoreAnalysisCompact, setIsScoreAnalysisCompact] = useState(false);
   const showJobSidebar = state.isJobSidebarOpen;
-  const [showEditJobSidebar, setShowEditJobSidebar] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [selectedJob, setSelectedJob] = useState<any>(null);
   const [journeysForJob, setJourneysForJob] = useState<CVJourney[]>([]);
@@ -263,13 +261,13 @@ export default function ResumeEnhancerContainer({
 
   useEffect(() => {
     if (state.isJobSidebarOpen) {
-      if (state.jobData) {
+      if (state.jobData && (state.jobData.id || state.jobData._id)) {
         setSelectedJob(state.jobData);
       } else {
-        setShowEditJobSidebar(true);
+        setShowJobParserDialog(true);
       }
     } else {
-      setShowEditJobSidebar(false);
+      setShowJobParserDialog(false);
     }
   }, [state.isJobSidebarOpen, state.jobData]);
 
@@ -280,7 +278,7 @@ export default function ResumeEnhancerContainer({
         setSelectedJob(currentJob);
         setJobSidebarOpen(true);
       } else {
-        setShowEditJobSidebar(true);
+        setShowJobParserDialog(true);
       }
     };
     const handleShowTemplateOverlay = () => setTemplateOverlayOpen(true);
@@ -296,7 +294,7 @@ export default function ResumeEnhancerContainer({
           setSelectedJob(currentJob);
           setJobSidebarOpen(true);
         } else {
-          setShowEditJobSidebar(true);
+          setShowJobParserDialog(true);
         }
       }, 100);
     };
@@ -2439,6 +2437,29 @@ export default function ResumeEnhancerContainer({
     return Math.round((filledSections / totalSections) * 100);
   };
 
+  // Listen for mobile bottom pill step navigation events
+  useEffect(() => {
+    const handleMobileBack = () => {
+      handleBackStep();
+    };
+    const handleMobileNext = () => {
+      if (isFromOnboarding) {
+        handleOnboardingExit();
+      } else if (state.currentStep === 3) {
+        handleStep3Complete();
+      } else if (state.currentStep === 4) {
+        handleStep4Complete();
+      }
+    };
+
+    window.addEventListener('editor-back-step', handleMobileBack);
+    window.addEventListener('editor-next-step', handleMobileNext);
+    return () => {
+      window.removeEventListener('editor-back-step', handleMobileBack);
+      window.removeEventListener('editor-next-step', handleMobileNext);
+    };
+  }, [state.currentStep, isFromOnboarding, handleBackStep, handleStep3Complete, handleStep4Complete, handleOnboardingExit]);
+
   // Helper function to ensure CV is saved and return cvId
   const ensureCVSaved = async (): Promise<string | null> => {
     // Check if CV is already saved
@@ -3150,7 +3171,7 @@ export default function ResumeEnhancerContainer({
 
           const activePill = (
             <div className="flex items-center bg-[#f1f9ec] dark:bg-[#1a2312] border border-[#dcedd9] dark:border-[#2a3c1d] rounded-2xl px-4 py-1.5 shadow-sm transition-all duration-300">
-              <div className="w-8 h-8 rounded-full bg-lime-600 dark:bg-[#02523c] flex items-center justify-center text-white dark:text-black flex-shrink-0">
+              <div className="w-8 h-8 rounded-full bg-lime-600 dark:bg-[#02523c] flex items-center justify-center text-white flex-shrink-0">
                 <IconComponent className="w-4 h-4 stroke-[2.5]" />
               </div>
               <div className="flex flex-col ml-3 text-left">
@@ -3175,8 +3196,8 @@ export default function ResumeEnhancerContainer({
             >
               {/* Circle */}
               {step.isCompleted ? (
-                <div className="w-6 h-6 rounded-full bg-lime-500 dark:bg-[#013f2e] flex items-center justify-center text-black flex-shrink-0 shadow-sm shadow-lime-500/20 transition-transform group-hover:scale-105">
-                  <Check className="w-3.5 h-3.5 stroke-[3] text-black" />
+                <div className="w-6 h-6 rounded-full bg-lime-500 dark:bg-[#013f2e] flex items-center justify-center text-white flex-shrink-0 shadow-sm shadow-lime-500/20 transition-transform group-hover:scale-105">
+                  <Check className="w-3.5 h-3.5 stroke-[3] text-white" />
                 </div>
               ) : (
                 <div className="w-7 h-7 rounded-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 flex items-center justify-center text-gray-400 dark:text-gray-500 flex-shrink-0 transition-colors group-hover:border-lime-500 dark:group-hover:border-[#013f2e] group-hover:text-lime-600 dark:group-hover:text-lime-400">
@@ -3638,7 +3659,7 @@ export default function ResumeEnhancerContainer({
                 <motion.button
                   onClick={() => handleSmartSave(true)}
                   disabled={saveStatus === 'saving'}
-                  className="hidden md:inline-flex lg:hidden p-1.5 sm:px-4 sm:py-1.5 bg-lime-500 dark:bg-[#013f2e] hover:bg-lime-600 dark:hover:bg-[#02523c] disabled:bg-gray-300 dark:disabled:bg-[var(--bg-tertiary)] disabled:cursor-not-allowed text-black disabled:text-gray-500 dark:disabled:text-[color:var(--text-tertiary)] rounded-full text-xs font-semibold transition-colors flex items-center space-x-1.5 shadow-md hover:shadow-lg overflow-hidden min-w-[36px] sm:min-w-[85px] justify-center"
+                  className="hidden md:inline-flex lg:hidden p-1.5 sm:px-4 sm:py-1.5 bg-lime-500 dark:bg-[#013f2e] hover:bg-lime-600 dark:hover:bg-[#02523c] disabled:bg-gray-300 dark:disabled:bg-[var(--bg-tertiary)] disabled:cursor-not-allowed text-white disabled:text-gray-500 dark:disabled:text-[color:var(--text-tertiary)] rounded-full text-xs font-semibold transition-colors flex items-center space-x-1.5 shadow-md hover:shadow-lg overflow-hidden min-w-[36px] sm:min-w-[85px] justify-center"
                   title="Save"
                   whileHover={{ scale: saveStatus === 'saving' ? 1 : 1.05 }}
                   whileTap={{ scale: 0.95 }}
@@ -3719,42 +3740,6 @@ export default function ResumeEnhancerContainer({
                   <span className="hidden sm:inline">Review</span>
                 </button>
               )}
-
-              {/* Mobile Step Dropdown Trigger */}
-              <div className="relative md:hidden z-[120]">
-                <button
-                  onClick={() => setIsMobileStepsOpen(!isMobileStepsOpen)}
-                  className="w-10 h-10 rounded-xl bg-white dark:bg-[#1a2312] border border-lime-200 dark:border-lime-900/30 flex items-center justify-center text-lime-600 dark:text-lime-400 hover:bg-lime-50 dark:hover:bg-lime-950/20 active:scale-95 transition-all duration-200 shadow-sm border-none bg-transparent"
-                  title="Navigate Steps"
-                >
-                  <ClipboardList className="w-5 h-5 text-lime-600 dark:text-lime-400" />
-                </button>
-                
-                {isMobileStepsOpen && (
-                  <div className="absolute right-0 top-12 z-[130] w-56 bg-white dark:bg-[#11160d] border border-gray-200 dark:border-lime-500/20 rounded-xl shadow-2xl p-2.5 flex flex-col gap-1">
-                    <div className="text-[9px] font-bold text-gray-400 dark:text-lime-400 uppercase tracking-widest px-2.5 py-1.5 border-b border-gray-100 dark:border-lime-500/10 mb-1">
-                      Navigate Steps
-                    </div>
-                    {getHeaderSteps().map((step) => (
-                      <button
-                        key={step.id}
-                        onClick={() => {
-                          handleStepNavigation(step.targetStep, !!step.openTemplateOverlay);
-                          setIsMobileStepsOpen(false);
-                        }}
-                        className={`flex items-center justify-between p-2 rounded-lg transition-all text-left w-full border-none shadow-none bg-transparent hover:bg-gray-100 dark:hover:bg-white/5 ${
-                          step.isActive 
-                            ? 'bg-[#f1f9ec] dark:bg-[#1a2312] text-lime-800 dark:text-lime-400 font-bold' 
-                            : 'text-gray-700 dark:text-gray-300'
-                        }`}
-                      >
-                        <span className="text-xs">{step.label}</span>
-                        {step.isActive && <span className="w-1.5 h-1.5 rounded-full bg-lime-500" />}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
             </>
           )}
 
@@ -3763,7 +3748,7 @@ export default function ResumeEnhancerContainer({
             <button
               onClick={handleOnboardingExit}
               disabled={saveStatus === 'saving'}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#013f2e] hover:bg-[#02523c] text-black font-extrabold text-xs rounded-full shadow-sm hover:shadow transition-all active:scale-95"
+              className="inline-flex items-center gap-1.5 px-3 py-1 sm:px-3.5 sm:py-1.5 bg-[#013f2e] hover:bg-[#02523c] text-white dark:bg-[#80FF00] dark:text-white font-extrabold text-xs rounded-full shadow-sm hover:shadow transition-all active:scale-95 shrink-0"
               title="Save & Continue to Onboarding"
             >
               <Check className="w-3.5 h-3.5 stroke-[3]" />
@@ -3773,18 +3758,20 @@ export default function ResumeEnhancerContainer({
 
           {/* Guest Mode Tag */}
           {isGuestMode && (
-            <span className="px-2.5 py-1 bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-full text-xs font-medium">
+            <span className="px-2.5 py-1 bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-full text-xs font-medium shrink-0">
               Guest
             </span>
           )}
 
           {/* Theme Toggle */}
-          <div>
+          <div className="shrink-0">
             <ThemeToggle variant="pill" />
           </div>
 
           {/* Notification Center */}
-          <NotificationCenter variant="pill" />
+          <div className="shrink-0">
+            <NotificationCenter variant="pill" />
+          </div>
         </div>
 
         {/* Save Error (lightweight inline) */}
@@ -3969,32 +3956,6 @@ export default function ResumeEnhancerContainer({
         />
       )}
 
-      {/* Edit Job Sidebar Overlay */}
-      {showEditJobSidebar && (
-        <EditJobSidebar
-          isOpen={showEditJobSidebar}
-          onClose={() => {
-            setShowEditJobSidebar(false);
-            setJobSidebarOpen(false);
-          }}
-          userId={userId}
-          editingJob={state.jobData && !state.jobData.id && !state.jobData._id ? state.jobData as any : undefined}
-          onJobSaved={(savedJob) => {
-            setShowEditJobSidebar(false);
-            setJobSidebarOpen(false);
-            // After saving, we can set it as the active job
-            setSelectedJob(savedJob);
-            // Optionally, also update state.jobData
-            dispatch({ type: 'SET_JOB_DATA', payload: savedJob });
-            const savedJobAny = savedJob as any;
-            if (savedJobAny.journeyId && !state.journeyId) {
-              dispatch({ type: 'SET_JOURNEY_ID', payload: savedJobAny.journeyId });
-              dispatch({ type: 'SET_CV_TYPE', payload: 'journey' });
-            }
-          }}
-        />
-      )}
-
       {/* ATS Deep Dive Modal */}
       <ATSDeepDiveModal
         isOpen={showATSDeepDive}
@@ -4030,7 +3991,7 @@ export default function ResumeEnhancerContainer({
               </button>
               <button
                 onClick={() => confirmNavigation(true)}
-                className="px-4 py-2 text-sm font-bold bg-lime-500 text-black hover:bg-lime-400 rounded-xl shadow-lg shadow-lime-500/20 transition-colors"
+                className="px-4 py-2 text-sm font-bold bg-lime-500 text-white hover:bg-lime-400 rounded-xl shadow-lg shadow-lime-500/20 transition-colors"
               >
                 Save & Leave
               </button>

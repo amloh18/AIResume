@@ -136,7 +136,7 @@ export const EntitlementNotice: React.FC<EntitlementNoticeProps> = ({
               <Link
                 href="/dashboard/billing"
                 onClick={onClose}
-                className="w-full py-2.5 rounded-xl text-xs font-black bg-[#013f2e] hover:brightness-95 text-black shadow-md transition-all flex items-center justify-center gap-1.5 mt-1"
+                className="w-full py-2.5 rounded-xl text-xs font-black bg-[#013f2e] hover:brightness-95 text-white shadow-md transition-all flex items-center justify-center gap-1.5 mt-1"
               >
                 <span>Upgrade to Focused</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -202,7 +202,7 @@ export const EntitlementNotice: React.FC<EntitlementNoticeProps> = ({
               <button
                 type="button"
                 onClick={handleManualApply}
-                className="w-full py-2.5 rounded-xl text-xs font-bold bg-[#0f172a] hover:bg-[#1e293b] dark:bg-[#013f2e] text-white dark:text-black transition-all flex items-center justify-center gap-1.5"
+                className="w-full py-2.5 rounded-xl text-xs font-bold bg-[#0f172a] hover:bg-[#1e293b] dark:bg-[#013f2e] text-white transition-all flex items-center justify-center gap-1.5"
               >
                 <span>Apply Manually {company ? `to ${company}` : 'Instead'}</span>
                 <ExternalLink className="w-3.5 h-3.5" />
@@ -261,7 +261,7 @@ export const EntitlementNotice: React.FC<EntitlementNoticeProps> = ({
               <Link
                 href="/dashboard/jobs?tab=applications"
                 onClick={onClose}
-                className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-[#0f172a] hover:bg-[#1e293b] dark:bg-[#013f2e] text-white dark:text-black transition-all text-center"
+                className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-[#0f172a] hover:bg-[#1e293b] dark:bg-[#013f2e] text-white transition-all text-center"
               >
                 Check Tracker
               </Link>
@@ -318,7 +318,7 @@ export const EntitlementNotice: React.FC<EntitlementNoticeProps> = ({
               <Link
                 href="/dashboard/jobs?tab=settings"
                 onClick={onClose}
-                className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-[#0f172a] hover:bg-[#1e293b] dark:bg-[#013f2e] text-white dark:text-black transition-all text-center"
+                className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-[#0f172a] hover:bg-[#1e293b] dark:bg-[#013f2e] text-white transition-all text-center"
               >
                 Settings
               </Link>
@@ -374,7 +374,7 @@ export const EntitlementNotice: React.FC<EntitlementNoticeProps> = ({
             <button
               type="button"
               onClick={handleManualApply}
-              className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-[#0f172a] hover:bg-[#1e293b] dark:bg-[#013f2e] text-white dark:text-black transition-all flex items-center justify-center gap-1.5"
+              className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-[#0f172a] hover:bg-[#1e293b] dark:bg-[#013f2e] text-white transition-all flex items-center justify-center gap-1.5"
             >
               <span>Apply Manually</span>
               <ExternalLink className="w-3.5 h-3.5" />

@@ -237,7 +237,7 @@ const CVPairThumbnail: React.FC<CVPairThumbnailProps> = ({
 
           {/* Edit/Delete hover buttons */}
           <div className="absolute top-2 sm:top-4 right-2 sm:right-4 z-30 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
-            <div className="w-7 h-7 sm:w-9 sm:h-9 bg-black/60 backdrop-blur-md rounded-lg flex items-center justify-center shadow-lg hover:bg-lime-500 hover:text-black text-white transition-colors duration-200">
+            <div className="w-7 h-7 sm:w-9 sm:h-9 bg-black/60 backdrop-blur-md rounded-lg flex items-center justify-center shadow-lg hover:bg-lime-500 hover:text-white text-white transition-colors duration-200">
               <Edit2 className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5" />
             </div>
             {cv.cvType !== 'master' && (
@@ -291,7 +291,7 @@ const CVPairThumbnail: React.FC<CVPairThumbnailProps> = ({
             </div>
 
             <div className="absolute top-2 sm:top-4 right-2 sm:right-4 z-30 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
-              <div className="w-7 h-7 sm:w-9 sm:h-9 bg-black/60 backdrop-blur-md rounded-lg flex items-center justify-center shadow-lg hover:bg-lime-500 hover:text-black text-white transition-colors duration-200">
+              <div className="w-7 h-7 sm:w-9 sm:h-9 bg-black/60 backdrop-blur-md rounded-lg flex items-center justify-center shadow-lg hover:bg-lime-500 hover:text-white text-white transition-colors duration-200">
                 <Edit2 className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5" />
               </div>
               <button
@@ -1310,7 +1310,7 @@ export default function Step1Dashboard({
                         onClick={() => setViewLayout('grid')}
                         className={`flex items-center gap-1 px-4 h-full rounded-full text-xs font-bold transition-all ${
                           viewLayout === 'grid'
-                            ? 'bg-lime-500 text-black dark:bg-[#0d100a] dark:text-[#013f2e] dark:border dark:border-[#013f2e]/25 shadow-md'
+                            ? 'bg-lime-500 text-white dark:bg-[#0d100a] dark:text-[#013f2e] dark:border dark:border-[#013f2e]/25 shadow-md'
                             : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
                         }`}
                       >
@@ -1321,7 +1321,7 @@ export default function Step1Dashboard({
                         onClick={() => setViewLayout('compact')}
                         className={`flex items-center gap-1 px-4 h-full rounded-full text-xs font-bold transition-all ${
                           viewLayout === 'compact'
-                            ? 'bg-lime-500 text-black dark:bg-[#0d100a] dark:text-[#013f2e] dark:border dark:border-[#013f2e]/25 shadow-md'
+                            ? 'bg-lime-500 text-white dark:bg-[#0d100a] dark:text-[#013f2e] dark:border dark:border-[#013f2e]/25 shadow-md'
                             : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
                         }`}
                       >
@@ -1332,7 +1332,7 @@ export default function Step1Dashboard({
                         onClick={() => setViewLayout('list')}
                         className={`flex items-center gap-1 px-4 h-full rounded-full text-xs font-bold transition-all ${
                           viewLayout === 'list'
-                            ? 'bg-lime-500 text-black dark:bg-[#0d100a] dark:text-[#013f2e] dark:border dark:border-[#013f2e]/25 shadow-md'
+                            ? 'bg-lime-500 text-white dark:bg-[#0d100a] dark:text-[#013f2e] dark:border dark:border-[#013f2e]/25 shadow-md'
                             : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
                         }`}
                       >
@@ -1478,7 +1478,7 @@ export default function Step1Dashboard({
                          </div>
 
                          <div className="absolute top-2 sm:top-4 right-2 sm:right-4 z-30 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
-                           <div className="w-7 h-7 sm:w-9 sm:h-9 bg-black/60 backdrop-blur-md rounded-lg flex items-center justify-center shadow-lg hover:bg-lime-500 hover:text-black text-white transition-colors duration-200">
+                           <div className="w-7 h-7 sm:w-9 sm:h-9 bg-black/60 backdrop-blur-md rounded-lg flex items-center justify-center shadow-lg hover:bg-lime-500 hover:text-white text-white transition-colors duration-200">
                              <Edit2 className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5" />
                            </div>
                            <button
@@ -1599,7 +1599,7 @@ export default function Step1Dashboard({
                                 <tr className="border-b border-gray-250 dark:border-white/5 hover:bg-gray-50/50 dark:hover:bg-white/[0.02] transition-colors">
                                   <td className="px-6 py-4">
                                     <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider ${
-                                      cv.cvType === 'master' ? 'bg-purple-600 text-white' : cv.cvType === 'journey' ? 'bg-lime-500 text-black dark:bg-[#013f2e]/10 dark:text-[#013f2e]' : 'bg-blue-600 text-white'
+                                      cv.cvType === 'master' ? 'bg-purple-600 text-white' : cv.cvType === 'journey' ? 'bg-lime-500 text-white dark:bg-[#013f2e]/10 dark:text-[#013f2e]' : 'bg-blue-600 text-white'
                                     }`}>
                                       {cv.cvType === 'master' ? 'Primary' : cv.cvType === 'journey' ? 'Job Based' : 'Custom'}
                                     </span>
@@ -1634,14 +1634,14 @@ export default function Step1Dashboard({
                                     <div className="flex items-center justify-end gap-1.5">
                                       <button
                                         onClick={() => handleEditExistingCV(cv)}
-                                        className="p-2 bg-gray-100 hover:bg-lime-500 hover:text-black dark:bg-[#1a230f]/60 dark:hover:bg-[#013f2e] dark:hover:text-black text-gray-700 dark:text-gray-300 rounded-lg transition-all"
+                                        className="p-2 bg-gray-100 hover:bg-lime-500 hover:text-white dark:bg-[#1a230f]/60 dark:hover:bg-[#013f2e] dark:hover:text-white text-gray-700 dark:text-gray-300 rounded-lg transition-all"
                                         title="Edit"
                                       >
                                         <Edit2 className="w-4 h-4" />
                                       </button>
                                       <button
                                         onClick={(e) => handleDuplicateCV(cv.id || cv._id || '', cv.title, e)}
-                                        className="p-2 bg-gray-100 hover:bg-lime-500 hover:text-black dark:bg-[#1a230f]/60 dark:hover:bg-[#013f2e] dark:hover:text-black text-gray-700 dark:text-gray-300 rounded-lg transition-all"
+                                        className="p-2 bg-gray-100 hover:bg-lime-500 hover:text-white dark:bg-[#1a230f]/60 dark:hover:bg-[#013f2e] dark:hover:text-white text-gray-700 dark:text-gray-300 rounded-lg transition-all"
                                         title="Duplicate"
                                       >
                                         <Copy className="w-4 h-4" />
@@ -1687,14 +1687,14 @@ export default function Step1Dashboard({
                                       <div className="flex items-center justify-end gap-1.5">
                                         <button
                                           onClick={() => router.push(`/editor?mode=edit-cover-letter&coverLetterId=${cl.id || cl._id}`)}
-                                          className="p-1.5 bg-gray-100 hover:bg-lime-500 hover:text-black dark:bg-[#1a230f]/60 dark:hover:bg-[#013f2e] dark:hover:text-black text-gray-700 dark:text-gray-300 rounded-lg transition-all"
+                                          className="p-1.5 bg-gray-100 hover:bg-lime-500 hover:text-white dark:bg-[#1a230f]/60 dark:hover:bg-[#013f2e] dark:hover:text-white text-gray-700 dark:text-gray-300 rounded-lg transition-all"
                                           title="Edit Cover Letter"
                                         >
                                           <Edit2 className="w-3.5 h-3.5" />
                                         </button>
                                         <button
                                           onClick={(e) => handleDeleteCoverLetter(cl.id || cl._id || '', e)}
-                                          className="p-1.5 bg-gray-100 hover:bg-red-500 hover:text-white dark:bg-[#1a230f]/60 dark:hover:bg-[#013f2e] dark:hover:text-black text-red-500 dark:text-red-400 rounded-lg transition-all"
+                                          className="p-1.5 bg-gray-100 hover:bg-red-500 hover:text-white dark:bg-[#1a230f]/60 dark:hover:bg-[#013f2e] dark:hover:text-white text-red-500 dark:text-red-400 rounded-lg transition-all"
                                           title="Delete Cover Letter"
                                         >
                                           <Trash2 className="w-3.5 h-3.5" />
@@ -1716,7 +1716,7 @@ export default function Step1Dashboard({
                               </td>
                               <td className="px-6 py-4">
                                 <span 
-                                  onClick={() => router.push(`/editor?mode=edit-cover-letter&coverLetterId=${cl.id || cl._id}`)}
+                                   onClick={() => router.push(`/editor?mode=edit-cover-letter&coverLetterId=${cl.id || cl._id}`)}
                                   className="font-black text-gray-900 dark:text-white hover:text-emerald-600 dark:hover:text-emerald-500 cursor-pointer text-sm"
                                 >
                                   {cl.title || 'Untitled Cover Letter'}
@@ -1732,14 +1732,14 @@ export default function Step1Dashboard({
                                 <div className="flex items-center justify-end gap-1.5">
                                   <button
                                     onClick={() => router.push(`/editor?mode=edit-cover-letter&coverLetterId=${cl.id || cl._id}`)}
-                                    className="p-2 bg-gray-100 hover:bg-lime-500 hover:text-black dark:bg-[#1a230f]/60 dark:hover:bg-[#013f2e] dark:hover:text-black text-gray-700 dark:text-gray-300 rounded-lg transition-all"
+                                    className="p-2 bg-gray-100 hover:bg-lime-500 hover:text-white dark:bg-[#1a230f]/60 dark:hover:bg-[#013f2e] dark:hover:text-white text-gray-700 dark:text-gray-300 rounded-lg transition-all"
                                     title="Edit Cover Letter"
                                   >
                                     <Edit2 className="w-4 h-4" />
                                   </button>
                                   <button
                                     onClick={(e) => handleDeleteCoverLetter(cl.id || cl._id || '', e)}
-                                    className="p-2 bg-gray-150 hover:bg-red-500 hover:text-white dark:bg-[#1a230f]/60 dark:hover:bg-[#013f2e] dark:hover:text-black text-gray-700 dark:text-gray-300 rounded-lg transition-all"
+                                    className="p-2 bg-gray-150 hover:bg-red-500 hover:text-white dark:bg-[#1a230f]/60 dark:hover:bg-[#013f2e] dark:hover:text-white text-gray-700 dark:text-gray-300 rounded-lg transition-all"
                                     title="Delete Cover Letter"
                                   >
                                     <Trash2 className="w-4 h-4" />
@@ -1805,7 +1805,7 @@ export default function Step1Dashboard({
                     className="hidden"
                     disabled={isUploading}
                   />
-                  <span className="inline-block px-6 sm:px-8 py-2.5 sm:py-3 bg-lime-500 dark:bg-[#013f2e] hover:bg-lime-600 dark:hover:bg-[#02523c] text-black rounded-xl font-bold transition-all shadow-lg hover:shadow-xl hover:scale-105 text-sm sm:text-base">
+                  <span className="inline-block px-6 sm:px-8 py-2.5 sm:py-3 bg-lime-500 dark:bg-[#013f2e] hover:bg-lime-600 dark:hover:bg-[#02523c] text-white rounded-xl font-bold transition-all shadow-lg hover:shadow-xl hover:scale-105 text-sm sm:text-base">
                     Choose File
                   </span>
                 </label>
@@ -1937,7 +1937,7 @@ export default function Step1Dashboard({
                     setErrorMessage('');
                     setUploadProgress(0);
                   }}
-                  className="px-6 py-2 bg-lime-500 dark:bg-[#013f2e] hover:bg-lime-600 dark:hover:bg-[#02523c] text-black rounded-lg font-medium transition-colors"
+                  className="px-6 py-2 bg-lime-500 dark:bg-[#013f2e] hover:bg-lime-600 dark:hover:bg-[#02523c] text-white rounded-lg font-medium transition-colors"
                 >
                   Try Again
                 </button>

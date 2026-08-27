@@ -44,6 +44,9 @@ export interface IJobSearchProfileDocument extends Document {
   // CV tailoring mode
   cvTailoringMode: string;
   
+  // Default tab when Jobs page opens
+  defaultJobsTab: 'discover' | 'applications';
+  
   // Versioning for cache invalidation
   profileVersion: number;
 }
@@ -154,6 +157,13 @@ const JobSearchProfileSchema = new Schema<IJobSearchProfileDocument>(
     cvTailoringMode: {
       type: String,
       default: 'standard',
+    },
+    
+    // Default tab when Jobs page opens
+    defaultJobsTab: {
+      type: String,
+      enum: ['discover', 'applications'],
+      default: 'discover',
     },
     
     // Versioning for cache invalidation

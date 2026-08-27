@@ -47,12 +47,28 @@ export async function executeGoldenPathProductionSuite(): Promise<GoldenPathSuit
     const candidateProfile = {
       userId: 'usr_sarah_101',
       targetRoles: ['Staff Software Engineer'],
+      roleFamilies: ['SOFTWARE_ENGINEERING'],
       targetLocations: ['London', 'Remote'],
       remotePreference: 'remote' as const,
+      workplacePreference: 'remote' as const,
       experienceLevel: 'senior' as const,
+      experienceYears: 8,
       minSalary: 120000,
+      salaryCurrency: 'GBP',
       skills: ['TypeScript', 'Node.js', 'Distributed Systems'],
       needsVisaSponsorship: false,
+      preferredIndustries: [],
+      hardConstraints: {
+        remoteOnly: true,
+        minSalary: 120000,
+        locations: ['London', 'Remote'],
+        visaRequired: false,
+      },
+      softPreferences: {
+        preferredIndustries: [],
+        preferredCompanySizes: [],
+        preferredWorkplace: 'remote',
+      },
     };
 
     const rawJob = {

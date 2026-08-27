@@ -577,7 +577,7 @@ const OptimizedNavigation: React.FC = () => {
                   <div className="text-small font-semibold truncate flex items-baseline gap-1">
                     <span>{section.name}</span>
                     {section.badge && (
-                      <span className="px-1.5 py-0.5 text-[9px] font-black bg-[#36D39B] text-black rounded-full leading-none ml-1">
+                      <span className="px-1.5 py-0.5 text-[9px] font-black bg-[#36D39B] text-white rounded-full leading-none ml-1">
                         {section.badge}
                       </span>
                     )}

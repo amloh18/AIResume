@@ -190,11 +190,11 @@ export default function SmartJDModal({ isOpen, onClose, onSubmit, initialData, i
               type="submit"
               form="smart-jd-form"
               disabled={isLoading || !title.trim()}
-              className="px-6 bg-lime-500 hover:bg-lime-600 text-black font-semibold"
+              className="px-6 bg-lime-500 hover:bg-lime-600 text-white font-semibold"
             >
               {isLoading ? (
                 <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin" />
+                  <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
                   Saving...
                 </div>
               ) : (

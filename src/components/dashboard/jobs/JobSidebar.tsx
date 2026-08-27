@@ -1991,7 +1991,7 @@ ${userName}`
                         <motion.button
                           onClick={() => void runSidebarAction(journeyCardData.primaryActionId)}
                           disabled={isMovingToCreated || isCreatingJourney}
-                          className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#013f2e] px-4 py-2.5 text-small font-black text-black shadow-sm transition hover:brightness-95 dark:bg-[#013f2e] disabled:opacity-60"
+                          className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#013f2e] px-4 py-2.5 text-small font-black text-white shadow-sm transition hover:brightness-95 dark:bg-[#013f2e] disabled:opacity-60"
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
                         >
@@ -2355,7 +2355,7 @@ ${userName}`
                         <button
                           type="button"
                           onClick={() => handleOpenEmail(0)}
-                          className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#013f2e] px-4 py-2.5 text-xs font-black text-black shadow-sm transition hover:brightness-95"
+                          className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#013f2e] px-4 py-2.5 text-xs font-black text-white shadow-sm transition hover:brightness-95"
                         >
                           <Send className="w-3.5 h-3.5" />
                           {hasRecruiterEmail ? 'Open Recruiter Email Draft' : 'Open Manual Outreach Draft'}
@@ -2434,7 +2434,7 @@ ${userName}`
                           type="button"
                           onClick={handleSaveNotes}
                           disabled={isSavingNotes}
-                          className="inline-flex items-center gap-1.5 rounded-xl bg-[#013f2e] px-4 py-2 text-xs font-black text-black shadow-sm transition hover:brightness-95 disabled:opacity-60"
+                          className="inline-flex items-center gap-1.5 rounded-xl bg-[#013f2e] px-4 py-2 text-xs font-black text-white shadow-sm transition hover:brightness-95 disabled:opacity-60"
                         >
                           {isSavingNotes ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                           Save Notes
@@ -2595,7 +2595,7 @@ ${userName}`
                               type="button"
                               onClick={() => void handleTailorAndApply()}
                               disabled={isCreatingJourney}
-                              className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#013f2e] hover:brightness-95 text-black rounded-xl text-xs font-black shadow-sm"
+                              className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#013f2e] hover:brightness-95 text-white rounded-xl text-xs font-black shadow-sm"
                             >
                               <Sparkles className="w-3.5 h-3.5" />
                               Generate Tailored CV

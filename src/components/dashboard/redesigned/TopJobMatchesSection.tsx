@@ -406,7 +406,7 @@ export default function TopJobMatchesSection() {
             <button
               type="button"
               onClick={() => fetchTopMatches()}
-              className="px-4 py-2 rounded-xl bg-[#0f172a] hover:bg-[#1e293b] dark:bg-[#013f2e] text-white dark:text-black text-xs font-bold transition-all shadow-sm flex items-center gap-1.5"
+              className="px-4 py-2 rounded-xl bg-[#0f172a] hover:bg-[#1e293b] dark:bg-[#013f2e] text-white text-xs font-bold transition-all shadow-sm flex items-center gap-1.5"
             >
               <RefreshCw className="w-3 h-3" />
               <span>Try Again</span>

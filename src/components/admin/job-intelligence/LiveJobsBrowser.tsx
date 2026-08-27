@@ -85,7 +85,7 @@ export default function LiveJobsBrowser() {
 
           <button
             type="submit"
-            className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-bold transition-all"
+            className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-bold transition-all"
           >
             Search
           </button>

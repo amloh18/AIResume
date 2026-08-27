@@ -215,7 +215,7 @@ export default function JDInputPanel({
           onClick={handleSubmit}
           disabled={!isValid || isValidating}
           className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-medium transition-all shadow-md hover:shadow-lg ${isValid
-            ? 'bg-lime-500 dark:bg-[#013f2e] text-black hover:bg-lime-600 dark:hover:bg-[#02523c]'
+            ? 'bg-lime-500 dark:bg-[#013f2e] text-white hover:bg-lime-600 dark:hover:bg-[#02523c]'
             : 'bg-gray-100 dark:bg-white/10 text-gray-400 dark:text-white/40 cursor-not-allowed'
             }`}
         >

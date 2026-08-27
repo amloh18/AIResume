@@ -53,6 +53,7 @@ const deduplicateJobs = (rawJobs: JobListing[]): JobListing[] => {
 
 export default function JobsDashboard() {
   const [activeTab, setActiveTab] = useState<'discover' | 'applications' | 'settings'>('discover');
+  const tabSetByUrl = useRef(false);
   const searchParams = useSearchParams();
   const router = useRouter();
   const { data: session } = useSession();
@@ -73,8 +74,10 @@ export default function JobsDashboard() {
 
     if (jobIdParam || newJobParam || filterParam) {
       setActiveTab('applications');
+      tabSetByUrl.current = true;
     } else if (tabParam && ['discover', 'applications', 'settings'].includes(tabParam)) {
       setActiveTab(tabParam as any);
+      tabSetByUrl.current = true;
     }
   }, [searchParams]);
 
@@ -124,6 +127,7 @@ export default function JobsDashboard() {
   const [modalOpen, setModalOpen] = useState(false);
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [suggestedSearches, setSuggestedSearches] = useState<string[]>([]);
   const [isApplying, setIsApplying] = useState<string | null>(null);
   const [portalConnections, setPortalConnections] = useState<any[]>([]);
   const [naukriConnected, setNaukriConnected] = useState<boolean>(false);
@@ -188,6 +192,10 @@ export default function JobsDashboard() {
         if (data?.profile) {
           setUserPreferences(data.profile);
           setAutoApplyEnabled(data.profile.enabled === true);
+          // Apply saved default tab if no URL param overrode it
+          if (!tabSetByUrl.current && data.profile.defaultJobsTab) {
+            setActiveTab(data.profile.defaultJobsTab);
+          }
         }
         if (data?.cvTailoringMode || data?.profile?.cvTailoringMode) {
           setCvTailoringMode(
@@ -612,6 +620,7 @@ export default function JobsDashboard() {
 
       setTotal(data.total);
       setHasMore(data.hasMore);
+      setSuggestedSearches(data.suggestedSearches || []);
       setError(null);
     } catch (err: any) {
       console.error('Error fetching jobs:', err);
@@ -866,7 +875,7 @@ export default function JobsDashboard() {
                     setNewJobsCount(0);
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-[#0f172a] dark:bg-[#013f2e] text-white dark:text-black text-sm font-semibold rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all"
+                  className="flex items-center gap-2 px-4 py-2.5 bg-[#0f172a] dark:bg-[#013f2e] text-white text-sm font-semibold rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all"
                 >
                   <ArrowUp className="w-4 h-4" />
                   {newJobsCount} new job{newJobsCount !== 1 ? 's' : ''}
@@ -977,6 +986,23 @@ export default function JobsDashboard() {
                 <p className="text-gray-500 dark:text-gray-400 mb-4">
                   Try adjusting your search criteria or switching region
                 </p>
+                {suggestedSearches.length > 0 && (
+                  <div className="flex flex-wrap justify-center gap-2 mb-4">
+                    {suggestedSearches.map((suggestion) => (
+                      <button
+                        key={suggestion}
+                        type="button"
+                        onClick={() => {
+                          setFilters((prev) => ({ ...prev, q: suggestion }));
+                          setPage(1);
+                        }}
+                        className="px-3 py-1.5 rounded-full border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-xs font-medium text-gray-700 dark:text-gray-300 hover:border-[#013f2e]/50 dark:hover:border-[#36D39B]/50 hover:text-[#013f2e] dark:hover:text-[#36D39B] transition-colors cursor-pointer"
+                      >
+                        {suggestion}
+                      </button>
+                    ))}
+                  </div>
+                )}
                 {!isPaidUser && (
                   <Link
                     href="/linkedin-enhancer"
@@ -1049,7 +1075,14 @@ export default function JobsDashboard() {
 
         {activeTab === 'settings' && (
           <div className="space-y-6">
-            <AutoApplyPanel userId={userId} />
+            <AutoApplyPanel userId={userId} onProfileSaved={() => {
+              fetch('/api/job-search-profile')
+                .then((res) => (res.ok ? res.json() : null))
+                .then((data) => {
+                  if (data?.profile) setUserPreferences(data.profile);
+                })
+                .catch(() => {});
+            }} />
           </div>
         )}
 

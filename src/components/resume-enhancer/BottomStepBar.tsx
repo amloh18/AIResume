@@ -125,12 +125,12 @@ export default function BottomStepBar({ steps, onNavigate }: BottomStepBarProps)
                       >
                         {step.isCompleted ? (
                           <span className="w-4 h-4 rounded-full bg-lime-500 dark:bg-[#013f2e] flex items-center justify-center flex-shrink-0">
-                            <Check className="w-2.5 h-2.5 stroke-[3] text-black" />
+                            <Check className="w-2.5 h-2.5 stroke-[3] text-white" />
                           </span>
                         ) : (
                           <span className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 ${
                             step.isActive
-                              ? 'bg-lime-600 dark:bg-[#02523c] text-white dark:text-black'
+                              ? 'bg-lime-600 dark:bg-[#02523c] text-white'
                               : 'bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500'
                           }`}>
                             <Icon className="w-2.5 h-2.5 stroke-[2.5]" />
@@ -158,7 +158,7 @@ export default function BottomStepBar({ steps, onNavigate }: BottomStepBarProps)
               <button
                 onClick={goForward}
                 disabled={!canGoForward}
-                className="w-7 h-7 rounded-full flex items-center justify-center bg-lime-500 dark:bg-[#013f2e] hover:bg-lime-600 dark:hover:bg-[#02523c] text-black disabled:bg-gray-100 dark:disabled:bg-white/5 disabled:text-gray-400 dark:disabled:text-gray-500 disabled:cursor-not-allowed transition-all active:scale-90 flex-shrink-0 shadow-sm"
+                className="w-7 h-7 rounded-full flex items-center justify-center bg-lime-500 dark:bg-[#013f2e] hover:bg-lime-600 dark:hover:bg-[#02523c] text-white disabled:bg-gray-100 dark:disabled:bg-white/5 disabled:text-gray-400 dark:disabled:text-gray-500 disabled:cursor-not-allowed transition-all active:scale-90 flex-shrink-0 shadow-sm"
                 aria-label="Next step"
               >
                 <ChevronRight className="w-4 h-4" />

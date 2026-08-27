@@ -130,7 +130,7 @@ export default function AuthPromptModal({
                 <button
                   onClick={handleSignUp}
                   disabled={isRedirecting}
-                  className="w-full px-4 py-3 bg-lime-500 dark:bg-[#013f2e] text-black rounded-lg hover:bg-lime-600 dark:hover:bg-[#02523c] font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 shadow-lg hover:shadow-xl"
+                  className="w-full px-4 py-3 bg-lime-500 dark:bg-[#013f2e] text-white rounded-lg hover:bg-lime-600 dark:hover:bg-[#02523c] font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 shadow-lg hover:shadow-xl"
                 >
                   <UserPlus className="w-5 h-5" />
                   <span>Sign Up with Email</span>

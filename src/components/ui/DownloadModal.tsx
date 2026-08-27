@@ -306,7 +306,7 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
                 disabled={(!journeyInfo.hasCV && !journeyInfo.hasCoverLetter) || isDownloading}
                 className={`relative w-full flex items-center justify-center gap-3 px-5 py-4 rounded-2xl font-semibold text-small transition-all ${(!journeyInfo.hasCV && !journeyInfo.hasCoverLetter)
                   ? 'opacity-40 cursor-not-allowed bg-[#222] text-gray-600'
-                  : 'bg-[#013f2e] text-black hover:bg-[#02523c] shadow-lg shadow-[#013f2e]/20 hover:shadow-xl hover:shadow-[#013f2e]/30 active:scale-[0.98]'
+                  : 'bg-[#013f2e] text-white hover:bg-[#02523c] shadow-lg shadow-[#013f2e]/20 hover:shadow-xl hover:shadow-[#013f2e]/30 active:scale-[0.98]'
                   }`}
               >
                 <Package className="w-5 h-5" />

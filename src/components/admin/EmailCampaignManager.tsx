@@ -290,7 +290,7 @@ export default function EmailCampaignManager() {
 
           <Button
             onClick={() => { setSelectedCampaign(null); setShowEditor(true); }}
-            className="bg-emerald-600 hover:bg-emerald-500 text-black font-black rounded-2xl px-8 py-6 shadow-[0_0_30px_rgba(16,185,129,0.2)]"
+            className="bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-2xl px-8 py-6 shadow-[0_0_30px_rgba(16,185,129,0.2)]"
           >
             <Plus className="w-5 h-5 mr-2" />
             <span className="uppercase tracking-widest text-xs">Deploy Campaign</span>

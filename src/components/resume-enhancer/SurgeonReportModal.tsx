@@ -778,7 +778,7 @@ export default function SurgeonReportModal({ isOpen, onClose, onReviewAndFix }: 
                   <button
                     onClick={() => setRecruiterView((v) => !v)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-2 ${recruiterView
-                      ? 'bg-[#013f2e] text-black hover:bg-[#02523c]'
+                      ? 'bg-[#013f2e] text-white hover:bg-[#02523c]'
                       : 'bg-white/10 text-white/90 hover:bg-white/15'
                       }`}
                   >
@@ -856,7 +856,7 @@ export default function SurgeonReportModal({ isOpen, onClose, onReviewAndFix }: 
                         }
                       }
                     }}
-                    className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#013f2e] hover:bg-[#02523c] text-black transition-colors"
+                    className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#013f2e] hover:bg-[#02523c] text-white transition-colors"
                   >
                     {openFixes.length === 0 ? 'Refresh' : 'Fix All'}
                   </button>

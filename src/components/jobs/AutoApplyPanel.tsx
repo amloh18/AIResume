@@ -42,11 +42,13 @@ interface AutoApplyPreferences {
   searchIntensity: 'browsing' | 'exploring' | 'active' | 'aggressive';
   expectedApplicationsPerMonth: number;
   applicationMode: 'find_only' | 'manual_review' | 'automatic';
+  defaultJobsTab: 'discover' | 'applications';
 }
 
 interface AutoApplyPanelProps {
   userId?: string;
   region?: 'UK' | 'India';
+  onProfileSaved?: () => void;
 }
 
 const CURRENCY_CONFIG: Record<
@@ -90,7 +92,7 @@ const EXPERIENCE_TIERS = [
   { label: 'Lead / Principal', range: '8+ years', minYears: 8 },
 ];
 
-export function AutoApplyPanel({ userId, region }: AutoApplyPanelProps) {
+export function AutoApplyPanel({ userId, region, onProfileSaved }: AutoApplyPanelProps) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [newRole, setNewRole] = useState('');
@@ -121,6 +123,7 @@ const [preferences, setPreferences] = useState<AutoApplyPreferences>({
     searchIntensity: 'exploring',
     expectedApplicationsPerMonth: 50,
     applicationMode: 'manual_review',
+    defaultJobsTab: 'discover',
   });
 
   const [savedPreferences, setSavedPreferences] = useState<string>('');
@@ -158,9 +161,10 @@ const [preferences, setPreferences] = useState<AutoApplyPreferences>({
       if (res.ok) {
         const json = await res.json();
         if (json.profile) {
+          const { _id, userId, __v, profileVersion, createdAt, updatedAt, id, ...profileFields } = json.profile;
           const loadedPrefs = {
             ...preferences,
-            ...json.profile,
+            ...profileFields,
             salaryCurrency: json.profile.salaryCurrency || 'INR_LPA',
           };
           setPreferences(loadedPrefs);
@@ -232,12 +236,18 @@ const [preferences, setPreferences] = useState<AutoApplyPreferences>({
         body: JSON.stringify({ profileData: preferences }),
       });
 
-      if (!res.ok) throw new Error('Failed to save preferences');
+      if (!res.ok) {
+        const errorBody = await res.json().catch(() => ({}));
+        console.error('[AutoApplyPanel] Save failed:', res.status, errorBody);
+        throw new Error(errorBody.error || errorBody.details?.join(', ') || 'Failed to save preferences');
+      }
       toast.success('Preferences saved');
       setSavedPreferences(JSON.stringify(preferences));
       await fetchEntitlements();
+      onProfileSaved?.();
     } catch (error: any) {
-      toast.error('Could not save settings');
+      console.error('[AutoApplyPanel] Save error:', error);
+      toast.error(error.message || 'Could not save settings');
     } finally {
       setSaving(false);
     }
@@ -780,7 +790,7 @@ const [preferences, setPreferences] = useState<AutoApplyPreferences>({
               <button
                 type="button"
                 onClick={() => handleAddRole()}
-                className="px-5 py-2.5 bg-gray-900 hover:bg-black dark:bg-[#013f2e] dark:hover:brightness-95 dark:text-black text-white rounded-xl text-xs sm:text-sm font-bold transition-colors shadow-2xs shrink-0"
+                className="px-5 py-2.5 bg-gray-900 hover:bg-black dark:bg-[#013f2e] dark:hover:brightness-95 text-white rounded-xl text-xs sm:text-sm font-bold transition-colors shadow-2xs shrink-0"
               >
                 Add
               </button>
@@ -948,7 +958,7 @@ const [preferences, setPreferences] = useState<AutoApplyPreferences>({
                       onClick={() => setPreferences((p) => ({ ...p, minSalary: val }))}
                       className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
                         isSelected
-                          ? 'bg-lime-500 dark:bg-[#013f2e] text-white dark:text-black shadow-2xs'
+                          ? 'bg-lime-500 dark:bg-[#013f2e] text-white shadow-2xs'
                           : 'bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 hover:bg-gray-100'
                       }`}
                     >
@@ -1016,7 +1026,7 @@ const [preferences, setPreferences] = useState<AutoApplyPreferences>({
                       onClick={() => setPreferences((p) => ({ ...p, maxNoticePeriodDays: days }))}
                       className={`px-3.5 py-1.5 rounded-xl text-xs font-bold border transition-all ${
                         isSelected
-                          ? 'bg-lime-500 dark:bg-[#013f2e] text-white dark:text-black border-transparent shadow-2xs'
+                          ? 'bg-lime-500 dark:bg-[#013f2e] text-white border-transparent shadow-2xs'
                           : 'bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 hover:bg-gray-50'
                       }`}
                     >
@@ -1027,6 +1037,46 @@ const [preferences, setPreferences] = useState<AutoApplyPreferences>({
               </div>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* Default Tab Preference                                                    */}
+      {/* ========================================================================= */}
+      <div className="bg-white dark:bg-[#141810] border border-gray-200/90 dark:border-white/10 rounded-3xl p-6 sm:p-7 shadow-sm">
+        <div className="flex items-center gap-2 mb-4">
+          <Sparkles className="w-4 h-4 text-lime-600 dark:text-[#013f2e]" />
+          <h4 className="text-sm font-bold text-gray-900 dark:text-white">Default Tab</h4>
+        </div>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+          Choose which tab opens by default when you navigate to the Jobs page.
+        </p>
+        <div className="flex gap-3">
+          {[
+            { value: 'discover' as const, label: 'Discover', desc: 'Browse new job matches' },
+            { value: 'applications' as const, label: 'Applications', desc: 'View your tracker' },
+          ].map((opt) => {
+            const isSelected = preferences.defaultJobsTab === opt.value;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setPreferences((p) => ({ ...p, defaultJobsTab: opt.value }))}
+                className={`flex-1 p-4 rounded-2xl border text-left transition-all ${
+                  isSelected
+                    ? 'border-lime-500 bg-lime-50/40 dark:bg-lime-900/20 shadow-2xs'
+                    : 'border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/[0.02] hover:border-gray-300'
+                }`}
+              >
+                <div className={`text-sm font-bold ${isSelected ? 'text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-400'}`}>
+                  {opt.label}
+                </div>
+                <div className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                  {opt.desc}
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -1045,7 +1095,7 @@ const [preferences, setPreferences] = useState<AutoApplyPreferences>({
           disabled={saving || !hasChanges}
           className={`px-8 py-3.5 font-black rounded-2xl text-sm flex items-center gap-2 shadow-md transition-all ${
             hasChanges 
-              ? 'bg-lime-500 hover:bg-lime-600 dark:bg-[#013f2e] dark:hover:brightness-95 text-white dark:text-black cursor-pointer' 
+              ? 'bg-lime-500 hover:bg-lime-600 dark:bg-[#013f2e] dark:hover:brightness-95 text-white cursor-pointer' 
               : 'bg-gray-200 dark:bg-gray-800 text-gray-500 dark:text-gray-500 cursor-not-allowed opacity-80'
           }`}
         >
