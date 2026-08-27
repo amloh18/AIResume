@@ -660,7 +660,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
   const textPrimary = isDarkUI ? 'text-gray-100' : 'text-gray-900';
   const textMuted = isDarkUI ? 'text-gray-400' : 'text-gray-500';
   const brandGreen = isDarkUI ? 'text-[#7EE787]' : 'text-emerald-600';
-  const brandGreenBg = isDarkUI ? 'bg-[#7EE787] text-black' : 'bg-emerald-600 text-white';
+  const brandGreenBg = isDarkUI ? 'bg-[#013f2e] text-white' : 'bg-emerald-600 text-white';
   const btnSecondary = isDarkUI ? 'bg-[#222] text-gray-300 hover:bg-[#333] border-[#333]' : 'bg-white text-gray-700 hover:bg-gray-50 border-gray-200';
 
   // Copy the JSON template (DEFAULT_UNIFIED_CV_DATA) to the user's clipboard

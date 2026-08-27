@@ -160,7 +160,7 @@ const FAQ = () => {
                     <div
                       className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center border transition-all duration-300 ${
                         isOpen
-                          ? 'bg-[#36D39B] text-black border-[#36D39B] rotate-180 scale-105 shadow-[0_0_12px_rgba(54,211,155,0.4)]'
+                          ? 'bg-[#36D39B] text-white border-[#36D39B] rotate-180 scale-105 shadow-[0_0_12px_rgba(54,211,155,0.4)]'
                           : 'bg-emerald-500/10 text-[#36D39B] border-emerald-500/25 rotate-0 scale-100 group-hover:bg-emerald-500/20 group-hover:border-emerald-400/40'
                       }`}
                     >

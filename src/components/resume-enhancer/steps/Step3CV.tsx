@@ -13,7 +13,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import {
   Sparkles,
   Component, Eye, Target, ZoomIn, ZoomOut, Plus, Shuffle, Palette, X,
-  Info, LayoutTemplate, FileJson
+  Info, LayoutTemplate, FileJson, ChevronLeft, ChevronRight
 } from 'lucide-react';
 
 // Import CV Builder form components
@@ -1358,10 +1358,21 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
             </div>
           </div>
           
+          {/* Mobile Backdrop Overlay when a panel is open */}
+          {activeUtilityPanel && (
+            <div 
+              onClick={() => {
+                setActiveUtilityPanel(null);
+                window.dispatchEvent(new CustomEvent('close-utility-panel'));
+              }}
+              className="fixed inset-0 bg-black/40 backdrop-blur-xs z-[75] md:hidden transition-opacity"
+            />
+          )}
+
           {/* Right rail: AI analysis */}
           <div 
             className={`
-              fixed inset-y-0 right-0 z-50 w-[95%] bg-white dark:bg-[#0a0a0a] flex flex-col h-full gap-3 min-h-0 shadow-2xl transition-all duration-300
+              fixed inset-y-0 right-0 z-[80] w-[95%] bg-white dark:bg-[#0a0a0a] flex flex-col h-full gap-3 min-h-0 shadow-2xl transition-all duration-300
               ${isControlPanelOpen
                 ? 'hidden lg:hidden'
                 : 'lg:static lg:w-[40%] lg:min-w-0 lg:shadow-none lg:border lg:border-white/20 lg:dark:border-white/10 lg:rounded-xl lg:flex lg:z-10 lg:p-0 lg:overflow-hidden lg:bg-transparent lg:panel-glass overflow-hidden'}
@@ -1377,7 +1388,7 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
           {/* Unified Utility Panel (Mori Chat, Design, JSON, Layout) */}
           <div 
             className={`
-              fixed inset-y-0 right-0 z-50 w-[95%] bg-white dark:bg-[var(--bg-secondary)] flex flex-col h-full gap-3 min-h-0 shadow-2xl transition-all duration-300
+              fixed inset-y-0 right-0 z-[80] w-[95%] bg-white dark:bg-[var(--bg-secondary)] flex flex-col h-full gap-3 min-h-0 shadow-2xl transition-all duration-300
               ${isControlPanelOpen 
                 ? 'translate-x-0 flex lg:static lg:w-[40%] lg:min-w-0 lg:shadow-sm lg:border lg:border-gray-200 lg:dark:border-white/[0.06] lg:rounded-xl lg:z-10 lg:overflow-hidden' 
                 : 'translate-x-full hidden lg:hidden w-0'}
@@ -1420,7 +1431,19 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
           </div>
 
           {/* Mobile unified bottom navigation pill */}
-          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] md:hidden flex items-center gap-2 bg-white/90 dark:bg-[#141810]/90 backdrop-blur-md border border-lime-200 dark:border-lime-900/30 rounded-2xl p-1.5 shadow-2xl">
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[70] md:hidden flex items-center gap-1.5 bg-white/95 dark:bg-[#141810]/95 backdrop-blur-md border border-lime-200 dark:border-lime-900/30 rounded-2xl p-1.5 shadow-2xl">
+            {/* Previous Step Button */}
+            <button
+              onClick={() => window.dispatchEvent(new CustomEvent('editor-back-step'))}
+              className="p-2 rounded-xl text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10 active:scale-95 transition-all border-none bg-transparent"
+              title="Previous Step"
+              aria-label="Previous step"
+            >
+              <ChevronLeft size={16} />
+            </button>
+
+            <div className="w-px h-5 bg-gray-200 dark:bg-white/10 mx-0.5" />
+
             {/* Zoom & Page Size controls (hidden if a panel is open) */}
             {!activeUtilityPanel && (
               <>
@@ -1431,12 +1454,12 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
                 >
                   <LayoutTemplate size={16} />
                 </button>
-                <div className="w-px h-5 bg-gray-200 dark:bg-white/10 mx-1" />
+                <div className="w-px h-5 bg-gray-200 dark:bg-white/10 mx-0.5" />
               </>
             )}
 
             {/* Panel Buttons */}
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-0.5">
               {/* Analysis Panel */}
               <button
                 onClick={() => setActiveUtilityPanel(curr => curr === 'analysis' ? null : 'analysis')}
@@ -1520,6 +1543,18 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
                 <FileJson size={16} />
               </button>
             </div>
+
+            <div className="w-px h-5 bg-gray-200 dark:bg-white/10 mx-0.5" />
+
+            {/* Next Step Button */}
+            <button
+              onClick={() => window.dispatchEvent(new CustomEvent('editor-next-step'))}
+              className="p-2 rounded-xl bg-black text-[#013f2e] dark:bg-[#013f2e] dark:text-white hover:opacity-90 active:scale-95 transition-all flex items-center justify-center shadow-sm"
+              title="Next Step"
+              aria-label="Next step"
+            >
+              <ChevronRight size={16} className="stroke-[2.5]" />
+            </button>
           </div>
 
         </div >

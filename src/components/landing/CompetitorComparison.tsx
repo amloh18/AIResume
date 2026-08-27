@@ -149,7 +149,7 @@ const CompetitorComparison: React.FC = () => {
                 }`}
               >
                 {comp.highlight && (
-                  <span className="absolute -top-2.5 left-4 text-[9px] font-extrabold uppercase tracking-widest bg-[#36D39B] text-black px-2 py-0.5 rounded-full">
+                  <span className="absolute -top-2.5 left-4 text-[9px] font-extrabold uppercase tracking-widest bg-[#36D39B] text-white px-2 py-0.5 rounded-full">
                     Best
                   </span>
                 )}
@@ -200,7 +200,7 @@ const CompetitorComparison: React.FC = () => {
                     >
                       <div className="flex flex-col items-center gap-1">
                         {comp.highlight && (
-                          <span className="text-[8px] font-extrabold uppercase tracking-widest bg-[#36D39B] text-black px-1.5 py-0.5 rounded-full">
+                          <span className="text-[8px] font-extrabold uppercase tracking-widest bg-[#36D39B] text-white px-1.5 py-0.5 rounded-full">
                             Us
                           </span>
                         )}

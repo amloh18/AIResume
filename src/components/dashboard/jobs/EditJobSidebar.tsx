@@ -1060,7 +1060,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
             <div className="border-b border-gray-200 dark:border-white/10 bg-white dark:bg-[#141810] sticky top-0 z-10">
               <div className="flex items-center justify-between p-4">
                 <h2 className="!text-lg font-bold text-gray-900 dark:text-white">
-                  {editingJob ? 'Edit Job Application' : 'Add New Job Application'}
+                  Edit Job Application
                 </h2>
                 <motion.button
                   onClick={handleClose}

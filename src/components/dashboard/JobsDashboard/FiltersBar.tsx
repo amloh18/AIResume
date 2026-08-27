@@ -132,18 +132,24 @@ export default function FiltersBar({
     : 'recommended';
 
   // 1. Search Profile Data Formatting
+  // Active filters override profile defaults for display; profile is the fallback.
   const targetRolesDisplay = useMemo(() => {
+    if (filters.roles?.length) {
+      return filters.roles.join(' · ');
+    }
     if (userPreferences?.targetRoles && userPreferences.targetRoles.length > 0) {
       return userPreferences.targetRoles.join(' · ');
     }
     return 'Full Stack Developer · Software Engineer · Product Analyst';
-  }, [userPreferences]);
+  }, [userPreferences, filters.roles]);
 
   const metadataList = useMemo(() => {
     const parts: string[] = [];
 
-    // Workplace Types
-    if (userPreferences?.workplaceTypes && userPreferences.workplaceTypes.length > 0) {
+    // Workplace Types — active chip filter overrides profile
+    if (filters.workplaceType?.length) {
+      parts.push(filters.workplaceType.map((t: string) => t.charAt(0).toUpperCase() + t.slice(1)).join(' · '));
+    } else if (userPreferences?.workplaceTypes && userPreferences.workplaceTypes.length > 0) {
       parts.push(userPreferences.workplaceTypes.map((t: string) => t.charAt(0).toUpperCase() + t.slice(1)).join(' · '));
     } else if (userPreferences?.locations && userPreferences.locations.length > 0) {
       parts.push(userPreferences.locations.join(' · '));
@@ -151,7 +157,7 @@ export default function FiltersBar({
       parts.push('Remote · Hybrid · On-site');
     }
 
-    // Salary Threshold
+    // Salary Threshold (always from profile — no chip filter)
     if (userPreferences?.minSalary) {
       const cur = userPreferences.salaryCurrency;
       if (cur === 'GBP_YEAR' || cur === 'GBP' || cur === '£') {
@@ -165,12 +171,20 @@ export default function FiltersBar({
       }
     }
 
-    // Experience
-    if (userPreferences?.experienceYears !== undefined && userPreferences.experienceYears > 0) {
+    // Experience — active chip filter overrides profile
+    if (filters.experienceLevel?.length) {
+      const expLabels: Record<string, string> = {
+        entry: 'Entry Level',
+        mid: 'Mid-level',
+        senior: 'Senior',
+        lead: 'Lead / Principal',
+      };
+      parts.push(filters.experienceLevel.map((e) => expLabels[e] || e).join(' · '));
+    } else if (userPreferences?.experienceYears !== undefined && userPreferences.experienceYears > 0) {
       parts.push(`${userPreferences.experienceYears}+ yrs`);
     }
 
-    // Availability / Notice period
+    // Availability / Notice period (always from profile)
     if (userPreferences?.maxNoticePeriodDays !== undefined) {
       if (userPreferences.maxNoticePeriodDays === 0) {
         parts.push('Available immediately');
@@ -179,7 +193,7 @@ export default function FiltersBar({
       }
     }
 
-    // Search Intensity
+    // Search Intensity (always from profile)
     if (userPreferences?.searchIntensity) {
       const intensityLabels: Record<string, string> = {
         browsing: 'Browsing',
@@ -190,13 +204,13 @@ export default function FiltersBar({
       parts.push(intensityLabels[userPreferences.searchIntensity] || userPreferences.searchIntensity);
     }
 
-    // Application Volume
+    // Application Volume (always from profile)
     if (userPreferences?.expectedApplicationsPerMonth) {
       parts.push(`${userPreferences.expectedApplicationsPerMonth}/mo`);
     }
 
     return parts;
-  }, [userPreferences]);
+  }, [userPreferences, filters.workplaceType, filters.experienceLevel]);
 
   // 2. Real Auto-Apply Status Logic (Plan-Aware & Product-First)
   const autoApplyStatus = useMemo(() => {
@@ -308,6 +322,12 @@ export default function FiltersBar({
                   <span>{item}</span>
                 </React.Fragment>
               ))}
+              {activeFilterCount > 0 && (
+                <span className="inline-flex items-center gap-1 ml-1 px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 text-[10px] font-bold">
+                  <span className="w-1 h-1 rounded-full bg-amber-500" />
+                  filtered
+                </span>
+              )}
             </div>
           </div>
 
@@ -493,7 +513,7 @@ export default function FiltersBar({
                     onClick={() => handleToggleWorkplace(wp.id)}
                     className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${
                       active
-                        ? 'bg-[#013f2e] dark:bg-[#36D39B] text-white dark:text-black font-bold shadow-2xs'
+                        ? 'bg-[#013f2e] dark:bg-[#36D39B] text-white font-bold shadow-2xs'
                         : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
                     }`}
                   >

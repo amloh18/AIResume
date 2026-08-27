@@ -313,14 +313,14 @@ const SkillsSection: React.FC<SkillsSectionProps> = ({ data, onUpdate, onAdd, on
               <button
                 type="button"
                 onClick={() => setActivePanel('skills')}
-                className={`px-4 py-2 rounded-none text-sm font-medium transition-colors ${activePanel === 'skills' ? 'bg-[#013f2e] text-black' : 'bg-white/5 text-white/70 hover:text-white'}`}
+                className={`px-4 py-2 rounded-none text-sm font-medium transition-colors ${activePanel === 'skills' ? 'bg-[#013f2e] text-white' : 'bg-white/5 text-white/70 hover:text-white'}`}
               >
                 Skills
               </button>
               <button
                 type="button"
                 onClick={() => setActivePanel('analysis')}
-                className={`px-4 py-2 rounded-none text-sm font-medium transition-colors ${activePanel === 'analysis' ? 'bg-[#013f2e] text-black' : 'bg-white/5 text-white/70 hover:text-white'}`}
+                className={`px-4 py-2 rounded-none text-sm font-medium transition-colors ${activePanel === 'analysis' ? 'bg-[#013f2e] text-white' : 'bg-white/5 text-white/70 hover:text-white'}`}
               >
                 Perfect Score
               </button>
@@ -339,7 +339,7 @@ const SkillsSection: React.FC<SkillsSectionProps> = ({ data, onUpdate, onAdd, on
                       type="button"
                       onClick={applySelected}
                       disabled={selectedCount === 0}
-                      className="px-4 py-2 rounded-none bg-[#013f2e] hover:bg-[#02523c] text-black font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-4 py-2 rounded-none bg-[#013f2e] hover:bg-[#02523c] text-white font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Add Selected {selectedCount > 0 ? `(${selectedCount})` : ''}
                     </button>

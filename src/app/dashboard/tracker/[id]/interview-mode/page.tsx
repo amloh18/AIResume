@@ -194,7 +194,7 @@ const InterviewModePage: React.FC = () => {
               <div className="flex gap-2 justify-center">
                 <button
                   onClick={() => setIsTimerRunning(!isTimerRunning)}
-                  className="px-4 py-2 bg-lime-500 hover:bg-lime-600 text-black rounded-lg font-medium"
+                  className="px-4 py-2 bg-lime-500 hover:bg-lime-600 text-white rounded-lg font-medium"
                 >
                   {isTimerRunning ? 'Pause' : 'Start'}
                 </button>

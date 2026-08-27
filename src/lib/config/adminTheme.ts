@@ -65,7 +65,7 @@ export const ADMIN_THEME = {
     scheduled: 'bg-amber-500/10 text-amber-400 border border-amber-500/20',
     sent: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',
     cancelled: 'bg-red-500/10 text-red-400 border border-red-500/20',
-    success: 'bg-emerald-500 text-black font-bold',
+    success: 'bg-emerald-500 text-white font-bold',
     error: 'bg-red-500 text-white',
     warning: 'bg-amber-500 text-black',
     info: 'bg-blue-500 text-white',

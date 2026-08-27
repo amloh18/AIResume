@@ -1386,9 +1386,9 @@ export default function Step5Review({ onSave }: { onSave?: () => Promise<void> }
               }
             }}
             disabled={isDownloading}
-            className="w-full py-4 bg-[#013f2e] hover:bg-[#02523c] text-black rounded-2xl font-black text-center shadow-md shadow-lime-500/10 hover:shadow-lg active:scale-95 transition-all disabled:opacity-50 mt-2 flex items-center justify-center gap-2 select-none"
+            className="w-full py-4 bg-[#013f2e] hover:bg-[#02523c] text-white rounded-2xl font-black text-center shadow-md shadow-lime-500/10 hover:shadow-lg active:scale-95 transition-all disabled:opacity-50 mt-2 flex items-center justify-center gap-2 select-none"
           >
-            <CheckCircle2 className="w-5 h-5 text-black" />
+            <CheckCircle2 className="w-5 h-5 text-white" />
             <span>Finish &amp; Exit</span>
           </button>
         </div>

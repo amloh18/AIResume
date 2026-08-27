@@ -177,7 +177,7 @@ export default function NotificationCenter({ variant = 'default' }: Notification
         />
 
         {unreadCount > 0 && !activeProgress && (
-          <span className="absolute -top-1 -right-1 bg-emerald-500 dark:bg-[#013f2e] text-white dark:text-black text-[9px] font-black rounded-full h-4 w-4 flex items-center justify-center border-2 border-white dark:border-[#141810] shadow-[0_0_8px_rgba(1, 63, 46,0.8)]">
+          <span className="absolute -top-1 -right-1 bg-emerald-500 dark:bg-[#013f2e] text-white text-[9px] font-black rounded-full h-4 w-4 flex items-center justify-center border-2 border-white dark:border-[#141810] shadow-[0_0_8px_rgba(1, 63, 46,0.8)]">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}

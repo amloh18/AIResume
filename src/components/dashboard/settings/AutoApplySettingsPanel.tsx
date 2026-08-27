@@ -124,7 +124,7 @@ export default function AutoApplySettingsPanel() {
           <button
             type="submit"
             disabled={isSaving}
-            className="px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold flex items-center gap-1.5 shadow-lg shadow-emerald-500/20 transition-all"
+            className="px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white font-bold flex items-center gap-1.5 shadow-lg shadow-emerald-500/20 transition-all"
           >
             {savedSuccess ? (
               <>

@@ -28,7 +28,7 @@ export const EmptyStateSkeleton: React.FC<EmptyStateSkeletonProps> = ({ onAdd, i
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <button
             onClick={onAdd}
-            className="w-14 h-14 bg-[#013f2e] text-black rounded-full flex items-center justify-center hover:bg-[#02523c] hover:scale-105 transition-all shadow-[0_0_20px_rgba(1, 63, 46,0.3)] mb-4"
+            className="w-14 h-14 bg-[#013f2e] text-white rounded-full flex items-center justify-center hover:bg-[#02523c] hover:scale-105 transition-all shadow-[0_0_20px_rgba(1, 63, 46,0.3)] mb-4"
             aria-label={`Add ${itemName}`}
           >
             <Plus size={32} />

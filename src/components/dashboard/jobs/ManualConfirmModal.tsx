@@ -92,7 +92,7 @@ export default function ManualConfirmModal({ job, onClose, onConfirm }: ManualCo
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold flex items-center gap-1.5 shadow-lg shadow-emerald-500/20"
+              className="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white font-bold flex items-center gap-1.5 shadow-lg shadow-emerald-500/20"
             >
               <CheckCircle2 className="w-4 h-4" />
               Mark as Applied

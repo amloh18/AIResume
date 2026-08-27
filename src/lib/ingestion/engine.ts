@@ -13,6 +13,7 @@ import mongoose from 'mongoose';
 import crypto from 'crypto';
 import { spawn, ChildProcess } from 'child_process';
 import path from 'path';
+import { resolveRoleFamily, getFamilySearchTerms, ROLE_TAXONOMY } from '@/lib/taxonomy/roleTaxonomy';
 
 // ── Structured Logging ─────────────────────────────────────────────────
 
@@ -65,6 +66,8 @@ export interface NormalizedJob {
   salary: { min?: number; max?: number; currency?: string; period?: string };
   skills: string[];
   seniority?: string;
+  roleFamily?: string;
+  roleFamilyKeywords?: string[];
   industry?: string;
   status: string;
   postedAt: Date;
@@ -135,17 +138,65 @@ export interface SourceDefinition {
   defaultLimit: number;
   maxLimit: number;
   cooldownMs: number;
+  /** Minimum refresh interval in ms (baseline schedule) */
+  refreshIntervalMs: number;
+  /** Max jobs to fetch per run */
+  maxResults: number;
+  /** Max execution time in ms before timeout */
+  maxDurationMs: number;
+  /** Human-readable description */
+  description: string;
 }
 
 export const SOURCE_REGISTRY: Record<string, SourceDefinition> = {
-  greenhouse: { id: 'greenhouse', name: 'Greenhouse ATS', type: 'public_api', enabled: true, requiresApiKey: false, supportsPagination: false, defaultLimit: 0, maxLimit: 0, cooldownMs: 600_000 },
-  lever: { id: 'lever', name: 'Lever ATS', type: 'public_api', enabled: true, requiresApiKey: false, supportsPagination: false, defaultLimit: 0, maxLimit: 0, cooldownMs: 600_000 },
-  ashby: { id: 'ashby', name: 'Ashby ATS', type: 'public_api', enabled: true, requiresApiKey: false, supportsPagination: false, defaultLimit: 0, maxLimit: 0, cooldownMs: 600_000 },
-  remotive: { id: 'remotive', name: 'Remotive', type: 'public_api', enabled: true, requiresApiKey: false, supportsPagination: false, defaultLimit: 250, maxLimit: 250, cooldownMs: 3_600_000 },
-  remoteok: { id: 'remoteok', name: 'RemoteOK', type: 'public_api', enabled: true, requiresApiKey: false, supportsPagination: false, defaultLimit: 0, maxLimit: 0, cooldownMs: 3_600_000 },
-  workday: { id: 'workday', name: 'Workday ATS', type: 'public_api', enabled: true, requiresApiKey: false, supportsPagination: true, defaultLimit: 20, maxLimit: 20, cooldownMs: 600_000 },
-  adzuna: { id: 'adzuna', name: 'Adzuna', type: 'api_key', enabled: true, requiresApiKey: true, supportsPagination: true, defaultLimit: 50, maxLimit: 50, cooldownMs: 600_000 },
-  jobspy: { id: 'jobspy', name: 'JobSpy Aggregator', type: 'self_hosted_scraper', enabled: true, requiresApiKey: false, supportsPagination: false, defaultLimit: 20, maxLimit: 100, cooldownMs: 600_000 },
+  greenhouse: {
+    id: 'greenhouse', name: 'Greenhouse ATS', type: 'public_api', enabled: true,
+    requiresApiKey: false, supportsPagination: false, defaultLimit: 0, maxLimit: 0, cooldownMs: 600_000,
+    refreshIntervalMs: 3 * 60 * 60 * 1000, maxResults: 500, maxDurationMs: 5 * 60 * 1000,
+    description: 'Public Greenhouse job board API (200k+ companies)',
+  },
+  lever: {
+    id: 'lever', name: 'Lever ATS', type: 'public_api', enabled: true,
+    requiresApiKey: false, supportsPagination: false, defaultLimit: 0, maxLimit: 0, cooldownMs: 600_000,
+    refreshIntervalMs: 3 * 60 * 60 * 1000, maxResults: 500, maxDurationMs: 5 * 60 * 1000,
+    description: 'Public Lever job board API',
+  },
+  ashby: {
+    id: 'ashby', name: 'Ashby ATS', type: 'public_api', enabled: true,
+    requiresApiKey: false, supportsPagination: false, defaultLimit: 0, maxLimit: 0, cooldownMs: 600_000,
+    refreshIntervalMs: 3 * 60 * 60 * 1000, maxResults: 500, maxDurationMs: 5 * 60 * 1000,
+    description: 'Public Ashby job board API',
+  },
+  remotive: {
+    id: 'remotive', name: 'Remotive', type: 'public_api', enabled: true,
+    requiresApiKey: false, supportsPagination: false, defaultLimit: 250, maxLimit: 250, cooldownMs: 3_600_000,
+    refreshIntervalMs: 8 * 60 * 60 * 1000, maxResults: 250, maxDurationMs: 3 * 60 * 1000,
+    description: 'Curated remote-only job board',
+  },
+  remoteok: {
+    id: 'remoteok', name: 'RemoteOK', type: 'public_api', enabled: true,
+    requiresApiKey: false, supportsPagination: false, defaultLimit: 0, maxLimit: 0, cooldownMs: 3_600_000,
+    refreshIntervalMs: 8 * 60 * 60 * 1000, maxResults: 300, maxDurationMs: 3 * 60 * 1000,
+    description: 'Remote-only job aggregator',
+  },
+  workday: {
+    id: 'workday', name: 'Workday ATS', type: 'public_api', enabled: true,
+    requiresApiKey: false, supportsPagination: true, defaultLimit: 20, maxLimit: 20, cooldownMs: 600_000,
+    refreshIntervalMs: 6 * 60 * 60 * 1000, maxResults: 200, maxDurationMs: 10 * 60 * 1000,
+    description: 'Enterprise Workday ATS (configurable tenant list)',
+  },
+  adzuna: {
+    id: 'adzuna', name: 'Adzuna', type: 'api_key', enabled: true,
+    requiresApiKey: true, supportsPagination: true, defaultLimit: 50, maxLimit: 50, cooldownMs: 600_000,
+    refreshIntervalMs: 6 * 60 * 60 * 1000, maxResults: 200, maxDurationMs: 10 * 60 * 1000,
+    description: 'Global job aggregator (requires API key)',
+  },
+  jobspy: {
+    id: 'jobspy', name: 'JobSpy Aggregator', type: 'self_hosted_scraper', enabled: true,
+    requiresApiKey: false, supportsPagination: false, defaultLimit: 20, maxLimit: 100, cooldownMs: 600_000,
+    refreshIntervalMs: 8 * 60 * 60 * 1000, maxResults: 200, maxDurationMs: 10 * 60 * 1000,
+    description: 'Self-hosted JobSpy scraper (Indeed, LinkedIn, etc.)',
+  },
 };
 
 export const VALID_SOURCES = Object.keys(SOURCE_REGISTRY);
@@ -169,25 +220,11 @@ export function checkSourceConfig(source: string): ConfigCheck {
   }
 
   if (source === 'jobspy') {
-    const venvPython = path.join(process.cwd(), 'scripts', '.venv', 'bin', 'python');
-    const workerPath = path.join(process.cwd(), 'scripts', 'jobspy-worker.py');
     try {
+      const workerPath = path.join(process.cwd(), 'scripts', 'jobspy-worker.py');
       require('fs').accessSync(workerPath);
     } catch {
       return { ready: false, reason: 'scripts/jobspy-worker.py not found' };
-    }
-    // Check venv Python exists and jobspy package is importable
-    try {
-      require('fs').accessSync(venvPython);
-    } catch {
-      return { ready: false, reason: 'JobSpy venv not found at scripts/.venv/bin/python. Run: python3 -m venv scripts/.venv && scripts/.venv/bin/pip install git+https://github.com/Bunsly/JobSpy.git' };
-    }
-    // Test import
-    try {
-      const { execSync } = require('child_process');
-      execSync(`${venvPython} -c "from jobspy import scrape_jobs"`, { timeout: 10000, stdio: 'ignore' });
-    } catch {
-      return { ready: false, reason: 'JobSpy package not installed in venv. Run: scripts/.venv/bin/pip install git+https://github.com/Bunsly/JobSpy.git' };
     }
   }
 
@@ -586,14 +623,13 @@ async function fetchAdzuna(signal?: AbortSignal): Promise<RawJob[]> {
 const activeJobSpyProcesses = new Map<string, ChildProcess>();
 
 async function fetchJobSpy(signal?: AbortSignal): Promise<RawJob[]> {
-  const venvPython = path.join(process.cwd(), 'scripts', '.venv', 'bin', 'python');
   const workerPath = path.join(process.cwd(), 'scripts', 'jobspy-worker.py');
-  log('FETCH', `JobSpy: spawning python worker at ${workerPath} using ${venvPython}`);
+  log('FETCH', `JobSpy: spawning python worker at ${workerPath}`);
 
   return new Promise((resolve) => {
     const processId = `jobspy-${Date.now()}`;
 
-    const child = spawn(venvPython, [workerPath], {
+    const child = spawn('python3', [workerPath], {
       stdio: ['pipe', 'pipe', 'pipe'],
       env: { ...process.env },
       timeout: 300_000,
@@ -795,6 +831,10 @@ function normalize(raw: RawJob): NormalizedJob {
   const descriptionText = (raw.rawHtmlDescription || '').replace(/<[^>]*>/g, '').substring(0, 50000);
   const description = (raw.rawHtmlDescription || '').substring(0, 50000);
 
+  // Resolve role family from title
+  const roleFamily = resolveRoleFamily(titleRes.title) || undefined;
+  const roleFamilyKeywords = roleFamily ? getFamilySearchTerms(roleFamily) : undefined;
+
   const contentHash = generateContentHash({
     title: titleRes.title,
     description,
@@ -826,6 +866,8 @@ function normalize(raw: RawJob): NormalizedJob {
     employmentType: 'full_time',
     experience: { minYears: null, maxYears: null, level: titleRes.level },
     seniority: titleRes.level,
+    roleFamily,
+    roleFamilyKeywords,
     salary: {},
     skills: [],
     status: 'new',
@@ -861,6 +903,23 @@ async function batchUpsert(db: mongoose.Connection['db'], jobs: NormalizedJob[],
     })
     .project({ canonicalId: 1, contentHash: 1, 'source.primary': 1, 'source.sourceJobId': 1 })
     .toArray();
+
+  // Pre-compute freshness for each job
+  function computeFreshness(job: NormalizedJob): { expiresAt: Date; freshnessScore: number } {
+    const now = Date.now();
+    const postedAt = job.postedAt?.getTime() || now;
+    const ageHours = (now - postedAt) / (1000 * 60 * 60);
+
+    // Freshness decays over 14 days (336 hours)
+    const maxAgeHours = 336;
+    const freshnessScore = Math.max(0, 1 - ageHours / maxAgeHours);
+
+    // Expire after 14 days from last seen
+    const lastSeenAt = job.source.lastSeenAt?.getTime() || now;
+    const expiresAt = new Date(lastSeenAt + 14 * 24 * 60 * 60 * 1000);
+
+    return { expiresAt, freshnessScore: Math.round(freshnessScore * 1000) / 1000 };
+  }
 
   // Build lookup: canonicalId → existing contentHash
   const existingHashByCanonical = new Map<string, string>();
@@ -899,96 +958,112 @@ async function batchUpsert(db: mongoose.Connection['db'], jobs: NormalizedJob[],
   }
 
   // Upsert new jobs (full fields via $setOnInsert + $set)
-  const newOps = newJobs.map((job) => ({
-    updateOne: {
-      filter: {
-        $or: [
-          { canonicalId: job.canonicalId },
-          { 'source.primary': job.source.primary, 'source.sourceJobId': job.source.sourceJobId },
-        ],
-      },
-      update: {
-        $setOnInsert: {
-          canonicalId: job.canonicalId,
-          title: job.title,
-          normalizedTitle: job.normalizedTitle,
-          company: job.company,
-          description: job.description,
-          descriptionText: job.descriptionText,
-          contentHash: job.contentHash,
-          location: job.location,
-          department: job.department,
-          category: job.category,
-          employmentType: job.employmentType,
-          experience: job.experience,
-          seniority: job.seniority,
-          salary: job.salary,
-          skills: job.skills,
-          postedAt: job.postedAt,
-          firstSeenAt: now,
-          status: 'new',
-          createdAt: now,
+  const newOps = newJobs.map((job) => {
+    const { expiresAt, freshnessScore } = computeFreshness(job);
+    return {
+      updateOne: {
+        filter: {
+          $or: [
+            { canonicalId: job.canonicalId },
+            { 'source.primary': job.source.primary, 'source.sourceJobId': job.source.sourceJobId },
+          ],
         },
-        $set: {
-          'source.primary': job.source.primary,
-          'source.secondary': job.source.secondary,
-          'source.sourceJobId': job.source.sourceJobId,
-          'source.sourceUrl': job.source.sourceUrl,
-          'source.applicationUrl': job.source.applicationUrl,
-          'source.discoveredAt': job.source.discoveredAt,
-          'source.lastSeenAt': now,
-          lastSeenAt: now,
-          lastVerifiedAt: now,
-          sourceMetadata: job.sourceMetadata,
-          updatedAt: now,
+        update: {
+          $setOnInsert: {
+            canonicalId: job.canonicalId,
+            title: job.title,
+            normalizedTitle: job.normalizedTitle,
+            company: job.company,
+            description: job.description,
+            descriptionText: job.descriptionText,
+            contentHash: job.contentHash,
+            location: job.location,
+            department: job.department,
+            category: job.category,
+            employmentType: job.employmentType,
+            experience: job.experience,
+            seniority: job.seniority,
+            roleFamily: job.roleFamily,
+            roleFamilyKeywords: job.roleFamilyKeywords,
+            salary: job.salary,
+            skills: job.skills,
+            postedAt: job.postedAt,
+            firstSeenAt: now,
+            status: 'new',
+            expiresAt,
+            freshnessScore,
+            createdAt: now,
+          },
+          $set: {
+            'source.primary': job.source.primary,
+            'source.secondary': job.source.secondary,
+            'source.sourceJobId': job.source.sourceJobId,
+            'source.sourceUrl': job.source.sourceUrl,
+            'source.applicationUrl': job.source.applicationUrl,
+            'source.discoveredAt': job.source.discoveredAt,
+            'source.lastSeenAt': now,
+            lastSeenAt: now,
+            lastVerifiedAt: now,
+            expiresAt,
+            freshnessScore,
+            sourceMetadata: job.sourceMetadata,
+            updatedAt: now,
+          },
         },
+        upsert: true,
       },
-      upsert: true,
-    },
-  }));
+    };
+  });
 
   // Upsert content-changed jobs (update content fields)
-  const contentOps = contentChangedJobs.map((job) => ({
-    updateOne: {
-      filter: {
-        $or: [
-          { canonicalId: job.canonicalId },
-          { 'source.primary': job.source.primary, 'source.sourceJobId': job.source.sourceJobId },
-        ],
-      },
-      update: {
-        $set: {
-          title: job.title,
-          normalizedTitle: job.normalizedTitle,
-          company: job.company,
-          description: job.description,
-          descriptionText: job.descriptionText,
-          contentHash: job.contentHash,
-          location: job.location,
-          department: job.department,
-          category: job.category,
-          employmentType: job.employmentType,
-          experience: job.experience,
-          seniority: job.seniority,
-          salary: job.salary,
-          skills: job.skills,
-          'source.primary': job.source.primary,
-          'source.secondary': job.source.secondary,
-          'source.sourceJobId': job.source.sourceJobId,
-          'source.sourceUrl': job.source.sourceUrl,
-          'source.applicationUrl': job.source.applicationUrl,
-          'source.discoveredAt': job.source.discoveredAt,
-          'source.lastSeenAt': now,
-          lastSeenAt: now,
-          lastVerifiedAt: now,
-          sourceMetadata: job.sourceMetadata,
-          updatedAt: now,
+  const contentOps = contentChangedJobs.map((job) => {
+    const { expiresAt, freshnessScore } = computeFreshness(job);
+    return {
+      updateOne: {
+        filter: {
+          $or: [
+            { canonicalId: job.canonicalId },
+            { 'source.primary': job.source.primary, 'source.sourceJobId': job.source.sourceJobId },
+          ],
         },
-        $inc: { 'ingestion.updateCount': 1 },
+        update: {
+          $set: {
+            title: job.title,
+            normalizedTitle: job.normalizedTitle,
+            company: job.company,
+            description: job.description,
+            descriptionText: job.descriptionText,
+            contentHash: job.contentHash,
+            location: job.location,
+            department: job.department,
+            category: job.category,
+            employmentType: job.employmentType,
+            experience: job.experience,
+            seniority: job.seniority,
+            roleFamily: job.roleFamily,
+            roleFamilyKeywords: job.roleFamilyKeywords,
+            salary: job.salary,
+            skills: job.skills,
+            'source.primary': job.source.primary,
+            'source.secondary': job.source.secondary,
+            'source.sourceJobId': job.source.sourceJobId,
+            'source.sourceUrl': job.source.sourceUrl,
+            'source.applicationUrl': job.source.applicationUrl,
+            'source.discoveredAt': job.source.discoveredAt,
+            'source.lastSeenAt': now,
+            lastSeenAt: now,
+            lastVerifiedAt: now,
+            expiresAt,
+            freshnessScore,
+            sourceMetadata: job.sourceMetadata,
+            updatedAt: now,
+          },
+          $inc: { 'ingestion.updateCount': 1 },
+        },
+        upsert: true,
       },
-      upsert: true,
-    },
-  }));
+    };
+  });
 
   // Metadata-only updates for duplicates (just touch lastSeenAt/lastVerifiedAt)
   const duplicateJobs = jobs.filter((_, i) => {
@@ -999,25 +1074,29 @@ async function batchUpsert(db: mongoose.Connection['db'], jobs: NormalizedJob[],
     return existingHash !== undefined && existingHash === job.contentHash;
   });
 
-  const metaOps = duplicateJobs.map((job) => ({
-    updateOne: {
-      filter: {
-        $or: [
-          { canonicalId: job.canonicalId },
-          { 'source.primary': job.source.primary, 'source.sourceJobId': job.source.sourceJobId },
-        ],
-      },
-      update: {
-        $set: {
-          'source.lastSeenAt': now,
-          lastSeenAt: now,
-          lastVerifiedAt: now,
-          updatedAt: now,
+  const metaOps = duplicateJobs.map((job) => {
+    const { expiresAt } = computeFreshness(job);
+    return {
+      updateOne: {
+        filter: {
+          $or: [
+            { canonicalId: job.canonicalId },
+            { 'source.primary': job.source.primary, 'source.sourceJobId': job.source.sourceJobId },
+          ],
         },
+        update: {
+          $set: {
+            'source.lastSeenAt': now,
+            lastSeenAt: now,
+            lastVerifiedAt: now,
+            expiresAt, // refresh expiry so actively-seen jobs don't expire early
+            updatedAt: now,
+          },
+        },
+        upsert: false,
       },
-      upsert: false,
-    },
-  }));
+    };
+  });
 
   // Execute all three batches
   const allOps = [...newOps, ...contentOps, ...metaOps];

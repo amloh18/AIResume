@@ -1,13 +1,51 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, Component, ErrorInfo, ReactNode } from 'react';
 import { motion } from 'framer-motion';
-import { Globe, Activity, RefreshCw, ShieldAlert } from 'lucide-react';
+import { Globe, RefreshCw, ShieldAlert, TrendingUp, HeartPulse, AlertTriangle } from 'lucide-react';
 import OverviewKPIs from './OverviewKPIs';
-import SourcesGrid from './SourcesGrid';
-import RunsExplorer from './RunsExplorer';
 import LiveJobsBrowser from './LiveJobsBrowser';
 import AutomationOverview from '@/components/admin/automation/AutomationOverview';
+import DemandQueueMonitor from './DemandQueueMonitor';
+import SourceHealthPanel from './SourceHealthPanel';
+
+// ── Error Boundary ──────────────────────────────────────────────────────────
+
+interface ErrorBoundaryProps { children: ReactNode; fallbackTitle?: string; }
+interface ErrorBoundaryState { hasError: boolean; error: Error | null; }
+
+class DashboardErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error('[DashboardErrorBoundary]', error, info.componentStack);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="bg-red-500/5 border border-red-500/10 rounded-2xl p-8 text-center">
+          <AlertTriangle className="w-8 h-8 text-red-400 mx-auto mb-3" />
+          <h3 className="text-sm font-bold text-red-400 mb-1">{this.props.fallbackTitle || 'Component Error'}</h3>
+          <p className="text-xs text-white/40 mb-4">{this.state.error?.message || 'An unexpected error occurred.'}</p>
+          <button
+            onClick={() => this.setState({ hasError: false, error: null })}
+            className="px-4 py-2 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-bold hover:bg-red-500/20 transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+// ── Dashboard ───────────────────────────────────────────────────────────────
 
 interface JobIntelligenceDashboardProps {
   activeSubTab?: string;
@@ -40,15 +78,11 @@ export default function JobIntelligenceDashboard({
     fetchOverview();
   }, []);
 
-  // Expose refresh function for child components
-  const handleSourceSaved = useCallback(() => {
-    fetchOverview();
-  }, []);
-
   const subTabs = [
     { id: 'overview', label: 'Overview', icon: Globe },
+    { id: 'demand', label: 'Demand', icon: TrendingUp },
+    { id: 'health', label: 'Source Health', icon: HeartPulse },
     { id: 'queue', label: 'Queue & Triage', icon: ShieldAlert },
-    { id: 'sources', label: 'Sources', icon: Activity },
   ];
 
   const currentTab = activeSubTab || 'overview';
@@ -91,7 +125,7 @@ export default function JobIntelligenceDashboard({
               onClick={() => onSubTabChange && onSubTabChange(tab.id)}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
                 isActive
-                  ? 'bg-emerald-500 text-black shadow-lg shadow-emerald-500/20'
+                  ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
                   : 'text-white/60 hover:text-white hover:bg-white/5'
               }`}
             >
@@ -103,21 +137,26 @@ export default function JobIntelligenceDashboard({
       </div>
 
       {/* Render View */}
-      {currentTab === 'overview' && (
-        <div className="space-y-8">
-          <OverviewKPIs kpis={data?.kpis || {}} />
-          <LiveJobsBrowser />
-        </div>
-      )}
+      <DashboardErrorBoundary fallbackTitle="Overview Error">
+        {currentTab === 'overview' && (
+          <div className="space-y-8">
+            <OverviewKPIs kpis={data?.kpis || {}} />
+            <LiveJobsBrowser />
+          </div>
+        )}
+      </DashboardErrorBoundary>
 
-      {currentTab === 'queue' && <AutomationOverview />}
+      <DashboardErrorBoundary fallbackTitle="Demand Queue Error">
+        {currentTab === 'demand' && <DemandQueueMonitor />}
+      </DashboardErrorBoundary>
 
-      {currentTab === 'sources' && (
-        <div className="space-y-8">
-          <SourcesGrid sources={data?.sources || []} onSourceSaved={handleSourceSaved} />
-          <RunsExplorer />
-        </div>
-      )}
+      <DashboardErrorBoundary fallbackTitle="Source Health Error">
+        {currentTab === 'health' && <SourceHealthPanel />}
+      </DashboardErrorBoundary>
+
+      <DashboardErrorBoundary fallbackTitle="Automation Error">
+        {currentTab === 'queue' && <AutomationOverview />}
+      </DashboardErrorBoundary>
     </div>
   );
 }

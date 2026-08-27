@@ -320,7 +320,7 @@ export function JobDetailModal({
                     type="button"
                     onClick={handleSaveNotes}
                     disabled={isSavingNotes}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-[#013f2e] px-3.5 py-1.5 text-xs font-black text-black shadow-sm transition hover:brightness-95 disabled:opacity-60"
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-[#013f2e] px-3.5 py-1.5 text-xs font-black text-white shadow-sm transition hover:brightness-95 disabled:opacity-60"
                   >
                     {isSavingNotes ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                     Save Notes
@@ -429,7 +429,7 @@ export function JobDetailModal({
             <div className="p-6 pt-4 border-t border-gray-100 dark:border-gray-800 gap-2 flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 flex-shrink-0">
               <button
                 onClick={onApply}
-                className="flex-1 inline-flex items-center justify-center gap-2 bg-lime-500 hover:bg-lime-600 text-black font-semibold py-2.5 px-4 rounded-lg transition-colors"
+                className="flex-1 inline-flex items-center justify-center gap-2 bg-lime-500 hover:bg-lime-600 text-white font-semibold py-2.5 px-4 rounded-lg transition-colors"
               >
                 <ExternalLink className="w-4 h-4" />
                 Apply Now

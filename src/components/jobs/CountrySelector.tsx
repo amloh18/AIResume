@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { ChevronDown, Search, Check, Globe, X, Sparkles, MapPin } from 'lucide-react';
+import { ChevronDown, Search, Check, Globe } from 'lucide-react';
 import { COUNTRIES_LIST, type CountryOption } from '@/lib/config/job-constants';
 
 export type { CountryOption };
@@ -64,12 +64,6 @@ export function CountrySelector({ value, onChange, disabled, align = 'right' }: 
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
-
-  const [userDetectedCountry, setUserDetectedCountry] = useState<CountryOption>(COUNTRIES_LIST[0]);
-
-  useEffect(() => {
-    setUserDetectedCountry(detectUserCountry());
-  }, []);
 
   // Close dropdown on click outside
   useEffect(() => {
@@ -170,34 +164,6 @@ export function CountrySelector({ value, onChange, disabled, align = 'right' }: 
               placeholder="Search country, continent (e.g. Europe, Asia, China)..."
               className="w-full pl-8 pr-3 py-1.5 bg-gray-50 dark:bg-[#1a230f] border border-gray-200 dark:border-gray-700 rounded-xl text-xs text-gray-900 dark:text-white outline-none focus:ring-1 focus:ring-lime-500"
             />
-          </div>
-
-          {/* User's Detected Country (Pinned on Top) */}
-          <div className="p-2 rounded-xl bg-lime-500/10 border border-lime-500/20 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="text-base">{userDetectedCountry.flag}</span>
-              <div>
-                <div className="text-[10px] uppercase font-bold text-lime-700 dark:text-lime-400 flex items-center gap-1">
-                  <MapPin className="w-2.5 h-2.5" />
-                  Your Location
-                </div>
-                <div className="text-xs font-bold text-gray-900 dark:text-white">
-                  {userDetectedCountry.name}
-                </div>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => handleToggleCountry(userDetectedCountry.name)}
-              className={`px-2 py-1 text-[11px] font-semibold rounded-lg transition-colors ${
-                value.includes(userDetectedCountry.name)
-                  ? 'bg-lime-500 text-white'
-                  : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:border-lime-500'
-              }`}
-            >
-              {value.includes(userDetectedCountry.name) ? 'Selected' : '+ Add'}
-            </button>
           </div>
 
           {/* List of Continents & Countries */}
@@ -304,10 +270,10 @@ export function CountrySelector({ value, onChange, disabled, align = 'right' }: 
             </button>
             <button
               type="button"
-              onClick={() => onChange([userDetectedCountry.name])}
+              onClick={() => onChange(['Worldwide / Remote'])}
               className="text-lime-600 dark:text-lime-400 font-semibold hover:underline"
             >
-              Reset to {userDetectedCountry.name}
+              Reset to Worldwide
             </button>
           </div>
         </div>

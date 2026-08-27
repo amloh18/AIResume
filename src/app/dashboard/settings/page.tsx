@@ -1826,7 +1826,7 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
                       setModalInitialTab('email');
                       setIsEmailConnectModalOpen(true);
                     }}
-                    className="px-4 py-2 bg-lime-500 hover:bg-lime-600 text-black rounded-lg text-small font-semibold transition"
+                    className="px-4 py-2 bg-lime-500 hover:bg-lime-600 text-white rounded-lg text-small font-semibold transition"
                   >
                     Connect Email
                   </button>
